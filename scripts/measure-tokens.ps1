@@ -37,7 +37,7 @@ $SourceDescription = ""
 if ($TargetFile -ne "" -and (Test-Path $TargetFile)) {
     $FoundFile = Resolve-Path $TargetFile
     $Content = Get-Content $FoundFile -Raw
-    $Pattern = "(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->"
+    $Pattern = '(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->'
     $Match = [regex]::Match($Content, $Pattern)
     if ($Match.Success) {
         $DirectiveText = $Match.Value
@@ -47,7 +47,7 @@ if ($TargetFile -ne "" -and (Test-Path $TargetFile)) {
     foreach ($cand in $Candidates) {
         if (Test-Path $cand) {
             $Content = Get-Content $cand -Raw
-            $Pattern = "(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->"
+            $Pattern = '(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->'
             $Match = [regex]::Match($Content, $Pattern)
             if ($Match.Success) {
                 $DirectiveText = $Match.Value

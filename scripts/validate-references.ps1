@@ -169,6 +169,8 @@ foreach ($file in $AllMarkdownFiles) {
                     "design" = "design-system.md"
                     "init" = "onboard.md"
                     "task" = "tasks.md"
+                    "update" = "sync.md"
+                    "refresh" = "sync.md"
                     # A name that is deliberately NOT a trigger. The
                     # execution-control design records reject a top-level
                     # pk:execution-control command; existing workflows retain
@@ -248,6 +250,7 @@ $CoreWorkflows = @(
     "pr.md",
     "ship.md",
     "checkpoint.md",
+    "sync.md",
     "reflect.md"
 )
 

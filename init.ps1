@@ -154,9 +154,12 @@ foreach ($file in $AgentFileCandidates) {
 
 if ($TargetsFound.Count -eq 0) {
     $defaultAgent = Join-Path $ProjectRoot "AGENTS.md"
+    $defaultClaude = Join-Path $ProjectRoot "CLAUDE.md"
     New-Item -ItemType File -Path $defaultAgent -Force | Out-Null
+    New-Item -ItemType File -Path $defaultClaude -Force | Out-Null
     $TargetsFound += $defaultAgent
-    Write-Host "  [+] Created default agent configuration: AGENTS.md" -ForegroundColor Green
+    $TargetsFound += $defaultClaude
+    Write-Host "  [+] Created default agent configurations: AGENTS.md & CLAUDE.md" -ForegroundColor Green
 }
 
 # 4. Directive Block (Loaded from Canonical Template)
@@ -254,4 +257,4 @@ foreach ($targetPath in $TargetsFound) {
 }
 
 Write-Host "`n✨ PromptKit OS successfully configured for $ProjectRoot!" -ForegroundColor Cyan
-Write-Host "   Start by asking your AI: 'pk:plan', 'pk:tutor', or 'pk:review'`n" -ForegroundColor White
+Write-Host "   Start by asking your AI: 'pk:sync', 'pk:plan', or 'pk:tutor'`n" -ForegroundColor White

@@ -128,9 +128,12 @@ done
 
 if [[ ${#TARGETS_FOUND[@]} -eq 0 ]]; then
     DEFAULT_AGENT="$PROJECT_ROOT/AGENTS.md"
+    DEFAULT_CLAUDE="$PROJECT_ROOT/CLAUDE.md"
     touch "$DEFAULT_AGENT"
+    touch "$DEFAULT_CLAUDE"
     TARGETS_FOUND+=("$DEFAULT_AGENT")
-    echo -e "  \033[0;32m[+]\033[0m Created default agent configuration: AGENTS.md"
+    TARGETS_FOUND+=("$DEFAULT_CLAUDE")
+    echo -e "  \033[0;32m[+]\033[0m Created default agent configurations: AGENTS.md & CLAUDE.md"
 fi
 
 # 4. Directive Block (Loaded from Canonical Template)
@@ -217,4 +220,4 @@ for target in "${TARGETS_FOUND[@]}"; do
 done
 
 echo -e "\n\033[0;36m✨ PromptKit OS successfully configured for $PROJECT_ROOT!\033[0m"
-echo -e "   Start by asking your AI: 'pk:plan', 'pk:tutor', or 'pk:review'\n"
+echo -e "   Start by asking your AI: 'pk:sync', 'pk:plan', or 'pk:tutor'\n"

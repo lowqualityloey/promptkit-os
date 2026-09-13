@@ -96,7 +96,7 @@ Write-Host "`n📌 Scenario J: Standardized Visual Callouts & Telemetry Status C
 Assert-Contains "templates/agent-directive-template.md" "Native MCP & Interactive Turn Prompts" "Directive includes native MCP and interactive turn prompts guardrail"
 Assert-Contains "templates/agent-directive-template.md" "Dual-Compatible Telemetry Status Cards" "Directive includes dual-compatible telemetry status card guardrail"
 Assert-Contains "templates/agent-directive-template.md" "### 💡 Next Recommended Step" "Directive specifies next recommended step callout format"
-Assert-Contains "templates/agent-directive-template.md" "📊 \*\*Milestone\*\*:" "Directive specifies telemetry status card format"
+Assert-Contains "templates/agent-directive-template.md" "📊 Milestone:" "Directive specifies telemetry status card format"
 Assert-Contains "workflows/commit.md" "Dual-Compatible Telemetry Status Card" "Commit workflow includes telemetry status card"
 Assert-Contains "workflows/pr.md" "Telemetry Status Card" "PR workflow includes telemetry status card"
 Assert-Contains "workflows/plan.md" "Dual-Compatible Telemetry Status Card" "Plan workflow includes telemetry status card"
@@ -109,6 +109,12 @@ Write-Host "`n📌 Scenario K: Project Database & Harness Isolation" -Foreground
 Assert-Contains "templates/agent-directive-template.md" "Project Database & Harness Isolation" "Directive enforces project database isolation guardrail"
 Assert-Contains "workflows/data.md" "Database Harness Isolation" "Data workflow mandates project-scoped database isolation"
 Assert-Contains "workflows/test.md" "Project Database Isolation" "Test workflow mandates project-scoped database isolation"
+
+Write-Host "`n📌 Scenario L: Protocol Synchronization & Hot-Reloading (pk:sync)" -ForegroundColor Yellow
+Assert-Contains "templates/agent-directive-template.md" "pk:sync" "Directive includes pk:sync trigger"
+Assert-Contains "templates/agent-directive-template.md" "Disk-First Protocol Loading & Hot-Reload" "Directive enforces disk-first protocol loading guardrail"
+Assert-Contains "workflows/sync.md" "3-Phase Sync Protocol" "Sync workflow defines 3-phase sync protocol"
+Assert-Contains "workflows/sync.md" "Fresh Disk-First Loading" "Sync workflow enforces fresh disk reads"
 
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan

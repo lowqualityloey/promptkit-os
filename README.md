@@ -220,9 +220,10 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:pr` | [`workflows/pr.md`](./workflows/pr.md) | Core | PR body / `gh pr` | Pull request descriptions with test evidence and rollback procedures. |
 | `pk:ship` | [`workflows/ship.md`](./workflows/ship.md) | Core 🧪 | `docs/releases/` | Runtime env validation (Zod/T3), migration ordering, and smoke tests. |
 | `pk:checkpoint` | [`workflows/checkpoint.md`](./workflows/checkpoint.md) | Core | `docs/STATE.md` | Session compaction, invariant locking, and fresh chat handover prompt. |
+| `pk:sync` | [`workflows/sync.md`](./workflows/sync.md) | Core 🧪 | Active context | Hot-reload protocols, purge stale memory, and synchronize with disk. |
 | `pk:retro` | [`workflows/reflect.md`](./workflows/reflect.md) | Core | `docs/adrs/` & journal | Post-feature retrospective: extracts decisions into standard MADRs. |
 
-*Status Legend: All 20 workflows pass CI structural link validation (`validate-references.sh`). Workflows marked with 🧪 also undergo automated behavioral prompt-contract testing (`run-behavioral-contract-tests.sh`).*
+*Status Legend: All 21 workflows pass CI structural link validation (`validate-references.sh`). Workflows marked with 🧪 also undergo automated behavioral prompt-contract testing (`run-behavioral-contract-tests.sh`).*
 
 ---
 
@@ -256,14 +257,17 @@ In multi-agent environments (Antigravity, Claude Code, Cursor background agents)
 
 ### 4. Dual-Compatible Telemetry Status Cards & Visual Callouts
 
-- **Structured Telemetry Status Cards**: When completing tasks, checkpoints, or PR workflows, the assistant displays a clean, compact 3-line status card:
-  ```markdown
-  > 📊 **Milestone**: `M2: Core Features` `[■■■■■□□□□□]` 42% (5/12)  
-  > 🎯 **Active**: `TASK-04` (Done, pointer cleared)  
-  > 🟢 **Quality Gate**: Clean (11 commits on `main`, 0 blockers)
+- **Structured Telemetry Status Cards**: When completing tasks, checkpoints, or PR workflows, the assistant displays a clean, monospace fenced status card (immune to Markdown formatting collisions) or blockquote card:
+  ````markdown
+  ```text
+  📊 Milestone: M2: Core Features — open=7 / closed=5 -> 6/6 after #42 merge
+  🎯 Active: TASK-04 PR #42 (Tenant CRUD and RLS isolation)
+  🟢 Quality Gate: Clean (lint 0 · typecheck 0 · 435 tests ✓ · 🔒 7 Invariants)
+  📈 PRs in flight: #42 open, 0 blocked
   ```
+  ````
 - **Zero Action-Blindness**: Whenever the assistant halts a turn requiring human decisions, PR review, or local actions, it terminates the message with a high-contrast `> [!IMPORTANT]` callout (`### 🛑 Action Required From You:`). If blocked, it emits `> [!WARNING]` (`### ⚠️ Blocked: Waiting on Human Input`).
-- **Dual-Compatibility**: Status cards and callouts render as clean bordered accent blocks in terminal CLIs (OpenCode, Claude Code) and rich alert blocks in web IDEs without unrendered raw table pipes or HTML tags.
+- **Dual-Compatibility & Markdown Parser Hygiene**: Status cards and callouts render as clean bordered accent blocks in terminal CLIs (OpenCode, Claude Code) and rich alert cards in web IDEs and DeepSeek harnesses. All callouts strictly use the `> [!TYPE]` blockquote syntax to prevent raw unrendered bracket leakage across Markdown renderers.
 
 ### 5. Interactive Decision Handoffs
 

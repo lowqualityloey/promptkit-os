@@ -25,6 +25,7 @@ Activate workflows anytime with these namespaced triggers:
 - `pk:design`: Modern UI/UX, Design Tokens, and WCAG 2.2 Level AA accessibility.
 - `pk:retro` (or `pk:reflect`): Retrospective log, ADR extraction, and skill matrix alignment.
 - `pk:checkpoint` (or `pk:handoff`): Session state compaction, docs/STATE.md update, and handover prompt.
+- `pk:sync` (or `pk:update`, `pk:refresh`): Hot-reload protocols, purge stale memory, and synchronize with disk.
 
 ### Smart Auto-Route & Guardrails (Triggers Are Optional)
 You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigger, apply this triage:
@@ -32,11 +33,9 @@ You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigge
 - **Anti-Slop Output**: Deliver all updates, plans, and diff explanations in structured, scannable markdown (tables, checklists, short bullets). Never output conversational essay walls.
 - **Absolute Secret Hygiene**: Never output or request raw secrets/keys; mandate `.env.example` templates and local `.env`.
 - **Native MCP & Interactive Turn Prompts**: Auto-detect active MCP servers and prioritize structured tools over shell commands. For branching choices or next steps, invoke native selection tools (e.g. `ask_question`) if supported; otherwise format numbered choices under `> [!TIP] ### 💡 Next Steps (Type number & Enter):` with Option 1 prefixed `(Recommended)`. When the developer replies with a single number (`1`), immediately execute that option.
-- **Dual-Compatible Telemetry Status Cards**: Display milestone progress, active task, and quality gate health using a 3-line status card:
-  `> 📊 **Milestone**: <name> [■■■■■□□□□□] <pct>% (<count>)`  
-  `> 🎯 **Active**: <task-id> (<status>)`  
-  `> 🟢 **Quality Gate**: Clean (<summary>)`  
-  Halting for human decisions uses `> [!IMPORTANT]` titled `### 🛑 Action Required From You:`. Blocked states use `> [!WARNING]` titled `### ⚠️ Blocked: Waiting on Human Input:`. Milestone completion / next lifecycle recommendations (e.g. `pk:checkpoint`, `pk:pr`, `pk:tasks`) use `> [!TIP]` titled `### 💡 Next Recommended Step:`. Zero raw HTML, perfect rendering across all terminal CLIs and IDEs.
+- **Dual-Compatible Telemetry Status Cards**: Display milestone progress, active task, and quality gate health using a monospace fenced block or blockquote card (e.g. ` ```text ` with `📊 Milestone: ...`, `🎯 Active: ...`, `🟢 Quality Gate: ...`, and optional `📈 PRs in flight: ...`).
+  Halting for human decisions uses `> [!IMPORTANT]` titled `### 🛑 Action Required From You:`. Blocked states use `> [!WARNING]` titled `### ⚠️ Blocked: Waiting on Human Input:`. Milestone completion / next lifecycle recommendations (e.g. `pk:checkpoint`, `pk:pr`, `pk:tasks`) use `> [!TIP]` titled `### 💡 Next Recommended Step:`. Always prefix callouts with `> ` (never bare `[!TIP]`), zero raw HTML, perfect rendering across all terminal CLIs and IDEs.
+- **Disk-First Protocol Loading & Hot-Reload (`pk:sync`)**: Never rely on conversational memory or past turn habits for workflows or quality gates. Always read `$KIT_DIR_REL/workflows/<trigger>.md` freshly from disk. When receiving `pk:sync` or after engine updates, immediately refresh context from disk.
 - **Project Database & Harness Isolation**: Integration tests and live database verification must use dedicated project-scoped containers (e.g. `./docker-compose.yml` or project-named instances). Never attach to or run destructive queries against foreign project containers or credentials.
 - **Strict Milestone Git Boundaries**: Never start a new milestone with uncommitted changes. At milestone end, verify, stage atomically (`pk:commit`), update `docs/STATE.md`, and request human sign-off with `> [!IMPORTANT]`.
 - **Protocol Auto-Route (Substantive Tasks)**: For multi-file changes or architecture, announce briefly (e.g. `[PromptKit OS: Auto-routed to pk:plan]`) and adopt the matching workflow:
