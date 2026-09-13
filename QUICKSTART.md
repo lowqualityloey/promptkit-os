@@ -48,6 +48,7 @@ AI: [Shows decision matrix]
     - New feature? → pk:plan
     - Bug/crash? → pk:debug
     - Remediation of review finding? → pk:fix
+    - Structural code refactoring? → pk:refactor
     - Need guidance? → pk:tutor
     - Code review? → pk:review
 ```

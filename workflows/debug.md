@@ -91,6 +91,7 @@ Construct a feedback loop using the first viable option from this hierarchy:
 - **Speed**: Target execution in < 3 seconds (skip unrelated init, narrow test scope).
 - **Sharpness**: Assert the exact user-reported symptom, not merely "didn't crash".
 - **Determinism**: For flaky or race condition bugs, increase reproduction rate (loop trigger 100x, add load, narrow timing windows).
+- **Concurrency Chaos Jitter**: For intermittent async or race-condition defects, widen the timing window by injecting random micro-delay jitter (`await new Promise(r => setTimeout(r, Math.random() * 50))`) or executing parallel stress loops (`Promise.all(Array.from({length: 50}, ...))`) until reproduction is 100% deterministic.
 
 #### Phase 1 Completion Gate
 - [ ] You have identified **one single command** (script path, test run, or curl).
@@ -134,7 +135,10 @@ Construct a feedback loop using the first viable option from this hierarchy:
      console.log('[DEBUG-b7e1] Token state at refresh:', { tokenExp, isExpired });
      ```
    - Benefit: Cleanup at completion is a single trivial command: `git grep "DEBUG-"`.
-3. **Performance Regressions (Measure First)**:
+3. **Structural State Delta Diffing (Avoid Raw Object Dumps)**:
+   - Dumping full objects creates token bloat and obscures mutations.
+   - Probe state transitions using **Delta Logging**: emit only the structural difference between `prevState` and `nextState` (e.g. `[DEBUG-b7e1] Delta: { status: 'PENDING' -> 'FAILED' }`).
+4. **Performance Regressions (Measure First)**:
    - Never debug performance issues with speculative console logs.
    - Establish a baseline metric first (`performance.now()`, query execution plan, profiler flamegraph).
    - Bisect changes against the baseline measurement.
@@ -167,6 +171,8 @@ Once the failure point is proven, trace the failure back to the fundamental brok
    - Run the automated regression test $\rightarrow$ must pass (green).
    - Re-run the un-minimized Phase 1 feedback loop $\rightarrow$ must pass.
    - Run full project test suite $\rightarrow$ verify zero regressions.
+5. **Resource Teardown & Listener Leak Verification**:
+   - For memory leaks, unclosed WebSockets, or lingering timers, assert that cleanup handlers run completely on unmount or cancellation (e.g. `expect(emitter.listenerCount('event')).toBe(0)` or `expect(abortSignal.aborted).toBe(true)`).
 
 ---
 
