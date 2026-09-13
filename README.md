@@ -161,16 +161,19 @@ Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycl
      │                      │                      │
      └──────────────────────┼──────────────────────┘
                             │
-                 [ Verification & Merge ]
-                            │
-     ┌──────────────────────┼──────────────────────┐
-     ▼                      ▼                      ▼
-  pk:debug               pk:perf               pk:review
-(Empirical Root Cause) (Latency & Profiling) (Two-Axis Code Audit)
-     │                      │                      │
-     └──────────────────────┼──────────────────────┘
-                            │
-                        pk:commit
+                  [ Quality, Debt & Remediation ]
+                             │
+      ┌──────────────┬───────┴───────┬──────────────┐
+      ▼              ▼               ▼              ▼
+   pk:debug       pk:fix        pk:refactor      pk:perf
+(Root Cause)   (Remediation)   (Modernization)  (Profiling)
+      │              │               │              │
+      └──────────────┴───────┬───────┴───────┴──────┘
+                             │
+                         pk:review
+                   (Two-Axis Code Audit)
+                             │
+                         pk:commit
              (Atomic Conventional Commits)
                             │
                          pk:pr
@@ -214,6 +217,7 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:spike` | [`workflows/research.md`](./workflows/research.md) | Core | `docs/spikes/` | Technical risk spikes comparing options against a boring baseline. |
 | `pk:debug` | [`workflows/debug.md`](./workflows/debug.md) | Core 🧪 | `docs/rca/` | Scientific debugging: fast reproduction loop, tagged logs, and 5-Whys. |
 | `pk:fix` | [`workflows/fix.md`](./workflows/fix.md) | New 🧪 | Code repair | Surgical remediation of known findings with security-first ordering. |
+| `pk:refactor` | [`workflows/refactor.md`](./workflows/refactor.md) | Core 🧪 | Code modernization | Structural debt remediation: Golden Master pinning, Mikado method, Strangler Fig. |
 | `pk:perf` | [`workflows/perf.md`](./workflows/perf.md) | Core | `docs/perf/` | Baseline quantification, EXPLAIN ANALYZE, flamegraphs, and deltas. |
 | `pk:review` | [`workflows/review.md`](./workflows/review.md) | Core | Review report | Two-axis review: Spec Fidelity vs Technical Standards (Fowler's smells). |
 | `pk:commit` | [`workflows/commit.md`](./workflows/commit.md) | Core | Git history | Atomic Conventional Commits, single-concern staging, and secret scanning. |
