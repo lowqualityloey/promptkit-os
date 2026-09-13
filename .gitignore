@@ -20,6 +20,14 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Secrets & Environment Configurations
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+
 # Preserved untracked local artifacts (not for publication)
 semantic-review/
 
