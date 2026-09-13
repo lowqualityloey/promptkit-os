@@ -379,6 +379,49 @@ pk:debug - [Describe the bug]
 
 ---
 
+## Model Context Protocol (MCP) Acceleration (Optional)
+
+PromptKit OS supports **Model Context Protocol (MCP)** tools as optional accelerators through a strict **Progressive Enhancement** model. If your assistant environment has MCP configured (via Docker Desktop or direct stdio), PromptKit OS leverages it automatically; if not, workflows seamlessly fall back to Markdown and standard CLI tools without disruption.
+
+### Recommended 100% Free / Zero-Cost MCP Stack
+
+| Tool | Protocol Command / Repo | Role in PromptKit OS |
+| :--- | :--- | :--- |
+| **Sequential Thinking** | `npx -y @modelcontextprotocol/server-sequential-thinking` | **Reasoning Scratchpad**: Powers `pk:debug` hypothesis branching and `pk:plan` architectural tradeoff evaluations. (Free & Open Source / MIT). |
+| **Fetch** | `npx -y @modelcontextprotocol/server-fetch` | **Primary Doc Reader**: Fetches clean Markdown of official library documentation during `pk:plan` and `pk:onboard` with zero HTML clutter. |
+| **Database MCP** | `@modelcontextprotocol/server-postgres` / `server-sqlite` | **Schema Inspector**: Safe read-only schema discovery for `pk:migrate` (Expand-Contract migrations). |
+| **Playwright MCP** | `@executeautomation/playwright-mcp-server` | **UI / E2E Inspector**: Visual verification against `DESIGN.md` tokens and responsive breakpoints during `pk:design`. |
+
+### Client Setup Examples
+
+#### 1. Standard Client Configuration (Antigravity, Cursor, Claude Code, Cline)
+Add to your client's MCP configuration settings (`mcpServers` object):
+
+```json
+{
+  "mcpServers": {
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    }
+  }
+}
+```
+
+#### 2. Docker Desktop MCP Toolkit
+1. Open **Docker Desktop** $\rightarrow$ **MCP Toolkit**.
+2. Select the **AI coding** template (or add **Sequential Thinking** from the Catalog).
+3. Switch to the **Clients** tab and click **Connect** on your preferred editor.
+
+> [!TIP]
+> **Token Economics Best Practice**: Keep active MCP servers lean (2 to 4 servers max, ~350 static schema tokens). Loading large monolithic packs (30+ tools) bloats your context window on every prompt and degrades attention on your codebase rules.
+
+---
+
 ## Rollback Plan (If It's Not Working)
 
 PromptKit is **zero lock-in**. To remove:

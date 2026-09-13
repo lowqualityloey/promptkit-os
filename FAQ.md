@@ -1,6 +1,6 @@
 # PromptKit OS FAQ
 
-**The 15 questions every developer asks before adopting PromptKit OS.**
+**The 16 questions every developer asks before adopting PromptKit OS.**
 
 ---
 
@@ -535,6 +535,24 @@ For complete line-by-line token breakdowns and mathematical analysis, see [docs/
 - **Project-Scoped Containers**: Database operations (`pk:data`), schema migrations, seeders, and integration test runners (`pk:test`) are strictly prohibited from attaching to shared or foreign host containers (e.g. `api-db-1` or sibling project instances like `jobtracker`).
 - **Explicit Harness Targets**: Test and migration commands must target project-scoped instances (such as `./docker-compose.yml` or dedicated `project-db` containers defined in `PROMPTKIT.md` / `.env.test`).
 - **Zero Accidental Contamination**: Prevents test suites or destructive migration scripts from truncating tables, applying schema changes, or dropping databases in neighboring projects.
+
+---
+
+## 16. How does PromptKit OS integrate with Model Context Protocol (MCP) and Docker Desktop MCP Toolkit?
+
+**Short Answer**: PromptKit OS supports MCP as **optional, zero-lock-in accelerators** through a strict **Progressive Enhancement** architecture. If MCP servers (like Sequential Thinking or Fetch) are active via Docker Desktop or stdio, PromptKit OS leverages them; if absent, workflows run seamlessly in pure Markdown / CLI fallback mode without errors.
+
+**Key Principles & Recommended Free Stack**:
+- **Progressive Enhancement (No Broken Repos)**: PromptKit OS workflows (`pk:debug`, `pk:plan`, `pk:migrate`) never mandate MCP tools as hard prerequisites. Team members without Docker or MCP can collaborate on the same repository with identical behavioral outcomes.
+- **Recommended Free & Open-Source ($0 Cost) Accelerators**:
+  - **Sequential Thinking** (`@modelcontextprotocol/server-sequential-thinking`): Official MIT-licensed local scratchpad tool. Accelerates `pk:debug` Phase 3 (falsifiable hypothesis branching) and Phase 5 (5 Whys RCA) at $0 cost and zero external API dependencies.
+  - **Fetch / Jina Reader** (`@modelcontextprotocol/server-fetch` or `r.jina.ai`): Converts live documentation URLs into clean, LLM-optimized Markdown during `pk:plan` with zero HTML noise or paywalls.
+  - **Database MCP** (e.g. Postgres / SQLite): Inspects live schema structures directly for zero-downtime `pk:migrate` checks.
+  - **Playwright MCP**: Headless browser automation for `pk:design` UI audits and responsive testing.
+- **Token Economics & Zero Static Bloat**: Every active MCP server registers tool JSON schemas that consume context tokens on every single LLM turn. Keep active MCP servers lean (2 to 4 servers max, ~350 static tokens) rather than installing 30+ tool monolithic bundles.
+- **Docker Desktop MCP Toolkit vs Direct stdio**:
+  - In **Docker Desktop MCP Toolkit**: 1-click containerized profiles without needing Node.js or Python installed on the host OS.
+  - In **Standard MCP Clients (Antigravity, Cursor, Claude Code, Cline)**: Configured directly via `npx` / `uvx` stdio in JSON settings with zero container overhead.
 
 ---
 
