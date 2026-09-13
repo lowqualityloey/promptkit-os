@@ -315,6 +315,4 @@ When executing workflows in agentic multi-agent environments (Antigravity, Claud
 ---
 
 ## Related References
-- [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md) — Visual lifecycle decision trees & sequence maps
-- [`QUICKSTART.md`](../QUICKSTART.md) — 5-minute quickstart guide
-- [`README.md`](../README.md) — System overview & philosophy
+- Canonical workflow navigation: [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md)

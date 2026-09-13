@@ -73,6 +73,4 @@ Conclude the synchronization turn by displaying the 4-line monospace status card
 ---
 
 ## Related References
-- [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md) — Complete workflow navigation & lifecycle mapping
-- [`templates/agent-directive-template.md`](../templates/agent-directive-template.md) — Canonical agent system directive
-- [`protocols/code-quality-gate.md`](../protocols/code-quality-gate.md) — Pre-commit quality & done-gates
+- Canonical workflow navigation: [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md)

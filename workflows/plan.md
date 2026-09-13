@@ -209,6 +209,4 @@ The Planner / Architect hands the objective, bounded files or behaviors, accepta
 ---
 
 ## Related References
-- [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md) — Complete workflow navigation & lifecycle mapping
-- [`templates/tech-spec-template.md`](../templates/tech-spec-template.md) — Technical specification template
-- [`workflows/tasks.md`](./tasks.md) — Task decomposition & acceptance criteria
+- Canonical workflow navigation: [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md)

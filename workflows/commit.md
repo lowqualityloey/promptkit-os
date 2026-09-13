@@ -219,5 +219,4 @@ docs(adrs): record decision to adopt UUIDv7 for primary keys
 ---
 
 ## Related References
-- [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md) — Complete workflow navigation & lifecycle mapping
-- [`protocols/code-quality-gate.md`](../protocols/code-quality-gate.md) — Pre-commit quality & done-gates
+- Canonical workflow navigation: [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md)
