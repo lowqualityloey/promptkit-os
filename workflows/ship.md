@@ -188,13 +188,12 @@ Use the shared [`Canonical Artifact Contract`](../docs/WORKFLOW-MAP.md#canonical
 
 ### PromptKit OS Internal Release Evaluation
 
-This repository's release-candidate evaluation procedure (Evaluation ID, Version Source of Truth, candidate-inclusive release range, Effective Change Set normalisation, SemVer derivation, QA/Reviewer review, draft Changelog Entries, Approved Release Tag, Approved Release Version, and Approved Release Record) is maintained separately in [`docs/internal/release-evaluation.md`](../docs/internal/release-evaluation.md), because it applies only to this repository and imposes no requirements on repositories that consume PromptKit OS. Load it only when performing a release evaluation **in this repository**.
+This repository's release-candidate evaluation procedure is maintained separately in [`docs/internal/release-evaluation.md`](../docs/internal/release-evaluation.md) and applies only to this repository. Load it only when performing a release evaluation **in this repository**; consumer repositories do not inherit this internal governance pack.
 
-- **Evaluation & Baseline**: Establish Evaluation ID, Version Source of Truth, and candidate-inclusive release range. Any unresolved blocker or failed consistency check leaves the evaluation unapproved.
-- **QA & Blocker Review**: The QA/Reviewer must conduct a blocker review; any required correction/re-review must be recorded.
-- **Release Notes**: Every effective public contract change requires Public Release Notes with exactly one supported note entry, plus draft Changelog Entries.
-- **Approvals & Alignment**: The Approved Release Record aligns the Approved Release Tag with the Approved Release Version under explicit human authorization.
-- **External Actions**: External-action decisions are data-only records; `pk:ship` must not automatically run tag commands, push refs, publish changelogs, deploy, or execute rollbacks.
+- **Evaluation & Baseline**: Any unresolved blocker leaves the evaluation unapproved.
+- **QA & Blocker Review**: The QA/Reviewer must conduct a Blocker review; any correction/re-review must be recorded.
+- **Release Notes & Records**: Every public contract change requires Public Release Notes with exactly one supported note entry, draft Changelog Entries, and an Approved Release Record aligning the Approved Release Tag with the Approved Release Version.
+- **External Actions**: External-action decisions remain data-only records; `pk:ship` must not automatically run tag commands, push refs, publish changelogs, deploy, or execute rollbacks.
 
 `pk:ship` Steps 3–5 and the production-safety guidance below remain in force regardless.
 

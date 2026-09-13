@@ -285,6 +285,4 @@ Tailor follow-up material based on the developer's confidence:
 ---
 
 ## Related References
-- [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md) — Complete workflow navigation & lifecycle mapping
-- [`notes/skill-matrix.md`](../notes/skill-matrix.md) — Competency self-assessment matrix
-- [`activities/README.md`](../activities/README.md) — Interactive learning simulations
+- Canonical workflow navigation: [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md)

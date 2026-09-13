@@ -303,6 +303,4 @@ For **Level 2 (Controlled)** and **Level 3 (Release-Critical)** Work, the lead a
 ---
 
 ## Related References
-- [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md) — Complete workflow navigation & lifecycle mapping
-- [`protocols/code-quality-gate.md`](../protocols/code-quality-gate.md) — Code quality & review done-gates
-- [`templates/code-review-checklist.md`](../templates/code-review-checklist.md) — Code review checklist template
+- Canonical workflow navigation: [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md)

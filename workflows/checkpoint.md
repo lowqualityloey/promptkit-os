@@ -225,5 +225,4 @@ When the human informs the assistant that a pull request has been merged into `m
 ---
 
 ## Related References
-- [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md) — Complete workflow navigation & lifecycle mapping
-- [`templates/state-tracker-template.md`](../templates/state-tracker-template.md) — Living state tracker template
+- Canonical workflow navigation: [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md)

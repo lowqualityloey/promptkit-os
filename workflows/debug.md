@@ -198,5 +198,4 @@ Before closing the debugging session:
 ---
 
 ## Related References
-- [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md) — Complete workflow navigation & lifecycle mapping
-- [`templates/rca-postmortem-template.md`](../templates/rca-postmortem-template.md) — Incident root-cause post-mortem template
+- Canonical workflow navigation: [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md)
