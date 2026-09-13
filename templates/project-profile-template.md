@@ -57,13 +57,15 @@
 ---
 
 ## 5. Active MCP Capabilities (Optional)
-> Record detected or configured Model Context Protocol (MCP) servers. The assistant prioritizes native MCP tool calls over terminal CLI commands. Set to `N/A (Standard CLI Fallback)` if running in a standard CLI environment. Note: Native MCP tool availability is host-dependent; assistants automatically fall back to terminal CLI commands when MCP servers are not supported or configured in the host runtime.
+> Record detected or configured Model Context Protocol (MCP) servers (via Docker Desktop MCP, stdio `npx`, or native client configs). PromptKit OS follows a **Progressive Enhancement** model: MCP tools serve as optional accelerators. When available, assistants prioritize native MCP tool calls; when unavailable, assistants seamlessly fall back to structured Markdown and terminal CLI commands with zero errors.
 
+- **Reasoning / Scratchpad MCP**: [e.g. `sequential-thinking` (`@modelcontextprotocol/server-sequential-thinking`) for `pk:debug` hypothesis branching & `pk:plan` tradeoffs | N/A]
+- **Documentation / Web Reader MCP**: [e.g. `fetch` (`@modelcontextprotocol/server-fetch`) or Jina reader for clean primary doc lookups | N/A]
 - **Task Tracking System**: [Local Markdown (docs/tasks/ + docs/STATE.md) | GitHub Issues | Linear | Jira]
-- **GitHub MCP**: [e.g. `github-mcp-server` for PR creation, issue reading, commit search]
-- **Database MCP**: [e.g. `postgres-mcp` for read-only schema discovery]
-- **Issue Tracker MCP**: [e.g. `linear-mcp` or N/A]
-- **Execution Precedence**: Native MCP Tools $\rightarrow$ Native IDE Search/Edit Tools $\rightarrow$ Terminal CLI Commands $\rightarrow$ Manual Human Prompt
+- **GitHub MCP**: [e.g. `github-mcp-server` for PR creation, issue reading, commit search | N/A]
+- **Database MCP**: [e.g. `postgres-mcp` or `sqlite-mcp` for read-only schema discovery & `pk:migrate` checks | N/A]
+- **Browser / UI MCP**: [e.g. `playwright` for `pk:design` visual and E2E verification | N/A]
+- **Execution Precedence**: Native MCP Tools $\rightarrow$ Native IDE Search/Edit Tools $\rightarrow$ Terminal CLI Commands $\rightarrow$ Structured Markdown Fallback
 
 ---
 

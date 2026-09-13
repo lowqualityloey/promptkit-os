@@ -116,7 +116,10 @@ Construct a feedback loop using the first viable option from this hierarchy:
 2. Ensure every hypothesis is strictly **falsifiable**:
    > **Prediction Format**:
    > *"If `<Defect X>` is the cause, then `<changing Y>` will make the bug disappear / `<changing Z>` will make it worse."*
-3. **Checkpoint with Developer**:
+3. **Reasoning & Tooling Acceleration (Progressive Enhancement)**:
+   - **MCP Tool Available (`sequentialthinking`)**: If the `sequentialthinking` MCP server is active in the host client/environment, invoke it to structure, score, branch (`branchFromThought`), and iteratively revise hypotheses before modifying files.
+   - **No MCP / CLI Fallback**: If `sequentialthinking` is absent or unsupported, output the ranked hypotheses directly in structured Markdown.
+4. **Checkpoint with Developer**:
    - Present the ranked list to the developer. Domain context often eliminates invalid theories instantly. Proceed with ranking if developer is unavailable.
 
 ---
@@ -140,7 +143,7 @@ Construct a feedback loop using the first viable option from this hierarchy:
 
 ### Phase 5: Root Cause Analysis (5 Whys)
 
-Once the failure point is proven, trace the failure back to the fundamental broken invariant:
+Once the failure point is proven, trace the failure back to the fundamental broken invariant. If `sequentialthinking` MCP is present, utilize multi-step thought revision to track causal seams backward:
 
 1. *Why did the transaction fail?*: Because the inventory count was negative.
 2. *Why was inventory negative?*: Because the checkout worker processed order items without an atomic row lock.
