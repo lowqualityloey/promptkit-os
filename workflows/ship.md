@@ -190,7 +190,10 @@ Use the shared [`Canonical Artifact Contract`](../docs/WORKFLOW-MAP.md#canonical
 
 This repository's release-candidate evaluation procedure is maintained separately in [`docs/internal/release-evaluation.md`](../docs/internal/release-evaluation.md) and applies only to this repository. Load it only when performing a release evaluation **in this repository**; consumer repositories do not inherit this internal governance pack.
 
-External-action decisions remain data-only records: `pk:ship` must not automatically run tag commands, push refs, publish changelogs, deploy, or execute rollbacks.
+- **Evaluation & Baseline**: Any unresolved blocker leaves the evaluation unapproved.
+- **QA & Blocker Review**: The QA/Reviewer must conduct a Blocker review; any correction/re-review must be recorded.
+- **Release Notes & Records**: Every public contract change requires Public Release Notes with exactly one supported note entry, draft Changelog Entries, and an Approved Release Record aligning the Approved Release Tag with the Approved Release Version.
+- **External Actions**: External-action decisions remain data-only records; `pk:ship` must not automatically run tag commands, push refs, publish changelogs, deploy, or execute rollbacks.
 
 `pk:ship` Steps 3–5 and the production-safety guidance below remain in force regardless.
 
