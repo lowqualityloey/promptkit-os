@@ -161,16 +161,19 @@ Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycl
      │                      │                      │
      └──────────────────────┼──────────────────────┘
                             │
-                 [ Verification & Merge ]
-                            │
-     ┌──────────────────────┼──────────────────────┐
-     ▼                      ▼                      ▼
-  pk:debug               pk:perf               pk:review
-(Empirical Root Cause) (Latency & Profiling) (Two-Axis Code Audit)
-     │                      │                      │
-     └──────────────────────┼──────────────────────┘
-                            │
-                        pk:commit
+                  [ Quality, Debt & Remediation ]
+                             │
+      ┌──────────────┬───────┴───────┬──────────────┐
+      ▼              ▼               ▼              ▼
+   pk:debug       pk:fix        pk:refactor      pk:perf
+(Root Cause)   (Remediation)   (Modernization)  (Profiling)
+      │              │               │              │
+      └──────────────┴───────┬───────┴───────┴──────┘
+                             │
+                         pk:review
+                   (Two-Axis Code Audit)
+                             │
+                         pk:commit
              (Atomic Conventional Commits)
                             │
                          pk:pr

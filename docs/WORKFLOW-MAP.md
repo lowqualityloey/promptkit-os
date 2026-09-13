@@ -181,6 +181,7 @@ graph TD
     
     Question5 -->|Bug/crash| Debug[pk:debug<br/>Scientific Debugging]
     Question5 -->|Review finding/remediation| Fix[pk:fix<br/>Surgical Remediation]
+    Question5 -->|Code refactoring/debt| Refactor[pk:refactor<br/>Safe Modernization]
     Question5 -->|Slow performance| Perf[pk:perf<br/>Performance Profiling]
     Question5 -->|Code quality| Review[pk:review<br/>Two-Axis Review]
     
@@ -229,6 +230,7 @@ graph TD
 |:---|:---|:---|
 | Fix a bug systematically | `pk:debug` | Root cause + regression test |
 | Surgically remediate review findings | `pk:fix` | Verified remediation + narrow diff |
+| Modernize code / pay down technical debt | `pk:refactor` | Golden Master pin + Mikado graph |
 | Optimize performance | `pk:perf` | `docs/perf/*.md` + benchmarks |
 | Review code quality | `pk:review` | Two-axis audit report |
 
@@ -276,6 +278,7 @@ graph LR
     subgraph "Quality Cluster"
         Debug[pk:debug]
         Fix[pk:fix]
+        Refactor[pk:refactor]
         Perf[pk:perf]
         Review[pk:review]
         Test[pk:test]
@@ -305,6 +308,8 @@ graph LR
     Review --> Commit
     Review -.-> Fix
     Fix --> Commit
+    Refactor --> Test
+    Refactor --> Commit
     Debug --> Test
     Perf --> Review
     
@@ -348,17 +353,22 @@ pk:debug → [Fix] → pk:test → pk:commit → pk:pr
 pk:perf → [Optimize] → pk:review → pk:commit
 ```
 
-### Sequence 4: Learning & Research
+### Sequence 4: Controlled Refactoring & Debt Remediation
+```
+pk:refactor → [Pin Golden Master] → [Mikado / Strangler Fig] → pk:test → pk:review → pk:commit
+```
+
+### Sequence 5: Learning & Research
 ```
 pk:tutor → [Practice] → pk:grill → [Strengthen]
 ```
 
-### Sequence 5: Codebase Onboarding
+### Sequence 6: Codebase Onboarding
 ```
 pk:onboard → pk:tutor → pk:plan → [Continue]
 ```
 
-### Sequence 6: Session or Role Handoff
+### Sequence 7: Session or Role Handoff
 ```
 [Work within Task Record scope] → pk:checkpoint → [Receiver validates revision, files, acceptance, blockers, invariants, next action] → [Resume]
 ```
@@ -375,6 +385,7 @@ Visual guide to workflow depth and time investment:
 | `pk:commit` | 2 min | ⚪ Low | Multiple/day |
 | `pk:review` | 5-10 min | 🟡 Medium | Before each PR |
 | `pk:fix` | 3-5 min | ⚪ Low | Surgical fix |
+| `pk:refactor` | 15-45 min | 🟡 Medium | Per refactor milestone |
 | `pk:debug` | Varies | 🟡 Medium | As needed |
 | `pk:tutor` | 10-20 min | 🟡 Medium | Daily learning |
 | `pk:checkpoint` | 3 min | ⚪ Low | Session end |
@@ -395,6 +406,7 @@ When you're stuck and need immediate help:
 ├─────────────────────────────────────────────────┤
 │  "I don't know what to do" → pk:route           │
 │  "This is broken" → pk:debug                    │
+│  "This code is messy / legacy" → pk:refactor    │
 │  "I'm confused" → pk:tutor                      │
 │  "Is this code good?" → pk:review               │
 │  "How do I...?" → pk:tutor                      │

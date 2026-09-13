@@ -1,6 +1,6 @@
 # PromptKit OS FAQ
 
-**The 16 questions every developer asks before adopting PromptKit OS.**
+**The 17 questions every developer asks before adopting PromptKit OS.**
 
 ---
 
@@ -477,7 +477,7 @@ Remember: **AI assistants aren't perfect**. PromptKit structures their reasoning
 
 | Dimension | `.cursorrules` / `CLAUDE.md` | Prompt Packs (spec-kit, BMad) | **PromptKit OS** |
 |:----------|:-----------------------------|:------------------------------|:-----------------|
-| **Scope** | Single instruction file for one tool | Workflow templates for one tool | 20 workflow files plus named aliases across all tools |
+| **Scope** | Single instruction file for one tool | Workflow templates for one tool | 21 workflow files plus named aliases across all tools |
 | **Persistence** | Dies with the chat session | Dies with the chat session | `docs/STATE.md` survives context resets |
 | **Database safety** | No schema guardrails | Varies | Expand-Contract only (phased migration) |
 | **Multi-agent** | Single agent | Single agent | Subagent delegation with compact synthesis |
@@ -553,6 +553,25 @@ For complete line-by-line token breakdowns and mathematical analysis, see [docs/
 - **Docker Desktop MCP Toolkit vs Direct stdio**:
   - In **Docker Desktop MCP Toolkit**: 1-click containerized profiles without needing Node.js or Python installed on the host OS.
   - In **Standard MCP Clients (Antigravity, Cursor, Claude Code, Cline)**: Configured directly via `npx` / `uvx` stdio in JSON settings with zero container overhead.
+
+---
+
+## 17. How does `pk:refactor` differ from standard TDD or `pk:debug`?
+
+**Short Answer**: `pk:debug` resolves broken behavior; standard TDD adds new behavior test-first. `pk:refactor` modernizes existing architecture **without changing observable behavior**, using Golden Master characterization testing, the Mikado method, and Strangler Fig migrations.
+
+**The Three Distinct Modes**:
+
+| Workflow | Primary Trigger | Invariant Rule | Key Technique |
+|:---------|:----------------|:---------------|:--------------|
+| **`pk:debug`** | "This is broken / failing / throwing errors" | Behavioral change expected (bug fixed) | Sub-3s reproduction loop, 3 falsifiable hypotheses, 5-Whys root cause |
+| **`pk:test`** | "Implement feature X test-first" | Behavioral change expected (feature added) | Red-Green-Refactor, test pyramid seams, fast unit boundaries |
+| **`pk:refactor`** | "This code works but is messy / rigid / legacy" | **Zero behavioral change allowed** | Golden Master pinning, Mikado dependency graph, Strangler Fig |
+
+**Why specialized refactoring matters**:
+- **Golden Master Pinning**: Captures a snapshot of current outputs (including quirks and legacy edge cases) before a single line of structural code is modified.
+- **The Mikado Method**: Graphs prerequisites for large refactorings. If an exploratory refactor breaks tests, changes are immediately reverted (`git reset --hard`) and the missing dependency is recorded as a leaf node.
+- **Strangler Fig Migrations**: Replaces legacy submodules incrementally behind facade adapters, preventing high-risk "big-bang" rewrites.
 
 ---
 

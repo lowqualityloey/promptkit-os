@@ -40,7 +40,7 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 | **Artifact Paths & Document Targets** | ~8 | ~245 tokens | Output destinations (`docs/specs/`, `docs/tasks/`, `docs/STATE.md`) |
 | **Total Baseline Static Overhead** | **91 lines** | **~1,928 tokens** | **Permanent footprint in system prompt (~90% savings vs. ~18.5k monolithic packs)** |
 
-By contrast, inlining all 20 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
+By contrast, inlining all 21 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
 
 ---
 
