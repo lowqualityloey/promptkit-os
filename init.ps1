@@ -34,25 +34,29 @@ if ($Help) {
     Write-Host "  --turbo             Turbo profile: Balanced + parallel subagent waves, 3-5x token cost"
     Write-Host "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
     Write-Host "  -Help               Show this help`n"
+    Write-Host "Interactive (TTY): If no profile flag is given and running in interactive host,"
+    Write-Host "  prompts visually: 1) Lite (Recommended) 2) Balanced (default) 3) Turbo (Experimental)`n"
     Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
     Write-Host "Examples:"
     Write-Host "  .\init.ps1 --lite"
     Write-Host "  .\init.ps1 --balanced C:\path\to\project"
-    Write-Host "  .\init.ps1 --turbo --experimental`n"
+    Write-Host "  .\init.ps1 --turbo --experimental"
+    Write-Host "  .\init.ps1 (interactive picker when TTY)`n"
     exit 0
 }
 
 # Handle switch aliases (allow --lite style via PS args parsing quirks)
-if ($Lite) { $Profile = "lite" }
-if ($Balanced) { $Profile = "balanced" }
-if ($Turbo) { $Profile = "turbo" }
+$ProfileSet = $false
+if ($Lite) { $Profile = "lite"; $ProfileSet = $true }
+if ($Balanced) { $Profile = "balanced"; $ProfileSet = $true }
+if ($Turbo) { $Profile = "turbo"; $ProfileSet = $true }
 
 # Also check $args for --lite style (when called via pwsh -File with --lite)
 foreach ($a in $args) {
     switch ($a) {
-        "--lite" { $Profile = "lite" }
-        "--balanced" { $Profile = "balanced" }
-        "--turbo" { $Profile = "turbo" }
+        "--lite" { $Profile = "lite"; $ProfileSet = $true }
+        "--balanced" { $Profile = "balanced"; $ProfileSet = $true }
+        "--turbo" { $Profile = "turbo"; $ProfileSet = $true }
         "--experimental" { $Experimental = $true }
         "--help" { 
             Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
@@ -65,6 +69,40 @@ foreach ($a in $args) {
             }
         }
     }
+}
+
+# Interactive TTY picker when no profile flag provided (visual decision for onboarding)
+# Shell-level equivalent of native interactive selection tools (ask_question)
+# Agent-level picker is in workflows/onboard.md
+if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
+    Write-Host "`n💡 PromptKit OS Profile Selection (visual decision)" -ForegroundColor Cyan
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+    Write-Host "  1) Lite (Recommended for new users) — 4 workflows, 845 tok, 80% value, fastest onboarding" -ForegroundColor Yellow
+    Write-Host "  2) Balanced (Recommended for teams) — 22 workflows, 2,076 tok, Level 0-3 adaptive ceremony [default]" -ForegroundColor White
+    Write-Host "  3) Turbo (Experimental) — Balanced + parallel waves, 3-5x cost, still requires human L3 approval" -ForegroundColor DarkGray
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+    Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
+    Write-Host "For CI/non-interactive, use flags: --lite, --balanced, --turbo --experimental`n" -ForegroundColor DarkGray
+    $choice = Read-Host "Choose profile [1-3, default 2]"
+    switch ($choice) {
+        "1" { $Profile = "lite"; $ProfileSet = $true }
+        "3" { 
+            Write-Host "`n⚠️  Turbo requires --experimental flag" -ForegroundColor Yellow
+            Write-Host "   Turbo uses parallel subagent waves (3-5x token cost) and is experimental." -ForegroundColor DarkGray
+            $confirm = Read-Host "Acknowledge experimental cost and proceed with Turbo? [y/N]"
+            if ($confirm -match "^[Yy]$") {
+                $Profile = "turbo"
+                $Experimental = $true
+                $ProfileSet = $true
+            } else {
+                Write-Host "Defaulting to Balanced" -ForegroundColor DarkGray
+                $Profile = "balanced"
+                $ProfileSet = $true
+            }
+        }
+        default { $Profile = "balanced"; $ProfileSet = $true }
+    }
+    Write-Host ""
 }
 
 if ($Profile -eq "turbo" -and -not $Experimental) {

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # PromptKit OS 1-Click Setup Script for Linux/macOS
 # Supports profiles: --lite, --balanced (default), --turbo --experimental
+# Includes interactive TTY picker when no flag provided (visual decision)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,6 +9,7 @@ DIR_NAME="$(basename "$SCRIPT_DIR")"
 
 # Default profile
 PROFILE="balanced"
+PROFILE_SET=0
 EXPERIMENTAL=0
 PROJECT_ROOT=""
 
@@ -16,12 +18,15 @@ for arg in "$@"; do
     case "$arg" in
         --lite)
             PROFILE="lite"
+            PROFILE_SET=1
             ;;
         --balanced)
             PROFILE="balanced"
+            PROFILE_SET=1
             ;;
         --turbo)
             PROFILE="turbo"
+            PROFILE_SET=1
             ;;
         --experimental)
             EXPERIMENTAL=1
@@ -36,6 +41,7 @@ for arg in "$@"; do
             echo -e "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
             echo -e "  -h, --help          Show this help\n"
             echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
+            echo -e "Interactive: When no flag provided and running in TTY, shows visual picker (1) Lite (Recommended) 2) Balanced 3) Turbo Experimental"
             echo -e "Examples:"
             echo -e "  ./init.sh --lite"
             echo -e "  ./init.sh --balanced /path/to/project"
@@ -70,6 +76,48 @@ if [[ -z "$PROJECT_ROOT" ]]; then
     else
         PROJECT_ROOT="$(pwd)"
     fi
+fi
+
+# Interactive TTY picker when no profile flag provided (visual decision for onboarding)
+# This is the shell-level equivalent of native interactive selection tools (ask_question)
+# Agent-level picker is in workflows/onboard.md which uses ask_question for same choice
+if [[ "$PROFILE_SET" -eq 0 && -t 0 && "$EXPERIMENTAL" -eq 0 ]]; then
+    echo -e "\n\033[0;36m💡 PromptKit OS Profile Selection (visual decision)\033[0m"
+    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e "  \033[1;33m1) Lite (Recommended for new users)\033[0m — 4 workflows (route, debug, commit, checkpoint) 845 tok, 80% value, fastest onboarding"
+    echo -e "  2) Balanced (Recommended for teams) — 22 workflows, 2,076 tok, Level 0-3 adaptive ceremony, full power [default]"
+    echo -e "  3) Turbo (Experimental) — Balanced + parallel subagent waves, 3-5x token cost, still requires human L3 approval"
+    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
+    echo -e "For CI/non-interactive, use flags: --lite, --balanced, --turbo --experimental"
+    echo ""
+    read -p "Choose profile [1-3, default 2]: " choice
+    case "$choice" in
+        1)
+            PROFILE="lite"
+            PROFILE_SET=1
+            ;;
+        3)
+            echo -e "\n\033[0;33m⚠️  Turbo requires --experimental flag\033[0m"
+            echo -e "   Turbo uses parallel subagent waves (3-5x token cost) and is experimental."
+            echo -e "   Run: ./init.sh --turbo --experimental"
+            read -p "Acknowledge experimental cost and proceed with Turbo? [y/N]: " confirm
+            if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                PROFILE="turbo"
+                EXPERIMENTAL=1
+                PROFILE_SET=1
+            else
+                echo "Defaulting to Balanced"
+                PROFILE="balanced"
+                PROFILE_SET=1
+            fi
+            ;;
+        *)
+            PROFILE="balanced"
+            PROFILE_SET=1
+            ;;
+    esac
+    echo ""
 fi
 
 # Validate turbo requires experimental
@@ -122,9 +170,7 @@ fi
 
 # Inject or update profile field in PROMPTKIT.md (2+1 modes)
 if [[ -f "$PROJECT_PROFILE" ]]; then
-    # Ensure profile line exists for machine parsing
     if grep -q "^profile:" "$PROJECT_PROFILE" 2>/dev/null; then
-        # Update existing profile line
         if sed --version >/dev/null 2>&1; then
             sed -i "s/^profile:.*/profile: $PROFILE/" "$PROJECT_PROFILE"
         else
@@ -132,7 +178,6 @@ if [[ -f "$PROJECT_PROFILE" ]]; then
         fi
         echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md profile: $PROFILE"
     else
-        # Add profile section at top after title
         TMP_FILE=$(mktemp)
         {
             head -n 1 "$PROJECT_PROFILE"
@@ -249,7 +294,6 @@ if [[ "$SCRIPT_DIR" == "$PROJECT_ROOT"* ]]; then
     KIT_DIR_REL="${SCRIPT_DIR#$PROJECT_ROOT/}"
 fi
 
-# Select template based on profile: lite uses lite template (845 tok), balanced/turbo use full (2076 tok)
 if [[ "$PROFILE" == "lite" ]]; then
     TEMPLATE_DIRECTIVE="$SCRIPT_DIR/templates/agent-directive-lite-template.md"
     if [[ ! -f "$TEMPLATE_DIRECTIVE" ]]; then
