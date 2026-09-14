@@ -52,14 +52,14 @@ else { NotOk "no flag should default balanced (rc=$LASTEXITCODE, profile=$(Profi
 # 2. --lite: profile lite + Lite directive injected.
 $d = NewDir "t2"
 & pwsh -NoProfile -File $Init --lite $d 2>&1 | Out-Null
-$agents = Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue | Out-String
+$agents = (Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue -Raw) -replace "\r\n", "`n"
 if ((ProfileOf $d) -eq "lite" -and $agents -match "PromptKit OS Lite") { Ok "--lite sets profile lite and injects Lite directive" }
 else { NotOk "--lite install (profile=$(ProfileOf $d))" }
 
 # 3. --balanced: profile balanced + full directive header.
 $d = NewDir "t3"
 & pwsh -NoProfile -File $Init --balanced $d 2>&1 | Out-Null
-$agents = Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue | Out-String
+$agents = (Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue -Raw) -replace "\r\n", "`n"
 if ((ProfileOf $d) -eq "balanced" -and $agents -match "(?m)^## PromptKit OS: Engineering Operating System$") { Ok "--balanced sets profile balanced and injects full directive" }
 else { NotOk "--balanced install (profile=$(ProfileOf $d))" }
 
@@ -87,7 +87,7 @@ else { NotOk "env-var escape test (rc=$LASTEXITCODE, profile=$(ProfileOf $d))" }
 $d = NewDir "t7"
 & pwsh -NoProfile -File $Init --lite $d 2>&1 | Out-Null
 & pwsh -NoProfile -File $Init --balanced $d 2>&1 | Out-Null
-$agentsRaw = Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue | Out-String
+$agentsRaw = (Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue -Raw) -replace "\r\n", "`n"
 $markerCount = ([regex]::Matches($agentsRaw, "(?m)^<!-- PROMPTKIT_START -->$")).Count
 if ((ProfileOf $d) -eq "balanced" -and $markerCount -eq 1 -and $agentsRaw -match "(?m)^## PromptKit OS: Engineering Operating System$") { Ok "lite -> balanced upgrade is idempotent (profile flips, one directive block)" }
 else { NotOk "upgrade re-run (profile=$(ProfileOf $d), markers=$markerCount)" }
