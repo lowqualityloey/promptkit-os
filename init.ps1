@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
     PromptKit OS 1-Click Setup Script for Windows (PowerShell)
+    Supports profiles: --lite, --balanced (default), --turbo --experimental
 .DESCRIPTION
     Initializes PromptKit OS in your project:
     - Scaffolds project documentation directories (docs/adrs, docs/specs, docs/rca, docs/spikes, docs/design)
-    - Creates PROMPTKIT.md project profile if missing
+    - Creates PROMPTKIT.md project profile if missing, injects profile: lite|balanced|turbo
     - Injects or updates PromptKit OS directives in AGENTS.md, CLAUDE.md, GEMINI.md, .cursorrules, .cursor/rules/*.mdc, .windsurfrules, .github/copilot-instructions.md, .clinerules, .traerules, or .opencode/rules.md
 #>
 
@@ -12,10 +13,67 @@
 param (
     [Parameter(Position = 0)]
     [Alias("ProjectRoot")]
-    [string]$TargetDir = ""
+    [string]$TargetDir = "",
+    [ValidateSet("lite","balanced","turbo")]
+    [string]$Profile = "balanced",
+    [switch]$Lite,
+    [switch]$Balanced,
+    [switch]$Turbo,
+    [switch]$Experimental,
+    [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($Help) {
+    Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
+    Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
+    Write-Host "Options:"
+    Write-Host "  --lite              Lite profile: 4 workflows (route, debug, commit, checkpoint) <1,500 tok, 80% value"
+    Write-Host "  --balanced          Balanced profile: full 22 workflows, Level 0-3 adaptive ceremony (default)"
+    Write-Host "  --turbo             Turbo profile: Balanced + parallel subagent waves, 3-5x token cost"
+    Write-Host "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
+    Write-Host "  -Help               Show this help`n"
+    Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
+    Write-Host "Examples:"
+    Write-Host "  .\init.ps1 --lite"
+    Write-Host "  .\init.ps1 --balanced C:\path\to\project"
+    Write-Host "  .\init.ps1 --turbo --experimental`n"
+    exit 0
+}
+
+# Handle switch aliases (allow --lite style via PS args parsing quirks)
+if ($Lite) { $Profile = "lite" }
+if ($Balanced) { $Profile = "balanced" }
+if ($Turbo) { $Profile = "turbo" }
+
+# Also check $args for --lite style (when called via pwsh -File with --lite)
+foreach ($a in $args) {
+    switch ($a) {
+        "--lite" { $Profile = "lite" }
+        "--balanced" { $Profile = "balanced" }
+        "--turbo" { $Profile = "turbo" }
+        "--experimental" { $Experimental = $true }
+        "--help" { 
+            Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
+            Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
+            exit 0
+        }
+        default {
+            if ($a -notlike "--*" -and $TargetDir -eq "") {
+                $TargetDir = $a
+            }
+        }
+    }
+}
+
+if ($Profile -eq "turbo" -and -not $Experimental) {
+    Write-Host "`n[!] --turbo requires --experimental flag" -ForegroundColor Red
+    Write-Host "   Turbo uses parallel subagent waves (3-5x token cost) and is experimental." -ForegroundColor DarkGray
+    Write-Host "   It still requires human approval for Level 3 (releases/tags/deploys)." -ForegroundColor DarkGray
+    Write-Host "   Run: .\init.ps1 --turbo --experimental [project-root]`n" -ForegroundColor DarkGray
+    exit 1
+}
 
 # Determine PromptKit OS directory and Host Project Root
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -30,12 +88,19 @@ if ($TargetDir -ne "") {
 
 $ProjectRootPath = if ($ProjectRoot.Path) { $ProjectRoot.Path } else { $ProjectRoot.ToString() }
 
-Write-Host "`n🚀 Initializing PromptKit OS..." -ForegroundColor Cyan
+Write-Host "`n🚀 Initializing PromptKit OS ($Profile profile)..." -ForegroundColor Cyan
 Write-Host "   Host Project: $ProjectRoot" -ForegroundColor DarkGray
-Write-Host "   Engine Path:  $ScriptDir`n" -ForegroundColor DarkGray
+Write-Host "   Engine Path:  $ScriptDir" -ForegroundColor DarkGray
+Write-Host "   Profile:      $Profile" -ForegroundColor DarkGray
+if ($Profile -eq "turbo") {
+    Write-Host "   ⚠️  Turbo: 3-5x token cost, experimental, parallel waves. Human approval still required for L3." -ForegroundColor Yellow
+}
+if ($Profile -eq "lite") {
+    Write-Host "   ✨ Lite: 4 workflows, <1,500 tok, 80% value — perfect for onboarding" -ForegroundColor Green
+}
+Write-Host ""
 
 # 1. Ensure Core Documentation Directories Exist in Host Project
-# (Specialized subdirectories like docs/auth, docs/data are created on-demand by workflows)
 $DocDirs = @(
     "docs/tasks",
     "docs/specs",
@@ -51,7 +116,7 @@ foreach ($dir in $DocDirs) {
     }
 }
 
-# 2. Scaffold PROMPTKIT.md if missing
+# 2. Scaffold PROMPTKIT.md if missing + inject profile
 $ProjectProfile = Join-Path $ProjectRoot "PROMPTKIT.md"
 $TemplateProfile = Join-Path $ScriptDir "templates/project-profile-template.md"
 
@@ -62,6 +127,35 @@ if (-not (Test-Path $ProjectProfile)) {
     }
 } else {
     Write-Host "  [✓] PROMPTKIT.md already present" -ForegroundColor DarkGray
+}
+
+# Inject or update profile field in PROMPTKIT.md (2+1 modes)
+if (Test-Path $ProjectProfile) {
+    $content = Get-Content $ProjectProfile -Raw -ErrorAction SilentlyContinue
+    if ($null -eq $content) { $content = "" }
+    if ($content -match "^profile:") {
+        $content = $content -replace "^profile:.*", "profile: $Profile"
+        [System.IO.File]::WriteAllText($ProjectProfile, $content, (New-Object System.Text.UTF8Encoding($false)))
+        Write-Host "  [✓] Updated PROMPTKIT.md profile: $Profile" -ForegroundColor Yellow
+    } else {
+        $firstLine = (Get-Content $ProjectProfile -TotalCount 1 -ErrorAction SilentlyContinue)
+        $rest = ""
+        if ((Get-Content $ProjectProfile | Measure-Object).Count -gt 1) {
+            $rest = (Get-Content $ProjectProfile | Select-Object -Skip 1 | Out-String)
+        }
+        $profileSection = @"
+
+## 0. PromptKit OS Profile
+- **Profile**: $Profile
+- **Installed**: $(Get-Date -Format "yyyy-MM-dd")
+- **Engine**: .promptkit
+- **Upgrade**: Run `.promptkit/init.ps1 --balanced` for full 22 workflows, or `--turbo --experimental` for parallel waves
+
+"@
+        $newContent = "$firstLine`n$profileSection`n$rest`n`nprofile: $Profile`n"
+        [System.IO.File]::WriteAllText($ProjectProfile, $newContent, (New-Object System.Text.UTF8Encoding($false)))
+        Write-Host "  [+] Set PROMPTKIT.md profile: $Profile" -ForegroundColor Green
+    }
 }
 
 $DesignProfile = Join-Path $ProjectRoot "DESIGN.md"
@@ -138,7 +232,6 @@ foreach ($file in $AgentFileCandidates) {
     $path = Join-Path $ProjectRoot $file
     if (Test-Path $path) {
         if (Test-Path $path -PathType Container) {
-            # Target is a directory (e.g., modern .clinerules/ folder layout)
             if ($file -eq ".clinerules") {
                 $dirTarget = Join-Path $path "promptkit.md"
                 if (-not (Test-Path $dirTarget)) {
@@ -162,14 +255,24 @@ if ($TargetsFound.Count -eq 0) {
     Write-Host "  [+] Created default agent configurations: AGENTS.md & CLAUDE.md" -ForegroundColor Green
 }
 
-# 4. Directive Block (Loaded from Canonical Template)
+# 4. Directive Block (Loaded from Canonical Template based on profile)
 $KitDirRel = if ($ScriptDir.StartsWith($ProjectRootPath)) {
     $ScriptDir.Substring($ProjectRootPath.Length).TrimStart("\", "/") -replace "\\", "/"
 } else {
     ".promptkit"
 }
 
-$TemplateDirective = Join-Path $ScriptDir "templates/agent-directive-template.md"
+# Select template based on profile: lite uses lite template (845 tok), balanced/turbo use full (2076 tok)
+if ($Profile -eq "lite") {
+    $TemplateDirective = Join-Path $ScriptDir "templates/agent-directive-lite-template.md"
+    if (-not (Test-Path $TemplateDirective)) {
+        Write-Host "Warning: Lite template not found, falling back to full template" -ForegroundColor Yellow
+        $TemplateDirective = Join-Path $ScriptDir "templates/agent-directive-template.md"
+    }
+} else {
+    $TemplateDirective = Join-Path $ScriptDir "templates/agent-directive-template.md"
+}
+
 if (Test-Path $TemplateDirective) {
     $RawTemplate = [System.IO.File]::ReadAllText($TemplateDirective, [System.Text.Encoding]::UTF8)
     $Directive = ($RawTemplate -replace '\$KIT_DIR_REL', $KitDirRel).TrimEnd("`r", "`n")
@@ -232,7 +335,7 @@ foreach ($targetPath in $TargetsFound) {
         $updated = [regex]::Replace($content, $pattern, $evaluator)
 
         [System.IO.File]::WriteAllText($targetPath, $updated, $utf8NoBom)
-        Write-Host "  [✓] Updated PromptKit OS directives in: $relTarget" -ForegroundColor Yellow
+        Write-Host "  [✓] Updated PromptKit OS directives in: $relTarget (profile: $Profile)" -ForegroundColor Yellow
     } else {
         $isCrlf = $content.Contains("`r`n")
         $targetDirective = if ($isCrlf) {
@@ -252,9 +355,19 @@ foreach ($targetPath in $TargetsFound) {
         }
         $updated = $content + $prefix + $targetDirective
         [System.IO.File]::WriteAllText($targetPath, $updated, $utf8NoBom)
-        Write-Host "  [+] Injected PromptKit OS directives into: $relTarget" -ForegroundColor Green
+        Write-Host "  [+] Injected PromptKit OS directives into: $relTarget (profile: $Profile)" -ForegroundColor Green
     }
 }
 
-Write-Host "`n✨ PromptKit OS successfully configured for $ProjectRoot!" -ForegroundColor Cyan
-Write-Host "   Start by asking your AI: 'pk:sync', 'pk:plan', or 'pk:tutor'`n" -ForegroundColor White
+Write-Host "`n✨ PromptKit OS successfully configured for $ProjectRoot! ($Profile profile)" -ForegroundColor Cyan
+if ($Profile -eq "lite") {
+    Write-Host "   Lite: 4 workflows (route, debug, commit, checkpoint) — 80% value, <1,500 tok" -ForegroundColor Green
+    Write-Host "   Upgrade anytime: .promptkit/init.ps1 --balanced for full 22 workflows" -ForegroundColor DarkGray
+} elseif ($Profile -eq "balanced") {
+    Write-Host "   Balanced: 22 workflows, Level 0-3 adaptive ceremony — full power" -ForegroundColor White
+    Write-Host "   For onboarding: .promptkit/init.ps1 --lite for minimal setup" -ForegroundColor DarkGray
+} else {
+    Write-Host "   Turbo (Experimental): Balanced + parallel waves, 3-5x token cost" -ForegroundColor Yellow
+    Write-Host "   Human approval still required for Level 3 (releases/tags/deploys)" -ForegroundColor DarkGray
+}
+Write-Host "   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'`n" -ForegroundColor White
