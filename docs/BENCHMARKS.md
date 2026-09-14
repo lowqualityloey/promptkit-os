@@ -21,7 +21,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                   PROMPTKIT OS JIT FILESYSTEM MODEL                     │
-│ Baseline Static Injection: Router Directive (877 tok Lite / 2,110 Bal)  │
+│ Baseline Static Injection: Router Directive (877 tok Lite / 2,103 Bal)  │
 │ On-Demand Loading: Tool loads only target workflow file (e.g. pk:debug) │
 │ Context Window Preservation: ~89-96% savings on initial static overhead │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -38,8 +38,8 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 | Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs 18.5k Monolithic | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
 | **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 3,509 | **877 tok** | **95% static** | Onboarding, new users, tiny fixes |
-| **Balanced** | `agent-directive-template.md` (23 workflows) | 8,438 | **2,110 tok** | **89% static** | Teams, production, default |
-| **Turbo** | same as Balanced + parallel waves | 8,438 | 2,110 tok + subagents (3-5x total) | 89% static, higher total | Experimental, greenfield, accepts cost |
+| **Balanced** | `agent-directive-template.md` (23 workflows) | 8,413 | **2,103 tok** | **89% static** | Teams, production, default |
+| **Turbo** | same as Balanced + parallel waves | 8,413 | 2,103 tok + subagents (3-5x total) | 89% static, higher total | Experimental, greenfield, accepts cost |
 
 > **Clarification:** The often-quoted "~90% savings" is **static overhead only** (directive vs monolithic inlining). Per-task payload (directive + workflow + gate) saves 28-54% after Change A (removing mandatory `route.md` 6,962 tok load). See §3 for per-task numbers.
 
@@ -50,7 +50,7 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 | **Smart Auto-Route & Guardrails** | ~22 | ~465 tokens | Triage rules (Fast-Path zero overhead, Anti-slop, Secrets hygiene, MCP precedence, Telemetry cards) |
 | **Workflows, Protocols & Task Ceremony Levels** | ~20 | ~530 tokens | Lazy convention routing & inline Level 0–3 ceremony classification |
 | **Artifact Paths & Document Targets** | ~8 | ~245 tokens | Output destinations (`docs/specs/`, `docs/tasks/`, `docs/STATE.md`) |
-| **Total Baseline Static Overhead (Balanced)** | **93 lines** | **~2,110 tokens** | **Permanent footprint in system prompt (~89% static saving vs. ~18.5k monolithic)** |
+| **Total Baseline Static Overhead (Balanced)** | **93 lines** | **~2,103 tokens** | **Permanent footprint in system prompt (~89% static saving vs. ~18.5k monolithic)** |
 | **Total Baseline Static Overhead (Lite)** | **~49 lines** | **~877 tokens** | **95% static saving, 58% saving vs Balanced** |
 
 By contrast, inlining all 23 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
@@ -74,7 +74,7 @@ Gate coverage: the static dual-profile budget runs in **both** Linux and Windows
 
 ## 3. Dynamic Per-Task Context Economics & Runtime Benchmarks
 
-PromptKit OS benchmarks both the **static footprint** (877 tok Lite, 2,110 tok Balanced) and the **dynamic per-task runtime context**. 
+PromptKit OS benchmarks both the **static footprint** (877 tok Lite, 2,103 tok Balanced) and the **dynamic per-task runtime context**. 
 
 By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without preloading `workflows/route.md` (~6,962 tokens). This is Change A from `docs/token-efficiency-review.md` — verified saving 6,915 tok per task.
 
@@ -82,8 +82,8 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 - SHA: `fc98f2f` (after 2+1 profiles), also valid at `c34be80` (before profiles, Balanced only)
 - Method: `bytes / 4` per `measure-tokens.sh` convention, sum of directive + workflow + `code-quality-gate.md` + relevant template
 - Baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A)
-- JIT payload = directive 1,929-2,110 + workflow + gate (new behavior, route.md only when ambiguous)
-- Lite vs Balanced: Lite uses 877 tok directive, Balanced uses 2,110 tok
+- JIT payload = directive 1,929-2,103 + workflow + gate (new behavior, route.md only when ambiguous)
+- Lite vs Balanced: Lite uses 877 tok directive, Balanced uses 2,103 tok
 
 ### Measured Per-Task Context Breakdown (bytes / 4 convention, after Change A + B):
 

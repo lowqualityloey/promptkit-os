@@ -98,7 +98,7 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: Local battery, all green at HEAD: behavioral 68/68 (Scenario M includes on-disk count==23 tripwire + stale 21/22 detector); token budget harness 6/6; profile matrix 8/8 with Section 0 body-flip; init safety suite rc=0; `validate-references.sh` 0 errors; `measure-tokens.sh --strict` PASS (BALANCED 2,110<=2,500; LITE 877<=1,500); `measure-per-task-tokens.sh --strict` PASS all profiles; `validate-execution-control.sh --root .` reports 0 diagnostics for this record.
+- **Verification Evidence**: Local battery, all green at HEAD: behavioral 68/68 (Scenario M includes on-disk count==23 tripwire + stale 21/22 detector); token budget harness 6/6; profile matrix 8/8 with Section 0 body-flip; init safety suite rc=0; `validate-references.sh` 0 errors; `measure-tokens.sh --strict` PASS (BALANCED 2,103<=2,500; LITE 877<=1,500); `measure-per-task-tokens.sh --strict` PASS all profiles; `validate-execution-control.sh --root .` reports 0 diagnostics for this record.
 - **Behavior IDs**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
@@ -110,7 +110,7 @@
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
 - **Completion State**: `awaiting_review`
-- **Acceptance Results**: AC-1 Complete (Section 0 body sync + matrix assertion); AC-2 Complete (workflow guard text + inherited init guard, matrix test 4); AC-3 Complete (non-interactive rule in workflow Phase 2.4, matrix test 7); AC-4 Complete (all claims reconciled, Scenario M tripwires green); AC-5 Complete (strict gate green at 877/2,110, docs cite measured values)
+- **Acceptance Results**: AC-1 Complete (Section 0 body sync + matrix assertion); AC-2 Complete (workflow guard text + inherited init guard, matrix test 4); AC-3 Complete (non-interactive rule in workflow Phase 2.4, matrix test 7); AC-4 Complete (all claims reconciled, Scenario M tripwires green); AC-5 Complete (strict gate green at 877/2,103, docs cite measured values)
 - **Changed-File Summary**: 1 new workflow, 1 task record, 2 directives, 1 project template, 2 installer scripts, 4 test harnesses, 8 docs reconciled
 - **Completion Exception**: `None`
 - **Completion Decision and Timestamp**: `awaiting_review, Implementor agent, 2026-09-14 07:10 UTC`

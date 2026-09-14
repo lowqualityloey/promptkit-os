@@ -1,7 +1,7 @@
 # Runtime Profile Switcher Workflow (Lite / Balanced / Turbo)
 
 ## Fast Shorthand
-Trigger anytime with: `pk:profile` (or `/pk-profile`, `pk:switch-profile`)
+Trigger anytime with: `pk:profile` (or `/pk-profile`)
 
 ## Mission
 Switch the workspace's PromptKit OS profile **at runtime, in-session**, without the developer leaving the chat or remembering installer semantics. Detects the active profile, presents the same visual decision as onboarding, then applies the change through the already-tested, idempotent `init.sh` / `init.ps1` re-injection path and verifies the result mechanically.

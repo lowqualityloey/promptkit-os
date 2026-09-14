@@ -84,7 +84,7 @@ if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive
     Write-Host "`n💡 PromptKit OS Profile Selection (visual decision)" -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
     Write-Host "  1) Lite (Recommended for new users) — 6 utility workflows, 877 tok, 80% value, fastest onboarding" -ForegroundColor Yellow
-    Write-Host "  2) Balanced (Recommended for teams) — 23 workflows, 2,110 tok, Level 0-3 adaptive ceremony [default]" -ForegroundColor White
+    Write-Host "  2) Balanced (Recommended for teams) — 23 workflows, 2,103 tok, Level 0-3 adaptive ceremony [default]" -ForegroundColor White
     Write-Host "  3) Turbo (Experimental) — Balanced + parallel waves, 3-5x cost, still requires human L3 approval" -ForegroundColor DarkGray
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
     Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
@@ -307,7 +307,7 @@ $KitDirRel = if ($ScriptDir.StartsWith($ProjectRootPath)) {
     ".promptkit"
 }
 
-# Select template based on profile: lite uses lite template (877 tok), balanced/turbo use full (2110 tok)
+# Select template based on profile: lite uses lite template (877 tok), balanced/turbo use full (2103 tok)
 if ($Profile -eq "lite") {
     $TemplateDirective = Join-Path $ScriptDir "templates/agent-directive-lite-template.md"
     if (-not (Test-Path $TemplateDirective)) {
