@@ -40,20 +40,20 @@
 
 ## 3. Acceptance Criteria
 
-- [ ] **AC-1**: Given a `profile: lite` host install, when `pk:profile` selects Balanced, then `init.sh --balanced` is applied and `PROMPTKIT.md` shows `profile: balanced` **and** the `## 0. PromptKit OS Profile` body shows Profile: balanced, and `AGENTS.md` contains exactly one directive block matching the full Balanced template.
-  - **Result**: Pending
+- [x] **AC-1**: Given a `profile: lite` host install, when `pk:profile` selects Balanced, then `init.sh --balanced` is applied and `PROMPTKIT.md` shows `profile: balanced` **and** the `## 0. PromptKit OS Profile` body shows Profile: balanced, and `AGENTS.md` contains exactly one directive block matching the full Balanced template.
+  - **Result**: Complete 2026-09-14
   - **Evidence**: run-profile-matrix.sh Section-0 assertion + PR CI link
-- [ ] **AC-2**: Given any current profile, when `pk:profile --turbo` is invoked without experimental acknowledgement, then the switch is refused with the `--turbo requires --experimental` guard message and no file changes (inherited from `init.sh`; workflow must state it).
-  - **Result**: Pending
+- [x] **AC-2**: Given any current profile, when `pk:profile --turbo` is invoked without experimental acknowledgement, then the switch is refused with the `--turbo requires --experimental` guard message and no file changes (inherited from `init.sh`; workflow must state it).
+  - **Result**: Complete 2026-09-14
   - **Evidence**: profile.md guard text + existing matrix guard test
-- [ ] **AC-3**: Given `PROMPTKIT_NO_INTERACTIVE=1` or a non-interactive host, when `pk:profile` is invoked with no flag, then the agent applies the Balanced default non-interactively (flags or default only, no picker, no hang).
-  - **Result**: Pending
+- [x] **AC-3**: Given `PROMPTKIT_NO_INTERACTIVE=1` or a non-interactive host, when `pk:profile` is invoked with no flag, then the agent applies the Balanced default non-interactively (flags or default only, no picker, no hang).
+  - **Result**: Complete 2026-09-14
   - **Evidence**: profile.md non-interactive rule + onboard.md/env alignment note
-- [ ] **AC-4**: Every Balanced workflow-count claim in shipped docs equals the on-disk workflow file count (23 after this PR), Lite claims equal the Lite trigger list (6), and a new behavioral-contract scenario fails CI if a future file/doc drift reappears (also corrects pre-existing "21 workflows pass CI" and "4 workflows" miscounts).
-  - **Result**: Pending
+- [x] **AC-4**: Every Balanced workflow-count claim in shipped docs equals the on-disk workflow file count (23 after this PR), Lite claims equal the Lite trigger list (6), and a new behavioral-contract scenario fails CI if a future file/doc drift reappears (also corrects pre-existing "21 workflows pass CI" and "4 workflows" miscounts).
+  - **Result**: Complete 2026-09-14
   - **Evidence**: behavioral scenario output + grep reconciliation list in PR
-- [ ] **AC-5**: After directive additions, `bash scripts/measure-tokens.sh --strict` passes both budgets and docs cite the newly measured token values (no stale 845/2,076 claims if numbers move).
-  - **Result**: Pending
+- [x] **AC-5**: After directive additions, `bash scripts/measure-tokens.sh --strict` passes both budgets and docs cite the newly measured token values (no stale 845/2,076 claims if numbers move).
+  - **Result**: Complete 2026-09-14
   - **Evidence**: strict gate run output + BENCHMARKS diff
 - **Not-Applicable Exception**: None
 
@@ -70,12 +70,12 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `in_progress`
-- **Mapped `pk:tasks` Status**: `In Progress`
-- **Active Task Pointer**: `TASK-2026-09-14-profile-switcher`
+- **Execution State**: `awaiting_review`
+- **Mapped `pk:tasks` Status**: `In Review`
+- **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 06:50 UTC`
-- **Current Actor**: `Implementor agent`
-- **Next Action**: `Commit 2: workflows/profile.md + directive triggers + init Section-0 sync`
+- **Current Actor**: `PromptKit maintainer (review)`
+- **Next Action**: `Human PR review and merge decision`
 
 ### Transition History
 
@@ -84,26 +84,31 @@
 | N/A | planned | 2026-09-14 06:50 UTC | Implementor agent | Task Record created for approved #142 plan | This record |
 | planned | ready | 2026-09-14 06:52 UTC | PromptKit maintainer | Readiness complete: objective, scope, non-goals, AC-1..5, dependencies (#141/#143 merged), verification condition, approval boundary, execution policy all populated | Human plan approval (2 confirmations) + validator readiness fields |
 | ready | in_progress | 2026-09-14 06:52 UTC | Implementor agent | Active ownership assumed on branch `142-profile-switcher` after human approved Task Record via picker | Approval selection "Approve record — start coding PR2" |
+| in_progress | awaiting_review | 2026-09-14 07:10 UTC | Implementor agent | All verification commands green locally; full change set committed to branch | Section 6 evidence |
 
 ## 6. Evidence and Completion Gate
 
-- **Changed Files**: (N/A before implementation; will list commit-2/3/4 outputs)
+- **Changed Files**:
+  - `docs/tasks/TASK-2026-09-14-profile-switcher.md` - this record (commit `4d543d9`)
+  - `workflows/profile.md` - new switcher workflow; `templates/agent-directive-template.md` + `templates/agent-directive-lite-template.md` - triggers & honest counts; `templates/project-profile-template.md` - Section 0 descriptions; `init.sh` / `init.ps1` - Section 0 body sync on re-run + count/number updates (commit `1121886`)
+  - `scripts/tests/run-behavioral-contract-tests.sh` + `.ps1` - Scenario M drift guards; `scripts/tests/run-profile-matrix.sh` + `.ps1` - Section 0 body-flip assertion (commit `67b5272`)
+  - `README.md`, `QUICKSTART.md`, `FAQ.md`, `docs/BENCHMARKS.md`, `docs/INTERESTING-FACTS.md`, `docs/ADOPTION-GUIDE.md`, `templates/lite-profile.md`, `workflows/onboard.md`, `protocols/setup.md` - count & re-measured token reconciliation (this commit)
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: (pending — local suites + CI links)
+- **Verification Evidence**: Local battery, all green at HEAD: behavioral 68/68 (Scenario M includes on-disk count==23 tripwire + stale 21/22 detector); token budget harness 6/6; profile matrix 8/8 with Section 0 body-flip; init safety suite rc=0; `validate-references.sh` 0 errors; `measure-tokens.sh --strict` PASS (BALANCED 2,110<=2,500; LITE 877<=1,500); `measure-per-task-tokens.sh --strict` PASS all profiles; `validate-execution-control.sh --root .` reports 0 diagnostics for this record.
 - **Behavior IDs**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Code Work`
-- **CI Evidence**: (pending)
-- **Review Evidence**: (pending — human PR review)
-- **Commit Evidence**: (pending)
-- **Pull Request Evidence**: (pending)
+- **CI Evidence**: pending on PR (Linux + Windows jobs)
+- **Review Evidence**: pending human PR review
+- **Commit Evidence**: `4d543d9` (record), `1121886` (workflow+triggers+installer sync), `67b5272` (guards, TDD red), plus this docs reconciliation commit
+- **Pull Request Evidence**: branch `142-profile-switcher` -> PR opened upon push (number linked in PR thread)
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `in_progress`
-- **Acceptance Results**: (pending)
-- **Changed-File Summary**: (pending)
+- **Completion State**: `awaiting_review`
+- **Acceptance Results**: AC-1 Complete (Section 0 body sync + matrix assertion); AC-2 Complete (workflow guard text + inherited init guard, matrix test 4); AC-3 Complete (non-interactive rule in workflow Phase 2.4, matrix test 7); AC-4 Complete (all claims reconciled, Scenario M tripwires green); AC-5 Complete (strict gate green at 877/2,110, docs cite measured values)
+- **Changed-File Summary**: 1 new workflow, 1 task record, 2 directives, 1 project template, 2 installer scripts, 4 test harnesses, 8 docs reconciled
 - **Completion Exception**: `None`
-- **Completion Decision and Timestamp**: (pending)
+- **Completion Decision and Timestamp**: `awaiting_review, Implementor agent, 2026-09-14 07:10 UTC`

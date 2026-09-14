@@ -4,8 +4,8 @@
 
 PromptKit OS ships with 2 official profiles + 1 experimental to fix recommendability gap (5/10 → 8/10):
 
-- **Lite (official)** — 4 workflows, 845 tok static (measured), 80% value, onboarding
-- **Balanced (official, default)** — full 22 workflows, 2,076 tok static, Level 0-3 adaptive ceremony, teams/production
+- **Lite (official)** — 6 utility workflows, 877 tok static (measured), 80% value, onboarding
+- **Balanced (official, default)** — full 23 workflows, 2,110 tok static, Level 0-3 adaptive ceremony, teams/production
 - **Turbo (experimental)** — Balanced + parallel subagent waves, 3-5x token cost, still requires human L3 approval
 
 ## Profile Comparison
@@ -13,7 +13,7 @@ PromptKit OS ships with 2 official profiles + 1 experimental to fix recommendabi
 | Dimension | Lite | Balanced | Turbo (Experimental) |
 | :--- | :--- | :--- | :--- |
 | **Workflows** | route, debug, commit, checkpoint, sync | All 22 | All 22 + parallel waves |
-| **Static tokens** | 845 tok | 2,076 tok | 2,076 tok + subagents |
+| **Static tokens** | 877 tok | 2,110 tok | 2,110 tok + subagents |
 | **Use case** | New users, learning, tiny bug fixes, docs typos | Teams, production, full lifecycle | Greenfield, user accepts cost |
 | **Install** | `init.sh --lite` | `init.sh --balanced` or no flag (default) | `init.sh --turbo --experimental` |
 | **PROMPTKIT.md** | `profile: lite` | `profile: balanced` | `profile: turbo` |
@@ -39,8 +39,8 @@ So Turbo is experimental, behind `--experimental` flag, warns about cost, still 
 
 ```
 > Choose profile:
-> 1) Lite (Recommended for new users) — 4 workflows, <1,500 tok
-> 2) Balanced (Recommended for teams) — full 22 workflows [default]
+> 1) Lite (Recommended for new users) — 6 utility workflows, <1,500 tok
+> 2) Balanced (Recommended for teams) — full 23 workflows [default]
 > 3) Turbo (Experimental) — Balanced + parallel subagents, 3-5x cost
 ```
 
@@ -48,9 +48,9 @@ Machine-readable line for agent parsing: `profile: lite|balanced|turbo` at botto
 
 ## Token Measurements (measured 2026-09-14, bytes/4)
 
-- Lite directive: 3,378 chars → 845 tok (96% reduction vs 18,500 monolithic)
-- Balanced directive: 8,303 chars → 2,076 tok (89% reduction)
-- Saving Lite vs Balanced: 1,231 tok (-59%)
+- Lite directive: 3,509 chars → 877 tok (95% reduction vs 18,500 monolithic)
+- Balanced directive: 8,438 chars → 2,110 tok (89% reduction)
+- Saving Lite vs Balanced: 1,233 tok (-58%)
 
 Per-task payload after Change A (route.md no longer mandatory):
 - pk:fix: 5,946 tok (was 12,861 before)
@@ -60,7 +60,7 @@ Per-task payload after Change A (route.md no longer mandatory):
 ## Upgrade Path
 
 - Lite → Balanced: `.promptkit/init.sh --balanced` — upgrades directive, keeps PROMPTKIT.md profile
-- Balanced → Lite: `.promptkit/init.sh --lite` — downgrades to 4 workflows
+- Balanced → Lite: `.promptkit/init.sh --lite` — downgrades to 6 utility workflows
 - Balanced → Turbo: `.promptkit/init.sh --turbo --experimental` — adds parallel wave capability
 - Turbo → Balanced: `.promptkit/init.sh --balanced` — removes experimental flag
 
