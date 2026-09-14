@@ -5,7 +5,7 @@
     Extracts the active PromptKit OS directive block from your agent
     instructions file (AGENTS.md, CLAUDE.md, etc.) and calculates the exact
     character, word, and estimated token counts (using industry standard 4 chars/token).
-    Compares against typical monolithic AI prompt packs (~18,500 tokens).
+    Compares against derived monolithic baselines (core-6 subset ~19.6k; full set ~75.3k).
     In -Strict mode (CI gate parity with measure-tokens.sh), host detection is
     skipped and BOTH canonical directive templates are asserted against their
     profile budgets: Balanced <= 2,500 tokens and Lite <= 1,500 tokens.
@@ -119,7 +119,18 @@ $LineCount = ($NormalizedDirective -split "\n").Count
 $CharCount = $NormalizedDirective.Length
 $WordCount = ($NormalizedDirective -split '\s+' | Where-Object { $_ -ne "" }).Count
 $EstimatedTokens = [Math]::Floor(($CharCount + 2) / 4)
-$MonolithicTokens = 18500
+# Monolithic baselines derived live (issue #145 audit): core-6 subset + full set.
+$KitRoot = Split-Path -Parent $PSScriptRoot
+function Measure-BytesNoCR([string]$p) {
+    if (-not (Test-Path $p)) { return 0 }
+    [System.Text.Encoding]::UTF8.GetByteCount(((Get-Content $p -Raw) -replace "`r", ""))
+}
+$subsetBytes = 0
+foreach ($s in @("route", "debug", "commit", "checkpoint", "sync", "profile")) { $subsetBytes += Measure-BytesNoCR (Join-Path $KitRoot "workflows\$s.md") }
+$MonolithicTokens = [Math]::Floor(($subsetBytes + 2) / 4)
+$fullBytes = 0
+foreach ($f in (Get-ChildItem (Join-Path $KitRoot "workflows") -Filter *.md)) { $fullBytes += Measure-BytesNoCR $f.FullName }
+$FullsetTokens = [Math]::Floor(($fullBytes + 2) / 4)
 $SavingsPercent = [Math]::Round((1 - ($EstimatedTokens / $MonolithicTokens)) * 100, 1)
 
 Write-Host "Target File: $SourceDescription" -ForegroundColor DarkGray
@@ -133,7 +144,8 @@ Write-Host "`nToken Economics Comparison:" -ForegroundColor Yellow
 Write-Host "  ┌─────────────────────────────────────────────────────────────┐" -ForegroundColor DarkGray
 Write-Host "  │ Model Architecture                 Static Overhead          │" -ForegroundColor DarkGray
 Write-Host "  ├─────────────────────────────────────────────────────────────┤" -ForegroundColor DarkGray
-Write-Host "  │ Monolithic Prompt Packs            ~18,500 tokens           │" -ForegroundColor Red
+Write-Host "  │ Monolithic (core-6 subset derived)   ~$MonolithicTokens tokens           │" -ForegroundColor Red
+Write-Host "  │ Monolithic (full 23-workflow set)    ~$FullsetTokens tokens           │" -ForegroundColor Red
 Write-Host "  │ PromptKit OS JIT Router            ~$EstimatedTokens tokens (measured)      │" -ForegroundColor Green
 Write-Host "  ├─────────────────────────────────────────────────────────────┤" -ForegroundColor DarkGray
 Write-Host "  │ Static Context Reduction:          $SavingsPercent% reduction             │" -ForegroundColor Cyan
