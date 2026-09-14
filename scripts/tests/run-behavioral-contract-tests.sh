@@ -147,6 +147,10 @@ assert_contains "templates/agent-directive-template.md" "Telemetry Card Provenan
 assert_contains "templates/agent-directive-lite-template.md" "~12 substantive turns" "Lite directive carries the endurance rule"
 assert_contains "templates/agent-directive-lite-template.md" "not measured" "Lite directive carries the provenance rule"
 assert_contains "templates/agent-directive-template.md" 'pk:spike. -> .research\.md' "Directive lists trigger-to-file rename exceptions"
+assert_contains "workflows/route.md" "Tie-Break" "Router defines the mixed-level tie-break rule"
+assert_contains "templates/agent-directive-template.md" "Ties take the higher level" "Directive carries the tie-break rule"
+assert_contains "protocols/code-quality-gate.md" "milestone boundary.*is the turn after" "Quality gate defines the milestone boundary"
+
 for directive_file in "templates/agent-directive-template.md" "templates/agent-directive-lite-template.md"; do
     DUPS=$(awk '/^- `pk:/ {print}' "$REPO_ROOT/$directive_file" | grep -oE '`pk:[a-z-]+`' | sort | uniq -d)
     if [ -z "$DUPS" ]; then

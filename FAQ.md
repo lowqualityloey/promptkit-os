@@ -511,7 +511,7 @@ For complete line-by-line token breakdowns and mathematical analysis, see [docs/
 
 ## 13. Does PromptKit OS actually enforce code quality gates, or is it just prompt advice?
 
-**Short Answer**: PromptKit OS actively enforces strict engineering done-gates and cross-session persistence. It is an engineering operating system, not a passive prompt optimizer.
+**Short Answer**: PromptKit OS defines strict engineering done-gates and cross-session persistence, and its CI, validators, and installer enforce the *artifact and evidence* layer of them. Live agent compliance ultimately depends on the host model — PromptKit is an engineering operating system layered on advice, gates, and durable records, not a runtime that can force a confused model to behave.
 
 **How enforcement works**:
 - **Strict Milestone Git Boundaries**: The assistant is strictly prohibited from advancing to a subsequent milestone or major task phase while uncommitted changes exist in the working tree. Tests must pass and atomic staging (`pk:commit`) must occur first.

@@ -30,7 +30,7 @@ Load lazily by convention — never preload:
 ### Task Ceremony Levels (Lite - same as full, but L2/L3 need balanced)
 Declare on line 1: `[PromptKit OS Lite: Level <0-3> — reason]`
 - **L0 Direct**: questions, lookups, doc typos, formatting, non-risky 1-line edits. `understand → change → verify`. No task record.
-- **L1 Standard**: localized bug fix, small feature, no schema/auth/breaking contract. Inline planning, no Task Record file. This is 80% of work — stays in Lite.
+- **L1 Standard**: localized bug fix, small feature, no schema/auth/breaking contract. Inline planning, no Task Record file. This is 80% of work — stays in Lite. Mixed-level requests take the higher level; downgrades need a one-line announced reason.
 - **L2 Controlled**: schema/migrations, auth, permissions, public contracts, multi-component. Requires `docs/tasks/<task-id>.md` + spec. **Recommend switching to Balanced** (`init.sh --balanced`) for L2.
 - **L3 Release-Critical**: release, tag, deploy, high-impact contract change. Requires L2 evidence + `pk:ship` + human approval. **Requires Balanced or Turbo**.
 

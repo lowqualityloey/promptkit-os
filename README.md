@@ -23,7 +23,7 @@ PromptKit OS equips your coding assistant with disciplined engineering workflows
 | **Token Efficiency** | **Zero Static Token Bloat**: Injects only a compact router directive (~961 tok Lite [95% reduction] / ~2,319 tok Balanced [88% reduction] vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). Full workflows are read Just-In-Time (JIT) from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md). |
 | **Durable State Persistence** | **Cross-Session Memory**: State is never lost when chat sessions compact or reset. All active milestones, tasks in flight, and architectural invariants persist directly in Git-tracked markdown (`docs/STATE.md` and `docs/tasks/`). Run `pk:checkpoint` and resume in any fresh session via `pk:route`. |
 | **Adaptive Ceremony & Model Tiering** | **Scales with Risk**: Bypasses heavy templates for daily tweaks (Level 0/1) while reserving deep reasoning, Task Records, and verification gates for schema, auth, and release risks (Level 2/3). Matches LLM model tiers to task risk to prevent token waste. |
-| **Enforced Done-Gates** | **Not Inert Advice**: PromptKit OS enforces verifiable engineering done-gates: strict milestone git boundaries (blocking dirty working tree transitions), automated pre-commit secret leak scans (`pk:commit`), and required Gherkin Acceptance Criteria verification proof. |
+| **Enforced Done-Gates** | **Not Inert Advice**: PromptKit OS enforces verifiable engineering done-gates: strict milestone git boundaries (blocking milestone transitions on the task's own uncommitted changes), automated pre-commit secret leak scans (`pk:commit`), and required Gherkin Acceptance Criteria verification proof. |
 
 ---
 
@@ -244,7 +244,7 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:profile` | [`workflows/profile.md`](./workflows/profile.md) | New 🧪 | `PROMPTKIT.md` + directive | Switch Lite/Balanced/Turbo at runtime via the idempotent installer re-injection path. |
 | `pk:retro` | [`workflows/reflect.md`](./workflows/reflect.md) | Core | `docs/adrs/` & journal | Post-feature retrospective: extracts decisions into standard MADRs. |
 
-*Status Legend: All 23 workflows pass CI structural link validation (`validate-references.sh`). Workflows marked with 🧪 also undergo automated behavioral prompt-contract testing (`run-behavioral-contract-tests.sh`).*
+*Status Legend: All 23 workflows pass CI structural link validation (`validate-references.sh`). Workflows marked with 🧪 also undergo automated documentation-contract testing (`run-behavioral-contract-tests.sh` — string-level prompt-contract assertions; runtime compliance evaluation is not shipped).*
 
 ---
 
@@ -318,7 +318,7 @@ Repository CI validates structural integrity and protocol compliance across Linu
 
 - **Script Syntax & Quality**: Validates Bash (`bash -n`) and PowerShell syntax for setup and validation scripts.
 - **Initialization Safety & Idempotency**: Tests `init.sh` and `init.ps1` to ensure non-destructive directive updates and safe error handling on malformed markers.
-- **Behavioral Prompt-Contract Tests**: Executes scenario suites verifying Level 0–3 classification, fast-path rules, Expand-Contract policy, and router consistency.
+- **Documentation-Contract Tests**: Executes scenario suites asserting the shipped prompt text (Level 0–3 classification, fast-path rules, Expand-Contract policy, router consistency) via string-level checks. They verify the contracts exist as specified, not that a live host complied at runtime.
 - **Execution-Control Fixtures**: Validates task and state tracker schema formatting, evidence references, and handoff contracts.
 - **CI-Triage Fixtures**: Tests failure classification, remediation tracking, and diagnostic record structures.
 - **Release Record Validation**: Ensures strict schema and evidence linkage compliance for release evaluation records.
