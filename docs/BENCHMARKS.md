@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Measurement Date:** 2026-09-14 · **Environment:** `main` branch (v1.6.0 with 2+1 profiles) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · **Baseline Monolithic:** core-6 lifecycle subset ~19,635 tok / full 23-workflow set ~75,346 tok (derived live)
+**Measurement Date:** 2026-09-14 · **Environment:** `main` branch (v1.6.0 with 2+1 profiles) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · **Baseline Monolithic:** core-6 lifecycle subset ~19,794 tok / full 23-workflow set ~75,505 tok (derived live)
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [23 Inlined Workflows + Templates + Protocols (~75.3k tok)] │
+│ Every Turn: [23 Inlined Workflows + Templates + Protocols (~75.5k tok)] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -35,13 +35,13 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 
 **Profiles (v1.6.0 — 2+1 modes):**
 
-| Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs ~19.6k core-subset baseline¹ | Use |
+| Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs ~19.8k core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
 | **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 3,523 | **881 tok** | **95% static** | Onboarding, new users, tiny fixes |
 | **Balanced** | `agent-directive-template.md` (23 workflows) | 8,395 | **2,099 tok** | **89% static** | Teams, production, default |
 | **Turbo** | same as Balanced + parallel waves | 8,395 | 2,099 tok + subagents (~2x measured total (bounds model, see section 8)) | 89% static, higher total | Experimental, greenfield, accepts cost |
 
-¹ Core-subset baseline = live sum of the six lifecycle files the Lite profile loads (route, debug, commit, checkpoint, sync, profile) = ~19,635 tok; full-set baseline = all 23 workflow files = ~75,346 tok (2026-09-14 measurement; replaces the previously unsourced "18.5k" constant).
+¹ Core-subset baseline = live sum of the six lifecycle files the Lite profile loads (route, debug, commit, checkpoint, sync, profile) = ~19,794 tok; full-set baseline = all 23 workflow files = ~75,505 tok (2026-09-14 measurement; replaces the previously unsourced "18.5k" constant).
 
 > **Clarification:** The often-quoted "~90% savings" is **static overhead only** (directive vs monolithic inlining). Per-task payload (directive + workflow + gate) saves 28-54% after Change A (removing mandatory `route.md` 6,962 tok load). See §3 for per-task numbers.
 
@@ -52,7 +52,7 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 | **Smart Auto-Route & Guardrails** | ~22 | ~465 tokens | Triage rules (Fast-Path zero overhead, Anti-slop, Secrets hygiene, MCP precedence, Telemetry cards) |
 | **Workflows, Protocols & Task Ceremony Levels** | ~20 | ~530 tokens | Lazy convention routing & inline Level 0–3 ceremony classification |
 | **Artifact Paths & Document Targets** | ~8 | ~245 tokens | Output destinations (`docs/specs/`, `docs/tasks/`, `docs/STATE.md`) |
-| **Total Baseline Static Overhead (Balanced)** | **93 lines** | **~2,099 tokens** | **Permanent footprint in system prompt (~89% static saving vs. ~19.6k core-subset (97.2% vs. full 23-file set))** |
+| **Total Baseline Static Overhead (Balanced)** | **93 lines** | **~2,099 tokens** | **Permanent footprint in system prompt (~89% static saving vs. ~19.8k core-subset (97.2% vs. full 23-file set))** |
 | **Total Baseline Static Overhead (Lite)** | **~49 lines** | **~881 tokens** | **95% static saving, 58% saving vs Balanced** |
 
 By contrast, inlining all 23 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
