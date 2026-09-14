@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-09-14
+
+> **BREAKING CHANGE (documented, minor):** `pk:profile` was retired as a `pk:perf` alias and is now the runtime profile switcher. Use `pk:perf` or `pk:latency` for profiling; intent-based auto-routing is unaffected. All existing artifacts remain valid (`git submodule update --remote .promptkit` + re-run `init.sh` / `init.ps1`).
+
+Release evidence chain: `docs/releases/2026-09-14-v1.7.0-*.md` (`REL-2026-09-14-V1.7.0-001`) · Tag: `v1.7.0` at `21a6498` · Prior untagged "v1.6.0" content (2+1 profiles) is folded into this release per the evaluation's Range Selection Rationale.
+
+
 ### Added
 - **Dual-Compatible Telemetry Status Cards**: Standardized structured 3-line status cards (`> 📊 **Milestone**: ... \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: ...`) across `templates/agent-directive-template.md` and all completion workflows (`workflows/commit.md`, `pr.md`, `plan.md`, `tasks.md`, `test.md`, `data.md`, `fix.md`), rendering cleanly in both rich markdown IDEs and raw terminal CLIs (OpenCode, Claude Code) without unrendered table syntax.
 - **Interactive Turn Handoffs**: Added protocol instructions prompting agents to execute native interactive selection tools (e.g. OpenCode prompt picker modal, `ask_question`) as their final tool call with `(Recommended)` as Option 1 when concluding tasks with branching choices, enabling keyboard arrow navigation, 1-key `Enter` confirmation, and custom typing.
@@ -22,6 +29,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Extracted Internal Release Evaluation**: Relocated the ~4,144-token repository-internal release evaluation block from `workflows/ship.md` to `docs/internal/release-evaluation.md`, retaining a concise concept stub in `ship.md` (-44% token reduction on `ship.md`).
 - **Brand Normalization**: Standardized legacy `Better-PromptKit` naming to `PromptKit OS` across all shipped workflows and template assets.
 - **2+1 Profile Architecture & Token Calibration**: Added Lite (`--lite`, ~845 tokens static overhead, 96% reduction) and Turbo (`--turbo --experimental`) profiles alongside Balanced (`--balanced`, ~2,076 tokens, 89% reduction), added visual interactive TTY menu in `init.sh` / `init.ps1`, and reconciled all documentation to 22 workflows.
+
+### Added (post-v1.6.0, included in this release)
+- **`pk:profile` Runtime Profile Switcher**: In-session Lite/Balanced/Turbo switching (`workflows/profile.md`) delegating to the idempotent installer re-injection path, with router-matrix registration and Section-0 body sync on re-runs (#142).
+- **Strict Dual-Profile Token Budget Gates**: `measure-tokens --strict` asserts Balanced ≤ 2,500 and Lite ≤ 1,500 on both OSes, with per-task baseline gate and negative-path regression harness (#141).
+- **Execution-Record Self-Validation in CI**: `validate-execution-control --root . --strict` on Linux + Windows (42 → 0 diagnostics permanently gated); legacy v1.6.0 records completed with canonical evidence and a formal Scope Change Record (#155).
+- **Ceremony Guards**: mixed-level tie-break (highest wins), announced-and-logged L2 downgrades, defined milestone boundary with task-scoped dirty-tree rule and post-init exception (#156).
+- **E2E Profile Matrix Harness**: 9 deterministic installer cases per OS, including piped-stdin no-hang, `PROMPTKIT_NO_INTERACTIVE=1`, upgrade idempotency, and Aider `CONVENTIONS.md` injection (#149).
+- **Trigger-Namespace Uniqueness and Validator-Warning Guards**: duplicate `pk:` triggers or orphaned alias tokens now fail CI (#152, #154).
+
+### Changed (post-v1.6.0, included in this release)
+- **Turbo Cost Claims Measured, Not Asserted**: protocol overhead measured at 1.0x–2.0x (bounds model) across 27 shipped claim surfaces, with a CI-gated claim window (#153).
+- **Derived Monolithic Baselines**: the unsourced 18,500-token constant replaced by live-derived core-subset/full-set baselines in scripts and docs; directive footprint now 2,404 (Balanced) / 983 (Lite) tok.
+- **Directive Endurance & Provenance Rules**: session-endurance checkpoint trigger, STATE-until-read trust, telemetry-card provenance, and trigger rename table moved into the always-loaded payload; `sync.md` recovery path made factual (#155).
+- **Honest Test Naming**: "behavioral prompt-contract" surfaces documented as string-level documentation-contract suites (#156).
+
+### Breaking (documented; shipped within minor)
+- **`pk:perf` lost its legacy `pk:profile` alias** (collision with the new switcher): use `pk:perf` / `pk:latency`. No stored artifact changes; see migration note above.
 
 ---
 
