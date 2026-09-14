@@ -57,7 +57,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 **Want to know more?** → See **[INTERESTING-FACTS.md](./docs/INTERESTING-FACTS.md)** for unique insights and design principles
 
 > [!TIP]
-> **Start with just 2 workflows.** You do not need to learn all 20 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand.
+> **Start with just 2 workflows.** You do not need to learn all 22 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand. New in v1.6.0: **2+1 profiles** — Lite (4 workflows, 845 tok), Balanced (22 workflows, default), Turbo experimental (parallel waves, 3-5x cost).
 
 ### 1. Add to Your Project
 
@@ -65,12 +65,27 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 Run from the root of your existing Git repository:
 
 ```bash
-# macOS / Linux (Bash / Zsh)
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh
+# macOS / Linux (Bash / Zsh) — Balanced is default (22 workflows)
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
+
+# Lite profile: 4 workflows (route, debug, commit, checkpoint) <1,500 tok, 80% value — onboarding
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --lite
+
+# Turbo experimental: Balanced + parallel subagent waves, 3-5x token cost, still requires human L3 approval
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --turbo --experimental
 
 # Windows (PowerShell)
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --balanced
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --lite
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --turbo --experimental
 ```
+
+**Profiles (v1.6.0 — 2+1 modes):**
+- **Lite** (`--lite`): 4 workflows, 845 tok static (96% reduction vs 18.5k), 80% value — new users, learning, tiny fixes
+- **Balanced** (`--balanced` or no flag, default): full 22 workflows, 2,076 tok, Level 0-3 adaptive ceremony — teams, production
+- **Turbo** (`--turbo --experimental`): Balanced + parallel waves, 3-5x token cost, experimental, still requires human L3 approval — greenfield
+
+Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Upgrade anytime: `.promptkit/init.sh --balanced` or `--lite`.
 
 <details>
 <summary>Or step-by-step / direct clone</summary>

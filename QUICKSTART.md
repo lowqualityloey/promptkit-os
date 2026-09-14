@@ -6,16 +6,39 @@ Welcome! This guide gets you productive with PromptKit OS in 5 minutes using the
 
 ## Step 1: Installation (30 seconds)
 
-### One-Command Setup (Recommended)
-Run from the root of your existing Git repository:
+### One-Command Setup (Recommended) — 2+1 Profiles
+
+**Balanced is default (22 workflows, Level 0-3 adaptive ceremony):**
 
 ```bash
-# macOS / Linux (Bash / Zsh)
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh
+# macOS / Linux (Bash / Zsh) — Balanced default
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
 
 # Windows (PowerShell)
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --balanced
 ```
+
+**Lite profile — 4 workflows (route, debug, commit, checkpoint) <1,500 tok, 80% value — onboarding:**
+
+```bash
+# macOS / Linux
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --lite
+
+# Windows
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --lite
+```
+
+**Turbo experimental — Balanced + parallel subagent waves, 3-5x token cost, still requires human L3 approval:**
+
+```bash
+# macOS / Linux
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --turbo --experimental
+
+# Windows
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --turbo --experimental
+```
+
+Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Upgrade anytime: `.promptkit/init.sh --balanced` or `--lite`.
 
 <details>
 <summary>Or install step-by-step</summary>
