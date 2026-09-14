@@ -156,6 +156,7 @@ Find your current engineering context below and activate the corresponding workf
 | **Post-Implementation Retro**   | `pk:retro`  | `docs/adrs/` & journal| MADR records, progress journal, skill matrix updates |
 | **Learning & Socratic Coaching**| `pk:tutor`  | Conversation / Notes | 3-tier progressive hints, conceptual mental models |
 | **Architecture Defense Drill**  | `pk:grill`  | Conversation / Notes | Staff Engineer Devil's Advocate stress-testing |
+| **Wrong Profile / Mode Upgrade**| `pk:profile` | `PROMPTKIT.md` + injected directive | Runtime Lite/Balanced/Turbo switching via the idempotent installer re-injection path |
 
 ---
 
