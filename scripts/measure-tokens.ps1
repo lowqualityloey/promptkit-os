@@ -6,15 +6,57 @@
     instructions file (AGENTS.md, CLAUDE.md, etc.) and calculates the exact
     character, word, and estimated token counts (using industry standard 4 chars/token).
     Compares against typical monolithic AI prompt packs (~18,500 tokens).
+    In -Strict mode (CI gate parity with measure-tokens.sh), host detection is
+    skipped and BOTH canonical directive templates are asserted against their
+    profile budgets: Balanced <= 2,500 tokens and Lite <= 1,500 tokens.
 #>
 
 [CmdletBinding()]
 param (
     [Parameter(Position = 0)]
-    [string]$TargetFile = ""
+    [string]$TargetFile = "",
+
+    [switch]$Strict
 )
 
 $ErrorActionPreference = "Stop"
+
+# Single source of truth for budget constants (documented in docs/BENCHMARKS.md section 2).
+$TokenBudgetBalanced = 2500
+$TokenBudgetLite = 1500
+
+if ($Strict) {
+    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $targets = @(
+        @{ Name = "BALANCED"; Path = (Join-Path $ScriptDir "..\templates\agent-directive-template.md"); Budget = $TokenBudgetBalanced },
+        @{ Name = "LITE"; Path = (Join-Path $ScriptDir "..\templates\agent-directive-lite-template.md"); Budget = $TokenBudgetLite }
+    )
+    Write-Host "`n📊 PromptKit OS Strict Token Budget Gate (bytes/4 convention)" -ForegroundColor Cyan
+    $gateFail = $false
+    foreach ($t in $targets) {
+        if (-not (Test-Path $t.Path)) {
+            Write-Host "$($t.Name)|MISSING|$($t.Budget)|FAIL" -ForegroundColor Red
+            $gateFail = $true
+            continue
+        }
+        $raw = [System.IO.File]::ReadAllText($t.Path, [System.Text.Encoding]::UTF8)
+        $norm = ($raw -replace "\r\n", "`n").TrimEnd("`r", "`n")
+        $bytes = [System.Text.Encoding]::UTF8.GetByteCount($norm)
+        $tokens = [Math]::Floor(($bytes + 2) / 4)
+        if ($tokens -le $t.Budget) {
+            Write-Host "$($t.Name)|$tokens|$($t.Budget)|PASS" -ForegroundColor Green
+        } else {
+            Write-Host "$($t.Name)|$tokens|$($t.Budget)|FAIL (exceeds budget by $($tokens - $t.Budget) tokens)" -ForegroundColor Red
+            $gateFail = $true
+        }
+    }
+    if ($gateFail) {
+        Write-Error "`n❌ Strict token budget gate FAILED. Budgets: docs/BENCHMARKS.md section 2.`n"
+        exit 1
+    }
+    Write-Host "`n✅ Strict token budget gate passed: Balanced <= $TokenBudgetBalanced, Lite <= $TokenBudgetLite.`n" -ForegroundColor Green
+    exit 0
+}
 
 Write-Host "`n📊 PromptKit OS Static Directive Token Analysis" -ForegroundColor Cyan
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
@@ -97,8 +139,17 @@ Write-Host "  ├─────────────────────
 Write-Host "  │ Static Context Reduction:          $SavingsPercent% reduction             │" -ForegroundColor Cyan
 Write-Host "  └─────────────────────────────────────────────────────────────┘" -ForegroundColor DarkGray
 
-$TokenBudget = 2500
+# Profile-aware budget: the Lite template is asserted against the Lite budget;
+# everything else against the Balanced budget.
+$TokenBudget = $TokenBudgetBalanced
+$BudgetProfile = "Balanced"
+if ($TargetFile -match "agent-directive-lite-template\.md$") {
+    $TokenBudget = $TokenBudgetLite
+    $BudgetProfile = "Lite"
+}
+
 Write-Host "`nBudget Assertion Verification:" -ForegroundColor Yellow
+Write-Host "  • Profile:                $BudgetProfile"
 Write-Host "  • Configured Token Budget:  $TokenBudget tokens"
 Write-Host "  • Measured Estimate:        $EstimatedTokens tokens"
 
