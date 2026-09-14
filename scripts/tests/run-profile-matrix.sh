@@ -98,10 +98,11 @@ bash "$REPO_ROOT/init.sh" --lite "$D" </dev/null >/dev/null 2>&1
 bash "$REPO_ROOT/init.sh" --balanced "$D" </dev/null >/dev/null 2>&1
 if [[ "$(profile_of "$D")" == "balanced" \
    && "$(grep -c '^<!-- PROMPTKIT_START -->$' "$D/AGENTS.md")" -eq 1 ]] \
-   && grep -q '^## PromptKit OS: Engineering Operating System$' "$D/AGENTS.md"; then
-    ok "lite -> balanced upgrade is idempotent (profile flips, one directive block)"
+   && grep -q '^## PromptKit OS: Engineering Operating System$' "$D/AGENTS.md" \
+   && grep -q '^- \*\*Profile\*\*: balanced$' "$D/PROMPTKIT.md"; then
+    ok "lite -> balanced upgrade is idempotent (profile + Section 0 body flip, one directive block)"
 else
-    notok "upgrade re-run (profile=$(profile_of "$D"), markers=$(grep -c '^<!-- PROMPTKIT_START -->$' "$D/AGENTS.md" 2>/dev/null))"
+    notok "upgrade re-run (profile=$(profile_of "$D"), markers=$(grep -c '^<!-- PROMPTKIT_START -->$' "$D/AGENTS.md" 2>/dev/null), section0=$(grep -c '^- \*\*Profile\*\*: balanced$' "$D/PROMPTKIT.md" 2>/dev/null))"
 fi
 
 echo ""
