@@ -22,13 +22,15 @@
 
 - **Objective**: Ship `workflows/profile.md` (`pk:profile`) so users switch Lite/Balanced/Turbo at runtime in-session (delegating re-injection to the already-tested `init.sh` / `init.ps1` idempotent path), and reconcile every workflow-count claim honestly (Balanced 23, Lite 6) with a mechanical drift guard so counts cannot silently rot again.
 - **In Scope**:
+  - `docs/tasks/TASK-2026-09-14-profile-switcher.md` (this record)
   - New `workflows/profile.md` (trigger, mission, ceremony alignment, steps: detect `profile:` → guard flags incl. turbo-experimental → `ask_question` picker → delegate `init.sh/.ps1 --<profile>` → verify `profile:` line, `## 0.` section body, directive token count → telemetry card close)
   - `pk:profile` trigger line added to `templates/agent-directive-template.md` and `templates/agent-directive-lite-template.md`
-  - Lite template header/upgrade-path count truth updated (4 → 6 workflows: route, debug, commit, checkpoint, sync, profile)
-  - `init.sh` / `init.ps1`: on re-run with existing `profile:` line, also sync the `## 0. PromptKit OS Profile` body (`**Profile**:` bullet) — residue gap confirmed by pre-flight (sed currently updates bottom line only); help/picker/upgrade strings updated to true counts
-  - Behavioral-contract scenario (sh + ps1): `workflows/profile.md` exists; both directives list `pk:profile`; claimed Balanced workflow count equals `ls workflows/*.md | wc -l` (tripwire for future drift)
-  - `run-profile-matrix.sh` extension: Section 0 body flip assertion
-  - Docs reconciliation: README (feature table, shorthand table, repo layout, "all 21 workflows" legend, token-efficiency rows), QUICKSTART, `protocols/setup.md` reference list, `docs/WORKFLOW-MAP.md` where counts appear, `docs/BENCHMARKS.md` §2/§3 re-measured directive tokens, `templates/lite-profile.md` counts
+  - `templates/agent-directive-lite-template.md` header/upgrade-path count truth updated (4 → 6 utility workflows: route, debug, commit, checkpoint, sync, profile)
+  - `templates/project-profile-template.md` Section 0 descriptions updated to honest counts and `pk:profile` upgrade mention
+  - `init.sh` / `init.ps1`: on re-run with existing `profile:` line, also sync the `## 0. PromptKit OS Profile` body (`**Profile**:` bullet) — residue gap confirmed by pre-flight (sed previously updated the bottom line only); help/picker/upgrade/summary strings updated to true counts and re-measured tokens
+  - `scripts/tests/run-behavioral-contract-tests.sh` + `scripts/tests/run-behavioral-contract-tests.ps1`: Scenario M (profile contract, honest Lite count, on-disk count==23 tripwire, stale 21/22-claim detector)
+  - `scripts/tests/run-profile-matrix.sh` + `scripts/tests/run-profile-matrix.ps1`: Section 0 body-flip assertion
+  - Docs reconciliation: `README.md`, `QUICKSTART.md`, `FAQ.md`, `docs/BENCHMARKS.md`, `docs/INTERESTING-FACTS.md`, `docs/ADOPTION-GUIDE.md`, `templates/lite-profile.md`, `workflows/onboard.md`, `protocols/setup.md`
 - **Explicit Non-Goals**:
   - No new installer flags or CLI binary; switching delegates to existing idempotent `init.sh` / `init.ps1` path
   - No auto-migration or rewriting of user-customized directive/PROMPTKIT.md sections beyond the `## 0.` body and marker-block replacement already defined
