@@ -43,13 +43,13 @@
 
 ## 3. Acceptance Criteria
 
-- [ ] **AC-1**: Repository self-validation is wired into both CI jobs and main passes it with zero diagnostics.
-- [ ] **AC-2**: The three legacy v1.6.0 records carry canonical completion evidence (8 fields), legal transition tables, usable Host Timer Capability, and a linked approved Scope Change Record where scope grew; original narratives unaltered.
-- [ ] **AC-3**: `workflows/sync.md` ships zero hardcoded counts, zero unrendered `$KIT_DIR_REL`, 3-line card alignment, and honest re-read (not "discard memory") wording.
-- [ ] **AC-4**: Monolithic baseline claims are derived and dual-stated (core-6 subset + full 23-file set, both measured); every cited reduction % matches its named baseline.
-- [ ] **AC-5**: Directive gains session-endurance, STATE-untrusted-until-read, telemetry provenance, and trigger rename mapping; budgets hold (Balanced ≤ 2,500, Lite ≤ 1,500).
-- [ ] **AC-6**: FAQ/Aider-host/count factual mismatches corrected (17 questions; `CONVENTIONS.md` injectable by both installers).
-- [ ] **AC-7**: Drift guards now cover `docs/BENCHMARKS.md` + `templates/lite-profile.md` phrases that escaped the proven false-negative.
+- [x] **AC-1**: Repository self-validation is wired into both CI jobs and main passes it with zero diagnostics.
+- [x] **AC-2**: The three legacy v1.6.0 records carry canonical completion evidence (8 fields), legal transition tables, usable Host Timer Capability, and a linked approved Scope Change Record where scope grew; original narratives unaltered.
+- [x] **AC-3**: `workflows/sync.md` ships zero hardcoded counts, zero unrendered `$KIT_DIR_REL`, 3-line card alignment, and honest re-read (not "discard memory") wording.
+- [x] **AC-4**: Monolithic baseline claims are derived and dual-stated (core-6 subset + full 23-file set, both measured); every cited reduction % matches its named baseline.
+- [x] **AC-5**: Directive gains session-endurance, STATE-untrusted-until-read, telemetry provenance, and trigger rename mapping; budgets hold (Balanced ≤ 2,500, Lite ≤ 1,500).
+- [x] **AC-6**: FAQ/Aider-host/count factual mismatches corrected (17 questions; `CONVENTIONS.md` injectable by both installers).
+- [x] **AC-7**: Drift guards now cover `docs/BENCHMARKS.md` + `templates/lite-profile.md` phrases that escaped the proven false-negative.
 
 ## 4. Execution Policy
 
@@ -64,12 +64,12 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `in_progress`
-- **Mapped `pk:tasks` Status**: `In Progress`
-- **Active Task Pointer**: `TASK-2026-09-14-audit-remediation`
+- **Execution State**: `awaiting_review`
+- **Mapped `pk:tasks` Status**: `In Review`
+- **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 09:05 UTC`
-- **Current Actor**: `Implementor agent`
-- **Next Action**: `Commit 1: complete three legacy records + scope-1 record`
+- **Current Actor**: `PromptKit maintainer (review)`
+- **Next Action**: `Human PR review and merge decision`
 
 ### Transition History
 
@@ -78,6 +78,7 @@
 | N/A | planned | 2026-09-14 09:05 UTC | Implementor agent | Record created from maintainer-approved PR-A plan | This record |
 | planned | ready | 2026-09-14 09:05 UTC | PromptKit maintainer | All readiness fields populated; approval via picker "Approve PR-A as scoped" | Picker approval + validator clean at ready |
 | ready | in_progress | 2026-09-14 09:05 UTC | Implementor agent | Branch `audit-remediation-151a`; pointer assumed | This record |
+| in_progress | awaiting_review | 2026-09-14 10:15 UTC | Implementor agent | All ACs satisfied; full battery green | Section 6 |
 
 ## 6. Evidence and Completion Gate
 
@@ -106,19 +107,19 @@
 - **Scope Change Records**: `docs/tasks/TASK-2026-09-14-lite-profile.scope-1.md`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: pending
+- **Verification Evidence**: Local final battery, all green at HEAD: self-validator `VALID|RECORDS=10|ROOT=.` (42->0); behavioral 78/78 (incl. widened stale-claim grep over 7 files + 6 new directive-rule assertions + uniqueness guards); budget 6/6; profile matrix 9/9 (new CONVENTIONS.md Aider case); init-safety green; references 0 warnings; strict budget PASS (Balanced 2,319<=2,500, Lite 961<=1,500); per-task baselines PASS; turbo claim window PASS (1.00-2.60)
 - **Behavior IDs**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Code Work`
-- **CI Evidence**: pending
-- **Review Evidence**: pending
-- **Commit Evidence**: pending
-- **Pull Request Evidence**: pending
+- **CI Evidence**: pending on PR run (Linux + Windows execute the new self-validation steps)
+- **Review Evidence**: pending human PR review
+- **Commit Evidence**: 89eb9e2 (records+CI self-gate), 1ddc76b + follow-ups (sync/baselines/directives), f6489ec amended (directive rules), then guards/matrices/record commits on branch
+- **Pull Request Evidence**: branch `audit-remediation-151a` -> PR opened on push
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `in_progress`
-- **Acceptance Results**: pending
+- **Completion State**: `awaiting_review`
+- **Acceptance Results**: AC-1 Complete (VALID 42->0 + both CI jobs wired); AC-2 Complete (three records + scope-1; narratives preserved, repairs labeled); AC-3 Complete (sync.md: derived counts, rendered paths, 3+1 card, honest purge); AC-4 Complete (19,794/75,505 derived + footnote + script derivation); AC-5 Complete (4 rules shipped, budget 2,319/961 with CI-asserted presence); AC-6 Complete (17-questions unified; CONVENTIONS.md injected when present + matrix-consistent); AC-7 Complete (grep now covers BENCHMARKS/lite-profile/FAQ/sync.md, patterns incl. 22 Inlined/All 22/19)
 - **Changed-File Summary**: 21 files: 4 governance records completed, 1 scope record created, CI self-gate wired, guards widened, sync.md repaired, claims derived/corrected, 4 directive endurance+provenance rules, installer parity
 - **Completion Exception**: `None`
-- **Completion Decision and Timestamp**: pending
+- **Completion Decision and Timestamp**: `awaiting_review; Implementor agent; 2026-09-14 10:15 UTC`

@@ -133,6 +133,12 @@ if ($warnCount -eq 0) {
     $script:FailCount++
 }
 Assert-Contains "templates/agent-directive-lite-template.md" "Lite - 6 workflows" "Lite directive claims the honest utility workflow count"
+Assert-Contains "templates/agent-directive-template.md" "Session Endurance" "Directive carries the session-endurance checkpoint rule"
+Assert-Contains "templates/agent-directive-template.md" "STATE.md Untrusted Until Read" "Directive mandates fresh-read trust for STATE.md"
+Assert-Contains "templates/agent-directive-template.md" "Telemetry Card Provenance" "Directive mandates telemetry card provenance"
+Assert-Contains "templates/agent-directive-lite-template.md" "~12 substantive turns" "Lite directive carries the endurance rule"
+Assert-Contains "templates/agent-directive-lite-template.md" "not measured" "Lite directive carries the provenance rule"
+Assert-Contains "templates/agent-directive-template.md" 'pk:spike. -> .research\.md' "Directive lists trigger-to-file rename exceptions"
 foreach ($directive in @("templates/agent-directive-template.md", "templates/agent-directive-lite-template.md")) {
     $tokens = Select-String -Path (Join-Path $RepoRoot $directive) -Pattern '^- `pk:' |
         ForEach-Object { [regex]::Matches($_.Line, '`pk:[a-z-]+`') } |
@@ -154,9 +160,10 @@ if ($WfCount -eq 23) {
     Write-Host "  ❌ FAIL: On-disk workflow count is $WfCount but shipped docs claim 23 — reconcile counts or update this drift guard" -ForegroundColor Red
     $script:FailCount++
 }
-$stale = Select-String -Path (Join-Path $RepoRoot "README.md"), (Join-Path $RepoRoot "QUICKSTART.md"), (Join-Path $RepoRoot "docs/WORKFLOW-MAP.md") -Pattern 'full 22 workflows|\(22 workflows\)|22 workflow files|All 21 workflows' -ErrorAction SilentlyContinue
+$staleFiles = @("README.md","QUICKSTART.md","FAQ.md","docs/WORKFLOW-MAP.md","docs/BENCHMARKS.md","templates/lite-profile.md","workflows/sync.md") | ForEach-Object { Join-Path $RepoRoot $_ }
+$stale = Select-String -Path $staleFiles -Pattern 'full 22 workflow|\(22 workflow|22 workflow files|22 Inlined|All 22|22 workflows|All 21 workflow|21 workflow files|19 workflows' -ErrorAction SilentlyContinue
 if ($stale) {
-    Write-Host "  ❌ FAIL: Stale 21/22 workflow-count claims found in shipped docs" -ForegroundColor Red
+    Write-Host "  ❌ FAIL: Stale 19/21/22 workflow-count claims found in shipped docs" -ForegroundColor Red
     $script:FailCount++
 } else {
     Write-Host "  ✅ PASS: No stale 21/22 workflow-count claims in shipped docs" -ForegroundColor Green

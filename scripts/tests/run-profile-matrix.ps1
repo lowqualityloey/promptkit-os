@@ -93,6 +93,15 @@ $markerCount = ([regex]::Matches($agentsRaw, "(?m)^<!-- PROMPTKIT_START -->$")).
 if ((ProfileOf $d) -eq "balanced" -and $markerCount -eq 1 -and $agentsRaw -match "(?m)^## PromptKit OS: Engineering Operating System$" -and $profileDoc -match "(?m)^- \*\*Profile\*\*: balanced$") { Ok "lite -> balanced upgrade is idempotent (profile + Section 0 body flip, one directive block)" }
 else { NotOk "upgrade re-run (profile=$(ProfileOf $d), markers=$markerCount)" }
 
+# 8. Aider parity: existing CONVENTIONS.md receives an idempotent directive block.
+$d = NewDir "t8"
+Set-Content -Path (Join-Path $d "CONVENTIONS.md") -Value "# My aider notes" -NoNewline
+& pwsh -NoProfile -File $Init --balanced $d 2>&1 | Out-Null
+$c = (Get-Content (Join-Path $d "CONVENTIONS.md") -Raw) -replace "\r\n", "`n"
+$cm = ([regex]::Matches($c, "(?m)^<!-- PROMPTKIT_START -->$")).Count
+if ($cm -eq 1 -and $c -match "(?m)^# My aider notes$") { Ok "existing CONVENTIONS.md injected idempotently with user content preserved" }
+else { NotOk "CONVENTIONS.md injection (markers=$cm)" }
+
 Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 Write-Host "Passed: $script:Pass | Failed: $script:Fail"
 

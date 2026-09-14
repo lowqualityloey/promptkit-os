@@ -141,6 +141,12 @@ else
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 assert_contains "templates/agent-directive-lite-template.md" "Lite - 6 workflows" "Lite directive claims the honest utility workflow count"
+assert_contains "templates/agent-directive-template.md" "Session Endurance" "Directive carries the session-endurance checkpoint rule"
+assert_contains "templates/agent-directive-template.md" "STATE.md Untrusted Until Read" "Directive mandates fresh-read trust for STATE.md"
+assert_contains "templates/agent-directive-template.md" "Telemetry Card Provenance" "Directive mandates telemetry card provenance"
+assert_contains "templates/agent-directive-lite-template.md" "~12 substantive turns" "Lite directive carries the endurance rule"
+assert_contains "templates/agent-directive-lite-template.md" "not measured" "Lite directive carries the provenance rule"
+assert_contains "templates/agent-directive-template.md" 'pk:spike. -> .research\.md' "Directive lists trigger-to-file rename exceptions"
 for directive_file in "templates/agent-directive-template.md" "templates/agent-directive-lite-template.md"; do
     DUPS=$(awk '/^- `pk:/ {print}' "$REPO_ROOT/$directive_file" | grep -oE '`pk:[a-z-]+`' | sort | uniq -d)
     if [ -z "$DUPS" ]; then
@@ -159,12 +165,15 @@ else
     echo "  ❌ FAIL: On-disk workflow count is $WF_COUNT but shipped docs claim 23 — reconcile counts or update this drift guard"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
-if grep -RE 'full 22 workflows|\(22 workflows\)|22 workflow files|All 21 workflows' "$REPO_ROOT/README.md" "$REPO_ROOT/QUICKSTART.md" "$REPO_ROOT/docs/WORKFLOW-MAP.md" >/dev/null 2>&1; then
-    echo "  ❌ FAIL: Stale 21/22 workflow-count claims found in shipped docs"
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-else
-    echo "  ✅ PASS: No stale 21/22 workflow-count claims in shipped docs"
+STALE_CLAIMS=$(grep -rE 'full 22 workflow|\(22 workflow|22 workflow files|22 Inlined|All 22|22 workflows|All 21 workflow|21 workflow files|19 workflows' \
+    "$REPO_ROOT/README.md" "$REPO_ROOT/QUICKSTART.md" "$REPO_ROOT/FAQ.md" "$REPO_ROOT/docs/WORKFLOW-MAP.md" "$REPO_ROOT/docs/BENCHMARKS.md" "$REPO_ROOT/templates/lite-profile.md" "$REPO_ROOT/workflows/sync.md" 2>/dev/null || true)
+if [ -z "$STALE_CLAIMS" ]; then
+    echo "  ✅ PASS: No stale 19/21/22 workflow-count claims in shipped docs"
     PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: Stale workflow-count claims found:"
+    echo "$STALE_CLAIMS" | sed "s|$REPO_ROOT/|  - |" | head -6
+    FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 
 echo ""
