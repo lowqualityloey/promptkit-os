@@ -1,0 +1,42 @@
+# Scope Change Record: lite-profile delivery extended to onboard.md interactive picker
+
+<a id="SCOPE-2026-09-14-lite-profile-1"></a>
+
+- **Record Type**: `Scope Change Record`
+- **Scope Change ID**: `SCOPE-2026-09-14-lite-profile-1`
+- **Task ID**: `TASK-2026-09-14-lite-profile`
+- **Specification**: `docs/tasks/TASK-2026-09-14-lite-profile.md`
+- **Proposer / Actor**: `PromptKit maintainer`
+- **Created**: `2026-09-14 03:30 UTC`
+- **Approval Boundary**: `In-PR maintainer direction; merge authority unchanged`
+- **Reason or Discovery**: During review the maintainer directed that profile selection also use native interactive selection tools in-agent, not only installer flags
+- **Current Task Value**: `In Scope covered templates/, init scripts, README/QUICKSTART only`
+- **Proposed Value**: `Add workflows/onboard.md Phase 3 Step 1 ask_question picker flow`
+- **Affected Objective**: unchanged objective; richer onboarding decision surface
+- **Affected Files or Artifacts**: `workflows/onboard.md`
+- **Affected Acceptance Criteria**: added interactive-picker criterion
+- **Affected Dependencies**: none new
+- **New or Changed Non-Goals**: none
+- **Risk / Estimate Impact**: Low; documentation-only flow addition, no token-budget impact outside lite template text
+- **Changed Verification Condition**: unchanged (behavioral + init suites already cover)
+- **Disposition**: `Approved and delivered within PR #140`
+- **Independent Work Discovered**: none
+- **Required Human Confirmation**: maintainer direction recorded in the task record Updated line 03:30 UTC
+- **Required New Task Record**: `N/A - handled under existing task via this record`
+- **Block Until Resolved**: No
+- **Decision**: Approved
+- **Approver**: `PromptKit maintainer`
+- **Decision Timestamp**: `2026-09-14 03:30 UTC`
+- **Approval Evidence**: `Task record §1 Updated line 2026-09-14 03:30 UTC; delivered in PR #140 files (onboard.md); formalized for validator by PR-A audit remediation 2026-09-14`
+- **Related Checkpoint**: `N/A`
+- **Related Handoff**: `N/A`
+- **Branch / Revision**: `main @ 06308fb (PR #140 merge)`
+- **Verification Plan or Result**: behavioral 60/0; onboard.md contains ask_question picker block per §6
+- **Blocker and Resume Condition**: None
+- **Previous Task State**: `awaiting_review`
+- **Resulting Task State**: `in_progress`
+- **Task Record Updated**: Yes - `docs/tasks/TASK-2026-09-14-lite-profile.md` (Updated line + repaired §5 table via PR-A)
+- **New Task / Exception Links**: None
+- **Changed Scope Summary**: workflows/onboard.md added to delivered scope; single file, additive docs-flow
+- **Next Action**: none - closed; retained for validator traceability
+- **Recorded By and Timestamp**: `Implementor agent, 2026-09-14 09:20 UTC (formalized from maintainer-directed in-PR scope growth per PR-A audit remediation)`

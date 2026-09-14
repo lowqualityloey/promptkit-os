@@ -339,3 +339,66 @@ commits restores the baseline exactly; no data migration is involved.
   commits, neither affects A or B's numbers materially.
 - Any edit to the Level 0–3 model's semantics, `docs/releases/` content, or `scripts/`.
 - New validators, schemas, or CI jobs beyond the single one-line budget assertion in A4.
+
+---
+
+## 8. Canonical Task Record Fields (added by PR-A audit remediation, 2026-09-14)
+
+This document was authored pre-self-validation as an informal STATUS record; per maintainer-approved PR-A it is now a complete canonical record. Narrative above is unaltered; pre-repair bytes recoverable at `c296473`.
+
+- **Record Type**: `Task Record`
+- **Task ID**: `TASK-2026-09-13-directive-and-ship-token-reduction`
+- **PromptKit Adaptation Profile**: `none`
+- **Specification**: `docs/token-efficiency-review.md` (analysis feeding this work, same directory)
+- **Owner / Actor**: `PromptKit maintainer + agent session`
+- **Execution Scope**: `promptkit-os repository`
+- **Approval Boundary**: `Maintainer commits/merges PRs #131-#134`
+- **Created**: `2026-09-13 (from task body Date line)`
+- **Objective**: Reduce runtime prompt payload via inline ceremony classification (A), internal release-evaluation extraction (B2), workflow reference-tail dedup (C), and brand normalization (D)
+- **Risk**: Medium - directive/ship wording surfaces pinned by behavioral contracts; per-change CI verification performed
+- **Verification Condition**: Per STATUS section: full local gate list green at each landing + PowerShell parity closed by CI runs (run 34726350139)
+- **Mode**: `Gated Mode`
+- **TDD Enforcement Mode**: `disabled`
+- **Host Timer Capability**: `Live host timing/forced termination unavailable in this environment; checkpoints are protocol discipline, not mechanical enforcement.`
+- **Execution State**: `completed`
+- **Mapped `pk:tasks` Status**: `Done`
+- **Active Task Pointer**: `None`
+- **Start Time**: `2026-09-13 UTC (session start per task body)`
+- **Next Action**: `None - all changes landed`
+
+### Transition History (Repaired)
+
+| Previous State | New State | Timestamp | Actor | Reason | Supporting Evidence |
+|---|---|---|---|---|---|
+| N/A | planned | 2026-09-13 (stated) | agent | Record created from token-efficiency review | This document |
+| planned | ready | 2026-09-13 (stated) | maintainer | (reconstructed PR-A) Baseline + guardrail map populated (contract-test line audit tables) | §STATUS baseline line: 56/0 at 258cf8c |
+| ready | in_progress | 2026-09-13 (stated) | agent | (reconstructed PR-A) Change A started | PR #131 |
+| in_progress | awaiting_review | 2026-09-13 00:08 UTC | agent | Change A merged eecd77b; B2/C/D in flight (git committer times) | eecd77b @ 2026-09-13 00:08 UTC |
+| awaiting_review | completed | 2026-09-13 07:35 UTC | maintainer | Final change landed via c7199c3 (#134) (git committer time) | c7199c3 @ 2026-09-13 07:35 UTC |
+
+- **Changed Files**:
+  - `templates/agent-directive-template.md` - inline ceremony table + convention routing (PR #131)
+  - `protocols/setup.md` - progressive loading step 1 (PR #131)
+  - `workflows/route.md` - canonical summary note (PR #131)
+  - `workflows/ship.md` + `docs/internal/release-evaluation.md` - B2 extraction (PR #132)
+  - `workflows/*.md` reference tails - C dedup (PR #133/#134)
+  - brand normalization surfaces - D (PR #132)
+- **Scope Change Records**: `None`
+- **Checkpoint Records**: `None`
+- **Handoff Records**: `None`
+- **Verification Evidence**: Local full-gate list recorded in STATUS section (behavioral/init/execution/ci-triage/release/property/example suites, measure-tokens, validators, dry-run idempotency) + PowerShell parity verified via Actions run 34726350139
+- **Behavior IDs**: `N/A - TDD Enforcement Mode disabled`
+- **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
+- **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
+- **TDD Exception Verification**: `N/A - Code Work`
+- **CI Evidence**: `Actions run 34726350139 (Linux 2m49s, Windows 1m49s) + per-PR jobs #131-#134 green`
+- **Review Evidence**: `Maintainer review + merge, PRs #131, #132, #133, #134`
+- **Commit Evidence**: `eecd77b (#131), 161b74c (#132), a1b4433 (#133), c7199c3 (#134)`
+- **Pull Request Evidence**: `PRs #131 #132 #133 #134 (MERGED)`
+- **Release Evidence**: `Landed within v1.4.0-v1.5.0 era per CHANGELOG`
+- **Blocker and Resume Condition**: `None`
+- **Completion State**: `completed`
+- **Acceptance Results**: Change A, A4, B2, C, D all Implemented per §STATUS table; directive growth +34 tok within budget (measured 1,929)
+- **Changed-File Summary**: See §8 list; four PRs; no template content semantics removed beyond extraction moves
+- **Completion Exception**: None
+- **Completion Decision and Timestamp**: completed; PromptKit maintainer; 2026-09-13 07:35 UTC (c7199c3 git committer time; fields recorded via PR-A audit remediation 2026-09-14)

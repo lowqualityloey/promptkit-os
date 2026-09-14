@@ -51,6 +51,9 @@ jobs:
       - name: Run Agent Execution Control Property Harness (Bash)
         run: bash scripts/tests/run-execution-control-properties.sh
 
+      - name: Self-Validate Repository Execution Records (Bash)
+        run: bash scripts/validate-execution-control.sh --root . --strict
+
       - name: Run CI Triage Fixture Harness (Bash)
         run: bash scripts/tests/run-ci-triage-fixtures.sh
 
@@ -185,6 +188,10 @@ jobs:
       - name: Run Agent Execution Control Property Harness (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-execution-control-properties.ps1
+
+      - name: Self-Validate Repository Execution Records (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\validate-execution-control.ps1 -Root . -Strict
 
       - name: Run CI Triage Fixture Harness (PowerShell)
         shell: pwsh
