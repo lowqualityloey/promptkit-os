@@ -132,6 +132,16 @@ assert_contains "workflows/profile.md" "4-Phase Switch Protocol" "Profile workfl
 assert_contains "workflows/profile.md" "Turbo guard" "Profile workflow enforces the Turbo experimental guard"
 assert_contains "workflows/profile.md" "PROMPTKIT_NO_INTERACTIVE" "Profile workflow honors non-interactive default"
 assert_contains "templates/agent-directive-lite-template.md" "Lite - 6 workflows" "Lite directive claims the honest utility workflow count"
+for directive_file in "templates/agent-directive-template.md" "templates/agent-directive-lite-template.md"; do
+    DUPS=$(awk '/^- `pk:/ {print}' "$REPO_ROOT/$directive_file" | grep -oE '`pk:[a-z-]+`' | sort | uniq -d)
+    if [ -z "$DUPS" ]; then
+        echo "  ✅ PASS: Trigger tokens are unique within $directive_file"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        echo "  ❌ FAIL: Duplicate trigger definitions in $directive_file: $(echo "$DUPS" | tr '\n' ' ')"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+done
 WF_COUNT=$(ls "$REPO_ROOT"/workflows/*.md | wc -l | tr -d ' ')
 if [ "$WF_COUNT" -eq 23 ]; then
     echo "  ✅ PASS: On-disk workflow file count is 23 (matches reconciled docs claims)"

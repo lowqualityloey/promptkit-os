@@ -1,7 +1,10 @@
 # Performance Profiling & Latency Protocol
 
 ## Fast Shorthand
-Trigger anytime with: `pk:perf` (or `/pk-perf`, `pk:profile`, `pk:latency`)
+Trigger anytime with: `pk:perf` (or `/pk-perf`, `pk:latency`)
+
+> [!NOTE]
+> **Alias retirement**: `pk:profile` was historically listed here as an alias. It is now owned exclusively by the runtime profile switcher (`workflows/profile.md`). Use `pk:latency` or `pk:perf` for profiling.
 
 ## Mission
 Eliminate silent performance regressions (sluggish API responses, slow database queries, memory leaks, event loop lag, React render thrashing, bundle size bloat, and Core Web Vitals degradation) using empirical profiling, hypothesis testing, and verifiable before-and-after delta audits.
