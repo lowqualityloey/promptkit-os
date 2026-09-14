@@ -92,6 +92,7 @@ Progressive loading is an instruction-efficiency policy to conserve context, not
 - **Design System**: `.promptkit/workflows/design-system.md`
 - **Reflect**: `.promptkit/workflows/reflect.md`
 - **Checkpoint**: `.promptkit/workflows/checkpoint.md`
+- **Profile**: `.promptkit/workflows/profile.md`
 - **Quality Gate (DoD)**: `.promptkit/protocols/code-quality-gate.md`
 - **Context Sync**: `.promptkit/protocols/context-sync.md`
 - **Subagent Delegation**: `.promptkit/protocols/subagent-delegation.md`

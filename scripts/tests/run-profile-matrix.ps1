@@ -88,8 +88,9 @@ $d = NewDir "t7"
 & pwsh -NoProfile -File $Init --lite $d 2>&1 | Out-Null
 & pwsh -NoProfile -File $Init --balanced $d 2>&1 | Out-Null
 $agentsRaw = (Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue -Raw) -replace "\r\n", "`n"
+$profileDoc = (Get-Content (Join-Path $d "PROMPTKIT.md") -ErrorAction SilentlyContinue -Raw) -replace "\r\n", "`n"
 $markerCount = ([regex]::Matches($agentsRaw, "(?m)^<!-- PROMPTKIT_START -->$")).Count
-if ((ProfileOf $d) -eq "balanced" -and $markerCount -eq 1 -and $agentsRaw -match "(?m)^## PromptKit OS: Engineering Operating System$") { Ok "lite -> balanced upgrade is idempotent (profile flips, one directive block)" }
+if ((ProfileOf $d) -eq "balanced" -and $markerCount -eq 1 -and $agentsRaw -match "(?m)^## PromptKit OS: Engineering Operating System$" -and $profileDoc -match "(?m)^- \*\*Profile\*\*: balanced$") { Ok "lite -> balanced upgrade is idempotent (profile + Section 0 body flip, one directive block)" }
 else { NotOk "upgrade re-run (profile=$(ProfileOf $d), markers=$markerCount)" }
 
 Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

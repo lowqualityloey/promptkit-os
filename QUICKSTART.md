@@ -8,7 +8,7 @@ Welcome! This guide gets you productive with PromptKit OS in 5 minutes using the
 
 ### One-Command Setup (Recommended) — 2+1 Profiles
 
-**Balanced is default (22 workflows, Level 0-3 adaptive ceremony):**
+**Balanced is default (23 workflows, Level 0-3 adaptive ceremony):**
 
 ```bash
 # macOS / Linux (Bash / Zsh) — Balanced default
@@ -18,7 +18,7 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit 
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --balanced
 ```
 
-**Lite profile — 4 workflows (route, debug, commit, checkpoint) <1,500 tok, 80% value — onboarding:**
+**Lite profile — 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value — onboarding:**
 
 ```bash
 # macOS / Linux
@@ -268,7 +268,7 @@ Pick one:
 
 ### 2. **Explore More Workflows**
 ```
-pk:route          # See all 22 workflow files and their named aliases
+pk:route          # See all 23 workflow files and their named aliases
 pk:data           # Database design & migrations
 pk:auth           # Authentication & RBAC
 pk:api            # API contracts & types

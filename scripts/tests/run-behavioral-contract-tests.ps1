@@ -116,6 +116,30 @@ Assert-Contains "templates/agent-directive-template.md" "Disk-First Protocol Loa
 Assert-Contains "workflows/sync.md" "3-Phase Sync Protocol" "Sync workflow defines 3-phase sync protocol"
 Assert-Contains "workflows/sync.md" "Fresh Disk-First Loading" "Sync workflow enforces fresh disk reads"
 
+Write-Host "`n📌 Scenario M: Runtime Profile Switcher & Honest Workflow Counts (pk:profile)" -ForegroundColor Yellow
+Assert-Contains "templates/agent-directive-template.md" "pk:profile" "Balanced directive includes pk:profile trigger"
+Assert-Contains "templates/agent-directive-lite-template.md" "pk:profile" "Lite directive includes pk:profile trigger"
+Assert-Contains "workflows/profile.md" "4-Phase Switch Protocol" "Profile workflow defines the 4-phase switch protocol"
+Assert-Contains "workflows/profile.md" "Turbo guard" "Profile workflow enforces the Turbo experimental guard"
+Assert-Contains "workflows/profile.md" "PROMPTKIT_NO_INTERACTIVE" "Profile workflow honors non-interactive default"
+Assert-Contains "templates/agent-directive-lite-template.md" "Lite - 6 workflows" "Lite directive claims the honest utility workflow count"
+$WfCount = @(Get-ChildItem (Join-Path $RepoRoot "workflows") -Filter "*.md").Count
+if ($WfCount -eq 23) {
+    Write-Host "  ✅ PASS: On-disk workflow file count is 23 (matches reconciled docs claims)" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: On-disk workflow count is $WfCount but shipped docs claim 23 — reconcile counts or update this drift guard" -ForegroundColor Red
+    $script:FailCount++
+}
+$stale = Select-String -Path (Join-Path $RepoRoot "README.md"), (Join-Path $RepoRoot "QUICKSTART.md"), (Join-Path $RepoRoot "docs/WORKFLOW-MAP.md") -Pattern 'full 22 workflows|\(22 workflows\)|22 workflow files|All 21 workflows' -ErrorAction SilentlyContinue
+if ($stale) {
+    Write-Host "  ❌ FAIL: Stale 21/22 workflow-count claims found in shipped docs" -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Write-Host "  ✅ PASS: No stale 21/22 workflow-count claims in shipped docs" -ForegroundColor Green
+    $script:PassCount++
+}
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

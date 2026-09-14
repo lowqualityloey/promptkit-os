@@ -29,8 +29,8 @@ if ($Help) {
     Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
     Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
     Write-Host "Options:"
-    Write-Host "  --lite              Lite profile: 4 workflows (route, debug, commit, checkpoint) <1,500 tok, 80% value"
-    Write-Host "  --balanced          Balanced profile: full 22 workflows, Level 0-3 adaptive ceremony (default)"
+    Write-Host "  --lite              Lite profile: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value"
+    Write-Host "  --balanced          Balanced profile: the full workflow set, Level 0-3 adaptive ceremony (default)"
     Write-Host "  --turbo             Turbo profile: Balanced + parallel subagent waves, 3-5x token cost"
     Write-Host "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
     Write-Host "  -Help               Show this help`n"
@@ -83,8 +83,8 @@ if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive
     -and [string]::IsNullOrEmpty($env:PROMPTKIT_NO_INTERACTIVE)) {
     Write-Host "`n💡 PromptKit OS Profile Selection (visual decision)" -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-    Write-Host "  1) Lite (Recommended for new users) — 4 workflows, 845 tok, 80% value, fastest onboarding" -ForegroundColor Yellow
-    Write-Host "  2) Balanced (Recommended for teams) — 22 workflows, 2,076 tok, Level 0-3 adaptive ceremony [default]" -ForegroundColor White
+    Write-Host "  1) Lite (Recommended for new users) — 6 utility workflows, 877 tok, 80% value, fastest onboarding" -ForegroundColor Yellow
+    Write-Host "  2) Balanced (Recommended for teams) — 23 workflows, 2,110 tok, Level 0-3 adaptive ceremony [default]" -ForegroundColor White
     Write-Host "  3) Turbo (Experimental) — Balanced + parallel waves, 3-5x cost, still requires human L3 approval" -ForegroundColor DarkGray
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
     Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
@@ -140,7 +140,7 @@ if ($Profile -eq "turbo") {
     Write-Host "   ⚠️  Turbo: 3-5x token cost, experimental, parallel waves. Human approval still required for L3." -ForegroundColor Yellow
 }
 if ($Profile -eq "lite") {
-    Write-Host "   ✨ Lite: 4 workflows, <1,500 tok, 80% value — perfect for onboarding" -ForegroundColor Green
+    Write-Host "   ✨ Lite: 6 utility workflows, <1,500 tok, 80% value — perfect for onboarding" -ForegroundColor Green
 }
 Write-Host ""
 
@@ -179,6 +179,7 @@ if (Test-Path $ProjectProfile) {
     if ($null -eq $content) { $content = "" }
     if ($content -match "^profile:") {
         $content = $content -replace "^profile:.*", "profile: $Profile"
+        $content = $content -replace "^- \*\*Profile\*\*:.*", "- **Profile**: $Profile"
         [System.IO.File]::WriteAllText($ProjectProfile, $content, (New-Object System.Text.UTF8Encoding($false)))
         Write-Host "  [✓] Updated PROMPTKIT.md profile: $Profile" -ForegroundColor Yellow
     } else {
@@ -193,7 +194,7 @@ if (Test-Path $ProjectProfile) {
 - **Profile**: $Profile
 - **Installed**: $(Get-Date -Format "yyyy-MM-dd")
 - **Engine**: .promptkit
-- **Upgrade**: Run `.promptkit/init.ps1 --balanced` for full 22 workflows, or `--turbo --experimental` for parallel waves
+- **Upgrade**: Run `.promptkit/init.ps1 --balanced` for the full Balanced profile, or `--turbo --experimental` for parallel waves
 
 "@
         $newContent = "$firstLine`n$profileSection`n$rest`n`nprofile: $Profile`n"
@@ -306,7 +307,7 @@ $KitDirRel = if ($ScriptDir.StartsWith($ProjectRootPath)) {
     ".promptkit"
 }
 
-# Select template based on profile: lite uses lite template (845 tok), balanced/turbo use full (2076 tok)
+# Select template based on profile: lite uses lite template (877 tok), balanced/turbo use full (2110 tok)
 if ($Profile -eq "lite") {
     $TemplateDirective = Join-Path $ScriptDir "templates/agent-directive-lite-template.md"
     if (-not (Test-Path $TemplateDirective)) {
@@ -405,10 +406,10 @@ foreach ($targetPath in $TargetsFound) {
 
 Write-Host "`n✨ PromptKit OS successfully configured for $ProjectRoot! ($Profile profile)" -ForegroundColor Cyan
 if ($Profile -eq "lite") {
-    Write-Host "   Lite: 4 workflows (route, debug, commit, checkpoint) — 80% value, <1,500 tok" -ForegroundColor Green
-    Write-Host "   Upgrade anytime: .promptkit/init.ps1 --balanced for full 22 workflows" -ForegroundColor DarkGray
+    Write-Host "   Lite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok" -ForegroundColor Green
+    Write-Host "   Upgrade anytime: .promptkit/init.ps1 --balanced for the full Balanced profile" -ForegroundColor DarkGray
 } elseif ($Profile -eq "balanced") {
-    Write-Host "   Balanced: 22 workflows, Level 0-3 adaptive ceremony — full power" -ForegroundColor White
+    Write-Host "   Balanced: 23 workflows, Level 0-3 adaptive ceremony — full power" -ForegroundColor White
     Write-Host "   For onboarding: .promptkit/init.ps1 --lite for minimal setup" -ForegroundColor DarkGray
 } else {
     Write-Host "   Turbo (Experimental): Balanced + parallel waves, 3-5x token cost" -ForegroundColor Yellow

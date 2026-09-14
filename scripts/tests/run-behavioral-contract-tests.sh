@@ -125,6 +125,30 @@ assert_contains "workflows/sync.md" "3-Phase Sync Protocol" "Sync workflow defin
 assert_contains "workflows/sync.md" "Fresh Disk-First Loading" "Sync workflow enforces fresh disk reads"
 
 echo ""
+echo "📌 Scenario M: Runtime Profile Switcher & Honest Workflow Counts (pk:profile)"
+assert_contains "templates/agent-directive-template.md" 'pk:profile' "Balanced directive includes pk:profile trigger"
+assert_contains "templates/agent-directive-lite-template.md" 'pk:profile' "Lite directive includes pk:profile trigger"
+assert_contains "workflows/profile.md" "4-Phase Switch Protocol" "Profile workflow defines the 4-phase switch protocol"
+assert_contains "workflows/profile.md" "Turbo guard" "Profile workflow enforces the Turbo experimental guard"
+assert_contains "workflows/profile.md" "PROMPTKIT_NO_INTERACTIVE" "Profile workflow honors non-interactive default"
+assert_contains "templates/agent-directive-lite-template.md" "Lite - 6 workflows" "Lite directive claims the honest utility workflow count"
+WF_COUNT=$(ls "$REPO_ROOT"/workflows/*.md | wc -l | tr -d ' ')
+if [ "$WF_COUNT" -eq 23 ]; then
+    echo "  ✅ PASS: On-disk workflow file count is 23 (matches reconciled docs claims)"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: On-disk workflow count is $WF_COUNT but shipped docs claim 23 — reconcile counts or update this drift guard"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+if grep -RE 'full 22 workflows|\(22 workflows\)|22 workflow files|All 21 workflows' "$REPO_ROOT/README.md" "$REPO_ROOT/QUICKSTART.md" "$REPO_ROOT/docs/WORKFLOW-MAP.md" >/dev/null 2>&1; then
+    echo "  ❌ FAIL: Stale 21/22 workflow-count claims found in shipped docs"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+    echo "  ✅ PASS: No stale 21/22 workflow-count claims in shipped docs"
+    PASS_COUNT=$((PASS_COUNT + 1))
+fi
+
+echo ""
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"

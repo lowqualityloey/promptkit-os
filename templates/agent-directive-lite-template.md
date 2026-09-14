@@ -1,14 +1,15 @@
 <!-- PROMPTKIT_START -->
 ## PromptKit OS Lite: Engineering Operating System (Lite Profile)
 
-PromptKit OS Lite is active in this workspace (`./$KIT_DIR_REL`). Lightweight mode: 4 workflows, <1,500 tok, 80% value. For full 22 workflows, run `init.sh --balanced`.
+PromptKit OS Lite is active in this workspace (`./$KIT_DIR_REL`). Lightweight mode: 6 utility workflows, <1,500 tok, 80% value. For the full Balanced profile, run `init.sh --balanced`.
 
-### Fast Shorthand Triggers (Lite - 4 workflows)
+### Fast Shorthand Triggers (Lite - 6 workflows)
 - `pk:route`: Workflow router — what workflow do I need?
 - `pk:debug`: Scientific debugging — hypothesis-driven, 5 Whys, regression test
 - `pk:commit`: Atomic Conventional Commits + secret leak scan
 - `pk:checkpoint`: Session state sync to `docs/STATE.md` + handover prompt
 - `pk:sync`: Hot-reload protocols from disk (purge stale memory)
+- `pk:profile`: Switch Lite/Balanced/Turbo profile at runtime via installer re-injection
 
 ### Smart Guardrails (Lite)
 - **Fast-Path**: Questions, typos, 1-line tweaks → answer directly, no ceremony. 1-line security/data edits escalate to L2.
@@ -42,7 +43,7 @@ Declare on line 1: `[PromptKit OS Lite: Level <0-3> — reason]`
 Lite keeps host project clean. Specialized dirs (auth/, data/, api/, etc.) created on-demand only in Balanced/Turbo.
 
 ### Upgrade Path
-- Need more workflows? Run `.promptkit/init.sh --balanced` to upgrade to full 22 workflows
+- Need more workflows? Run `.promptkit/init.sh --balanced` (or `pk:profile`) to upgrade to the full Balanced profile
 - Need parallel waves? Run `.promptkit/init.sh --turbo --experimental` (warns 3-5x token cost)
 - Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`
 <!-- PROMPTKIT_END -->

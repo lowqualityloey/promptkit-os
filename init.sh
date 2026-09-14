@@ -35,8 +35,8 @@ for arg in "$@"; do
             echo -e "\nPromptKit OS init.sh — 1-Click Setup\n"
             echo -e "Usage: ./init.sh [options] [project-root]\n"
             echo -e "Options:"
-            echo -e "  --lite              Lite profile: 4 workflows (route, debug, commit, checkpoint) <1,500 tok, 80% value"
-            echo -e "  --balanced          Balanced profile: full 22 workflows, Level 0-3 adaptive ceremony (default)"
+            echo -e "  --lite              Lite profile: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value"
+            echo -e "  --balanced          Balanced profile: the full workflow set, Level 0-3 adaptive ceremony (default)"
             echo -e "  --turbo             Turbo profile: Balanced + parallel subagent waves, 3-5x token cost"
             echo -e "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
             echo -e "  -h, --help          Show this help\n"
@@ -88,8 +88,8 @@ fi
 if [[ "$PROFILE_SET" -eq 0 && "$EXPERIMENTAL" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}" ]]; then
     echo -e "\n\033[0;36m💡 PromptKit OS Profile Selection (visual decision)\033[0m"
     echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "  \033[1;33m1) Lite (Recommended for new users)\033[0m — 4 workflows (route, debug, commit, checkpoint) 845 tok, 80% value, fastest onboarding"
-    echo -e "  2) Balanced (Recommended for teams) — 22 workflows, 2,076 tok, Level 0-3 adaptive ceremony, full power [default]"
+    echo -e "  \033[1;33m1) Lite (Recommended for new users)\033[0m — 6 utility workflows (route, debug, commit, checkpoint, sync, profile) 877 tok, 80% value, fastest onboarding"
+    echo -e "  2) Balanced (Recommended for teams) — 23 workflows, 2,110 tok, Level 0-3 adaptive ceremony, full power [default]"
     echo -e "  3) Turbo (Experimental) — Balanced + parallel subagent waves, 3-5x token cost, still requires human L3 approval"
     echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
@@ -141,7 +141,7 @@ if [[ "$PROFILE" == "turbo" ]]; then
     echo -e "   \033[0;33m⚠️  Turbo: 3-5x token cost, experimental, parallel waves. Human approval still required for L3.\033[0m"
 fi
 if [[ "$PROFILE" == "lite" ]]; then
-    echo -e "   \033[0;32m✨ Lite: 4 workflows, <1,500 tok, 80% value — perfect for onboarding\033[0m"
+    echo -e "   \033[0;32m✨ Lite: 6 utility workflows, <1,500 tok, 80% value — perfect for onboarding\033[0m"
 fi
 echo ""
 
@@ -177,8 +177,14 @@ if [[ -f "$PROJECT_PROFILE" ]]; then
     if grep -q "^profile:" "$PROJECT_PROFILE" 2>/dev/null; then
         if sed --version >/dev/null 2>&1; then
             sed -i "s/^profile:.*/profile: $PROFILE/" "$PROJECT_PROFILE"
+            if grep -q '^- \*\*Profile\*\*:' "$PROJECT_PROFILE" 2>/dev/null; then
+                sed -i "s/^- \*\*Profile\*\*:.*/- **Profile**: $PROFILE/" "$PROJECT_PROFILE"
+            fi
         else
             sed -i.bak "s/^profile:.*/profile: $PROFILE/" "$PROJECT_PROFILE" && rm -f "$PROJECT_PROFILE.bak"
+            if grep -q '^- \*\*Profile\*\*:' "$PROJECT_PROFILE" 2>/dev/null; then
+                sed -i.bak "s/^- \*\*Profile\*\*:.*/- **Profile**: $PROFILE/" "$PROJECT_PROFILE" && rm -f "$PROJECT_PROFILE.bak"
+            fi
         fi
         echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md profile: $PROFILE"
     else
@@ -190,7 +196,7 @@ if [[ -f "$PROJECT_PROFILE" ]]; then
             echo "- **Profile**: $PROFILE"
             echo "- **Installed**: $(date +%Y-%m-%d)"
             echo "- **Engine**: .promptkit"
-            echo "- **Upgrade**: Run \`.promptkit/init.sh --balanced\` for full 22 workflows, or \`--turbo --experimental\` for parallel waves"
+            echo "- **Upgrade**: Run \`.promptkit/init.sh --balanced\` for the full Balanced profile, or \`--turbo --experimental\` for parallel waves"
             echo ""
             tail -n +2 "$PROJECT_PROFILE"
             echo ""
@@ -386,10 +392,10 @@ done
 
 echo -e "\n\033[0;36m✨ PromptKit OS successfully configured for $PROJECT_ROOT! ($PROFILE profile)\033[0m"
 if [[ "$PROFILE" == "lite" ]]; then
-    echo -e "   \033[0;32mLite: 4 workflows (route, debug, commit, checkpoint) — 80% value, <1,500 tok\033[0m"
-    echo -e "   Upgrade anytime: .promptkit/init.sh --balanced for full 22 workflows"
+    echo -e "   \033[0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok\033[0m"
+    echo -e "   Upgrade anytime: .promptkit/init.sh --balanced for the full Balanced profile"
 elif [[ "$PROFILE" == "balanced" ]]; then
-    echo -e "   Balanced: 22 workflows, Level 0-3 adaptive ceremony — full power"
+    echo -e "   Balanced: 23 workflows, Level 0-3 adaptive ceremony — full power"
     echo -e "   For onboarding: .promptkit/init.sh --lite for minimal setup"
 else
     echo -e "   \033[0;33mTurbo (Experimental): Balanced + parallel waves, 3-5x token cost\033[0m"

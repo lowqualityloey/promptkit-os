@@ -27,6 +27,7 @@ Activate workflows anytime with these namespaced triggers:
 - `pk:retro` (or `pk:reflect`): Retrospective log, ADR extraction, and skill matrix alignment.
 - `pk:checkpoint` (or `pk:handoff`): Session state compaction, docs/STATE.md update, and handover prompt.
 - `pk:sync` (or `pk:update`, `pk:refresh`): Hot-reload protocols, purge stale memory, and synchronize with disk.
+- `pk:profile` (or `pk:switch-profile`): Switch Lite/Balanced/Turbo profile at runtime via the idempotent installer re-injection path.
 
 ### Smart Auto-Route & Guardrails (Triggers Are Optional)
 You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigger, apply this triage:
