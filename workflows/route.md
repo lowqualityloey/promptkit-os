@@ -82,12 +82,14 @@ The 4-level ceremony model refines and clarifies the system's execution boundari
    - Announce the escalation briefly: `[PromptKit OS: Escalating to Level 2 (Controlled) due to schema/auth impact]`.
 
 3. **Task Downgrade & Safety Boundaries**:
-   - **Level 2 Downgrade**: If analysis reveals a proposed Level 2 task can be simplified into a localized, non-breaking single-file fix without schema/auth/breaking contract impact, it may be downgraded to Level 1 or Level 0.
+   - **Level 2 Downgrade**: If analysis reveals a proposed Level 2 task can be simplified into a localized, non-breaking single-file fix without schema/auth/breaking contract impact, it may be downgraded to Level 1 or Level 0. The downgrade MUST be announced with a one-line reason (e.g. `[PromptKit OS: Downgrading to Level 1 — verified single-file, non-breaking]`) and, when a Task Record already exists, noted in `docs/STATE.md`. A silent downgrade is a protocol violation.
    - **Level 3 Downgrade Guardrails**: Downgrading a Level 3 (Release-Critical) task requires ALL of the following:
      1. A documented reason and revised task scope;
      2. Confirmation that no tag creation, release publication, production deployment, or other release-critical action remains in scope;
      3. Explicit human Release Coordinator approval if release evaluation or evidence creation (`pk:ship`) has already begun;
      4. Preservation or an explicit closure record for any existing release evidence. A downgrade must never be used to bypass release provenance, QA review, or human authorization boundaries.
+
+4b. **Tie-Break (Mixed-Level Requests)**: If two or more levels plausibly apply to one request (e.g. "fix this typo and add the index"), classify at the **highest** applicable level and state that choice in the Turn 1 banner. Risk-before-size still applies downward never upward.
 
 ### Model-Tiering & Resource Optimization Guidance
 
