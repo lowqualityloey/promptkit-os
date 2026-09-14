@@ -139,6 +139,10 @@ Assert-Contains "templates/agent-directive-template.md" "Telemetry Card Provenan
 Assert-Contains "templates/agent-directive-lite-template.md" "~12 substantive turns" "Lite directive carries the endurance rule"
 Assert-Contains "templates/agent-directive-lite-template.md" "not measured" "Lite directive carries the provenance rule"
 Assert-Contains "templates/agent-directive-template.md" 'pk:spike. -> .research\.md' "Directive lists trigger-to-file rename exceptions"
+Assert-Contains "workflows/route.md" "Tie-Break" "Router defines the mixed-level tie-break rule"
+Assert-Contains "templates/agent-directive-template.md" "Ties take the higher level" "Directive carries the tie-break rule"
+Assert-Contains "protocols/code-quality-gate.md" "milestone boundary.*is the turn after" "Quality gate defines the milestone boundary"
+
 foreach ($directive in @("templates/agent-directive-template.md", "templates/agent-directive-lite-template.md")) {
     $tokens = Select-String -Path (Join-Path $RepoRoot $directive) -Pattern '^- `pk:' |
         ForEach-Object { [regex]::Matches($_.Line, '`pk:[a-z-]+`') } |
