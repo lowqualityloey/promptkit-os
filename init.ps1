@@ -35,7 +35,8 @@ if ($Help) {
     Write-Host "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
     Write-Host "  -Help               Show this help`n"
     Write-Host "Interactive (TTY): If no profile flag is given and running in interactive host,"
-    Write-Host "  prompts visually: 1) Lite (Recommended) 2) Balanced (default) 3) Turbo (Experimental)`n"
+    Write-Host "  prompts visually: 1) Lite (Recommended) 2) Balanced (default) 3) Turbo (Experimental)"
+    Write-Host "  Env escape hatch: PROMPTKIT_NO_INTERACTIVE=1 skips the picker even in a TTY`n"
     Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
     Write-Host "Examples:"
     Write-Host "  .\init.ps1 --lite"
@@ -74,7 +75,12 @@ foreach ($a in $args) {
 # Interactive TTY picker when no profile flag provided (visual decision for onboarding)
 # Shell-level equivalent of native interactive selection tools (ask_question)
 # Agent-level picker is in workflows/onboard.md
-if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
+# Non-interactive safety (#144): VS Code integrated terminals can report UserInteractive with
+# redirected streams, so also require stdout not redirected, and honor the documented
+# PROMPTKIT_NO_INTERACTIVE escape hatch to force the flag/default (non-interactive) path.
+if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive `
+    -and -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected `
+    -and [string]::IsNullOrEmpty($env:PROMPTKIT_NO_INTERACTIVE)) {
     Write-Host "`n💡 PromptKit OS Profile Selection (visual decision)" -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
     Write-Host "  1) Lite (Recommended for new users) — 4 workflows, 845 tok, 80% value, fastest onboarding" -ForegroundColor Yellow
