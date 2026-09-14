@@ -36,7 +36,7 @@ jobs:
           bash -n scripts/tests/release-records.examples.sh
           echo "Bash scripts parsed with 0 syntax errors."
 
-      - name: Run Behavioral Prompt-Contract Tests (Bash)
+      - name: Run Documentation-Contract Tests (Bash)
         run: bash scripts/tests/run-behavioral-contract-tests.sh
 
       - name: Run init.sh Safety Regression Tests (Bash)
@@ -169,7 +169,7 @@ jobs:
           }
           Write-Host "PowerShell scripts parsed with 0 syntax errors."
 
-      - name: Run Behavioral Prompt-Contract Tests (PowerShell)
+      - name: Run Documentation-Contract Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-behavioral-contract-tests.ps1
 
