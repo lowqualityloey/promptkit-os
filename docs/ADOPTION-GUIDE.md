@@ -87,9 +87,10 @@ PromptKit OS is designed for **gradual adoption**. You don't need to:
 **Steps**:
 1. Add PromptKit as a tracked submodule and initialize:
    ```bash
-   git submodule add https://github.com/lowqualityloey/promptkit-os .promptkit && ./.promptkit/init.sh
+   # Initialize with Balanced (default) or Lite (minimal 4-workflow onboarding footprint, 845 tokens):
+   git submodule add https://github.com/lowqualityloey/promptkit-os .promptkit && ./.promptkit/init.sh --balanced
    # On Windows PowerShell:
-   # git submodule add https://github.com/lowqualityloey/promptkit-os .promptkit; .\.promptkit\init.ps1
+   # git submodule add https://github.com/lowqualityloey/promptkit-os .promptkit; .\.promptkit\init.ps1 --balanced
 
    git add .promptkit/ PROMPTKIT.md
    # Also stage whichever agent config file init created or updated:
@@ -389,7 +390,7 @@ PromptKit OS supports **Model Context Protocol (MCP)** tools as optional acceler
 | :--- | :--- | :--- |
 | **Sequential Thinking** | `npx -y @modelcontextprotocol/server-sequential-thinking` | **Reasoning Scratchpad**: Powers `pk:debug` hypothesis branching and `pk:plan` architectural tradeoff evaluations. (Free & Open Source / MIT). |
 | **Fetch** | `npx -y @modelcontextprotocol/server-fetch` | **Primary Doc Reader**: Fetches clean Markdown of official library documentation during `pk:plan` and `pk:onboard` with zero HTML clutter. |
-| **Database MCP** | `@modelcontextprotocol/server-postgres` / `server-sqlite` | **Schema Inspector**: Safe read-only schema discovery for `pk:migrate` (Expand-Contract migrations). |
+| **Database MCP** | `@modelcontextprotocol/server-postgres` / `server-sqlite` | **Schema Inspector**: Safe read-only schema discovery for `pk:data` (Expand-Contract migrations). |
 | **Playwright MCP** | `@executeautomation/playwright-mcp-server` | **UI / E2E Inspector**: Visual verification against `DESIGN.md` tokens and responsive breakpoints during `pk:design`. |
 
 ### Client Setup Examples
