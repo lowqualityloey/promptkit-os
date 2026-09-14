@@ -276,6 +276,7 @@ pk:test           # Testing strategy
 pk:fix            # Surgical remediation of known findings
 pk:ship           # Zero-downtime deployment
 pk:spike          # Technical research
+pk:profile        # Switch Lite/Balanced/Turbo at runtime
 ```
 
 ### 3. **Read the Philosophy**
