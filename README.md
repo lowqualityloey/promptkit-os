@@ -20,7 +20,7 @@ PromptKit OS equips your coding assistant with disciplined engineering workflows
 | **Who it is NOT for** | Developers looking for an autocomplete inline plugin, a CLI binary, or an npm dependency. PromptKit OS is pure markdown protocols and prompts. |
 | **Why it is better** | Replaces unguided "vibe coding" and token-wasting guess-and-patch loops with systematic, hypothesis-driven development workflows. Structured workflows are designed to reduce redundant back-and-forth by enforcing one-pass planning, artifact reuse, and surgical fixes over guess-and-patch loops. |
 | **Key differences** | Namespaced triggers (`pk:` prefix), guardrails against single-step destructive schema drops (phased Expand-Contract policy), strict project-scoped database container isolation, Socratic guidance that avoids unsolicited code dumps, and monorepo workspace isolation (scoped `--filter` commands). |
-| **Token Efficiency** | **Zero Static Token Bloat**: Injects only a compact router directive (~881 tok Lite [95% reduction] / ~2,099 tok Balanced [89% reduction] vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). Full workflows are read Just-In-Time (JIT) from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md). |
+| **Token Efficiency** | **Zero Static Token Bloat**: Injects only a compact router directive (~961 tok Lite [95% reduction] / ~2,319 tok Balanced [88% reduction] vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). Full workflows are read Just-In-Time (JIT) from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md). |
 | **Durable State Persistence** | **Cross-Session Memory**: State is never lost when chat sessions compact or reset. All active milestones, tasks in flight, and architectural invariants persist directly in Git-tracked markdown (`docs/STATE.md` and `docs/tasks/`). Run `pk:checkpoint` and resume in any fresh session via `pk:route`. |
 | **Adaptive Ceremony & Model Tiering** | **Scales with Risk**: Bypasses heavy templates for daily tweaks (Level 0/1) while reserving deep reasoning, Task Records, and verification gates for schema, auth, and release risks (Level 2/3). Matches LLM model tiers to task risk to prevent token waste. |
 | **Enforced Done-Gates** | **Not Inert Advice**: PromptKit OS enforces verifiable engineering done-gates: strict milestone git boundaries (blocking dirty working tree transitions), automated pre-commit secret leak scans (`pk:commit`), and required Gherkin Acceptance Criteria verification proof. |
@@ -57,7 +57,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 **Want to know more?** → See **[INTERESTING-FACTS.md](./docs/INTERESTING-FACTS.md)** for unique insights and design principles
 
 > [!TIP]
-> **Start with just 2 workflows.** You do not need to learn all 23 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand. New in v1.6.0: **2+1 profiles** — Lite (6 utility workflows, 881 tok), Balanced (23 workflows, default), Turbo experimental (parallel waves, ~2x measured cost).
+> **Start with just 2 workflows.** You do not need to learn all 23 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand. New in v1.6.0: **2+1 profiles** — Lite (6 utility workflows, 961 tok), Balanced (23 workflows, default), Turbo experimental (parallel waves, ~2x measured cost).
 
 ### 1. Add to Your Project
 
@@ -81,8 +81,8 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit;
 ```
 
 **Profiles (v1.6.0 — 2+1 modes):**
-- **Lite** (`--lite`): 6 utility workflows, 881 tok static (95% reduction vs ~19.8k core-subset), 80% value — new users, learning, tiny fixes
-- **Balanced** (`--balanced` or no flag, default): full 23 workflows, 2,099 tok, Level 0-3 adaptive ceremony — teams, production
+- **Lite** (`--lite`): 6 utility workflows, 961 tok static (95% reduction vs ~19.8k core-subset), 80% value — new users, learning, tiny fixes
+- **Balanced** (`--balanced` or no flag, default): full 23 workflows, 2,319 tok, Level 0-3 adaptive ceremony — teams, production
 - **Turbo** (`--turbo --experimental`): Balanced + parallel waves, up to ~2x measured token cost, experimental, still requires human L3 approval — greenfield
 
 Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Upgrade anytime: `.promptkit/init.sh --balanced` or `--lite`.
@@ -331,7 +331,7 @@ Repository CI validates structural integrity and protocol compliance across Linu
 | Dimension | Single-File Directives | Static Prompt Packs | Autonomous Multi-Agent Swarms | **PromptKit OS** |
 | :--- | :--- | :--- | :--- | :--- |
 | **Scope** | Tool-specific instruction endpoint | Workflow templates for one tool | Multi-agent unmonitored loops | Cross-tool engineering OS with 22 lifecycle workflows |
-| **Token Overhead** | Minimal initial overhead | High monolithic bloat (~18k tokens inlined) | Higher aggregate token cost from multi-agent pipeline calls | **~881 tok Lite / ~2,099 tok Balanced baseline\***  (~95% / ~89% static context reduction vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set); unused workflows consume 0 tokens) |
+| **Token Overhead** | Minimal initial overhead | High monolithic bloat (~18k tokens inlined) | Higher aggregate token cost from multi-agent pipeline calls | **~961 tok Lite / ~2,319 tok Balanced baseline\***  (~95% / ~88% static context reduction vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set); unused workflows consume 0 tokens) |
 | **Persistence** | Per-session only | Per-session only | Hidden cache directories prone to context exhaustion | Git-tracked `docs/STATE.md` survives context resets & fresh chats |
 | **Execution Model** | Unstructured chat | Manual template pasting | Background loop until timeout or crash | Disciplined human-in-the-loop pairing (Levels 0–3) |
 | **Database Safety** | No schema guardrails | Varies | Risk of destructive drops in unmonitored edits | Expand-Contract only (phased, non-breaking migrations) & strict Project-Scoped DB container isolation |
@@ -339,7 +339,7 @@ Repository CI validates structural integrity and protocol compliance across Linu
 | **Done-Gates** | Trust the model | Trust the model | Fragile timeout heuristics | Artifact gates + Gherkin verification + CI + human review |
 | **Lock-in** | Tool-specific format | Tool-specific format | Framework-specific runtime & daemons | Pure markdown, works with any AI coding assistant |
 
-*\* Measured mechanically via `scripts/measure-tokens.sh` / `measure-tokens.ps1` (bytes/4 convention, ~881 tokens Lite / ~2,099 tokens Balanced vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md) for full context window analysis.*
+*\* Measured mechanically via `scripts/measure-tokens.sh` / `measure-tokens.ps1` (bytes/4 convention, ~961 tokens Lite / ~2,319 tokens Balanced vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md) for full context window analysis.*
 
 ---
 

@@ -15,8 +15,8 @@ PromptKit OS Lite is active in this workspace (`./$KIT_DIR_REL`). Lightweight mo
 - **Fast-Path**: Questions, typos, 1-line tweaks → answer directly, no ceremony. 1-line security/data edits escalate to L2.
 - **No Secret Leak**: Never output/request raw secrets. Use `.env.example` + local `.env`.
 - **Anti-Slop**: Use tables, checklists, short bullets. No essay walls.
-- **Telemetry Cards**: Show `📊 Milestone`, `🎯 Active`, `🟢 Quality Gate` in monospace block. Halting for human decision → `> [!IMPORTANT] 🛑 Action Required`.
-- **Disk-First**: Always read `$KIT_DIR_REL/workflows/<trigger>.md` fresh from disk, never rely on memory. `pk:sync` refreshes.
+- **Telemetry Cards**: Show `📊 Milestone`, `🎯 Active`, `🟢 Quality Gate` in monospace block; every value must trace to a command run or file read this turn, else `not measured`. Halting for human decision → `> [!IMPORTANT] 🛑 Action Required`.
+- **Disk-First**: Always read `$KIT_DIR_REL/workflows/<trigger>.md` fresh from disk, never rely on memory. `pk:sync` refreshes. After ~12 substantive turns, or when `docs/STATE.md` invariants cannot be recited from a current read, run `pk:checkpoint` and recommend a fresh session; unpopulated STATE.md fields report `not tracked`, never computed-looking numbers.
 - **DB Isolation**: Use project-scoped containers, never foreign DBs.
 - **Git Boundaries**: Never start new milestone with dirty tree. At milestone end: verify, `pk:commit`, update `docs/STATE.md`, request sign-off.
 

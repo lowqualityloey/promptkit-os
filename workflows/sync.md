@@ -43,7 +43,7 @@ Before responding, the AI assistant inspects the physical workspace:
 
 ---
 
-### Phase 2: Disk Re-Read & Convention Diffing
+### Phase 2: Disk Re-Read & Convention Diffing (Fresh Disk-First Loading)
 
 1. **Re-Read, Then Diff Aloud**:
    A model cannot delete in-context habits; it can only override them with fresher authority. Re-read the injected directive block from disk, then explicitly announce any rule that differs from what the session has been doing (e.g., "prior turns used bare `[!TIP]`; disk standard mandates `> [!TIP]`"). If the conversation is long enough that you distrust your own recall, recommend a fresh session via `pk:checkpoint`.
