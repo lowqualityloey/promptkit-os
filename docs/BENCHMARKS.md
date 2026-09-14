@@ -55,6 +55,21 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 
 By contrast, inlining all 22 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
 
+### CI Budget Gate (Strict Mode)
+
+The budgets above are enforced mechanically on every push and pull request so template edits cannot regress them silently. Both commands emit machine-parseable `NAME|MEASURED|BUDGET|STATUS` lines:
+
+```bash
+# Static directives: asserts Balanced <= 2,500 tok AND Lite <= 1,500 tok
+bash scripts/measure-tokens.sh --strict
+pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict   # PowerShell parity
+
+# Per-task payloads: asserts pk:fix / pk:plan / pk:ship stay <= baselines 12,861 / 24,666 / 24,761 tok
+bash scripts/measure-per-task-tokens.sh --strict
+```
+
+Gate coverage: the static dual-profile budget runs in **both** Linux and Windows CI jobs; the per-task baseline gate runs in the Linux job (PowerShell mirror tracked as a follow-up). Negative-path behavior is covered by `scripts/tests/run-token-budget-tests.sh`. Budget constants are defined once per script; this document is the human reference. If a deliberate contract expansion requires raising a budget, update the constant in `scripts/measure-tokens.sh`, `scripts/measure-tokens.ps1`, and this document in the same change.
+
 ---
 
 ## 3. Dynamic Per-Task Context Economics & Runtime Benchmarks

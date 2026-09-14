@@ -20,6 +20,8 @@ jobs:
         run: |
           bash -n init.sh
           bash -n scripts/measure-tokens.sh
+          bash -n scripts/measure-per-task-tokens.sh
+          bash -n scripts/tests/run-token-budget-tests.sh
           bash -n scripts/validate-execution-control.sh
           bash -n scripts/tests/run-execution-control-fixtures.sh
           bash -n scripts/tests/run-execution-control-properties.sh
@@ -59,7 +61,13 @@ jobs:
         run: bash scripts/tests/release-records.examples.sh
 
       - name: Assert Directive Token Budget (Bash)
-        run: bash scripts/measure-tokens.sh
+        run: bash scripts/measure-tokens.sh --strict
+
+      - name: Assert Per-Task Token Baselines (Bash)
+        run: bash scripts/measure-per-task-tokens.sh --strict
+
+      - name: Run Token Budget Gate Regression Tests (Bash)
+        run: bash scripts/tests/run-token-budget-tests.sh
 
       - name: Run Release-Record Self-Validation with Grandfather Exemption (Bash)
         run: |
@@ -185,7 +193,7 @@ jobs:
 
       - name: Assert Directive Token Budget (PowerShell)
         shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\measure-tokens.ps1
+        run: pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict
 
       - name: Run Release-Record Self-Validation with Grandfather Exemption (PowerShell)
         shell: pwsh

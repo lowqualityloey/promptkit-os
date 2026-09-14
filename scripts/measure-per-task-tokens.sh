@@ -4,6 +4,20 @@
 # Uses bytes/4 convention, same as measure-tokens.sh
 set -euo pipefail
 
+# Modes:
+#   default  : informational report (unchanged behavior).
+#   --strict : CI gate mode. After the report, asserts every measured per-task payload
+#              stays <= its recorded historical baseline below. Machine-parseable lines:
+#              BASELINE|task/profile|measured|limit|PASS|FAIL
+STRICT=0
+for arg in "$@"; do
+    case "$arg" in
+        --strict) STRICT=1 ;;
+        -h|--help) echo "Usage: measure-per-task-tokens.sh [--strict]"; exit 0 ;;
+        *) echo "Unknown argument: $arg" >&2; exit 2 ;;
+    esac
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KIT_DIR="$SCRIPT_DIR/.."
 
@@ -88,3 +102,30 @@ echo "  bash scripts/measure-tokens.sh # static directive"
 echo "  bash scripts/measure-per-task-tokens.sh # this script"
 echo "  bash scripts/validate-references.sh . # no broken links"
 echo ""
+
+if [[ "$STRICT" -eq 1 ]]; then
+    GATE_FAIL=0
+    check_baseline() {
+        local name="$1" payload="$2" limit="$3"
+        if [[ "$payload" -le "$limit" ]]; then
+            echo "BASELINE|${name}|${payload}|${limit}|PASS"
+        else
+            echo "BASELINE|${name}|${payload}|${limit}|FAIL (exceeds recorded baseline by $(( payload - limit )) tokens)"
+            GATE_FAIL=1
+        fi
+    }
+    echo "Strict baseline gate (bytes/4):"
+    check_baseline "pk:fix/balanced"   "$JIT_FIX_FULL"   "$BASELINE_FIX"
+    check_baseline "pk:plan/balanced"  "$JIT_PLAN_FULL"  "$BASELINE_PLAN"
+    check_baseline "pk:ship/balanced"  "$JIT_SHIP_FULL"  "$BASELINE_SHIP"
+    check_baseline "pk:fix/lite"       "$JIT_FIX_LITE"   "$BASELINE_FIX"
+    check_baseline "pk:plan/lite"      "$JIT_PLAN_LITE"  "$BASELINE_PLAN"
+    check_baseline "pk:ship/lite"      "$JIT_SHIP_LITE"  "$BASELINE_SHIP"
+    if [[ "$GATE_FAIL" -eq 1 ]]; then
+        echo ""
+        echo "❌ Per-task baseline gate FAILED: current payloads exceed the historical baselines encoded in this script (docs/BENCHMARKS.md section 3)." >&2
+        exit 1
+    fi
+    echo ""
+    echo "✅ Per-task baseline gate passed for all profiles."
+fi
