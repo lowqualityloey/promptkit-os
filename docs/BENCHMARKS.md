@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Measurement Date:** 2026-09-14 · **Repo SHA:** `fc98f2f` (branch `arena/01a09d50-promptkit-os`, after 2+1 profiles) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh`, same as `token-efficiency-review.md` · **Baseline Monolithic:** ~18,500 tokens (all 21 workflows inlined)
+**Measurement Date:** 2026-09-14 · **Environment:** `main` branch (v1.6.0 with 2+1 profiles) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · **Baseline Monolithic:** ~18,500 tokens (all 22 workflows inlined)
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -15,15 +15,15 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [20 Inlined Workflows + Templates + Protocols (~18.5k tok)] │
+│ Every Turn: [22 Inlined Workflows + Templates + Protocols (~18.5k tok)] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                   PROMPTKIT OS JIT FILESYSTEM MODEL                     │
-│ Baseline Static Injection: 91-line Router Directive (~1,928 tokens)     │
+│ Baseline Static Injection: Router Directive (845 tok Lite / 2,076 Bal)  │
 │ On-Demand Loading: Tool loads only target workflow file (e.g. pk:debug) │
-│ Context Window Preservation: ~90% savings on initial static overhead    │
+│ Context Window Preservation: ~89-96% savings on initial static overhead │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 

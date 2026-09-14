@@ -94,14 +94,20 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 
 **Setup**: Init script detects your assistant and configures automatically.
 
-**Example (One-Command Setup)**:
+**Example (One-Command Setup — 2+1 Profiles)**:
 ```bash
-# macOS / Linux
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh
+# macOS / Linux — Balanced profile (22 workflows, default)
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
+
+# Lite profile (4 workflows, 845 tokens static overhead)
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --lite
 
 # Windows (PowerShell)
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --balanced
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --lite
 ```
+
+> **Tip**: If run in an interactive terminal without flags, `init.sh` / `init.ps1` displays a visual menu to choose your profile. For CI/automated setups, pass `--balanced`/`--lite` or set `PROMPTKIT_NO_INTERACTIVE=1`.
 
 **Related**: [QUICKSTART.md](QUICKSTART.md) Section 1 (Installation)
 
@@ -543,11 +549,11 @@ For complete line-by-line token breakdowns and mathematical analysis, see [docs/
 **Short Answer**: PromptKit OS supports MCP as **optional, zero-lock-in accelerators** through a strict **Progressive Enhancement** architecture. If MCP servers (like Sequential Thinking or Fetch) are active via Docker Desktop or stdio, PromptKit OS leverages them; if absent, workflows run seamlessly in pure Markdown / CLI fallback mode without errors.
 
 **Key Principles & Recommended Free Stack**:
-- **Progressive Enhancement (No Broken Repos)**: PromptKit OS workflows (`pk:debug`, `pk:plan`, `pk:migrate`) never mandate MCP tools as hard prerequisites. Team members without Docker or MCP can collaborate on the same repository with identical behavioral outcomes.
+- **Progressive Enhancement (No Broken Repos)**: PromptKit OS workflows (`pk:debug`, `pk:plan`, `pk:data`) never mandate MCP tools as hard prerequisites. Team members without Docker or MCP can collaborate on the same repository with identical behavioral outcomes.
 - **Recommended Free & Open-Source ($0 Cost) Accelerators**:
   - **Sequential Thinking** (`@modelcontextprotocol/server-sequential-thinking`): Official MIT-licensed local scratchpad tool. Accelerates `pk:debug` Phase 3 (falsifiable hypothesis branching) and Phase 5 (5 Whys RCA) at $0 cost and zero external API dependencies.
   - **Fetch / Jina Reader** (`@modelcontextprotocol/server-fetch` or `r.jina.ai`): Converts live documentation URLs into clean, LLM-optimized Markdown during `pk:plan` with zero HTML noise or paywalls.
-  - **Database MCP** (e.g. Postgres / SQLite): Inspects live schema structures directly for zero-downtime `pk:migrate` checks.
+  - **Database MCP** (e.g. Postgres / SQLite): Inspects live schema structures directly for zero-downtime `pk:data` checks.
   - **Playwright MCP**: Headless browser automation for `pk:design` UI audits and responsive testing.
 - **Token Economics & Zero Static Bloat**: Every active MCP server registers tool JSON schemas that consume context tokens on every single LLM turn. Keep active MCP servers lean (2 to 4 servers max, ~350 static tokens) rather than installing 30+ tool monolithic bundles.
 - **Docker Desktop MCP Toolkit vs Direct stdio**:

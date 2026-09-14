@@ -1,5 +1,8 @@
 # Token Efficiency & Execution-Speed Review
 
+> [!NOTE]
+> **ARCHIVED (2026-09-14)**: This analytical review was conducted at commit `258cf8c`. Its architectural recommendations (Change A: free Level 0–3 ceremony classification in directives, Change B: `pk:ship` internal extraction, and the 2+1 profile architecture) have been implemented in PromptKit OS v1.6.0. Behavioral contract tests now stand at **60/60 passing**, with Lite (~845 tok) and Balanced (~2,076 tok) profiles. See [`docs/BENCHMARKS.md`](./BENCHMARKS.md) for live measurements. This document is preserved for architectural provenance.
+
 **Date**: 2026-09-12 · **Scope**: whole repo at `258cf8c` · **Method**: measured, not estimated
 
 Every number below was measured on this checkout. Token figures use the repo's own

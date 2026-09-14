@@ -2,6 +2,9 @@
 
 <a id="FRICTION-adaptation-task-15"></a>
 
+> [!NOTE]
+> **ARCHIVED (2026-09-08)**: This static contract review documents the historical evaluation of the PromptKit Adaptation overlay. Historical references to pre-release specs are preserved for architecture provenance. PromptKit OS v1.6.0+ uses the streamlined native 4-level task ceremony model directly.
+
 > This is the completed optional Task 15 evaluation. It is a static, network-free contract review of the PromptKit Adaptation. It does not claim to be a user study and does not authorize implementation, release, deployment, rollback, or another external action.
 
 ## 1. Evaluation Metadata

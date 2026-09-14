@@ -382,17 +382,28 @@ Visual guide to workflow depth and time investment:
 | Workflow | Typical Duration | Complexity | Frequency |
 |:---|:---|:---|:---|
 | `pk:route` | 10 sec | ⚪ Low | Every session |
+| `pk:sync` | 1-3 min | ⚪ Low | Milestone / session start |
 | `pk:commit` | 2 min | ⚪ Low | Multiple/day |
+| `pk:checkpoint` | 3 min | ⚪ Low | Session end |
+| `pk:fix` | 3-5 min | ⚪ Low | Surgical remediation |
+| `pk:pr` | 3-5 min | ⚪ Low | Before opening PR |
+| `pk:onboard` | 5-15 min | 🟡 Medium | Repo intake / setup |
+| `pk:tasks` | 5-15 min | 🟡 Medium | Task decomposition |
 | `pk:review` | 5-10 min | 🟡 Medium | Before each PR |
-| `pk:fix` | 3-5 min | ⚪ Low | Surgical fix |
-| `pk:refactor` | 15-45 min | 🟡 Medium | Per refactor milestone |
+| `pk:retro` | 5-15 min | 🟡 Medium | Milestone end |
 | `pk:debug` | Varies | 🟡 Medium | As needed |
 | `pk:tutor` | 10-20 min | 🟡 Medium | Daily learning |
-| `pk:checkpoint` | 3 min | ⚪ Low | Session end |
-| `pk:plan` | 15-45 min | 🔴 High | Per feature |
-| `pk:data` | 20-40 min | 🔴 High | Per schema |
-| `pk:ship` | 10-30 min | 🔴 High | Per release |
-| `pk:grill` | 15-30 min | 🔴 High | Deep dives |
+| `pk:refactor` | 15-45 min | 🟡 Medium | Per refactor milestone |
+| `pk:perf` | 15-30 min | 🟡 Medium | Performance tuning |
+| `pk:api` | 10-25 min | 🟡 Medium | Endpoint contract design |
+| `pk:test` | 10-30 min | 🟡 Medium | Test strategy & seam allocation |
+| `pk:design` | 15-30 min | 🟡 Medium | UI tokens & accessibility |
+| `pk:spike` | 15-45 min | 🔴 High | Technical research & trade-offs |
+| `pk:plan` | 15-45 min | 🔴 High | Per feature RFC |
+| `pk:data` | 20-40 min | 🔴 High | Schema & migrations |
+| `pk:auth` | 20-40 min | 🔴 High | Security & RBAC |
+| `pk:ship` | 10-30 min | 🔴 High | Per release evaluation |
+| `pk:grill` | 15-30 min | 🔴 High | Architecture defense drill |
 
 ---
 

@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Inline Task Ceremony Classification**: Replaced the 26-line hardcoded workflow path list in `templates/agent-directive-template.md` with convention-based routing and a compact Level 0–3 ceremony summary, eliminating mandatory preloading of `workflows/route.md` (-28% to -54% dynamic per-task context reduction).
 - **Extracted Internal Release Evaluation**: Relocated the ~4,144-token repository-internal release evaluation block from `workflows/ship.md` to `docs/internal/release-evaluation.md`, retaining a concise concept stub in `ship.md` (-44% token reduction on `ship.md`).
 - **Brand Normalization**: Standardized legacy `Better-PromptKit` naming to `PromptKit OS` across all shipped workflows and template assets.
-- **Token Calibration & Benchmarks**: Aligned directive budget assertion to 2,500 tokens in `scripts/measure-tokens.*` (providing 572 tokens of headroom) and updated `README.md`, `docs/BENCHMARKS.md`, and `FAQ.md` with verified 91-line / ~1,928-token baseline measurements.
+- **2+1 Profile Architecture & Token Calibration**: Added Lite (`--lite`, ~845 tokens static overhead, 96% reduction) and Turbo (`--turbo --experimental`) profiles alongside Balanced (`--balanced`, ~2,076 tokens, 89% reduction), added visual interactive TTY menu in `init.sh` / `init.ps1`, and reconciled all documentation to 22 workflows.
 
 ---
 

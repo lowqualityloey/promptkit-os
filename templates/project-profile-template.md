@@ -75,7 +75,7 @@ profile: balanced
 - **Documentation / Web Reader MCP**: [e.g. `fetch` (`@modelcontextprotocol/server-fetch`) or Jina reader for clean primary doc lookups | N/A]
 - **Task Tracking System**: [Local Markdown (docs/tasks/ + docs/STATE.md) | GitHub Issues | Linear | Jira]
 - **GitHub MCP**: [e.g. `github-mcp-server` for PR creation, issue reading, commit search | N/A]
-- **Database MCP**: [e.g. `postgres-mcp` or `sqlite-mcp` for read-only schema discovery & `pk:migrate` checks | N/A]
+- **Database MCP**: [e.g. `postgres-mcp` or `sqlite-mcp` for read-only schema discovery & `pk:data` checks | N/A]
 - **Browser / UI MCP**: [e.g. `playwright` for `pk:design` visual and E2E verification | N/A]
 - **Execution Precedence**: Native MCP Tools $\rightarrow$ Native IDE Search/Edit Tools $\rightarrow$ Terminal CLI Commands $\rightarrow$ Structured Markdown Fallback
 
