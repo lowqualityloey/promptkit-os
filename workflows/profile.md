@@ -34,7 +34,7 @@ Profile economics and token budgets are maintained in [`docs/BENCHMARKS.md`](../
 
 ### Phase 2: Decide (flags, picker, or non-interactive default)
 1. **Flag form**: `pk:profile --lite | --balanced | --turbo --experimental`. A flag is an explicit instruction — skip the picker.
-2. **Turbo guard**: `--turbo` without `--experimental` (or without explicit in-chat acknowledgement) is **refused**, mirroring `init.sh`: Turbo is experimental, carries 3-5x token cost, and **never** removes the Level 3 human-approval boundary. No files are touched on refusal.
+2. **Turbo guard**: `--turbo` without `--experimental` (or without explicit in-chat acknowledgement) is **refused**, mirroring `init.sh`: Turbo is experimental, carries up to ~2x measured token cost, and **never** removes the Level 3 human-approval boundary. No files are touched on refusal.
 3. **Interactive, no flag**: invoke the host's native selection tool (`ask_question` / prompt picker) as the final action of this decision step, with the SAME three options as `pk:onboard`:
    - Option 1: current profile — keep unchanged `(Recommended)`
    - Option 2: Lite — 6 workflows, fastest onboarding path

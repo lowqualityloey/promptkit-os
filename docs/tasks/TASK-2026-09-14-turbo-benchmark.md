@@ -39,14 +39,14 @@
 
 ## 3. Acceptance Criteria
 
-- [ ] **AC-1**: Given repo at a post-`06308fb` main, when `bash scripts/measure-turbo-overhead.sh` runs, then it outputs the table `Task | Balanced tok | Turbo tok | Multiplier | Time saved est (bound) | Notes` deterministically.
-  - **Result**: Pending
+- [x] **AC-1**: Given repo at a post-`06308fb` main, when `bash scripts/measure-turbo-overhead.sh` runs, then it outputs the table `Task | Balanced tok | Turbo tok | Multiplier | Time saved est (bound) | Notes` deterministically.
+  - **Result**: Complete 2026-09-14
   - **Evidence**: pending script run
-- [ ] **AC-2**: The keep/promote/remove recommendation is written to `docs/BENCHMARKS.md` section 8 applying the issue's threshold rule to the measured numbers, whatever they are (no threshold shopping).
-  - **Result**: Pending
+- [x] **AC-2**: The keep/promote/remove recommendation is written to `docs/BENCHMARKS.md` section 8 applying the issue's threshold rule to the measured numbers, whatever they are (no threshold shopping).
+  - **Result**: Complete 2026-09-14
   - **Evidence**: pending section 8
-- [ ] **AC-3**: Documentation still states human L3 approval is required for releases/tags/deploys even in Turbo (grep-asserted by the script).
-  - **Result**: Pending
+- [x] **AC-3**: Documentation still states human L3 approval is required for releases/tags/deploys even in Turbo (grep-asserted by the script).
+  - **Result**: Complete 2026-09-14
   - **Evidence**: pending
 - **Not-Applicable Exception**: None
 
@@ -63,12 +63,12 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `in_progress`
-- **Mapped `pk:tasks` Status**: `In Progress`
-- **Active Task Pointer**: `TASK-2026-09-14-turbo-benchmark`
+- **Execution State**: `awaiting_review`
+- **Mapped `pk:tasks` Status**: `In Review`
+- **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 08:14 UTC`
-- **Current Actor**: `Implementor agent`
-- **Next Action**: `Commit 2: measure-turbo-overhead.sh + run to obtain measured table`
+- **Current Actor**: `PromptKit maintainer (review)`
+- **Next Action**: `Human PR review and merge decision`
 
 ### Transition History
 
@@ -77,26 +77,32 @@
 | N/A | planned | 2026-09-14 08:14 UTC | Implementor agent | Record created from approved #145 plan | This record |
 | planned | ready | 2026-09-14 08:14 UTC | PromptKit maintainer | Readiness fields complete; human approved plan via picker ("Approve - build #145 post-#152-merge"), gate condition (#152 merged `719a74e`) satisfied | Approval + merged PR #152 |
 | ready | in_progress | 2026-09-14 08:14 UTC | Implementor agent | Active ownership assumed on branch `145-turbo-benchmark` | This record |
+| in_progress | awaiting_review | 2026-09-14 08:35 UTC | Implementor agent | Full local battery green; complete change set committed | Section 6 evidence |
 
 ## 6. Evidence and Completion Gate
 
-- **Changed Files**: (pending)
+- **Changed Files**:
+  - `docs/tasks/TASK-2026-09-14-turbo-benchmark.md` - this record (commit 1)
+  - `scripts/measure-turbo-overhead.sh` - bounds estimator + `--strict` claim window + AC-3 invariant (commit 2)
+  - `README.md`, `QUICKSTART.md`, `docs/BENCHMARKS.md`, `init.sh`, `init.ps1`, `templates/lite-profile.md`, `templates/agent-directive-lite-template.md`, `templates/project-profile-template.md`, `workflows/onboard.md`, `workflows/profile.md` - 27 shipped "3-5x" claims corrected to measured bounds; zero residue (grep-verified) (commit 3)
+  - `docs/BENCHMARKS.md` - new section 8 with decision KEEP-EXPERIMENTAL + provenance caveat (commit 3)
+  - `.github/workflows/ci.yml` - `bash -n` entry + strict claim-window step (commit 3)
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: (pending)
+- **Verification Evidence**: AC-1 table emitted deterministically (fix 1.00x; plan 1.16x-2.02x; ship 1.21x-2.02x at directive 2,099); `--strict` PASS (window 1.00-2.60); AC-3 invariant PASS (3 shipped sources); full battery green: behavioral 70/70, token budget 6/6, matrix 8/8, init-safety OK, references 0 errors, directive strict gate PASS post lite-template wording change, per-task strict PASS, this record 0 validator diagnostics.
 - **Behavior IDs**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Code Work`
-- **CI Evidence**: (pending)
-- **Review Evidence**: (pending)
-- **Commit Evidence**: (pending)
-- **Pull Request Evidence**: (pending)
+- **CI Evidence**: pending on PR (Linux strict step + Windows regression parity)
+- **Review Evidence**: pending human PR review
+- **Commit Evidence**: commit 1 (record), commit 2 (script), commit 3 (claims + section 8 + CI) - SHAs in branch log
+- **Pull Request Evidence**: branch `145-turbo-benchmark` -> PR opened on push
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `in_progress`
-- **Acceptance Results**: (pending)
-- **Changed-File Summary**: (pending)
+- **Completion State**: `awaiting_review`
+- **Acceptance Results**: AC-1 Complete (deterministic bounds table); AC-2 Complete (section 8 decision from measured data, no threshold shopping - measured below the rule's band, decision reasoned); AC-3 Complete (invariant grep-asserted in script, exits 1 on regression)
+- **Changed-File Summary**: 1 record, 1 new script, 10 claim surfaces corrected, 1 docs section added, 1 CI wiring
 - **Completion Exception**: `None`
-- **Completion Decision and Timestamp**: (pending)
+- **Completion Decision and Timestamp**: `awaiting_review, Implementor agent, 2026-09-14 08:35 UTC`

@@ -31,7 +31,7 @@ if ($Help) {
     Write-Host "Options:"
     Write-Host "  --lite              Lite profile: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value"
     Write-Host "  --balanced          Balanced profile: the full workflow set, Level 0-3 adaptive ceremony (default)"
-    Write-Host "  --turbo             Turbo profile: Balanced + parallel subagent waves, 3-5x token cost"
+    Write-Host "  --turbo             Turbo profile: Balanced + parallel subagent waves, up to ~2x measured token cost"
     Write-Host "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
     Write-Host "  -Help               Show this help`n"
     Write-Host "Interactive (TTY): If no profile flag is given and running in interactive host,"
@@ -83,9 +83,9 @@ if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive
     -and [string]::IsNullOrEmpty($env:PROMPTKIT_NO_INTERACTIVE)) {
     Write-Host "`n💡 PromptKit OS Profile Selection (visual decision)" -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-    Write-Host "  1) Lite (Recommended for new users) — 6 utility workflows, 877 tok, 80% value, fastest onboarding" -ForegroundColor Yellow
+    Write-Host "  1) Lite (Recommended for new users) — 6 utility workflows, 881 tok, 80% value, fastest onboarding" -ForegroundColor Yellow
     Write-Host "  2) Balanced (Recommended for teams) — 23 workflows, 2,099 tok, Level 0-3 adaptive ceremony [default]" -ForegroundColor White
-    Write-Host "  3) Turbo (Experimental) — Balanced + parallel waves, 3-5x cost, still requires human L3 approval" -ForegroundColor DarkGray
+    Write-Host "  3) Turbo (Experimental) — Balanced + parallel waves, ~2x measured cost, still requires human L3 approval" -ForegroundColor DarkGray
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
     Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
     Write-Host "For CI/non-interactive, use flags: --lite, --balanced, --turbo --experimental`n" -ForegroundColor DarkGray
@@ -94,7 +94,7 @@ if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive
         "1" { $Profile = "lite"; $ProfileSet = $true }
         "3" { 
             Write-Host "`n⚠️  Turbo requires --experimental flag" -ForegroundColor Yellow
-            Write-Host "   Turbo uses parallel subagent waves (3-5x token cost) and is experimental." -ForegroundColor DarkGray
+            Write-Host "   Turbo uses parallel subagent waves (up to ~2x measured token cost) and is experimental." -ForegroundColor DarkGray
             $confirm = Read-Host "Acknowledge experimental cost and proceed with Turbo? [y/N]"
             if ($confirm -match "^[Yy]$") {
                 $Profile = "turbo"
@@ -113,7 +113,7 @@ if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive
 
 if ($Profile -eq "turbo" -and -not $Experimental) {
     Write-Host "`n[!] --turbo requires --experimental flag" -ForegroundColor Red
-    Write-Host "   Turbo uses parallel subagent waves (3-5x token cost) and is experimental." -ForegroundColor DarkGray
+    Write-Host "   Turbo uses parallel subagent waves (up to ~2x measured token cost) and is experimental." -ForegroundColor DarkGray
     Write-Host "   It still requires human approval for Level 3 (releases/tags/deploys)." -ForegroundColor DarkGray
     Write-Host "   Run: .\init.ps1 --turbo --experimental [project-root]`n" -ForegroundColor DarkGray
     exit 1
@@ -137,7 +137,7 @@ Write-Host "   Host Project: $ProjectRoot" -ForegroundColor DarkGray
 Write-Host "   Engine Path:  $ScriptDir" -ForegroundColor DarkGray
 Write-Host "   Profile:      $Profile" -ForegroundColor DarkGray
 if ($Profile -eq "turbo") {
-    Write-Host "   ⚠️  Turbo: 3-5x token cost, experimental, parallel waves. Human approval still required for L3." -ForegroundColor Yellow
+    Write-Host "   ⚠️  Turbo: up to ~2x measured token cost, experimental, parallel waves. Human approval still required for L3." -ForegroundColor Yellow
 }
 if ($Profile -eq "lite") {
     Write-Host "   ✨ Lite: 6 utility workflows, <1,500 tok, 80% value — perfect for onboarding" -ForegroundColor Green
@@ -307,7 +307,7 @@ $KitDirRel = if ($ScriptDir.StartsWith($ProjectRootPath)) {
     ".promptkit"
 }
 
-# Select template based on profile: lite uses lite template (877 tok), balanced/turbo use full (2099 tok)
+# Select template based on profile: lite uses lite template (881 tok), balanced/turbo use full (2099 tok)
 if ($Profile -eq "lite") {
     $TemplateDirective = Join-Path $ScriptDir "templates/agent-directive-lite-template.md"
     if (-not (Test-Path $TemplateDirective)) {
@@ -412,7 +412,7 @@ if ($Profile -eq "lite") {
     Write-Host "   Balanced: 23 workflows, Level 0-3 adaptive ceremony — full power" -ForegroundColor White
     Write-Host "   For onboarding: .promptkit/init.ps1 --lite for minimal setup" -ForegroundColor DarkGray
 } else {
-    Write-Host "   Turbo (Experimental): Balanced + parallel waves, 3-5x token cost" -ForegroundColor Yellow
+    Write-Host "   Turbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost" -ForegroundColor Yellow
     Write-Host "   Human approval still required for Level 3 (releases/tags/deploys)" -ForegroundColor DarkGray
 }
 Write-Host "   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'`n" -ForegroundColor White

@@ -128,15 +128,15 @@ After completing the scan and presenting the findings summary / Executive Scorec
        header: "Profile"
        options:
          - label: "Lite (Recommended for new users) (Recommended)"
-           description: "6 utility workflows (route, debug, commit, checkpoint, sync, profile) 877 tok, 80% value, fastest onboarding, <1,500 tok"
+           description: "6 utility workflows (route, debug, commit, checkpoint, sync, profile) 881 tok, 80% value, fastest onboarding, <1,500 tok"
          - label: "Balanced (Recommended for teams)"
            description: "Full 23 workflows, 2,099 tok, Level 0-3 adaptive ceremony, teams/production, default"
          - label: "Turbo (Experimental)"
-           description: "Balanced + parallel subagent waves, 3-5x token cost, still requires human L3 approval, needs --experimental acknowledgement"
+           description: "Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval, needs --experimental acknowledgement"
        multiSelect: false
      ```
    - Hosts without `ask_question` support: fallback to `> [!TIP] ### 💡 Choose profile (Type number & Enter):` with Option 1 prefixed `(Recommended)` and Option 2 as default.
-   - If developer chooses Turbo, require explicit experimental acknowledgement: second confirmation `Acknowledge Turbo experimental cost (3-5x tokens) and that human approval still required for L3? [y/N]`
+   - If developer chooses Turbo, require explicit experimental acknowledgement: second confirmation `Acknowledge Turbo experimental cost (up to ~2x measured tokens) and that human approval still required for L3? [y/N]`
    - Store choice as machine-readable `profile: lite|balanced|turbo` in `PROMPTKIT.md` (both human section `## 0. PromptKit OS Profile` and bottom `profile:` line) so future sessions don't re-ask.
    - Non-interactive / CI: respect flags `--lite`, `--balanced`, `--turbo --experimental` passed to `init.sh` / `init.ps1`, or `PROMPTKIT.md` existing profile, or default to `balanced`. When `PROMPTKIT_NO_INTERACTIVE=1` is set, skip any picker (this agent-level prompt and the shell-level TTY picker in `init.sh` / `init.ps1`) and apply flags/default only.
 

@@ -21,7 +21,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                   PROMPTKIT OS JIT FILESYSTEM MODEL                     │
-│ Baseline Static Injection: Router Directive (877 tok Lite / 2,099 Bal)  │
+│ Baseline Static Injection: Router Directive (881 tok Lite / 2,099 Bal)  │
 │ On-Demand Loading: Tool loads only target workflow file (e.g. pk:debug) │
 │ Context Window Preservation: ~89-96% savings on initial static overhead │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -37,9 +37,9 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 
 | Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs 18.5k Monolithic | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
-| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 3,509 | **877 tok** | **95% static** | Onboarding, new users, tiny fixes |
+| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 3,525 | **881 tok** | **95% static** | Onboarding, new users, tiny fixes |
 | **Balanced** | `agent-directive-template.md` (23 workflows) | 8,395 | **2,099 tok** | **89% static** | Teams, production, default |
-| **Turbo** | same as Balanced + parallel waves | 8,395 | 2,099 tok + subagents (3-5x total) | 89% static, higher total | Experimental, greenfield, accepts cost |
+| **Turbo** | same as Balanced + parallel waves | 8,395 | 2,099 tok + subagents (~2x measured total (bounds model, see section 8)) | 89% static, higher total | Experimental, greenfield, accepts cost |
 
 > **Clarification:** The often-quoted "~90% savings" is **static overhead only** (directive vs monolithic inlining). Per-task payload (directive + workflow + gate) saves 28-54% after Change A (removing mandatory `route.md` 6,962 tok load). See §3 for per-task numbers.
 
@@ -51,7 +51,7 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 | **Workflows, Protocols & Task Ceremony Levels** | ~20 | ~530 tokens | Lazy convention routing & inline Level 0–3 ceremony classification |
 | **Artifact Paths & Document Targets** | ~8 | ~245 tokens | Output destinations (`docs/specs/`, `docs/tasks/`, `docs/STATE.md`) |
 | **Total Baseline Static Overhead (Balanced)** | **93 lines** | **~2,099 tokens** | **Permanent footprint in system prompt (~89% static saving vs. ~18.5k monolithic)** |
-| **Total Baseline Static Overhead (Lite)** | **~49 lines** | **~877 tokens** | **95% static saving, 58% saving vs Balanced** |
+| **Total Baseline Static Overhead (Lite)** | **~49 lines** | **~881 tokens** | **95% static saving, 58% saving vs Balanced** |
 
 By contrast, inlining all 23 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
 
@@ -74,7 +74,7 @@ Gate coverage: the static dual-profile budget runs in **both** Linux and Windows
 
 ## 3. Dynamic Per-Task Context Economics & Runtime Benchmarks
 
-PromptKit OS benchmarks both the **static footprint** (877 tok Lite, 2,099 tok Balanced) and the **dynamic per-task runtime context**. 
+PromptKit OS benchmarks both the **static footprint** (881 tok Lite, 2,099 tok Balanced) and the **dynamic per-task runtime context**. 
 
 By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without preloading `workflows/route.md` (~6,962 tokens). This is Change A from `docs/token-efficiency-review.md` — verified saving 6,915 tok per task.
 
@@ -83,7 +83,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 - Method: `bytes / 4` per `measure-tokens.sh` convention, sum of directive + workflow + `code-quality-gate.md` + relevant template
 - Baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A)
 - JIT payload = directive 1,929-2,099 + workflow + gate (new behavior, route.md only when ambiguous)
-- Lite vs Balanced: Lite uses 877 tok directive, Balanced uses 2,099 tok
+- Lite vs Balanced: Lite uses 881 tok directive, Balanced uses 2,099 tok
 
 ### Measured Per-Task Context Breakdown (bytes / 4 convention, after Change A + B):
 
@@ -174,6 +174,26 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
 
 - **Avoid Flagship Burn on Trivial Tasks**: Standard coding assistants frequently waste expensive flagship reasoning tokens on basic single-line formatting, regex syntax checks, or documentation typo fixes. Routing Level 0 tasks to economy models reduces token spend by **80–90%** on daily ad-hoc queries (this is a static footprint estimation, turn-by-turn dynamic token efficiency may vary based on model usage).
 - **Avoid Reasoning Failures on Hard Tasks**: Conversely, under-powering database migrations (Expand-Contract) or authentication boundary redesigns with lightweight models causes expensive defect repair loops. Deploying deep reasoning models exclusively on Level 2/3 work provides a verification standard for intended zero-downtime safety while keeping total aggregate token budgets lean.
+
+---
+
+## 8. Turbo Protocol Economics — Measured Bounds & Decision (Issue #145)
+
+**Measurement provenance:** `bash scripts/measure-turbo-overhead.sh` (deterministic static analysis, bytes/4). Turbo is a **documentation protocol**, not a runtime engine — there is no installed binary to profile. This section measures the *protocol's* fan-out token budget; actual host behavior varies with subagent implementation. "Time saved" figures are **structural upper bounds**, not empirical seconds.
+
+**Model.** A Turbo branch runs in a fresh context. Beyond the first branch, each parallel lane costs either a directive reload + 250-tok synthesis return (lower bound) or a full task-path context reload (upper bound).
+
+**Measured (main @ `719a74e`, directive 2,099 tok):**
+
+| Task path | Balanced tok | Turbo tok (lower–upper) | Multiplier | Time saved (bound) | Fan-out anchor |
+| :--- | ---: | :--- | :--- | :--- | :--- |
+| `pk:fix` | 6,117 | 6,117–6,117 | **1.00x** | 0% (single-thread) | `route.md` Tier-3 offload only |
+| `pk:plan` | 14,907 | 17,256–30,064 | **1.16x–2.02x** | ≤50% of spike segment | Delegation Pattern A (k=2) |
+| `pk:ship` | 11,274 | 13,623–22,798 | **1.21x–2.02x** | ≤50% of QA segment | Pattern B (k=2) + Pattern C verifier |
+
+**Decision (per #145 threshold rule):** **KEEP Turbo experimental — do not promote, do not remove.** Measured overhead tops out near **2x**, materially below the "3-5x" band previously advertised, and the structural time benefit caps at ~50% of only the parallelizable segment. Promotion would require real multi-host wall-clock evidence that a documentation protocol cannot produce; removal would discard a genuinely useful (≤2x) pattern for greenfield spikes. All shipped "3-5x" claims were corrected in this change to "up to ~2x measured" and the claim window is now CI-gated (`--strict`, 1.00–2.60x): widening fan-out without re-baselining this section fails the build.
+
+**Safety invariant (AC-3, grep-asserted by the script):** Turbo never removes the human Level-3 approval requirement for releases, tags, deployments, or rollback, in any shipped surface.
 
 ---
 

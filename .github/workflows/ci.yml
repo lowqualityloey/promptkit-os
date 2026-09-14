@@ -21,6 +21,7 @@ jobs:
           bash -n init.sh
           bash -n scripts/measure-tokens.sh
           bash -n scripts/measure-per-task-tokens.sh
+          bash -n scripts/measure-turbo-overhead.sh
           bash -n scripts/tests/run-token-budget-tests.sh
           bash -n scripts/validate-execution-control.sh
           bash -n scripts/tests/run-execution-control-fixtures.sh
@@ -69,6 +70,9 @@ jobs:
 
       - name: Assert Per-Task Token Baselines (Bash)
         run: bash scripts/measure-per-task-tokens.sh --strict
+
+      - name: Assert Turbo Protocol Overhead Claim Window (Bash)
+        run: bash scripts/measure-turbo-overhead.sh --strict
 
       - name: Run Token Budget Gate Regression Tests (Bash)
         run: bash scripts/tests/run-token-budget-tests.sh
