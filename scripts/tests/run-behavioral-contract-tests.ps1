@@ -122,6 +122,16 @@ Assert-Contains "templates/agent-directive-lite-template.md" "pk:profile" "Lite 
 Assert-Contains "workflows/profile.md" "4-Phase Switch Protocol" "Profile workflow defines the 4-phase switch protocol"
 Assert-Contains "workflows/profile.md" "Turbo guard" "Profile workflow enforces the Turbo experimental guard"
 Assert-Contains "workflows/profile.md" "PROMPTKIT_NO_INTERACTIVE" "Profile workflow honors non-interactive default"
+Assert-Contains "workflows/route.md" "Wrong Profile / Mode Upgrade" "Router decision matrix registers pk:profile"
+$warnOut = (& bash scripts/validate-references.sh . 2>&1) -join "`n"
+$warnCount = ([regex]::Matches($warnOut, 'WARNING')).Count
+if ($warnCount -eq 0) {
+    Write-Host "  ✅ PASS: Reference validator reports zero trigger warnings" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: Reference validator reports $warnCount warning(s) - orphaned trigger aliases shipped" -ForegroundColor Red
+    $script:FailCount++
+}
 Assert-Contains "templates/agent-directive-lite-template.md" "Lite - 6 workflows" "Lite directive claims the honest utility workflow count"
 foreach ($directive in @("templates/agent-directive-template.md", "templates/agent-directive-lite-template.md")) {
     $tokens = Select-String -Path (Join-Path $RepoRoot $directive) -Pattern '^- `pk:' |

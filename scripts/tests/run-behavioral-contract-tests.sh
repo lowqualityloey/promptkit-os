@@ -131,6 +131,15 @@ assert_contains "templates/agent-directive-lite-template.md" 'pk:profile' "Lite 
 assert_contains "workflows/profile.md" "4-Phase Switch Protocol" "Profile workflow defines the 4-phase switch protocol"
 assert_contains "workflows/profile.md" "Turbo guard" "Profile workflow enforces the Turbo experimental guard"
 assert_contains "workflows/profile.md" "PROMPTKIT_NO_INTERACTIVE" "Profile workflow honors non-interactive default"
+assert_contains "workflows/route.md" "Wrong Profile / Mode Upgrade" "Router decision matrix registers pk:profile"
+WARN_COUNT=$(bash "$REPO_ROOT/scripts/validate-references.sh" "$REPO_ROOT" 2>&1 | grep -c 'WARNING' || true)
+if [ "$WARN_COUNT" -eq 0 ]; then
+    echo "  ✅ PASS: Reference validator reports zero trigger warnings"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: Reference validator reports $WARN_COUNT warning(s) - orphaned trigger aliases shipped"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
 assert_contains "templates/agent-directive-lite-template.md" "Lite - 6 workflows" "Lite directive claims the honest utility workflow count"
 for directive_file in "templates/agent-directive-template.md" "templates/agent-directive-lite-template.md"; do
     DUPS=$(awk '/^- `pk:/ {print}' "$REPO_ROOT/$directive_file" | grep -oE '`pk:[a-z-]+`' | sort | uniq -d)
