@@ -13,7 +13,7 @@
 - **Execution Scope**: `promptkit-os repository`
 - **Approval Boundary**: `Requires human confirmation for commit, PR, and README update`
 - **Created**: `2026-09-14 01:10 UTC`
-- **Updated**: `2026-09-14 02:45 UTC - implemented 2+1 profiles, verified tokens`
+- **Updated**: `2026-09-14 03:30 UTC - added native interactive selection tools (visual decision) for profile picking in init.sh/init.ps1 + onboard.md ask_question`
 
 ## 2. Objective and Boundaries
 
@@ -54,6 +54,14 @@
 - [x] **AC-6**: Existing full/balanced install still works and all contract tests pass
   - **Result**: Completed
   - **Evidence**: `bash scripts/tests/run-behavioral-contract-tests.sh` → Passed: 60 | Failed: 0, `bash scripts/validate-references.sh .` → 0 errors, 3 warnings, `bash -n init.sh` syntax OK
+- [x] **AC-7**: Native interactive selection tools (visual decision) for profile picking
+  - **Result**: Completed 2026-09-14 03:30 UTC
+  - **Evidence**: 
+    - `init.sh`: PROFILE_SET tracking, if PROFILE_SET==0 && -t 0 && EXPERIMENTAL==0 shows visual decision box with `💡 PromptKit OS Profile Selection`, options 1) Lite (Recommended for new users) 2) Balanced (Recommended for teams) [default] 3) Turbo (Experimental) + confirmation for Turbo, help mentions interactive
+    - `init.ps1`: ProfileSet tracking, [Environment]::UserInteractive && !IsInputRedirected, Read-Host picker with same 3 options + Turbo confirmation y/N
+    - `workflows/onboard.md` Phase 3 Step 1: requires ask_question with 3 options Lite (Recommended) Balanced (Recommended for teams) Turbo (Experimental) 3-5x cost, fallback TIP for hosts without ask_question, storage in PROMPTKIT.md profile: line
+    - Non-interactive flags --lite/--balanced/--turbo still work (verified via parsing tests), CI respects flags or existing PROMPTKIT.md profile, defaults to balanced
+    - Validated: bash init.sh --help shows Interactive line, measure-tokens 2076/845 unchanged, behavioral 60/0, init safety tests pass
 
 ## 4. Execution Policy
 
@@ -73,7 +81,7 @@
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 02:30 UTC`
 - **Current Actor**: `PromptKit maintainer`
-- **Next Action**: `Update GitHub Issue #139 via web UI (API 403 blocked), then close #139 and #137 manually, start #138 benchmarks`
+- **Next Action**: `Push ad30133 interactive picker to PR #140, update Issue #139 body via web UI (API 403), assign milestone v1.6.0, merge PR`
 
 ### Transition History
 
@@ -82,6 +90,7 @@
 | N/A | planned | 2026-09-14 01:10 UTC | maintainer | Task created to address recommendability gap (5/10) | QUICKSTART.md |
 | planned | planned | 2026-09-14 02:00 UTC | maintainer | Refined to 2+1 modes per user proposal cross-exam | User proposal + BENCHMARKS.md §6 + L3 safety |
 | planned | completed | 2026-09-14 02:45 UTC | maintainer | Implemented 2+1 profiles: lite template 845 tok, init.sh/init.ps1 flags, PROMPTKIT.md profile injection, README/QUICKSTART updated, verified tokens and validators | init.sh --lite 842 tok, --balanced 2073 tok, behavioral 60/0, references 0 errors |
+| completed | completed | 2026-09-14 03:30 UTC | maintainer | Added native interactive selection tools: init.sh TTY picker PROFILE_SET visual decision box 1 Lite Recommended 2 Balanced default 3 Turbo Experimental + confirmation, init.ps1 equivalent, onboard.md ask_question with 3 options | init.sh --help Interactive line, flags still parse, behavioral 60/0, init safety pass, onboard.md Phase 3 Step 1 ask_question |
 
 ## 6. Evidence and Completion Gate
 
@@ -89,11 +98,12 @@
   - `templates/agent-directive-lite-template.md` - new lite directive 845 tok (96% reduction)
   - `templates/lite-profile.md` - updated from placeholder to full 2+1 design doc with comparison table, token measurements, upgrade path
   - `templates/project-profile-template.md` - added Profile section 0 with profile: balanced default
-  - `init.sh` - added --lite/--balanced/--turbo/--experimental flags, profile injection into PROMPTKIT.md, directive selection based on profile, help text, cost warnings
-  - `init.ps1` - same flags, PowerShell parity, profile injection
+  - `init.sh` - added --lite/--balanced/--turbo/--experimental flags, profile injection into PROMPTKIT.md, directive selection based on profile, help text, cost warnings + interactive TTY picker visual decision (PROFILE_SET tracking, -t 0 check, 1 Lite Recommended 2 Balanced default 3 Turbo Experimental with confirmation)
+  - `init.ps1` - same flags, PowerShell parity, profile injection + interactive picker with ProfileSet tracking, UserInteractive check, Read-Host visual decision
   - `README.md` - Quick Start updated with 3 profiles code blocks + Profiles table
   - `QUICKSTART.md` - Installation section updated with 2+1 profiles
-- **Scope Change Records**: None - refinement within same objective
+  - `workflows/onboard.md` - Phase 3 Step 1 added native interactive selection via ask_question with 3 options, fallback TIP, storage in PROMPTKIT.md profile: line
+- **Scope Change Records**: Extension 2026-09-14 03:30 UTC - user asked does #139 use native interactive selection tools (visual decision) for picking profiles. Answered no, now implemented TTY picker in init.sh/init.ps1 and ask_question in onboard.md
 - **Checkpoint Records**: None
 - **Handoff Records**: None
 - **Verification Evidence**: 
@@ -101,10 +111,15 @@
   - `bash init.sh --balanced /tmp/test-balanced` → profile: balanced, 2073 tok
   - `bash init.sh --turbo` → fails requiring --experimental
   - `bash init.sh --turbo --experimental /tmp/test-turbo` → profile: turbo with warning
+  - `bash init.sh --help` → shows Interactive line
+  - Non-interactive flag parsing tests: --lite SET=1, --balanced SET=1, --turbo --experimental SET=1 EXP=1
   - `bash scripts/validate-references.sh .` → 0 errors, 3 warnings
   - `bash scripts/tests/run-behavioral-contract-tests.sh` → 60/0
+  - `bash scripts/tests/run-init-safety-tests.sh` → pass
   - `bash -n init.sh` → syntax OK
   - `wc -c templates/agent-directive-lite-template.md` 3378 → 845 tok est
+  - `bash scripts/measure-tokens.sh` → 2076 tok balanced 845 lite
+  - `bash scripts/measure-per-task-tokens.sh` → per-task saving 53-63% Lite vs Balanced, Change A saving 6915 tok
 - **Behavior IDs**: N/A - TDD Enforcement Mode disabled
 - **TDD Intent Register**: N/A - TDD Enforcement Mode disabled
 - **TDD Execution Evidence**: N/A - TDD Enforcement Mode disabled
