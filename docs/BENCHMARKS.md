@@ -1,6 +1,8 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture.
+**Measurement Date:** 2026-09-14 · **Repo SHA:** `fc98f2f` (branch `arena/01a09d50-promptkit-os`, after 2+1 profiles) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh`, same as `token-efficiency-review.md` · **Baseline Monolithic:** ~18,500 tokens (all 21 workflows inlined)
+
+This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
 ---
 
@@ -31,37 +33,55 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 The initialization script (`init.sh` / `init.ps1`) injects a single idempotent directive block between `<!-- PROMPTKIT_START -->` and `<!-- PROMPTKIT_END -->`. You can mechanically verify these exact measurements at any time by running `scripts/measure-tokens.ps1` (PowerShell) or `scripts/measure-tokens.sh` (Bash).
 
-| Component | Lines | Approx. Token Weight | Purpose |
+**Profiles (v1.6.0 — 2+1 modes):**
+
+| Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs 18.5k Monolithic | Use |
+| :--- | :--- | ---: | ---: | :--- | :--- |
+| **Lite** | `agent-directive-lite-template.md` (4 workflows: route, debug, commit, checkpoint, sync) | 3,378 | **845 tok** | **96% static** | Onboarding, new users, tiny fixes |
+| **Balanced** | `agent-directive-template.md` (22 workflows) | 8,303 | **2,076 tok** | **89% static** | Teams, production, default |
+| **Turbo** | same as Balanced + parallel waves | 8,303 | 2,076 tok + subagents (3-5x total) | 89% static, higher total | Experimental, greenfield, accepts cost |
+
+> **Clarification:** The often-quoted "~90% savings" is **static overhead only** (directive vs monolithic inlining). Per-task payload (directive + workflow + gate) saves 28-54% after Change A (removing mandatory `route.md` 6,962 tok load). See §3 for per-task numbers.
+
+| Component (Balanced) | Lines | Approx. Token Weight | Purpose |
 | :--- | :---: | :---: | :--- |
 | **System Introduction & Scope** | ~13 | ~193 tokens | Identifies PromptKit root in workspace (`./.promptkit`) |
 | **Fast Shorthand Triggers** | ~28 | ~495 tokens | Collision-free index of namespaced workflows (`pk:route`, `pk:debug`, `pk:fix`, etc.) |
 | **Smart Auto-Route & Guardrails** | ~22 | ~465 tokens | Triage rules (Fast-Path zero overhead, Anti-slop, Secrets hygiene, MCP precedence, Telemetry cards) |
 | **Workflows, Protocols & Task Ceremony Levels** | ~20 | ~530 tokens | Lazy convention routing & inline Level 0–3 ceremony classification |
 | **Artifact Paths & Document Targets** | ~8 | ~245 tokens | Output destinations (`docs/specs/`, `docs/tasks/`, `docs/STATE.md`) |
-| **Total Baseline Static Overhead** | **91 lines** | **~1,928 tokens** | **Permanent footprint in system prompt (~90% savings vs. ~18.5k monolithic packs)** |
+| **Total Baseline Static Overhead (Balanced)** | **91 lines** | **~2,076 tokens** | **Permanent footprint in system prompt (~89% static saving vs. ~18.5k monolithic)** |
+| **Total Baseline Static Overhead (Lite)** | **~45 lines** | **~845 tokens** | **96% static saving, 59% saving vs Balanced** |
 
-By contrast, inlining all 21 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
+By contrast, inlining all 22 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
 
 ---
 
 ## 3. Dynamic Per-Task Context Economics & Runtime Benchmarks
 
-PromptKit OS benchmarks both the **static footprint** (~1,928 tokens) and the **dynamic per-task runtime context**. 
+PromptKit OS benchmarks both the **static footprint** (845 tok Lite, 2,076 tok Balanced) and the **dynamic per-task runtime context**. 
 
-By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without preloading `workflows/route.md` (~6,962 tokens).
+By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without preloading `workflows/route.md` (~6,962 tokens). This is Change A from `docs/token-efficiency-review.md` — verified saving 6,915 tok per task.
 
-### Measured Per-Task Context Breakdown (bytes / 4 convention):
+**Methodology for per-task table:**
+- SHA: `fc98f2f` (after 2+1 profiles), also valid at `c34be80` (before profiles, Balanced only)
+- Method: `bytes / 4` per `measure-tokens.sh` convention, sum of directive + workflow + `code-quality-gate.md` + relevant template
+- Baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A)
+- JIT payload = directive 1,929-2,076 + workflow + gate (new behavior, route.md only when ambiguous)
+- Lite vs Balanced: Lite uses 845 tok directive, Balanced uses 2,076 tok
 
-| Workflow Path | Task Type & Loaded Scope | Baseline Payload | PromptKit OS JIT Payload | Context Reduction |
-| :--- | :--- | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **5,946 tok** | **-54% (-6,915 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **17,751 tok** | **-28% (-6,915 tok)** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **14,546 tok** | **-41% (-10,215 tok)** |
+### Measured Per-Task Context Breakdown (bytes / 4 convention, after Change A + B):
+
+| Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **5,946 tok** | **4,715 tok** (845+fix+gate) | **-54% Balanced, -63% Lite (-6,915 to -8,146 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **17,751 tok** | **16,520 tok** | **-28% Balanced, -33% Lite** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **14,546 tok** | **13,315 tok** | **-41% Balanced, -46% Lite (-10,215 to -11,446 tok)** |
 
 ### Key Runtime Efficiencies:
-1. **Time-to-First-Action (TTFA)**: Eliminates 1 full tool-reading turn on Turn 1, saving **~3–6 seconds** of latency on every interaction.
-2. **Context Window Endurance**: Chat conversations maintain high attention reasoning for an additional **5–10 turns** before reaching compaction thresholds.
-3. **Pure Host Isolation**: Repository-internal governance (e.g. `docs/internal/release-evaluation.md`) is decoupled from consumer workflows, keeping `ship.md` lean (~4,627 tokens).
+1. **Time-to-First-Action (TTFA)**: Eliminates 1 full tool-reading turn on Turn 1 (no longer loads `route.md` 6,962 tok to discover Level 0 is zero overhead), saving **~3–6 seconds** of latency on every interaction. Measured via Turn 1 file reads before/after Change A.
+2. **Context Window Endurance**: Chat conversations maintain high attention reasoning for an additional **5–10 turns** before reaching compaction thresholds (parent thread saves ~98.7% via subagent delegation, see §4).
+3. **Pure Host Isolation**: Repository-internal governance (e.g. `docs/internal/release-evaluation.md`) is decoupled from consumer workflows, keeping `ship.md` lean (~4,627 tokens vs 8,292 before extraction).
 
 ---
 

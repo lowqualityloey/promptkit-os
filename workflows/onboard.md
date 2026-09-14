@@ -116,7 +116,31 @@ After completing the scan and presenting the findings summary / Executive Scorec
 
 ### Phase 3: Profile & Guardrail Generation
 
-1. **Auto-Populate `PROMPTKIT.md`**:
+> [!TIP]
+> **Profile Selection — Visual Decision (2+1 Modes):** PromptKit OS now ships with 2 official + 1 experimental profiles. For onboarding, you MUST use native interactive selection tools (e.g. `ask_question` / prompt picker) to let the developer choose visually, not just via flags. This is the agent-level equivalent of the shell TTY picker in `init.sh`.
+
+1. **Profile Selection via Native Interactive Tools (Visual Decision):**
+   - Check `PROMPTKIT.md` for existing `profile: lite|balanced|turbo` line. If present, respect it and skip prompt.
+   - If missing and running in interactive host (Claude Code, Cursor, OpenCode, etc.), invoke native selection tool as final action of Phase 2 / first action of Phase 3:
+     ```
+     ask_question:
+       question: "Choose PromptKit OS profile for this project"
+       header: "Profile"
+       options:
+         - label: "Lite (Recommended for new users) (Recommended)"
+           description: "4 workflows (route, debug, commit, checkpoint, sync) 845 tok, 80% value, fastest onboarding, <1,500 tok"
+         - label: "Balanced (Recommended for teams)"
+           description: "Full 22 workflows, 2,076 tok, Level 0-3 adaptive ceremony, teams/production, default"
+         - label: "Turbo (Experimental)"
+           description: "Balanced + parallel subagent waves, 3-5x token cost, still requires human L3 approval, needs --experimental acknowledgement"
+       multiSelect: false
+     ```
+   - Hosts without `ask_question` support: fallback to `> [!TIP] ### 💡 Choose profile (Type number & Enter):` with Option 1 prefixed `(Recommended)` and Option 2 as default.
+   - If developer chooses Turbo, require explicit experimental acknowledgement: second confirmation `Acknowledge Turbo experimental cost (3-5x tokens) and that human approval still required for L3? [y/N]`
+   - Store choice as machine-readable `profile: lite|balanced|turbo` in `PROMPTKIT.md` (both human section `## 0. PromptKit OS Profile` and bottom `profile:` line) so future sessions don't re-ask.
+   - Non-interactive / CI: respect flags `--lite`, `--balanced`, `--turbo --experimental` passed to `init.sh` / `init.ps1`, or `PROMPTKIT.md` existing profile, or default to `balanced`.
+
+2. **Auto-Populate `PROMPTKIT.md`**:
    Copy `.promptkit/templates/project-profile-template.md` to `./PROMPTKIT.md` and fill out all sections using findings from Phases 1 and 2:
    - Project Name inferred from directory or manifest `name`.
    - Active commands configured to the exact detected package manager and runner scripts.
@@ -124,14 +148,15 @@ After completing the scan and presenting the findings summary / Executive Scorec
    - Document paths set to standard defaults (`docs/specs/`, `docs/tasks/`, `docs/data/`, etc.) and link any detected root documentation (`ARCHITECTURE.md`, `ROADMAP.md`, `RUNBOOK.md`, `STYLE.md`).
    - Task tracking system recorded in Section 5 (`Local Markdown (docs/tasks/)` by default, or `GitHub Issues` / `Linear` / `Jira` if requested).
    - Tailored architectural invariants added (e.g. strict TypeScript, zero loose casting, database check constraints, RLS enforcement).
+   - Ensure `## 0. PromptKit OS Profile` section exists with chosen profile (`lite|balanced|turbo`) and machine-readable `profile:` line at bottom for agent parsing (from Step 1).
 
-2. **Auto-Populate `DESIGN.md` (If Frontend Surfaces Exist)**:
+3. **Auto-Populate `DESIGN.md` (If Frontend Surfaces Exist)**:
    If UI components are detected (`.tsx`, `.jsx`, `.vue`, `.svelte`):
    - Inspect styling configurations: `tailwind.config.*`, `globals.css`, `components.json` (Shadcn UI).
    - Extract primary brand colors, font families, base radius (`rounded-md`), and typography tokens.
    - Scaffold `./DESIGN.md` incorporating PromptKit OS anti-slop directives and detected tokens.
 
-3. **Auto-Populate `docs/STATE.md` (Living Project Tracker)**:
+4. **Auto-Populate `docs/STATE.md` (Living Project Tracker)**:
    Copy `.promptkit/templates/state-tracker-template.md` to `./docs/STATE.md`:
    - Populate project name, current branch, and active status.
    - If monorepo, set initial Target Workspace / Package in Section 3 (`Active Working Set`).

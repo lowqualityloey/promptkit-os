@@ -2,6 +2,18 @@
 
 > **Instructions for AI**: Read this file during every session. Adhere strictly to the project domain boundaries, commands, documentation targets, and non-negotiable architectural rules defined below.
 
+## 0. PromptKit OS Profile
+- **Profile**: `balanced` (options: `lite` | `balanced` | `turbo` experimental)
+- **Installed**: [YYYY-MM-DD]
+- **Engine**: `.promptkit`
+- **Description**:
+  - `lite`: 4 workflows (route, debug, commit, checkpoint) <1,500 tok, 80% value — onboarding
+  - `balanced`: full 22 workflows, Level 0-3 adaptive ceremony (default) — teams, production
+  - `turbo`: experimental, Balanced + parallel subagent waves, 3-5x token cost, still requires human L3 approval
+- **Upgrade Path**: Run `.promptkit/init.sh --balanced` for full, `--lite` for minimal, `--turbo --experimental` for parallel waves
+
+profile: balanced
+
 ---
 
 ## 1. Project Overview & Domain
