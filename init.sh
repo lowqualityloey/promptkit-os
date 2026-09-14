@@ -270,6 +270,7 @@ AGENT_FILES=(
     ".clinerules/promptkit.md"
     ".traerules"
     ".opencode/rules.md"
+    "CONVENTIONS.md"   # Aider conventions file
 )
 
 TARGETS_FOUND=()

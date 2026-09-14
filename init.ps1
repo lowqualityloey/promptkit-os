@@ -6,7 +6,7 @@
     Initializes PromptKit OS in your project:
     - Scaffolds project documentation directories (docs/adrs, docs/specs, docs/rca, docs/spikes, docs/design)
     - Creates PROMPTKIT.md project profile if missing, injects profile: lite|balanced|turbo
-    - Injects or updates PromptKit OS directives in AGENTS.md, CLAUDE.md, GEMINI.md, .cursorrules, .cursor/rules/*.mdc, .windsurfrules, .github/copilot-instructions.md, .clinerules, .traerules, or .opencode/rules.md
+    - Injects or updates PromptKit OS directives in AGENTS.md, CLAUDE.md, GEMINI.md, .cursorrules, .cursor/rules/*.mdc, .windsurfrules, .github/copilot-instructions.md, .clinerules, .traerules, .opencode/rules.md, or CONVENTIONS.md (Aider)
 #>
 
 [CmdletBinding()]
@@ -269,7 +269,8 @@ $AgentFileCandidates = @(
     ".clinerules",
     ".clinerules/promptkit.md",
     ".traerules",
-    ".opencode/rules.md"
+    ".opencode/rules.md",
+    "CONVENTIONS.md"   # Aider conventions file
 )
 
 $TargetsFound = @()
