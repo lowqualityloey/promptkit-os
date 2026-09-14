@@ -31,6 +31,7 @@ jobs:
           bash -n scripts/tests/run-ci-triage-fixtures.sh
           bash -n scripts/tests/run-behavioral-contract-tests.sh
           bash -n scripts/tests/run-init-safety-tests.sh
+          bash -n scripts/tests/run-profile-matrix.sh
           bash -n scripts/tests/release-records.examples.sh
           echo "Bash scripts parsed with 0 syntax errors."
 
@@ -39,6 +40,9 @@ jobs:
 
       - name: Run init.sh Safety Regression Tests (Bash)
         run: bash scripts/tests/run-init-safety-tests.sh
+
+      - name: Run init Profile Matrix Tests (Bash)
+        run: bash scripts/tests/run-profile-matrix.sh
 
       - name: Run Agent Execution Control Fixture Harness (Bash)
         run: bash scripts/tests/run-execution-control-fixtures.sh
@@ -145,6 +149,7 @@ jobs:
             "scripts/tests/run-ci-triage-fixtures.ps1",
             "scripts/tests/run-behavioral-contract-tests.ps1",
             "scripts/tests/run-init-safety-tests.ps1",
+            "scripts/tests/run-profile-matrix.ps1",
             "scripts/tests/release-records.examples.ps1"
           )
           foreach ($file in $syntaxFiles) {
@@ -164,6 +169,10 @@ jobs:
       - name: Run init.ps1 Safety Regression Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-init-safety-tests.ps1
+
+      - name: Run init Profile Matrix Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-profile-matrix.ps1
 
       - name: Run Agent Execution Control Fixture Harness (PowerShell)
         shell: pwsh
