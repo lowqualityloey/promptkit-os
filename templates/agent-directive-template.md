@@ -16,7 +16,7 @@ Activate workflows anytime with these namespaced triggers:
 - `pk:debug`: Hypothesis-driven scientific debugging & root cause analysis (5-Whys).
 - `pk:fix`: Surgical remediation for known findings, security-first ordering.
 - `pk:refactor`: Structural debt remediation, Golden Master pinning, Mikado method.
-- `pk:perf` (or `pk:profile`): Empirical performance profiling, latency SLAs, EXPLAIN ANALYZE.
+- `pk:perf`: Empirical performance profiling, latency SLAs, EXPLAIN ANALYZE.
 - `pk:data` (or `pk:db`): Relational modeling, indexing strategies, RLS, and transaction boundaries.
 - `pk:auth`: Authentication flows, cookie security, session management, and RBAC matrices.
 - `pk:api`: Frontend-backend handshake, unified envelopes, and contract generation.
@@ -27,7 +27,7 @@ Activate workflows anytime with these namespaced triggers:
 - `pk:retro` (or `pk:reflect`): Retrospective log, ADR extraction, and skill matrix alignment.
 - `pk:checkpoint` (or `pk:handoff`): Session state compaction, docs/STATE.md update, and handover prompt.
 - `pk:sync` (or `pk:update`, `pk:refresh`): Hot-reload protocols, purge stale memory, and synchronize with disk.
-- `pk:profile` (or `pk:switch-profile`): Switch Lite/Balanced/Turbo profile at runtime via the idempotent installer re-injection path.
+- `pk:profile`: Switch Lite/Balanced/Turbo profile at runtime via the idempotent installer re-injection path.
 
 ### Smart Auto-Route & Guardrails (Triggers Are Optional)
 You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigger, apply this triage:
