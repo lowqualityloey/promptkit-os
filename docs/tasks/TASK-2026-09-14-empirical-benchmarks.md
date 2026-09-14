@@ -8,7 +8,7 @@
 - **Task ID**: `TASK-2026-09-14-empirical-benchmarks`
 - **PromptKit Adaptation Profile**: `none`
 - **Specification**: `docs/BENCHMARKS.md` and `docs/token-efficiency-review.md#2`
-- **External Reference (Optional)**: `GitHub Issue TBD`
+- **External Reference (Optional)**: `https://github.com/lowqualityloey/promptkit-os/issues/138`
 - **Owner / Actor**: `PromptKit maintainer`
 - **Execution Scope**: `promptkit-os repository`
 - **Approval Boundary**: `Requires human confirmation for commit, PR, and benchmark methodology`

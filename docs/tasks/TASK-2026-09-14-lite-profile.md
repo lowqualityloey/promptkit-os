@@ -8,7 +8,7 @@
 - **Task ID**: `TASK-2026-09-14-lite-profile`
 - **PromptKit Adaptation Profile**: `none`
 - **Specification**: `QUICKSTART.md` tip "Start with just 2 workflows" and due-diligence recommendability gap
-- **External Reference (Optional)**: `GitHub Issue TBD`
+- **External Reference (Optional)**: `https://github.com/lowqualityloey/promptkit-os/issues/139`
 - **Owner / Actor**: `PromptKit maintainer`
 - **Execution Scope**: `promptkit-os repository`
 - **Approval Boundary**: `Requires human confirmation for commit, PR, and README update`

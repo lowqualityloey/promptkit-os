@@ -8,7 +8,7 @@
 - **Task ID**: `TASK-2026-09-14-cross-ref-tails`
 - **PromptKit Adaptation Profile**: `none`
 - **Specification**: `docs/token-efficiency-review.md#5c`
-- **External Reference (Optional)**: `GitHub Issue TBD - will link after creation`
+- **External Reference (Optional)**: `https://github.com/lowqualityloey/promptkit-os/issues/137`
 - **Owner / Actor**: `PromptKit maintainer`
 - **Execution Scope**: `promptkit-os repository`
 - **Approval Boundary**: `Requires human confirmation for commit and PR`
