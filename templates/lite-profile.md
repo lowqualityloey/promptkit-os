@@ -4,16 +4,16 @@
 
 PromptKit OS ships with 2 official profiles + 1 experimental to fix recommendability gap (5/10 → 8/10):
 
-- **Lite (official)** — 6 utility workflows, 881 tok static (measured), 80% value, onboarding
-- **Balanced (official, default)** — full 23 workflows, 2,099 tok static, Level 0-3 adaptive ceremony, teams/production
+- **Lite (official)** — 6 utility workflows, 961 tok static (measured), 80% value, onboarding
+- **Balanced (official, default)** — full 23 workflows, 2,319 tok static, Level 0-3 adaptive ceremony, teams/production
 - **Turbo (experimental)** — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval
 
 ## Profile Comparison
 
 | Dimension | Lite | Balanced | Turbo (Experimental) |
 | :--- | :--- | :--- | :--- |
-| **Workflows** | route, debug, commit, checkpoint, sync | All 22 | All 22 + parallel waves |
-| **Static tokens** | 881 tok | 2,099 tok | 2,099 tok + subagents |
+| **Workflows** | route, debug, commit, checkpoint, sync, profile | All 23 | All 23 + parallel waves |
+| **Static tokens** | 961 tok | 2,319 tok | 2,319 tok + subagents |
 | **Use case** | New users, learning, tiny bug fixes, docs typos | Teams, production, full lifecycle | Greenfield, user accepts cost |
 | **Install** | `init.sh --lite` | `init.sh --balanced` or no flag (default) | `init.sh --turbo --experimental` |
 | **PROMPTKIT.md** | `profile: lite` | `profile: balanced` | `profile: turbo` |
@@ -48,9 +48,9 @@ Machine-readable line for agent parsing: `profile: lite|balanced|turbo` at botto
 
 ## Token Measurements (measured 2026-09-14, bytes/4)
 
-- Lite directive: 3,523 chars → 881 tok (95% reduction vs 18,500 monolithic)
-- Balanced directive: 8,395 chars → 2,099 tok (89% reduction)
-- Saving Lite vs Balanced: 1,218 tok (-58%)
+- Lite directive: 3,844 chars → 961 tok (95% reduction vs ~19.8k derived core-subset); 98.7% vs full 75.5k set
+- Balanced directive: 9,276 chars → 2,319 tok (89% reduction)
+- Saving Lite vs Balanced: 1,358 tok (-59%)
 
 Per-task payload after Change A (route.md no longer mandatory):
 - pk:fix: 5,946 tok (was 12,861 before)

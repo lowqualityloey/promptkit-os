@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Measurement Date:** 2026-09-14 · **Environment:** `main` branch (v1.6.0 with 2+1 profiles) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · **Baseline Monolithic:** ~18,500 tokens (all 23 workflows inlined)
+**Measurement Date:** 2026-09-14 · **Environment:** `main` branch (v1.6.0 with 2+1 profiles) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · **Baseline Monolithic:** core-6 lifecycle subset ~19,794 tok / full 23-workflow set ~75,505 tok (derived live)
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -15,13 +15,13 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [22 Inlined Workflows + Templates + Protocols (~18.5k tok)] │
+│ Every Turn: [23 Inlined Workflows + Templates + Protocols (~75.5k tok)] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                   PROMPTKIT OS JIT FILESYSTEM MODEL                     │
-│ Baseline Static Injection: Router Directive (881 tok Lite / 2,099 Bal)  │
+│ Baseline Static Injection: Router Directive (961 tok Lite / 2,319 Bal)  │
 │ On-Demand Loading: Tool loads only target workflow file (e.g. pk:debug) │
 │ Context Window Preservation: ~89-96% savings on initial static overhead │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -35,11 +35,13 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 
 **Profiles (v1.6.0 — 2+1 modes):**
 
-| Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs 18.5k Monolithic | Use |
+| Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs ~19.8k core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
-| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 3,523 | **881 tok** | **95% static** | Onboarding, new users, tiny fixes |
-| **Balanced** | `agent-directive-template.md` (23 workflows) | 8,395 | **2,099 tok** | **89% static** | Teams, production, default |
-| **Turbo** | same as Balanced + parallel waves | 8,395 | 2,099 tok + subagents (~2x measured total (bounds model, see section 8)) | 89% static, higher total | Experimental, greenfield, accepts cost |
+| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 3,844 | **961 tok** | **95% static** | Onboarding, new users, tiny fixes |
+| **Balanced** | `agent-directive-template.md` (23 workflows) | 9,276 | **2,319 tok** | **88% static** | Teams, production, default |
+| **Turbo** | same as Balanced + parallel waves | 9,276 | 2,319 tok + subagents (~2x measured total (bounds model, see section 8)) | 88% static, higher total | Experimental, greenfield, accepts cost |
+
+¹ Core-subset baseline = live sum of the six lifecycle files the Lite profile loads (route, debug, commit, checkpoint, sync, profile) = ~19,794 tok; full-set baseline = all 23 workflow files = ~75,505 tok (2026-09-14 measurement; replaces the previously unsourced "18.5k" constant).
 
 > **Clarification:** The often-quoted "~90% savings" is **static overhead only** (directive vs monolithic inlining). Per-task payload (directive + workflow + gate) saves 28-54% after Change A (removing mandatory `route.md` 6,962 tok load). See §3 for per-task numbers.
 
@@ -50,8 +52,8 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 | **Smart Auto-Route & Guardrails** | ~22 | ~465 tokens | Triage rules (Fast-Path zero overhead, Anti-slop, Secrets hygiene, MCP precedence, Telemetry cards) |
 | **Workflows, Protocols & Task Ceremony Levels** | ~20 | ~530 tokens | Lazy convention routing & inline Level 0–3 ceremony classification |
 | **Artifact Paths & Document Targets** | ~8 | ~245 tokens | Output destinations (`docs/specs/`, `docs/tasks/`, `docs/STATE.md`) |
-| **Total Baseline Static Overhead (Balanced)** | **93 lines** | **~2,099 tokens** | **Permanent footprint in system prompt (~89% static saving vs. ~18.5k monolithic)** |
-| **Total Baseline Static Overhead (Lite)** | **~49 lines** | **~881 tokens** | **95% static saving, 58% saving vs Balanced** |
+| **Total Baseline Static Overhead (Balanced)** | **97 lines** | **~2,319 tokens** | **Permanent footprint in system prompt (~88% static saving vs. ~19.8k core-subset (96.9% vs. full 23-file set))** |
+| **Total Baseline Static Overhead (Lite)** | **~49 lines** | **~961 tokens** | **95% static saving, 58% saving vs Balanced** |
 
 By contrast, inlining all 23 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
 
@@ -74,7 +76,7 @@ Gate coverage: the static dual-profile budget runs in **both** Linux and Windows
 
 ## 3. Dynamic Per-Task Context Economics & Runtime Benchmarks
 
-PromptKit OS benchmarks both the **static footprint** (881 tok Lite, 2,099 tok Balanced) and the **dynamic per-task runtime context**. 
+PromptKit OS benchmarks both the **static footprint** (961 tok Lite, 2,319 tok Balanced) and the **dynamic per-task runtime context**. 
 
 By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without preloading `workflows/route.md` (~6,962 tokens). This is Change A from `docs/token-efficiency-review.md` — verified saving 6,915 tok per task.
 
@@ -82,16 +84,16 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 - SHA: `fc98f2f` (after 2+1 profiles), also valid at `c34be80` (before profiles, Balanced only)
 - Method: `bytes / 4` per `measure-tokens.sh` convention, sum of directive + workflow + `code-quality-gate.md` + relevant template
 - Baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A)
-- JIT payload = directive 1,929-2,099 + workflow + gate (new behavior, route.md only when ambiguous)
-- Lite vs Balanced: Lite uses 881 tok directive, Balanced uses 2,099 tok
+- JIT payload = directive 1,929-2,319 + workflow + gate (new behavior, route.md only when ambiguous)
+- Lite vs Balanced: Lite uses 961 tok directive, Balanced uses 2,319 tok
 
 ### Measured Per-Task Context Breakdown (bytes / 4 convention, after Change A + B):
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **6,117 tok** | **4,899 tok** (881+fix+gate) | **-53% Balanced, -62% Lite (-6,744 to -7,966 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **14,907 tok** | **13,689 tok** | **-40% Balanced, -45% Lite** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **11,274 tok** | **10,056 tok** | **-55% Balanced, -59% Lite (-13,487 to -14,709 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **6,337 tok** | **4,979 tok** (961+fix+gate) | **-51% Balanced, -62% Lite (-6,524 to -7,882 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **15,127 tok** | **13,769 tok** | **-39% Balanced, -44% Lite** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **11,494 tok** | **10,136 tok** | **-54% Balanced, -59% Lite (-13,267 to -14,625 tok)** |
 
 ### Key Runtime Efficiencies:
 1. **Time-to-First-Action (TTFA)**: Eliminates 1 full tool-reading turn on Turn 1 (no longer loads `route.md` 6,962 tok to discover Level 0 is zero overhead), saving **~3–6 seconds** of latency on every interaction. Measured via Turn 1 file reads before/after Change A.
@@ -183,13 +185,13 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
 
 **Model.** A Turbo branch runs in a fresh context. Beyond the first branch, each parallel lane costs either a directive reload + 250-tok synthesis return (lower bound) or a full task-path context reload (upper bound).
 
-**Measured (main @ `719a74e`, directive 2,099 tok):**
+**Measured (main @ `719a74e`, directive 2,319 tok):**
 
 | Task path | Balanced tok | Turbo tok (lower–upper) | Multiplier | Time saved (bound) | Fan-out anchor |
 | :--- | ---: | :--- | :--- | :--- | :--- |
-| `pk:fix` | 6,117 | 6,117–6,117 | **1.00x** | 0% (single-thread) | `route.md` Tier-3 offload only |
-| `pk:plan` | 14,907 | 17,256–30,064 | **1.16x–2.02x** | ≤50% of spike segment | Delegation Pattern A (k=2) |
-| `pk:ship` | 11,274 | 13,623–22,798 | **1.21x–2.02x** | ≤50% of QA segment | Pattern B (k=2) + Pattern C verifier |
+| `pk:fix` | 6,337 | 6,337–6,337 | **1.00x** | 0% (single-thread) | `route.md` Tier-3 offload only |
+| `pk:plan` | 15,127 | 17,256–30,064 | **1.16x–2.02x** | ≤50% of spike segment | Delegation Pattern A (k=2) |
+| `pk:ship` | 11,494 | 13,623–22,798 | **1.21x–2.02x** | ≤50% of QA segment | Pattern B (k=2) + Pattern C verifier |
 
 **Decision (per #145 threshold rule):** **KEEP Turbo experimental — do not promote, do not remove.** Measured overhead tops out near **2x**, materially below the "3-5x" band previously advertised, and the structural time benefit caps at ~50% of only the parallelizable segment. Promotion would require real multi-host wall-clock evidence that a documentation protocol cannot produce; removal would discard a genuinely useful (≤2x) pattern for greenfield spikes. All shipped "3-5x" claims were corrected in this change to "up to ~2x measured" and the claim window is now CI-gated (`--strict`, 1.00–2.60x): widening fan-out without re-baselining this section fails the build.
 

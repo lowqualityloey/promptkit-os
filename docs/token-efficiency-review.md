@@ -152,7 +152,7 @@ Keeping this from becoming over-engineered:
   **A** (all harnesses pass on a prototype) but **false for B**. `scripts/tests/release-records.examples.sh`
   carries 6 assertions on `workflows/ship.md` that the 56 contract tests do not cover, and that
   harness is **not wired into CI** — so B would regress it silently. See
-  [`docs/tasks/TASK-2026-09-13-directive-and-ship-token-reduction.md` §3.0](./tasks/TASK-2026-09-13-directive-and-ship-token-reduction.md).
+  [`docs/archive/2026-09-13-directive-and-ship-token-reduction.md` §3.0](./tasks/TASK-2026-09-13-directive-and-ship-token-reduction.md).
   Wiring that harness into CI is a prerequisite for B, and a standalone win regardless.
 - **No restructuring of `docs/releases/`.** The 20-file release trail is evidence and is
   validated by `validate-release-records.sh`. Leave it alone.

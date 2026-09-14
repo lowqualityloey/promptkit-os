@@ -105,6 +105,17 @@ else
     notok "upgrade re-run (profile=$(profile_of "$D"), markers=$(grep -c '^<!-- PROMPTKIT_START -->$' "$D/AGENTS.md" 2>/dev/null), section0=$(grep -c '^- \*\*Profile\*\*: balanced$' "$D/PROMPTKIT.md" 2>/dev/null))"
 fi
 
+# 9. Aider parity: existing CONVENTIONS.md receives an idempotent directive block.
+D="$TEST_ROOT/t9"; mkdir -p "$D"
+printf '# My aider notes\n' > "$D/CONVENTIONS.md"
+bash "$REPO_ROOT/init.sh" --balanced "$D" </dev/null >/dev/null 2>&1
+if [[ "$(grep -c '^<!-- PROMPTKIT_START -->$' "$D/CONVENTIONS.md" 2>/dev/null)" -eq 1 ]] \
+   && grep -q '^# My aider notes$' "$D/CONVENTIONS.md"; then
+    ok "existing CONVENTIONS.md injected idempotently with user content preserved"
+else
+    notok "CONVENTIONS.md injection (markers=$(grep -c '^<!-- PROMPTKIT_START -->$' "$D/CONVENTIONS.md" 2>/dev/null))"
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Passed: $PASS | Failed: $FAIL"

@@ -53,7 +53,7 @@
 - **Hard Checkpoint**: `N/A`
 - **Event-Driven Checkpoints**: `N/A`
 - **Stop Conditions**: `Missing benchmark methodology, unverifiable claims`
-- **Host Timer Capability**: `N/A`
+- **Host Timer Capability**: `Live host timing/forced termination unavailable in this environment; checkpoint rules are protocol discipline, not mechanical enforcement.`
 
 ## 5. State and Active Ownership
 
@@ -69,7 +69,10 @@
 | Previous State | New State | Timestamp | Actor | Reason | Supporting Evidence |
 |---|---|---|---|---|---|
 | N/A | planned | 2026-09-14 01:05 UTC | maintainer | Task created to address benchmark gap 3/10 | docs/BENCHMARKS.md |
-| planned | completed | 2026-09-14 03:00 UTC | maintainer | Implemented: BENCHMARKS.md updated with methodology SHA fc98f2f, per-task Lite vs Balanced table, TTFA, 90% static-only clarification, plus new script measure-per-task-tokens.sh | measure-per-task-tokens.sh output 6094/4863 tok etc., validate-references 0 errors, behavioral 60/0 |
+| planned | ready | 2026-09-14 01:20 UTC | maintainer | (reconstructed) AC + verification populated | This record |
+| ready | in_progress | 2026-09-14 01:20 UTC | maintainer | (reconstructed) Measurement started | This record |
+| in_progress | awaiting_review | 2026-09-14 03:00 UTC | maintainer | BENCHMARKS.md methodology + per-task Lite/Balanced table + TTFA + 90% static-only clarification; new measure-per-task-tokens.sh | measure-per-task-tokens.sh output, validate-references 0, behavioral 60/0 |
+| awaiting_review | completed | 2026-09-14 01:45 UTC | maintainer | PR #140 squash-merged as 06308fb (git committer time; authoring clock offset acknowledged in §7) | git show -s --format=%cI 06308fb |
 
 ## 6. Evidence and Completion Gate
 
@@ -79,7 +82,7 @@
 - **Scope Change Records**: None
 - **Checkpoint Records**: None
 - **Handoff Records**: None
-- **Verification Evidence**: 
+- **Verification Evidence**: `measure-tokens.sh + measure-per-task-tokens.sh outputs transcribed into docs/BENCHMARKS.md §2/§3; validate-references 0 errors; behavioral 60/0. Original reason line cited non-existent SHA fc98f2f — corrected 2026-09-14 (issue #145 comment); values themselves were script-measured.`
   - `bash scripts/measure-per-task-tokens.sh` → Repo SHA fc98f2f, Full 2076 tok, Lite 845 tok, pk:fix Balanced 6094 tok Lite 4863 tok, saving 53-63%
   - `bash scripts/validate-references.sh .` → 0 errors, 3 warnings
   - `bash scripts/tests/run-behavioral-contract-tests.sh` → 60/0
@@ -88,9 +91,18 @@
 - **TDD Intent Register**: N/A - TDD Enforcement Mode disabled
 - **TDD Execution Evidence**: N/A - TDD Enforcement Mode disabled
 - **TDD Exception Verification**: Exception verification for Documentation Work - benchmark methodology documented with SHA and reproducible commands
-- **CI Evidence**: Local green, full CI will run on PR
-- **Review Evidence**: Pending human review
-- **Commit Evidence**: Will be added after commit
-- **Pull Request Evidence**: Pending
+- **CI Evidence**: `GitHub Actions Linux + Windows green on PR #140 (merge 06308fb); benchmarks re-gated by run-token-budget-tests (PR #148).`
+- **Review Evidence**: `Human maintainer review + merge of PR #140.`
+- **Commit Evidence**: `06308fb feat(v1.6.0): ... empirical benchmarks ... (#140)`
+- **Pull Request Evidence**: `https://github.com/lowqualityloey/promptkit-os/pull/140 (MERGED)`
 - **Release Evidence**: N/A
 - **Blocker and Resume Condition**: None - GH API edit blocked for Issue #138 (403), needs manual close via web UI
+
+## 7. Audit Remediation Note (2026-09-14, PR-A / TASK-2026-09-14-audit-remediation)
+
+This record predates validator self-enforcement and was created without canonical completion fields. The evidence fields and transition table above were repaired **in place, with truthful retroactive values from git/PR history** per maintainer-approved PR-A; original narrative content is unaltered and pre-repair bytes are recoverable at commit `c296473`. Merge timestamps below are git committer times (UTC).
+- **Completion State**: `completed`
+- **Acceptance Results**: AC set Complete 2026-09-14 per §3 result lines (BENCHMARKS §2/§3 methodology + measured tables, TTFA clarification, per-task script)
+- **Changed-File Summary**: docs/BENCHMARKS.md measured economics + scripts/measure-per-task-tokens.sh + docs/tasks record (see §6 Changed Files)
+- **Completion Exception**: None
+- **Completion Decision and Timestamp**: completed; PromptKit maintainer; 2026-09-14 01:45 UTC (PR #140 merge, git committer time; fields recorded via PR-A audit remediation 2026-09-14)

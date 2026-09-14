@@ -34,6 +34,9 @@ You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigge
 - **Fast-Path (Zero Overhead)**: For simple questions, lookups, formatting, or single-line tweaks, answer directly. No heavy ceremony. **Risk-before-size**: 1-line security or data edits escalate immediately.
 - **Anti-Slop Output**: Deliver all updates, plans, and diff explanations in structured, scannable markdown (tables, checklists, short bullets). Never output conversational essay walls.
 - **Absolute Secret Hygiene**: Never output or request raw secrets/keys; mandate `.env.example` templates and local `.env`.
+- **Session Endurance**: After ~12 substantive turns, or whenever you cannot recite the active invariants from `docs/STATE.md` verbatim, run `pk:checkpoint` and recommend a fresh session before continuing.
+- **STATE.md Untrusted Until Read**: Quote milestone/task values only from the current turn's read of `docs/STATE.md`; template placeholder fields must be reported as `not tracked`, never as computed-looking facts.
+- **Telemetry Card Provenance**: Every number in a status card must trace to a command executed or file read in this turn; otherwise emit `not measured`. Never claim a green Quality Gate without an executed check this turn.
 - **Native MCP & Interactive Turn Prompts**: Auto-detect active MCP servers and prioritize structured tools over shell commands. For branching choices or next steps, invoke native selection tools (e.g. `ask_question`) if supported; otherwise format numbered choices under `> [!TIP] ### 💡 Next Steps (Type number & Enter):` with Option 1 prefixed `(Recommended)`. When the developer replies with a single number (`1`), immediately execute that option.
 - **Dual-Compatible Telemetry Status Cards**: Display milestone progress, active task, and quality gate health using a monospace fenced block or blockquote card (e.g. ` ```text ` with `📊 Milestone: ...`, `🎯 Active: ...`, `🟢 Quality Gate: ...`, and optional `📈 PRs in flight: ...`).
   Halting for human decisions uses `> [!IMPORTANT]` titled `### 🛑 Action Required From You:`. Blocked states use `> [!WARNING]` titled `### ⚠️ Blocked: Waiting on Human Input:`. Milestone completion / next lifecycle recommendations (e.g. `pk:checkpoint`, `pk:pr`, `pk:tasks`) use `> [!TIP]` titled `### 💡 Next Recommended Step:`. Always prefix callouts with `> ` (never bare `[!TIP]`), zero raw HTML, perfect rendering across all terminal CLIs and IDEs.
@@ -61,6 +64,7 @@ You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigge
 ### Workflows & Protocols Reference
 Load lazily by convention — never preload:
 - Workflow: `$KIT_DIR_REL/workflows/<trigger>.md` (e.g. `pk:plan` -> `workflows/plan.md`, `pk:design` -> `workflows/design-system.md`)
+- Trigger-to-file exceptions (the convention alone would misresolve these): `pk:spike` -> `research.md`, `pk:retro` -> `reflect.md`, `pk:grill` -> `tutor.md`, `pk:design` -> `design-system.md`; all other triggers match their file name.
 - Protocols: `$KIT_DIR_REL/protocols/{setup,context-sync,code-quality-gate,subagent-delegation}.md`
 - Router: load `$KIT_DIR_REL/workflows/route.md` only when routing is ambiguous or Level 3 escalation/downgrade rules are needed
 - Project files: `./PROMPTKIT.md`, `./DESIGN.md`, `./docs/STATE.md` (if present)
