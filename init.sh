@@ -42,6 +42,7 @@ for arg in "$@"; do
             echo -e "  -h, --help          Show this help\n"
             echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
             echo -e "Interactive: When no flag provided and running in TTY, shows visual picker (1) Lite (Recommended) 2) Balanced 3) Turbo Experimental"
+            echo -e "Env escape hatch: PROMPTKIT_NO_INTERACTIVE=1 skips the picker even in a TTY (use flags or Balanced default)"
             echo -e "Examples:"
             echo -e "  ./init.sh --lite"
             echo -e "  ./init.sh --balanced /path/to/project"
@@ -81,7 +82,10 @@ fi
 # Interactive TTY picker when no profile flag provided (visual decision for onboarding)
 # This is the shell-level equivalent of native interactive selection tools (ask_question)
 # Agent-level picker is in workflows/onboard.md which uses ask_question for same choice
-if [[ "$PROFILE_SET" -eq 0 && -t 0 && "$EXPERIMENTAL" -eq 0 ]]; then
+# Non-interactive safety (#144): require BOTH stdin and stdout to be TTYs (so piped or
+# log-redirected invocations can never block on a blind prompt), and honor the documented
+# PROMPTKIT_NO_INTERACTIVE escape hatch to force the flag/default (non-interactive) path.
+if [[ "$PROFILE_SET" -eq 0 && "$EXPERIMENTAL" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}" ]]; then
     echo -e "\n\033[0;36m💡 PromptKit OS Profile Selection (visual decision)\033[0m"
     echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e "  \033[1;33m1) Lite (Recommended for new users)\033[0m — 4 workflows (route, debug, commit, checkpoint) 845 tok, 80% value, fastest onboarding"
