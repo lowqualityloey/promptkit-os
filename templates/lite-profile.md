@@ -48,7 +48,7 @@ Machine-readable line for agent parsing: `profile: lite|balanced|turbo` at botto
 
 ## Token Measurements (measured 2026-09-14, bytes/4)
 
-- Lite directive: 3,525 chars → 881 tok (95% reduction vs 18,500 monolithic)
+- Lite directive: 3,523 chars → 881 tok (95% reduction vs 18,500 monolithic)
 - Balanced directive: 8,395 chars → 2,099 tok (89% reduction)
 - Saving Lite vs Balanced: 1,218 tok (-58%)
 

@@ -37,7 +37,7 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 
 | Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs 18.5k Monolithic | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
-| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 3,525 | **881 tok** | **95% static** | Onboarding, new users, tiny fixes |
+| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 3,523 | **881 tok** | **95% static** | Onboarding, new users, tiny fixes |
 | **Balanced** | `agent-directive-template.md` (23 workflows) | 8,395 | **2,099 tok** | **89% static** | Teams, production, default |
 | **Turbo** | same as Balanced + parallel waves | 8,395 | 2,099 tok + subagents (~2x measured total (bounds model, see section 8)) | 89% static, higher total | Experimental, greenfield, accepts cost |
 
@@ -89,9 +89,9 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **6,117 tok** | **4,895 tok** (877+fix+gate) | **-53% Balanced, -62% Lite (-6,744 to -7,966 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **14,907 tok** | **13,685 tok** | **-40% Balanced, -45% Lite** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **11,274 tok** | **10,052 tok** | **-55% Balanced, -59% Lite (-13,487 to -14,709 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **6,117 tok** | **4,899 tok** (881+fix+gate) | **-53% Balanced, -62% Lite (-6,744 to -7,966 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **14,907 tok** | **13,689 tok** | **-40% Balanced, -45% Lite** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **11,274 tok** | **10,056 tok** | **-55% Balanced, -59% Lite (-13,487 to -14,709 tok)** |
 
 ### Key Runtime Efficiencies:
 1. **Time-to-First-Action (TTFA)**: Eliminates 1 full tool-reading turn on Turn 1 (no longer loads `route.md` 6,962 tok to discover Level 0 is zero overhead), saving **~3–6 seconds** of latency on every interaction. Measured via Turn 1 file reads before/after Change A.
