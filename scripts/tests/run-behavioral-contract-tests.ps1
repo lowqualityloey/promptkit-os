@@ -123,6 +123,19 @@ Assert-Contains "workflows/profile.md" "4-Phase Switch Protocol" "Profile workfl
 Assert-Contains "workflows/profile.md" "Turbo guard" "Profile workflow enforces the Turbo experimental guard"
 Assert-Contains "workflows/profile.md" "PROMPTKIT_NO_INTERACTIVE" "Profile workflow honors non-interactive default"
 Assert-Contains "templates/agent-directive-lite-template.md" "Lite - 6 workflows" "Lite directive claims the honest utility workflow count"
+foreach ($directive in @("templates/agent-directive-template.md", "templates/agent-directive-lite-template.md")) {
+    $tokens = Select-String -Path (Join-Path $RepoRoot $directive) -Pattern '^- `pk:' |
+        ForEach-Object { [regex]::Matches($_.Line, '`pk:[a-z-]+`') } |
+        ForEach-Object { $_.Value }
+    $dups = $tokens | Group-Object | Where-Object { $_.Count -gt 1 }
+    if (-not $dups) {
+        Write-Host "  ✅ PASS: Trigger tokens are unique within $directive" -ForegroundColor Green
+        $script:PassCount++
+    } else {
+        Write-Host "  ❌ FAIL: Duplicate trigger definitions in ${directive}: $(($dups | ForEach-Object Name) -join ' ')" -ForegroundColor Red
+        $script:FailCount++
+    }
+}
 $WfCount = @(Get-ChildItem (Join-Path $RepoRoot "workflows") -Filter "*.md").Count
 if ($WfCount -eq 23) {
     Write-Host "  ✅ PASS: On-disk workflow file count is 23 (matches reconciled docs claims)" -ForegroundColor Green
