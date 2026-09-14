@@ -28,7 +28,7 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit 
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --lite
 ```
 
-**Turbo experimental — Balanced + parallel subagent waves, 3-5x token cost, still requires human L3 approval:**
+**Turbo experimental — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval:**
 
 ```bash
 # macOS / Linux

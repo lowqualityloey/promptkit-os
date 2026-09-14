@@ -44,6 +44,6 @@ Lite keeps host project clean. Specialized dirs (auth/, data/, api/, etc.) creat
 
 ### Upgrade Path
 - Need more workflows? Run `.promptkit/init.sh --balanced` (or `pk:profile`) to upgrade to the full Balanced profile
-- Need parallel waves? Run `.promptkit/init.sh --turbo --experimental` (warns 3-5x token cost)
+- Need parallel waves? Run `.promptkit/init.sh --turbo --experimental` (warns up to ~2x measured token cost)
 - Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`
 <!-- PROMPTKIT_END -->

@@ -37,7 +37,7 @@ for arg in "$@"; do
             echo -e "Options:"
             echo -e "  --lite              Lite profile: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value"
             echo -e "  --balanced          Balanced profile: the full workflow set, Level 0-3 adaptive ceremony (default)"
-            echo -e "  --turbo             Turbo profile: Balanced + parallel subagent waves, 3-5x token cost"
+            echo -e "  --turbo             Turbo profile: Balanced + parallel subagent waves, up to ~2x measured token cost"
             echo -e "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
             echo -e "  -h, --help          Show this help\n"
             echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
@@ -88,9 +88,9 @@ fi
 if [[ "$PROFILE_SET" -eq 0 && "$EXPERIMENTAL" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}" ]]; then
     echo -e "\n\033[0;36m💡 PromptKit OS Profile Selection (visual decision)\033[0m"
     echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "  \033[1;33m1) Lite (Recommended for new users)\033[0m — 6 utility workflows (route, debug, commit, checkpoint, sync, profile) 877 tok, 80% value, fastest onboarding"
+    echo -e "  \033[1;33m1) Lite (Recommended for new users)\033[0m — 6 utility workflows (route, debug, commit, checkpoint, sync, profile) 881 tok, 80% value, fastest onboarding"
     echo -e "  2) Balanced (Recommended for teams) — 23 workflows, 2,099 tok, Level 0-3 adaptive ceremony, full power [default]"
-    echo -e "  3) Turbo (Experimental) — Balanced + parallel subagent waves, 3-5x token cost, still requires human L3 approval"
+    echo -e "  3) Turbo (Experimental) — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval"
     echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
     echo -e "For CI/non-interactive, use flags: --lite, --balanced, --turbo --experimental"
@@ -103,7 +103,7 @@ if [[ "$PROFILE_SET" -eq 0 && "$EXPERIMENTAL" -eq 0 && -t 0 && -t 1 && -z "${PRO
             ;;
         3)
             echo -e "\n\033[0;33m⚠️  Turbo requires --experimental flag\033[0m"
-            echo -e "   Turbo uses parallel subagent waves (3-5x token cost) and is experimental."
+            echo -e "   Turbo uses parallel subagent waves (up to ~2x measured token cost) and is experimental."
             echo -e "   Run: ./init.sh --turbo --experimental"
             read -p "Acknowledge experimental cost and proceed with Turbo? [y/N]: " confirm
             if [[ "$confirm" =~ ^[Yy]$ ]]; then
@@ -127,7 +127,7 @@ fi
 # Validate turbo requires experimental
 if [[ "$PROFILE" == "turbo" && "$EXPERIMENTAL" -eq 0 ]]; then
     echo -e "\n\033[0;31m[!] --turbo requires --experimental flag\033[0m" >&2
-    echo -e "   Turbo uses parallel subagent waves (3-5x token cost) and is experimental." >&2
+    echo -e "   Turbo uses parallel subagent waves (up to ~2x measured token cost) and is experimental." >&2
     echo -e "   It still requires human approval for Level 3 (releases/tags/deploys)." >&2
     echo -e "   Run: ./init.sh --turbo --experimental [project-root]\n" >&2
     exit 1
@@ -138,7 +138,7 @@ echo -e "   Host Project: $PROJECT_ROOT"
 echo -e "   Engine Path:  $SCRIPT_DIR"
 echo -e "   Profile:      $PROFILE"
 if [[ "$PROFILE" == "turbo" ]]; then
-    echo -e "   \033[0;33m⚠️  Turbo: 3-5x token cost, experimental, parallel waves. Human approval still required for L3.\033[0m"
+    echo -e "   \033[0;33m⚠️  Turbo: up to ~2x measured token cost, experimental, parallel waves. Human approval still required for L3.\033[0m"
 fi
 if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32m✨ Lite: 6 utility workflows, <1,500 tok, 80% value — perfect for onboarding\033[0m"
@@ -398,7 +398,7 @@ elif [[ "$PROFILE" == "balanced" ]]; then
     echo -e "   Balanced: 23 workflows, Level 0-3 adaptive ceremony — full power"
     echo -e "   For onboarding: .promptkit/init.sh --lite for minimal setup"
 else
-    echo -e "   \033[0;33mTurbo (Experimental): Balanced + parallel waves, 3-5x token cost\033[0m"
+    echo -e "   \033[0;33mTurbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost\033[0m"
     echo -e "   Human approval still required for Level 3 (releases/tags/deploys)"
 fi
 echo -e "   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'\n"

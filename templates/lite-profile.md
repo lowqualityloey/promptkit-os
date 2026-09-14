@@ -4,21 +4,21 @@
 
 PromptKit OS ships with 2 official profiles + 1 experimental to fix recommendability gap (5/10 → 8/10):
 
-- **Lite (official)** — 6 utility workflows, 877 tok static (measured), 80% value, onboarding
+- **Lite (official)** — 6 utility workflows, 881 tok static (measured), 80% value, onboarding
 - **Balanced (official, default)** — full 23 workflows, 2,099 tok static, Level 0-3 adaptive ceremony, teams/production
-- **Turbo (experimental)** — Balanced + parallel subagent waves, 3-5x token cost, still requires human L3 approval
+- **Turbo (experimental)** — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval
 
 ## Profile Comparison
 
 | Dimension | Lite | Balanced | Turbo (Experimental) |
 | :--- | :--- | :--- | :--- |
 | **Workflows** | route, debug, commit, checkpoint, sync | All 22 | All 22 + parallel waves |
-| **Static tokens** | 877 tok | 2,099 tok | 2,099 tok + subagents |
+| **Static tokens** | 881 tok | 2,099 tok | 2,099 tok + subagents |
 | **Use case** | New users, learning, tiny bug fixes, docs typos | Teams, production, full lifecycle | Greenfield, user accepts cost |
 | **Install** | `init.sh --lite` | `init.sh --balanced` or no flag (default) | `init.sh --turbo --experimental` |
 | **PROMPTKIT.md** | `profile: lite` | `profile: balanced` | `profile: turbo` |
 | **L2/L3 support** | Recommends switching to Balanced | Full support | Full + parallel |
-| **Token cost** | 1x | 1x | 3-5x |
+| **Token cost** | 1x | 1x | 1.2-2x measured |
 | **Human approval** | Still required for L3 | Required | Required (even in turbo) |
 
 ## Why 2+1, not 3 equal Turbo
@@ -41,16 +41,16 @@ So Turbo is experimental, behind `--experimental` flag, warns about cost, still 
 > Choose profile:
 > 1) Lite (Recommended for new users) — 6 utility workflows, <1,500 tok
 > 2) Balanced (Recommended for teams) — full 23 workflows [default]
-> 3) Turbo (Experimental) — Balanced + parallel subagents, 3-5x cost
+> 3) Turbo (Experimental) — Balanced + parallel subagents, ~2x measured cost
 ```
 
 Machine-readable line for agent parsing: `profile: lite|balanced|turbo` at bottom of PROMPTKIT.md
 
 ## Token Measurements (measured 2026-09-14, bytes/4)
 
-- Lite directive: 3,509 chars → 877 tok (95% reduction vs 18,500 monolithic)
+- Lite directive: 3,523 chars → 881 tok (95% reduction vs 18,500 monolithic)
 - Balanced directive: 8,395 chars → 2,099 tok (89% reduction)
-- Saving Lite vs Balanced: 1,222 tok (-58%)
+- Saving Lite vs Balanced: 1,218 tok (-58%)
 
 Per-task payload after Change A (route.md no longer mandatory):
 - pk:fix: 5,946 tok (was 12,861 before)
