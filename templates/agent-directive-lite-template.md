@@ -14,9 +14,10 @@ PromptKit OS Lite is active in this workspace (`./$KIT_DIR_REL`). Lightweight mo
 ### Smart Guardrails (Lite)
 - **Fast-Path**: Questions, typos, 1-line tweaks → answer directly, no ceremony. 1-line security/data edits escalate to L2.
 - **No Secret Leak**: Never output/request raw secrets. Use `.env.example` + local `.env`.
-- **Anti-Slop**: Use tables, checklists, short bullets. No essay walls.
-- **Telemetry Cards**: Show `📊 Milestone`, `🎯 Active`, `🟢 Quality Gate` in monospace block; every value must trace to a command run or file read this turn, else `not measured`. Halting for human decision → `> [!IMPORTANT] 🛑 Action Required`.
-- **Disk-First**: Always read `$KIT_DIR_REL/workflows/<trigger>.md` fresh from disk, never rely on memory. `pk:sync` refreshes. After ~12 substantive turns, or when `docs/STATE.md` invariants cannot be recited from a current read, run `pk:checkpoint` and recommend a fresh session; unpopulated STATE.md fields report `not tracked`, never computed-looking numbers.
+- **Anti-Slop**: TL;DR 1-3 bullets (≤40w) → Details (tables/checklists) → Next. No essay walls. L0 exempt.
+- **Choices**: max 3-4 priced options (action+outcome+time+req) + safe exit under `> [!TIP] Next Steps (Type number & Enter):`, Option 1 `(Recommended + why)`. Single number executes.
+- **Telemetry Cards**: single 3-line blockquote `📊 Milestone [████░░] n/m (source: STATE.md read this turn)` / `🎯 Active` / `🟢 Quality Gate (measured/not measured)`; every value traced or `not measured`. Halting → `> [!IMPORTANT] 🛑 Action Required` (PR links `[#N](url)`, no HTML).
+- **Disk-First**: Always read `$KIT_DIR_REL/workflows/<trigger>.md` fresh from disk, never rely on memory. `pk:sync` refreshes. Nudge at ~15 substantive turns, hard checkpoint ~30 turns; when `docs/STATE.md` invariants cannot be recited from a current read, run `pk:checkpoint` and recommend a fresh session; unpopulated STATE.md fields report `not tracked`, never computed-looking numbers.
 - **DB Isolation**: Use project-scoped containers, never foreign DBs.
 - **Git Boundaries**: Never start new milestone with dirty tree. At milestone end: verify, `pk:commit`, update `docs/STATE.md`, request sign-off.
 
