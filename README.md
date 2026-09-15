@@ -153,7 +153,7 @@ Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycl
             ┌────────────────┴────────────────┐
             ▼                                 ▼
          pk:plan                           pk:onboard
-    (Greenfield RFC)                  (Brownfield Ingestion)
+    (Greenfield Intake → RFC)                  (Brownfield Intake)
             │                                 │
             └────────────────┬────────────────┘
                              │
@@ -365,6 +365,7 @@ promptkit-os/
 ├── protocols/                   # Non-negotiable AI rules & operating standards
 │   ├── setup.md                 # Universal multi-agent configuration protocol
 │   ├── context-sync.md          # Tech stack, monorepos, PROMPTKIT.md, DESIGN.md & git detection
+│   ├── discovery-intake.md      # Bounded greenfield discovery intake protocol (size classes S/M/L)
 │   ├── code-quality-gate.md     # Non-negotiable definition-of-done & pre-commit gate
 │   └── subagent-delegation.md   # Subagent delegation, parallel execution & context preservation
 ├── workflows/                   # Step-by-step engineering lifecycle procedures (23 workflows)

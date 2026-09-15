@@ -8,7 +8,7 @@ Activate workflows anytime with these namespaced triggers:
 - `pk:tutor` (or `pk:tutor beginner`, `pk:tutor architect`): Socratic mentorship & 3-tier hints (no unsolicited code dumps).
 - `pk:grill`: Intensive Staff Engineer architecture interview and defense drill.
 - `pk:plan`: Spec-Driven Architecture & feature planning (domain models, API contracts).
-- `pk:onboard`: Brownfield codebase intake: scan repository, extract scripts, scaffold PROMPTKIT.md.
+- `pk:onboard`: Project intake: greenfield interview or brownfield scan; scaffold PROMPTKIT.md.
 - `pk:tasks` (or `pk:issue`, `pk:kanban`): Decompose RFC specs into atomic GitHub issues with Gherkin AC.
 - `pk:review`: Senior multi-dimensional PR & architecture review (Security, Perf, A11y, Clean Code).
 - `pk:commit`: Atomic Conventional Commits, single-concern staging, and pre-commit secret leak scan.

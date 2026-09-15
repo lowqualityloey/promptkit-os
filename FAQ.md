@@ -529,7 +529,7 @@ For complete line-by-line token breakdowns and mathematical analysis, see [docs/
 **How it works**:
 - **Structured Telemetry Status Cards**: Status updates and task completions use a clean 3-line status card (`> 📊 **Milestone**: ... \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: ...`) providing instant situational awareness without vertical sprawl or unrendered table syntax.
 - **Dual-Compatibility**: In GUI environments (Cursor, Antigravity, GitHub), callouts render as rich GitHub-style visual alerts (`> [!IMPORTANT]`, `> [!NOTE]`). In headless terminal CLIs (Claude Code, Gemini CLI, OpenCode), they render cleanly as bordered accent blocks without unrendered HTML tags or broken table formatting.
-- **Interactive Turn Handoffs**: When concluding multi-step tasks, the AI executes native interactive selection tools (OpenCode prompt picker, `ask_question`) as its final action with Option 1 marked `(Recommended)`, letting you confirm your next step with arrow keys, `1`/`Enter`, or custom typing.
+- **Interactive Turn Handoffs**: When concluding multi-step tasks, the AI executes native interactive selection tools (OpenCode prompt picker, `ask_question`) as its final action with Option 1 marked `(Recommended)`, letting you confirm your next step with arrow keys, `1`/`Enter`, or custom typing. Bounded to closed-set operational choices: for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead — see the Picker routing rule in `workflows/plan.md`.
 
 ---
 
