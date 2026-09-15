@@ -84,6 +84,6 @@ Before completing any coding task or finishing a PromptKit OS session:
 4. Audit against the 6 pillars checklist above.
 5. If any gate fails, address it before declaring the task done.
 6. When ready to stage and commit, invoke `workflows/commit.md` (`pk:commit`) to ensure atomic single-concern staging, Conventional Commit formatting, and secret leak prevention.
-7. Prepare the pull request with `workflows/pr.md` (`pk:pr`), compiling the verified AC checklist for human review and merge.
+7. Prepare the pull request with `workflows/pr.md` (`pk:pr`), compiling the verified AC checklist for human review and merge. Before `gh pr create`: `git status -s` clean for this task, `git fetch origin` + rebase check against base, and `Quality Gate: measured this turn`. No auto-push.
 8. **Milestone Git Boundary & Working Tree Verification**: A **milestone boundary** is the turn after a `pk:plan`/`pk:tasks` milestone or a Task Record closes. At milestone conclusion, verify working tree status with `git status`: all changes produced **by the current task** must be cleanly committed via `pk:commit` and synchronized to `docs/STATE.md` before beginning the next milestone. Files that were already untracked/dirty **before the task started** (including fresh `init.sh` scaffold output) are a documented exception: surface them to the developer and recommend `pk:commit` or ignores — do not stall the session on dirt you did not create.
 

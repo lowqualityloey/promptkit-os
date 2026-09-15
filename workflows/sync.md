@@ -62,6 +62,7 @@ Conclude the synchronization turn with the standard telemetry status card (3 man
 📊 Milestone: PromptKit OS Synced — Engine Rules Reloaded From Disk
 🎯 Active: pk:sync (disk-first reload complete)
 🟢 Quality Gate: <results of checks actually executed this turn>
+Session: ~<n>/30 turns — consider pk:checkpoint (estimate; write `not measured` if unknown)
 ```
 
 > [!TIP]
