@@ -6,7 +6,7 @@
 - **Milestone**: `Unassigned (remote has no open feature milestone; maintainer triage)`
 - **Priority**: `#priority/p1`
 - **Labels**: `area:backend, type:feature`
-- **Kanban Status**: `To Do`
+- **Kanban Status**: `In Review`
 
 ## User Story & Context
 **As a** developer running `pk:review`
@@ -22,10 +22,10 @@
 - `lsp-mcp` daemon/bridge, polyglot languages (pyright/rust-analyzer), `pk:debug`/`pk:refactor`/`pk:fix` integration.
 
 ## Implementation Tasks
-- [ ] 1. Add pre-Axis 2 step `2a. Pull Diagnostics Evidence (optional, read-only)` to `workflows/review.md` gated on `PROMPTKIT.md §5a`.
-- [ ] 2. Filter diagnostics to the resolved fixed-point diff (`git diff <base>...HEAD`); map `error -> 🚨 [BLOCKING]`, `warn -> ⚠️ [IMPORTANT]`.
-- [ ] 3. Inject `Diagnostics Evidence` table into `docs/reviews/<slug>.md` Axis 2: `| file:line:col | severity | source | message |`.
-- [ ] 4. Split `code-quality-gate.md` step 1 into `1a. Optional LSP pull` / `1b. Mandatory CLI verification`.
+- [x] 1. Add pre-Axis 2 step `2a. Pull Diagnostics Evidence (optional, read-only)` to `workflows/review.md` gated on `PROMPTKIT.md §5a`.
+- [x] 2. Filter diagnostics to the resolved fixed-point diff (`git diff <base>...HEAD`); map `error -> 🚨 [BLOCKING]`, `warn -> ⚠️ [IMPORTANT]`.
+- [x] 3. Inject `Diagnostics Evidence` table into `docs/reviews/<slug>.md` Axis 2: `| file:line:col | severity | source | message |`.
+- [x] 4. Split `code-quality-gate.md` step 1 into `1a. Optional LSP pull` / `1b. Mandatory CLI verification`.
 
 ## Acceptance Criteria
 ### Scenario 1: Happy — diagnostics available

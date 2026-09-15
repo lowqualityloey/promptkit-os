@@ -78,7 +78,8 @@ Define the non-negotiable definition-of-done (DoD) and engineering quality bar f
 
 ## Protocol Execution in Pair-Programming
 Before completing any coding task or finishing a PromptKit OS session:
-1. Run static analyzers (`tsc --noEmit`, `eslint`, `biome check`, or commands in `./PROMPTKIT.md`).
+1a. Pull optional diagnostics evidence (read-only, when `./PROMPTKIT.md` Section 5a enables LSP): capture `tsc --noEmit --pretty false` / `biome check --json` / `eslint --format json` locations for the review report. Never auto-fix; record `not measured` when unavailable.
+1b. Run mandatory static verification (blocking): `tsc --noEmit`, `eslint`, `biome check`, or commands in `./PROMPTKIT.md`. The task is not done until these pass.
 2. Run test suites (`npm test`, `pytest`, `cargo test`, or commands in `./PROMPTKIT.md`).
 3. Verify all scenario acceptance criteria (`AC-*`) are completely met with concrete test evidence.
 4. Audit against the 6 pillars checklist above.
