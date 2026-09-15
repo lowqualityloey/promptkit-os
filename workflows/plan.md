@@ -120,10 +120,11 @@ Dependencies, risk, owner/approval boundary, execution policy, stop conditions, 
 Before any planning interrogation, read the machine-readable signals at the top of `PROMPTKIT.md` (`size:`, `intake-status:`):
 
 1. **`intake-status: complete`** → proceed directly to Step 1. Do not re-ask intake questions (Question Retention extends to intake slots).
-2. **`unanswered` / `partial` / missing on a greenfield intent** → run the bounded Project Discovery Intake in [`discovery-intake.md`](../protocols/discovery-intake.md) **before proposing architecture**: ask only the missing slots within the size-class round cap, in the context window (never modal pickers), inviting links, screenshots, and documents as answers. Update `size:` / `intake-status:` when the interview closes.
-3. **`intake-status: legacy-partial` on an existing codebase** → do **not** re-interview; the codebase and its docs are the intake record. Record gaps as Assumption Records per the Level 2–3 Missing Inputs rule.
+2. **`unanswered` / `partial` / missing on a greenfield intent** → run the bounded Project Discovery Intake in [`discovery-intake.md`](../protocols/discovery-intake.md) **before proposing architecture**: ask only the missing critical slots within the size-class round cap — never a full re-interview — in the context window (never modal pickers), inviting links, screenshots, and documents as answers. Update `size:` / `intake-status:` when the interview closes, without downgrading an existing status.
+3. **`intake-status: legacy-partial` on an existing codebase** (including any missing or unrecognized intake fields, which resolve to `legacy-partial`) → do **not** re-interview; the codebase and its docs are the intake record. Record gaps as Assumption Records per the Level 2–3 Missing Inputs rule.
 4. **Level 0–1 requests skip intake entirely** — bounded discovery never gates trivial or lightweight work.
 5. **New requirements after intake closed** are never silently absorbed: doc-only deltas append to the intake record; scope or acceptance-criteria changes require a Scope Change Record; architecture, data-model, or deployment-target changes block execution and re-open planning (interception rules live in `pk:sync` / `pk:checkpoint`).
+6. **Legacy partial intake**: when `intake-status` is `partial` (or the field is absent entirely) on an existing install, Step 0 asks only for the specific missing critical slot, never a full re-interview, and records the result without downgrading the status.
 
 ### Step 1: Define Problem Statement, Metrics & Explicit Non-Goals
 1. **User & Business Problem**: What exact friction or capability does this address, for whom, and why now?

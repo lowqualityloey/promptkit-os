@@ -19,7 +19,7 @@ Run before any analysis, so nothing below is built on a broken tree:
 | Behavioral prompt-contract tests | `bash scripts/tests/run-behavioral-contract-tests.sh` | **Passed: 56 \| Failed: 0** |
 | Reference / structural validator | `bash scripts/validate-references.sh .` | **All references valid! No broken links found.** |
 | init.sh safety regressions | `bash scripts/tests/run-init-safety-tests.sh` | **passed** (idempotency, CRLF, markers, UTF-8) |
-| Directive budget assertion | `bash scripts/measure-tokens.sh` | **1,882 tokens**, passes the ≤ 2,000 budget |
+| Directive budget assertion | `bash scripts/measure-tokens.sh` | **2,496 tokens**, passes the ≤ 2,500 budget (re-measured 2026-09-16; 1,882 vs a ≤ 2,000 budget at review time) |
 
 The engineering controls here are genuinely good and should not be touched: dual
 bash/PowerShell parity in CI, fixture + property harnesses, a link validator, and an
@@ -38,7 +38,7 @@ against the Progressive Loading Policy in `protocols/setup.md`:
 
 | Path | Loaded files | Total |
 | :--- | :--- | :--- |
-| `pk:fix` (small bug) | directive 1,882 + route 6,962 + fix 2,089 + gate 1,928 | **12,861 tok** |
+| `pk:fix` (small bug) | directive 1,882 + route 6,962 + fix 2,089 + gate 1,928 (baseline composition at review time; current directive 2,496) | **12,861 tok** |
 | `pk:plan` (Level 2 feature) | + route, plan, gate, sync, tech-spec template | **24,666 tok** |
 | `pk:ship` (release) | + route, ship, gate, sync, release checklist | **24,761 tok** |
 
@@ -102,7 +102,7 @@ asset.
 3. Fund it by replacing the directive's 25-line explicit path list (~345 tok) with one
    convention line (`$KIT_DIR_REL/workflows/<trigger>.md`, `$KIT_DIR_REL/protocols/*.md`).
 
-Directive net: `1,882 − 345 + 250 ≈ 1,817 tokens` — **still under the 2,000 budget**, verifiable
+Directive net: `1,882 − 345 + 250 ≈ 1,817 tokens` — **still under the 2,000 budget at review time** (current directive: 2,496 vs the ≤ 2,500 gate), verifiable
 with the existing `measure-tokens.sh` assertion. No new files, no new scripts.
 
 ### B. Extract Better-PromptKit release evaluation out of `ship.md`

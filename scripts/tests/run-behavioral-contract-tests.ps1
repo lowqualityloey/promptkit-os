@@ -193,6 +193,8 @@ Assert-Contains "workflows/sync.md" "New-Requirement Interception" "Sync workflo
 Assert-Contains "workflows/checkpoint.md" "never silently absorbed" "Checkpoint contract requires new requirements to be recorded before continuing"
 Assert-Contains "workflows/route.md" "New Project / Greenfield Inception" "Router decision matrix registers greenfield inception via pk:onboard"
 Assert-Contains "protocols/context-sync.md" "Product & Design Inputs" "Context-sync authority table covers Figma/screenshot/doc design inputs"
+Assert-Contains "workflows/plan.md" "never a full re-interview" "Plan workflow caps partial-intake repair to missing critical slots only (legacy protection)"
+Assert-Contains "workflows/commit.md" "closed-set operational choices" "Blanket Recommended-pickers are bounded to closed-set operational choices"
 
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan

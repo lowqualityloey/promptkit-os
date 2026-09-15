@@ -47,7 +47,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 
 ## Quick Start (60 Seconds)
 
-**New to PromptKit?** → See **[FAQ.md](./FAQ.md)** for the 17 most common questions  
+**New to PromptKit?** → See **[FAQ.md](./FAQ.md)** for the 18 most common questions  
 **Getting started?** → See **[QUICKSTART.md](./QUICKSTART.md)** for a 5-minute guided tour  
 **Release History?** → See **[CHANGELOG.md](./CHANGELOG.md)** for version notes and release provenance  
 **Full-Stack Example?** → See **[examples/saas-dashboard/](./examples/saas-dashboard/README.md)** for a populated end-to-end feature walkthrough, or **[examples/fullstack-feature/](./examples/fullstack-feature/README.md)** for a narrative lifecycle reference  
@@ -292,7 +292,7 @@ In multi-agent environments (Antigravity, Claude Code, Cursor background agents)
 
 ### 5. Interactive Decision Handoffs
 
-- **Native Selection Modals**: When concluding a task, workflow milestone, or decision point, the assistant executes the host's native interactive selection tool (e.g. OpenCode prompt picker, `ask_question`) as its final tool call of the turn with `(Recommended)` prefixing Option 1.
+- **Native Selection Modals**: When concluding a task, workflow milestone, or decision point, the assistant executes the host's native interactive selection tool (e.g. OpenCode prompt picker, `ask_question`) as its final tool call of the turn with `(Recommended)` prefixing Option 1. Bounded to closed-set operational choices: for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead — see the Picker routing rule in `workflows/plan.md`.
 - **Fast Keyboard Navigation**: Renders an interactive menu right in your chat/terminal interface where you can navigate with arrow keys, press `Enter` for 1-key confirmation, or type custom input instead of staring at a blank prompt.
 
 ---
@@ -351,7 +351,7 @@ promptkit-os/
 │   └── workflows/
 │       └── ci.yml               # Maintainer CI (script syntax, initialization dry-run/idempotency, workflow structure, reference validation, fixture harnesses, and behavioral-contract tests)
 ├── CHANGELOG.md                 # Official release provenance adhering to Keep a Changelog
-├── FAQ.md                       # The 17 questions every developer asks before adopting
+├── FAQ.md                       # The 18 questions every developer asks before adopting
 ├── QUICKSTART.md                # 5-minute introduction with core workflows & 1-line setup
 ├── init.ps1                     # Setup script for Windows (PowerShell)
 ├── init.sh                      # Setup script for Linux/macOS (Bash)

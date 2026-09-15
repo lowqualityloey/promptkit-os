@@ -186,7 +186,7 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
 
 **Model.** A Turbo branch runs in a fresh context. Beyond the first branch, each parallel lane costs either a directive reload + 250-tok synthesis return (lower bound) or a full task-path context reload (upper bound).
 
-**Measured (main @ `76e3168`, directive 2,496 tok):**
+**Measured (main @ `76e3168`, directive 2,496 tok; re-baselined 2026-09-16, prior measurement `719a74e` @ 2,319 tok):**
 
 | Task path | Balanced tok | Turbo tok (lower–upper) | Multiplier | Time saved (bound) | Fan-out anchor |
 | :--- | ---: | :--- | :--- | :--- | :--- |

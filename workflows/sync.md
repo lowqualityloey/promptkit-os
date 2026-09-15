@@ -71,7 +71,7 @@ Session: ~<n>/30 turns — consider pk:checkpoint (estimate; write `not measured
 > - If investigating or fixing an issue: run **`pk:debug`** or **`pk:fix`**
 > - If managing tasks and milestones: run **`pk:tasks`** or **`pk:checkpoint`**
 
-*(If multiple next actions exist, invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`)*
+*(If multiple next actions exist, invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`; Bounded to closed-set operational choices — for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead, see the Picker routing rule in `workflows/plan.md`)*
 
 ---
 
