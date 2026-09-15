@@ -46,10 +46,10 @@ An issue is only ready for implementation when its completion can be objectively
    - **Ambiguous Work**: Follow the Code Work path until the work type and TDD mode are clarified in the Task Record.
    - **Localized Code Work**: Use an adaptive flat list ordered strictly by dependency (Task 1 -> Task 2 -> Task 3), applying the same enabled or disabled TDD branch.
 3. **Inspect Task Tracking Strategy**:
-   - Check `PROMPTKIT.md` Section 5 (`Task Tracking System`).
-   - If set to `GitHub Issues`: In Phase 4, invoke `github-mcp-server` tool calls or generate `gh issue create` CLI commands, and link assigned issue numbers (`#N`) into `docs/STATE.md`.
-   - If set to `Linear` or `Jira`: In Phase 4, format tasks matching the external tracker's schema.
-   - If set to `Local Markdown` (the default) or unspecified: Maintain task records locally in `docs/tasks/` and `docs/STATE.md` without requiring external credentials or network access.
+    - Check `PROMPTKIT.md` Section 5 (`Task Tracking System` + machine `tracking:` line).
+    - If set to `GitHub Issues`: In Phase 4, invoke `github-mcp-server` tool calls or generate `gh issue create` CLI commands, and link assigned issue numbers (`#N`) into `docs/STATE.md`.
+    - If set to `Linear` or `Jira`: In Phase 4, format tasks matching the external tracker's schema for manual import / copy-paste. No auto-push. State explicitly in output: `Jira/Linear: manual import, no auto-push — board is projection only, Local Task Record authoritative.`
+    - If set to `Local Markdown` (the default) or unspecified: Maintain task records locally in `docs/tasks/` and `docs/STATE.md` without requiring external credentials or network access.
 
 ### Controlled & Release-Critical Work Execution Overlay
 

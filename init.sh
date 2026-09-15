@@ -11,6 +11,8 @@ DIR_NAME="$(basename "$SCRIPT_DIR")"
 PROFILE="balanced"
 PROFILE_SET=0
 EXPERIMENTAL=0
+TRACKING="local"
+TRACKING_SET=0
 PROJECT_ROOT=""
 
 # Parse args: flags + optional positional project root
@@ -31,6 +33,13 @@ for arg in "$@"; do
         --experimental)
             EXPERIMENTAL=1
             ;;
+        --tracking=*)
+            TRACKING="${arg#--tracking=}"
+            case "$TRACKING" in
+                local|github|jira|linear) TRACKING_SET=1 ;;
+                *) echo -e "\033[0;31m[!] Unknown tracking: $TRACKING (use local|github|jira|linear)\033[0m" >&2; exit 1 ;;
+            esac
+            ;;
         --help|-h)
             echo -e "\nPromptKit OS init.sh — 1-Click Setup\n"
             echo -e "Usage: ./init.sh [options] [project-root]\n"
@@ -39,6 +48,7 @@ for arg in "$@"; do
             echo -e "  --balanced          Balanced profile: the full workflow set, Level 0-3 adaptive ceremony (default)"
             echo -e "  --turbo             Turbo profile: Balanced + parallel subagent waves, up to ~2x measured token cost"
             echo -e "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
+            echo -e "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import, no auto-push)"
             echo -e "  -h, --help          Show this help\n"
             echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
             echo -e "Interactive: When no flag provided and running in TTY, shows visual picker (1) Lite (Recommended) 2) Balanced 3) Turbo Experimental"
@@ -124,6 +134,27 @@ if [[ "$PROFILE_SET" -eq 0 && "$EXPERIMENTAL" -eq 0 && -t 0 && -t 1 && -z "${PRO
     echo ""
 fi
 
+# Interactive tracker picker (visual decision for onboarding, step 2)
+if [[ "$TRACKING_SET" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}" ]]; then
+    echo -e "\033[0;36m💡 Task Tracker Selection (visual decision)\033[0m"
+    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e "  \033[1;33m1) Local Markdown (Recommended for solo / offline)\033[0m — docs/tasks/ + STATE.md only, import later"
+    echo -e "  2) GitHub Issues — via gh CLI or MCP, needs gh auth + labels script"
+    echo -e "  3) Jira — manual import / copy-paste, no auto-push, needs project key"
+    echo -e "  4) Linear — manual import / copy-paste, no auto-push, needs project key"
+    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo ""
+    read -p "Choose tracker [1-4, default 1]: " tchoice
+    case "$tchoice" in
+        2) TRACKING="github" ;;
+        3) TRACKING="jira" ;;
+        4) TRACKING="linear" ;;
+        *) TRACKING="local" ;;
+    esac
+    TRACKING_SET=1
+    echo ""
+fi
+
 # Validate turbo requires experimental
 if [[ "$PROFILE" == "turbo" && "$EXPERIMENTAL" -eq 0 ]]; then
     echo -e "\n\033[0;31m[!] --turbo requires --experimental flag\033[0m" >&2
@@ -137,6 +168,7 @@ echo -e "\n\033[0;36m🚀 Initializing PromptKit OS ($PROFILE profile)...\033[0m
 echo -e "   Host Project: $PROJECT_ROOT"
 echo -e "   Engine Path:  $SCRIPT_DIR"
 echo -e "   Profile:      $PROFILE"
+echo -e "   Tracking:     $TRACKING"
 if [[ "$PROFILE" == "turbo" ]]; then
     echo -e "   \033[0;33m⚠️  Turbo: up to ~2x measured token cost, experimental, parallel waves. Human approval still required for L3.\033[0m"
 fi
@@ -205,6 +237,17 @@ if [[ -f "$PROJECT_PROFILE" ]]; then
         mv "$TMP_FILE" "$PROJECT_PROFILE"
         echo -e "  \033[0;32m[+]\\033[0m Set PROMPTKIT.md profile: $PROFILE"
     fi
+    if grep -q "^tracking:" "$PROJECT_PROFILE" 2>/dev/null; then
+        if sed --version >/dev/null 2>&1; then
+            sed -i "s/^tracking:.*/tracking: $TRACKING/" "$PROJECT_PROFILE"
+        else
+            sed -i.bak "s/^tracking:.*/tracking: $TRACKING/" "$PROJECT_PROFILE" && rm -f "$PROJECT_PROFILE.bak"
+        fi
+    else
+        echo "" >> "$PROJECT_PROFILE"
+        echo "tracking: $TRACKING" >> "$PROJECT_PROFILE"
+    fi
+    echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md tracking: $TRACKING"
 fi
 
 DESIGN_PROFILE="$PROJECT_ROOT/DESIGN.md"
