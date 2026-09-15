@@ -66,6 +66,7 @@ Scan the workspace root and key subdirectories for project manifests:
 - **Deployment & Hosting**: Vercel, Cloudflare Pages/Workers, Fly.io, Railway, AWS, GCP, Docker, Kubernetes
 - **CI / CD Pipelines**: GitHub Actions (`.github/workflows`), GitLab CI, CircleCI
 - **MCP & Native Tooling Inspection**: Inspect active assistant system prompts, environment configs (`.cursor/mcp.json`, `.gemini/antigravity/mcp/`, `claude_desktop_config.json`, Docker Desktop MCP profiles, or host tool declarations) for active Model Context Protocol (MCP) servers (e.g. `sequential-thinking`, `fetch`, `github-mcp-server`, `postgres`, `playwright`, `linear`, `sentry`).
+- **LSP Capability Inspection (Optional / Non-Blocking)**: Detect active language servers (`tsserver`, `pyright`, `rust-analyzer`, `gopls`) from editor configs (`.vscode/settings.json`, Neovim `lsp` setups, host tool declarations) and `./PROMPTKIT.md` Section 5a. Record capability as `LSP Enabled: true | false | not measured` with `Evidence Source: lsp-mcp | tsc-cli | not measured`. Detection is advise-only: the assistant never starts or enables a language server (human configures in-host), and a missing LSP silently degrades to the typecheck/lint CLI commands in `PROMPTKIT.md` Section 3.
  
 ### 5. Architecture & Pattern Recognition
 Identify existing project structural patterns:

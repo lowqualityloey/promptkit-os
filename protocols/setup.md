@@ -182,11 +182,13 @@ When operating in AI development environments with Model Context Protocol (MCP) 
 | **Interactive Selection** | Modal Prompt / `ask_question` / prompt picker modal | Native IDE UI Pickers | Terminal CLI input / raw prompt | Free-form conversational text |
 | **Codebase Search** | N/A | `grep_search`, `find_by_name`, `file_search` | `rg`, `grep`, `find`, `fd` | Asking developer for file paths |
 | **File Manipulation** | N/A | `view_file`, `replace_file_content`, `write_to_file` | `cat`, `sed`, `awk`, shell redirection | Asking developer to edit code |
+| **Diagnostics & Type Integrity** | `lsp-mcp` (`textDocument/diagnostic`, `hover`, `references`) | Native IDE diagnostics panel | `tsc --noEmit`, `biome check`, `eslint` (JSON output) | Manual reviewer inspection |
 
 #### Degradation & Progressive Enhancement Rules
 1. **Detect MCP Capabilities**: Assistants inspect available MCP tools at session start.
 2. **Graceful Degradation**: If an MCP tool is not configured in the host environment or fails due to missing daemon/connectivity, immediately and silently fall back to Native IDE tools or Terminal CLI commands.
 3. **Never Block on Missing MCP**: MCP tooling is a progressive enhancement, never a hard barrier to workflow execution.
+4. **Never Block on Missing LSP**: Language-server diagnostics are a progressive enhancement. When no LSP bridge or editor language server is available, assistants fall back to the typecheck and lint commands declared in `PROMPTKIT.md` and record unmeasured evidence as `not measured`.
 
 ---
 
