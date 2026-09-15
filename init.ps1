@@ -20,6 +20,8 @@ param (
     [switch]$Balanced,
     [switch]$Turbo,
     [switch]$Experimental,
+    [ValidateSet("local","github","jira","linear")]
+    [string]$Tracking = "local",
     [switch]$Help
 )
 
@@ -33,6 +35,7 @@ if ($Help) {
     Write-Host "  --balanced          Balanced profile: the full workflow set, Level 0-3 adaptive ceremony (default)"
     Write-Host "  --turbo             Turbo profile: Balanced + parallel subagent waves, up to ~2x measured token cost"
     Write-Host "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
+    Write-Host "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import)"
     Write-Host "  -Help               Show this help`n"
     Write-Host "Interactive (TTY): If no profile flag is given and running in interactive host,"
     Write-Host "  prompts visually: 1) Lite (Recommended) 2) Balanced (default) 3) Turbo (Experimental)"
@@ -48,6 +51,8 @@ if ($Help) {
 
 # Handle switch aliases (allow --lite style via PS args parsing quirks)
 $ProfileSet = $false
+$TrackingSet = $false
+if ($PSBoundParameters.ContainsKey("Tracking")) { $TrackingSet = $true }
 if ($Lite) { $Profile = "lite"; $ProfileSet = $true }
 if ($Balanced) { $Profile = "balanced"; $ProfileSet = $true }
 if ($Turbo) { $Profile = "turbo"; $ProfileSet = $true }
@@ -59,6 +64,10 @@ foreach ($a in $args) {
         "--balanced" { $Profile = "balanced"; $ProfileSet = $true }
         "--turbo" { $Profile = "turbo"; $ProfileSet = $true }
         "--experimental" { $Experimental = $true }
+        "--tracking=local" { $Tracking = "local"; $TrackingSet = $true }
+        "--tracking=github" { $Tracking = "github"; $TrackingSet = $true }
+        "--tracking=jira" { $Tracking = "jira"; $TrackingSet = $true }
+        "--tracking=linear" { $Tracking = "linear"; $TrackingSet = $true }
         "--help" { 
             Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
             Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
@@ -111,6 +120,26 @@ if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive
     Write-Host ""
 }
 
+if (-not $TrackingSet -and [Environment]::UserInteractive `
+    -and -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected `
+    -and [string]::IsNullOrEmpty($env:PROMPTKIT_NO_INTERACTIVE)) {
+    Write-Host "`n💡 Task Tracker Selection (visual decision)" -ForegroundColor Cyan
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+    Write-Host "  1) Local Markdown (Recommended for solo / offline) — docs/tasks/ only" -ForegroundColor Yellow
+    Write-Host "  2) GitHub Issues — via gh CLI or MCP, needs gh auth" -ForegroundColor White
+    Write-Host "  3) Jira — manual import, no auto-push" -ForegroundColor DarkGray
+    Write-Host "  4) Linear — manual import, no auto-push" -ForegroundColor DarkGray
+    $tchoice = Read-Host "Choose tracker [1-4, default 1]"
+    switch ($tchoice) {
+        "2" { $Tracking = "github" }
+        "3" { $Tracking = "jira" }
+        "4" { $Tracking = "linear" }
+        default { $Tracking = "local" }
+    }
+    $TrackingSet = $true
+    Write-Host ""
+}
+
 if ($Profile -eq "turbo" -and -not $Experimental) {
     Write-Host "`n[!] --turbo requires --experimental flag" -ForegroundColor Red
     Write-Host "   Turbo uses parallel subagent waves (up to ~2x measured token cost) and is experimental." -ForegroundColor DarkGray
@@ -136,6 +165,7 @@ Write-Host "`n🚀 Initializing PromptKit OS ($Profile profile)..." -ForegroundC
 Write-Host "   Host Project: $ProjectRoot" -ForegroundColor DarkGray
 Write-Host "   Engine Path:  $ScriptDir" -ForegroundColor DarkGray
 Write-Host "   Profile:      $Profile" -ForegroundColor DarkGray
+Write-Host "   Tracking:     $Tracking" -ForegroundColor DarkGray
 if ($Profile -eq "turbo") {
     Write-Host "   ⚠️  Turbo: up to ~2x measured token cost, experimental, parallel waves. Human approval still required for L3." -ForegroundColor Yellow
 }
@@ -201,6 +231,14 @@ if (Test-Path $ProjectProfile) {
         [System.IO.File]::WriteAllText($ProjectProfile, $newContent, (New-Object System.Text.UTF8Encoding($false)))
         Write-Host "  [+] Set PROMPTKIT.md profile: $Profile" -ForegroundColor Green
     }
+    $tcontent = Get-Content $ProjectProfile -Raw -ErrorAction SilentlyContinue
+    if ($tcontent -match "^tracking:") {
+        $tcontent = $tcontent -replace "^tracking:.*", "tracking: $Tracking"
+    } else {
+        $tcontent = "$tcontent`n`ntracking: $Tracking`n"
+    }
+    [System.IO.File]::WriteAllText($ProjectProfile, $tcontent, (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host "  [✓] Updated PROMPTKIT.md tracking: $Tracking" -ForegroundColor Yellow
 }
 
 $DesignProfile = Join-Path $ProjectRoot "DESIGN.md"

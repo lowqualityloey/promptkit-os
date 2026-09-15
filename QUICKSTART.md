@@ -55,7 +55,7 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit
 
 </details>
 
-**What this does**: Creates core `docs/` directories (`tasks/`, `specs/`, `adrs/`, `tests/`), scaffolds `PROMPTKIT.md` and `docs/STATE.md`, and injects the lightweight directive router into your AI assistant configuration (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, etc.).
+**What this does**: Creates core `docs/` directories (`tasks/`, `specs/`, `adrs/`, `tests/`), scaffolds `PROMPTKIT.md` and `docs/STATE.md`, asks where tasks live (`tracking: local|github|jira|linear` — Jira/Linear manual import), advises MCP (or CLI fallback), and injects the lightweight directive router into your AI assistant configuration (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, etc.).
 
 ---
 

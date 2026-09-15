@@ -102,8 +102,8 @@ Generate a 3-4 bullet point internal context summary before executing any workfl
 - **Active Task / Branch**: [e.g., feature/auth-rate-limiting, 3 files modified]
 ```
 
-### 8. Context Window Threshold & Reset Protocol (~30 Turns)
-As pairing sessions progress, context window bloat causes token lag and attention degradation. When a conversation approaches **~30 turns** or high token saturation:
+### 8. Context Window Threshold & Reset Protocol (~15 Nudge / ~30 Hard)
+As pairing sessions progress, context window bloat causes token lag and attention degradation. Nudge at **~15 substantive turns**, hard checkpoint at **~30 turns / 90min** (L2/L3 hard-stop, L1 advisory + `pk:sync` recovery) or high token saturation:
 1. **Synchronize State**: Execute `pk:checkpoint` to persist all in-flight decisions, locked invariants, and next actions to `docs/STATE.md`.
 2. **Emit Standardized Handover Notice**: At the conclusion of the turn, emit the exact notice:
    > "Session memory synced to docs/STATE.md. To eliminate token lag and prevent hallucinations, open a fresh chat session and type `pk:route`."
