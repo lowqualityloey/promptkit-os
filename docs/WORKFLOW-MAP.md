@@ -183,6 +183,7 @@ graph TD
     
     Question3 -->|New feature| Plan[pk:plan<br/>Spec-Driven Architecture]
     Question3 -->|Existing codebase| Onboard[pk:onboard<br/>Codebase Intake]
+    Question3 -->|Greenfield (no code yet)| Onboard[pk:onboard<br/>Project Discovery Intake]
     
     Question4 -->|Database schema| Data[pk:data<br/>Schema & Migrations]
     Question4 -->|Authentication| Auth[pk:auth<br/>Sessions & RBAC]
@@ -223,6 +224,7 @@ graph TD
 |:---|:---|:---|
 | Plan a new feature from scratch | `pk:plan` | `docs/specs/*.md` |
 | Understand an existing codebase | `pk:onboard` | `PROMPTKIT.md` + `docs/STATE.md` |
+| Start a brand-new project (greenfield) | `pk:onboard` | Intake Record + `PROMPTKIT.md` |
 | Design database schema | `pk:data` | `docs/data/*.md` |
 | Design auth & permissions | `pk:auth` | `docs/auth/*.md` |
 | Design API contracts | `pk:api` | `docs/api/*.md` |
@@ -399,7 +401,7 @@ Visual guide to workflow depth and time investment:
 | `pk:checkpoint` | 3 min | ⚪ Low | Session end |
 | `pk:fix` | 3-5 min | ⚪ Low | Surgical remediation |
 | `pk:pr` | 3-5 min | ⚪ Low | Before opening PR |
-| `pk:onboard` | 5-15 min | 🟡 Medium | Repo intake / setup |
+| `pk:onboard` | 5-15 min | 🟡 Medium | Project intake (greenfield interview or brownfield scan) / setup |
 | `pk:tasks` | 5-15 min | 🟡 Medium | Task decomposition |
 | `pk:review` | 5-10 min | 🟡 Medium | Before each PR |
 | `pk:retro` | 5-15 min | 🟡 Medium | Milestone end |

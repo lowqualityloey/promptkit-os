@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Bounded Discovery Intake (Greenfield & Brownfield)**: New `protocols/discovery-intake.md` protocol and conditional `Phase 0` in `workflows/onboard.md`: size-classed (S/M/L) bounded interview covering MVP intent, surfaces, deployment target, auth & data, constraints, design inputs (Figma/screenshots/docs), and integrations — asked in the context window (never modal pickers) so the user can attach links, screenshots, and documents. Intake closes with a recorded `close_reason`; unanswered slots become owned `ASSUMPTION-*` entries; AI-suggested scope goes to a **Later ledger** instead of the plan.
+- **Intake Signals & Migration Safety**: `templates/project-profile-template.md` now carries machine-readable `size:` / `intake-status:` lines; placeholders are declared **intake questions, not defaults**. Existing (brownfield) installs resolve to `legacy-partial` and are never re-interviewed.
+- **Planning Gate (pk:plan Step 0)**: Intake preflight gates architecture on intake status; **MVP Floor & Anti-Overengineering Gate** requires every moving part to trace to a user-stated requirement (else Later ledger) and surfaces a "Decisions I'm defaulting for you" accept-or-change list; **Picker routing rule** bounds modal pickers to closed-set, evidence-backed choices and bans them for intent questions.
+- **Mid-Implementation Delta Path**: New-Requirement Interception tables in `workflows/sync.md` and `workflows/checkpoint.md` — doc-only deltas append; scope/AC changes require a Scope Change Record; architecture/data/deployment changes block execution and re-open planning.
+- **Product & Design Inputs Authority**: `protocols/context-sync.md` gains an authority row for Figma links, screenshots, `STYLE.md` / `DESIGN.md`, and tracker-board links captured by intake.
+- **Greenfield Routing**: `pk:onboard` registered as the first-class entry for brand-new projects across `workflows/route.md`, `docs/WORKFLOW-MAP.md`, README, and QUICKSTART.
+
+
 ## [1.7.0] - 2026-09-14
 
 > **BREAKING CHANGE (documented, minor):** `pk:profile` was retired as a `pk:perf` alias and is now the runtime profile switcher. Use `pk:perf` or `pk:latency` for profiling; intent-based auto-routing is unaffected. All existing artifacts remain valid (`git submodule update --remote .promptkit` + re-run `init.sh` / `init.ps1`).

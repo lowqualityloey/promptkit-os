@@ -71,7 +71,22 @@ Session: ~<n>/30 turns — consider pk:checkpoint (estimate; write `not measured
 > - If investigating or fixing an issue: run **`pk:debug`** or **`pk:fix`**
 > - If managing tasks and milestones: run **`pk:tasks`** or **`pk:checkpoint`**
 
-*(If multiple next actions exist, invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`)*
+*(If multiple next actions exist, invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`; Bounded to closed-set operational choices — for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead, see the Picker routing rule in `workflows/plan.md`)*
+
+---
+
+### New-Requirement Interception (Mid-Implementation Deltas)
+
+During the Phase 2 diff, treat any new requirement, attachment, or scope statement the developer introduces mid-implementation as an interception candidate — never absorb it silently into current execution:
+
+| Delta type | Required handling |
+| :--- | :--- |
+| Documentation-only (doc link, README note, style preference) | Append to the intake record and `PROMPTKIT.md` signals; continue. |
+| Scope or acceptance-criteria change | Create a linked Scope Change Record (`docs/tasks/<task-id>.scope-<n>.md`) before continuing; expansion requires human confirmation. |
+| Architecture, data-model, auth, or deployment-target change | Block execution (`checkpoint_due`) and re-open planning via `pk:plan`; intake status returns to `partial`. |
+| Unsolicited idea / nice-to-have | Record in the intake record's **Later ledger**; it never enters the current plan by default. |
+
+Unrecorded new requirements must be reconciled before execution continues.
 
 ---
 

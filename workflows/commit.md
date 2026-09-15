@@ -213,7 +213,7 @@ docs(adrs): record decision to adopt UUIDv7 for primary keys
    > - If ready to open a pull request for review: run **`pk:pr`**
    > - If continuing work on the next issue: run **`pk:tasks`**
 
-   *(You MUST invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`)*
+   *(You MUST invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`; Bounded to closed-set operational choices — for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead, see the Picker routing rule in `workflows/plan.md`)*
 
 
 ---

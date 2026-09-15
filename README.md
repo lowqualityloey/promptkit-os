@@ -20,7 +20,7 @@ PromptKit OS equips your coding assistant with disciplined engineering workflows
 | **Who it is NOT for** | Developers looking for an autocomplete inline plugin, a CLI binary, or an npm dependency. PromptKit OS is pure markdown protocols and prompts. |
 | **Why it is better** | Replaces unguided "vibe coding" and token-wasting guess-and-patch loops with systematic, hypothesis-driven development workflows. Structured workflows are designed to reduce redundant back-and-forth by enforcing one-pass planning, artifact reuse, and surgical fixes over guess-and-patch loops. |
 | **Key differences** | Namespaced triggers (`pk:` prefix), guardrails against single-step destructive schema drops (phased Expand-Contract policy), strict project-scoped database container isolation, Socratic guidance that avoids unsolicited code dumps, and monorepo workspace isolation (scoped `--filter` commands). |
-| **Token Efficiency** | **Zero Static Token Bloat**: Injects only a compact router directive (~961 tok Lite [95% reduction] / ~2,319 tok Balanced [88% reduction] vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). Full workflows are read Just-In-Time (JIT) from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md). |
+| **Token Efficiency** | **Zero Static Token Bloat**: Injects only a compact router directive (~1,059 tok Lite [95% reduction] / ~2,496 tok Balanced [87% reduction] vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). Full workflows are read Just-In-Time (JIT) from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md). |
 | **Durable State Persistence** | **Cross-Session Memory**: State is never lost when chat sessions compact or reset. All active milestones, tasks in flight, and architectural invariants persist directly in Git-tracked markdown (`docs/STATE.md` and `docs/tasks/`). Run `pk:checkpoint` and resume in any fresh session via `pk:route`. |
 | **Adaptive Ceremony & Model Tiering** | **Scales with Risk**: Bypasses heavy templates for daily tweaks (Level 0/1) while reserving deep reasoning, Task Records, and verification gates for schema, auth, and release risks (Level 2/3). Matches LLM model tiers to task risk to prevent token waste. |
 | **Enforced Done-Gates** | **Not Inert Advice**: PromptKit OS enforces verifiable engineering done-gates: strict milestone git boundaries (blocking milestone transitions on the task's own uncommitted changes), automated pre-commit secret leak scans (`pk:commit`), and required Gherkin Acceptance Criteria verification proof. |
@@ -32,7 +32,7 @@ PromptKit OS equips your coding assistant with disciplined engineering workflows
 Getting started with PromptKit OS takes three simple steps:
 
 1. **Install & Initialize**: Run `./.promptkit/init.sh` (or `.\.promptkit\init.ps1` on Windows) to scaffold `./docs/`, `./PROMPTKIT.md`, and host directives.
-2. **Inspect `PROMPTKIT.md`**: Review or customize project-specific commands, test runners, and architectural invariants in `./PROMPTKIT.md` (or run `pk:onboard` for passive stack discovery).
+2. **Inspect `PROMPTKIT.md`**: Review or customize project-specific commands, test runners, and architectural invariants in `./PROMPTKIT.md` (or run `pk:onboard` — a greenfield discovery interview or brownfield stack scan).
 3. **Prompt Naturally**: Enter your task naturally or route explicitly with `pk:route`. The assistant announces its ceremony level upfront (e.g. `[PromptKit OS: Level 1 (Standard) — Localized bug fix. No Task Record required.]`). Most ordinary engineering tasks (bug fixes, isolated component tweaks, small features) are **Level 1 (Standard)** and do **not** require a formal Task Record file (`docs/tasks/<task-id>.md`).
 
 ### First Task Example
@@ -47,7 +47,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 
 ## Quick Start (60 Seconds)
 
-**New to PromptKit?** → See **[FAQ.md](./FAQ.md)** for the 17 most common questions  
+**New to PromptKit?** → See **[FAQ.md](./FAQ.md)** for the 18 most common questions  
 **Getting started?** → See **[QUICKSTART.md](./QUICKSTART.md)** for a 5-minute guided tour  
 **Release History?** → See **[CHANGELOG.md](./CHANGELOG.md)** for version notes and release provenance  
 **Full-Stack Example?** → See **[examples/saas-dashboard/](./examples/saas-dashboard/README.md)** for a populated end-to-end feature walkthrough, or **[examples/fullstack-feature/](./examples/fullstack-feature/README.md)** for a narrative lifecycle reference  
@@ -57,7 +57,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 **Want to know more?** → See **[INTERESTING-FACTS.md](./docs/INTERESTING-FACTS.md)** for unique insights and design principles
 
 > [!TIP]
-> **Start with just 2 workflows.** You do not need to learn all 23 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand. New in v1.6.0: **2+1 profiles** — Lite (6 utility workflows, 961 tok), Balanced (23 workflows, default), Turbo experimental (parallel waves, ~2x measured cost).
+> **Start with just 2 workflows.** You do not need to learn all 23 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand. New in v1.6.0: **2+1 profiles** — Lite (6 utility workflows, 1,059 tok), Balanced (23 workflows, default), Turbo experimental (parallel waves, ~2x measured cost).
 
 ### 1. Add to Your Project
 
@@ -81,8 +81,8 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit;
 ```
 
 **Profiles (v1.6.0 — 2+1 modes):**
-- **Lite** (`--lite`): 6 utility workflows, 961 tok static (95% reduction vs ~19.8k core-subset), 80% value — new users, learning, tiny fixes
-- **Balanced** (`--balanced` or no flag, default): full 23 workflows, 2,319 tok, Level 0-3 adaptive ceremony — teams, production
+- **Lite** (`--lite`): 6 utility workflows, 1,059 tok static (95% reduction vs ~19.8k core-subset), 80% value — new users, learning, tiny fixes
+- **Balanced** (`--balanced` or no flag, default): full 23 workflows, 2,496 tok, Level 0-3 adaptive ceremony — teams, production
 - **Turbo** (`--turbo --experimental`): Balanced + parallel waves, up to ~2x measured token cost, experimental, still requires human L3 approval — greenfield
 
 Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Upgrade anytime: `.promptkit/init.sh --balanced` or `--lite`.
@@ -223,7 +223,7 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:tutor` | [`workflows/tutor.md`](./workflows/tutor.md) | Core 🧪 | Conversation | Socratic mentorship using 3-tier hints; guides without dumping code. |
 | `pk:grill` | [`workflows/tutor.md`](./workflows/tutor.md) (alias) | Core 🧪 | Conversation | Architecture defense drill implemented via `tutor.md`. |
 | `pk:plan` | [`workflows/plan.md`](./workflows/plan.md) | Core 🧪 | `docs/specs/` | Spec-driven architecture, module depth, and zero-downtime migrations. |
-| `pk:onboard` | [`workflows/onboard.md`](./workflows/onboard.md) | Core | `PROMPTKIT.md`, `docs/STATE.md` | Brownfield intake: scans manifests, workspaces, and scaffolds guardrails. |
+| `pk:onboard` | [`workflows/onboard.md`](./workflows/onboard.md) | Core | `PROMPTKIT.md`, `docs/STATE.md` | Project intake: greenfield discovery interview (bounded, size-classed) or brownfield stack scan; scaffolds guardrails. |
 | `pk:tasks` | [`workflows/tasks.md`](./workflows/tasks.md) | Core 🧪 | `docs/tasks/` or `gh` | Decomposes specs into atomic 1-4h tasks with Gherkin AC. |
 | `pk:data` | [`workflows/data.md`](./workflows/data.md) | Core 🧪 | `docs/data/` | Schema design, composite indexing, RLS policies, and migrations. |
 | `pk:auth` | [`workflows/auth.md`](./workflows/auth.md) | Core 🧪 | `docs/auth/` | Cookie security flags, OAuth PKCE flows, and RBAC/ABAC capability matrix. |
@@ -292,7 +292,7 @@ In multi-agent environments (Antigravity, Claude Code, Cursor background agents)
 
 ### 5. Interactive Decision Handoffs
 
-- **Native Selection Modals**: When concluding a task, workflow milestone, or decision point, the assistant executes the host's native interactive selection tool (e.g. OpenCode prompt picker, `ask_question`) as its final tool call of the turn with `(Recommended)` prefixing Option 1.
+- **Native Selection Modals**: When concluding a task, workflow milestone, or decision point, the assistant executes the host's native interactive selection tool (e.g. OpenCode prompt picker, `ask_question`) as its final tool call of the turn with `(Recommended)` prefixing Option 1. Bounded to closed-set operational choices: for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead — see the Picker routing rule in `workflows/plan.md`.
 - **Fast Keyboard Navigation**: Renders an interactive menu right in your chat/terminal interface where you can navigate with arrow keys, press `Enter` for 1-key confirmation, or type custom input instead of staring at a blank prompt.
 
 ---
@@ -331,7 +331,7 @@ Repository CI validates structural integrity and protocol compliance across Linu
 | Dimension | Single-File Directives | Static Prompt Packs | Autonomous Multi-Agent Swarms | **PromptKit OS** |
 | :--- | :--- | :--- | :--- | :--- |
 | **Scope** | Tool-specific instruction endpoint | Workflow templates for one tool | Multi-agent unmonitored loops | Cross-tool engineering OS with 22 lifecycle workflows |
-| **Token Overhead** | Minimal initial overhead | High monolithic bloat (~18k tokens inlined) | Higher aggregate token cost from multi-agent pipeline calls | **~961 tok Lite / ~2,319 tok Balanced baseline\***  (~95% / ~88% static context reduction vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set); unused workflows consume 0 tokens) |
+| **Token Overhead** | Minimal initial overhead | High monolithic bloat (~18k tokens inlined) | Higher aggregate token cost from multi-agent pipeline calls | **~1,059 tok Lite / ~2,496 tok Balanced baseline\***  (~95% / ~87% static context reduction vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set); unused workflows consume 0 tokens) |
 | **Persistence** | Per-session only | Per-session only | Hidden cache directories prone to context exhaustion | Git-tracked `docs/STATE.md` survives context resets & fresh chats |
 | **Execution Model** | Unstructured chat | Manual template pasting | Background loop until timeout or crash | Disciplined human-in-the-loop pairing (Levels 0–3) |
 | **Database Safety** | No schema guardrails | Varies | Risk of destructive drops in unmonitored edits | Expand-Contract only (phased, non-breaking migrations) & strict Project-Scoped DB container isolation |
@@ -339,7 +339,7 @@ Repository CI validates structural integrity and protocol compliance across Linu
 | **Done-Gates** | Trust the model | Trust the model | Fragile timeout heuristics | Artifact gates + Gherkin verification + CI + human review |
 | **Lock-in** | Tool-specific format | Tool-specific format | Framework-specific runtime & daemons | Pure markdown, works with any AI coding assistant |
 
-*\* Measured mechanically via `scripts/measure-tokens.sh` / `measure-tokens.ps1` (bytes/4 convention, ~961 tokens Lite / ~2,319 tokens Balanced vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md) for full context window analysis.*
+*\* Measured mechanically via `scripts/measure-tokens.sh` / `measure-tokens.ps1` (bytes/4 convention, ~1,059 tokens Lite / ~2,496 tokens Balanced vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md) for full context window analysis.*
 
 ---
 
@@ -351,7 +351,7 @@ promptkit-os/
 │   └── workflows/
 │       └── ci.yml               # Maintainer CI (script syntax, initialization dry-run/idempotency, workflow structure, reference validation, fixture harnesses, and behavioral-contract tests)
 ├── CHANGELOG.md                 # Official release provenance adhering to Keep a Changelog
-├── FAQ.md                       # The 17 questions every developer asks before adopting
+├── FAQ.md                       # The 18 questions every developer asks before adopting
 ├── QUICKSTART.md                # 5-minute introduction with core workflows & 1-line setup
 ├── init.ps1                     # Setup script for Windows (PowerShell)
 ├── init.sh                      # Setup script for Linux/macOS (Bash)
@@ -371,7 +371,7 @@ promptkit-os/
 │   ├── route.md                 # Lifecycle decision matrix & workflow triage (pk:route)
 │   ├── tutor.md                 # Socratic mentorship & 3-tier progressive hints (pk:tutor, pk:grill)
 │   ├── plan.md                  # Spec-Driven Development & deep modular design (pk:plan)
-│   ├── onboard.md               # Brownfield intake, monorepo workspaces & PROMPTKIT.md (pk:onboard)
+│   ├── onboard.md               # Project intake (greenfield interview & brownfield scan), monorepo workspaces & PROMPTKIT.md (pk:onboard)
 │   ├── tasks.md                 # Atomic issue breakdown, Gherkin AC & Kanban sync (pk:tasks)
 │   ├── review.md                # Two-axis PR & Fowler smell review with data safety audit (pk:review)
 │   ├── commit.md                # Atomic Conventional Commits & staging hygiene (pk:commit)

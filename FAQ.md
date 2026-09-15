@@ -1,6 +1,6 @@
 # PromptKit OS FAQ
 
-**The 17 questions every developer asks before adopting PromptKit OS.**
+**The 18 questions every developer asks before adopting PromptKit OS.**
 
 ---
 
@@ -99,7 +99,7 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 # macOS / Linux — Balanced profile (23 workflows, default)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
 
-# Lite profile (6 utility workflows, 961 tokens static overhead)
+# Lite profile (6 utility workflows, 1,059 tokens static overhead)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --lite
 
 # Windows (PowerShell)
@@ -578,6 +578,12 @@ For complete line-by-line token breakdowns and mathematical analysis, see [docs/
 - **Golden Master Pinning**: Captures a snapshot of current outputs (including quirks and legacy edge cases) before a single line of structural code is modified.
 - **The Mikado Method**: Graphs prerequisites for large refactorings. If an exploratory refactor breaks tests, changes are immediately reverted (`git reset --hard`) and the missing dependency is recorded as a leaf node.
 - **Strangler Fig Migrations**: Replaces legacy submodules incrementally behind facade adapters, preventing high-risk "big-bang" rewrites.
+
+---
+
+## 18. How does PromptKit OS handle a brand-new (greenfield) project with no code yet?
+
+Run `pk:onboard` first. On an empty repo it skips the brownfield scan and runs a **bounded Project Discovery Interview** instead (`protocols/discovery-intake.md`): a size-classed (small / medium / large) set of questions covering MVP intent, target surfaces, deployment target, auth & data needs, constraints, and design references (Figma links, screenshots, `STYLE.md`/`DESIGN.md`, tracker boards). Questions are asked in the context window — not modal pickers — so you can answer with links, screenshots, or documents. The interview closes with a recorded `close_reason`; anything you defer or the AI suggests goes to a **Later ledger**, not the plan. Results land in `PROMPTKIT.md` as machine-readable `size:` / `intake-status:` signals, which `pk:plan` Step 0 consults before proposing architecture. Existing (brownfield) installs resolve to `legacy-partial` and are never re-interviewed.
 
 ---
 

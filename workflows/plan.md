@@ -116,6 +116,16 @@ Dependencies, risk, owner/approval boundary, execution policy, stop conditions, 
 
 ## Workflow Steps
 
+### Step 0: Intake Preflight (Bounded, Never Blocks Small Work)
+Before any planning interrogation, read the machine-readable signals at the top of `PROMPTKIT.md` (`size:`, `intake-status:`):
+
+1. **`intake-status: complete`** → proceed directly to Step 1. Do not re-ask intake questions (Question Retention extends to intake slots).
+2. **`unanswered` / `partial` / missing on a greenfield intent** → run the bounded Project Discovery Intake in [`discovery-intake.md`](../protocols/discovery-intake.md) **before proposing architecture**: ask only the missing critical slots within the size-class round cap — never a full re-interview — in the context window (never modal pickers), inviting links, screenshots, and documents as answers. Update `size:` / `intake-status:` when the interview closes, without downgrading an existing status.
+3. **`intake-status: legacy-partial` on an existing codebase** (including any missing or unrecognized intake fields, which resolve to `legacy-partial`) → do **not** re-interview; the codebase and its docs are the intake record. Record gaps as Assumption Records per the Level 2–3 Missing Inputs rule.
+4. **Level 0–1 requests skip intake entirely** — bounded discovery never gates trivial or lightweight work.
+5. **New requirements after intake closed** are never silently absorbed: doc-only deltas append to the intake record; scope or acceptance-criteria changes require a Scope Change Record; architecture, data-model, or deployment-target changes block execution and re-open planning (interception rules live in `pk:sync` / `pk:checkpoint`).
+6. **Legacy partial intake**: when `intake-status` is `partial` (or the field is absent entirely) on an existing install, Step 0 asks only for the specific missing critical slot, never a full re-interview, and records the result without downgrading the status.
+
 ### Step 1: Define Problem Statement, Metrics & Explicit Non-Goals
 1. **User & Business Problem**: What exact friction or capability does this address, for whom, and why now?
 2. **Explicit Non-Goals (Scope Boundary)**:
@@ -126,6 +136,12 @@ Dependencies, risk, owner/approval boundary, execution policy, stop conditions, 
 4. **Interactive Decision & Trade-Off Clarification**:
    - When resolving architectural choices or ambiguous requirements, prioritize native interactive selection tools (e.g. OpenCode question prompt, `ask_question`) with option 1 prefixed `(Recommended)`.
    - This enables the developer to navigate with arrow keys and confirm with `Enter` in one keystroke rather than typing prose.
+   - **Picker routing rule (bounded use)**: interactive pickers are for genuinely closed-set choices only — at most 4 options, no attachment expected (links, screenshots, documents, or multi-part answers require a context-window question), options grounded in recorded evidence or explicitly labelled "No recommendation / user decides", and never for intent questions (MVP scope, auth needs, deployment target), where the user's goal — not the assistant's preference — selects the answer.
+5. **MVP Floor & Anti-Overengineering Gate (user size, not agent size)**:
+   - Derive scope from the intake record's size class and stated MVP: small = single surface, single deploy target, no speculative infrastructure; medium = stated surfaces only; large = only user-stated complexity.
+   - Every proposed moving part (service, queue, cache, table, microservice, abstraction layer) must trace to a user-stated requirement. Anything without one goes to the intake record's **Later ledger** — proposed, not built.
+   - Prefer the boring default with a recorded upgrade path over the clever default with a migration cost.
+   - Present a short **"Decisions I'm defaulting for you"** list (deployment, auth, data ownership, hosting tier, version pins) and get explicit accept-or-change before finalizing the architecture.
 
 ### Step 2: System Context & Deep Module Architecture
 1. **Map the System Context**:

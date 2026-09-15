@@ -146,4 +146,4 @@ Upon presenting or opening the PR, conclude with the standard Telemetry Status C
 > - **To Merge**: Run **`gh pr merge <number> --squash --delete-branch`** (or review on GitHub)
 > - **Next Task**: Run **`pk:plan TASK-XX`** or **`pk:checkpoint`**
 
-*(You MUST invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`)*
+*(You MUST invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`; Bounded to closed-set operational choices — for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead, see the Picker routing rule in `workflows/plan.md`)*
