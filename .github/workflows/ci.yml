@@ -30,6 +30,8 @@ jobs:
           bash -n scripts/tests/run-release-record-properties.sh
           bash -n scripts/validate-ci-triage.sh
           bash -n scripts/tests/run-ci-triage-fixtures.sh
+          bash -n scripts/validate-lsp-evidence.sh
+          bash -n scripts/tests/run-lsp-evidence-fixtures.sh
           bash -n scripts/tests/run-behavioral-contract-tests.sh
           bash -n scripts/tests/run-init-safety-tests.sh
           bash -n scripts/tests/run-profile-matrix.sh
@@ -56,6 +58,9 @@ jobs:
 
       - name: Run CI Triage Fixture Harness (Bash)
         run: bash scripts/tests/run-ci-triage-fixtures.sh
+
+      - name: Run LSP Evidence Fixture Harness (Bash)
+        run: bash scripts/tests/run-lsp-evidence-fixtures.sh
 
       - name: Run Release-Record Validator Fixtures (Bash)
         run: |
@@ -154,6 +159,8 @@ jobs:
             "scripts/tests/run-release-record-properties.ps1",
             "scripts/validate-ci-triage.ps1",
             "scripts/tests/run-ci-triage-fixtures.ps1",
+            "scripts/validate-lsp-evidence.ps1",
+            "scripts/tests/run-lsp-evidence-fixtures.ps1",
             "scripts/tests/run-behavioral-contract-tests.ps1",
             "scripts/tests/run-init-safety-tests.ps1",
             "scripts/tests/run-profile-matrix.ps1",
@@ -196,6 +203,10 @@ jobs:
       - name: Run CI Triage Fixture Harness (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-ci-triage-fixtures.ps1
+
+      - name: Run LSP Evidence Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-lsp-evidence-fixtures.ps1
 
       - name: Run Release-Record Validator Fixtures (PowerShell)
         shell: pwsh

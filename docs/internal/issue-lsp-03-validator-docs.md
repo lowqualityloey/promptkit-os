@@ -6,7 +6,7 @@
 - **Milestone**: `Unassigned (remote has no open feature milestone; maintainer triage)`
 - **Priority**: `#priority/p2`
 - **Labels**: `area:tooling, type:feature`
-- **Kanban Status**: `To Do`
+- **Kanban Status**: `In Review`
 
 ## User Story & Context
 **As a** reviewer consuming `docs/reviews/*.md`
@@ -21,10 +21,11 @@
 - Auto-correcting reports, live LSP server communication, CI wiring beyond an optional job.
 
 ## Implementation Tasks
-- [ ] 1. Implement `scripts/validate-lsp-evidence.sh`: parse Diagnostics Evidence tables in `docs/reviews/*.md`, cross-check each `file:line:col` against the recorded fixed-point diff/revision or fixture baseline.
-- [ ] 2. Port parity `.ps1` version; add fixture matrix (valid, hallucinated path, out-of-range line, `not measured` pass-through).
-- [ ] 3. Add `docs/ADOPTION-GUIDE.md` Scenario 7: Supercharging `pk:review` with LSP/CLI Diagnostics (opt-in, fallback note).
-- [ ] 4. Add `docs/BENCHMARKS.md` row for measured evidence-table token cost.
+- [x] 1. Implement `scripts/validate-lsp-evidence.sh`: parse Diagnostics Evidence tables in `docs/reviews/*.md`, cross-check each `file:line:col` against the recorded fixed-point diff/revision or fixture baseline.
+- [x] 2. Port parity `.ps1` version; add fixture matrix (valid, hallucinated path, out-of-range line, `not measured` pass-through).
+- [x] 3. Add `docs/ADOPTION-GUIDE.md` Scenario 7: Supercharging `pk:review` with LSP/CLI Diagnostics (opt-in, fallback note).
+- [x] 4. Add `docs/BENCHMARKS.md` row for measured evidence-table token cost.
+- [x] 5. (Optional CI wiring, allowed by scope) Harness steps + syntax checks added to `ci.yml`.
 
 ## Acceptance Criteria
 ### Scenario 1: Validator pass

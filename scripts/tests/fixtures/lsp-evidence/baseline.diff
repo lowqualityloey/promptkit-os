@@ -1,0 +1,19 @@
+diff --git a/src/foo.ts b/src/foo.ts
+index 1111111..2222222 100644
+--- a/src/foo.ts
++++ b/src/foo.ts
+@@ -40,0 +41,6 @@ export module demo {
++export function greet(name: string) {
++  return `hello ${name}`;
++}
++const x: number = "no"; // tsc: TS2322 at 42:5
++export const y = 1;
++export const z = 2;
+diff --git a/src/bar.ts b/src/bar.ts
+index 3333333..4444444 100644
+--- a/src/bar.ts
++++ b/src/bar.ts
+@@ -15,0 +16,3 @@
++let a = 1;
++let b = 2;
++export { a, b };

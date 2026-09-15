@@ -318,6 +318,26 @@ If an MCP server is missing or disconnected, PromptKit OS gracefully and silentl
 
 ---
 
+### Scenario 7: Supercharging `pk:review` with LSP/CLI Diagnostics
+**Problem**: Review findings quote prose like "the auth check is missing in the service layer" instead of verifiable `file:line:col` locations, so authors waste turns re-locating the issue.
+
+**Solution**: Opt in via `PROMPTKIT.md` Section 5a (`LSP Enabled: true`). `pk:review` then runs a read-only diagnostics pull (Pre-Flight step 2a) before Axis 2 and injects a `Diagnostics Evidence` table into `docs/reviews/<slug>.md`:
+
+```markdown
+| Location | Severity | Source | Message |
+|----------|----------|--------|---------|
+| `src/foo.ts:42:5` | 🚨 [BLOCKING] | tsc-cli | `Type 'string' is not assignable to type 'number'.` |
+```
+
+**Bridge Priority** (Progressive Enhancement — same 4-tier rule as MCP):
+$$\text{lsp-mcp (future)} \rightarrow \text{Native IDE tools} \rightarrow \text{CLI JSON } (tsc, biome, eslint) \rightarrow \text{Manual}$$
+
+- **Filtering**: only diagnostics inside the fixed-point diff are cited; `error → 🚨 [BLOCKING]`, `warning → ⚠️ [IMPORTANT]`.
+- **Fallback**: no typecheck command configured, or tool missing? The section records `not measured` and the review proceeds via the standards audit — zero block, zero errors. Lite profile skips this with no token cost.
+- **Provenance**: verify citations mechanically with `bash scripts/validate-lsp-evidence.sh --root . --diff-file <fixed-point.diff>` (exit `1` only on hallucinated/out-of-diff locations; absence passes). A PowerShell parity port runs via `scripts/tests/run-lsp-evidence-fixtures.ps1`.
+
+---
+
 ## Handling Resistance & Common Objections
 
 ### "This Looks Like Bureaucracy"
