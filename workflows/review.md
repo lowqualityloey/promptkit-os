@@ -73,6 +73,19 @@ Establish and validate the appropriate diff comparison baseline before reviewing
 > - **Filesystem & Cloud Storage Destruction**: Un-versioned object deletions (`rm -rf`, bucket purge scripts) without backup confirmation.
 > - **Hard Resets**: In-code process automation running destructive Git resets or database purges.
 
+### 2a. Pull Diagnostics Evidence (Optional, Read-Only)
+> Gated on `./PROMPTKIT.md` Section 5a (`LSP Enabled: true`, or `Evidence Source: tsc-cli`). When `LSP Enabled` is `false` or `not measured`, skip this step silently and rely on the Axis 2 standards audit — never block the review on missing diagnostics. Lite profile (`lsp: disabled` default) skips this step with zero token overhead.
+
+1. Run the project's typecheck/lint commands from `PROMPTKIT.md` Section 3 with machine-readable output:
+   ```bash
+   pnpm tsc --noEmit --pretty false          # or: npx tsc --noEmit --pretty false
+   biome check --json .                      # or: eslint --format json .
+   ```
+2. Keep only diagnostics whose `file:line:col` falls inside the resolved fixed-point diff (`git diff <fixed-point>...HEAD` file list). Out-of-diff diagnostics belong to other changes — never cite them.
+3. Map severity: `error` → `🚨 [BLOCKING]`, `warning` → `⚠️ [IMPORTANT]`, `info`/`hint` → `💡 [SUGGEST]`.
+4. Cap injected evidence at 2 compact code blocks (<150 lines total); when the CLI emits only single-line output, cite the single line.
+5. Diagnostics are read-only evidence: never auto-fix. Values not produced this turn are recorded as `not measured`.
+
 ### Controlled & Release-Critical Work Traceability Preflight
 
 Before applying the two-axis review for Level 2 (Controlled) or Level 3 (Release-Critical) Work, validate the evidence without creating or repairing it:
@@ -203,6 +216,14 @@ Audit the diff against documented project standards (`PROMPTKIT.md`, `CODING_STA
 - **`src/hooks/useProjectFilter.ts:L34`**: [Repeated Switches / Race Condition]
   - *Finding*: Filter triggers asynchronous fetch without an `AbortController`. Rapid filter clicks cause stale resolution.
   - *Remedy*: Pass `signal` to fetch client.
+
+### Diagnostics Evidence (Optional — from Step 2a)
+- **Evidence Source**: `tsc-cli | biome-cli | eslint-cli | lsp-mcp | not measured`
+- Only rows whose `file:line:col` falls inside the fixed-point diff; otherwise record `not measured`. Severity mapping: `error` → 🚨 [BLOCKING]; `warning` → ⚠️ [IMPORTANT]; `info`/`hint` → 💡 [SUGGEST].
+
+| Location | Severity | Source | Message |
+|----------|----------|--------|---------|
+| `src/foo.ts:42:5` | 🚨 [BLOCKING] | tsc-cli | `Property 'x' does not exist on type 'Y'.` |
 
 ### 💡 [SUGGEST]
 - **`src/components/UserBadge.tsx:L12`**: [Primitive Obsession]
