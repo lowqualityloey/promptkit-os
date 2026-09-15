@@ -1,6 +1,6 @@
 # Project Architectural Profile (`PROMPTKIT.md`)
 
-> **Instructions for AI**: Read this file during every session. Adhere strictly to the project domain boundaries, commands, documentation targets, and non-negotiable architectural rules defined below.
+> **Instructions for AI**: Read this file during every session. Adhere strictly to the project domain boundaries, commands, documentation targets, and non-negotiable architectural rules defined below. Placeholders marked `[e.g. ...]` are **intake questions, not defaults**: when a value is unknown, report it to the user via the bounded intake (`protocols/discovery-intake.md`) instead of inventing a value.
 
 ## 0. PromptKit OS Profile
 - **Profile**: `balanced` (options: `lite` | `balanced` | `turbo` experimental)
@@ -13,6 +13,10 @@
 - **Upgrade Path**: Run `.promptkit/init.sh --balanced` for full, `--lite` for minimal, `--turbo --experimental` for parallel waves — or switch in-session with `pk:profile`
 
 profile: balanced
+
+size: [small | medium | large]
+intake-status: [unanswered | partial | complete]
+> `size:` and `intake-status:` are written by `pk:onboard` (greenfield Phase 0 interview, or a brownfield estimate marked `legacy-partial` when fields predate intake). `unanswered` or `partial` instructs `pk:plan` Step 0 to run the bounded intake in `protocols/discovery-intake.md` before proposing architecture. Never guess these values.
 
 ---
 

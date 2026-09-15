@@ -181,6 +181,18 @@ else
 fi
 
 echo ""
+echo "📌 Scenario N: Greenfield Discovery Intake & Planning Gate (pk:onboard / pk:plan)"
+assert_contains "workflows/onboard.md" "Phase 0: Greenfield Discovery Intake" "Onboard workflow defines conditional greenfield Phase 0 intake"
+assert_contains "workflows/onboard.md" "never in choice menus" "Intake questions are asked in the context window, not modal pickers"
+assert_contains "workflows/onboard.md" "discovery-intake\\.md" "Onboard workflow links the bounded discovery intake protocol"
+assert_contains "workflows/onboard.md" "intake-status: legacy-partial" "Brownfield installs get migration-safe intake signals (never re-grilled)"
+assert_contains "workflows/onboard.md" "size: small\\|medium\\|large" "Onboard workflow writes machine-readable size class to PROMPTKIT.md"
+assert_contains "protocols/discovery-intake.md" "close_reason" "Intake protocol records why the interview closed"
+assert_contains "protocols/discovery-intake.md" "Later ledger" "Intake protocol routes AI-suggested scope to the Later ledger"
+assert_contains "templates/project-profile-template.md" "intake-status:" "Project profile template carries machine-readable intake signals"
+assert_contains "templates/project-profile-template.md" "intake questions, not defaults" "Profile placeholders are declared intake questions, never silent defaults"
+
+echo ""
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"
