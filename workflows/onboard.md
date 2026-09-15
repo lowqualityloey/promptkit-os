@@ -138,17 +138,39 @@ After completing the scan and presenting the findings summary / Executive Scorec
    - Hosts without `ask_question` support: fallback to `> [!TIP] ### 💡 Choose profile (Type number & Enter):` with Option 1 prefixed `(Recommended)` and Option 2 as default.
    - If developer chooses Turbo, require explicit experimental acknowledgement: second confirmation `Acknowledge Turbo experimental cost (up to ~2x measured tokens) and that human approval still required for L3? [y/N]`
    - Store choice as machine-readable `profile: lite|balanced|turbo` in `PROMPTKIT.md` (both human section `## 0. PromptKit OS Profile` and bottom `profile:` line) so future sessions don't re-ask.
-   - Non-interactive / CI: respect flags `--lite`, `--balanced`, `--turbo --experimental` passed to `init.sh` / `init.ps1`, or `PROMPTKIT.md` existing profile, or default to `balanced`. When `PROMPTKIT_NO_INTERACTIVE=1` is set, skip any picker (this agent-level prompt and the shell-level TTY picker in `init.sh` / `init.ps1`) and apply flags/default only.
+    - Non-interactive / CI: respect flags `--lite`, `--balanced`, `--turbo --experimental` passed to `init.sh` / `init.ps1`, or `PROMPTKIT.md` existing profile, or default to `balanced`. When `PROMPTKIT_NO_INTERACTIVE=1` is set, skip any picker (this agent-level prompt and the shell-level TTY picker in `init.sh` / `init.ps1`) and apply flags/default only.
+
+1b. **Task Tracker Selection via Native Interactive Tools (Visual Decision):**
+    - Check `PROMPTKIT.md` for existing `tracking: local|github|jira|linear` line. If present, respect it and skip prompt.
+    - If missing and running in interactive host, invoke native selection tool immediately after profile selection:
+      ```
+      ask_question:
+        question: "Where should PromptKit tasks live for this project?"
+        header: "Tracker"
+        options:
+          - label: "Local Markdown (Recommended for solo / offline) (Recommended)"
+            description: "Writes docs/tasks/*.md + docs/STATE.md only, offline, import to GitHub/Jira later, reversible"
+          - label: "GitHub Issues"
+            description: "Publishes via gh CLI or github-mcp-server, ~2 min, needs gh auth + labels script, reversible"
+          - label: "Jira"
+            description: "Formats to Jira schema, manual import / copy-paste, no auto-push, needs project key"
+          - label: "Linear"
+            description: "Formats to Linear schema, manual import / copy-paste, no auto-push, needs project key"
+        multiSelect: false
+      ```
+    - Hosts without `ask_question` support: fallback to `> [!TIP] ### 💡 Choose tracker (Type number & Enter):` with Option 1 prefixed `(Recommended)`. A single-number reply (`1`) executes that option.
+    - Store choice as machine-readable `tracking: local|github|jira|linear` in `PROMPTKIT.md` (Section 5 + bottom machine line) so future sessions don't re-ask.
+    - Non-interactive / CI: respect `--tracking=<value>` passed to `init.sh` / `init.ps1`, or existing `tracking:` line, or default to `local`. When `PROMPTKIT_NO_INTERACTIVE=1` is set, skip picker and apply flags/default only.
 
 2. **Auto-Populate `PROMPTKIT.md`**:
    Copy `.promptkit/templates/project-profile-template.md` to `./PROMPTKIT.md` and fill out all sections using findings from Phases 1 and 2:
    - Project Name inferred from directory or manifest `name`.
    - Active commands configured to the exact detected package manager and runner scripts.
    - If monorepo detected, populate Section 4 (`Monorepo & Workspace Topology`) with the mapped workspace manager, package table, filtered command conventions (`pnpm --filter <pkg>`, `turbo run <cmd> --filter=<pkg>`), and boundary guardrails. If single-package repo, set Section 4 to `N/A (Standalone Repository)`.
-   - Document paths set to standard defaults (`docs/specs/`, `docs/tasks/`, `docs/data/`, etc.) and link any detected root documentation (`ARCHITECTURE.md`, `ROADMAP.md`, `RUNBOOK.md`, `STYLE.md`).
-   - Task tracking system recorded in Section 5 (`Local Markdown (docs/tasks/)` by default, or `GitHub Issues` / `Linear` / `Jira` if requested).
-   - Tailored architectural invariants added (e.g. strict TypeScript, zero loose casting, database check constraints, RLS enforcement).
-   - Ensure `## 0. PromptKit OS Profile` section exists with chosen profile (`lite|balanced|turbo`) and machine-readable `profile:` line at bottom for agent parsing (from Step 1).
+    - Document paths set to standard defaults (`docs/specs/`, `docs/tasks/`, `docs/data/`, etc.) and link any detected root documentation (`ARCHITECTURE.md`, `ROADMAP.md`, `RUNBOOK.md`, `STYLE.md`).
+    - Task tracking system recorded in Section 5 from Step 1b picker (`Local Markdown (docs/tasks/)` default, or `GitHub Issues` / `Jira` / `Linear`). Jira/Linear are manual import / copy-paste with no auto-push; Local Task Record at `docs/tasks/<task-id>.md` remains authoritative and board status is a projection only.
+    - Tailored architectural invariants added (e.g. strict TypeScript, zero loose casting, database check constraints, RLS enforcement).
+    - Ensure `## 0. PromptKit OS Profile` section exists with chosen profile (`lite|balanced|turbo`), machine-readable `profile:` line, and machine-readable `tracking: local|github|jira|linear` line at bottom for agent parsing (from Steps 1 and 1b).
 
 3. **Auto-Populate `DESIGN.md` (If Frontend Surfaces Exist)**:
    If UI components are detected (`.tsx`, `.jsx`, `.vue`, `.svelte`):
@@ -170,9 +192,9 @@ After completing the scan and presenting the findings summary / Executive Scorec
 
 1. **Emit Executive Architecture Scorecard**:
    Present the developer with a concise summary table in the conversation:
-   - **Stack & Tooling**: Confirmed runtime, framework, ORM, and test runners.
-   - **Task Tracking System**: Confirmed task lifecycle backend (`Local Markdown (docs/tasks/)`, `GitHub Issues`, `Linear`, or `Jira`).
-   - **Active MCP Capabilities**: Catalog detected Model Context Protocol servers (e.g. GitHub MCP, Postgres MCP, Linear) or record `N/A (Standard CLI Fallback)`.
+    - **Stack & Tooling**: Confirmed runtime, framework, ORM, and test runners.
+    - **Task Tracking System**: Confirmed task lifecycle backend from Step 1b (`tracking: local|github|jira|linear`). Jira/Linear are manual import with no auto-push.
+    - **Active MCP Capabilities**: Catalog detected Model Context Protocol servers (e.g. GitHub MCP, Postgres MCP, Linear) or record `N/A (Standard CLI Fallback)`. This step is non-blocking advise only — the agent cannot enable MCP; the human configures it in-host. Recommend: tracker=github → `github-mcp-server`; `pk:data` planned → `postgres-mcp` read-only; frontend → `playwright`. Always add fallback line: `No MCP? Zero errors — falls back to gh CLI + markdown.` Store in `PROMPTKIT.md §5`.
    - **Existing System Documentation**: Catalog detected standard root documentation (`ARCHITECTURE.md`, `ROADMAP.md`, `RUNBOOK.md`, `STYLE.md`) or record `N/A (None Detected)`.
    - **Architectural Strengths**: High test coverage, strict typing, clean modular boundaries.
    - **Vulnerabilities & Missing Seams**: Zero integration tests, unindexed foreign keys, loose `any` types, missing error boundaries.

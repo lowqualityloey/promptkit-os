@@ -35,7 +35,9 @@ Eliminate instruction decay, stale working assumptions, and formatting divergenc
 Before responding, the AI assistant inspects the physical workspace:
 
 1. **Verify Root Directive Files**:
-   Confirm that active host configuration files (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.github/copilot-instructions.md`) contain the latest `<!-- PROMPTKIT_START -->` block.
+    Confirm that active host configuration files (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.github/copilot-instructions.md`) contain the latest `<!-- PROMPTKIT_START -->` block.
+2. **Backfill Missing `tracking:` Line (One-Time Migration)**:
+    If `./PROMPTKIT.md` lacks a `tracking: local|github|jira|linear` line, prompt once via native selection tool (same 4 priced options as `pk:onboard` Step 1b, with markdown `Type number & Enter` fallback) and persist it. Never overwrite an existing value. Respect `--tracking=` flag and `PROMPTKIT_NO_INTERACTIVE=1` (flags/default `local`, no picker).
 2. **Inspect Engine Path & Workflows**:
    Identify the engine directory (typically `.promptkit/` — the path quoted in your injected directive) and verify available workflows in its `workflows/` directory (count them with the file listing, do not recall a number).
 3. **Check Version & Release Records**:
