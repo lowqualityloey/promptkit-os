@@ -191,6 +191,11 @@ assert_contains "protocols/discovery-intake.md" "close_reason" "Intake protocol 
 assert_contains "protocols/discovery-intake.md" "Later ledger" "Intake protocol routes AI-suggested scope to the Later ledger"
 assert_contains "templates/project-profile-template.md" "intake-status:" "Project profile template carries machine-readable intake signals"
 assert_contains "templates/project-profile-template.md" "intake questions, not defaults" "Profile placeholders are declared intake questions, never silent defaults"
+assert_contains "workflows/plan.md" "Step 0: Intake Preflight" "Plan workflow gates architecture on intake status before Step 1"
+assert_contains "workflows/plan.md" "intake-status: legacy-partial" "Plan workflow never re-interviews brownfield installs"
+assert_contains "workflows/plan.md" "Later ledger" "Plan workflow routes unrequired complexity to the Later ledger"
+assert_contains "workflows/plan.md" "Decisions I'm defaulting for you" "Plan workflow surfaces agent defaults as an accept-or-change list"
+assert_contains "workflows/plan.md" "Picker routing rule" "Plan workflow bounds interactive pickers to closed-set, evidence-backed choices"
 
 echo ""
 echo "==========================================================="
