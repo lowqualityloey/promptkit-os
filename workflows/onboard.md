@@ -1,12 +1,15 @@
-# Brownfield Codebase Intake & Onboarding Workflow
+# Project Intake & Onboarding Workflow (Greenfield & Brownfield)
 
 ## Fast Shorthand
 Trigger anytime with: `pk:onboard` (or `/pk-onboard`, `pk:scan`, `pk:init-repo`)
 
 ## Mission
-Ingest any existing repository into the PromptKit OS engineering operating system in under 60 seconds. Inspect package manifests, active developer scripts, database schemas, and architectural boundaries. Auto-populate `./PROMPTKIT.md` (and `./DESIGN.md` if frontend surfaces exist), establish a concrete baseline for code quality gates, and index existing technical debt into `docs/tasks/`.
+Bring any project into the PromptKit OS engineering operating system: interview a greenfield repository that has no code yet, or ingest an existing repository in under 60 seconds. For brownfield work, inspect package manifests, active developer scripts, database schemas, and architectural boundaries. For greenfield work, run the bounded Project Discovery Intake to establish MVP intent, surfaces, deployment target, constraints, and design inputs before any architecture is proposed. Auto-populate `./PROMPTKIT.md` (and `./DESIGN.md` if frontend surfaces exist), establish a concrete baseline for code quality gates, and index existing technical debt into `docs/tasks/`.
 
-Eliminate day-one setup friction. Replace manual configuration chores with automated, deterministic architectural discovery.
+Eliminate day-one setup friction. Replace manual configuration chores with deterministic discovery for existing code, and with a bounded low-technical interview for new projects. Brownfield keeps the passive read-only discovery path; greenfield asks instead of assuming.
+
+## Core Principle: Ask Before Assuming
+For a greenfield repository there is nothing to inspect, so the assistant asks instead of inventing. The bounded interview in [`discovery-intake.md`](../protocols/discovery-intake.md) collects only what the human can answer, and every unanswered slot becomes an owned assumption rather than a silent agent default. This is the intake that prevents an agent's preferred architecture from becoming the project's architecture by default.
 
 ---
 
@@ -23,23 +26,40 @@ After completing the scan and presenting the findings summary / Executive Scorec
 ---
 
 ## Preconditions
-- The repository contains existing application code, manifests, or configuration files.
+- **Brownfield**: the repository contains existing application code, manifests, or configuration files.
+- **Greenfield**: the repository is empty or contains only documentation, licence, and git metadata — Phase 0 applies.
 - PromptKit OS is installed in `.promptkit/` or `promptkit/`.
 - Access to `.promptkit/templates/project-profile-template.md` and `.promptkit/templates/design-profile-template.md`.
+- Greenfield only: access to `.promptkit/protocols/discovery-intake.md` (the bounded interview protocol).
 
 ---
 
-## 4-Phase Onboarding Protocol
+## 5-Phase Onboarding Protocol
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                    PK:ONBOARD LIFECYCLE                     │
-├──────────────┬──────────────┬──────────────┬────────────────┤
-│ Phase 1:     │ Phase 2:     │ Phase 3:     │ Phase 4:       │
-│ Manifest &   │ Architecture │ Profile &    │ Health Score-  │
-│ Tooling Scan │ & Boundaries │ Guardrail Gen│ card & Backlog │
-└──────────────┴──────────────┴──────────────┴────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              PK:ONBOARD LIFECYCLE                            │
+├────────────────┬──────────────┬───────────────┬──────────────┬──────────────┤
+│ Phase 0:       │ Phase 1:     │ Phase 2:      │ Phase 3:     │ Phase 4:     │
+│ Greenfield     │ Manifest &   │ Architecture  │ Profile &    │ Health Score-│
+│ Intake (cond.) │ Tooling Scan │ & Boundaries  │ Guardrail Gen│ card & Backlog│
+└────────────────┴──────────────┴───────────────┴──────────────┴──────────────┘
 ```
+
+> Phase 0 is **conditional**: it activates only for greenfield repositories. If any application code, manifest, or lockfile is detected, skip Phase 0 entirely and run Phases 1–4 unchanged.
+
+---
+
+### Phase 0: Greenfield Discovery Intake (Greenfield Only)
+
+**Activation gate**: run this phase only when the repository has no application code, no package manifests, and no lockfiles (documentation, licence, and git metadata are acceptable). Otherwise proceed directly to Phase 1.
+
+1. **Load the bounded interview protocol**: read [`discovery-intake.md`](../protocols/discovery-intake.md) and determine the size class (`S`/`M`/`L`) from the user's first description. Never load the protocol for brownfield runs.
+2. **Ask in the context window, never in choice menus**: every intake question is asked as plain conversation so the human can paste Figma links, screenshots, `ARCHITECTURE.md`/`STYLE.md`/`DESIGN.md` references, or Jira/GitHub board links as answers. Modal pickers are permitted only for genuinely closed-set questions (≤4 options, no attachment expected, evidence-based or explicitly marked "no recommendation").
+3. **Cover the 7 intake slots within the size-class round cap** (S ≤ 1 round / ≤ 5 questions, M ≤ 2 / ≤ 8, L ≤ 3 / ≤ 12): MVP intent, surfaces, deployment target, auth & data, constraints, design inputs, integrations. Accept "not sure" and record it as an open question.
+4. **Close the loop**: after each round ask *"Is there anything you want to add?"* and *"Is this enough for now?"* — close on explicit user signal, all slots covered, round cap reached, or no new information in a round. Record the `close_reason`.
+5. **Never propose architecture during intake**: unanswered slots become owned `ASSUMPTION-*` entries with a validation owner — never silent agent defaults. Any AI-suggested capability that lacks a user-stated requirement goes to the **Later ledger**, not the plan.
+6. **Persist**: record the Intake Record per the protocol; the durable projection (`size:` and `intake-status:` lines in `PROMPTKIT.md`) is written during Phase 3.
 
 ---
 
@@ -128,9 +148,9 @@ After completing the scan and presenting the findings summary / Executive Scorec
        header: "Profile"
        options:
          - label: "Lite (Recommended for new users) (Recommended)"
-           description: "6 utility workflows (route, debug, commit, checkpoint, sync, profile) 961 tok, 80% value, fastest onboarding, <1,500 tok"
+           description: "6 utility workflows (route, debug, commit, checkpoint, sync, profile), 80% of value, fastest onboarding, fits the <1,500 tok lite budget"
          - label: "Balanced (Recommended for teams)"
-           description: "Full 23 workflows, 2,319 tok, Level 0-3 adaptive ceremony, teams/production, default"
+           description: "Full 23-workflow set, Level 0-3 adaptive ceremony, teams/production, default"
          - label: "Turbo (Experimental)"
            description: "Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval, needs --experimental acknowledgement"
        multiSelect: false
@@ -171,6 +191,7 @@ After completing the scan and presenting the findings summary / Executive Scorec
     - Task tracking system recorded in Section 5 from Step 1b picker (`Local Markdown (docs/tasks/)` default, or `GitHub Issues` / `Jira` / `Linear`). Jira/Linear are manual import / copy-paste with no auto-push; Local Task Record at `docs/tasks/<task-id>.md` remains authoritative and board status is a projection only.
     - Tailored architectural invariants added (e.g. strict TypeScript, zero loose casting, database check constraints, RLS enforcement).
     - Ensure `## 0. PromptKit OS Profile` section exists with chosen profile (`lite|balanced|turbo`), machine-readable `profile:` line, and machine-readable `tracking: local|github|jira|linear` line at bottom for agent parsing (from Steps 1 and 1b).
+    - Write the machine-readable `size: small|medium|large` and `intake-status: unanswered|partial|complete` lines below `profile:`: greenfield copies them from the Phase 0 Intake Record (`complete` when closed); brownfield writes best-effort `size:` and `intake-status: legacy-partial` (never `complete` — the scan cannot answer intent slots).
 
 3. **Auto-Populate `DESIGN.md` (If Frontend Surfaces Exist)**:
    If UI components are detected (`.tsx`, `.jsx`, `.vue`, `.svelte`):
@@ -184,7 +205,7 @@ After completing the scan and presenting the findings summary / Executive Scorec
    - If monorepo, set initial Target Workspace / Package in Section 3 (`Active Working Set`).
    - Record detected architectural invariants in Section 4.
    - Seed Section 8 (`Session Continuity Log`) with an initial onboarding entry:
-     `| YYYY-MM-DD | Assistant (pk:onboard) | Brownfield Codebase Intake | Generated PROMPTKIT.md and initialized docs/STATE.md |`
+     `| YYYY-MM-DD | Assistant (pk:onboard) | Project Intake (Greenfield or Brownfield) | Generated PROMPTKIT.md and initialized docs/STATE.md |`
 
 ---
 
@@ -215,6 +236,7 @@ After completing the scan and presenting the findings summary / Executive Scorec
 ---
 
 ## Completion Criteria
+- Greenfield: bounded intake closed with a recorded `close_reason`; `size:` and `intake-status:` written to `PROMPTKIT.md`; unanswered slots carry owned `ASSUMPTION-*` entries.
 - Manifests and scripts inspected; package manager verified.
 - `./PROMPTKIT.md` generated with non-generic, working project commands.
 - `./DESIGN.md` generated or skipped with explicit rationale.
