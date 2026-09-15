@@ -80,6 +80,13 @@ profile: balanced
 - **Browser / UI MCP**: [e.g. `playwright` for `pk:design` visual and E2E verification | N/A]
 - **Execution Precedence**: Native MCP Tools $\rightarrow$ Native IDE Search/Edit Tools $\rightarrow$ Terminal CLI Commands $\rightarrow$ Structured Markdown Fallback
 
+### 5a. LSP Capabilities (Optional)
+> Record detected language-server capabilities for range-accurate diagnostics (`file:line:col`) consumed by `pk:review`. Progressive Enhancement applies: LSP is an optional accelerator, disabled by default, with zero token overhead for Lite-profile users. When unavailable, assistants fall back to the Section 3 typecheck/lint commands with zero errors. The assistant never starts or enables a language server; humans configure in-host.
+
+- **LSP Enabled**: [false (default) | true | not measured]
+- **LSP Servers**: [e.g. `tsserver`, `pyright`, `rust-analyzer` | none]
+- **Evidence Source**: [lsp-mcp | tsc-cli | not measured]
+
 ---
 
 ## 6. Documentation & Artifact Storage Paths
