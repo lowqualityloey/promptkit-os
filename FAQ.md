@@ -99,7 +99,7 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 # macOS / Linux — Balanced profile (23 workflows, default)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
 
-# Lite profile (6 utility workflows, 961 tokens static overhead)
+# Lite profile (6 utility workflows, 1,059 tokens static overhead)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --lite
 
 # Windows (PowerShell)

@@ -39,6 +39,8 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit;
 ```
 
 Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Upgrade anytime: `.promptkit/init.sh --balanced` or `--lite`.
+**Fresh project (no code yet)?** Run `pk:onboard` before `pk:plan` — the bounded discovery interview captures MVP intent, surfaces, deployment target, auth & data needs, and design references (Figma, screenshots, docs), then writes `size:` / `intake-status:` into `PROMPTKIT.md`.
+
 When run in an interactive terminal without flags, `init.sh` / `init.ps1` presents an interactive visual menu to select your profile. In CI or non-interactive environments, pass a profile flag or set `PROMPTKIT_NO_INTERACTIVE=1`.
 
 <details>

@@ -138,6 +138,7 @@ Find your current engineering context below and activate the corresponding workf
 | Current Context / Problem | Recommended Trigger | Primary Artifact Output | Core Value Delivered |
 | :--- | :--- | :--- | :--- |
 | **New Feature or Inception** | `pk:plan` | `docs/specs/` | Modular RFC spec, deletion test, threat modeling |
+| **New Project / Greenfield Inception** | `pk:onboard` | Intake Record + `PROMPTKIT.md` | Bounded discovery interview (size-classed): MVP intent, surfaces, deployment, design inputs |
 | **Existing Repo / Brownfield Intake** | `pk:onboard` | `PROMPTKIT.md` & `docs/STATE.md` | Automated stack scan, command extraction, PROMPTKIT.md generation |
 | **Task Breakdown & Acceptance Criteria** | `pk:tasks` | `docs/tasks/` or gh CLI | Atomic issues, Gherkin AC, Kanban lane sync, gh CLI |
 | **Relational Database Design** | `pk:data` | `docs/data/` | UUIDv7 keys, composite indexes, RLS policies |
@@ -194,7 +195,7 @@ Use the existing [`pk:commit`](./commit.md), [`pk:checkpoint`](./checkpoint.md),
             ┌────────────────┴────────────────┐
             ▼                                 ▼
          pk:plan                           pk:onboard
-    (Greenfield RFC)                  (Brownfield Ingestion)
+    (Greenfield Intake → RFC)                  (Brownfield Intake)
             │                                 │
             └────────────────┬────────────────┘
                              │

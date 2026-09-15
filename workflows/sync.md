@@ -75,5 +75,20 @@ Session: ~<n>/30 turns — consider pk:checkpoint (estimate; write `not measured
 
 ---
 
+### New-Requirement Interception (Mid-Implementation Deltas)
+
+During the Phase 2 diff, treat any new requirement, attachment, or scope statement the developer introduces mid-implementation as an interception candidate — never absorb it silently into current execution:
+
+| Delta type | Required handling |
+| :--- | :--- |
+| Documentation-only (doc link, README note, style preference) | Append to the intake record and `PROMPTKIT.md` signals; continue. |
+| Scope or acceptance-criteria change | Create a linked Scope Change Record (`docs/tasks/<task-id>.scope-<n>.md`) before continuing; expansion requires human confirmation. |
+| Architecture, data-model, auth, or deployment-target change | Block execution (`checkpoint_due`) and re-open planning via `pk:plan`; intake status returns to `partial`. |
+| Unsolicited idea / nice-to-have | Record in the intake record's **Later ledger**; it never enters the current plan by default. |
+
+Unrecorded new requirements must be reconciled before execution continues.
+
+---
+
 ## Related References
 - Canonical workflow navigation: [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md)

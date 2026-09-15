@@ -29,7 +29,7 @@ idempotent installer. **The recommendations below add no new machinery.**
 
 ## 2. The gap: the repo benchmarks the cheap layer, not the expensive one
 
-`docs/BENCHMARKS.md` measures exactly one thing — the static directive (**~1,878 tokens**) —
+`docs/BENCHMARKS.md` measures exactly one thing — the static directive (**~2,496 tokens as of 2026-09-16**) —
 and reports a **~90% reduction** against a ~18,500-token monolithic prompt pack. That claim is
 true *for the static layer*.
 
