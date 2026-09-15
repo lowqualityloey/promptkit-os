@@ -64,8 +64,9 @@ Extract and structure the 5 vital signals of the session:
 
 For Level 2 (Controlled) and Level 3 (Release-Critical) Work, checkpointing is a durable execution gate linking `docs/tasks/<task-id>.md` in addition to the existing workspace audit and handover prompt. Level 0 (Direct) and Level 1 (Standard) work update `docs/STATE.md` or session notes directly without requiring a Task Record file:
 
-- Request a **Soft Checkpoint** around 60 minutes after the active task starts and require a **Hard Checkpoint** at or before 90 minutes, unless the Task Record documents a different policy.
-- Require event-driven checkpoints at major milestones, task switches, scope expansion, handoff, context compaction, or detected context drift.
+- Request a **Soft Checkpoint** around 60 minutes after the active task starts and require a **Hard Checkpoint** at or before 90 minutes, unless the Task Record documents a different policy. Nudge at ~15 substantive turns, hard checkpoint at ~30 turns (L2/L3 hard-stop; L1 advisory with `pk:sync` disk-reload recovery for users who stay).
+- **Session Fatigue Meter (estimate, never fake precision)**: when emitting telemetry, append `Session: ~<n>/30 turns — consider pk:checkpoint` as a labeled estimate. If turn count is unknown, write `Session: not measured`.
+- Require event-driven checkpoints at major milestones, task switches, scope expansion, handoff, context compaction, or detected context drift (e.g. dropped callouts, missing telemetry, skipped `ask_question`).
 - Record the configured thresholds and host capability. If the host cannot observe or forcibly stop live generation, record `POLICY_LIMITATION`; do not claim mechanical timer enforcement.
 - A Checkpoint Record at `docs/tasks/<task-id>.checkpoint-<sequence>.md` must include task/specification identity, state, objective, completed and remaining work, changed files, branch/revision, decisions/invariants, verification/CI evidence, blockers, scope changes, and exactly one prioritized next action.
 - `checkpoint_due`, `blocked`, `paused`, and `handoff_ready` are stop states. They prohibit implementation edits, commits, pull-request actions, and task switches until the recorded resume condition is satisfied. Read-only diagnosis may continue when it does not change project state.

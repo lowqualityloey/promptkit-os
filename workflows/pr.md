@@ -32,11 +32,20 @@ Transform a series of local commits into a high-signal, staff-level Pull Request
 ### Phase 1: Diff & Log Inspection
 
 1. **Verify Target Comparison**:
-   ```bash
-   BASE_BRANCH="origin/main"
-   git log ${BASE_BRANCH}..HEAD --oneline
-   git diff --stat ${BASE_BRANCH}...HEAD
-   ```
+    ```bash
+    BASE_BRANCH="origin/main"
+    git log ${BASE_BRANCH}..HEAD --oneline
+    git diff --stat ${BASE_BRANCH}...HEAD
+    ```
+2. **Pre-PR Conflict & Gate Check (Mandatory)**:
+    ```bash
+    git status -s
+    git fetch origin && git log HEAD..origin/main --oneline
+    ```
+    - If the tree is dirty with this task's uncommitted changes, stop: stage via `pk:commit` first (milestone git boundary).
+    - If `origin/main` advanced (log shows commits), rebase or merge before opening the PR; never push a known-conflicted branch.
+    - Require `Quality Gate: measured this turn` (tests/typecheck actually run) before `gh pr create`. Otherwise record `not measured` and do not open the PR.
+    - On conflict or dirty tree, emit `> [!WARNING]` titled `### ⚠️ Blocked: Waiting on Human Input` with exact resolve commands. No auto-push; human approval boundary holds.
 2. **Review Commit History**:
    Ensure commits on the branch follow Conventional Commits format (`feat:`, `fix:`, `refactor:`, `test:`). If commits are messy, suggest cleaning them up via `pk:commit` before opening the PR.
 
@@ -105,11 +114,24 @@ Provide the generated PR description to the developer in two formats:
 
 1. **Markdown Document**: For copy-pasting directly into GitHub, GitLab, or Bitbucket web interfaces.
 2. **GitHub CLI Command (`gh pr create`)**:
-   Offer a pre-formatted CLI command to open the PR immediately:
-   ```bash
-   gh pr create --title "<type>(<scope>): <summary>" --body-file pr-body.md
-   ```
-   *(Or interactive `gh pr create --web`)*.
+    Offer a pre-formatted CLI command to open the PR immediately:
+    ```bash
+    gh pr create --title "<type>(<scope>): <summary>" --body-file pr-body.md --json url --jq .url
+    ```
+    Capture the returned URL (or `gh pr view --json url --jq .url` for MCP-created PRs). If no URL is available, write `PR URL: not measured — paste link from browser`. Never invent a URL.
+    *(Or interactive `gh pr create --web`)*.
+
+### PR Link Callout (Dual-Compatible)
+
+Upon presenting or opening the PR, close with an attention callout (not TIP — action required). Dual-compatible: `> [!IMPORTANT]` + `> ` prefix only, standard markdown link (clickable in IDE, selectable in CLI), zero HTML:
+
+```markdown
+> [!IMPORTANT]
+> ### 🛑 Action Required From You: Review PR #<number>
+> **PR:** [#<number> — <title>](<url>)
+> - Files: <url>/files · Checks: <url>/checks
+> - Merge (after green): `gh pr merge <number> --squash --delete-branch`
+```
 
 ### Human Authority & Merge Boundary
 The AI assistant drafts the pull request and compiles verification evidence, but the human engineer retains sole authority over code review, approval, and merging to `main`. The AI assistant must **never** execute `git push origin main` or merge pull requests directly without explicit developer authorization.
