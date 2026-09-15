@@ -147,7 +147,7 @@ After completing the scan and presenting the findings summary / Executive Scorec
        question: "Choose PromptKit OS profile for this project"
        header: "Profile"
        options:
-         - label: "Lite (Recommended for new users) (Recommended)"
+         - label: "Lite (Recommended for new users)"
            description: "6 utility workflows (route, debug, commit, checkpoint, sync, profile), 80% of value, fastest onboarding, fits the <1,500 tok lite budget"
          - label: "Balanced (Recommended for teams)"
            description: "Full 23-workflow set, Level 0-3 adaptive ceremony, teams/production, default"
@@ -168,7 +168,7 @@ After completing the scan and presenting the findings summary / Executive Scorec
         question: "Where should PromptKit tasks live for this project?"
         header: "Tracker"
         options:
-          - label: "Local Markdown (Recommended for solo / offline) (Recommended)"
+          - label: "Local Markdown (Recommended for solo / offline)"
             description: "Writes docs/tasks/*.md + docs/STATE.md only, offline, import to GitHub/Jira later, reversible"
           - label: "GitHub Issues"
             description: "Publishes via gh CLI or github-mcp-server, ~2 min, needs gh auth + labels script, reversible"

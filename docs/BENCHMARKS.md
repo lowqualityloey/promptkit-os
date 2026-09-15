@@ -92,8 +92,8 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **6,722 tok** | **5,285 tok** (1,059+fix+gate) | **-48% Balanced, -59% Lite (-6,139 to -7,576 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **16,225 tok** | **14,788 tok** | **-34% Balanced, -40% Lite** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **6,778 tok** | **5,341 tok** (1,059+fix+gate) | **-47% Balanced, -58% Lite (-6,083 to -7,520 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **16,333 tok** | **14,896 tok** | **-34% Balanced, -40% Lite** |
 | **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **11,879 tok** | **10,442 tok** | **-52% Balanced, -58% Lite (-12,882 to -14,319 tok)** |
 
 ### Key Runtime Efficiencies:

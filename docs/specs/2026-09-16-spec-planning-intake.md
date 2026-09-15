@@ -1,7 +1,7 @@
 # Technical Design Document (RFC): Bounded Project Intake & Anti-Overengineering Gate
 
 - **Author**: PromptKit OS maintainer
-- **Status**: Draft
+- **Status**: Shipped — delivered via PRs #186, #187, #188 with pilot evidence in `docs/internal/pilots/`; post-merge doc audit applied 2026-09-16.
 - **Created**: 2026-09-16
 - **Delivery**: Phases 1-3 via GitHub issues #178-#185
 

@@ -87,7 +87,7 @@ PromptKit OS is designed for **gradual adoption**. You don't need to:
 **Steps**:
 1. Add PromptKit as a tracked submodule and initialize:
    ```bash
-   # Initialize with Balanced (default) or Lite (minimal 6-utility-workflow onboarding footprint, 877 tokens):
+   # Initialize with Balanced (default) or Lite (minimal 6-utility-workflow onboarding footprint, 1,059 tokens):
    git submodule add https://github.com/lowqualityloey/promptkit-os .promptkit && ./.promptkit/init.sh --balanced
    # On Windows PowerShell:
    # git submodule add https://github.com/lowqualityloey/promptkit-os .promptkit; .\.promptkit\init.ps1 --balanced
