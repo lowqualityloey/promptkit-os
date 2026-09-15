@@ -136,7 +136,7 @@ Assert-Contains "templates/agent-directive-lite-template.md" "Lite - 6 workflows
 Assert-Contains "templates/agent-directive-template.md" "Session Endurance" "Directive carries the session-endurance checkpoint rule"
 Assert-Contains "templates/agent-directive-template.md" "STATE.md Untrusted Until Read" "Directive mandates fresh-read trust for STATE.md"
 Assert-Contains "templates/agent-directive-template.md" "Telemetry Card Provenance" "Directive mandates telemetry card provenance"
-Assert-Contains "templates/agent-directive-lite-template.md" "~12 substantive turns" "Lite directive carries the endurance rule"
+Assert-Contains "templates/agent-directive-lite-template.md" "~15 substantive turns" "Lite directive carries the endurance rule"
 Assert-Contains "templates/agent-directive-lite-template.md" "not measured" "Lite directive carries the provenance rule"
 Assert-Contains "templates/agent-directive-template.md" 'pk:spike. -> .research\.md' "Directive lists trigger-to-file rename exceptions"
 Assert-Contains "workflows/route.md" "Tie-Break" "Router defines the mixed-level tie-break rule"
