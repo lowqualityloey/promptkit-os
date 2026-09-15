@@ -54,6 +54,7 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 | **Artifact Paths & Document Targets** | ~8 | ~245 tokens | Output destinations (`docs/specs/`, `docs/tasks/`, `docs/STATE.md`) |
 | **Total Baseline Static Overhead (Balanced)** | **97 lines** | **~2,319 tokens** | **Permanent footprint in system prompt (~88% static saving vs. ~19.8k core-subset (96.9% vs. full 23-file set))** |
 | **Total Baseline Static Overhead (Lite)** | **~49 lines** | **~961 tokens** | **95% static saving, 58% saving vs Balanced** |
+| **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 961 tok — skipped silently) |
 
 By contrast, inlining all 23 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
 
