@@ -174,3 +174,8 @@ bash scripts/tests/run-init-safety-tests.sh           # expect idempotency to ho
 
 `scripts/validate-references.sh .` is the critical one for changes A, B and C: it is what proves
 the moved and re-pointed content left no dangling links.
+
+> **Proxy validation (2026-09-16, #194):** `bash scripts/measure-tokenizer-delta.sh` compares `bytes/4`
+> against `tiktoken` `cl100k_base`/`o200k_base`. Gated directives match within 0–6%; workflow figures
+> overstate by 13–19% (conservative). Full table and verdict: `docs/BENCHMARKS.md` §9. `bytes/4`
+> remains the gated convention; no figure changed.
