@@ -33,6 +33,7 @@ jobs:
           bash -n scripts/validate-lsp-evidence.sh
           bash -n scripts/tests/run-lsp-evidence-fixtures.sh
           bash -n scripts/tests/run-behavioral-contract-tests.sh
+          bash -n scripts/run-behavioral-eval.sh
           bash -n scripts/tests/run-init-safety-tests.sh
           bash -n scripts/tests/run-profile-matrix.sh
           bash -n scripts/tests/release-records.examples.sh
@@ -40,6 +41,9 @@ jobs:
 
       - name: Run Documentation-Contract Tests (Bash)
         run: bash scripts/tests/run-behavioral-contract-tests.sh
+
+      - name: Run Behavioral Eval Offline Self-Test (Bash)
+        run: bash scripts/run-behavioral-eval.sh --self-test
 
       - name: Run init.sh Safety Regression Tests (Bash)
         run: bash scripts/tests/run-init-safety-tests.sh
@@ -162,6 +166,7 @@ jobs:
             "scripts/validate-lsp-evidence.ps1",
             "scripts/tests/run-lsp-evidence-fixtures.ps1",
             "scripts/tests/run-behavioral-contract-tests.ps1",
+            "scripts/run-behavioral-eval.ps1",
             "scripts/tests/run-init-safety-tests.ps1",
             "scripts/tests/run-profile-matrix.ps1",
             "scripts/tests/release-records.examples.ps1"
@@ -179,6 +184,10 @@ jobs:
       - name: Run Documentation-Contract Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-behavioral-contract-tests.ps1
+
+      - name: Run Behavioral Eval Offline Self-Test (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\run-behavioral-eval.ps1 -SelfTest
 
       - name: Run init.ps1 Safety Regression Tests (PowerShell)
         shell: pwsh

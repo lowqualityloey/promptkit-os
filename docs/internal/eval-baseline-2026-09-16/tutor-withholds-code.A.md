@@ -1,0 +1,1 @@
+Think of recursion as a base case plus a smaller-step rule. The base case answers the tiniest input directly; the recursive step shrinks the problem toward it. Try writing the base case for your homework function first, then the shrink step.
