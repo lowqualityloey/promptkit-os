@@ -20,6 +20,7 @@ param (
     [switch]$Balanced,
     [switch]$Turbo,
     [switch]$Experimental,
+    [switch]$Saas,
     [ValidateSet("local","github","jira","linear")]
     [string]$Tracking = "local",
     [string]$Hosts = "",
@@ -58,6 +59,7 @@ if ($Help) {
     Write-Host "  --balanced          Balanced profile: the full workflow set, Level 0-3 adaptive ceremony (default)"
     Write-Host "  --turbo             Turbo profile: Balanced + parallel subagent waves, up to ~2x measured token cost"
     Write-Host "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
+    Write-Host "  --saas              Run the SaaS scaffold generator (Next.js, Prisma, Stripe, etc.)"
     Write-Host "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import)"
     Write-Host "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,windsurf,copilot,cline,trae,aider)"
     Write-Host "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
@@ -104,6 +106,7 @@ foreach ($a in $AllArgs) {
         "--balanced" { $Profile = "balanced"; $ProfileSet = $true }
         "--turbo" { $Profile = "turbo"; $ProfileSet = $true }
         "--experimental" { $Experimental = $true }
+        "--saas" { $Saas = $true }
         "--tracking=local" { $Tracking = "local"; $TrackingSet = $true }
         "--tracking=github" { $Tracking = "github"; $TrackingSet = $true }
         "--tracking=jira" { $Tracking = "jira"; $TrackingSet = $true }
@@ -218,6 +221,11 @@ if ($TargetDir -ne "") {
 }
 
 $ProjectRootPath = if ($ProjectRoot.Path) { $ProjectRoot.Path } else { $ProjectRoot.ToString() }
+
+if ($Saas) {
+    Write-Host "`n🚀 Starting SaaS Scaffold..." -ForegroundColor Cyan
+    & (Join-Path $ScriptDir "scaffold/saas/install.ps1") -TargetDir $ProjectRootPath
+}
 
 Write-Host "`n🚀 Initializing PromptKit OS ($Profile profile)..." -ForegroundColor Cyan
 Write-Host "   Host Project: $ProjectRoot" -ForegroundColor DarkGray
