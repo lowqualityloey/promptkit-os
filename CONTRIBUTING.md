@@ -182,4 +182,4 @@ The Release Coordinator separately and explicitly decides whether to create a ta
 
 ## Release Boundaries & Storage
 
-Release evidence for PromptKit OS is recorded in `docs/releases/`. Official release notes and tarballs are published via GitHub Releases. The project does not use a separate root `CHANGELOG.md` file to prevent competing release schemas.
+Release evidence for PromptKit OS is recorded in `docs/releases/`. Official release notes and tarballs are published via GitHub Releases. The root `CHANGELOG.md` is the published human-readable record (including `BREAKING CHANGE` notices with migration paths); `docs/releases/` holds the underlying evidence chain. Keep the two consistent — never publish one without the other.
