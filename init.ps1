@@ -23,6 +23,8 @@ param (
     [ValidateSet("local","github","jira","linear")]
     [string]$Tracking = "local",
     [string]$Hosts = "",
+    [string]$AddHost = "",
+    [string[]]$Target = @(),
     [switch]$Help
 )
 
@@ -38,6 +40,8 @@ if ($Help) {
     Write-Host "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
     Write-Host "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import)"
     Write-Host "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,windsurf,copilot,cline,trae,aider)"
+    Write-Host "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
+    Write-Host "  --target=rel/path   Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
     Write-Host "  -Help               Show this help`n"
     Write-Host "Interactive (TTY): If no profile flag is given and running in interactive host,"
     Write-Host "  prompts visually: 1) Lite (Recommended) 2) Balanced (default) 3) Turbo (Experimental)"
@@ -56,6 +60,15 @@ $ProfileSet = $false
 $TrackingSet = $false
 $HostSet = $false
 if ($Hosts -ne "") { $HostSet = $true }
+if ($AddHost -ne "") {
+    if ((Get-HostFile $AddHost) -eq "") {
+        Write-Host "[!] Unknown host: $AddHost" -ForegroundColor Red
+        exit 1
+    }
+    $Hosts = "agents,$AddHost"
+    $HostSet = $true
+}
+$ExtraTargets = @() + $Target
 if ($PSBoundParameters.ContainsKey("Tracking")) { $TrackingSet = $true }
 if ($Lite) { $Profile = "lite"; $ProfileSet = $true }
 if ($Balanced) { $Profile = "balanced"; $ProfileSet = $true }
@@ -73,6 +86,23 @@ foreach ($a in $args) {
         "--tracking=jira" { $Tracking = "jira"; $TrackingSet = $true }
         "--tracking=linear" { $Tracking = "linear"; $TrackingSet = $true }
         { $_ -like "--host=*" } { $Hosts = $_.Substring(7); $HostSet = $true }
+        { $_ -like "--add-host=*" } {
+            $ah = $_.Substring(11)
+            if ((Get-HostFile $ah) -eq "" -and $ah -ne "agents") {
+                Write-Host "[!] Unknown host: $ah" -ForegroundColor Red
+                exit 1
+            }
+            $Hosts = "agents,$ah"
+            $HostSet = $true
+        }
+        { $_ -like "--target=*" } {
+            $tp = $_.Substring(9)
+            if ($tp.StartsWith("/") -or $tp -match '\.\.' -or [string]::IsNullOrWhiteSpace($tp)) {
+                Write-Host "[!] --target must be a project-relative path without '..': $tp" -ForegroundColor Red
+                exit 1
+            }
+            $ExtraTargets += $tp
+        }
         "--help" { 
             Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
             Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
@@ -305,6 +335,7 @@ if (-not (Test-Path $TaskTemplateTarget)) {
 # AGENTS.md is always created fresh as the universal fallback standard.
 function Get-HostFile($Name) {
     switch ($Name) {
+        "agents" { return "AGENTS.md" }
         "claude" { return "CLAUDE.md" }
         "opencode" { return ".opencode/rules.md" }
         "cursor" { return ".cursorrules" }
@@ -424,6 +455,19 @@ foreach ($file in $AgentFileCandidates) {
     }
 }
 
+# Custom --target paths ride the same create/inject machinery as host files
+foreach ($xp in $ExtraTargets) {
+    $xfull = Join-Path $ProjectRoot $xp
+    if ($TargetsFound -notcontains $xfull) {
+        $xparent = Split-Path -Parent $xfull
+        if ($xparent -ne "" -and -not (Test-Path $xparent)) {
+            New-Item -ItemType Directory -Path $xparent -Force | Out-Null
+        }
+        if (-not (Test-Path $xfull)) { New-Item -ItemType File -Path $xfull -Force | Out-Null }
+        $TargetsFound += $xfull
+        Write-Host "  [+] Added custom target: $xp" -ForegroundColor Green
+    }
+}
 function New-TargetFile($Rel) {
     if ($Rel -eq ".clinerules") {
         $dir = Join-Path $ProjectRoot ".clinerules"

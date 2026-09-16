@@ -15,7 +15,26 @@ TRACKING="local"
 TRACKING_SET=0
 HOSTS=""
 HOST_SET=0
+EXTRA_TARGETS=""
 PROJECT_ROOT=""
+# Known host -> directive file map (defined early: arg parsing validates against it).
+# Probes are best-effort suggestions only; the TTY menu (or --host=) is authoritative.
+host_file() {
+    case "$1" in
+        agents) echo "AGENTS.md" ;;
+        claude) echo "CLAUDE.md" ;;
+        opencode) echo ".opencode/rules.md" ;;
+        cursor) echo ".cursorrules" ;;
+        gemini) echo "GEMINI.md" ;;
+        windsurf) echo ".windsurfrules" ;;
+        copilot) echo ".github/copilot-instructions.md" ;;
+        cline) echo ".clinerules" ;;
+        trae) echo ".traerules" ;;
+        aider) echo "CONVENTIONS.md" ;;
+        *) echo "" ;;
+    esac
+}
+KNOWN_HOSTS="claude opencode cursor gemini windsurf copilot cline trae aider"
 
 # Parse args: flags + optional positional project root
 for arg in "$@"; do
@@ -46,6 +65,23 @@ for arg in "$@"; do
             HOSTS="${arg#--host=}"
             HOST_SET=1
             ;;
+        --add-host=*)
+            ADD_HOST="${arg#--add-host=}"
+            if [[ -z "$(host_file "$ADD_HOST")" ]]; then
+                echo -e "\033[0;31m[!] Unknown host: $ADD_HOST (use one of: agents,${KNOWN_HOSTS// /,})\033[0m" >&2; exit 1
+            fi
+            HOSTS="agents,$ADD_HOST"
+            HOST_SET=1
+            ;;
+        --target=*)
+            TARGET_PATH="${arg#--target=}"
+            case "$TARGET_PATH" in
+                /*|*../*)
+                    echo -e "\033[0;31m[!] --target must be a project-relative path without '..': $TARGET_PATH\033[0m" >&2; exit 1
+                    ;;
+            esac
+            EXTRA_TARGETS="$EXTRA_TARGETS $TARGET_PATH"
+            ;;
         --help|-h)
             echo -e "\nPromptKit OS init.sh — 1-Click Setup\n"
             echo -e "Usage: ./init.sh [options] [project-root]\n"
@@ -56,6 +92,8 @@ for arg in "$@"; do
             echo -e "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
             echo -e "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import, no auto-push)"
             echo -e "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,windsurf,copilot,cline,trae,aider)"
+            echo -e "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
+            echo -e "  --target=rel/path  Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
             echo -e "  -h, --help          Show this help\n"
             echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
             echo -e "Interactive: When no flag provided and running in TTY, shows visual picker (1) Lite (Recommended) 2) Balanced 3) Turbo Experimental"
@@ -308,24 +346,9 @@ fi
 
 
 # 2b. Host probing + selection (which AI assistants get directive files)
-# Known host -> directive file map. Probes are best-effort suggestions only;
-# the TTY menu (or --host=) is authoritative. AGENTS.md is always created fresh
-# as the universal fallback standard (see protocols/setup.md).
-host_file() {
-    case "$1" in
-        claude) echo "CLAUDE.md" ;;
-        opencode) echo ".opencode/rules.md" ;;
-        cursor) echo ".cursorrules" ;;
-        gemini) echo "GEMINI.md" ;;
-        windsurf) echo ".windsurfrules" ;;
-        copilot) echo ".github/copilot-instructions.md" ;;
-        cline) echo ".clinerules" ;;
-        trae) echo ".traerules" ;;
-        aider) echo "CONVENTIONS.md" ;;
-        *) echo "" ;;
-    esac
-}
-KNOWN_HOSTS="claude opencode cursor gemini windsurf copilot cline trae aider"
+# AGENTS.md is always created fresh as the universal fallback standard
+# (see protocols/setup.md); host_file()/KNOWN_HOSTS live near the top
+# because arg parsing validates --host=/--add-host against them.
 if [[ "$HOST_SET" -eq 1 ]]; then
     for h in ${HOSTS//,/ }; do
         if [[ -z "$(host_file "$h")" ]]; then
@@ -444,6 +467,22 @@ for file in "${AGENT_FILES[@]}"; do
     fi
 done
 
+# Custom --target paths ride the same create/inject machinery as host files
+if [[ -n "$EXTRA_TARGETS" ]]; then
+    for xp in $EXTRA_TARGETS; do
+        xfull="$PROJECT_ROOT/$xp"
+        already=0
+        for t in "${TARGETS_FOUND[@]}"; do
+            [[ "$t" == "$xfull" ]] && already=1
+        done
+        if [[ "$already" -eq 0 ]]; then
+            mkdir -p "$(dirname "$xfull")"
+            [[ -f "$xfull" ]] || touch "$xfull"
+            TARGETS_FOUND+=("$xfull")
+            echo -e "  \033[0;32m[+]\\033[0m Added custom target: $xp"
+        fi
+    done
+fi
 # Create a directive target: parent dirs first, never overwrite, .clinerules stays a dir
 create_target() {
     local rel="$1"
