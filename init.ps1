@@ -222,10 +222,6 @@ if ($TargetDir -ne "") {
 
 $ProjectRootPath = if ($ProjectRoot.Path) { $ProjectRoot.Path } else { $ProjectRoot.ToString() }
 
-if ($Saas) {
-    Write-Host "`n🚀 Starting SaaS Scaffold..." -ForegroundColor Cyan
-    & (Join-Path $ScriptDir "scaffold/saas/install.ps1") -TargetDir $ProjectRootPath
-}
 
 Write-Host "`n🚀 Initializing PromptKit OS ($Profile profile)..." -ForegroundColor Cyan
 Write-Host "   Host Project: $ProjectRoot" -ForegroundColor DarkGray
@@ -648,3 +644,9 @@ if ($Profile -eq "lite") {
     Write-Host "   Human approval still required for Level 3 (releases/tags/deploys)" -ForegroundColor DarkGray
 }
 Write-Host "   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'`n" -ForegroundColor White
+
+if ($Saas) {
+    Write-Host "
+🚀 Starting SaaS Scaffold..." -ForegroundColor Cyan
+    & (Join-Path $ScriptDir "scaffold/saas/install.ps1") -TargetDir $ProjectRootPath
+}
