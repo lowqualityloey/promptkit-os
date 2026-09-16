@@ -13,21 +13,12 @@
 ## 2. Milestone & Task Progress
 
 ### Milestone Roadmap
-- [x] **Milestone 1**: Inception, Architecture & Contracts (Complete)
-- [/] **Milestone 2**: Core Domain Logic & Integrations (In Progress)
-- [ ] **Milestone 3**: UI, Design Tokens & Presentation Layer (Queued)
-- [ ] **Milestone 4**: Performance Profiling & Hardening (Queued)
-- [ ] **Milestone 5**: Release Engineering & Deployment (Queued)
+- [ ] **Milestone 1**: not tracked — defined by `pk:onboard` intake, then owned here
 
 ### Active Milestone Task Breakdown
 Track tasks using atomic checklists (`[x]` Done, `[/]` In Progress, `[ ]` Queued, `[!]` Blocked):
 
-- [x] `TASK-01`: Define relational schema migrations and entities (`#priority/p0`)
-- [x] `TASK-02`: Scaffold API contract types and error envelopes (`#priority/p1`)
-- [/] `TASK-03`: Implement domain service layer and business rules (`#priority/p1`)
-- [ ] `TASK-04`: Add unit and integration tests for service layer (`#priority/p1`)
-- [ ] `TASK-05`: Implement error handling and edge cases (`#priority/p2`)
-- [!] `TASK-06`: External API integration (BLOCKED: pending API credentials)
+- [ ] not tracked — populated by `pk:tasks` and `pk:checkpoint` from real execution, never pre-filled
 
 ---
 
@@ -35,10 +26,7 @@ Track tasks using atomic checklists (`[x]` Done, `[/]` In Progress, `[ ]` Queued
 - **Target Workspace / Package (if Monorepo)**: [e.g. `apps/web` or `@repo/db` (leave blank for standalone repo)]
 - **Active RFC / Spec**: `docs/specs/YYYY-MM-DD-feature-name.md`
 - **Active Task Spec**: `docs/tasks/YYYY-MM-DD-task-breakdown.md`
-- **Key Source Files in Flight**:
-  - `src/domain/service.ts`: Primary business logic implementation
-  - `src/domain/types.ts`: Domain models and entity interfaces
-  - `tests/domain/service.test.ts`: Active test suite
+- **Key Source Files in Flight**: not tracked — recorded here when work starts, never pre-filled
 - **Verification Commands (Scoped)**:
   - Unit Tests: `npm test` (or `pnpm --filter <pkg> test`, `turbo run test --filter=<pkg>`)
   - Typecheck: `npm run typecheck` (or `pnpm --filter <pkg> typecheck`)
@@ -91,10 +79,7 @@ Track tasks using atomic checklists (`[x]` Done, `[/]` In Progress, `[ ]` Queued
 
 ## 4. Locked Technical Invariants (Do Not Undo)
 Document non-negotiable architectural decisions agreed upon during pairing sessions:
-- [Invariant 1]: All database queries must enforce tenant-level isolation via Row-Level Security (RLS).
-- [Invariant 2]: Presentation components must never import database clients or execute raw queries directly.
-- [Invariant 3]: API responses must always conform to the unified error envelope (`{ ok: boolean, data?: T, error?: AppError }`).
-- [Invariant 4]: Schema changes must follow Expand-Contract ordering to ensure zero-downtime rollouts.
+- not tracked — invariants are recorded here as pairing sessions lock them in, never pre-filled
 
 ---
 
@@ -111,15 +96,12 @@ Document non-negotiable architectural decisions agreed upon during pairing sessi
 ## 6. Recent Architectural Decisions (ADR Log)
 | Date | Title & Scope | Decision Summary | ADR File |
 | :--- | :--- | :--- | :--- |
-| YYYY-MM-DD | Primary Key Strategy | Adopted UUIDv7 for time-ordered distributed keys | `docs/adrs/0001-uuidv7.md` |
-| YYYY-MM-DD | Auth Session Storage | Enforce HttpOnly SameSite=Lax cookies over localStorage | `docs/adrs/0002-cookie-auth.md` |
+| not tracked | not tracked | not tracked | not tracked |
 
 ---
 
 ## 7. Next Immediate Actions (Queued)
-1. Complete `TASK-03`: Implement validation gate on domain service mutation handler.
-2. Execute test command to transition from RED to GREEN loop.
-3. Commit working changes using atomic conventional commits (`pk:commit`).
+1. not tracked — populated by `pk:checkpoint` from real session state, never pre-filled.
 
 ---
 
@@ -128,4 +110,4 @@ Compact record of pairing sessions to enable instant chat resumption:
 
 | Date | Engineer / Agent | Milestone / Focus | Key Changes & Artifacts |
 | :--- | :--- | :--- | :--- |
-| YYYY-MM-DD | Lead Engineer | Project Inception | Scaffolded repo, created PROMPTKIT.md and STATE.md |
+| not tracked | not tracked | not tracked | not tracked |
