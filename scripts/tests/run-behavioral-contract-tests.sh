@@ -120,6 +120,9 @@ assert_contains "workflows/tasks.md" "Dual-Compatible Telemetry Status Card" "Ta
 assert_contains "workflows/test.md" "Dual-Compatible Telemetry Status Card" "Test workflow includes telemetry status card"
 assert_contains "workflows/fix.md" "Dual-Compatible Telemetry Status Card" "Fix workflow includes telemetry status card"
 assert_contains "workflows/plan.md" "Interactive Decision & Trade-Off Clarification" "Plan workflow includes interactive decision prompt guidelines"
+assert_contains "workflows/design-system.md" "No-DESIGN.md Visual Floor" "Design workflow defines the no-brand-file finish bar"
+assert_contains "workflows/design-system.md" "Favicon" "Design gate requires a declared favicon"
+assert_contains "workflows/design-system.md" "21st.dev" "Design workflow names the advisory catalog with exclusions"
 
 echo ""
 echo "📌 Scenario K: Project Database & Harness Isolation"
