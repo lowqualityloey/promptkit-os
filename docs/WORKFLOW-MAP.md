@@ -181,7 +181,7 @@ graph TD
     Question2 -->|Shipping| Question6{Ready to<br/>deploy?}
     Question2 -->|Learning| Question7{How deep do you<br/>want to go?}
     
-    Question3 -->|New feature| Plan[pk:plan<br/>Spec-Driven Architecture]
+    Question3 -->|New feature| Plan[pk:plan Step 0 intake preflight<br/>Spec-Driven Architecture + MVP floor]
     Question3 -->|Existing codebase| Onboard[pk:onboard<br/>Codebase Intake]
     Question3 -->|Greenfield (no code yet)| Onboard[pk:onboard<br/>Project Discovery Intake]
     
@@ -401,7 +401,7 @@ Visual guide to workflow depth and time investment:
 | `pk:checkpoint` | 3 min | ⚪ Low | Session end |
 | `pk:fix` | 3-5 min | ⚪ Low | Surgical remediation |
 | `pk:pr` | 3-5 min | ⚪ Low | Before opening PR |
-| `pk:onboard` | 5-15 min | 🟡 Medium | Project intake (greenfield interview or brownfield scan) / setup |
+| `pk:onboard` | 5-15 min | 🟡 Medium | Project intake: greenfield interview (bounded, size-classed) writes `size:`/`intake-status:`; brownfield scan resolves `legacy-partial`, never re-interviewed / setup |
 | `pk:tasks` | 5-15 min | 🟡 Medium | Task decomposition |
 | `pk:review` | 5-10 min | 🟡 Medium | Before each PR |
 | `pk:retro` | 5-15 min | 🟡 Medium | Milestone end |
@@ -413,7 +413,7 @@ Visual guide to workflow depth and time investment:
 | `pk:test` | 10-30 min | 🟡 Medium | Test strategy & seam allocation |
 | `pk:design` | 15-30 min | 🟡 Medium | UI tokens & accessibility |
 | `pk:spike` | 15-45 min | 🔴 High | Technical research & trade-offs |
-| `pk:plan` | 15-45 min | 🔴 High | Per feature RFC |
+| `pk:plan` | 15-45 min | 🔴 High | Per feature RFC — Step 0 intake preflight, MVP floor (trace to requirement or Later ledger), accept-or-change defaults |
 | `pk:data` | 20-40 min | 🔴 High | Schema & migrations |
 | `pk:auth` | 20-40 min | 🔴 High | Security & RBAC |
 | `pk:ship` | 10-30 min | 🔴 High | Per release evaluation |

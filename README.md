@@ -222,7 +222,7 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:route` | [`workflows/route.md`](./workflows/route.md) | Core 🧪 | Conversation | Interactive lifecycle decision matrix and workflow triage. |
 | `pk:tutor` | [`workflows/tutor.md`](./workflows/tutor.md) | Core 🧪 | Conversation | Socratic mentorship using 3-tier hints; guides without dumping code. |
 | `pk:grill` | [`workflows/tutor.md`](./workflows/tutor.md) (alias) | Core 🧪 | Conversation | Architecture defense drill implemented via `tutor.md`. |
-| `pk:plan` | [`workflows/plan.md`](./workflows/plan.md) | Core 🧪 | `docs/specs/` | Spec-driven architecture, module depth, and zero-downtime migrations. |
+| `pk:plan` | [`workflows/plan.md`](./workflows/plan.md) | Core 🧪 | `docs/specs/` | Spec-driven architecture with MVP floor (every part traces to a stated requirement, rest to the Later ledger), module depth, and zero-downtime migrations. |
 | `pk:onboard` | [`workflows/onboard.md`](./workflows/onboard.md) | Core | `PROMPTKIT.md`, `docs/STATE.md` | Project intake: greenfield discovery interview (bounded, size-classed) or brownfield stack scan; scaffolds guardrails. |
 | `pk:tasks` | [`workflows/tasks.md`](./workflows/tasks.md) | Core 🧪 | `docs/tasks/` or `gh` | Decomposes specs into atomic 1-4h tasks with Gherkin AC. |
 | `pk:data` | [`workflows/data.md`](./workflows/data.md) | Core 🧪 | `docs/data/` | Schema design, composite indexing, RLS policies, and migrations. |

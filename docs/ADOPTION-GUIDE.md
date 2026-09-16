@@ -210,6 +210,17 @@ PromptKit OS is designed for **gradual adoption**. You don't need to:
 
 ---
 
+### If Your Project Predates Intake: the `legacy-partial` Guarantee
+
+The project-profile template now carries two machine-readable lines, written by `pk:onboard` (`workflows/onboard.md:194`):
+
+- `size: small|medium|large` — the bounded-interview class
+- `intake-status: unanswered|partial|complete|legacy-partial`
+
+**Guarantee for existing installs:** if those fields are absent or unrecognized, they resolve to `legacy-partial` — and `legacy-partial` is **never re-interviewed**. `pk:plan` Step 0 treats your codebase and its docs as the intake record and files gaps as Assumption Records instead (`workflows/plan.md:124`). Adopting a newer PromptKit OS therefore cannot ambush your team with a discovery interview.
+
+---
+
 ## Migration Strategies for Common Scenarios
 
 ### Scenario 1: You Already Have Linter/Formatter Standards
