@@ -175,17 +175,17 @@ for directive_file in "templates/agent-directive-template.md" "templates/agent-d
     fi
 done
 WF_COUNT=$(ls "$REPO_ROOT"/workflows/*.md | wc -l | tr -d ' ')
-if [ "$WF_COUNT" -eq 23 ]; then
-    echo "  ✅ PASS: On-disk workflow file count is 23 (matches reconciled docs claims)"
+if [ "$WF_COUNT" -eq 24 ]; then
+    echo "  ✅ PASS: On-disk workflow file count is 24 (matches reconciled docs claims)"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo "  ❌ FAIL: On-disk workflow count is $WF_COUNT but shipped docs claim 23 — reconcile counts or update this drift guard"
+    echo "  ❌ FAIL: On-disk workflow count is $WF_COUNT but shipped docs claim 24 — reconcile counts or update this drift guard"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
-STALE_CLAIMS=$(grep -rE 'full 22 workflow|\(22 workflow|22 workflow files|22 Inlined|All 22|22 workflows|All 21 workflow|21 workflow files|19 workflows' \
+STALE_CLAIMS=$(grep -rE 'full 23 workflow|\(23 workflow|23 workflow files|23 Inlined|All 23|23 workflows|full 22 workflow|\(22 workflow|22 workflow files|22 Inlined|All 22|22 workflows|All 21 workflow|21 workflow files|19 workflows' \
     "$REPO_ROOT/README.md" "$REPO_ROOT/QUICKSTART.md" "$REPO_ROOT/FAQ.md" "$REPO_ROOT/docs/WORKFLOW-MAP.md" "$REPO_ROOT/docs/BENCHMARKS.md" "$REPO_ROOT/templates/lite-profile.md" "$REPO_ROOT/workflows/sync.md" 2>/dev/null || true)
 if [ -z "$STALE_CLAIMS" ]; then
-    echo "  ✅ PASS: No stale 19/21/22 workflow-count claims in shipped docs"
+    echo "  ✅ PASS: No stale 19/21/22/23 workflow-count claims in shipped docs"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
     echo "  ❌ FAIL: Stale workflow-count claims found:"
@@ -341,6 +341,16 @@ else
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 fi
+
+echo ""
+echo "📌 Scenario O: Autonomous SDLC Meta-Orchestrator (workflows/auto.md & pk:auto)"
+assert_contains "workflows/auto.md" "Autonomous SDLC Meta-Orchestrator" "Auto workflow defines autonomous SDLC meta-orchestration"
+assert_contains "workflows/auto.md" "Test Immobility Invariant" "Auto workflow enforces Test Immobility Invariant"
+assert_contains "workflows/auto.md" "3-Strike Circuit Breaker" "Auto workflow enforces 3-strike circuit breaker on failures"
+assert_contains "workflows/auto.md" "Path Deny-List" "Auto workflow enforces path deny-list"
+assert_contains "workflows/auto.md" "review ready" "Auto workflow defaults to review ready stop boundary"
+assert_contains "workflows/route.md" "workflows/auto.md" "Router decision matrix registers pk:auto"
+assert_contains "templates/agent-directive-template.md" "pk:auto" "Directive template registers pk:auto trigger"
 
 echo ""
 echo "==========================================================="

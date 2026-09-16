@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [23 Inlined Workflows + Templates + Protocols (~75.5k tok)] │
+│ Every Turn: [24 Inlined Workflows + Templates + Protocols (~75.5k tok)] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -23,40 +23,35 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 │                   PROMPTKIT OS JIT FILESYSTEM MODEL                     │
 │ Baseline Static Injection: Router Directive (1,105 tok Lite / 2,477 Bal)  │
 │ On-Demand Loading: Tool loads only target workflow file (e.g. pk:debug) │
-│ Context Window Preservation: ~89-96% savings on initial static overhead │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Verifiable Static Directive Token Breakdown
-
-The initialization script (`init.sh` / `init.ps1`) injects a single idempotent directive block between `<!-- PROMPTKIT_START -->` and `<!-- PROMPTKIT_END -->`. You can mechanically verify these exact measurements at any time by running `scripts/measure-tokens.ps1` (PowerShell) or `scripts/measure-tokens.sh` (Bash).
-
-**Profiles (v1.6.0 — 2+1 modes):**
+## 2. Static Injection Footprint (Measured Tokens)
 
 | Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs ~19.8k core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
 | **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 4,420 | **1,105 tok** | **94% static** | Onboarding, new users, tiny fixes |
-| **Balanced** | `agent-directive-template.md` (23 workflows) | 9,908 | **2,477 tok** | **87% static** | Teams, production, default |
-| **Turbo** | same as Balanced + parallel waves | 9,908 | 2,477 tok + subagents (~2x measured total (bounds model, see section 8)) | 87% static, higher total | Experimental, greenfield, accepts cost |
+| **Balanced** | `agent-directive-template.md` (24 workflows) | 9,907 | **2,477 tok** | **87% static** | Teams, production, default |
+| **Turbo** | same as Balanced + parallel waves | 9,907 | 2,477 tok + subagents (~2x measured total (bounds model, see section 8)) | 87% static, higher total | Experimental, greenfield, accepts cost |
 
-¹ Core-subset baseline = live sum of the six lifecycle files the Lite profile loads (route, debug, commit, checkpoint, sync, profile) = ~19,794 tok; full-set baseline = all 23 workflow files = ~75,505 tok (2026-09-14 measurement; replaces the previously unsourced "18.5k" constant).
+¹ Core-subset baseline = live sum of the six lifecycle files the Lite profile loads (route, debug, commit, checkpoint, sync, profile) = ~19,794 tok; full-set baseline = all 24 workflow files = ~75,505 tok (2026-09-14 measurement; replaces the previously unsourced "18.5k" constant).
 
 > **Clarification:** The often-quoted "~90% savings" is **static overhead only** (directive vs monolithic inlining). Per-task payload (directive + workflow + gate) saves 28-54% after Change A (removing mandatory `route.md` 6,962 tok load). See §3 for per-task numbers.
 
 | Component (Balanced) | Lines | Approx. Token Weight | Purpose |
 | :--- | :---: | :---: | :--- |
 | **System Introduction & Scope** | ~13 | ~193 tokens | Identifies PromptKit root in workspace (`./.promptkit`) |
-| **Fast Shorthand Triggers** | ~28 | ~495 tokens | Collision-free index of namespaced workflows (`pk:route`, `pk:debug`, `pk:fix`, etc.) |
-| **Smart Auto-Route & Guardrails** | ~22 | ~447 tokens | Triage rules (Fast-Path zero overhead, Anti-slop, Secrets hygiene, Circuit Breaker, MCP precedence, Telemetry-cards pointer, status-cards opt-out, alias registry) |
-| **Workflows, Protocols & Task Ceremony Levels** | ~20 | ~530 tokens | Lazy convention routing & inline Level 0–3 ceremony classification |
-| **Artifact Paths & Document Targets** | ~8 | ~245 tokens | Output destinations (`docs/specs/`, `docs/tasks/`, `docs/STATE.md`) |
-| **Total Baseline Static Overhead (Balanced)** | **97 lines** | **~2,477 tokens** | **Permanent footprint in system prompt (~87% static saving vs. ~19.8k core-subset (~97% vs. full 23-file set))** |
+| **Fast Shorthand Triggers** | ~24 | ~295 tokens | Direct workflow routing shorthand (`pk:debug`, `pk:test`, etc.) |
+| **Engineering Quality Gates** | ~36 | ~642 tokens | Secret hygiene, timeout budgets, and anti-hallucination rules |
+| **Task Ceremony Levels & Output** | ~25 | ~397 tokens | Composable 4-level task ceremony engine & output protocol |
+| **Standard Output Directories** | ~17 | ~226 tokens | Canonical locations for generated specs, ADRs, and plans |
+| **Total Baseline Static Overhead (Balanced)** | **100 lines** | **~2,477 tokens** | **Permanent footprint in system prompt (~87% static saving vs. ~19.8k core-subset (~97% vs. full 24-file set))** |
 | **Total Baseline Static Overhead (Lite)** | **~50 lines** | **~1,105 tokens** | **94% static saving, 55% saving vs Balanced** |
 | **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,105 tok — skipped silently) |
 
-By contrast, inlining all 23 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
+By contrast, inlining all 24 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
 
 ### CI Budget Gate (Strict Mode)
 

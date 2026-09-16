@@ -8,7 +8,7 @@ Welcome! This guide gets you productive with PromptKit OS in 5 minutes using the
 
 ### One-Command Setup (Recommended) — 2+1 Profiles
 
-**Balanced is default (23 workflows, Level 0-3 adaptive ceremony):**
+**Balanced is default (24 workflows, Level 0-3 adaptive ceremony):**
 
 ```bash
 # macOS / Linux (Bash / Zsh) — Balanced default
@@ -271,7 +271,7 @@ Pick one:
 
 ### 2. **Explore More Workflows**
 ```
-pk:route          # See all 23 workflow files and their named aliases
+pk:route          # See all 24 workflow files and their named aliases
 pk:data           # Database design & migrations
 pk:auth           # Authentication & RBAC
 pk:api            # API contracts & types

@@ -56,7 +56,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 **Want to know more?** → See **[INTERESTING-FACTS.md](./docs/INTERESTING-FACTS.md)** for unique insights and design principles
 
 > [!TIP]
-> **Start with just 2 workflows.** You do not need to learn all 23 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand. New in v1.6.0: **2+1 profiles** — Lite (6 utility workflows, 1,105 tok), Balanced (23 workflows, default), Turbo experimental (parallel waves, ~2x measured cost).
+> **Start with just 2 workflows.** You do not need to learn all 24 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand. New in v1.6.0: **2+1 profiles** — Lite (6 utility workflows, 1,105 tok), Balanced (24 workflows, default), Turbo experimental (parallel waves, ~2x measured cost).
 
 ### 1. Add to Your Project
 
@@ -64,7 +64,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 Run from the root of your existing Git repository:
 
 ```bash
-# macOS / Linux (Bash / Zsh) — Balanced is default (23 workflows)
+# macOS / Linux (Bash / Zsh) — Balanced is default (24 workflows)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
 
 # Lite profile: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value — onboarding
@@ -81,7 +81,7 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit;
 
 **Profiles (v1.6.0 — 2+1 modes):**
 - **Lite** (`--lite`): 6 utility workflows, 1,105 tok static (94% reduction vs ~19.8k core-subset), 80% value — new users, learning, tiny fixes
-- **Balanced** (`--balanced` or no flag, default): full 23 workflows, 2,477 tok, Level 0-3 adaptive ceremony — teams, production
+- **Balanced** (`--balanced` or no flag, default): full 24 workflows, 2,477 tok, Level 0-3 adaptive ceremony — teams, production
 - **Turbo** (`--turbo --experimental`): Balanced + parallel waves, up to ~2x measured token cost, experimental, still requires human L3 approval — greenfield
 
 Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Upgrade anytime: `.promptkit/init.sh --balanced` or `--lite`.
@@ -148,11 +148,11 @@ PromptKit OS structures developer-AI collaboration into four distinct layers:
 
 ## Lifecycle Map & Command Reference
 
-Trigger anytime with `pk:route`. The full lifecycle ASCII map lives in [`docs/WORKFLOW-MAP.md`](./docs/WORKFLOW-MAP.md) alongside decision trees, and the complete 23-command reference (files, outputs, descriptions) in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md#command-reference). Start with two: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia).
+Trigger anytime with `pk:route`. The full lifecycle ASCII map lives in [`docs/WORKFLOW-MAP.md`](./docs/WORKFLOW-MAP.md) alongside decision trees, and the complete 24-command reference (files, outputs, descriptions) in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md#command-reference). Start with two: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia).
 
 All triggers use the `pk:` prefix to avoid collisions with native slash commands in Antigravity or Cursor.
 
-*Status Legend: All 23 workflows pass CI structural link validation (`validate-references.sh`); 🧪 marks contract-tested workflows. Full table with file links and output targets: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md#command-reference).*
+*Status Legend: All 24 workflows pass CI structural link validation (`validate-references.sh`); 🧪 marks contract-tested workflows. Full table with file links and output targets: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md#command-reference).*
 
 ---
 

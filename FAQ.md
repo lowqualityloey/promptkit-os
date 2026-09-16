@@ -96,7 +96,7 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 
 **Example (One-Command Setup — 2+1 Profiles)**:
 ```bash
-# macOS / Linux — Balanced profile (23 workflows, default)
+# macOS / Linux — Balanced profile (24 workflows, default)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
 
 # Lite profile (6 utility workflows, 1,105 tokens static overhead)
@@ -483,7 +483,7 @@ Remember: **AI assistants aren't perfect**. PromptKit structures their reasoning
 
 | Dimension | `.cursorrules` / `CLAUDE.md` | Prompt Packs (spec-kit, BMad) | **PromptKit OS** |
 |:----------|:-----------------------------|:------------------------------|:-----------------|
-| **Scope** | Single instruction file for one tool | Workflow templates for one tool | 23 workflow files plus named aliases across all tools |
+| **Scope** | Single instruction file for one tool | Workflow templates for one tool | 24 workflow files plus named aliases across all tools |
 | **Persistence** | Dies with the chat session | Dies with the chat session | `docs/STATE.md` survives context resets |
 | **Database safety** | No schema guardrails | Varies | Expand-Contract only (phased migration) |
 | **Multi-agent** | Single agent | Single agent | Subagent delegation with compact synthesis |
