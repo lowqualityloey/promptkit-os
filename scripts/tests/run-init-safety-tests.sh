@@ -201,4 +201,62 @@ bash "$REPO_ROOT/init.sh" "$IDEMPOTENT_ROOT" >/dev/null
 second_hash="$(sha256sum "$IDEMPOTENT_ROOT/AGENTS.md" | cut -d' ' -f1)"
 [[ "$first_hash" == "$second_hash" ]]
 
+# Host selection: --host=opencode on empty dir (hermetic: clean HOME, tool-free PATH)
+HOSTSEL_ROOT="$TEST_ROOT/hostsel"
+FAKE_HOME="$TEST_ROOT/fakehome"
+mkdir -p "$HOSTSEL_ROOT" "$FAKE_HOME"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=opencode --balanced "$HOSTSEL_ROOT" >/dev/null
+[[ -f "$HOSTSEL_ROOT/.opencode/rules.md" ]]
+[[ -f "$HOSTSEL_ROOT/AGENTS.md" ]]
+[[ ! -f "$HOSTSEL_ROOT/CLAUDE.md" ]]
+grep -q '## PromptKit OS: Engineering Operating System' "$HOSTSEL_ROOT/.opencode/rules.md"
+
+# Host probing: single unambiguous hit wins without flags (fake opencode only)
+PROBE_ROOT="$TEST_ROOT/probehit"
+FAKE_BIN="$TEST_ROOT/fakebin"
+mkdir -p "$PROBE_ROOT" "$FAKE_BIN"
+printf '#!/bin/sh\nexit 0\n' > "$FAKE_BIN/opencode"
+chmod +x "$FAKE_BIN/opencode"
+HOME="$FAKE_HOME" PATH="$FAKE_BIN:/usr/bin:/bin" PROMPTKIT_NO_INTERACTIVE=1 bash "$REPO_ROOT/init.sh" --balanced "$PROBE_ROOT" >/dev/null
+[[ -f "$PROBE_ROOT/.opencode/rules.md" ]]
+[[ ! -f "$PROBE_ROOT/CLAUDE.md" ]]
+
+# Host probing: multiple hits fall back to deterministic legacy pair
+printf '#!/bin/sh\nexit 0\n' > "$FAKE_BIN/aider"
+chmod +x "$FAKE_BIN/aider"
+MULTI_ROOT="$TEST_ROOT/probemulti"
+mkdir -p "$MULTI_ROOT"
+HOME="$FAKE_HOME" PATH="$FAKE_BIN:/usr/bin:/bin" PROMPTKIT_NO_INTERACTIVE=1 bash "$REPO_ROOT/init.sh" --balanced "$MULTI_ROOT" >/dev/null
+[[ -f "$MULTI_ROOT/AGENTS.md" ]]
+[[ -f "$MULTI_ROOT/CLAUDE.md" ]]
+[[ ! -f "$MULTI_ROOT/.opencode/rules.md" ]]
+
+# Add-host on existing install preserves content and injects exactly once
+ADDHOST_ROOT="$TEST_ROOT/addhost"
+mkdir -p "$ADDHOST_ROOT"
+printf "# Mine\n" > "$ADDHOST_ROOT/AGENTS.md"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --balanced "$ADDHOST_ROOT" >/dev/null
+before_hash="$(sha256sum "$ADDHOST_ROOT/AGENTS.md" | cut -d' ' -f1)"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --balanced --add-host=claude "$ADDHOST_ROOT" >/dev/null
+[[ -f "$ADDHOST_ROOT/CLAUDE.md" ]]
+after_hash="$(sha256sum "$ADDHOST_ROOT/AGENTS.md" | cut -d' ' -f1)"
+[[ "$before_hash" == "$after_hash" ]]
+[[ "$(grep -c 'PROMPTKIT_START' "$ADDHOST_ROOT/CLAUDE.md")" -eq 1 ]]
+
+# Custom target is created, injected once across re-runs, and rejects traversal
+TARGET_ROOT="$TEST_ROOT/customtarget"
+mkdir -p "$TARGET_ROOT"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --balanced --target=docs/AI.md "$TARGET_ROOT" >/dev/null
+[[ -f "$TARGET_ROOT/docs/AI.md" ]]
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --balanced --target=docs/AI.md "$TARGET_ROOT" >/dev/null
+[[ "$(grep -c 'PROMPTKIT_START' "$TARGET_ROOT/docs/AI.md")" -eq 1 ]]
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --target=../evil "$TARGET_ROOT" >/dev/null 2>&1; then
+    echo "Traversal --target=../evil was accepted; expected rejection." >&2
+    exit 1
+fi
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=bogus "$TARGET_ROOT" >/dev/null 2>&1; then
+    echo "Unknown --host=bogus was accepted; expected rejection." >&2
+    exit 1
+fi
+
 echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, and byte-idempotency tests passed."

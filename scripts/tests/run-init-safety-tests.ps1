@@ -219,7 +219,78 @@ try {
         throw "Failed Test 12: Repeated initialization was not byte-idempotent (hash mismatch)."
     }
 
-    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, and strict byte-idempotency tests passed." -ForegroundColor Green
+    # Test 13: --host=opencode on empty dir creates host file, keeps AGENTS.md, skips CLAUDE.md
+    # (Probing is environment-dependent, so flag-driven paths are asserted here;
+    # the single-hit probe rule is covered by the Bash twin with a hermetic PATH.)
+    $HostSelRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "hostsel") -Force).FullName
+    $env:PROMPTKIT_NO_INTERACTIVE = "1"
+    try {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $HostSelRoot --host=opencode --balanced | Out-Null
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
+    }
+    $opencodeRules = Join-Path $HostSelRoot ".opencode/rules.md"
+    if (-not (Test-Path $opencodeRules)) {
+        throw "Failed Test 13: .opencode/rules.md was not created for --host=opencode."
+    }
+    if (-not (Test-Path (Join-Path $HostSelRoot "AGENTS.md"))) {
+        throw "Failed Test 13: AGENTS.md universal fallback was not created."
+    }
+    if (Test-Path (Join-Path $HostSelRoot "CLAUDE.md")) {
+        throw "Failed Test 13: CLAUDE.md should not exist for an opencode-only selection."
+    }
+    $rulesContent = [System.IO.File]::ReadAllText($opencodeRules, [System.Text.Encoding]::UTF8)
+    if (-not $rulesContent.Contains('## PromptKit OS: Engineering Operating System')) {
+        throw "Failed Test 13: .opencode/rules.md does not contain the injected directive."
+    }
+
+    # Test 14: --add-host injects exactly once; pre-existing content preserved
+    $AddHostRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "addhost") -Force).FullName
+    [System.IO.File]::WriteAllText((Join-Path $AddHostRoot "AGENTS.md"), "# Mine`n", $utf8NoBom)
+    $env:PROMPTKIT_NO_INTERACTIVE = "1"
+    try {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $AddHostRoot --balanced | Out-Null
+        $beforeHash = (Get-FileHash -Path (Join-Path $AddHostRoot "AGENTS.md") -Algorithm SHA256).Hash
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $AddHostRoot --balanced --add-host=claude | Out-Null
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
+    }
+    $claudePath = Join-Path $AddHostRoot "CLAUDE.md"
+    if (-not (Test-Path $claudePath)) {
+        throw "Failed Test 14: CLAUDE.md was not created by --add-host=claude."
+    }
+    $afterHash = (Get-FileHash -Path (Join-Path $AddHostRoot "AGENTS.md") -Algorithm SHA256).Hash
+    if ($beforeHash -ne $afterHash) {
+        throw "Failed Test 14: pre-existing AGENTS.md changed during --add-host."
+    }
+    $claudeBlocks = ([regex]::Matches([System.IO.File]::ReadAllText($claudePath, [System.Text.Encoding]::UTF8), "PROMPTKIT_START")).Count
+    if ($claudeBlocks -ne 1) {
+        throw "Failed Test 14: CLAUDE.md should contain exactly one directive block."
+    }
+
+    # Test 15: --target custom path is idempotent; traversal and unknown hosts rejected
+    $TargetRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "customtarget") -Force).FullName
+    $env:PROMPTKIT_NO_INTERACTIVE = "1"
+    try {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $TargetRoot --balanced --target=docs/AI.md | Out-Null
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $TargetRoot --balanced --target=docs/AI.md | Out-Null
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
+    }
+    $aiPath = Join-Path $TargetRoot "docs/AI.md"
+    if (-not (Test-Path $aiPath)) {
+        throw "Failed Test 15: docs/AI.md was not created by --target."
+    }
+    $aiBlocks = ([regex]::Matches([System.IO.File]::ReadAllText($aiPath, [System.Text.Encoding]::UTF8), "PROMPTKIT_START")).Count
+    if ($aiBlocks -ne 1) {
+        throw "Failed Test 15: docs/AI.md should contain exactly one directive block after re-runs."
+    }
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $TargetRoot --target=../evil 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        throw "Failed Test 15: traversal --target=../evil was accepted; expected rejection."
+    }
+
+    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, and custom-target tests passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

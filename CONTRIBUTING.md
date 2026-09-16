@@ -136,6 +136,16 @@ The surface is 23 workflows by design, not by accident. Growth is gated and reti
 - **Retiring a workflow or alias**: breaking-change path — justification plus `CHANGELOG.md` `BREAKING CHANGE` notice with migration path, count-guard updates in both twins (suite stays green), directive exception-list sync, and reference cleanup (`setup.md`, README, WORKFLOW-MAP, FAQ, QUICKSTART) with `validate-references.sh` passing.
 - **This policy retires nothing.** Count stays at 23; the drift guard is untouched.
 
+## Adding a New AI Host
+
+Host support lives in exactly three places — update all three in the same PR, both twins:
+
+1. `host_file()` / `Get-HostFile()` map in `init.sh` / `init.ps1` (name → directive file).
+2. A best-effort probe (`probe_host()` / `Test-HostDetected`): installed binary or well-known config dir. Probes suggest; the menu decides — a probe that misfires is worse than none.
+3. The `--help` host list in both scripts.
+
+Then extend the safety harnesses: a `--host=<name>` empty-dir case, an `--add-host=<name>` byte-identity case, and (Bash only, hermetic PATH) single-hit and multi-hit probe cases. Keep the non-interactive contract: one unambiguous hit wins, zero-or-many fall back to the deterministic legacy pair.
+
 ---
 
 ## Maintainer Guidance: Release-Evidence Lifecycle

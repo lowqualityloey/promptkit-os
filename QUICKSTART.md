@@ -300,6 +300,9 @@ A: Yes. Edit `PROMPTKIT.md` for project-specific rules. Workflows adapt automati
 **Q: Does this work with my IDE's AI?**  
 A: Yes. Compatible with Claude Code, Cursor, Cline / Roo Code, Trae, OpenCode, Windsurf, GitHub Copilot, Gemini CLI, and Aider.
 
+**Q: Switching AI hosts later, or need a custom config file?**  
+A: Re-run the installer with `--add-host=<name>` (e.g. `claude`) to inject the current profile into the new host without touching anything else, or `--target=<rel/path>` (e.g. `docs/AI.md`) for setups outside the known list. Switching hosts never re-asks intake and never overwrites existing files.
+
 **Q: What if I don't want all the ceremony?**  
 A: Simple questions get simple answers (zero overhead). Workflows only activate for substantive tasks.
 

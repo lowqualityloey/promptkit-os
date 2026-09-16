@@ -22,10 +22,33 @@ param (
     [switch]$Experimental,
     [ValidateSet("local","github","jira","linear")]
     [string]$Tracking = "local",
-    [switch]$Help
+    [string]$Hosts = "",
+    [string]$AddHost = "",
+    [string[]]$Target = @(),
+    [switch]$Help,
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$Remaining = @()
 )
 
 $ErrorActionPreference = "Stop"
+
+# Host map + probes (defined up front: param handling below calls Get-HostFile).
+function Get-HostFile($Name) {
+    switch ($Name) {
+        "agents" { return "AGENTS.md" }
+        "claude" { return "CLAUDE.md" }
+        "opencode" { return ".opencode/rules.md" }
+        "cursor" { return ".cursorrules" }
+        "gemini" { return "GEMINI.md" }
+        "windsurf" { return ".windsurfrules" }
+        "copilot" { return ".github/copilot-instructions.md" }
+        "cline" { return ".clinerules" }
+        "trae" { return ".traerules" }
+        "aider" { return "CONVENTIONS.md" }
+        default { return "" }
+    }
+}
+$KnownHostsList = @("claude","opencode","cursor","gemini","windsurf","copilot","cline","trae","aider")
 
 if ($Help) {
     Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
@@ -36,6 +59,9 @@ if ($Help) {
     Write-Host "  --turbo             Turbo profile: Balanced + parallel subagent waves, up to ~2x measured token cost"
     Write-Host "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
     Write-Host "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import)"
+    Write-Host "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,windsurf,copilot,cline,trae,aider)"
+    Write-Host "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
+    Write-Host "  --target=rel/path   Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
     Write-Host "  -Help               Show this help`n"
     Write-Host "Interactive (TTY): If no profile flag is given and running in interactive host,"
     Write-Host "  prompts visually: 1) Lite (Recommended) 2) Balanced (default) 3) Turbo (Experimental)"
@@ -52,13 +78,27 @@ if ($Help) {
 # Handle switch aliases (allow --lite style via PS args parsing quirks)
 $ProfileSet = $false
 $TrackingSet = $false
+$HostSet = $false
+if ($Hosts -ne "") { $HostSet = $true }
+if ($AddHost -ne "") {
+    if ((Get-HostFile $AddHost) -eq "") {
+        Write-Host "[!] Unknown host: $AddHost" -ForegroundColor Red
+        exit 1
+    }
+    $Hosts = "agents,$AddHost"
+    $HostSet = $true
+}
+$ExtraTargets = @() + $Target
 if ($PSBoundParameters.ContainsKey("Tracking")) { $TrackingSet = $true }
 if ($Lite) { $Profile = "lite"; $ProfileSet = $true }
 if ($Balanced) { $Profile = "balanced"; $ProfileSet = $true }
 if ($Turbo) { $Profile = "turbo"; $ProfileSet = $true }
 
-# Also check $args for --lite style (when called via pwsh -File with --lite)
-foreach ($a in $args) {
+# Also check $args for --lite style (when called via pwsh -File with --lite).
+# Tokens PowerShell cannot bind (notably --name=value with a double dash) land
+# in $Remaining instead of throwing, so merge both sources before parsing.
+$AllArgs = @($args) + @($Remaining)
+foreach ($a in $AllArgs) {
     switch ($a) {
         "--lite" { $Profile = "lite"; $ProfileSet = $true }
         "--balanced" { $Profile = "balanced"; $ProfileSet = $true }
@@ -68,6 +108,24 @@ foreach ($a in $args) {
         "--tracking=github" { $Tracking = "github"; $TrackingSet = $true }
         "--tracking=jira" { $Tracking = "jira"; $TrackingSet = $true }
         "--tracking=linear" { $Tracking = "linear"; $TrackingSet = $true }
+        { $_ -like "--host=*" } { $Hosts = $_.Substring(7); $HostSet = $true }
+        { $_ -like "--add-host=*" } {
+            $ah = $_.Substring(11)
+            if ((Get-HostFile $ah) -eq "" -and $ah -ne "agents") {
+                Write-Host "[!] Unknown host: $ah" -ForegroundColor Red
+                exit 1
+            }
+            $Hosts = "agents,$ah"
+            $HostSet = $true
+        }
+        { $_ -like "--target=*" } {
+            $tp = $_.Substring(9)
+            if ($tp.StartsWith("/") -or $tp -match '\.\.' -or [string]::IsNullOrWhiteSpace($tp)) {
+                Write-Host "[!] --target must be a project-relative path without '..': $tp" -ForegroundColor Red
+                exit 1
+            }
+            $ExtraTargets += $tp
+        }
         "--help" { 
             Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
             Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
@@ -295,6 +353,81 @@ if (-not (Test-Path $TaskTemplateTarget)) {
 
 
 
+# 2b. Host probing + selection (which AI assistants get directive files)
+# Probes are best-effort suggestions only; the TTY menu (or --host=) is authoritative.
+# AGENTS.md is always created fresh as the universal fallback standard.
+if ($HostSet) {
+    foreach ($h in ($Hosts -split ',')) {
+        if ((Get-HostFile $h) -eq "") {
+            Write-Host "[!] Unknown host: $h (use comma-separated from: $($KnownHostsList -join ','))" -ForegroundColor Red
+            exit 1
+        }
+    }
+}
+function Test-HostDetected($Name) {
+    switch ($Name) {
+        "claude" { return ($null -ne (Get-Command claude -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".claude")) }
+        "opencode" { return ($null -ne (Get-Command opencode -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".config/opencode")) }
+        "cursor" { return ($null -ne (Get-Command cursor -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".cursor")) }
+        "gemini" { return ($null -ne (Get-Command gemini -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".gemini")) }
+        "windsurf" { return ($null -ne (Get-Command windsurf -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".windsurf")) }
+        "copilot" { return ($null -ne (Get-Command copilot -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".copilot")) }
+        "cline" { return (Test-Path (Join-Path $HOME ".config/cline")) -or (Test-Path (Join-Path $HOME ".cline")) }
+        "trae" { return ($null -ne (Get-Command trae -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".trae")) }
+        "aider" { return ($null -ne (Get-Command aider -ErrorAction SilentlyContinue)) }
+        default { return $false }
+    }
+}
+$DetectedHosts = @()
+if (-not $HostSet) {
+    foreach ($h in $KnownHostsList) {
+        if (Test-HostDetected $h) { $DetectedHosts += $h }
+    }
+}
+$IsTTY = [Environment]::UserInteractive -and -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected -and [string]::IsNullOrEmpty($env:PROMPTKIT_NO_INTERACTIVE)
+if (-not $HostSet -and -not $IsTTY) {
+    # Non-interactive: a single unambiguous probe hit wins; zero or many
+    # fall back to the deterministic legacy pair (never guess among several).
+    if ($DetectedHosts.Count -eq 1) {
+        $Hosts = $DetectedHosts[0]
+        $HostSet = $true
+    }
+}
+if (-not $HostSet -and $IsTTY) {
+    Write-Host "`n💡 AI Host Selection (visual decision)" -ForegroundColor Cyan
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+    $idx = 0
+    foreach ($h in $KnownHostsList) {
+        $idx++
+        $marker = ""
+        if ($DetectedHosts -contains $h) { $marker = " [detected]" }
+        Write-Host "  $idx) $h$marker — $(Get-HostFile $h)"
+    }
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+    if ($DetectedHosts.Count -gt 0) {
+        Write-Host "Comma-separated numbers, Enter = detected ($($DetectedHosts -join ',')) + AGENTS.md" -ForegroundColor DarkGray
+    } else {
+        Write-Host "Comma-separated numbers, Enter = AGENTS.md + CLAUDE.md (default)" -ForegroundColor DarkGray
+    }
+    Write-Host ""
+    $hchoice = Read-Host "Choose hosts"
+    if ($hchoice -ne "") {
+        $picked = @()
+        foreach ($n in ($hchoice -split ',')) {
+            $nn = 0
+            if ([int]::TryParse($n.Trim(), [ref]$nn) -and $nn -ge 1 -and $nn -le $KnownHostsList.Count) {
+                $picked += $KnownHostsList[$nn - 1]
+            }
+        }
+        $Hosts = ($picked | Select-Object -Unique) -join ','
+        $HostSet = $true
+    } elseif ($DetectedHosts.Count -gt 0) {
+        $Hosts = ($DetectedHosts -join ',')
+        $HostSet = $true
+    }
+    Write-Host ""
+}
+
 # 3. Detect Agent Files or Default to AGENTS.md
 $AgentFileCandidates = @(
     "AGENTS.md",
@@ -329,14 +462,66 @@ foreach ($file in $AgentFileCandidates) {
     }
 }
 
-if ($TargetsFound.Count -eq 0) {
-    $defaultAgent = Join-Path $ProjectRoot "AGENTS.md"
-    $defaultClaude = Join-Path $ProjectRoot "CLAUDE.md"
-    New-Item -ItemType File -Path $defaultAgent -Force | Out-Null
-    New-Item -ItemType File -Path $defaultClaude -Force | Out-Null
-    $TargetsFound += $defaultAgent
-    $TargetsFound += $defaultClaude
-    Write-Host "  [+] Created default agent configurations: AGENTS.md & CLAUDE.md" -ForegroundColor Green
+# Custom --target paths ride the same create/inject machinery as host files
+foreach ($xp in $ExtraTargets) {
+    $xfull = Join-Path $ProjectRoot $xp
+    if ($TargetsFound -notcontains $xfull) {
+        $xparent = Split-Path -Parent $xfull
+        if ($xparent -ne "" -and -not (Test-Path $xparent)) {
+            New-Item -ItemType Directory -Path $xparent -Force | Out-Null
+        }
+        if (-not (Test-Path $xfull)) { New-Item -ItemType File -Path $xfull -Force | Out-Null }
+        $TargetsFound += $xfull
+        Write-Host "  [+] Added custom target: $xp" -ForegroundColor Green
+    }
+}
+function New-TargetFile($Rel) {
+    if ($Rel -eq ".clinerules") {
+        $dir = Join-Path $ProjectRoot ".clinerules"
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        $inner = Join-Path $dir "promptkit.md"
+        if (-not (Test-Path $inner)) { New-Item -ItemType File -Path $inner -Force | Out-Null }
+        $script:TargetsFound += $inner
+        return
+    }
+    $p = Join-Path $ProjectRoot $Rel
+    $parent = Split-Path -Parent $p
+    if ($parent -ne "" -and -not (Test-Path $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+    if (-not (Test-Path $p)) { New-Item -ItemType File -Path $p -Force | Out-Null }
+    $script:TargetsFound += $p
+}
+$Fresh = ($TargetsFound.Count -eq 0)
+# Add selected-host files missing from the detected set (new hosts on existing installs)
+if ($HostSet -and $Hosts -ne "") {
+    foreach ($h in ($Hosts -split ',')) {
+        $rel = Get-HostFile $h.Trim()
+        $want = Join-Path $ProjectRoot $rel
+        if ($rel -eq ".clinerules") { $want = Join-Path $want "promptkit.md" }
+        if ($TargetsFound -notcontains $want) {
+            New-TargetFile $rel
+            Write-Host "  [+] Added host configuration: $rel" -ForegroundColor Green
+        }
+    }
+}
+if ($Fresh) {
+    New-TargetFile "AGENTS.md"
+    if ($HostSet -and $Hosts -ne "") {
+        foreach ($h in ($Hosts -split ',')) {
+            $rel = Get-HostFile $h.Trim()
+            if ($rel -eq "AGENTS.md") { continue }
+            $want = Join-Path $ProjectRoot $rel
+            if ($rel -eq ".clinerules") { $want = Join-Path $want "promptkit.md" }
+            if ($TargetsFound -notcontains $want) { New-TargetFile $rel }
+        }
+    } else {
+        New-TargetFile "CLAUDE.md"
+    }
+    $created = @($TargetsFound | ForEach-Object {
+        $_.Substring($ProjectRootPath.Length).TrimStart("\", "/") -replace "\\", "/"
+    }) -join ' '
+    Write-Host "  [+] Created default agent configurations: $created" -ForegroundColor Green
 }
 
 # 4. Directive Block (Loaded from Canonical Template based on profile)

@@ -13,7 +13,28 @@ PROFILE_SET=0
 EXPERIMENTAL=0
 TRACKING="local"
 TRACKING_SET=0
+HOSTS=""
+HOST_SET=0
+EXTRA_TARGETS=""
 PROJECT_ROOT=""
+# Known host -> directive file map (defined early: arg parsing validates against it).
+# Probes are best-effort suggestions only; the TTY menu (or --host=) is authoritative.
+host_file() {
+    case "$1" in
+        agents) echo "AGENTS.md" ;;
+        claude) echo "CLAUDE.md" ;;
+        opencode) echo ".opencode/rules.md" ;;
+        cursor) echo ".cursorrules" ;;
+        gemini) echo "GEMINI.md" ;;
+        windsurf) echo ".windsurfrules" ;;
+        copilot) echo ".github/copilot-instructions.md" ;;
+        cline) echo ".clinerules" ;;
+        trae) echo ".traerules" ;;
+        aider) echo "CONVENTIONS.md" ;;
+        *) echo "" ;;
+    esac
+}
+KNOWN_HOSTS="claude opencode cursor gemini windsurf copilot cline trae aider"
 
 # Parse args: flags + optional positional project root
 for arg in "$@"; do
@@ -40,6 +61,27 @@ for arg in "$@"; do
                 *) echo -e "\033[0;31m[!] Unknown tracking: $TRACKING (use local|github|jira|linear)\033[0m" >&2; exit 1 ;;
             esac
             ;;
+        --host=*)
+            HOSTS="${arg#--host=}"
+            HOST_SET=1
+            ;;
+        --add-host=*)
+            ADD_HOST="${arg#--add-host=}"
+            if [[ -z "$(host_file "$ADD_HOST")" ]]; then
+                echo -e "\033[0;31m[!] Unknown host: $ADD_HOST (use one of: agents,${KNOWN_HOSTS// /,})\033[0m" >&2; exit 1
+            fi
+            HOSTS="agents,$ADD_HOST"
+            HOST_SET=1
+            ;;
+        --target=*)
+            TARGET_PATH="${arg#--target=}"
+            case "$TARGET_PATH" in
+                /*|*../*)
+                    echo -e "\033[0;31m[!] --target must be a project-relative path without '..': $TARGET_PATH\033[0m" >&2; exit 1
+                    ;;
+            esac
+            EXTRA_TARGETS="$EXTRA_TARGETS $TARGET_PATH"
+            ;;
         --help|-h)
             echo -e "\nPromptKit OS init.sh — 1-Click Setup\n"
             echo -e "Usage: ./init.sh [options] [project-root]\n"
@@ -49,6 +91,9 @@ for arg in "$@"; do
             echo -e "  --turbo             Turbo profile: Balanced + parallel subagent waves, up to ~2x measured token cost"
             echo -e "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
             echo -e "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import, no auto-push)"
+            echo -e "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,windsurf,copilot,cline,trae,aider)"
+            echo -e "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
+            echo -e "  --target=rel/path  Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
             echo -e "  -h, --help          Show this help\n"
             echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
             echo -e "Interactive: When no flag provided and running in TTY, shows visual picker (1) Lite (Recommended) 2) Balanced 3) Turbo Experimental"
@@ -300,6 +345,96 @@ fi
 
 
 
+# 2b. Host probing + selection (which AI assistants get directive files)
+# AGENTS.md is always created fresh as the universal fallback standard
+# (see protocols/setup.md); host_file()/KNOWN_HOSTS live near the top
+# because arg parsing validates --host=/--add-host against them.
+if [[ "$HOST_SET" -eq 1 ]]; then
+    for h in ${HOSTS//,/ }; do
+        if [[ -z "$(host_file "$h")" ]]; then
+            echo -e "\033[0;31m[!] Unknown host: $h (use comma-separated from: ${KNOWN_HOSTS// /,}) \033[0m" >&2; exit 1
+        fi
+    done
+fi
+DETECTED_HOSTS=""
+probe_host() {
+    case "$1" in
+        claude) command -v claude >/dev/null 2>&1 || [[ -d "$HOME/.claude" ]] ;;
+        opencode) command -v opencode >/dev/null 2>&1 || [[ -d "$HOME/.config/opencode" ]] ;;
+        cursor) command -v cursor >/dev/null 2>&1 || [[ -d "$HOME/.cursor" ]] ;;
+        gemini) command -v gemini >/dev/null 2>&1 || [[ -d "$HOME/.gemini" ]] ;;
+        windsurf) command -v windsurf >/dev/null 2>&1 || [[ -d "$HOME/.windsurf" ]] ;;
+        copilot) command -v copilot >/dev/null 2>&1 || [[ -d "$HOME/.copilot" ]] ;;
+        cline) [[ -d "$HOME/.config/cline" ]] || [[ -d "$HOME/.cline" ]] ;;
+        trae) command -v trae >/dev/null 2>&1 || [[ -d "$HOME/.trae" ]] ;;
+        aider) command -v aider >/dev/null 2>&1 ;;
+    esac
+}
+if [[ "$HOST_SET" -eq 0 ]]; then
+    for h in $KNOWN_HOSTS; do
+        if probe_host "$h"; then
+            DETECTED_HOSTS="$DETECTED_HOSTS $h"
+        fi
+    done
+    DETECTED_HOSTS="${DETECTED_HOSTS# }"
+fi
+if [[ "$HOST_SET" -eq 0 && (! -t 0 || ! -t 1 || -n "${PROMPTKIT_NO_INTERACTIVE:-}") ]]; then
+    # Non-interactive: a single unambiguous probe hit wins; zero or many
+    # fall back to the deterministic legacy pair (never guess among several).
+    if [[ "$(echo "$DETECTED_HOSTS" | wc -w)" -eq 1 ]]; then
+        HOSTS="$DETECTED_HOSTS"
+        HOST_SET=1
+    fi
+fi
+if [[ "$HOST_SET" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}" ]]; then
+    echo -e "\033[0;36m💡 AI Host Selection (visual decision)\033[0m"
+    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    idx=0
+    HOST_COUNT=0
+    for h in $KNOWN_HOSTS; do HOST_COUNT=$((HOST_COUNT + 1)); done
+    for h in $KNOWN_HOSTS; do
+        idx=$((idx + 1))
+        marker=""
+        if [[ " $DETECTED_HOSTS " == *" $h "* ]]; then
+            marker=" \033[0;32m[detected]\033[0;90m"
+        fi
+        echo -e "  $idx) $h$(echo -e "$marker") — $(host_file "$h")"
+    done
+    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    if [[ -n "$DETECTED_HOSTS" ]]; then
+        echo -e "Comma-separated numbers, Enter = detected ($(echo "$DETECTED_HOSTS" | tr ' ' ',')) + AGENTS.md"
+    else
+        echo -e "Comma-separated numbers, Enter = AGENTS.md + CLAUDE.md (default)"
+    fi
+    echo ""
+    read -p "Choose hosts: " hchoice || true
+    if [[ -n "$hchoice" ]]; then
+        HOSTS=""
+        for n in ${hchoice//,/ }; do
+            if [[ "$n" =~ ^[0-9]+$ ]] && [[ "$n" -ge 1 ]] && [[ "$n" -le "$HOST_COUNT" ]]; then
+                idx=0
+                for h in $KNOWN_HOSTS; do
+                    idx=$((idx + 1))
+                    if [[ "$idx" -eq "$n" ]]; then
+                        HOSTS="$HOSTS,$h"
+                    fi
+                done
+            fi
+        done
+        HOSTS="${HOSTS#,}"
+        if [[ -n "$HOSTS" ]]; then
+            HOST_SET=1
+        else
+            echo -e "  No valid hosts selected; using default."
+        fi
+    fi
+    if [[ "$HOST_SET" -eq 0 && -n "$DETECTED_HOSTS" ]]; then
+        HOSTS="$(echo "$DETECTED_HOSTS" | tr ' ' ',')"
+        HOST_SET=1
+    fi
+    echo ""
+fi
+
 # 3. Detect Agent Files or Default to AGENTS.md
 AGENT_FILES=(
     "AGENTS.md"
@@ -332,14 +467,80 @@ for file in "${AGENT_FILES[@]}"; do
     fi
 done
 
+# Custom --target paths ride the same create/inject machinery as host files
+if [[ -n "$EXTRA_TARGETS" ]]; then
+    for xp in $EXTRA_TARGETS; do
+        xfull="$PROJECT_ROOT/$xp"
+        already=0
+        for t in "${TARGETS_FOUND[@]}"; do
+            [[ "$t" == "$xfull" ]] && already=1
+        done
+        if [[ "$already" -eq 0 ]]; then
+            mkdir -p "$(dirname "$xfull")"
+            [[ -f "$xfull" ]] || touch "$xfull"
+            TARGETS_FOUND+=("$xfull")
+            echo -e "  \033[0;32m[+]\\033[0m Added custom target: $xp"
+        fi
+    done
+fi
+# Create a directive target: parent dirs first, never overwrite, .clinerules stays a dir
+create_target() {
+    local rel="$1"
+    local p="$PROJECT_ROOT/$rel"
+    if [[ "$rel" == ".clinerules" ]]; then
+        mkdir -p "$p"
+        [[ -f "$p/promptkit.md" ]] || touch "$p/promptkit.md"
+        TARGETS_FOUND+=("$p/promptkit.md")
+        return 0
+    fi
+    mkdir -p "$(dirname "$p")"
+    [[ -f "$p" ]] || touch "$p"
+    TARGETS_FOUND+=("$p")
+}
+# Ensure a host file is registered (and created): newest hosts on existing
+# installs, or fresh defaults. Never duplicates, never overwrites.
+ensure_target() {
+    local rel="$1"
+    local want="$PROJECT_ROOT/$rel"
+    [[ "$rel" == ".clinerules" ]] && want="$want/promptkit.md"
+    local t
+    local already=0
+    for t in "${TARGETS_FOUND[@]}"; do
+        [[ "$t" == "$want" ]] && already=1
+    done
+    if [[ "$already" -eq 0 ]]; then
+        create_target "$rel"
+        return 0
+    fi
+    return 1
+}
+FRESH=0
 if [[ ${#TARGETS_FOUND[@]} -eq 0 ]]; then
-    DEFAULT_AGENT="$PROJECT_ROOT/AGENTS.md"
-    DEFAULT_CLAUDE="$PROJECT_ROOT/CLAUDE.md"
-    touch "$DEFAULT_AGENT"
-    touch "$DEFAULT_CLAUDE"
-    TARGETS_FOUND+=("$DEFAULT_AGENT")
-    TARGETS_FOUND+=("$DEFAULT_CLAUDE")
-    echo -e "  \033[0;32m[+]\\033[0m Created default agent configurations: AGENTS.md & CLAUDE.md"
+    FRESH=1
+fi
+if [[ "$HOST_SET" -eq 1 && -n "$HOSTS" ]]; then
+    for h in ${HOSTS//,/ }; do
+        if ensure_target "$(host_file "$h")"; then
+            echo -e "  \033[0;32m[+]\\033[0m Added host configuration: $(host_file "$h")"
+        fi
+    done
+fi
+if [[ "$FRESH" -eq 1 ]]; then
+    ensure_target "AGENTS.md" >/dev/null || true
+    if [[ "$HOST_SET" -eq 1 && -n "$HOSTS" ]]; then
+        for h in ${HOSTS//,/ }; do
+            rel="$(host_file "$h")"
+            [[ "$rel" == "AGENTS.md" ]] && continue
+            ensure_target "$rel" >/dev/null || true
+        done
+    else
+        ensure_target "CLAUDE.md" >/dev/null || true
+    fi
+    created=""
+    for t in "${TARGETS_FOUND[@]}"; do
+        created="$created ${t#$PROJECT_ROOT/}"
+    done
+    echo -e "  \033[0;32m[+]\\033[0m Created default agent configurations:$created"
 fi
 
 # 4. Directive Block (Loaded from Canonical Template based on profile)
