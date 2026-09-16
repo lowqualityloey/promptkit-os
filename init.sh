@@ -359,14 +359,14 @@ fi
 DETECTED_HOSTS=""
 probe_host() {
     case "$1" in
-        claude) command -v claude >/dev/null 2>&1 || [[ -d "$HOME/.claude" ]] ;;
+        claude) command -v claude >/dev/null 2>&1 ;;
         opencode) command -v opencode >/dev/null 2>&1 || [[ -d "$HOME/.config/opencode" ]] ;;
         cursor) command -v cursor >/dev/null 2>&1 || [[ -d "$HOME/.cursor" ]] ;;
-        gemini) command -v gemini >/dev/null 2>&1 || [[ -d "$HOME/.gemini" ]] ;;
+        gemini) command -v gemini >/dev/null 2>&1 ;;
         windsurf) command -v windsurf >/dev/null 2>&1 || [[ -d "$HOME/.windsurf" ]] ;;
-        copilot) command -v copilot >/dev/null 2>&1 || [[ -d "$HOME/.copilot" ]] ;;
+        copilot) command -v copilot >/dev/null 2>&1 ;;
         cline) [[ -d "$HOME/.config/cline" ]] || [[ -d "$HOME/.cline" ]] ;;
-        trae) command -v trae >/dev/null 2>&1 || [[ -d "$HOME/.trae" ]] ;;
+        trae) command -v trae >/dev/null 2>&1 ;;
         aider) command -v aider >/dev/null 2>&1 ;;
     esac
 }
