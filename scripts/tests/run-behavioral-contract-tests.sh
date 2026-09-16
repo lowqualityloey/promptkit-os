@@ -72,7 +72,7 @@ assert_contains "README.md" "Level 1 .*does NOT require a Task Record" "README e
 assert_contains "README.md" "Level 2 .*Requires a canonical Local Task Record" "README specifies Level 2 requires a Task Record"
 assert_contains "README.md" "Level 3 .*Requires Level 2 evidence" "README specifies Level 3 requires Level 2 evidence and Task Record"
 assert_contains "workflows/route.md" "treat release and evidence work as Level 3" "Router release-evidence routing uses Level-3 terminology"
-assert_contains "README.md" "Maintainer CI \(script syntax, initialization dry-run/idempotency" "README CI description refers to current validation"
+assert_contains "docs/ARCHITECTURE.md" "Maintainer CI \(script syntax, initialization dry-run/idempotency" "ARCHITECTURE layout tree describes current CI validation"
 assert_contains "docs/WORKFLOW-MAP.md" "Level 1 — Standard" "WORKFLOW-MAP includes Level 1 ceremony definition"
 
 echo ""
