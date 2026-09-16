@@ -25,7 +25,9 @@ param (
     [string]$Hosts = "",
     [string]$AddHost = "",
     [string[]]$Target = @(),
-    [switch]$Help
+    [switch]$Help,
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$Remaining = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -74,8 +76,11 @@ if ($Lite) { $Profile = "lite"; $ProfileSet = $true }
 if ($Balanced) { $Profile = "balanced"; $ProfileSet = $true }
 if ($Turbo) { $Profile = "turbo"; $ProfileSet = $true }
 
-# Also check $args for --lite style (when called via pwsh -File with --lite)
-foreach ($a in $args) {
+# Also check $args for --lite style (when called via pwsh -File with --lite).
+# Tokens PowerShell cannot bind (notably --name=value with a double dash) land
+# in $Remaining instead of throwing, so merge both sources before parsing.
+$AllArgs = @($args) + @($Remaining)
+foreach ($a in $AllArgs) {
     switch ($a) {
         "--lite" { $Profile = "lite"; $ProfileSet = $true }
         "--balanced" { $Profile = "balanced"; $ProfileSet = $true }
