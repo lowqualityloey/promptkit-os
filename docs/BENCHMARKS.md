@@ -21,7 +21,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                   PROMPTKIT OS JIT FILESYSTEM MODEL                     │
-│ Baseline Static Injection: Router Directive (1,059 tok Lite / 2,496 Bal)  │
+│ Baseline Static Injection: Router Directive (1,059 tok Lite / 2,335 Bal)  │
 │ On-Demand Loading: Tool loads only target workflow file (e.g. pk:debug) │
 │ Context Window Preservation: ~89-96% savings on initial static overhead │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -38,8 +38,8 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 | Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs ~19.8k core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
 | **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 4,237 | **1,059 tok** | **95% static** | Onboarding, new users, tiny fixes |
-| **Balanced** | `agent-directive-template.md` (23 workflows) | 9,985 | **2,496 tok** | **88% static** | Teams, production, default |
-| **Turbo** | same as Balanced + parallel waves | 9,985 | 2,496 tok + subagents (~2x measured total (bounds model, see section 8)) | 88% static, higher total | Experimental, greenfield, accepts cost |
+| **Balanced** | `agent-directive-template.md` (23 workflows) | 9,339 | **2,335 tok** | **88% static** | Teams, production, default |
+| **Turbo** | same as Balanced + parallel waves | 9,339 | 2,335 tok + subagents (~2x measured total (bounds model, see section 8)) | 88% static, higher total | Experimental, greenfield, accepts cost |
 
 ¹ Core-subset baseline = live sum of the six lifecycle files the Lite profile loads (route, debug, commit, checkpoint, sync, profile) = ~19,794 tok; full-set baseline = all 23 workflow files = ~75,505 tok (2026-09-14 measurement; replaces the previously unsourced "18.5k" constant).
 
@@ -49,10 +49,10 @@ The initialization script (`init.sh` / `init.ps1`) injects a single idempotent d
 | :--- | :---: | :---: | :--- |
 | **System Introduction & Scope** | ~13 | ~193 tokens | Identifies PromptKit root in workspace (`./.promptkit`) |
 | **Fast Shorthand Triggers** | ~28 | ~495 tokens | Collision-free index of namespaced workflows (`pk:route`, `pk:debug`, `pk:fix`, etc.) |
-| **Smart Auto-Route & Guardrails** | ~22 | ~465 tokens | Triage rules (Fast-Path zero overhead, Anti-slop, Secrets hygiene, MCP precedence, Telemetry cards) |
+| **Smart Auto-Route & Guardrails** | ~21 | ~305 tokens | Triage rules (Fast-Path zero overhead, Anti-slop, Secrets hygiene, MCP precedence, Telemetry-cards pointer) |
 | **Workflows, Protocols & Task Ceremony Levels** | ~20 | ~530 tokens | Lazy convention routing & inline Level 0–3 ceremony classification |
 | **Artifact Paths & Document Targets** | ~8 | ~245 tokens | Output destinations (`docs/specs/`, `docs/tasks/`, `docs/STATE.md`) |
-| **Total Baseline Static Overhead (Balanced)** | **97 lines** | **~2,496 tokens** | **Permanent footprint in system prompt (~88% static saving vs. ~19.8k core-subset (96.9% vs. full 23-file set))** |
+| **Total Baseline Static Overhead (Balanced)** | **96 lines** | **~2,335 tokens** | **Permanent footprint in system prompt (~88% static saving vs. ~19.8k core-subset (~97% vs. full 23-file set))** |
 | **Total Baseline Static Overhead (Lite)** | **~49 lines** | **~1,059 tokens** | **95% static saving, 58% saving vs Balanced** |
 | **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,059 tok — skipped silently) |
 
@@ -77,7 +77,7 @@ Gate coverage: the static dual-profile budget runs in **both** Linux and Windows
 
 ## 3. Dynamic Per-Task Context Economics & Runtime Benchmarks
 
-PromptKit OS benchmarks both the **static footprint** (1,059 tok Lite, 2,496 tok Balanced) and the **dynamic per-task runtime context**. 
+PromptKit OS benchmarks both the **static footprint** (1,059 tok Lite, 2,335 tok Balanced) and the **dynamic per-task runtime context**. 
 
 By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without preloading `workflows/route.md` (~6,962 tokens). This is Change A from `docs/token-efficiency-review.md` — verified saving 6,915 tok per task.
 
@@ -92,9 +92,9 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **6,778 tok** | **5,341 tok** (1,059+fix+gate) | **-47% Balanced, -58% Lite (-6,083 to -7,520 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **16,333 tok** | **14,896 tok** | **-34% Balanced, -40% Lite** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **11,879 tok** | **10,442 tok** | **-52% Balanced, -58% Lite (-12,882 to -14,319 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **6,617 tok** | **5,341 tok** (1,059+fix+gate) | **-49% Balanced, -58% Lite (-6,244 to -7,520 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **16,172 tok** | **14,896 tok** | **-34% Balanced, -40% Lite** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **11,718 tok** | **10,442 tok** | **-53% Balanced, -58% Lite (-13,043 to -14,319 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 

@@ -136,7 +136,7 @@ Upon presenting or opening the PR, close with an attention callout (not TIP — 
 ### Human Authority & Merge Boundary
 The AI assistant drafts the pull request and compiles verification evidence, but the human engineer retains sole authority over code review, approval, and merging to `main`. The AI assistant must **never** execute `git push origin main` or merge pull requests directly without explicit developer authorization.
 
-Upon presenting or opening the PR, conclude with the standard Telemetry Status Card and invoke the native interactive selection tool:
+Upon presenting or opening the PR, conclude with the standard Telemetry Status Card and invoke the native interactive selection tool (skip the decorative card only when PROMPTKIT.md declares `status-cards: off`; halts still fire):
 > 📊 **Milestone**: `M2: Core Features` `[■■■■■□□□□□]` 50% (6/12)  
 > 🎯 **Active**: PR `#<number>` (`<head-branch> → main`)  
 > 🟢 **Quality Gate**: Clean (`<passed>/<total> CI Passing ✓` · `🔒 <n> Invariants Intact`)

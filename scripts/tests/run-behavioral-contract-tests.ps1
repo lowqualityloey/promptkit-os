@@ -94,9 +94,14 @@ Assert-Contains "workflows/commit.md" "Immediately after staging" "Secret scan r
 
 Write-Host "`n📌 Scenario J: Standardized Visual Callouts & Telemetry Status Cards" -ForegroundColor Yellow
 Assert-Contains "templates/agent-directive-template.md" "Native MCP & Interactive Turn Prompts" "Directive includes native MCP and interactive turn prompts guardrail"
-Assert-Contains "templates/agent-directive-template.md" "Dual-Compatible Telemetry Status Cards" "Directive includes dual-compatible telemetry status card guardrail"
-Assert-Contains "templates/agent-directive-template.md" "### 💡 Next Recommended Step" "Directive specifies next recommended step callout format"
-Assert-Contains "templates/agent-directive-template.md" "📊 Milestone:" "Directive specifies telemetry status card format"
+Assert-Contains "protocols/telemetry-cards.md" "Dual-Compatible Telemetry Status Cards" "Telemetry-cards protocol carries the relocated status card spec"
+Assert-Contains "protocols/telemetry-cards.md" "### 💡 Next Recommended Step" "Telemetry-cards protocol specifies next recommended step callout format"
+Assert-Contains "protocols/telemetry-cards.md" "📊 Milestone:" "Telemetry-cards protocol specifies telemetry status card format"
+Assert-Contains "templates/agent-directive-template.md" "protocols/telemetry-cards.md" "Directive points to the lazy telemetry-cards protocol"
+Assert-Contains "templates/project-profile-template.md" "status-cards:" "Project profile template carries the status-cards machine line"
+Assert-Contains "templates/agent-directive-template.md" "status-cards: off" "Directive conditions the card on the status-cards opt-out"
+Assert-Contains "templates/agent-directive-lite-template.md" "status-cards: off" "Lite directive conditions the card on the status-cards opt-out"
+Assert-Contains "protocols/telemetry-cards.md" "status-cards: off" "Telemetry-cards protocol documents the opt-out and halt guarantee"
 Assert-Contains "workflows/commit.md" "Dual-Compatible Telemetry Status Card" "Commit workflow includes telemetry status card"
 Assert-Contains "workflows/pr.md" "Telemetry Status Card" "PR workflow includes telemetry status card"
 Assert-Contains "workflows/plan.md" "Dual-Compatible Telemetry Status Card" "Plan workflow includes telemetry status card"

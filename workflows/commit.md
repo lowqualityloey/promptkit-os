@@ -202,7 +202,7 @@ docs(adrs): record decision to adopt UUIDv7 for primary keys
    git commit -m "<subject>" -m "<body-paragraphs>"
    ```
 4. Confirm commit creation with `git log -n 1 --stat`.
-5. **Dual-Compatible Telemetry Status Card & Interactive Handoff**: Conclude the turn by displaying the status card and invoking the native interactive selection tool:
+5. **Dual-Compatible Telemetry Status Card & Interactive Handoff**: Conclude the turn by displaying the status card and invoking the native interactive selection tool (skip the decorative card only when PROMPTKIT.md declares `status-cards: off`; halts still fire):
    > 📊 **Milestone**: `M2: Core Features` `[■■■■■□□□□□]` 42% (5/12)  
    > 🎯 **Active**: `TASK-04: Tenant CRUD` (Committed)  
    > 🟢 **Quality Gate**: Clean (`5/5 ACs ✓` · `🔒 7 Invariants`)
