@@ -34,7 +34,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | :--- | :--- | ---: | ---: | :--- | :--- |
 | **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 4,420 | **1,105 tok** | **94% static** | Onboarding, new users, tiny fixes |
 | **Balanced** | `agent-directive-template.md` (24 workflows) | 9,907 | **2,477 tok** | **87% static** | Teams, production, default |
-| **Turbo** | same as Balanced + parallel waves | 9,907 | 2,477 tok + subagents (~2x measured total (bounds model, see section 8)) | 87% static, higher total | Experimental, greenfield, accepts cost |
+ | **Turbo** | same as Balanced + parallel waves | 9,907 | 2,477 tok + subagents (~2x measured total (bounds model, see section 8)) | 87% static, higher total | Experimental, greenfield, accepts cost |
 
 ¹ Core-subset baseline = live sum of the six lifecycle files the Lite profile loads (route, debug, commit, checkpoint, sync, profile) = ~19,794 tok; full-set baseline = all 24 workflow files = ~75,505 tok (2026-09-14 measurement; replaces the previously unsourced "18.5k" constant).
 
@@ -43,11 +43,12 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | Component (Balanced) | Lines | Approx. Token Weight | Purpose |
 | :--- | :---: | :---: | :--- |
 | **System Introduction & Scope** | ~13 | ~193 tokens | Identifies PromptKit root in workspace (`./.promptkit`) |
-| **Fast Shorthand Triggers** | ~24 | ~295 tokens | Direct workflow routing shorthand (`pk:debug`, `pk:test`, etc.) |
-| **Engineering Quality Gates** | ~36 | ~642 tokens | Secret hygiene, timeout budgets, and anti-hallucination rules |
-| **Task Ceremony Levels & Output** | ~25 | ~397 tokens | Composable 4-level task ceremony engine & output protocol |
-| **Standard Output Directories** | ~17 | ~226 tokens | Canonical locations for generated specs, ADRs, and plans |
-| **Total Baseline Static Overhead (Balanced)** | **100 lines** | **~2,477 tokens** | **Permanent footprint in system prompt (~87% static saving vs. ~19.8k core-subset (~97% vs. full 24-file set))** |
+| **System Introduction & Scope** | ~13 | ~193 tokens | Identifies PromptKit root in workspace (`./.promptkit`) |
+ | **Fast Shorthand Triggers** | ~24 | ~295 tokens | Direct workflow routing shorthand (`pk:debug`, `pk:test`, etc.) |
+ | **Engineering Quality Gates** | ~36 | ~642 tokens | Secret hygiene, timeout budgets, and anti-hallucination rules |
+ | **Task Ceremony Levels & Output** | ~25 | ~397 tokens | Composable 4-level task ceremony engine & output protocol |
+ | **Standard Output Directories** | ~17 | ~226 tokens | Canonical locations for generated specs, ADRs, and plans |
+ | **Total Baseline Static Overhead (Balanced)** | **100 lines** | **~2,477 tokens** | **Permanent footprint in system prompt (~87% static saving vs. ~19.8k core-subset (~97% vs. full 24-file set))** |
 | **Total Baseline Static Overhead (Lite)** | **~50 lines** | **~1,105 tokens** | **94% static saving, 55% saving vs Balanced** |
 | **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,105 tok — skipped silently) |
 
