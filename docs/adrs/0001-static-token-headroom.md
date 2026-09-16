@@ -1,6 +1,6 @@
 # ADR 0001: Static Token Headroom (Option B — Extract, Don't Raise)
 
-- **Status**: Accepted (decision only; extraction is a follow-up)
+- **Status**: Accepted → Implemented (Wave A, closes #195)
 - **Date**: 2026-09-16
 - **Context**: `scripts/measure-tokens.sh --strict` reports `BALANCED|2495|2500|PASS` — 5 tokens of headroom (0.2%). The planning-intake wave was already forced to route `size:` / `intake-status:` signals through `PROMPTKIT.md` instead of the directive. Related issues: #195 (headroom), #200 (protocol registry), #196 (status-cards opt-out, blocked).
 - **Measured at**: `37fb866` — `templates/agent-directive-template.md` 9980 B (~2495 tok), `templates/agent-directive-lite-template.md` 4237 B (~1059 tok).
@@ -10,6 +10,13 @@
 **Option B**: extract the Dual-Compatible Telemetry Status Card format spec from the directive into a lazily-loaded protocol (e.g. `protocols/telemetry-cards.md`), leaving a one-line pointer in the directive. **Do not raise `TOKEN_BUDGET_BALANCED`** (Option A rejected: it weakens the efficiency claim and only moves the cliff).
 
 This PR implements the decision record only. Budget constants, directive semantics, and card format are unchanged.
+
+## Measured Before/After (extraction landed in Wave A)
+
+- **Before** (`2c33078`): `templates/agent-directive-template.md` 9,980 B → `BALANCED|2495|2500|PASS` (5 tok headroom).
+- **After**: 9,339 B → `BALANCED|2335|2500|PASS` (**165 tok headroom**, ≥150 target met). Reclaimed 641 B (~160 tok) by relocating the 819 B card spec (directive lines 41–42) to `protocols/telemetry-cards.md`, leaving a one-line pointer.
+- **Lite unchanged**: 4,237 B → `LITE|1059|1500|PASS`.
+- Budget constants unchanged; card format byte-identical in structure; Scenario J assertions moved with the text in both twins (none deleted) plus one new pointer assertion.
 
 ## Consequences
 
