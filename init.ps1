@@ -32,6 +32,24 @@ param (
 
 $ErrorActionPreference = "Stop"
 
+# Host map + probes (defined up front: param handling below calls Get-HostFile).
+function Get-HostFile($Name) {
+    switch ($Name) {
+        "agents" { return "AGENTS.md" }
+        "claude" { return "CLAUDE.md" }
+        "opencode" { return ".opencode/rules.md" }
+        "cursor" { return ".cursorrules" }
+        "gemini" { return "GEMINI.md" }
+        "windsurf" { return ".windsurfrules" }
+        "copilot" { return ".github/copilot-instructions.md" }
+        "cline" { return ".clinerules" }
+        "trae" { return ".traerules" }
+        "aider" { return "CONVENTIONS.md" }
+        default { return "" }
+    }
+}
+$KnownHostsList = @("claude","opencode","cursor","gemini","windsurf","copilot","cline","trae","aider")
+
 if ($Help) {
     Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
     Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
@@ -338,26 +356,10 @@ if (-not (Test-Path $TaskTemplateTarget)) {
 # 2b. Host probing + selection (which AI assistants get directive files)
 # Probes are best-effort suggestions only; the TTY menu (or --host=) is authoritative.
 # AGENTS.md is always created fresh as the universal fallback standard.
-function Get-HostFile($Name) {
-    switch ($Name) {
-        "agents" { return "AGENTS.md" }
-        "claude" { return "CLAUDE.md" }
-        "opencode" { return ".opencode/rules.md" }
-        "cursor" { return ".cursorrules" }
-        "gemini" { return "GEMINI.md" }
-        "windsurf" { return ".windsurfrules" }
-        "copilot" { return ".github/copilot-instructions.md" }
-        "cline" { return ".clinerules" }
-        "trae" { return ".traerules" }
-        "aider" { return "CONVENTIONS.md" }
-        default { return "" }
-    }
-}
-$KnownHosts = @("claude","opencode","cursor","gemini","windsurf","copilot","cline","trae","aider")
 if ($HostSet) {
     foreach ($h in ($Hosts -split ',')) {
         if ((Get-HostFile $h) -eq "") {
-            Write-Host "[!] Unknown host: $h (use comma-separated from: $($KnownHosts -join ','))" -ForegroundColor Red
+            Write-Host "[!] Unknown host: $h (use comma-separated from: $($KnownHostsList -join ','))" -ForegroundColor Red
             exit 1
         }
     }
@@ -378,7 +380,7 @@ function Test-HostDetected($Name) {
 }
 $DetectedHosts = @()
 if (-not $HostSet) {
-    foreach ($h in $KnownHosts) {
+    foreach ($h in $KnownHostsList) {
         if (Test-HostDetected $h) { $DetectedHosts += $h }
     }
 }
@@ -395,7 +397,7 @@ if (-not $HostSet -and $IsTTY) {
     Write-Host "`n💡 AI Host Selection (visual decision)" -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
     $idx = 0
-    foreach ($h in $KnownHosts) {
+    foreach ($h in $KnownHostsList) {
         $idx++
         $marker = ""
         if ($DetectedHosts -contains $h) { $marker = " [detected]" }
@@ -413,8 +415,8 @@ if (-not $HostSet -and $IsTTY) {
         $picked = @()
         foreach ($n in ($hchoice -split ',')) {
             $nn = 0
-            if ([int]::TryParse($n.Trim(), [ref]$nn) -and $nn -ge 1 -and $nn -le $KnownHosts.Count) {
-                $picked += $KnownHosts[$nn - 1]
+            if ([int]::TryParse($n.Trim(), [ref]$nn) -and $nn -ge 1 -and $nn -le $KnownHostsList.Count) {
+                $picked += $KnownHostsList[$nn - 1]
             }
         }
         $Hosts = ($picked | Select-Object -Unique) -join ','
