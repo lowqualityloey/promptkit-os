@@ -96,14 +96,15 @@ Before writing or editing code:
 
 ---
 
-### Step 5: Regression Lock-In & Seam Verification
+### Step 5: Regression Lock-In & Oracle Verification
 
 1. **Lock-In Regression Test**:
    Convert the reproduction check into a permanent regression test at the real call-site seam (`pk:test`).
-2. **Verify Fix**:
-   - Re-run targeted reproduction check $\rightarrow$ Must pass (green).
-   - For performance fixes: Re-measure metric against Step 3 baseline $\rightarrow$ Assert measurable delta improvement (`pk:perf`).
-   - Run full project test suite $\rightarrow$ Verify zero regressions.
+2. **Oracle Gate Verification (Machine-Verified Done)**:
+   - **Execute** the targeted reproduction check via a terminal tool call. It MUST return `exit code 0`.
+   - **Execute** the full project test/build command. It MUST return `exit code 0`.
+   - **Bounded Retry**: If either fails (`exit code != 0`), apply a maximum of 2 automated repair attempts. If the 3rd attempt fails, HALT immediately with a `> [!WARNING] Blocked` callout.
+   - You are forbidden from emitting a green Quality Gate card until this oracle check passes in the current turn.
 
 ---
 

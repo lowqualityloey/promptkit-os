@@ -229,7 +229,10 @@ After completing the scan and presenting the findings summary / Executive Scorec
    - Offer to run `pk:tasks` to structure high-priority debt items into atomic task cards in `docs/tasks/`.
    - Record discovered debt tasks in `docs/STATE.md` under initial remediation items.
 
-3. **Announce Ready State**:
+3. **Invariant Handoff (Sync to STATE.md)**:
+   Append any hard constraints, non-negotiables, or architectural rules discovered during the intake or manifest scan (e.g., "Must use UUIDv7", "Zero raw hex colors in CSS", "No ORM") directly into Section 4 (`Locked Technical Invariants`) of `docs/STATE.md`.
+
+4. **Announce Ready State**:
    Confirm that `./PROMPTKIT.md` and `./docs/STATE.md` are active and suggest the immediate next workflow:
    - Use `pk:plan` for upcoming new features.
    - Use `pk:tasks` to break down existing backlog items.
@@ -243,5 +246,6 @@ After completing the scan and presenting the findings summary / Executive Scorec
 - `./PROMPTKIT.md` generated with non-generic, working project commands.
 - `./DESIGN.md` generated or skipped with explicit rationale.
 - `./docs/STATE.md` initialized with project baseline and active branch.
+- **Invariant Handoff**: Discovered architectural rules persisted to `docs/STATE.md` Section 4.
 - Executive Architecture Scorecard delivered to developer.
 - Workspace ready for immediate `pk:` workflow pairing.

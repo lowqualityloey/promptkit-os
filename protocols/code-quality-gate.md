@@ -83,7 +83,10 @@ Before completing any coding task or finishing a PromptKit OS session:
 2. Run test suites (`npm test`, `pytest`, `cargo test`, or commands in `./PROMPTKIT.md`).
 3. Verify all scenario acceptance criteria (`AC-*`) are completely met with concrete test evidence.
 4. Audit against the 6 pillars checklist above.
-5. If any gate fails, address it before declaring the task done.
+5. **Bounded Oracle Verification (Machine-Verified Done)**:
+   - You **MUST NOT** emit a green telemetry card (`> 🟢 Quality Gate: passed`) or claim a task is "done" unless a verification command (tests, build, or typecheck) physically executed and returned `exit code 0` in this active turn.
+   - **Bounded Repair Rule**: If the verification command fails (`exit code != 0`), you are allowed a maximum of **2 automated self-repair attempts**.
+   - If the 3rd consecutive verification attempt fails, you MUST halt execution, print the failure output, and emit `> [!WARNING] Blocked: Awaiting Human Input` to prevent infinite token-burning loops.
 6. When ready to stage and commit, invoke `workflows/commit.md` (`pk:commit`) to ensure atomic single-concern staging, Conventional Commit formatting, and secret leak prevention.
 7. Prepare the pull request with `workflows/pr.md` (`pk:pr`), compiling the verified AC checklist for human review and merge. Before `gh pr create`: `git status -s` clean for this task, `git fetch origin` + rebase check against base, and `Quality Gate: measured this turn`. No auto-push.
 8. **Milestone Git Boundary & Working Tree Verification**: A **milestone boundary** is the turn after a `pk:plan`/`pk:tasks` milestone or a Task Record closes. At milestone conclusion, verify working tree status with `git status`: all changes produced **by the current task** must be cleanly committed via `pk:commit` and synchronized to `docs/STATE.md` before beginning the next milestone. Files that were already untracked/dirty **before the task started** (including fresh `init.sh` scaffold output) are a documented exception: surface them to the developer and recommend `pk:commit` or ignores — do not stall the session on dirt you did not create.
