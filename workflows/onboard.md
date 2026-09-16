@@ -59,7 +59,8 @@ After completing the scan and presenting the findings summary / Executive Scorec
 3. **Cover the 7 intake slots within the size-class round cap** (S ≤ 1 round / ≤ 5 questions, M ≤ 2 / ≤ 8, L ≤ 3 / ≤ 12): MVP intent, surfaces, deployment target, auth & data, constraints, design inputs, integrations. Accept "not sure" and record it as an open question.
 4. **Close the loop**: after each round ask *"Is there anything you want to add?"* and *"Is this enough for now?"* — close on explicit user signal, all slots covered, round cap reached, or no new information in a round. Record the `close_reason`.
 5. **Never propose architecture during intake**: unanswered slots become owned `ASSUMPTION-*` entries with a validation owner — never silent agent defaults. Any AI-suggested capability that lacks a user-stated requirement goes to the **Later ledger**, not the plan.
-6. **Persist**: record the Intake Record per the protocol; the durable projection (`size:` and `intake-status:` lines in `PROMPTKIT.md`) is written during Phase 3.
+6. **Propose tooling accept-or-change, never default it**: only after the intent slots are answered, offer at most three stack proposals (package manager, data-fetching, runner). Each names its rationale and vintage (e.g. "2026-era default: pnpm — compatible and fast"). Nothing is written, installed, or assumed until the human explicitly accepts; changing any line overturns that slot, and unanswered proposals stay open questions.
+7. **Persist**: record the Intake Record per the protocol; the durable projection (`size:` and `intake-status:` lines in `PROMPTKIT.md`) is written during Phase 3.
 
 ---
 
@@ -73,6 +74,7 @@ After completing the scan and presenting the findings summary / Executive Scorec
    - Node.js / TypeScript: `pnpm-lock.yaml` (pnpm), `bun.lockb` / `bun.lock` (bun), `package-lock.json` (npm), `yarn.lock` (yarn).
    - Python: `uv.lock` (uv), `poetry.lock` (poetry), `Pipfile.lock` (pipenv), `requirements.txt`.
    - Rust / Go / Java: `Cargo.lock` (cargo), `go.mod` (go), `pom.xml` / `build.gradle`.
+   - Record the detected toolchain as ground truth. Never propose switching package managers, runners, or frameworks on brownfield runs; the only stack question permitted is a missing capability the task requires.
 
 2. **Monorepo & Workspace Manifest Detection**:
    Inspect root directory for multi-package monorepo managers:
