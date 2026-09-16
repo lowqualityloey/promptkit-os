@@ -3,7 +3,7 @@
 ## 1. Executive Summary & Current Position
 - **Project Name**: [Project Name]
 - **Current Milestone / Epic**: [e.g., Milestone 2: Core Domain Engine]
-- **Overall Status**: ACTIVE <!-- Options: ACTIVE | PAUSED | STABILIZING | RELEASE_CANDIDATE -->
+- **Overall Status**: ACTIVE <!-- Options: ACTIVE | PAUSED | STABILIZING | RELEASE_CANDIDATE | COMPLETED (all milestones closed, release evidence archived, zero open blockers — recording stops here) -->
 - **Target Release / Deadline**: [e.g., v1.0.0 / YYYY-MM-DD]
 - **Current Working Branch**: [e.g., main or feature/branch-name]
 - **Last Updated**: [YYYY-MM-DD]
@@ -111,3 +111,13 @@ Compact record of pairing sessions to enable instant chat resumption:
 | Date | Engineer / Agent | Milestone / Focus | Key Changes & Artifacts |
 | :--- | :--- | :--- | :--- |
 | not tracked | not tracked | not tracked | not tracked |
+
+---
+
+## 9. Session Spend Ledger
+
+| Session | Turns | Measured in/out | Estimated payload | Note |
+| :--- | :--- | :--- | :--- | :--- |
+| not tracked | not tracked | not tracked | not tracked | not tracked |
+
+- **Running total**: not tracked — refreshed by `pk:checkpoint`; one row per real work session (trivial sessions under ~5 turns with no workflow usage write nothing).
