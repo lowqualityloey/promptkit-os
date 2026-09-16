@@ -63,7 +63,7 @@ You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigge
 ### Workflows & Protocols Reference
 Load lazily by convention — never preload:
 - Workflow: `$KIT_DIR_REL/workflows/<trigger>.md` (e.g. `pk:plan` -> `workflows/plan.md`, `pk:design` -> `workflows/design-system.md`)
-- Trigger-to-file exceptions (the convention alone would misresolve these): `pk:spike` -> `research.md`, `pk:retro` -> `reflect.md`, `pk:grill` -> `tutor.md`, `pk:design` -> `design-system.md`; all other triggers match their file name.
+- Trigger-to-file exceptions (the convention alone would misresolve these): `pk:spike` -> `research.md`, `pk:retro` -> `reflect.md`, `pk:grill` -> `tutor.md`, `pk:design` -> `design-system.md`; parenthesized aliases inherit: `pk:db` -> `data.md`, `pk:handoff` -> `checkpoint.md`, `pk:issue`/`pk:kanban` -> `tasks.md`, `pk:update`/`pk:refresh` -> `sync.md`; all other triggers match their file name.
 - Protocols: `$KIT_DIR_REL/protocols/{setup,context-sync,code-quality-gate,subagent-delegation}.md`
 - Router: load `$KIT_DIR_REL/workflows/route.md` only when routing is ambiguous or Level 3 escalation/downgrade rules are needed
 - Project files: `./PROMPTKIT.md`, `./DESIGN.md`, `./docs/STATE.md` (if present)

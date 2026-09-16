@@ -21,6 +21,7 @@ jobs:
           bash -n init.sh
           bash -n scripts/measure-tokens.sh
           bash -n scripts/measure-per-task-tokens.sh
+          bash -n scripts/measure-tokenizer-delta.sh
           bash -n scripts/measure-turbo-overhead.sh
           bash -n scripts/tests/run-token-budget-tests.sh
           bash -n scripts/validate-execution-control.sh
@@ -156,6 +157,7 @@ jobs:
           $syntaxFiles = @(
             "init.ps1",
             "scripts/measure-tokens.ps1",
+            "scripts/measure-tokenizer-delta.ps1",
             "scripts/validate-execution-control.ps1",
             "scripts/tests/run-execution-control-fixtures.ps1",
             "scripts/tests/run-execution-control-properties.ps1",
