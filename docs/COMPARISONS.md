@@ -36,8 +36,8 @@ PromptKit OS coexists cleanly with host-specific instruction files (`AGENTS.md`,
 
 | Dimension | Single-File Directives | Static Prompt Packs | Autonomous Multi-Agent Swarms | **PromptKit OS** |
 | :--- | :--- | :--- | :--- | :--- |
-| **Scope** | Tool-specific instruction endpoint | Workflow templates for one tool | Multi-agent unmonitored loops | Cross-tool engineering OS with 22 lifecycle workflows |
-| **Token Overhead** | Minimal initial overhead | High monolithic bloat (~18k tokens inlined) | Higher aggregate token cost from multi-agent pipeline calls | **~1,059 tok Lite / ~2,335 tok Balanced baseline\***  (~95% / ~88% static context reduction vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set); unused workflows consume 0 tokens) |
+| **Scope** | Tool-specific instruction endpoint | Workflow templates for one tool | Multi-agent unmonitored loops | Cross-tool engineering OS with 23 lifecycle workflows |
+| **Token Overhead** | Minimal initial overhead | High monolithic bloat (~18k tokens inlined) | Higher aggregate token cost from multi-agent pipeline calls | **~1,079 tok Lite / ~2,345 tok Balanced baseline\***  (~95% / ~88% static context reduction vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set); unused workflows consume 0 tokens) |
 | **Persistence** | Per-session only | Per-session only | Hidden cache directories prone to context exhaustion | Git-tracked `docs/STATE.md` survives context resets & fresh chats |
 | **Execution Model** | Unstructured chat | Manual template pasting | Background loop until timeout or crash | Disciplined human-in-the-loop pairing (Levels 0–3) |
 | **Database Safety** | No schema guardrails | Varies | Risk of destructive drops in unmonitored edits | Expand-Contract only (phased, non-breaking migrations) & strict Project-Scoped DB container isolation |
@@ -45,7 +45,7 @@ PromptKit OS coexists cleanly with host-specific instruction files (`AGENTS.md`,
 | **Done-Gates** | Trust the model | Trust the model | Fragile timeout heuristics | Artifact gates + Gherkin verification + CI + human review |
 | **Lock-in** | Tool-specific format | Tool-specific format | Framework-specific runtime & daemons | Pure markdown, works with any AI coding assistant |
 
-*\* Measured mechanically via `scripts/measure-tokens.sh` / `measure-tokens.ps1` (bytes/4 convention, ~1,059 tokens Lite / ~2,335 tokens Balanced vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). See [`BENCHMARKS.md`](./BENCHMARKS.md) for full context window analysis.*
+*\* Measured mechanically via `scripts/measure-tokens.sh` / `measure-tokens.ps1` (bytes/4 convention, ~1,079 tokens Lite / ~2,345 tokens Balanced vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). See [`BENCHMARKS.md`](./BENCHMARKS.md) for full context window analysis.*
 
 ---
 
