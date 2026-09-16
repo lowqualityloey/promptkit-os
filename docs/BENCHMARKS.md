@@ -96,6 +96,17 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 | **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **16,333 tok** | **14,896 tok** | **-34% Balanced, -40% Lite** |
 | **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **11,879 tok** | **10,442 tok** | **-52% Balanced, -58% Lite (-12,882 to -14,319 tok)** |
 
+### Planning-Intake Cost: One-Time Premium, Zero Steady State
+
+The intake wave adds a bounded one-time cost and no steady-state cost (measured at `db4da7c`, `bytes/4` convention, reproducible via `wc -c protocols/discovery-intake.md workflows/plan.md`):
+
+| Intake cost item | Measurement | Tokens |
+| :--- | :--- | ---: |
+| `protocols/discovery-intake.md` (12,635 B, lazy-loaded only while intake is incomplete) | new file | 3,159 |
+| `workflows/plan.md` Step 0 preflight growth (22,660 → 25,835 B) | +3,175 B | +794 |
+| **One-time premium total** | | **~3,953** |
+| **Steady state after intake closes** (`complete` or `legacy-partial`) | protocol unloaded | **0 additional** |
+
 ### Key Runtime Efficiencies:
 1. **Time-to-First-Action (TTFA)**: Eliminates 1 full tool-reading turn on Turn 1 (no longer loads `route.md` 6,962 tok to discover Level 0 is zero overhead), saving **~3–6 seconds** of latency on every interaction. Measured via Turn 1 file reads before/after Change A.
 2. **Context Window Endurance**: Chat conversations maintain high attention reasoning for an additional **5–10 turns** before reaching compaction thresholds (parent thread saves ~98.7% via subagent delegation, see §4).
