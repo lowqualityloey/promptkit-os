@@ -226,6 +226,78 @@ if (($claimedN.Count -eq 1) -and ([int]$claimedN[0] -eq $faqN)) {
     $script:FailCount++
 }
 
+Write-Host "`n📌 Scenario P: Published Figure Exact-Match (BENCHMARKS vs tool output)" -ForegroundColor Yellow
+# Same coverage as the .sh twin. Live payloads are recomputed natively here
+# (bytes/4 per file); composition MUST match measure-per-task-tokens.sh lines 81-87
+# and measure-tokens.sh --strict. Dated records are exempt. Rounding: nearest
+# integer percent via Floor(x + 0.5).
+function Measure-Tok($RelPath) {
+    $bytes = [System.IO.File]::ReadAllBytes((Join-Path $RepoRoot $RelPath))
+    $cr = @($bytes | Where-Object { $_ -eq 13 }).Count
+    return [int][math]::Floor((($bytes.Length - $cr) + 2) / 4)
+}
+function Check-Figure($Desc, $Live, $Doc) {
+    if ($Live -eq $Doc) {
+        Write-Host "  ✅ PASS: $Desc ($Doc tok == tool output)" -ForegroundColor Green
+        $script:PassCount++
+    } else {
+        Write-Host "  ❌ FAIL: $Desc published $Doc tok but tool output is $Live tok" -ForegroundColor Red
+        $script:FailCount++
+    }
+}
+function Digits($S) { return [int](($S -replace '\D', '')) }
+function FirstNum($S) { return [int](([regex]::Match($S, '[0-9,]+')).Value -replace ',', '') }
+$benchLines = Get-Content -Path (Join-Path $RepoRoot "docs/BENCHMARKS.md")
+$fullTok = Measure-Tok "templates/agent-directive-template.md"
+$liteTok = Measure-Tok "templates/agent-directive-lite-template.md"
+$gateTok = Measure-Tok "protocols/code-quality-gate.md"
+$fixTok = Measure-Tok "workflows/fix.md"
+$planTok = Measure-Tok "workflows/plan.md"
+$shipTok = Measure-Tok "workflows/ship.md"
+$techTok = Measure-Tok "templates/tech-spec-template.md"
+$relTok = Measure-Tok "templates/release-checklist.md"
+$live = @{
+    'pk:fix/balanced' = $fullTok + $fixTok + $gateTok
+    'pk:fix/lite'     = $liteTok + $fixTok + $gateTok
+    'pk:plan/balanced' = $fullTok + $planTok + $techTok + $gateTok
+    'pk:plan/lite'     = $liteTok + $planTok + $techTok + $gateTok
+    'pk:ship/balanced' = $fullTok + $shipTok + $relTok + $gateTok
+    'pk:ship/lite'     = $liteTok + $shipTok + $relTok + $gateTok
+}
+$limits = @{ 'pk:fix' = 12861; 'pk:plan' = 24666; 'pk:ship' = 24761 }
+foreach ($spec in @('pk:fix', 'pk:plan', 'pk:ship')) {
+    $row = @($benchLines | Where-Object { $_ -cmatch "^\| \*\*``$spec``\*\* \|" })[0]
+    if ($null -eq $row) {
+        Write-Host "  ❌ FAIL: BENCHMARKS.md section-3 row for $spec not found" -ForegroundColor Red
+        $script:FailCount++
+        continue
+    }
+    $cols = $row -split '\|'
+    $base = Digits $cols[3]
+    $balDoc = Digits $cols[4]
+    $liteDoc = FirstNum $cols[5]
+    $balLive = $live["$spec/balanced"]
+    $liteLive = $live["$spec/lite"]
+    Check-Figure "$spec Balanced payload" $balLive $balDoc
+    Check-Figure "$spec Lite payload" $liteLive $liteDoc
+    Check-Figure "$spec baseline constant" $limits[$spec] $base
+    $balPctDoc = Digits (([regex]::Match($row, '-[0-9]+% Balanced')).Value)
+    $litePctDoc = Digits (([regex]::Match($row, '-[0-9]+% Lite')).Value)
+    $balPctLive = [int][math]::Floor((($base - $balLive) * 100.0) / $base + 0.5)
+    $litePctLive = [int][math]::Floor((($base - $liteLive) * 100.0) / $base + 0.5)
+    Check-Figure "$spec Balanced reduction label" $balPctLive $balPctDoc
+    Check-Figure "$spec Lite reduction label" $litePctLive $litePctDoc
+}
+$balRow = @($benchLines | Where-Object { $_ -cmatch '^\| \*\*Balanced\*\* \|' })[0]
+$liteRow = @($benchLines | Where-Object { $_ -cmatch '^\| \*\*Lite\*\* \|' })[0]
+if ($null -eq $balRow -or $null -eq $liteRow) {
+    Write-Host "  ❌ FAIL: BENCHMARKS.md section-2 profile rows not found" -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Check-Figure "Balanced static directive" $fullTok (Digits (($balRow -split '\|')[4]))
+    Check-Figure "Lite static directive" $liteTok (Digits (($liteRow -split '\|')[4]))
+}
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
