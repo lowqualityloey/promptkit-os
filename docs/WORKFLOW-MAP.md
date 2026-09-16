@@ -254,7 +254,7 @@ graph TD
 | Make clean atomic commit | `pk:commit` | Conventional Commits |
 | Write PR description | `pk:pr` | High-signal PR body |
 | Deploy without downtime | `pk:ship` | `docs/releases/*.md` |
-| Pause and hand off work | `pk:checkpoint` | Handover prompt + STATE.md |
+| Pause and hand off work | `pk:checkpoint` | Handover prompt + STATE.md (spend ledger, closeout record at COMPLETED) |
 | Capture decisions | `pk:retro` | ADRs in `docs/adrs/` |
 
 ### 🧭 Navigation & Routing
