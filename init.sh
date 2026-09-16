@@ -17,6 +17,7 @@ HOSTS=""
 HOST_SET=0
 EXTRA_TARGETS=""
 PROJECT_ROOT=""
+SAAS_SCAFFOLD=0
 # Known host -> directive file map (defined early: arg parsing validates against it).
 # Probes are best-effort suggestions only; the TTY menu (or --host=) is authoritative.
 host_file() {
@@ -54,6 +55,9 @@ for arg in "$@"; do
         --experimental)
             EXPERIMENTAL=1
             ;;
+        --saas)
+            SAAS_SCAFFOLD=1
+            ;;
         --tracking=*)
             TRACKING="${arg#--tracking=}"
             case "$TRACKING" in
@@ -90,6 +94,7 @@ for arg in "$@"; do
             echo -e "  --balanced          Balanced profile: the full workflow set, Level 0-3 adaptive ceremony (default)"
             echo -e "  --turbo             Turbo profile: Balanced + parallel subagent waves, up to ~2x measured token cost"
             echo -e "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
+            echo -e "  --saas              Run the SaaS scaffold generator (Next.js, Prisma, Stripe, etc.)"
             echo -e "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import, no auto-push)"
             echo -e "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,windsurf,copilot,cline,trae,aider)"
             echo -e "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
@@ -100,6 +105,7 @@ for arg in "$@"; do
             echo -e "Env escape hatch: PROMPTKIT_NO_INTERACTIVE=1 skips the picker even in a TTY (use flags or Balanced default)"
             echo -e "Examples:"
             echo -e "  ./init.sh --lite"
+            echo -e "  ./init.sh --saas"
             echo -e "  ./init.sh --balanced /path/to/project"
             echo -e "  ./init.sh --turbo --experimental\n"
             exit 0
@@ -132,6 +138,11 @@ if [[ -z "$PROJECT_ROOT" ]]; then
     else
         PROJECT_ROOT="$(pwd)"
     fi
+fi
+
+if [[ "${SAAS_SCAFFOLD:-0}" -eq 1 ]]; then
+    echo -e "\n\033[0;36m🚀 Starting SaaS Scaffold...\033[0m"
+    bash "$SCRIPT_DIR/scaffold/saas/install.sh" "$PROJECT_ROOT"
 fi
 
 # Interactive TTY picker when no profile flag provided (visual decision for onboarding)
