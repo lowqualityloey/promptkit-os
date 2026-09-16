@@ -21,9 +21,9 @@
 
 ## 2. Evidence Reviewed
 
-- [Adaptation requirements](../.kiro/specs/promptkit-sdlc-skill-adaptation/requirements.md)
-- [Adaptation design](../.kiro/specs/promptkit-sdlc-skill-adaptation/design.md)
-- [Adaptation task sequence](../.kiro/specs/promptkit-sdlc-skill-adaptation/tasks.md)
+- Adaptation requirements — `.kiro/specs/promptkit-sdlc-skill-adaptation/requirements.md` (retired from `main`; recover from git history)
+- Adaptation design — `.kiro/specs/promptkit-sdlc-skill-adaptation/design.md` (retired from `main`; recover from git history)
+- Adaptation task sequence — `.kiro/specs/promptkit-sdlc-skill-adaptation/tasks.md` (retired from `main`; recover from git history)
 - [Execution Task Record template](../templates/execution-task-record-template.md)
 - [CI Triage template](../templates/ci-triage-template.md)
 - [Test Plan template](../templates/test-plan-template.md)
