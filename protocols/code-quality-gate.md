@@ -83,8 +83,8 @@ Before completing any coding task or finishing a PromptKit OS session:
 2. Run test suites (`npm test`, `pytest`, `cargo test`, or commands in `./PROMPTKIT.md`).
 3. Verify all scenario acceptance criteria (`AC-*`) are completely met with concrete test evidence.
 4. Audit against the 6 pillars checklist above.
-5. **Bounded Oracle Verification (Machine-Verified Done)**:
-   - You **MUST NOT** emit a green telemetry card (`> 🟢 Quality Gate: passed`) or claim a task is "done" unless a verification command (tests, build, or typecheck) physically executed and returned `exit code 0` in this active turn.
+5. **Bounded Oracle Verification (Machine-Verified Quality Gate)**:
+   - You **MUST NOT** emit a green telemetry card (`> 🟢 Quality Gate: passed`) unless a verification command (tests, build, or typecheck) physically executed and returned `exit code 0` in this active turn. Passing this gate proves technical verification; full task completion additionally requires satisfying all acceptance criteria (`AC-*`) and human intent.
    - **Bounded Repair Rule**: If the verification command fails (`exit code != 0`), you are allowed a maximum of **2 automated self-repair attempts**.
    - If the 3rd consecutive verification attempt fails, you MUST halt execution, print the failure output, and emit `> [!WARNING] Blocked: Awaiting Human Input` to prevent infinite token-burning loops.
 6. When ready to stage and commit, invoke `workflows/commit.md` (`pk:commit`) to ensure atomic single-concern staging, Conventional Commit formatting, and secret leak prevention.

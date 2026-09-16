@@ -100,7 +100,7 @@ Before writing or editing code:
 
 1. **Lock-In Regression Test**:
    Convert the reproduction check into a permanent regression test at the real call-site seam (`pk:test`).
-2. **Oracle Gate Verification (Machine-Verified Done)**:
+2. **Oracle Gate Verification (Machine-Verified Quality Gate)**:
    - **Execute** the targeted reproduction check via a terminal tool call. It MUST return `exit code 0`.
    - **Execute** the full project test/build command. It MUST return `exit code 0`.
    - **Bounded Retry**: If either fails (`exit code != 0`), apply a maximum of 2 automated repair attempts. If the 3rd attempt fails, HALT immediately with a `> [!WARNING] Blocked` callout.
