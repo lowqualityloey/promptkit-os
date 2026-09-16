@@ -124,6 +124,16 @@ companion `*-release-notes-record.md`.
 
 ---
 
+## Workflow Lifecycle: Addition & Retirement Policy
+
+The surface is 23 workflows by design, not by accident. Growth is gated and retirement has a path — see [ADR 0002](./docs/adrs/0002-workflow-lifecycle-policy.md) for the full policy and the v1.7.0 `pk:profile` worked example.
+
+- **Proposing the 24th workflow**: state non-overlap (which existing workflows were considered and why not), ceremony fit, all artifacts shipped in the same PR (workflow file, `setup.md` row, directive entry or recorded omission, WORKFLOW-MAP/README/FAQ updates, assertions in both test twins), and strict token-gate results.
+- **Retiring a workflow or alias**: breaking-change path — justification plus `CHANGELOG.md` `BREAKING CHANGE` notice with migration path, count-guard updates in both twins (suite stays green), directive exception-list sync, and reference cleanup (`setup.md`, README, WORKFLOW-MAP, FAQ, QUICKSTART) with `validate-references.sh` passing.
+- **This policy retires nothing.** Count stays at 23; the drift guard is untouched.
+
+---
+
 ## Maintainer Guidance: Release-Evidence Lifecycle
 
 The release-evidence policy applies only to maintainers evaluating candidates for the PromptKit OS repository. It documents how PromptKit OS evaluates a candidate and records an approval decision; it does not impose PromptKit OS Conventional Commit, SemVer, release-note, changelog, tag, remote, publication, deployment, or rollback requirements on repositories that consume PromptKit OS.
