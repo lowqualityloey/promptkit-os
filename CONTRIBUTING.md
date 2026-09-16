@@ -17,11 +17,7 @@ When contributing to PromptKit OS, adhere to the following core principles:
 3. **Atomic Conventional Commits**: Every change set must be staged as single-concern atomic commits following Conventional Commits format (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `perf:`, `chore:`). See [`workflows/commit.md`](./workflows/commit.md).
 4. **Behavioral Contract & Parity**: Script fixes must maintain full behavioral parity between Linux/macOS (`init.sh`, Bash scripts) and Windows (`init.ps1`, PowerShell scripts).
 5. **Non-Destructive Safety**: Setup scripts and workflows must preserve existing user content, fail loudly on malformed or duplicate marker blocks, and leave original files byte-for-byte unchanged on failure.
-6. **Internal Specification Hygiene**: Public templates and onboarding documentation use `docs/specs/[specification].md`. The tracked `.kiro/specs` directories are retained as internal or historical planning artifacts for repository evidence and validator compatibility; they are not required for adopters:
-   - `agent-execution-control-handoff/`: retained for active validator, fixture, task-record, and release-evidence references.
-   - `conventional-commit-versioning/`: retained as historical release-planning evidence.
-   - `promptkit-sdlc-skill-adaptation/`: retained as adaptation-planning evidence.
-   Future local Kiro specifications are ignored unless explicitly retained for repository evidence.
+6. **Internal Specification Hygiene**: Public specifications live in `docs/specs/[specification].md`. Tool-local planning directories such as `.kiro/` are ignored and never published. Three `.kiro/specs` bundles (`agent-execution-control-handoff/`, `conventional-commit-versioning/`, `promptkit-sdlc-skill-adaptation/`) were tracked as historical planning evidence and have since been retired; they remain recoverable from git history. Dated release evaluations and Task Records that cite them are historical records and are deliberately left unedited.
 
 ---
 
