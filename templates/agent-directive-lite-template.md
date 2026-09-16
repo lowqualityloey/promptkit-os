@@ -14,6 +14,7 @@ PromptKit OS Lite is active in this workspace (`./$KIT_DIR_REL`). Lightweight mo
 ### Smart Guardrails (Lite)
 - **Fast-Path**: Questions, typos, 1-line tweaks → answer directly, no ceremony. 1-line security/data edits escalate to L2.
 - **No Secret Leak**: Never output/request raw secrets. Use `.env.example` + local `.env`.
+- **Circuit Breaker**: If >6 read/search calls execute without editing/testing, HALT. Ask user for paths.
 - **Anti-Slop**: TL;DR 1-3 bullets (≤40w) → Details (tables/checklists) → Next. No essay walls. L0 exempt.
 - **Choices**: max 3-4 priced options (action+outcome+time+req) + safe exit under `> [!TIP] Next Steps (Type number & Enter):`, Option 1 `(Recommended + why)`. Single number executes.
 - **Telemetry Cards**: single 3-line blockquote `📊 Milestone [████░░] n/m (source: STATE.md read this turn)` / `🎯 Active` / `🟢 Quality Gate (measured/not measured)`; every value traced or `not measured`. Suppress only when `PROMPTKIT.md` declares `status-cards: off` (default on). Halting → `> [!IMPORTANT] 🛑 Action Required` (PR links `[#N](url)`, no HTML).

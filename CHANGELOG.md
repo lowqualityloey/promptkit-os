@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Bounded Oracle Verification (Machine-Verified Done)**: Added to `protocols/code-quality-gate.md`, `workflows/fix.md`, and `workflows/commit.md`. Agents cannot self-certify completion or emit a green status card without an executed test/build command returning `exit code 0`. Enforces bounded auto-repair: max 2 retries before a hard halt with `> [!WARNING] Blocked: Awaiting Human Input`.
+- **Search Circuit Breaker (Context Churn Defense)**: Added to `templates/agent-directive-template.md` and `templates/agent-directive-lite-template.md`. Prevents runaway token waste by requiring the agent to halt and ask the user for exact paths if more than 6 consecutive read/search calls execute without an edit or test.
+- **Invariant Handoff to STATE.md**: Added to `workflows/onboard.md`. Architectural constraints, design tokens, or stack rules discovered during greenfield intake or brownfield scans are automatically appended to Section 4 (`Locked Technical Invariants`) of `docs/STATE.md`.
+
 ## [1.8.0] - 2026-09-16
 
 Release evidence chain: `docs/releases/2026-09-16-v1.8.0-*.md` (`REL-2026-09-16-V1.8.0-001`) · Tag: `v1.8.0` at source `05aac50` — pending maintainer tag action after this chain's CI passes · No breaking changes (minor).

@@ -32,7 +32,9 @@ Transform uncommitted workspace diffs into clean, atomic, high-signal Convention
 
 1. **Review Local Modifications**: Use `git diff` to review all current changes.
 2. **Review Untracked Files**: Inspect untracked files (`??` in `git status -s`). Ensure scratch scripts or build output folders are added to `.gitignore` rather than accidentally committed.
-3. **Quality Gate Verification**: Verify that relevant unit tests and typechecks pass (`pnpm tsc --noEmit`, `npm test`, or commands defined in `PROMPTKIT.md`).
+3. **Quality Gate Verification (Bounded Oracle Gate)**: 
+   - You MUST physically execute the test/build command via tool call and observe `exit code 0` before allowing a commit. 
+   - **Bounded Retry**: If the verification fails, apply a maximum of 2 automated repairs. If the 3rd attempt fails, HALT immediately with a `> [!WARNING]` and do not commit.
 
 ### Controlled & Release-Critical Work Commit Gate
 
