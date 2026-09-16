@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-09-16
+
+Release evidence chain: `docs/releases/2026-09-16-v1.8.0-*.md` (`REL-2026-09-16-V1.8.0-001`) · Tag: `v1.8.0` at source `05aac50` — pending maintainer tag action after this chain's CI passes · No breaking changes (minor).
+
 ### Added
 - **Bounded Discovery Intake (Greenfield & Brownfield)**: New `protocols/discovery-intake.md` protocol and conditional `Phase 0` in `workflows/onboard.md`: size-classed (S/M/L) bounded interview covering MVP intent, surfaces, deployment target, auth & data, constraints, design inputs (Figma/screenshots/docs), and integrations — asked in the context window (never modal pickers) so the user can attach links, screenshots, and documents. Intake closes with a recorded `close_reason`; unanswered slots become owned `ASSUMPTION-*` entries; AI-suggested scope goes to a **Later ledger** instead of the plan.
 - **Intake Signals & Migration Safety**: `templates/project-profile-template.md` now carries machine-readable `size:` / `intake-status:` lines; placeholders are declared **intake questions, not defaults**. Existing (brownfield) installs resolve to `legacy-partial` and are never re-interviewed.
@@ -16,6 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mid-Implementation Delta Path**: New-Requirement Interception tables in `workflows/sync.md` and `workflows/checkpoint.md` — doc-only deltas append; scope/AC changes require a Scope Change Record; architecture/data/deployment changes block execution and re-open planning.
 - **Product & Design Inputs Authority**: `protocols/context-sync.md` gains an authority row for Figma links, screenshots, `STYLE.md` / `DESIGN.md`, and tracker-board links captured by intake.
 - **Greenfield Routing**: `pk:onboard` registered as the first-class entry for brand-new projects across `workflows/route.md`, `docs/WORKFLOW-MAP.md`, README, and QUICKSTART.
+- **Telemetry Status Cards**: New lazily-loaded `protocols/telemetry-cards.md` format spec and `status-cards: on|off` machine line in `PROMPTKIT.md` — `off` suppresses the decorative completion card (default `on`); `> [!IMPORTANT]` / `> [!WARNING]` halts always fire.
+- **Behavioral Eval Harness**: New `scripts/run-behavioral-eval.sh` (+ `.ps1` twin) scoring transcripts against 15 rubric scenarios with embedded fixtures and an offline self-test wired into both CI jobs; baseline 15/15 with 5/5 regression controls in `docs/BEHAVIORAL-EVAL.md`.
+- **Tokenizer Validation**: New `scripts/measure-tokenizer-delta.sh` (+ `.ps1` twin) checking the `bytes/4` convention against `tiktoken` (`bytes/4` remains the gate); results published in `docs/BENCHMARKS.md` §9.
+- **LSP Diagnostics (Opt-In)**: `pk:review` gains a read-only diagnostics pull on TypeScript repos (`LSP Enabled: true`); session-endurance rules, TL;DR-first output, and tracker-picker onboarding included.
+- **Contributor Governance**: New workflow-lifecycle policy (`CONTRIBUTING.md` + `docs/adrs/0002-workflow-lifecycle-policy.md`) gating additions and retirements; static-token-headroom decision recorded in `docs/adrs/0001-static-token-headroom.md`.
+
+### Changed
+- **Directive Footprint**: Balanced static directive drops 2,496 → 2,335 tok (165 tok headroom) against the unchanged 2500 budget; Lite moves 1,059 → 1,079 against 1500. Per-task payloads and benchmark figures refreshed to live tool output.
+- **README Front Door**: Halved 50,146 → ~20k bytes with detail relocated to new `docs/COMPARISONS.md` (hosts, competitors) and `docs/ARCHITECTURE.md` (operating model, command reference, layout); lifecycle map consolidated in `docs/WORKFLOW-MAP.md`.
+
+### Fixed
+- **Pilot & Registry Hygiene**: Intake pilot `close_reason` corrected to the valid enum; `discovery-intake.md` registered in the progressive-loading list with a filesystem-derived drift guard; FAQ entry-count guard added (both test twins).
 
 ### Removed
 - **Retired `.kiro/specs` planning bundles**: The three tracked Kiro specification bundles (`agent-execution-control-handoff/`, `conventional-commit-versioning/`, `promptkit-sdlc-skill-adaptation/` — 12 files) are removed from the published tree. Public specifications live in `docs/specs/`; tool-local planning directories are not shipped to adopters. `.gitignore` no longer carries the per-directory negations, and `CONTRIBUTING.md` §6 now states the retirement rather than the retention policy. Evidence is preserved: the bundles remain recoverable from git history, and the dated release evaluations and Task Records that cite them are left unedited as historical records. No validator read `.kiro/`, so no gate is affected.

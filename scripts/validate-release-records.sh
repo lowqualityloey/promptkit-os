@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Read-only Better-PromptKit release-record consistency validator.
+# Read-only PromptKit OS release-record consistency validator.
 # Usage: ./scripts/validate-release-records.sh [--root PATH] [--strict]
 
 set -u
