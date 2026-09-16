@@ -1,4 +1,4 @@
-# Read-only Better-PromptKit release-record consistency validator.
+# Read-only PromptKit OS release-record consistency validator.
 # Usage: .\scripts\validate-release-records.ps1 [-Root PATH] [-Strict]
 
 [CmdletBinding()]
