@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Product & Design Inputs Authority**: `protocols/context-sync.md` gains an authority row for Figma links, screenshots, `STYLE.md` / `DESIGN.md`, and tracker-board links captured by intake.
 - **Greenfield Routing**: `pk:onboard` registered as the first-class entry for brand-new projects across `workflows/route.md`, `docs/WORKFLOW-MAP.md`, README, and QUICKSTART.
 
+### Removed
+- **Retired `.kiro/specs` planning bundles**: The three tracked Kiro specification bundles (`agent-execution-control-handoff/`, `conventional-commit-versioning/`, `promptkit-sdlc-skill-adaptation/` — 12 files) are removed from the published tree. Public specifications live in `docs/specs/`; tool-local planning directories are not shipped to adopters. `.gitignore` no longer carries the per-directory negations, and `CONTRIBUTING.md` §6 now states the retirement rather than the retention policy. Evidence is preserved: the bundles remain recoverable from git history, and the dated release evaluations and Task Records that cite them are left unedited as historical records. No validator read `.kiro/`, so no gate is affected.
+
 
 ## [1.7.0] - 2026-09-14
 
