@@ -485,6 +485,76 @@ How workflows feed into each other:
 
 ---
 
+## Lifecycle ASCII Map (relocated from the README front door)
+
+Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycle without guessing:
+
+```text
+               [ Inception & Intake ]
+                             │
+            ┌────────────────┴────────────────┐
+            ▼                                 ▼
+         pk:plan                           pk:onboard
+    (Greenfield Intake → RFC)                  (Brownfield Intake)
+            │                                 │
+            └────────────────┬────────────────┘
+                             │
+                             ▼
+                          pk:tasks
+          (Atomic Issues, Gherkin AC & Kanban Sync)
+                             │
+     ┌──────────────────────┼──────────────────────┐
+     ▼                      ▼                      ▼
+  pk:data                pk:auth                 pk:api
+(Relational Schema)    (Session & RBAC)    (Endpoints & Types)
+     │                      │                      │
+     └──────────────────────┼──────────────────────┘
+                            │
+                     [ Implementation ]
+                            │
+     ┌──────────────────────┼──────────────────────┐
+     ▼                      ▼                      ▼
+  pk:test               pk:design               pk:spike
+(Pyramid & Mocks)     (Tokens & A11y)      (Risk Spikes)
+     │                      │                      │
+     └──────────────────────┼──────────────────────┘
+                            │
+                   [ Quality, Debt & Remediation ]
+                             │
+      ┌──────────────┬───────┴───────┬──────────────┐
+      ▼              ▼               ▼              ▼
+   pk:debug       pk:fix        pk:refactor      pk:perf
+(Root Cause)   (Remediation)   (Modernization)  (Profiling)
+      │              │               │              │
+      └──────────────┴───────┬───────┴───────┴──────┘
+                             │
+                         pk:review
+                   (Two-Axis Code Audit)
+                             │
+                         pk:commit
+             (Atomic Conventional Commits)
+                            │
+                         pk:pr
+             (High-Signal PR Descriptions)
+                            │
+                     [ Release & Ops ]
+                            │
+                         pk:ship
+             (Zero-Downtime Deploy & Rollback)
+                            │
+                     [ Knowledge Capture & Handover ]
+                            │
+     ┌──────────────────────┴──────────────────────┐
+     ▼                                             ▼
+   pk:retro                                   pk:checkpoint
+(MADR & Journals)                       (Zero-Loss Chat Handover)
+```
+
+> [!NOTE]
+> **Cross-Cutting Utilities**: `pk:tutor` (Socratic mentorship & 3-tier progressive hints) and `pk:grill` (Staff Engineer architecture defense drills) operate perpendicularly across all lifecycle phases whenever conceptual guidance or invariant stress-testing is needed. `pk:sync` (hot-reload) and `pk:profile` (runtime Lite/Balanced/Turbo switching) are cross-cutting session utilities outside the lifecycle flow.
+
+---
+
 ## Related Documentation
 
 - [`BENCHMARKS.md`](./BENCHMARKS.md) — Factual token economics, architecture analysis, and context window preservation
