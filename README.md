@@ -57,7 +57,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 **Want to know more?** → See **[INTERESTING-FACTS.md](./docs/INTERESTING-FACTS.md)** for unique insights and design principles
 
 > [!TIP]
-> **Start with just 2 workflows.** You do not need to learn all 23 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand. New in v1.6.0: **2+1 profiles** — Lite (6 utility workflows, 1,059 tok), Balanced (23 workflows, default), Turbo experimental (parallel waves, ~2x measured cost).
+> **Start with just 2 workflows.** You do not need to learn all 23 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand. New in v1.6.0: **2+1 profiles** — Lite (6 utility workflows, 1,079 tok), Balanced (23 workflows, default), Turbo experimental (parallel waves, ~2x measured cost).
 
 ### 1. Add to Your Project
 

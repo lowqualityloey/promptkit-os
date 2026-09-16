@@ -298,6 +298,61 @@ if ($null -eq $balRow -or $null -eq $liteRow) {
     Check-Figure "Lite static directive" $liteTok (Digits (($liteRow -split '\|')[4]))
 }
 
+Write-Host "  -- Prose-claim sweep: anchored Lite shapes must equal $liteTok (dated blocks exempt)" -ForegroundColor Gray
+$shapes = @(
+    'Lite[^()|]*\([^()]*[0-9,]+ tok(en)?s?\)',
+    'Lite uses [0-9,]+ tok',
+    'Lite stays at [0-9,]+ tok',
+    '[0-9,]+ tok Lite',
+    '[0-9,]+ tok(en)?s? static'
+)
+$benchAll = Get-Content -Path (Join-Path $RepoRoot "docs/BENCHMARKS.md")
+$b9s = -1; $b9e = -1
+for ($i = 0; $i -lt $benchAll.Count; $i++) {
+    if ($benchAll[$i] -cmatch '^## 9\. Proxy Validation') { $b9s = $i }
+    elseif ($b9s -ge 0 -and $benchAll[$i] -cmatch '^## Related References') { $b9e = $i; break }
+}
+$lpAll = Get-Content -Path (Join-Path $RepoRoot "templates/lite-profile.md")
+$lps = -1; $lpe = -1
+for ($i = 0; $i -lt $lpAll.Count; $i++) {
+    if ($lpAll[$i] -cmatch '^## Token Measurements \(measured 2026-09-14') { $lps = $i }
+    elseif ($lps -ge 0 -and $lpAll[$i] -cmatch '^## ') { $lpe = $i; break }
+}
+if ($b9s -lt 0 -or $b9e -lt 0 -or $lps -lt 0 -or $lpe -lt 0) {
+    Write-Host "  ❌ FAIL: prose-sweep exempt-range markers missing" -ForegroundColor Red
+    $script:FailCount++
+} else {
+    $proseBad = @()
+    $proseFiles = @("README.md","QUICKSTART.md","FAQ.md","CONTRIBUTING.md","docs/BENCHMARKS.md","docs/COMPARISONS.md","docs/ARCHITECTURE.md","docs/WORKFLOW-MAP.md","docs/ADOPTION-GUIDE.md","docs/INTERESTING-FACTS.md","docs/DESIGN-MD-FAQ.md","docs/adaptation-friction-evaluation.md","templates/lite-profile.md")
+    foreach ($pf in $proseFiles) {
+        $fp = Join-Path $RepoRoot $pf
+        if (-not (Test-Path $fp)) { continue }
+        $lns = Get-Content -Path $fp
+        for ($i = 0; $i -lt $lns.Count; $i++) {
+            $ln = $lns[$i]
+            if ($ln -notmatch 'Lite' -or $ln -notmatch 'tok') { continue }
+            if ($pf -eq "docs/BENCHMARKS.md" -and $i -ge $b9s -and $i -lt $b9e) { continue }
+            if ($pf -eq "templates/lite-profile.md" -and $i -ge $lps -and $i -lt $lpe) { continue }
+            foreach ($pat in $shapes) {
+                foreach ($mm in ([regex]::Matches($ln, $pat))) {
+                    $m = $mm.Value
+                    if ($m -like '* to *') { continue }
+                    $v = [int]((([regex]::Matches($m, '[0-9,]+') | Select-Object -Last 1).Value) -replace ',', '')
+                    if ($v -ne $liteTok) { $proseBad += "  - ${pf}:$($i + 1): '$m' (live is $liteTok tok)" }
+                }
+            }
+        }
+    }
+    if ($proseBad.Count -eq 0) {
+        Write-Host "  ✅ PASS: all live Lite prose claims match tool output ($liteTok tok)" -ForegroundColor Green
+        $script:PassCount++
+    } else {
+        Write-Host "  ❌ FAIL: stale Lite prose figures:" -ForegroundColor Red
+        $proseBad | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+        $script:FailCount++
+    }
+}
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

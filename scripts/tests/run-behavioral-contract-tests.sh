@@ -288,6 +288,50 @@ LITE_STATIC_DOC="$(grep -E '^\| \*\*Lite\*\* \|' "$BENCH" | head -n 1 | awk -F'|
 check_figure "Balanced static directive" "$BAL_STATIC_LIVE" "$BAL_STATIC_DOC"
 check_figure "Lite static directive" "$LITE_STATIC_LIVE" "$LITE_STATIC_DOC"
 
+echo "  -- Prose-claim sweep: anchored Lite static-figure shapes must equal $LITE_STATIC_LIVE"
+echo "     Shapes: 'Lite (<claim> N tok)', 'Lite uses N tok', 'Lite stays at N tok',"
+echo "     'N tok Lite', 'N tokens static' on a Lite line. Tables (pipes) are covered"
+echo "     by the cell checks above, not here. Saving-range 'X to Y' strings are"
+echo "     skipped (derived display, not static claims). Archived token-efficiency-review.md"
+echo "     is exempt by class (dated record, like releases/ and archive/)."
+LITE_PROF="$REPO_ROOT/templates/lite-profile.md"
+B9_S="$(grep -n '^## 9\. Proxy Validation' "$BENCH" | cut -d: -f1)"
+B9_E="$(awk -v s="$B9_S" 'NR>s && /^## Related References/ {print NR; exit}' "$BENCH")"
+LP_S="$(grep -n '^## Token Measurements (measured 2026-09-14' "$LITE_PROF" | cut -d: -f1)"
+LP_E="$(awk -v s="$LP_S" 'NR>s && /^## / {print NR; exit}' "$LITE_PROF")"
+SHAPES='Lite[^()|]*\([^()]*[0-9,]+ tok(en)?s?\)|Lite uses [0-9,]+ tok|Lite stays at [0-9,]+ tok|[0-9,]+ tok Lite|[0-9,]+ tok(en)?s? static'
+if [ -z "$B9_S" ] || [ -z "$B9_E" ] || [ -z "$LP_S" ] || [ -z "$LP_E" ]; then
+    echo "  ❌ FAIL: prose-sweep exempt-range markers missing (BENCHMARKS §9 / lite-profile dated block)"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+    PROSE_BAD=""
+    for pf in README.md QUICKSTART.md FAQ.md CONTRIBUTING.md docs/BENCHMARKS.md docs/COMPARISONS.md docs/ARCHITECTURE.md docs/WORKFLOW-MAP.md docs/ADOPTION-GUIDE.md docs/INTERESTING-FACTS.md docs/DESIGN-MD-FAQ.md docs/adaptation-friction-evaluation.md templates/lite-profile.md; do
+        [ -f "$REPO_ROOT/$pf" ] || continue
+        while IFS= read -r mline; do
+            ln="${mline%%:*}"; txt="${mline#*:}"
+            case "$txt" in *Lite*) ;; *) continue ;; esac
+            if { [ "$pf" = "docs/BENCHMARKS.md" ] && [ "$ln" -ge "$B9_S" ] && [ "$ln" -lt "$B9_E" ]; } || \
+               { [ "$pf" = "templates/lite-profile.md" ] && [ "$ln" -ge "$LP_S" ] && [ "$ln" -lt "$LP_E" ]; }; then
+                continue
+            fi
+            while IFS= read -r m; do
+                case "$m" in *" to "*) continue ;; esac
+                v="$(echo "$m" | grep -oE '[0-9,]+' | tail -n 1 | tr -cd '0-9')"
+                if [ "$v" -ne "$LITE_STATIC_LIVE" ]; then
+                    PROSE_BAD="${PROSE_BAD}  - $pf:$ln: '$m' (live is $LITE_STATIC_LIVE tok)\n"
+                fi
+            done < <(echo "$txt" | grep -oE "$SHAPES" || true)
+        done < <(grep -n 'Lite' "$REPO_ROOT/$pf" | grep 'tok' || true)
+    done
+    if [ -z "$PROSE_BAD" ]; then
+        echo "  ✅ PASS: all live Lite prose claims match tool output ($LITE_STATIC_LIVE tok)"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        printf '  ❌ FAIL: stale Lite prose figures:\n%b' "$PROSE_BAD"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+fi
+
 echo ""
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
