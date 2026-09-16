@@ -92,11 +92,12 @@ PromptKit OS is designed for **gradual adoption**. You don't need to:
    # On Windows PowerShell:
    # git submodule add https://github.com/lowqualityloey/promptkit-os .promptkit; .\.promptkit\init.ps1 --balanced
 
-   git add .promptkit/ PROMPTKIT.md
-   # Also stage whichever agent config file init created or updated:
-   # AGENTS.md (fallback), CLAUDE.md, GEMINI.md, .cursorrules,
-   # .cursor/rules/promptkit.mdc, .windsurfrules, .clinerules,
-   # .traerules, .opencode/rules.md, or .github/copilot-instructions.md
+    git add .promptkit/ PROMPTKIT.md
+    # Also stage whichever agent config file init created or updated (AGENTS.md is always the
+    # universal fallback; host-specific files are probed or passed with --host / --add-host / --target):
+    # AGENTS.md (fallback), CLAUDE.md, GEMINI.md, .cursorrules,
+    # .cursor/rules/promptkit.mdc, .windsurfrules, .clinerules,
+    # .traerules, .opencode/rules.md, .github/copilot-instructions.md, or CONVENTIONS.md (Aider)
    git commit -m "chore: add promptkit-os for engineering standards"
    ```
 

@@ -5,7 +5,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-lowqualityloey%2Fpromptkit--os-black.svg)](https://github.com/lowqualityloey/promptkit-os)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-orange?style=flat&logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/itsjonellmb)
 
-The open-source Engineering Operating System for AI coding assistants (Claude Code, Antigravity, Cursor, Windsurf, GitHub Copilot, Cline, Roo Code, Trae, OpenCode, Gemini CLI, and Aider).
+The open-source Engineering Operating System for AI coding assistants (Claude Code, Gemini CLI, Cursor, Windsurf, GitHub Copilot, Cline, Roo Code, Trae, OpenCode, Aider, and Antigravity).
 
 PromptKit OS equips your coding assistant with disciplined engineering workflows: spec-driven architecture, living session state, phased Expand-Contract zero-downtime database migrations, empirical debugging, and atomic Conventional Commits without colliding with IDE slash commands.
 
@@ -20,7 +20,7 @@ PromptKit OS equips your coding assistant with disciplined engineering workflows
 | **Who it is NOT for** | Developers looking for an autocomplete inline plugin, a CLI binary, or an npm dependency. PromptKit OS is pure markdown protocols and prompts. |
 | **Why it is better** | Replaces unguided "vibe coding" and token-wasting guess-and-patch loops with systematic, hypothesis-driven development workflows. Structured workflows are designed to reduce redundant back-and-forth by enforcing one-pass planning, artifact reuse, and surgical fixes over guess-and-patch loops. |
 | **Key differences** | Namespaced triggers (`pk:` prefix), guardrails against single-step destructive schema drops (phased Expand-Contract policy), strict project-scoped database container isolation, Socratic guidance that avoids unsolicited code dumps, and monorepo workspace isolation (scoped `--filter` commands). |
-| **Token Efficiency** | **Zero Static Token Bloat**: Injects only a compact router directive (~1,079 tok Lite [95% reduction] / ~2,401 tok Balanced [88% reduction] vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). Full workflows are read Just-In-Time (JIT) from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md). |
+| **Token Efficiency** | **Zero Static Token Bloat**: Injects only a compact router directive (~1,079 tok Lite [95% reduction] / ~2,401 tok Balanced [88% reduction] vs the ~19.8k derived core-subset baseline (v1.6.0-dated; re-derives with workflow growth, and ~97-99% vs the full 23-workflow set)). Full workflows are read Just-In-Time (JIT) from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md). |
 | **Durable State Persistence** | **Cross-Session Memory**: State is never lost when chat sessions compact or reset. All active milestones, tasks in flight, and architectural invariants persist directly in Git-tracked markdown (`docs/STATE.md` and `docs/tasks/`). Run `pk:checkpoint` and resume in any fresh session via `pk:route`. |
 | **Adaptive Ceremony & Model Tiering** | **Scales with Risk**: Bypasses heavy templates for daily tweaks (Level 0/1) while reserving deep reasoning, Task Records, and verification gates for schema, auth, and release risks (Level 2/3). Matches LLM model tiers to task risk to prevent token waste. |
 | **Enforced Done-Gates** | **Not Inert Advice**: PromptKit OS enforces verifiable engineering done-gates: strict milestone git boundaries (blocking milestone transitions on the task's own uncommitted changes), automated pre-commit secret leak scans (`pk:commit`), and required Gherkin Acceptance Criteria verification proof. Sampled prompt compliance is measured, not asserted: 15/15 baseline + 5/5 regression controls (see [`docs/BEHAVIORAL-EVAL.md`](./docs/BEHAVIORAL-EVAL.md)). |
@@ -86,7 +86,15 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit;
 - **Turbo** (`--turbo --experimental`): Balanced + parallel waves, up to ~2x measured token cost, experimental, still requires human L3 approval — greenfield
 
 Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Upgrade anytime: `.promptkit/init.sh --balanced` or `--lite`.
-When run in an interactive terminal without flags, `init.sh` / `init.ps1` presents an interactive visual menu to select your profile. In CI or non-interactive environments, pass a profile flag or set `PROMPTKIT_NO_INTERACTIVE=1`.
+When run in an interactive terminal without flags, `init.sh` / `init.ps1` probes your installed AI hosts and presents a visual menu to select both your **profile** and target **hosts**. In CI or non-interactive environments, pass flags or set `PROMPTKIT_NO_INTERACTIVE=1`.
+
+**Host targeting:** scope the install to specific assistants and adjust it later —
+```bash
+./.promptkit/init.sh --host=opencode,claude   # also write directives to these hosts
+./.promptkit/init.sh --add-host=cursor         # add one host to an existing install
+./.promptkit/init.sh --target=docs/AI.md       # a custom directive file outside the known list
+```
+`AGENTS.md` is always written as the universal fallback; `--host` adds host-specific files on top (without it, the installer probes your environment). Re-running never re-asks intake and never overwrites files you already own.
 
 <details>
 <summary>Or step-by-step / direct clone</summary>
@@ -115,7 +123,7 @@ The initialization script is transparent and idempotent:
 - **`./docs/STATE.md`**: The living project tracker recording active milestones, tasks in flight, and locked architectural invariants.
 - **`.github/pull_request_template.md`**: Staff-level Pull Request template with Gherkin acceptance criteria checklists, Expand-Contract database safety gates, and automated test evidence tables.
 - **`.github/ISSUE_TEMPLATE/task.md`**: Standardized task specification issue template for opening structured Gherkin work units directly in GitHub web UI or CLI.
-- **Agent Directives**: Injects or updates an idempotent directive block in `AGENTS.md` (or `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/`, `.clinerules`, `.traerules`, `.opencode/rules.md`, `.windsurfrules`, `.github/copilot-instructions.md`).
+- **Agent Directives**: Injects or updates an idempotent directive block in the hosts you selected (probed or passed via `--host`) — e.g. `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/`, `.clinerules`, `.traerules`, `.opencode/rules.md`, `.windsurfrules`, `.github/copilot-instructions.md`, or `CONVENTIONS.md` (Aider).
 - **Just-In-Time (JIT) Workflow Injection**: Zero static token bloat. Workflows are loaded into agent context on-demand from local filesystem files only when triggered (avoiding 18k+ token monolithic prompt injection).
 - **Zero-Token Label Provisioning (Optional)**: Provision standardized repository labels (`priority/p0-p3`, `type:*`, `area:*`) with zero token burn using `pwsh -File .promptkit/scripts/setup-github-labels.ps1` (or `bash .promptkit/scripts/setup-github-labels.sh`).
 - **Zero Lock-In**: Installs zero binaries, adds zero npm dependencies, and runs zero background daemons.
@@ -222,7 +230,7 @@ Scaffolded automatically during initialization from `templates/state-tracker-tem
 
 ## Host & External Tool Composition
 
-Works with 10 hosts (Claude Code, Gemini, Cursor, Windsurf, Cline/Roo, Trae, OpenCode, Copilot, Aider) plus subordinate external skills — PromptKit stays authoritative for classification, routing, and gates. Full matrix and governance boundary: [`docs/COMPARISONS.md`](./docs/COMPARISONS.md#host--external-tool-composition).
+The installer targets 9 host-specific directive files — Claude Code (`CLAUDE.md`), OpenCode (`.opencode/rules.md`), Cursor (`.cursorrules`), Gemini (`GEMINI.md`), Windsurf (`.windsurfrules`), Copilot (`.github/copilot-instructions.md`), Cline/Roo (`.clinerules`), Trae (`.traerules`), and Aider (`CONVENTIONS.md`) — plus a universal `AGENTS.md` fallback that Antigravity and other AGENTS-aware agents read. It probes installed hosts (or you choose with `--host`), so nothing you do not use gets written — plus subordinate external skills. PromptKit stays authoritative for classification, routing, and gates. Full matrix and governance boundary: [`docs/COMPARISONS.md`](./docs/COMPARISONS.md#host--external-tool-composition).
 
 ---
 
