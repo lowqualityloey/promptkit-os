@@ -204,6 +204,33 @@ assert_contains "workflows/plan.md" "never a full re-interview" "Plan workflow c
 assert_contains "workflows/commit.md" "closed-set operational choices" "Blanket Recommended-pickers are bounded to closed-set operational choices"
 
 echo ""
+echo "📌 Scenario O: Protocol registry & FAQ count drift guards"
+PROTO_FAIL=0
+for proto in "$REPO_ROOT"/protocols/*.md; do
+    base=$(basename "$proto")
+    [ "$base" = "setup.md" ] && continue
+    if ! grep -Fq "$base" "$REPO_ROOT/protocols/setup.md"; then
+        echo "  ❌ FAIL: protocols/setup.md missing registration for $base"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        PROTO_FAIL=1
+    fi
+done
+if [ "$PROTO_FAIL" -eq 0 ]; then
+    echo "  ✅ PASS: Every protocols/*.md file is registered in protocols/setup.md"
+    PASS_COUNT=$((PASS_COUNT + 1))
+fi
+FAQ_N=$(grep -c "^## [0-9]" "$REPO_ROOT/FAQ.md")
+CLAIMED_N=$(grep -hoE "for the [0-9]+ most common questions|The [0-9]+ questions" "$REPO_ROOT/README.md" "$REPO_ROOT/FAQ.md" | grep -oE "[0-9]+" | sort -u)
+UNIQUE_CLAIMED=$(echo "$CLAIMED_N" | wc -w | tr -d ' ')
+if [ "$UNIQUE_CLAIMED" -eq 1 ] && [ "$CLAIMED_N" -eq "$FAQ_N" ]; then
+    echo "  ✅ PASS: FAQ entry count ($FAQ_N) matches published claims in README.md/FAQ.md"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: FAQ entry count is $FAQ_N but published claims are [$(echo "$CLAIMED_N" | tr '\n' ' ')] — reconcile counts"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+echo ""
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"
