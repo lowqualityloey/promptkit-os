@@ -7,7 +7,7 @@ Canonical format specification for completion status cards and human-action call
 
 ## Dual-Compatible Telemetry Status Cards
 
-Single 3-line blockquote spec: `> 📊 Milestone: <name> [████░░] n/m (pct%) — source: STATE.md read this turn` / `> 🎯 Active: <task>` / `> 🟢 Quality Gate: <measured this turn / not measured>`. Text fallback `(n of m done)` for screen readers.
+Single 3-line blockquote spec: `> 📊 Milestone: <name> [████░░] n/m (pct%) — source: STATE.md read this turn` / `> 🎯 Active: <task>` / `> 🟢 Quality Gate: <measured this turn / not measured>`. Text fallback `(n of m done)` for screen readers. Append a fourth line only when the host exposes per-turn usage: `> 💰 Spend: <in> / <out> (source: host usage)`; otherwise omit the line (L0 trivial turns omit it too).
 
 ---
 
@@ -20,6 +20,10 @@ Halting for human decisions uses `> [!IMPORTANT]` titled `### 🛑 Action Requir
 ## Opt-Out
 
 `status-cards: off` in `PROMPTKIT.md` suppresses the decorative card only (default is `on`; a missing line means `on`). It never suppresses a genuine halt: `> [!IMPORTANT]` "Action Required From You" and `> [!WARNING]` "Blocked" states still fire.
+
+## Quiet Completion
+
+When `docs/STATE.md` shows no open milestones, tasks, or blockers, end the turn with a completion statement (`All milestones closed — nothing pending.`) instead of a `> [!TIP]` Next-Step recommendation. This rule is independent of `status-cards: off` (decoration vs nagging are separate knobs): quiet completion suppresses recommendations, never halts.
 
 ## Provenance Reminder
 

@@ -115,9 +115,12 @@ Ensure the workspace is in a clean state before switching sessions:
    - Record newly agreed-upon non-negotiables in Section 4 (`Locked Technical Invariants`).
    - Record active blockers in Section 5 (`Known Blockers, Risks & Open Questions`).
    - Set the prioritized next tasks in Section 7 (`Next Immediate Actions`).
-   - Append an entry to Section 8 (`Session Continuity Log`):
-     `| YYYY-MM-DD | [Agent/Author] | [Active Task/Milestone] | [Summary of work & decisions] |`
-   If `docs/STATE.md` does not yet exist, offer to scaffold it from `templates/state-tracker-template.md`.
+    - Append an entry to Section 8 (`Session Continuity Log`):
+      `| YYYY-MM-DD | [Agent/Author] | [Active Task/Milestone] | [Summary of work & decisions] |`
+    - Append one row to the Session Spend Ledger (new Section 9 in the state template; skip trivial sessions under ~5 turns with no workflow usage):
+      `| YYYY-MM-DD (focus) | [turns] | [measured in/out or not measured] | [~estimated payload] | [host usage source or why not measured] |`
+      and refresh its Running-total line. Per-turn card figures stay in chat history; the ledger is the only durable spend artifact.
+    If `docs/STATE.md` does not yet exist, offer to scaffold it from `templates/state-tracker-template.md`.
 
 2. **Generate Clean Handover Prompt**:
    Generate a self-contained, copy-pasteable prompt block formatted for a brand-new chat session:
@@ -223,6 +226,23 @@ When the human informs the assistant that a pull request has been merged into `m
    - Reset Section 3 (`Active Working Set`) for the next task.
    - Append a completion record to Section 8 (`Session Continuity Log`):
      `| YYYY-MM-DD | Assistant (pk:checkpoint) | Post-Merge Sync | PR merged into main; pulled latest and pruned local branch |`
+
+---
+
+## Project Closeout Record (COMPLETED transition)
+
+When the developer declares the project finished and `docs/STATE.md` Overall Status moves to `COMPLETED` (all milestones closed, release evidence archived, zero open blockers), seal the spend ledger with a closeout record at the end of `docs/STATE.md`:
+
+```markdown
+## Project Closeout (Definition of Done)
+- **Completed**: [YYYY-MM-DD] · **Scope delivered**: [milestones shipped]
+- **Measured spend**: [in/out totals with per-session sources, or not measured]
+- **Estimated spend**: [sum of per-task payloads for work done]
+- **Variance**: [measured vs estimated on measured sessions, or not measurable]
+- **Gates held**: [contract suite, budgets, references at closeout SHA]
+```
+
+No further ledger rows accumulate after `COMPLETED`. This record is the receipt the efficiency claims reconcile against — estimated vs measured, in one place.
 
 ---
 
