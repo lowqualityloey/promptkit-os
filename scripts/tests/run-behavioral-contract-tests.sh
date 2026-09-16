@@ -236,6 +236,59 @@ else
 fi
 
 echo ""
+echo "📌 Scenario P: Published Figure Exact-Match (BENCHMARKS vs tool output)"
+# Guards the six section-3 payload cells, the two section-2 static cells, and the
+# six reduction labels against figure rot. Dated records (§8 @76e3168, §9 @1312831,
+# lite-profile 2026-09-14 block) are historical and explicitly exempt.
+# Rounding rule: nearest integer percent, ((diff*100 + base/2) / base).
+BENCH="$REPO_ROOT/docs/BENCHMARKS.md"
+PER_TASK_OUT="$(bash "$REPO_ROOT/scripts/measure-per-task-tokens.sh" --strict 2>/dev/null)"
+STATIC_OUT="$(bash "$REPO_ROOT/scripts/measure-tokens.sh" --strict 2>/dev/null)"
+live_payload() {
+    echo "$PER_TASK_OUT" | awk -F'|' -v k="$1" '$1=="BASELINE" && $2==k {print $3}'
+}
+live_limit() {
+    echo "$PER_TASK_OUT" | awk -F'|' -v k="$1" '$1=="BASELINE" && $2==k {print $4}'
+}
+doc_row() {
+    grep -E "^\| \*\*\`$1\`\*\* \|" "$BENCH" | head -n 1
+}
+check_figure() {
+    local desc="$1" live="$2" doc="$3"
+    if [ "$live" -eq "$doc" ]; then
+        echo "  ✅ PASS: $desc ($doc tok == tool output)"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        echo "  ❌ FAIL: $desc published $doc tok but tool output is $live tok"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+for spec in "pk:fix" "pk:plan" "pk:ship"; do
+    ROW="$(doc_row "$spec")"
+    BASE="$(echo "$ROW" | awk -F'|' '{print $4}' | tr -cd '0-9')"
+    BAL_DOC="$(echo "$ROW" | awk -F'|' '{print $5}' | tr -cd '0-9')"
+    LITE_DOC="$(echo "$ROW" | awk -F'|' '{print $6}' | grep -oE '[0-9,]+' | head -n 1 | tr -cd '0-9')"
+    BAL_LIVE="$(live_payload "$spec/balanced")"
+    LITE_LIVE="$(live_payload "$spec/lite")"
+    BASE_LIVE="$(live_limit "$spec/balanced")"
+    check_figure "$spec Balanced payload" "$BAL_LIVE" "$BAL_DOC"
+    check_figure "$spec Lite payload" "$LITE_LIVE" "$LITE_DOC"
+    check_figure "$spec baseline constant" "$BASE_LIVE" "$BASE"
+    BAL_PCT_DOC="$(echo "$ROW" | grep -oE '\-[0-9]+% Balanced' | tr -cd '0-9')"
+    LITE_PCT_DOC="$(echo "$ROW" | grep -oE '\-[0-9]+% Lite' | tr -cd '0-9')"
+    BAL_PCT_LIVE=$(( ((BASE - BAL_LIVE) * 100 + BASE / 2) / BASE ))
+    LITE_PCT_LIVE=$(( ((BASE - LITE_LIVE) * 100 + BASE / 2) / BASE ))
+    check_figure "$spec Balanced reduction label" "$BAL_PCT_LIVE" "$BAL_PCT_DOC"
+    check_figure "$spec Lite reduction label" "$LITE_PCT_LIVE" "$LITE_PCT_DOC"
+done
+BAL_STATIC_LIVE="$(echo "$STATIC_OUT" | awk -F'|' '$1=="BALANCED" {print $2}')"
+LITE_STATIC_LIVE="$(echo "$STATIC_OUT" | awk -F'|' '$1=="LITE" {print $2}')"
+BAL_STATIC_DOC="$(grep -E '^\| \*\*Balanced\*\* \|' "$BENCH" | head -n 1 | awk -F'|' '{print $5}' | tr -cd '0-9')"
+LITE_STATIC_DOC="$(grep -E '^\| \*\*Lite\*\* \|' "$BENCH" | head -n 1 | awk -F'|' '{print $5}' | tr -cd '0-9')"
+check_figure "Balanced static directive" "$BAL_STATIC_LIVE" "$BAL_STATIC_DOC"
+check_figure "Lite static directive" "$LITE_STATIC_LIVE" "$LITE_STATIC_DOC"
+
+echo ""
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"
