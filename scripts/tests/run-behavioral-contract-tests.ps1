@@ -196,6 +196,31 @@ Assert-Contains "protocols/context-sync.md" "Product & Design Inputs" "Context-s
 Assert-Contains "workflows/plan.md" "never a full re-interview" "Plan workflow caps partial-intake repair to missing critical slots only (legacy protection)"
 Assert-Contains "workflows/commit.md" "closed-set operational choices" "Blanket Recommended-pickers are bounded to closed-set operational choices"
 
+Write-Host "`n📌 Scenario O: Protocol registry & FAQ count drift guards" -ForegroundColor Yellow
+$protoFail = $false
+$setupContent = Get-Content -Path (Join-Path $RepoRoot "protocols/setup.md") -Raw
+foreach ($proto in Get-ChildItem (Join-Path $RepoRoot "protocols") -Filter "*.md") {
+    if ($proto.Name -eq "setup.md") { continue }
+    if ($setupContent -notmatch [regex]::Escape($proto.Name)) {
+        Write-Host "  ❌ FAIL: protocols/setup.md missing registration for $($proto.Name)" -ForegroundColor Red
+        $script:FailCount++
+        $protoFail = $true
+    }
+}
+if (-not $protoFail) {
+    Write-Host "  ✅ PASS: Every protocols/*.md file is registered in protocols/setup.md" -ForegroundColor Green
+    $script:PassCount++
+}
+$faqN = @(Select-String -Path (Join-Path $RepoRoot "FAQ.md") -Pattern '^## [0-9]').Count
+$claimedN = Select-String -Path (Join-Path $RepoRoot "README.md"), (Join-Path $RepoRoot "FAQ.md") -Pattern 'for the ([0-9]+) most common questions|The ([0-9]+) questions' -AllMatches | ForEach-Object { $_.Matches } | ForEach-Object { if ($_.Groups[1].Success) { $_.Groups[1].Value } else { $_.Groups[2].Value } } | Sort-Object -Unique
+if (($claimedN.Count -eq 1) -and ([int]$claimedN[0] -eq $faqN)) {
+    Write-Host "  ✅ PASS: FAQ entry count ($faqN) matches published claims in README.md/FAQ.md" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: FAQ entry count is $faqN but published claims are [$($claimedN -join ' ')] — reconcile counts" -ForegroundColor Red
+    $script:FailCount++
+}
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
