@@ -212,7 +212,7 @@ if (-not $protoFail) {
     $script:PassCount++
 }
 $faqN = @(Select-String -Path (Join-Path $RepoRoot "FAQ.md") -Pattern '^## [0-9]').Count
-$claimedN = Select-String -Path (Join-Path $RepoRoot "README.md"), (Join-Path $RepoRoot "FAQ.md") -Pattern 'for the ([0-9]+) most common questions|The ([0-9]+) questions' -AllMatches | ForEach-Object { $_.Matches } | ForEach-Object { if ($_.Groups[1].Success) { $_.Groups[1].Value } else { $_.Groups[2].Value } } | Sort-Object -Unique
+$claimedN = @(Select-String -Path (Join-Path $RepoRoot "README.md"), (Join-Path $RepoRoot "FAQ.md") -Pattern 'for the ([0-9]+) most common questions|The ([0-9]+) questions' -AllMatches | ForEach-Object { $_.Matches } | ForEach-Object { if ($_.Groups[1].Success) { $_.Groups[1].Value } else { $_.Groups[2].Value } } | Sort-Object -Unique)
 if (($claimedN.Count -eq 1) -and ([int]$claimedN[0] -eq $faqN)) {
     Write-Host "  ✅ PASS: FAQ entry count ($faqN) matches published claims in README.md/FAQ.md" -ForegroundColor Green
     $script:PassCount++
