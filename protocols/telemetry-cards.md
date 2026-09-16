@@ -17,6 +17,10 @@ Halting for human decisions uses `> [!IMPORTANT]` titled `### 🛑 Action Requir
 
 ---
 
+## Opt-Out
+
+`status-cards: off` in `PROMPTKIT.md` suppresses the decorative card only (default is `on`; a missing line means `on`). It never suppresses a genuine halt: `> [!IMPORTANT]` "Action Required From You" and `> [!WARNING]` "Blocked" states still fire.
+
 ## Provenance Reminder
 
 Every number in a status card must trace to a command executed or file read in this turn (see the directive's Telemetry Card Provenance rule); otherwise emit `not measured`. Never claim a green Quality Gate without an executed check this turn.

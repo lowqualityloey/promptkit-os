@@ -288,6 +288,7 @@ In multi-agent environments (Antigravity, Claude Code, Cursor background agents)
   ```
   ````
 - **Zero Action-Blindness**: Whenever the assistant halts a turn requiring human decisions, PR review, or local actions, it terminates the message with a high-contrast `> [!IMPORTANT]` callout (`### 🛑 Action Required From You:`). If blocked, it emits `> [!WARNING]` (`### ⚠️ Blocked: Waiting on Human Input`).
+- **Opt-out**: set `status-cards: off` in `PROMPTKIT.md` to suppress the decorative card (default `on`; halts still fire).
 - **Dual-Compatibility & Markdown Parser Hygiene**: Status cards and callouts render as clean bordered accent blocks in terminal CLIs (OpenCode, Claude Code) and rich alert cards in web IDEs and DeepSeek harnesses. All callouts strictly use the `> [!TYPE]` blockquote syntax to prevent raw unrendered bracket leakage across Markdown renderers.
 
 ### 5. Interactive Decision Handoffs
