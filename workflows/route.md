@@ -91,6 +91,15 @@ The 4-level ceremony model refines and clarifies the system's execution boundari
 
 4b. **Tie-Break (Mixed-Level Requests)**: If two or more levels plausibly apply to one request (e.g. "fix this typo and add the index"), classify at the **highest** applicable level and state that choice in the Turn 1 banner. Risk-before-size still applies downward never upward.
 
+4c. **Hierarchical Workflow Composition (Primary vs. Supporting)**:
+To eliminate cognitive confusion, duplicate context loads, and conflicting instructions when a task touches multiple domains (e.g., implementing a feature while modifying database schemas and writing tests):
+- **One Primary Workflow**: Exactly **one** primary lifecycle workflow owns the active turn and execution state (e.g., `pk:fix` for bug remediation, `pk:plan` for controlled planning, `pk:debug` for root-cause diagnosis).
+- **Explicit Supporting Checks**: Auxiliary domain concerns do NOT launch competing primary workflows. Instead, they are declared and evaluated as modular **Supporting Checks** under the primary workflow's lifecycle:
+  - *Data Safety Check*: If the primary task touches tables or columns, enforce `workflows/data.md` Expand-Contract invariants without replacing the primary workflow.
+  - *Quality Gate Check*: All primary workflows terminate at `protocols/code-quality-gate.md` for machine-verified oracle compliance.
+  - *Security Check*: If auth or secrets are touched, attach `workflows/auth.md` invariants as supporting constraints.
+- **Rule**: Never load multiple parallel primary workflow files in a single turn. Declare `Primary: <workflow>` and list active `Supporting Checks: [<protocol/workflow>]`.
+
 ### Model-Tiering & Resource Optimization Guidance
 
 To optimize API cost, token consumption, and reasoning depth, match your LLM selection to the active ceremony level:
