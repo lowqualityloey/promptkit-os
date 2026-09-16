@@ -366,14 +366,14 @@ if ($HostSet) {
 }
 function Test-HostDetected($Name) {
     switch ($Name) {
-        "claude" { return ($null -ne (Get-Command claude -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".claude")) }
+        "claude" { return ($null -ne (Get-Command claude -ErrorAction SilentlyContinue)) }
         "opencode" { return ($null -ne (Get-Command opencode -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".config/opencode")) }
         "cursor" { return ($null -ne (Get-Command cursor -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".cursor")) }
-        "gemini" { return ($null -ne (Get-Command gemini -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".gemini")) }
+        "gemini" { return ($null -ne (Get-Command gemini -ErrorAction SilentlyContinue)) }
         "windsurf" { return ($null -ne (Get-Command windsurf -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".windsurf")) }
-        "copilot" { return ($null -ne (Get-Command copilot -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".copilot")) }
+        "copilot" { return ($null -ne (Get-Command copilot -ErrorAction SilentlyContinue)) }
         "cline" { return (Test-Path (Join-Path $HOME ".config/cline")) -or (Test-Path (Join-Path $HOME ".cline")) }
-        "trae" { return ($null -ne (Get-Command trae -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".trae")) }
+        "trae" { return ($null -ne (Get-Command trae -ErrorAction SilentlyContinue)) }
         "aider" { return ($null -ne (Get-Command aider -ErrorAction SilentlyContinue)) }
         default { return $false }
     }

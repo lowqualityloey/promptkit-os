@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Search Circuit Breaker (Context Churn Defense)**: Added to `templates/agent-directive-template.md` and `templates/agent-directive-lite-template.md`. Prevents runaway token waste by requiring the agent to halt and ask the user for exact paths if consecutive read/search calls exceed the ceremony budget (≤6 for L0/L1, ≤12 for L2/L3) without an edit or test.
 - **Invariant Handoff to STATE.md**: Added to `workflows/onboard.md`. Architectural constraints, design tokens, or stack rules discovered during greenfield intake or brownfield scans are automatically appended to Section 4 (`Locked Technical Invariants`) of `docs/STATE.md`.
 
+### Fixed
+- **CLI Host Probe Precision**: Fixed false-positive detection in `init.sh` and `init.ps1` where stale or leftover configuration directories (e.g. `~/.claude`, `~/.copilot`) caused uninstalled CLI assistants to be marked as `[detected]`. CLI hosts now strictly probe active executable binaries in `$PATH`.
+
 ## [1.8.0] - 2026-09-16
 
 Release evidence chain: `docs/releases/2026-09-16-v1.8.0-*.md` (`REL-2026-09-16-V1.8.0-001`) · Tag: `v1.8.0` at source `05aac50` — pending maintainer tag action after this chain's CI passes · No breaking changes (minor).
