@@ -114,6 +114,9 @@ Assert-Contains "workflows/tasks.md" "Dual-Compatible Telemetry Status Card" "Ta
 Assert-Contains "workflows/test.md" "Dual-Compatible Telemetry Status Card" "Test workflow includes telemetry status card"
 Assert-Contains "workflows/fix.md" "Dual-Compatible Telemetry Status Card" "Fix workflow includes telemetry status card"
 Assert-Contains "workflows/plan.md" "Interactive Decision & Trade-Off Clarification" "Plan workflow includes interactive decision prompt guidelines"
+Assert-Contains "workflows/design-system.md" "No-DESIGN.md Visual Floor" "Design workflow defines the no-brand-file finish bar"
+Assert-Contains "workflows/design-system.md" "Favicon" "Design gate requires a declared favicon"
+Assert-Contains "workflows/design-system.md" "21st.dev" "Design workflow names the advisory catalog with exclusions"
 
 Write-Host "`n📌 Scenario K: Project Database & Harness Isolation" -ForegroundColor Yellow
 Assert-Contains "templates/agent-directive-template.md" "Project Database & Harness Isolation" "Directive enforces project database isolation guardrail"

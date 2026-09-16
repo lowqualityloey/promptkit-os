@@ -313,6 +313,18 @@ Ensure all async components support the 4 fundamental UI states with meaningful 
 
 ---
 
+## No-DESIGN.md Visual Floor
+
+When no `DESIGN.md` exists, UI work still ships finished — restraint plus a defined minimum (propose accept-or-change, never impose):
+
+- **One icon family**: the Iconify single-family rule applies as a requirement, not guidance — every view gets its icon pass (no icon-less interactive controls, no mixed weights).
+- **Tabular figures**: `tabular-nums` on all metrics, counters, and tables.
+- **Favicon**: every shipped page declares a favicon derived from a stated rule (e.g. first letterform of the wordmark on the primary token, or the primary action glyph); no blank-tab default ships.
+- **One type pairing, proposed**: a single accept-or-change pairing (display + body, with 2026-era rationale); the system stack remains the default unless explicitly accepted.
+- **21st.dev catalog (React + Tailwind only, advisory)**: the agent may propose specific components with links as a taste source; each proposal needs human approval and must inherit project tokens and pass the a11y, single-family, and license gates. Free components only unless the human buys. Excluded: CLI/MCP install paths, templates-as-starters, offline reliance, blanket trust. Offline or out-of-scope stacks fall back to system defaults.
+
+---
+
 ## 📋 UI Delivery Gate Checklist
 
 Before marking any UI task complete, verify all criteria pass:
@@ -333,3 +345,6 @@ Before marking any UI task complete, verify all criteria pass:
 - [ ] **5% Signal Accent**: Saturated accent is confined to $<5\%$ of viewport area; no decorative gradient floods.
 - [ ] **Typography & AI Tells**: Headings are upright (no italic titles); `tabular-nums` enabled on data/counters; no hand-drawn browser chrome.
 - [ ] **Single Icon Family**: All UI icons derive from a single cohesive set via Iconify (`simple-icons` for tech marks).
+- [ ] **Favicon Declared**: Every shipped page has a favicon per the stated rule; no blank-tab default.
+- [ ] **Type Pairing Resolved**: One pairing proposed-and-accepted, or explicitly waived with the system stack.
+- [ ] **Third-Party Components Vetted**: Each catalog component inherits tokens and passes a11y, single-family, and license gates with human approval evidenced.
