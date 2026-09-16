@@ -151,7 +151,7 @@ if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive
     Write-Host "`n💡 PromptKit OS Profile Selection (visual decision)" -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
     Write-Host "  1) Lite (Recommended for new users) — 6 utility workflows, 961 tok, 80% value, fastest onboarding" -ForegroundColor Yellow
-    Write-Host "  2) Balanced (Recommended for teams) — 23 workflows, 2,319 tok, Level 0-3 adaptive ceremony [default]" -ForegroundColor White
+    Write-Host "  2) Balanced (Recommended for teams) — 24 workflows, 2,319 tok, Level 0-3 adaptive ceremony [default]" -ForegroundColor White
     Write-Host "  3) Turbo (Experimental) — Balanced + parallel waves, ~2x measured cost, still requires human L3 approval" -ForegroundColor DarkGray
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
     Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
@@ -633,7 +633,7 @@ if ($Profile -eq "lite") {
     Write-Host "   Lite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok" -ForegroundColor Green
     Write-Host "   Upgrade anytime: .promptkit/init.ps1 --balanced for the full Balanced profile" -ForegroundColor DarkGray
 } elseif ($Profile -eq "balanced") {
-    Write-Host "   Balanced: 23 workflows, Level 0-3 adaptive ceremony — full power" -ForegroundColor White
+    Write-Host "   Balanced: 24 workflows, Level 0-3 adaptive ceremony — full power" -ForegroundColor White
     Write-Host "   For onboarding: .promptkit/init.ps1 --lite for minimal setup" -ForegroundColor DarkGray
 } else {
     Write-Host "   Turbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost" -ForegroundColor Yellow

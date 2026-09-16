@@ -4,7 +4,7 @@ Visual guide to help you quickly find the right workflow for your current task.
 
 ## Lite Map (Onboarding — 5 Nodes)
 
-New users start here. Full 23-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
+New users start here. Full 24-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
 
 ```text
 pk:route → pk:plan / pk:tasks → pk:debug → pk:commit → pk:checkpoint
@@ -551,7 +551,7 @@ Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycl
 ```
 
 > [!NOTE]
-> **Cross-Cutting Utilities**: `pk:tutor` (Socratic mentorship & 3-tier progressive hints) and `pk:grill` (Staff Engineer architecture defense drills) operate perpendicularly across all lifecycle phases whenever conceptual guidance or invariant stress-testing is needed. `pk:sync` (hot-reload) and `pk:profile` (runtime Lite/Balanced/Turbo switching) are cross-cutting session utilities outside the lifecycle flow.
+> **Cross-Cutting Utilities & Meta-Orchestration**: `pk:auto` orchestrates unattended sequential lifecycle chaining (`plan` → `tasks` → code → `test` → `review`) with built-in circuit breakers, test immobility, and a default stop at review-ready. `pk:tutor` (Socratic mentorship & 3-tier progressive hints) and `pk:grill` (Staff Engineer architecture defense drills) operate perpendicularly across all lifecycle phases whenever conceptual guidance or invariant stress-testing is needed. `pk:sync` (hot-reload) and `pk:profile` (runtime Lite/Balanced/Turbo switching) are cross-cutting session utilities outside the lifecycle flow.
 
 ---
 

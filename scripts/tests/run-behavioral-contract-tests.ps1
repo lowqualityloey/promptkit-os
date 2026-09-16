@@ -170,20 +170,20 @@ foreach ($directive in @("templates/agent-directive-template.md", "templates/age
     }
 }
 $WfCount = @(Get-ChildItem (Join-Path $RepoRoot "workflows") -Filter "*.md").Count
-if ($WfCount -eq 23) {
-    Write-Host "  ✅ PASS: On-disk workflow file count is 23 (matches reconciled docs claims)" -ForegroundColor Green
+if ($WfCount -eq 24) {
+    Write-Host "  ✅ PASS: On-disk workflow file count is 24 (matches reconciled docs claims)" -ForegroundColor Green
     $script:PassCount++
 } else {
-    Write-Host "  ❌ FAIL: On-disk workflow count is $WfCount but shipped docs claim 23 — reconcile counts or update this drift guard" -ForegroundColor Red
+    Write-Host "  ❌ FAIL: On-disk workflow count is $WfCount but shipped docs claim 24 — reconcile counts or update this drift guard" -ForegroundColor Red
     $script:FailCount++
 }
 $staleFiles = @("README.md","QUICKSTART.md","FAQ.md","docs/WORKFLOW-MAP.md","docs/BENCHMARKS.md","templates/lite-profile.md","workflows/sync.md") | ForEach-Object { Join-Path $RepoRoot $_ }
-$stale = Select-String -Path $staleFiles -Pattern 'full 22 workflow|\(22 workflow|22 workflow files|22 Inlined|All 22|22 workflows|All 21 workflow|21 workflow files|19 workflows' -ErrorAction SilentlyContinue
+$stale = Select-String -Path $staleFiles -Pattern 'full 23 workflow|\(23 workflow|23 workflow files|23 Inlined|All 23|23 workflows|full 22 workflow|\(22 workflow|22 workflow files|22 Inlined|All 22|22 workflows|All 21 workflow|21 workflow files|19 workflows' -ErrorAction SilentlyContinue
 if ($stale) {
-    Write-Host "  ❌ FAIL: Stale 19/21/22 workflow-count claims found in shipped docs" -ForegroundColor Red
+    Write-Host "  ❌ FAIL: Stale 19/21/22/23 workflow-count claims found in shipped docs" -ForegroundColor Red
     $script:FailCount++
 } else {
-    Write-Host "  ✅ PASS: No stale 21/22 workflow-count claims in shipped docs" -ForegroundColor Green
+    Write-Host "  ✅ PASS: No stale 21/22/23 workflow-count claims in shipped docs" -ForegroundColor Green
     $script:PassCount++
 }
 
@@ -362,6 +362,15 @@ if ($b9s -lt 0 -or $b9e -lt 0 -or $lps -lt 0 -or $lpe -lt 0) {
         $script:FailCount++
     }
 }
+
+Write-Host "`n📌 Scenario O: Autonomous SDLC Meta-Orchestrator (workflows/auto.md & pk:auto)" -ForegroundColor Yellow
+Assert-Contains "workflows/auto.md" "Autonomous SDLC Meta-Orchestrator" "Auto workflow defines autonomous SDLC meta-orchestration"
+Assert-Contains "workflows/auto.md" "Test Immobility Invariant" "Auto workflow enforces Test Immobility Invariant"
+Assert-Contains "workflows/auto.md" "3-Strike Circuit Breaker" "Auto workflow enforces 3-strike circuit breaker on failures"
+Assert-Contains "workflows/auto.md" "Path Deny-List" "Auto workflow enforces path deny-list"
+Assert-Contains "workflows/auto.md" "review ready" "Auto workflow defaults to review ready stop boundary"
+Assert-Contains "workflows/route.md" "workflows/auto.md" "Router decision matrix registers pk:auto"
+Assert-Contains "templates/agent-directive-template.md" "pk:auto" "Directive template registers pk:auto trigger"
 
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan

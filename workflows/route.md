@@ -169,6 +169,7 @@ Find your current engineering context below and activate the corresponding workf
 | **Learning & Socratic Coaching**| `pk:tutor`  | Conversation / Notes | 3-tier progressive hints, conceptual mental models |
 | **Architecture Defense Drill**  | `pk:grill`  | Conversation / Notes | Staff Engineer Devil's Advocate stress-testing |
 | **Wrong Profile / Mode Upgrade**| `pk:profile` | `PROMPTKIT.md` + injected directive | Runtime Lite/Balanced/Turbo switching via the idempotent installer re-injection path |
+| **Unattended SDLC & Automation**| `pk:auto` | Verified diff / PR | Autonomous pipeline chaining (plan→tasks→code→test→review), default stop at review-ready |
 
 ---
 
@@ -311,6 +312,7 @@ If the request involves non-trivial engineering changes (new features, crashes, 
    - **Pull requests, PR descriptions, or opening a PR**: Auto-route to `pk:pr`. Compile verification evidence and format PR description.
    - **Context bloat, chat lag, session handover, or pausing**: Auto-route to `pk:checkpoint`. Compress working state, sync `docs/STATE.md`, and generate handover prompt.
    - **Production deployment, env vars, rollback prep**: Auto-route to `pk:ship`. Run runtime env validation and release checklist.
+   - **Unattended execution, hands-off automation, end-to-end task runs**: Auto-route to `workflows/auto.md` (`pk:auto`). Announce the active leash on Turn 1 and halt at `review ready` (or declared boundary) with a 3-strike test circuit breaker.
 
 ### Tier 3: Subagent Delegation Guardrails
 When executing workflows in agentic multi-agent environments (Antigravity, Claude Code, Cursor background agents), follow `.promptkit/protocols/subagent-delegation.md`:

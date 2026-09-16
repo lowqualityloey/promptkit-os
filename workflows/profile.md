@@ -38,7 +38,7 @@ Profile economics and token budgets are maintained in [`docs/BENCHMARKS.md`](../
 3. **Interactive, no flag**: invoke the host's native selection tool (`ask_question` / prompt picker) as the final action of this decision step, with the SAME three options as `pk:onboard`:
    - Option 1: current profile — keep unchanged `(Recommended)`
    - Option 2: Lite — 6 workflows, fastest onboarding path
-   - Option 3: Balanced — full 23 workflows, Level 0-3 adaptive ceremony
+   - Option 3: Balanced — full 24 workflows, Level 0-3 adaptive ceremony
    - Option 4 (only when not already Turbo): Turbo — experimental, requires acknowledgement
    Hosts without native pickers: fall back to `> [!TIP] ### 💡 Choose profile (Type number & Enter):` with the same ordering.
 4. **Non-interactive / CI** (`PROMPTKIT_NO_INTERACTIVE=1` or no interactive host): never prompt — apply the flag if given, otherwise default to **Balanced**; state this in the reply.

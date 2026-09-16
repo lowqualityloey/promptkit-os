@@ -28,6 +28,7 @@ Activate workflows anytime with these namespaced triggers:
 - `pk:checkpoint` (or `pk:handoff`): Session state compaction, docs/STATE.md update, and handover prompt.
 - `pk:sync` (or `pk:update`, `pk:refresh`): Hot-reload protocols, purge stale memory, and synchronize with disk.
 - `pk:profile`: Switch Lite/Balanced/Turbo profile at runtime via the idempotent installer re-injection path.
+- `pk:auto`: Autonomous SDLC pipeline (plan→tasks→code→test→review), default stop at review-ready.
 
 ### Smart Auto-Route & Guardrails (Triggers Are Optional)
 You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigger, apply this triage:
@@ -38,11 +39,11 @@ You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigge
 - **Session Endurance**: Nudge at ~15 substantive turns, hard checkpoint at ~30 turns / 90min (L2/L3 hard, L1 advisory). Whenever you cannot recite invariants from a current `docs/STATE.md` read, run `pk:checkpoint` and recommend a fresh session.
 - **STATE.md Untrusted Until Read**: Quote milestone/task values only from the current turn's read of `docs/STATE.md`; template placeholder fields must be reported as `not tracked`, never as computed-looking facts.
 - **Telemetry Card Provenance & Oracle Integrity**: Every number in a status card must trace to a command executed or file read in this turn; otherwise emit `not measured`. Never claim a green Quality Gate without an executed check this turn, and never modify, weaken, or delete tests or write vacuous assertions to force `exit code 0`.
-- **Native MCP & Interactive Turn Prompts**: Auto-detect active MCP servers and prioritize structured tools over shell commands. For branching choices or next steps, invoke native selection tools (e.g. `ask_question`) if supported; otherwise format max 3-4 priced choices under `> [!TIP] ### 💡 Next Steps (Type number & Enter):` with Option 1 `(Recommended + why)`. Each option = action + outcome + time + requirement, plus safe exit (show details, no changes). When the developer replies with a single number (`1`), immediately execute that option.
+- **Native MCP & Interactive Turn Prompts**: Auto-detect active MCP servers and prioritize structured tools over shell commands. For branching choices or next steps, invoke native selection tools (e.g. `ask_question`) if supported; otherwise format max 3-4 priced choices under `> [!TIP] ### 💡 Next Steps (Type number & Enter):` with Option 1 `(Recommended + why)`. When the developer replies with a number (`1`), immediately execute it.
 - **Telemetry Status Cards**: Emit the 3-line card per `$KIT_DIR_REL/protocols/telemetry-cards.md` (lazy-load on demand); suppress only when `PROMPTKIT.md` declares `status-cards: off` (default on) — halts still fire, and stay silent on recommendations when nothing is pending.
 - **Disk-First Protocol Loading & Hot-Reload (`pk:sync`)**: Never rely on conversational memory or past turn habits for workflows or quality gates. Always read `$KIT_DIR_REL/workflows/<trigger>.md` freshly from disk. When receiving `pk:sync` or after engine updates, immediately refresh context from disk.
-- **Project Database & Harness Isolation**: Integration tests and live database verification must use dedicated project-scoped containers (e.g. `./docker-compose.yml` or project-named instances). Never attach to or run destructive queries against foreign project containers or credentials.
-- **Strict Milestone Git Boundaries**: A milestone boundary is the turn after a `pk:plan`/`pk:tasks` milestone or Task Record closes. Never cross it carrying **this task's** uncommitted changes; pre-existing dirt (e.g., fresh `init.sh` scaffold output) is surfaced and recommended for `pk:commit`, never a stall reason. At milestone end: stage atomically (`pk:commit`), update `docs/STATE.md`, request human sign-off (`> [!IMPORTANT]`).
+- **Project Database & Harness Isolation**: Integration tests and DB verification must use dedicated project-scoped containers (e.g. `./docker-compose.yml`). Never run destructive queries against foreign project containers or credentials.
+- **Strict Milestone Git Boundaries**: A milestone boundary is the turn after a `pk:plan`/`pk:tasks` milestone or Task Record closes. Never cross it carrying **this task's** uncommitted changes; pre-existing dirt (e.g. init output) is surfaced and recommended for `pk:commit`, never a stall reason. At milestone end: stage atomically (`pk:commit`), update `docs/STATE.md`, request human sign-off (`> [!IMPORTANT]`).
 - **Protocol Auto-Route (Substantive Tasks)**: For multi-file changes or architecture, announce briefly (e.g. `[PromptKit OS: Auto-routed to pk:plan]`) and adopt the matching workflow:
   - Defects, bugs, crashes, test failures -> `pk:debug`
   - Known defects, review findings, security patches -> `pk:fix`
@@ -60,6 +61,7 @@ You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigge
   - Pull requests, PR descriptions -> `pk:pr`
   - Context bloat, session handover -> `pk:checkpoint`
   - Deployments, env validation, releases -> `pk:ship`
+  - Unattended automation, hands-off SDLC -> `workflows/auto.md` (`pk:auto`)
 
 ### Workflows & Protocols Reference
 Load lazily by convention — never preload:
