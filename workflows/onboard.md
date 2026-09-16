@@ -60,7 +60,8 @@ After completing the scan and presenting the findings summary / Executive Scorec
 4. **Close the loop**: after each round ask *"Is there anything you want to add?"* and *"Is this enough for now?"* — close on explicit user signal, all slots covered, round cap reached, or no new information in a round. Record the `close_reason`.
 5. **Never propose architecture during intake**: unanswered slots become owned `ASSUMPTION-*` entries with a validation owner — never silent agent defaults. Any AI-suggested capability that lacks a user-stated requirement goes to the **Later ledger**, not the plan.
 6. **Propose tooling accept-or-change, never default it**: only after the intent slots are answered, offer at most three stack proposals (package manager, data-fetching, runner). Each names its rationale and vintage (e.g. "2026-era default: pnpm — compatible and fast"). Nothing is written, installed, or assumed until the human explicitly accepts; changing any line overturns that slot, and unanswered proposals stay open questions.
-7. **Persist**: record the Intake Record per the protocol; the durable projection (`size:` and `intake-status:` lines in `PROMPTKIT.md`) is written during Phase 3.
+7. **Product-shaped requests get questions, never a stack**: when slot 3 reports two or more surfaces (a SaaS-class request: accounts plus data plus auth or billing), also ask the five Product-Shape Cover Questions in [`discovery-intake.md`](../protocols/discovery-intake.md), folded into the same size-class question budget. The first response to such a request is questions, not files: never name, choose, install, or announce a stack, generator, or starter template — tooling stays accept-or-change under step 6, and an unattended build still requires `pk:plan`/`pk:tasks` plus milestone approval.
+8. **Persist**: record the Intake Record per the protocol; the durable projection (`size:` and `intake-status:` lines in `PROMPTKIT.md`) is written during Phase 3.
 
 ---
 

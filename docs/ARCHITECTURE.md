@@ -136,7 +136,7 @@ promptkit-os/
 ├── protocols/                   # Non-negotiable AI rules & operating standards
 │   ├── setup.md                 # Universal multi-agent configuration protocol
 │   ├── context-sync.md          # Tech stack, monorepos, PROMPTKIT.md, DESIGN.md & git detection
-│   ├── discovery-intake.md      # Bounded greenfield discovery intake protocol (size classes S/M/L)
+│   ├── discovery-intake.md      # Bounded greenfield intake protocol (size classes S/M/L + product-shape questions)
 │   ├── telemetry-cards.md       # Lazy-loaded status-card format spec & callout titles
 │   ├── code-quality-gate.md     # Non-negotiable definition-of-done & pre-commit gate
 │   └── subagent-delegation.md   # Subagent delegation, parallel execution & context preservation

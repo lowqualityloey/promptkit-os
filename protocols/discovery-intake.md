@@ -64,6 +64,26 @@ Slot guidance:
 - Accept "not sure yet" for any slot. Record it as an assumption with a proposed default rather than pressing for an answer.
 - A slot answered earlier in the same project is never re-asked unless scope changed or new evidence invalidated it.
 
+### Product-Shape Cover Questions (SaaS-Class Requests)
+
+Some intents are **product-shaped**, not feature-shaped: the request implies accounts, per-user data, and money or third-party integrations — the SaaS shape. Slot 3 answers alone do not cover the decisions those surfaces create, so when slot 3 reports **two or more surfaces**, or the request names accounts plus data plus billing or integrations, ask these five **conditional** product-shape questions (`P1`–`P5`) in the same interview, in the context window (§D). They are an extension of slot 3 and slot 7 coverage, never five extra required slots.
+
+| Q | Question being answered | Why it changes architecture | Boring default if unanswered |
+| :--- | :--- | :--- | :--- |
+| `P1` | Who can see whose data: one account, a shared workspace, or separate tenants? | Tenant boundary and every query behind it | Single-owner scope, no sharing |
+| `P2` | How do people get in, and who administers them: self-serve signup, invitations, SSO, admin roles? | Auth surface and role model | Invitation-only, single admin |
+| `P3` | Does money change hands — none, one-off, or recurring — and who is the billing source of truth? | Entitlements, webhooks, reconciliation | None in the MVP floor (Later ledger) |
+| `P4` | What runs without a human: scheduled jobs, webhooks, notifications — and what happens after repeated failure? | Background surface and retry policy | Synchronous only, no jobs |
+| `P5` | What constraints apply: personal data, region or residency, retention, audit expectations? | Data store, hosting region, logging | Recorded assumptions only, no compliance claims |
+
+Rules:
+
+1. **These are questions, not proposals.** Never answer them on the human's behalf; an unanswered slot becomes an owned `ASSUMPTION-*` record per §C, never a silent default.
+2. **They extend slot 3 and slot 7 coverage instead of adding required slots** — one or two per round, inside the size-class cap (§A). If the budget is reached first, close the intake with assumptions (§C) instead of extending it.
+3. **Never answer a product-shaped request with a stack, scaffold, generator, starter template, or `create-*` command.** Naming, choosing, installing, or announcing a technology during intake is a protocol violation: the intake's first output is questions, not files. Technology stays slot 7 and the accept-or-change proposals described above.
+4. **A product-shaped request never authorizes an unattended build.** It states intent only; planning, milestones, and approvals still run through `pk:plan`, `pk:tasks`, and the milestone gate.
+5. **Capabilities nobody asked for stay put.** Admin consoles, notification systems, and pricing tiers that do not trace to a stated requirement go to the Later ledger (§E.6), never into the MVP floor.
+
 ## C. Question Protocol and Stop Contract
 
 ### Round Shape
