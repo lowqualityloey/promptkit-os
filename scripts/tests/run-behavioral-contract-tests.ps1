@@ -190,6 +190,8 @@ Assert-Contains "workflows/onboard.md" "never in choice menus" "Intake questions
 Assert-Contains "workflows/onboard.md" "discovery-intake\.md" "Onboard workflow links the bounded discovery intake protocol"
 Assert-Contains "workflows/onboard.md" "intake-status: legacy-partial" "Brownfield installs get migration-safe intake signals (never re-grilled)"
 Assert-Contains "workflows/onboard.md" "size: small\|medium\|large" "Onboard workflow writes machine-readable size class to PROMPTKIT.md"
+Assert-Contains "workflows/onboard.md" "accept-or-change" "Onboard offers tooling proposals accept-or-change, never silent defaults"
+Assert-Contains "workflows/onboard.md" "Never propose switching" "Onboard treats brownfield toolchain as ground truth"
 Assert-Contains "protocols/discovery-intake.md" "close_reason" "Intake protocol records why the interview closed"
 Assert-Contains "protocols/discovery-intake.md" "Later ledger" "Intake protocol routes AI-suggested scope to the Later ledger"
 Assert-Contains "templates/project-profile-template.md" "intake-status:" "Project profile template carries machine-readable intake signals"
