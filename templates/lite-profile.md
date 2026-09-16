@@ -5,14 +5,14 @@
 PromptKit OS ships with 2 official profiles + 1 experimental to fix recommendability gap (5/10 → 8/10):
 
 - **Lite (official)** — 6 utility workflows, 1,105 tok static (measured), 80% value, onboarding
-- **Balanced (official, default)** — full 23 workflows, 2,477 tok static, Level 0-3 adaptive ceremony, teams/production
+- **Balanced (official, default)** — full 24 workflows, 2,477 tok static, Level 0-3 adaptive ceremony, teams/production
 - **Turbo (experimental)** — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval
 
 ## Profile Comparison
 
 | Dimension | Lite | Balanced | Turbo (Experimental) |
 | :--- | :--- | :--- | :--- |
-| **Workflows** | route, debug, commit, checkpoint, sync, profile | All 23 | All 23 + parallel waves |
+| **Workflows** | route, debug, commit, checkpoint, sync, profile | All 24 | All 24 + parallel waves |
 | **Static tokens** | 1,105 tok | 2,477 tok | 2,477 tok + subagents |
 | **Use case** | New users, learning, tiny bug fixes, docs typos | Teams, production, full lifecycle | Greenfield, user accepts cost |
 | **Install** | `init.sh --lite` | `init.sh --balanced` or no flag (default) | `init.sh --turbo --experimental` |
@@ -40,7 +40,7 @@ So Turbo is experimental, behind `--experimental` flag, warns about cost, still 
 ```
 > Choose profile:
 > 1) Lite (Recommended for new users) — 6 utility workflows, <1,500 tok
-> 2) Balanced (Recommended for teams) — full 23 workflows [default]
+> 2) Balanced (Recommended for teams) — full 24 workflows [default]
 > 3) Turbo (Experimental) — Balanced + parallel subagents, ~2x measured cost
 ```
 

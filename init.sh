@@ -144,7 +144,7 @@ if [[ "$PROFILE_SET" -eq 0 && "$EXPERIMENTAL" -eq 0 && -t 0 && -t 1 && -z "${PRO
     echo -e "\n\033[0;36m💡 PromptKit OS Profile Selection (visual decision)\033[0m"
     echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e "  \033[1;33m1) Lite (Recommended for new users)\033[0m — 6 utility workflows (route, debug, commit, checkpoint, sync, profile) 961 tok, 80% value, fastest onboarding"
-    echo -e "  2) Balanced (Recommended for teams) — 23 workflows, 2,319 tok, Level 0-3 adaptive ceremony, full power [default]"
+    echo -e "  2) Balanced (Recommended for teams) — 24 workflows, 2,319 tok, Level 0-3 adaptive ceremony, full power [default]"
     echo -e "  3) Turbo (Experimental) — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval"
     echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
@@ -640,7 +640,7 @@ if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok\033[0m"
     echo -e "   Upgrade anytime: .promptkit/init.sh --balanced for the full Balanced profile"
 elif [[ "$PROFILE" == "balanced" ]]; then
-    echo -e "   Balanced: 23 workflows, Level 0-3 adaptive ceremony — full power"
+    echo -e "   Balanced: 24 workflows, Level 0-3 adaptive ceremony — full power"
     echo -e "   For onboarding: .promptkit/init.sh --lite for minimal setup"
 else
     echo -e "   \033[0;33mTurbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost\033[0m"

@@ -2,7 +2,7 @@
 
 - **Status**: Accepted
 - **Date**: 2026-09-16
-- **Context**: The project ships 23 workflows and 28 templates. The on-disk workflow count is mechanically guarded (`run-behavioral-contract-tests.sh/.ps1` fail on divergence), but nothing governs retirement — growth is one-directional. Every addition raises documentation, testing, and coherence costs. Related issue: #198. This ADR retires nothing; the count stays at 23.
+- **Context**: The project ships 24 workflows and 28 templates. The on-disk workflow count is mechanically guarded (`run-behavioral-contract-tests.sh/.ps1` fail on divergence), but nothing governs retirement — growth is one-directional. Every addition raises documentation, testing, and coherence costs. Related issue: #198. This ADR originally locked the count at 23; issue #238 admitted the 24th workflow (`workflows/auto.md`) under the gate below.
 
 ## Decision
 
@@ -16,6 +16,12 @@ A new-workflow proposal must state, in the PR body:
 - **Token cost**: `measure-tokens.sh --strict` and `measure-per-task-tokens.sh --strict` results; any budget-constant change needs its own written justification.
 
 A proposal missing any of these is incomplete, not controversial — request changes, don't debate taste.
+
+#### Worked Example: Issue #238 `pk:auto` (The 24th Workflow)
+Issue #238 introduced `workflows/auto.md` under this exact gate:
+- **Non-overlap**: Existing workflows (`pk:plan`, `pk:debug`, `pk:test`, `pk:review`, `pk:commit`) are single-domain lifecycle procedures. None can chain end-to-end SDLC phases without violating single responsibility. `pk:auto` is strictly the unattended meta-orchestrator coordinating handoffs across them.
+- **Ceremony fit**: Adaptive Level 1–2 ceremony chaining with strict circuit breakers, test immobility, and default stop at `review ready`.
+- **Shipped artifacts**: `workflows/auto.md`, updated `workflows/route.md`, directive trigger and auto-route entries, `WORKFLOW-MAP.md` rows, README/FAQ counts, and behavioral test assertions in both `.sh` and `.ps1` twins.
 
 ### 2. Retiring a workflow
 
