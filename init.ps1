@@ -224,8 +224,9 @@ $ProjectRootPath = if ($ProjectRoot.Path) { $ProjectRoot.Path } else { $ProjectR
 
 if ($Saas) {
     Write-Host "`n🚀 Starting SaaS Scaffold..." -ForegroundColor Cyan
-    & (Join-Path $ScriptDir "scaffold/saas/install.ps1") -TargetDir $ProjectRootPath
+    & "$PSScriptRoot\scaffold\saas\install.ps1" $ProjectRoot
 }
+
 
 Write-Host "`n🚀 Initializing PromptKit OS ($Profile profile)..." -ForegroundColor Cyan
 Write-Host "   Host Project: $ProjectRoot" -ForegroundColor DarkGray

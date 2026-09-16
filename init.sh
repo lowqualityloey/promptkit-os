@@ -145,6 +145,7 @@ if [[ "${SAAS_SCAFFOLD:-0}" -eq 1 ]]; then
     bash "$SCRIPT_DIR/scaffold/saas/install.sh" "$PROJECT_ROOT"
 fi
 
+
 # Interactive TTY picker when no profile flag provided (visual decision for onboarding)
 # This is the shell-level equivalent of native interactive selection tools (ask_question)
 # Agent-level picker is in workflows/onboard.md which uses ask_question for same choice
@@ -658,3 +659,4 @@ else
     echo -e "   Human approval still required for Level 3 (releases/tags/deploys)"
 fi
 echo -e "   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'\n"
+
