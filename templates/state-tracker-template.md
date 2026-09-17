@@ -130,4 +130,4 @@ Compact record of pairing sessions to enable instant chat resumption:
 | :--- | :--- | :--- | :--- | :--- |
 | not tracked | not tracked | not tracked | not tracked | not tracked |
 
-- **Running total**: not tracked — refreshed by `pk:checkpoint`; one row per real work session (trivial sessions under ~5 turns with no workflow usage write nothing).
+- **Running total**: not tracked — refreshed by `pk:checkpoint`; one row per real work session (trivial sessions under ~5 turns with no workflow usage write nothing). When host metering is unavailable, compute `Estimated payload` via heuristic (`turns × ~8k–15k tok/turn`) rather than emitting `not measured`.

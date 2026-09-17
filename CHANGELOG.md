@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation Workflow Count & Profile Framing Synchronization**: Updated historical 23-workflow references to 24 workflows across `README.md` and `docs/COMPARISONS.md`, modernized profile callouts to remove dated v1.6 phrasing, and synchronized FAQ counts (19 questions) in `README.md` and `docs/ARCHITECTURE.md`. (#259)
 
 ### Fixed
+- **Spend Ledger Fallback Estimation Heuristic**: Added deterministic fallback spend estimation instructions (`turns × ~8k–15k tok/turn`) to `workflows/checkpoint.md` and `templates/state-tracker-template.md`. Prevents agents in unmetered CLI hosts (OpenCode, Cursor, Windsurf, Copilot, Neovim) from emitting `not measured` for the estimated payload column and cumulative running totals when host token telemetry is unavailable. (#267)
 - **Mechanical docs/STATE.md Scaffolding & Directory Guarantee**: Fixed `init.sh` and `init.ps1` to ensure the `docs/` directory is created before copying `templates/state-tracker-template.md`, guaranteeing all 9 canonical sections (including Section 8 Session Continuity Log and Section 9 Session Spend Ledger) are present on Day 1. Updated `workflows/onboard.md` to preserve Section 9 intact. (#261)
 - **CLI Host Probe Precision**: Fixed false-positive detection in `init.sh` and `init.ps1` where stale or leftover configuration directories (e.g. `~/.claude`, `~/.copilot`) caused uninstalled CLI assistants to be marked as `[detected]`. CLI hosts now strictly probe active executable binaries in `$PATH`. (#226)
 

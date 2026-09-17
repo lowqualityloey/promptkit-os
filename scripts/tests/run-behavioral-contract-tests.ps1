@@ -216,6 +216,7 @@ Assert-Contains "workflows/plan.md" "Decisions I'm defaulting for you" "Plan wor
 Assert-Contains "workflows/plan.md" "Picker routing rule" "Plan workflow bounds interactive pickers to closed-set, evidence-backed choices"
 Assert-Contains "workflows/sync.md" "New-Requirement Interception" "Sync workflow intercepts mid-implementation requirement deltas"
 Assert-Contains "workflows/checkpoint.md" "never silently absorbed" "Checkpoint contract requires new requirements to be recorded before continuing"
+Assert-Contains "workflows/checkpoint.md" "Fallback Estimation Heuristic" "Checkpoint workflow defines fallback spend estimation heuristic for unmetered hosts"
 Assert-Contains "workflows/route.md" "New Project / Greenfield Inception" "Router decision matrix registers greenfield inception via pk:onboard"
 Assert-Contains "protocols/context-sync.md" "Product & Design Inputs" "Context-sync authority table covers Figma/screenshot/doc design inputs"
 Assert-Contains "workflows/plan.md" "never a full re-interview" "Plan workflow caps partial-intake repair to missing critical slots only (legacy protection)"
