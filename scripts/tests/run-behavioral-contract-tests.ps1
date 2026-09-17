@@ -366,6 +366,16 @@ if ($b9s -lt 0 -or $b9e -lt 0 -or $lps -lt 0 -or $lpe -lt 0) {
     }
 }
 
+Write-Host "`n📌 Scenario R: Search Circuit Breaker Semantics (Balanced + Lite consistency)" -ForegroundColor Yellow
+Assert-Contains "templates/agent-directive-template.md" "Search Circuit Breaker \(advisory\)" "Balanced breaker states advisory semantics"
+Assert-Contains "templates/agent-directive-template.md" "parallel batch counts per call" "Balanced breaker defines parallel-call counting"
+Assert-Contains "templates/agent-directive-template.md" "trivial edits never reset" "Balanced breaker excludes trivial-edit resets"
+Assert-Contains "templates/agent-directive-template.md" "Read-only needs no edit" "Balanced breaker covers read-only research"
+Assert-Contains "docs/BENCHMARKS.md" "advisory instruction, not deterministic tool control" "Balanced breaker distinguishes CI budgets from session/host limits"
+Assert-Contains "templates/agent-directive-lite-template.md" "Circuit Breaker \(advisory\)" "Lite breaker states advisory semantics"
+Assert-Contains "templates/agent-directive-lite-template.md" "Trivial edits" "Lite breaker excludes trivial-edit resets"
+Assert-Contains "templates/agent-directive-lite-template.md" "Read-only needs no edit" "Lite breaker covers read-only research"
+
 Write-Host "`n📌 Scenario O: Autonomous SDLC Meta-Orchestrator (workflows/auto.md & pk:auto)" -ForegroundColor Yellow
 Assert-Contains "workflows/auto.md" "Autonomous SDLC Meta-Orchestrator" "Auto workflow defines autonomous SDLC meta-orchestration"
 Assert-Contains "workflows/auto.md" "Test Immobility Invariant" "Auto workflow enforces Test Immobility Invariant"
