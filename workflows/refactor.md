@@ -120,6 +120,24 @@ For multi-file or cross-module refactors, never execute a destructive "big-bang"
 
 ---
 
+## Code Simplification Pass (Clarity Over Cleverness)
+
+AI coding agents have a natural bias toward generative bloat: constructing single-use wrapper classes, over-engineered abstract interfaces, redundant converter utilities, and nested functional gymnastics. 
+
+The **Code Simplification Pass** is a mandatory deflation review executed before declaring a refactoring complete:
+
+### 1. The 5 Deflation Heuristics
+1. **Flatten Indirection**: If a function or method only forwards arguments to another 1-line function with identical parameters, inline it. Do not keep pass-through wrappers that obscure control flow.
+2. **Eliminate Premature Abstractions**: If an `interface` or `abstract class` has only a single concrete implementation and no polymorphism or test mock boundary is required, collapse it into a direct class or plain function (YAGNI).
+3. **Linearize Control Flow**: Replace deeply nested conditional pyramids and nested ternary soup with early returns (guard clauses). Code should read top-to-bottom with happy paths un-indented.
+4. **Delete Speculative Helpers**: Remove unused generic utility functions, "future-proof" parameter options, and uncalled helper methods. If an abstraction has zero callers in the active codebase, delete it.
+5. **Prefer Standard Library Over Custom Wrappers**: Replace custom array/object manipulation gymnastics with modern built-in primitives (`Array.prototype.flatMap`, `Object.groupBy`, `structuredClone`, etc.).
+
+### 2. Simplification Invariant
+- **Zero Behavior Change**: Simplification is a pure refactor. Never alter external API contracts, error statuses, or observable side effects while deflating code.
+
+---
+
 ## Martin Fowler Code Smell Remediation Catalog
 
 | Code Smell | Architectural Indicator | Refactoring Remedy |
@@ -138,6 +156,7 @@ For multi-file or cross-module refactors, never execute a destructive "big-bang"
 Before closing a `pk:refactor` task, verify:
 - [ ] **Zero Functional Regressions**: All existing tests and Golden Master snapshots pass without modifications to test assertions.
 - [ ] **Atomic Green Commits**: Every intermediate commit built and passed tests cleanly (Mikado compliance).
+- [ ] **Code Simplification Enforced**: Flattened pass-through indirection, collapsed single-implementation abstractions, and linearized nested conditionals with guard clauses.
 - [ ] **No Opportunistic Bug Fixes**: Any unrelated defects spotted were filed separately, not mixed into the refactoring diff.
 - [ ] **No Dead Code**: Obsolete functions, unused imports, and transitional feature toggles have been completely removed.
 - [ ] **Clean Lint & Typecheck**: Zero new linter warnings, zero loose `any` casts, and 100% typecheck pass.
