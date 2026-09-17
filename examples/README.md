@@ -32,6 +32,12 @@ Non-project scenario showing how PromptKit supports incident response, root-caus
 - **See**: [`production-incident/`](production-incident/)
 - **Demonstrates**: `pk:debug`, `pk:spike`, `pk:test`, `pk:retro`, `pk:checkpoint`, `pk:ship`
 
+### **Lite Quickstart** (Lite Profile Reference)
+Minimal Lite-profile project: `profile: lite`, the 6-workflow subset, on-demand `docs/` layout, an annotated L0 → L1 session, and the explicit Balanced upgrade path.
+
+- **See**: [`lite-quickstart/`](lite-quickstart/)
+- **Demonstrates**: `pk:route`, `pk:debug`, `pk:commit`, `pk:checkpoint`, `pk:profile`
+
 These three examples intentionally form a ceremony progression: Marketing Site (Level 1), SaaS Dashboard (Level 2), and Production Incident (Level 3).
 
 ---
