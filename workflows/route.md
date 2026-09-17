@@ -37,7 +37,7 @@ Before executing any request, classify the work using the PromptKit OS 4-level t
 
 ### Level 0 — Direct (Zero Overhead & Fast Verification)
 - **Applicability**: Conceptual questions, explanations, documentation typos, formatting, syntax lookups, and tiny non-risky single-line tweaks.
-- **Expected Behavior**: `understand → change → fast verify → atomic commit`
+- **Expected Behavior**: `understand → change → verify`
 - **Verification Tier**: `fast` verification only (e.g. syntax check, markdown/link check, or `tsc --noEmit`).
 - **Ceremony**: Direct execution. Zero task records, no GitHub issue required, no state tracking overhead. Single atomic commit.
 
