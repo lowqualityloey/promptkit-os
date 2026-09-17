@@ -43,7 +43,7 @@ validate_single_playbook() {
     fi
 
     local end_line
-    end_line="$(grep -n "^---$" "$file" | sed -n '2p' | cut -d: -f1)"
+    end_line="$(tr -d '\r' < "$file" | grep -n "^---$" | sed -n '2p' | cut -d: -f1)"
     if [[ -z "$end_line" || "$end_line" -le 1 ]]; then
         echo "❌ $filename: Missing closing frontmatter delimiter (---)"
         return 1
