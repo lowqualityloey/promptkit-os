@@ -203,12 +203,13 @@ After completing the scan and presenting the findings summary / Executive Scorec
    - Scaffold `./DESIGN.md` incorporating PromptKit OS anti-slop directives and detected tokens.
 
 4. **Auto-Populate `docs/STATE.md` (Living Project Tracker)**:
-   Copy `.promptkit/templates/state-tracker-template.md` to `./docs/STATE.md`:
+   `docs/STATE.md` is pre-seeded by `init.sh` / `init.ps1` from `.promptkit/templates/state-tracker-template.md` (or copied from the template if missing). You must preserve all 9 canonical sections intact (never truncate or drop Sections 8 and 9):
    - Populate project name, current branch, and active status.
    - If monorepo, set initial Target Workspace / Package in Section 3 (`Active Working Set`).
    - Record existing documented policies and explicitly human-approved rules in Section 4 with source references. Stage manifest-derived observations and inferred rules in Section 4A (`Candidate Learnings`) with status `pending`; they are not locked invariants.
    - Seed Section 8 (`Session Continuity Log`) with an initial onboarding entry:
      `| YYYY-MM-DD | Assistant (pk:onboard) | Project Intake (Greenfield or Brownfield) | Generated PROMPTKIT.md and initialized docs/STATE.md |`
+   - Preserve Section 9 (`Session Spend Ledger`) with its starting placeholder table ready for subsequent `pk:checkpoint` spend tracking.
 
 ---
 

@@ -112,6 +112,8 @@ assert_contains "protocols/telemetry-cards.md" "Quiet Completion" "Telemetry-car
 assert_contains "protocols/telemetry-cards.md" "Spend:" "Telemetry-cards protocol specifies the per-turn spend field"
 assert_contains "templates/state-tracker-template.md" "COMPLETED" "State template offers the terminal COMPLETED status"
 assert_contains "templates/state-tracker-template.md" "Session Spend Ledger" "State template carries the spend ledger block"
+assert_contains "workflows/onboard.md" "Session Spend Ledger" "Onboard workflow mandates preserving Session Spend Ledger"
+assert_contains "init.sh" 'DOCS_DIR="$PROJECT_ROOT/docs"' "Init script ensures docs directory creation for STATE.md"
 assert_contains "workflows/checkpoint.md" "Project Closeout Record" "Checkpoint workflow defines the closeout DoD format"
 assert_contains "workflows/commit.md" "Dual-Compatible Telemetry Status Card" "Commit workflow includes telemetry status card"
 assert_contains "workflows/pr.md" "Telemetry Status Card" "PR workflow includes telemetry status card"

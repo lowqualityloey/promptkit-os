@@ -312,11 +312,13 @@ if [[ -f "$DESIGN_PROFILE" ]]; then
 fi
 
 # Scaffold docs/STATE.md if missing
-STATE_TRACKER="$PROJECT_ROOT/docs/STATE.md"
+DOCS_DIR="$PROJECT_ROOT/docs"
+STATE_TRACKER="$DOCS_DIR/STATE.md"
 TEMPLATE_STATE="$SCRIPT_DIR/templates/state-tracker-template.md"
 
 if [[ ! -f "$STATE_TRACKER" ]]; then
     if [[ -f "$TEMPLATE_STATE" ]]; then
+        mkdir -p "$DOCS_DIR"
         cp "$TEMPLATE_STATE" "$STATE_TRACKER"
         echo -e "  \033[0;32m[+]\\033[0m Created: docs/STATE.md (living project & state tracker)"
     fi
