@@ -31,6 +31,8 @@ jobs:
           bash -n scripts/tests/run-release-record-properties.sh
           bash -n scripts/validate-ci-triage.sh
           bash -n scripts/tests/run-ci-triage-fixtures.sh
+          bash -n scripts/validate-playbooks.sh
+          bash -n scripts/tests/run-playbook-contract-tests.sh
           bash -n scripts/validate-lsp-evidence.sh
           bash -n scripts/tests/run-lsp-evidence-fixtures.sh
           bash -n scripts/tests/run-behavioral-contract-tests.sh
@@ -42,6 +44,9 @@ jobs:
 
       - name: Run Documentation-Contract Tests (Bash)
         run: bash scripts/tests/run-behavioral-contract-tests.sh
+
+      - name: Run Playbook Contract Tests (Bash)
+        run: bash scripts/tests/run-playbook-contract-tests.sh
 
       - name: Run Behavioral Eval Offline Self-Test (Bash)
         run: bash scripts/run-behavioral-eval.sh --self-test
@@ -168,6 +173,8 @@ jobs:
             "scripts/tests/run-release-record-properties.ps1",
             "scripts/validate-ci-triage.ps1",
             "scripts/tests/run-ci-triage-fixtures.ps1",
+            "scripts/validate-playbooks.ps1",
+            "scripts/tests/run-playbook-contract-tests.ps1",
             "scripts/validate-lsp-evidence.ps1",
             "scripts/tests/run-lsp-evidence-fixtures.ps1",
             "scripts/tests/run-behavioral-contract-tests.ps1",
@@ -189,6 +196,10 @@ jobs:
       - name: Run Documentation-Contract Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-behavioral-contract-tests.ps1
+
+      - name: Run Playbook Contract Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-playbook-contract-tests.ps1
 
       - name: Run Behavioral Eval Offline Self-Test (PowerShell)
         shell: pwsh

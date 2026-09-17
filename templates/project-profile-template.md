@@ -40,13 +40,20 @@ intake-status: [unanswered | partial | complete]
 
 ---
 
-## 3. Project Commands (Root / Global)
-- **Install**: `pnpm install`
-- **Dev Server**: `pnpm dev`
-- **Unit Tests**: `pnpm test`
-- **E2E Tests**: `pnpm test:e2e`
-- **Typecheck**: `pnpm tsc --noEmit`
-- **Lint & Format**: `pnpm lint`
+## 3. Project Commands & Evidence-Gated Verification
+PromptKit OS enforces Evidence-Gated Verification. Every completion claim requires executed evidence matching the task ceremony level:
+- **Fast Tier (Level 0/1)**: `pnpm tsc --noEmit` [or cargo check / ruff check . / flutter analyze]
+- **Required Tier (Level 1/2)**: `pnpm test` [or cargo test / pytest / go test -race ./...]
+- **Extended Tier (Level 2/3)**: `pnpm test:e2e && pnpm lint` [or cargo clippy -- -D warnings / mypy]
+- **Cross-OS Execution Bridge (Optional)**: `N/A` [e.g. wsl bash -c "<command>" when host agent runs on Windows and code runs in WSL]
+
+### 3a. Active Stack Playbooks (JIT Loaded)
+> Candidate manifests detected by `pk:onboard` map to bounded playbooks in `docs/stacks/`. Loaded strictly just-in-time; never loaded all at once.
+- **Active Playbooks**: `[e.g. docs/stacks/fullstack-nextjs.md, docs/stacks/database-turso.md | N/A]`
+
+- **Standard Commands**:
+  - **Install**: `pnpm install`
+  - **Dev Server**: `pnpm dev`
 
 ---
 
