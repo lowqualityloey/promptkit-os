@@ -83,6 +83,14 @@ Figma frames are static desktop or mobile snapshots that frequently omit critica
 5. **Text Truncation & Overflow Safeguards**:
    - Add `min-w-0` to flex/grid containers and use `truncate` or `line-clamp-*` to prevent long dynamic content from blowing out the layout.
 
+### 4. Design Study Protocol (`pk:design study <url | screenshot>`)
+
+When inspired by an existing product or visual reference, extract its design DNA rather than copying pixels:
+1. **Inspect Macrostructure & Rhythm**: Identify hero archetype, navigation model, and section surface banding. Refuse repeating identical layout cards.
+2. **Extract Typography Roles**: Identify distinct display, body, and tabular numeral roles. Refuse using a single generic sans-serif for all roles.
+3. **Derive Color Bands & Signal Accent**: Map surface paper/background, border hairlines, and isolate the single $\le 5\%$ accent hue.
+4. **Export Portable `DESIGN.md`**: Emit a project-root `DESIGN.md` declaring tokens, typography pairing, and chosen Iconify family so any agent builds against it.
+
 ---
 
 ## Workflow Steps
@@ -102,6 +110,8 @@ Figma frames are static desktop or mobile snapshots that frequently omit critica
 
 3. **Macrostructure & Layout Rhythm Variety**:
    - **Break the Generic Rut**: Refuse the automatic AI template (`Hero + Badge ──> 3 Bento Cards ──> Fake Logos ──> Pill CTA ──> 4-col Footer`).
+   - **Refuse Uniform Bento Grids**: Do not generate pages with uniform repeating card grids (e.g. 6 identical floating boxes). Introduce layout rhythm: alternating full-bleed surface bands, asymmetric feature spotlights, and varied card column spans.
+   - **Curated Non-Slop Iconify Families**: Recommend human-crafted sets via Iconify (`ph:*` Phosphor for modern fintech/SaaS, `radix-icons:*` for 15px micro-density, `tabler:*` for sharp enterprise). Warn against generic 24px Lucide defaults to avoid the recognizable AI template aesthetic.
    - Diversify section rhythms based on the product's genre:
      - *Asymmetric Split*: Left-aligned punchy headline + right-aligned interactive artifact (working terminal or API demo).
      - *Editorial Magazine*: Asymmetric columns, rich pull-quotes, and generous whitespace.
@@ -317,9 +327,14 @@ Ensure all async components support the 4 fundamental UI states with meaningful 
 
 When no `DESIGN.md` exists, UI work still ships finished — restraint plus a defined minimum (propose accept-or-change, never impose):
 
-- **One icon family**: the Iconify single-family rule applies as a requirement, not guidance — every view gets its icon pass (no icon-less interactive controls, no mixed weights).
+- **Curated Aesthetic Archetypes**: Propose one of four human-crafted archetypes rather than defaulting to an unstyled monochrome void:
+  1. *Warm Paper / Editorial*: Parchment surface `oklch(97% 0.012 95)` (`#faf6ee`), `Plus Jakarta Sans` + `JetBrains Mono`, mint/pear/terracotta signal chips.
+  2. *High-Density Fintech*: Rich slate `oklch(15% 0.015 250)` (`#0f1115`), `Inter` / `Geist` + tabular numerals, `Radix 15px` (`radix-icons:*`) or `Phosphor Light` (`ph:*-light`), emerald status indicators.
+  3. *Clean Modern SaaS*: Crisp neutral white/zinc, bold geometric headings, single saturated $\le 5\%$ accent.
+  4. *Dark Terminal*: Monochrome dark graphite, high-contrast 1px hairlines, pure monospace / technical grotesque, zero decorative noise.
+- **One icon family**: the Iconify single-family rule applies as a requirement, not guidance — every view gets its icon pass (no icon-less interactive controls, no mixed weights). Prefer curated human sets (`ph:*`, `radix-icons:*`, `tabler:*`) over generic Lucide.
 - **Tabular figures**: `tabular-nums` on all metrics, counters, and tables.
-- **Favicon**: every shipped page declares a favicon derived from a stated rule (e.g. first letterform of the wordmark on the primary token, or the primary action glyph); no blank-tab default ships.
+- **Favicon**: every shipped page declares a favicon derived from a stated rule (e.g. first letterform of the wordmark on the primary token, or the primary action glyph); no blank-tab default ships (never leave framework default favicons like Next.js triangle).
 - **One type pairing, proposed**: a single accept-or-change pairing (display + body, with 2026-era rationale); the system stack remains the default unless explicitly accepted.
 - **21st.dev catalog (React + Tailwind only, advisory)**: the agent may propose specific components with links as a taste source; each proposal needs human approval and must inherit project tokens and pass the a11y, single-family, and license gates. Free components only unless the human buys. Excluded: CLI/MCP install paths, templates-as-starters, offline reliance, blanket trust. Offline or out-of-scope stacks fall back to system defaults.
 
@@ -329,6 +344,7 @@ When no `DESIGN.md` exists, UI work still ships finished — restraint plus a de
 
 Before marking any UI task complete, verify all criteria pass:
 
+- [ ] **Visual Floor Enforced**: Replaced default framework tab favicon (no blank-tab or Next.js triangle default); applied a single Iconify family across all interactive controls.
 - [ ] **Aesthetic Craft**: Palette is derived from brand identity; no generic blue/purple AI gradients, no decorative emoji, and glass/glow is limited to 1–2 elements.
 - [ ] **Contrast Compliance**: Normal text passes $\ge 4.5:1$ and large text/UI controls pass $\ge 3.0:1$ in both light and dark themes.
 - [ ] **Focus Replacement**: No `outline-none` without an immediate `:focus-visible:ring-2` replacement.

@@ -119,6 +119,11 @@ Assert-Contains "workflows/plan.md" "Interactive Decision & Trade-Off Clarificat
 Assert-Contains "workflows/design-system.md" "No-DESIGN.md Visual Floor" "Design workflow defines the no-brand-file finish bar"
 Assert-Contains "workflows/design-system.md" "Favicon" "Design gate requires a declared favicon"
 Assert-Contains "workflows/design-system.md" "21st.dev" "Design workflow names the advisory catalog with exclusions"
+Assert-Contains "workflows/design-system.md" "Curated Aesthetic Archetypes" "Design workflow defines 4 curated aesthetic archetypes"
+Assert-Contains "workflows/design-system.md" "Design Study Protocol" "Design workflow defines pk:design study protocol"
+Assert-Contains "workflows/design-system.md" "Refuse Uniform Bento Grids" "Design workflow defines anti-bento layout rhythm rule"
+Assert-Contains "protocols/discovery-intake.md" "Slot 6 Design Vibe" "Discovery intake includes aesthetic design vibe slot"
+Assert-Contains "workflows/design-system.md" "Visual Floor Enforced" "Design workflow checklist includes Visual Floor enforcement"
 
 Write-Host "`n📌 Scenario K: Project Database & Harness Isolation" -ForegroundColor Yellow
 Assert-Contains "templates/agent-directive-template.md" "Project Database & Harness Isolation" "Directive enforces project database isolation guardrail"
