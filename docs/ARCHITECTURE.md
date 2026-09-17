@@ -133,6 +133,7 @@ promptkit-os/
 │   ├── DESIGN-MD-FAQ.md         # FAQ on custom DESIGN.md usage & safety
 │   ├── token-efficiency-review.md # Token efficiency audit trail
 │   ├── stacks/                  # JIT stack playbooks (Web, DB, Cloud, Mobile, Systems & CLI)
+│   ├── recipes/                 # Contract boundary recipes (Auth, Forms, Webhooks, Env, Test Isolation)
 │   └── adrs/                    # Architecture Decision Records (0001 headroom, 0002 lifecycle)
 ├── protocols/                   # Non-negotiable AI rules & operating standards
 │   ├── setup.md                 # Universal multi-agent configuration protocol
