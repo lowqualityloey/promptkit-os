@@ -322,11 +322,15 @@ if (Test-Path $DesignProfile) {
 }
 
 # Scaffold docs/STATE.md if missing
-$StateTracker = Join-Path $ProjectRoot "docs/STATE.md"
+$DocsDir = Join-Path $ProjectRoot "docs"
+$StateTracker = Join-Path $DocsDir "STATE.md"
 $TemplateState = Join-Path $ScriptDir "templates/state-tracker-template.md"
 
 if (-not (Test-Path $StateTracker)) {
     if (Test-Path $TemplateState) {
+        if (-not (Test-Path $DocsDir)) {
+            New-Item -ItemType Directory -Path $DocsDir -Force | Out-Null
+        }
         Copy-Item -Path $TemplateState -Destination $StateTracker
         Write-Host "  [+] Created: docs/STATE.md (living project & state tracker)" -ForegroundColor Green
     }
