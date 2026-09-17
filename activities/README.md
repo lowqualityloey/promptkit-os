@@ -12,6 +12,7 @@ Welcome to the Senior Developer Activity Suite. These simulations are designed t
 | **[`02-refactoring-clean-arch.md`](./02-refactoring-clean-arch.md)** | Architecture & Refactoring | Clean / Hexagonal Boundaries, Dependency Inversion, Testability | `pk:tutor`<br>`pk:review` |
 | **[`03-async-concurrency-debug.md`](./03-async-concurrency-debug.md)** | Concurrency & Diagnostics | Race Conditions, Memory Leaks, Abort Signals, Hypothesis Testing | `pk:debug` |
 | **[`04-accessible-design-system.md`](./04-accessible-design-system.md)** | Modern UI/UX & a11y | Design Tokens, WCAG 2.2 AA, Headless Primitives, Tailwind v4 | `pk:design` |
+| **[`05-auto-orchestration.md`](./05-auto-orchestration.md)** | Autonomous Orchestration | Circuit Breaker, Test Immobility, Review-Ready Stop | `pk:auto` |
 
 ---
 
