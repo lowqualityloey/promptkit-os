@@ -39,6 +39,7 @@ Define the non-negotiable definition-of-done (DoD) and engineering quality bar f
 ### 3. Security Hygiene & Defense-in-Depth
 - [ ] **Injection Prevention**: Parameterized queries / ORM bindings used; zero raw SQL or unescaped HTML string interpolation.
 - [ ] **Authentication & Authorization**: Explicit RBAC / ABAC checks on every server endpoint / mutation.
+- [ ] **Local Harness Preflight**: Run the kit's `scripts/check-harness-security.sh` (or `.ps1 -Root`) against the project as described in `docs/HARNESS-PREFLIGHT.md`. Review redacted advisory findings; incomplete/fixed-scope results do not certify security or replace staged-secret checks.
 - [ ] **Secrets & Sensitive Data**: Zero hardcoded API keys, tokens, or PII; environment variables validated at startup. Never ask the user to paste real secrets into chat.
 - [ ] **Environment Template Hygiene (`.env.example`)**: Any feature requiring new environment variables must update or generate `.env.example` with sanitized placeholder keys, directing the human to populate their local untracked `.env`.
 - [ ] **Input Sanitization & Rate Limiting**: All public endpoints bounded by rate limiters and payload size limits.

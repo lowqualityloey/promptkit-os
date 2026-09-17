@@ -68,6 +68,8 @@ If a session touched multiple layers, propose splitting into sequential commits:
 Explicitly stage only the files relevant to the active atomic concern. Avoid blind `git add .` when multi-concern changes are present.
 
 **Pre-Commit Secret & Hygiene Scan:**
+Run the local harness preflight first: `bash <kit>/scripts/check-harness-security.sh <project>` (PowerShell: `pwsh -File <kit>/scripts/check-harness-security.ps1 -Root <project>`), resolving `<kit>` from `PROMPTKIT.md`. Review its redacted advisory findings; missing/incomplete checks are not a clean bill of health. See `docs/HARNESS-PREFLIGHT.md` in the kit. This working-tree scan does not replace the staged-index checks below.
+
 Immediately after staging and before commit construction, perform a mandatory scan of the staged index for accidental secrets or debug probes (Time-of-Check to Time-of-Use safety):
 
 1. **Staged Content Secret Scan**:

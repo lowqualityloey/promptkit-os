@@ -97,6 +97,7 @@ for arg in "$@"; do
             echo -e "  -h, --help          Show this help\n"
             echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
             echo -e "Interactive: When no flag provided and running in TTY, shows visual picker (1) Lite (Recommended) 2) Balanced 3) Turbo Experimental"
+            echo -e "Preflight opt-out: PROMPTKIT_NO_PREFLIGHT=1 skips advisory local security inspection (independent of picker)"
             echo -e "Env escape hatch: PROMPTKIT_NO_INTERACTIVE=1 skips the picker even in a TTY (use flags or Balanced default)"
             echo -e "Examples:"
             echo -e "  ./init.sh --lite"
@@ -221,6 +222,16 @@ if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32m✨ Lite: 6 utility workflows, <1,500 tok, 80% value — perfect for onboarding\033[0m"
 fi
 echo ""
+
+if [[ "${PROMPTKIT_NO_PREFLIGHT:-}" == "1" ]]; then
+    printf '%s\n' 'PREFLIGHT|SKIPPED|USER_OPT_OUT'
+else
+    if bash "$SCRIPT_DIR/scripts/check-harness-security.sh" "$PROJECT_ROOT"; then
+        :
+    else
+        printf '%s\n' 'PREFLIGHT|ADVISORY|Review findings or incomplete checks; installation continues'
+    fi
+fi
 
 # 1. Ensure Core Documentation Directories Exist in Host Project
 DOC_DIRS=(
