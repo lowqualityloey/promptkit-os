@@ -46,13 +46,15 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 
 ## Quick Start (60 Seconds)
 
-**New to PromptKit?** → See **[FAQ.md](./FAQ.md)** for the 19 most common questions  
+**New to PromptKit?** → See **[FAQ.md](./FAQ.md)** for the 20 most common questions  
 **Getting started?** → See **[QUICKSTART.md](./QUICKSTART.md)** for a 5-minute guided tour  
 **Release History?** → See **[CHANGELOG.md](./CHANGELOG.md)** for version notes and release provenance  
 **Full-Stack Example?** → See **[examples/saas-dashboard/](./examples/saas-dashboard/README.md)** for a populated end-to-end feature walkthrough, or **[examples/fullstack-feature/](./examples/fullstack-feature/README.md)** for a narrative lifecycle reference  
 **Existing project?** → See **[ADOPTION-GUIDE.md](./docs/ADOPTION-GUIDE.md)** for gradual adoption  
 **Visual learner?** → See **[WORKFLOW-MAP.md](./docs/WORKFLOW-MAP.md)** for decision trees and diagrams  
-**Token economics & benchmarks?** → See **[BENCHMARKS.md](./docs/BENCHMARKS.md)** for architecture and context window analysis  
+**Token economics & benchmarks?** → See **[BENCHMARKS.md](./docs/BENCHMARKS.md)** for static context and **[BENCHMARK-METHODOLOGY.md](./docs/BENCHMARK-METHODOLOGY.md)** for Cost Per Accepted Change (CPAC)  
+**Stack Playbooks?** → See **[`docs/stacks/`](./docs/stacks/)** for 11 JIT playbooks (Web, DB, Cloud, Mobile, Systems Native)  
+**Boundary Recipes?** → See **[`docs/recipes/`](./docs/recipes/)** for canonical boundary contracts (Auth, Forms, Webhooks, Env, Testing)  
 **Want to know more?** → See **[INTERESTING-FACTS.md](./docs/INTERESTING-FACTS.md)** for unique insights and design principles
 
 > [!TIP]
@@ -139,8 +141,10 @@ PromptKit OS structures developer-AI collaboration into four distinct layers:
 
 | Layer | Plain-English Role | Examples | Location |
 | :--- | :--- | :--- | :--- |
-| **Protocols** | Non-negotiable operating rules the assistant obeys at all times. | Context Sync, Definition of Done, Subagent Delegation | [`protocols/`](./protocols) |
-| **Workflows** | Step-by-step engineering procedures for each phase of the dev lifecycle. | `pk:plan`, `pk:test`, `pk:debug`, `pk:commit`, `pk:ship` | [`workflows/`](./workflows) |
+| **Control Plane** | Task ceremony (L0–L3), risk routing, evidence gating, and escape hatch. | `pk:route`, Escape Hatch, Evidence Matrix | [`protocols/`](./protocols) |
+| **Workflows** | Step-by-step engineering procedures for each phase of the dev lifecycle (24 total). | `pk:plan`, `pk:test`, `pk:debug`, `pk:commit`, `pk:ship` | [`workflows/`](./workflows) |
+| **Stack Playbooks** | JIT-loaded stack invariants & fast verification for Web, DB, Cloud, Mobile & Systems. | Next.js, Supabase, Expo, Flutter, Rust, Go, Python | [`docs/stacks/`](./docs/stacks) |
+| **Boundary Recipes** | Portable contract boundaries for cross-cutting application patterns without lock-in. | Auth sessions, Action envelopes, Webhook HMAC, Env schema | [`docs/recipes/`](./docs/recipes) |
 | **Templates** | Standardized markdown schemas the assistant fills into your `./docs/` folder. | RFC Specs, MADRs, Test Plans, RCA Post-Mortems | [`templates/`](./templates) |
 | **Labs & Notes** | Interactive simulations, competency rubrics, and retro logs for skill building. | System design spikes, refactoring katas, skill matrix | [`activities/`](./activities), [`notes/`](./notes) |
 
@@ -193,11 +197,11 @@ Headline: ~95% / ~88% static reduction vs the ~19.8k core-subset baseline, human
 ```text
 promptkit-os/
 ├── CHANGELOG.md, FAQ.md, QUICKSTART.md, init.sh / init.ps1, LICENSE
-├── docs/            # BENCHMARKS, WORKFLOW-MAP, ADOPTION-GUIDE, COMPARISONS,
-│                    # ARCHITECTURE, BEHAVIORAL-EVAL, adrs/
+├── docs/            # BENCHMARKS, BENCHMARK-METHODOLOGY, WORKFLOW-MAP, ADOPTION-GUIDE,
+│                    # COMPARISONS, ARCHITECTURE, BEHAVIORAL-EVAL, stacks/, recipes/, adrs/
 ├── protocols/       # setup, context-sync, discovery-intake, telemetry-cards,
 │                    # code-quality-gate, subagent-delegation
-├── workflows/       # 23 step-by-step engineering procedures (pk:route … pk:ship)
+├── workflows/       # 24 step-by-step engineering procedures (pk:route … pk:ship)
 ├── templates/       # 28 artifact schemas (specs, ADRs, test plans, PR/issue templates)
 ├── scripts/         # validators, token measurement, eval harness (.sh + .ps1 twins)
 ├── examples/        # production lifecycle references

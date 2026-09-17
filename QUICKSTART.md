@@ -82,6 +82,9 @@ AI: [Shows decision matrix]
 
 **What it does**: Acts as your workflow GPS, routing you to the right protocol based on your current task. External skills (such as `skills.sh` skills or host `/skill` commands) act as subordinate helpers; PromptKit OS remains authoritative for task routing, evidence rules, safety boundaries, and human authorization.
 
+> [!TIP]
+> **Automatic Ecosystem Adaptation**: If you are working in Rust, Go, Python, Expo, Flutter, Next.js, or Supabase, PromptKit OS automatically loads the appropriate JIT Stack Playbook ([`docs/stacks/`](./docs/stacks/)) and Contract Boundary Recipes ([`docs/recipes/`](./docs/recipes/)) with zero static prompt bloat.
+
 ---
 
 ## Step 3: The Essential Four (3 minutes)
@@ -315,6 +318,9 @@ A: Yes. `PROMPTKIT.md` and `docs/STATE.md` are git-tracked, so whole teams stay 
 
 - **Issues**: [GitHub Issues](https://github.com/lowqualityloey/promptkit-os/issues)
 - **Philosophy**: See [README.md](./README.md) for the full mental model
+- **Stack Playbooks**: See [`docs/stacks/`](./docs/stacks/) for ecosystem invariants
+- **Boundary Recipes**: See [`docs/recipes/`](./docs/recipes/) for contract patterns
+- **Empirical Benchmarks**: See [`docs/BENCHMARK-METHODOLOGY.md`](./docs/BENCHMARK-METHODOLOGY.md) for CPAC metrics
 - **License**: [MIT](./LICENSE)
 
 ---

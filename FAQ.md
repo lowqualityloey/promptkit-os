@@ -1,6 +1,6 @@
 # PromptKit OS FAQ
 
-**The 19 questions every developer asks before adopting PromptKit OS.**
+**The 20 questions every developer asks before adopting PromptKit OS.**
 
 ---
 
@@ -605,12 +605,30 @@ For full architectural details, see [docs/COMPARISONS.md](docs/COMPARISONS.md).
 
 ---
 
+## 20. How does PromptKit OS support non-web, mobile, and native systems without prompt bloat?
+
+**Short Answer**: Through **Just-In-Time (JIT) Stack Playbooks** (`docs/stacks/`) and **Contract Boundary Recipes** (`docs/recipes/`). PromptKit OS loads ecosystem-specific invariants on-demand only when relevant manifests (e.g. `Cargo.toml`, `go.mod`, `pubspec.yaml`, `app.json`) are detected, keeping the core control plane universally lightweight.
+
+**How it works across ecosystems**:
+- **Zero Web Assumptions Leaked**: Mobile and native systems have entirely different failure modes from web JavaScript. PromptKit OS provides dedicated stack playbooks:
+  - **Rust** (`docs/stacks/systems-rust.md`): Zero-panic `Result<T, E>` discipline, strict ownership borrowing over cloning, and sub-second `cargo check` micro-verification.
+  - **Go** (`docs/stacks/systems-go.md`): Context propagation, goroutine leak prevention, and mandatory `go test -race` execution.
+  - **Mobile Expo & Flutter** (`docs/stacks/mobile-expo.md`, `docs/stacks/mobile-flutter.md`): Asynchronous `BuildContext` mounted guards, Hermes engine limits, and Continuous Native Generation (CNG).
+  - **Python CLI** (`docs/stacks/cli-python.md`): Virtualenv isolation, typecheck verification, and deterministic status exit codes.
+- **Strict Token Ceiling**: Every playbook adheres strictly to the $\le 1,500$ token ceiling. You never pay the token cost of Rust or Flutter rules when working on a Next.js or Python repository.
+- **Contract Boundary Recipes** (`docs/recipes/`): Critical security boundaries (raw body stream preservation for HMAC webhooks, HttpOnly cookies for sessions, fail-fast boot environment schemas, and hermetic MSW network isolation) are codified as portable contracts adaptable to any framework rather than imposing authoritarian architectural lock-in.
+
+For full playbook details, see [docs/stacks/](docs/stacks/) and [docs/recipes/](docs/recipes/).
+
+---
+
 ## Still Have Questions?
 
 **More detailed documentation**:
 - [QUICKSTART.md](QUICKSTART.md) - 5-minute introduction
 - [docs/ADOPTION-GUIDE.md](docs/ADOPTION-GUIDE.md) - Incremental adoption strategy
 - [docs/BENCHMARKS.md](docs/BENCHMARKS.md) - Token economics & architecture benchmarks
+- [docs/BENCHMARK-METHODOLOGY.md](docs/BENCHMARK-METHODOLOGY.md) - Cost Per Accepted Change (CPAC) empirical framework
 - [docs/WORKFLOW-MAP.md](docs/WORKFLOW-MAP.md) - Visual workflow decision trees
 - [docs/DESIGN-MD-FAQ.md](docs/DESIGN-MD-FAQ.md) - DESIGN.md safety guarantees
 - [docs/INTERESTING-FACTS.md](docs/INTERESTING-FACTS.md) - Deep insights
@@ -621,6 +639,6 @@ For full architectural details, see [docs/COMPARISONS.md](docs/COMPARISONS.md).
 
 ---
 
-**Last Updated**: 2026-09-13  
-**Version**: 1.5.1  
+**Last Updated**: 2026-09-18  
+**Version**: 1.7.0  
 **Maintainer**: [@lowqualityloey](https://github.com/lowqualityloey)

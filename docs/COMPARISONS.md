@@ -47,7 +47,7 @@ flowchart TD
 ### Layer Breakdown
 
 1. **Layer 1: Specification Layer (`WHAT`)**: Defines requirements, business constraints, user journeys, and acceptance criteria before implementation starts.
-2. **Layer 2: Engineering Control Plane (`HOW MUCH PROCESS & RISK`) — PromptKit OS**: Operates as the neutral governor of the software development lifecycle. It determines whether a task is trivial (Level 0/1) or high-risk (Level 2/3), injects only the required workflow Just-In-Time, tracks cross-session state (`STATE.md`), enforces non-breaking database safety, and validates done-gates.
+2. **Layer 2: Engineering Control Plane & JIT Knowledge — PromptKit OS (`HOW MUCH PROCESS, RISK & INVARIANTS`)**: Operates as the neutral governor of the software development lifecycle. It determines whether a task is trivial (Level 0/1) or high-risk (Level 2/3), injects required workflows, JIT Stack Playbooks (`docs/stacks/`), and Contract Boundary Recipes (`docs/recipes/`) on demand, tracks cross-session state (`STATE.md`), enforces non-breaking database safety, and validates done-gates.
 3. **Layer 3: Capability & Execution Layer (`HOW TO EXECUTE`)**: Contains specialized assistance: language-specific tools, domain prompt libraries, refactoring helpers, or local scripts.
 4. **Layer 4: Agent Runtime / Host (`WHERE`)**: The underlying LLM interface and tool-use environment (Claude Code, Gemini CLI, Cursor, Windsurf, Copilot, etc.).
 
@@ -108,4 +108,5 @@ While rigid methodologies force heavy specification and testing loops on every l
 
 - [`../README.md`](../README.md) — Front door: pitch, install, Level model, worked example
 - [`BENCHMARKS.md`](./BENCHMARKS.md) — Token economics behind the comparison figures
-- [`../FAQ.md`](../FAQ.md) — The 19 questions every developer asks before adopting
+- [`BENCHMARK-METHODOLOGY.md`](./BENCHMARK-METHODOLOGY.md) — Cost Per Accepted Change (CPAC) empirical framework
+- [`../FAQ.md`](../FAQ.md) — The 20 questions every developer asks before adopting
