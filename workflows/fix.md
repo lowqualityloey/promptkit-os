@@ -24,6 +24,7 @@ Bridge the gap between diagnosis (`pk:review`, static analysis, security audit, 
 
 Before applying any fix, classify the task using the PromptKit OS ceremony model:
 
+- **Level 0 — Direct Fix (Zero Overhead)**: Documentation typos, formatting, syntax lookups, and tiny 1-line non-risky tweaks. Direct execution: `understand → change → fast verify → atomic commit`. Zero Task Records, no GitHub issue required, no state tracking overhead.
 - **Level 1 — Standard Fix (Low-Risk)**: Localized bug fix, code smell cleanup, or single-component repair without schema, auth, authorization, public contract, or multi-component risks. Modifies source files using natural workflow routing (`pk:fix` $\rightarrow$ `pk:test` $\rightarrow$ `pk:commit`) with lightweight inline tracking. Does **not** require a Task Record file (`docs/tasks/<task-id>.md`).
 - **Level 2 — Controlled Fix (High-Risk)**: Fix involving relational schema/data migrations, auth/permissions, breaking public API contracts, or multi-component architectural changes. Requires a canonical Local Task Record at `docs/tasks/<task-id>.md` and formal specification before implementation.
 - **Level 3 — Release-Critical Fix**: Production emergency patch or release candidate fix. Requires Level 2 evidence plus candidate evaluation (`pk:ship`), QA review, contract impact evidence, and explicit human authorization.
@@ -41,8 +42,8 @@ Before applying any fix, classify the task using the PromptKit OS ceremony model
 │ & Scope Lock    │ Priority Check  │ Baseline Measurement    │
 ├─────────────────┼─────────────────┼─────────────────────────┤
 │ Step 4:         │ Step 5:         │ Step 6:                 │
-│ Surgical Fix    │ Regression      │ Handoff & Atomic        │
-│ Implementation  │ Lock-In         │ Conventional Commit     │
+│ Surgical Fix    │ Evidence-Gated  │ Handoff & Atomic        │
+│ Implementation  │ Verification    │ Conventional Commit     │
 └─────────────────┴─────────────────┴─────────────────────────┘
 ```
 
@@ -96,15 +97,26 @@ Before writing or editing code:
 
 ---
 
-### Step 5: Regression Lock-In & Oracle Verification
+### Step 5: Evidence-Gated Verification & Escape Hatch
 
 1. **Lock-In Regression Test**:
    Convert the reproduction check into a permanent regression test at the real call-site seam (`pk:test`).
-2. **Oracle Gate Verification (Machine-Verified Quality Gate)**:
-   - **Execute** the targeted reproduction check via a terminal tool call. It MUST return `exit code 0`.
-   - **Execute** the full project test/build command. It MUST return `exit code 0`.
-   - **Bounded Retry**: If either fails (`exit code != 0`), apply a maximum of 2 automated repair attempts. If the 3rd attempt fails, HALT immediately with a `> [!WARNING] Blocked` callout.
-   - You are forbidden from emitting a green Quality Gate card until this oracle check passes in the current turn.
+2. **Evidence-Gated Verification (Machine-Verified Quality Gate)**:
+   - **Tiered Execution**: Execute the verification command matching the task ceremony level defined in `project-profile.md`:
+     - *Level 0 (Direct)*: `fast` verification tier (e.g. `pnpm tsc --noEmit` or `cargo check`).
+     - *Level 1 (Standard)*: `fast` + `required` verification tier (targeted unit/component tests).
+     - *Level 2/3 (Controlled/Release)*: `fast` + `required` + `extended` verification tiers (full suite, schema validation, lint).
+   - **Strict Completion Claim Invariant**: Completion claims strictly require executed evidence with `exit code 0`. You are forbidden from emitting a green Quality Gate card until this evidence exists in the current turn.
+   - **Bounded Repair**: If verification fails (`exit code != 0`), apply a maximum of 2 automated repair attempts. If the 3rd attempt fails, HALT immediately with a `> [!WARNING] Blocked` callout.
+3. **Deterministic Verification Escape Hatch**:
+   - If an environment prerequisite is genuinely unavailable (e.g. missing Docker daemon, live database credentials, mobile emulator):
+   - The assistant is **strictly prohibited from looping in blind auto-repair attempts**.
+   - **Protocol**:
+     1. Record the blocked prerequisite in the evidence record: `> [!WARNING] Verification Blocked: Prerequisite '<name>' unavailable in environment.`
+     2. Attempt permitted local fallback (e.g. static typecheck, schema lint, or unit dry-run).
+     3. If verification remains blocked, **HALT immediately** and request human decision. Never claim completion without executed evidence.
+4. **Instruction Layer Restraint**:
+   - PromptKit prescribes policy and required evidence; command execution remains with host agent tools and local shell. PromptKit introduces no runtime daemons or execution engines.
 
 ---
 

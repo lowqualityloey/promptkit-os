@@ -35,25 +35,40 @@ In the opening turn (Turn 1) of every task or interaction, the assistant must ex
 
 Before executing any request, classify the work using the PromptKit OS 4-level task ceremony model to balance developer velocity with engineering rigor:
 
-### Level 0 — Direct (Zero Overhead)
+### Level 0 — Direct (Zero Overhead & Fast Verification)
 - **Applicability**: Conceptual questions, explanations, documentation typos, formatting, syntax lookups, and tiny non-risky single-line tweaks.
-- **Expected Behavior**: `understand → change → verify`
-- **Ceremony**: Direct execution. No task record, formal planning, or state tracking unless requested.
+- **Expected Behavior**: `understand → change → fast verify → atomic commit`
+- **Verification Tier**: `fast` verification only (e.g. syntax check, markdown/link check, or `tsc --noEmit`).
+- **Ceremony**: Direct execution. Zero task records, no GitHub issue required, no state tracking overhead. Single atomic commit.
 
-### Level 1 — Standard (Lightweight Workflow)
+### Level 1 — Standard (Lightweight Workflow & Targeted Verification)
 - **Applicability**: Ordinary localized bug fixes, small self-contained features, or localized refactoring without schema, auth, or breaking contract risks.
-- **Expected Behavior**: `understand → plan → implement → test → review`
-- **Ceremony**: Uses natural workflow routing (`pk:debug`, `pk:test`) with lightweight inline planning. Normal task tracking in `docs/STATE.md` or task list where appropriate without requiring formal Task Record files.
+- **Expected Behavior**: `understand → plan → implement → targeted verify → review`
+- **Verification Tier**: `fast` + `required` verification (targeted unit/component tests passing with exit code 0).
+- **Ceremony**: Natural workflow routing (`pk:debug`, `pk:fix`, `pk:test`) with lightweight inline planning. Normal task tracking in `docs/STATE.md` without requiring formal Task Record files.
 
-### Level 2 — Controlled (Durable State & Readiness)
+### Level 2 — Controlled (Durable State & Multi-Tier Verification)
 - **Applicability**: Work involving meaningful risk, architecture, relational schema/data migrations, authentication, authorization, public contracts, multiple components, or significant uncertainty.
-- **Expected Behavior**: `task record → plan → implement → checkpoints → verification → review`
+- **Expected Behavior**: `task record → plan → implement → checkpoints → multi-tier verify → review`
+- **Verification Tier**: `fast` + `required` + `extended` verification (integration tests, schema validation, lint/static analysis).
 - **Ceremony**: Requires a Local Task Record at `docs/tasks/<task-id>.md` and formal specification (`pk:plan`, `pk:data`, `pk:auth`, `pk:api`). The Task Record is authoritative for scope, acceptance criteria, dependencies, non-goals, and verification conditions before implementation begins.
 
 ### Level 3 — Release-Critical (Full Provenance & Evaluation)
 - **Applicability**: Release candidates, production deployments, high-impact public contract/API changes, tag generation, or critical security updates.
-- **Expected Behavior**: `provenance → authorization → evaluation → release notes → evidence → human approval`
+- **Expected Behavior**: `provenance → authorization → evaluation → full verify → release notes → human approval`
+- **Verification Tier**: Full test suite + release candidate evaluation (`pk:ship`) + QA review + security scan.
 - **Ceremony**: Uses full release candidate evaluation, contract impact evidence (`pk:ship`), QA review, and explicit human authorization boundaries before tagging, publishing, or deploying.
+
+### Evidence-Gated Verification Matrix
+
+PromptKit OS enforces Evidence-Gated Verification: completion claims strictly require executed evidence appropriate to the task's ceremony level:
+
+| Ceremony Level | Typical Scope | Required Verification Tier | Required Evidence / Artifact |
+| :--- | :--- | :--- | :--- |
+| **Level 0 (Direct)** | Doc typo, formatting, 1-line localized fix, spike | `fast` (e.g. `tsc --noEmit`, link-check, `cargo check`) | Terminal tool execution with exit code 0 |
+| **Level 1 (Standard)** | Localized bug fix, small feature tweak, component repair | `fast` + `required` (targeted unit test, component verification) | Exit code 0 + test output evidence in turn |
+| **Level 2 (Controlled)** | Database schema, auth, public API contracts, multi-component | `fast` + `required` + `extended` (integration suite, schema diff, linter) | Exit code 0 + Local Task Record evidence |
+| **Level 3 (Release-Critical)** | Release candidates, deployments, tag generation, security patch | Full suite + Release Candidate Evaluation (`pk:ship`) | Exit code 0 + Release Record + Human Approval |
 
 ### Canonical Mapping & Legacy Compatibility
 
@@ -61,9 +76,9 @@ The 4-level ceremony model refines and clarifies the system's execution boundari
 
 | Level | Ceremony Class | Scope & File Impact | Required Task Record? |
 | :--- | :--- | :--- | :--- |
-| **Level 0** | **Direct (Trivial Work)** | Conceptual queries, syntax lookups, doc typos, formatting | **No** (Fast-path direct execution) |
-| **Level 1** | **Standard (Lightweight Work)** | Localized bug fixes, small self-contained feature tweaks, or single-component changes modifying source files without schema/auth/breaking contract risks | **No** (Natural workflow `pk:debug`/`pk:test` with inline/`STATE.md` tracking) |
-| **Level 2** | **Controlled Work** | Relational schema/data migrations, auth, permissions, breaking API contracts, or multi-component architectural changes | **Yes** (Canonical Task Record at `docs/tasks/<task-id>.md`) |
+| **Level 0** | **Direct (Trivial Work)** | Conceptual queries, syntax lookups, doc typos, formatting, 1-line micro-fixes | **No** (Fast-path direct execution + `fast` verify) |
+| **Level 1** | **Standard (Lightweight Work)** | Localized bug fixes, small self-contained feature tweaks, or single-component changes modifying source files without schema/auth/breaking contract risks | **No** (Natural workflow `pk:debug`/`pk:test` with inline/`STATE.md` tracking + `required` verify) |
+| **Level 2** | **Controlled Work** | Relational schema/data migrations, auth, permissions, breaking API contracts, or multi-component architectural changes | **Yes** (Canonical Task Record at `docs/tasks/<task-id>.md` + `extended` verify) |
 | **Level 3** | **Release-Critical Work** | Release candidates, deployments, tag generation, or high-impact contract changes | **Yes** (Level 2 evidence plus release candidate evaluation `pk:ship` & human approval) |
 
 **Important Rule**: Modifying durable source files during an ordinary bug fix or small localized tweak is classified as **Level 1 (Standard)** and does **not** trigger Level 2 Controlled Work requirements or mandate creating `docs/tasks/<task-id>.md`. Where protocols or templates refer to "Controlled Work", those requirements apply specifically to **Level 2 (Controlled)** and **Level 3 (Release-Critical)** tasks.
@@ -99,6 +114,13 @@ To eliminate cognitive confusion, duplicate context loads, and conflicting instr
   - *Quality Gate Check*: All primary workflows terminate at `protocols/code-quality-gate.md` for machine-verified oracle compliance.
   - *Security Check*: If auth or secrets are touched, attach `workflows/auth.md` invariants as supporting constraints.
 - **Rule**: Never load multiple parallel primary workflow files in a single turn. Declare `Primary: <workflow>` and list active `Supporting Checks: [<protocol/workflow>]`.
+
+4d. **JIT Stack Playbook Discovery & Injection**:
+To prevent framework bloat while providing deep architectural invariants, the router checks `.promptkit/project-profile.md` for active stack playbooks:
+- **Repository Manifest Signals**: Candidate manifests (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`, `render.yaml`) map to bounded playbooks in `docs/stacks/`.
+- **Bounded JIT Loading**: The assistant loads **only** the candidate playbook(s) declared in `project-profile.md` (e.g. `docs/stacks/database-turso.md`).
+- **Context Exclusion**: Unrelated stack playbooks (e.g. Rust playbooks in a Next.js repo) are strictly excluded to preserve token budgets.
+- **Precedence Hierarchy**: Local Project Profile Overrides > PromptKit Stack Playbooks > External Host Skills.
 
 ### Model-Tiering & Resource Optimization Guidance
 
