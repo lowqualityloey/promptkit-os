@@ -61,6 +61,7 @@ Slot guidance:
 
 - Ask **outcome before technology**. Never open with a framework or hosting question.
 - Slot 5 and slot 6 are **attachment-bearing slots**. Ask them in the context window (§D) so links, files, and screenshots can be provided.
+- **Slot 6 Design Vibe**: If no external design link or screenshot is provided, offer the 4 curated aesthetic archetypes (`Warm Paper / Editorial`, `High-Density Fintech`, `Clean Modern SaaS`, `Dark Terminal`) or system defaults so the user selects their visual vibe upfront, avoiding an unstyled monochrome void.
 - Accept "not sure yet" for any slot. Record it as an assumption with a proposed default rather than pressing for an answer.
 - A slot answered earlier in the same project is never re-asked unless scope changed or new evidence invalidated it.
 

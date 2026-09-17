@@ -123,6 +123,11 @@ assert_contains "workflows/plan.md" "Interactive Decision & Trade-Off Clarificat
 assert_contains "workflows/design-system.md" "No-DESIGN.md Visual Floor" "Design workflow defines the no-brand-file finish bar"
 assert_contains "workflows/design-system.md" "Favicon" "Design gate requires a declared favicon"
 assert_contains "workflows/design-system.md" "21st.dev" "Design workflow names the advisory catalog with exclusions"
+assert_contains "workflows/design-system.md" "Curated Aesthetic Archetypes" "Design workflow defines 4 curated aesthetic archetypes"
+assert_contains "workflows/design-system.md" "Design Study Protocol" "Design workflow defines pk:design study protocol"
+assert_contains "workflows/design-system.md" "Refuse Uniform Bento Grids" "Design workflow defines anti-bento layout rhythm rule"
+assert_contains "protocols/discovery-intake.md" "Slot 6 Design Vibe" "Discovery intake includes aesthetic design vibe slot"
+assert_contains "workflows/design-system.md" "Visual Floor Enforced" "Design workflow checklist includes Visual Floor enforcement"
 
 echo ""
 echo "📌 Scenario K: Project Database & Harness Isolation"
