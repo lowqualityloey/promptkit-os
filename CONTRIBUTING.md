@@ -25,6 +25,10 @@ When contributing to PromptKit OS, adhere to the following core principles:
 
 Run these validation commands before opening a pull request. All verification gates must pass in both Bash and PowerShell environments.
 
+### Local Harness Preflight
+
+Installers run bounded advisory inspection before project writes; `PROMPTKIT_NO_PREFLIGHT=1` skips it independently of interactive mode. Scope, redaction, limitations and exit codes: [Local harness preflight](docs/HARNESS-PREFLIGHT.md). Run `bash scripts/tests/run-harness-security-tests.sh` and `pwsh -NoProfile -File scripts/tests/run-harness-security-tests.ps1` with the safety suites below.
+
 ### Behavioral Eval Harness (prompt compliance, not prose)
 
 `scripts/run-behavioral-eval.sh` (+ `.ps1` twin) scores transcripts against the 16 rubrics in `scripts/tests/eval-scenarios/` (methodology and baseline: [`docs/BEHAVIORAL-EVAL.md`](./docs/BEHAVIORAL-EVAL.md)). Run `bash scripts/run-behavioral-eval.sh --self-test` (offline, CI-wired in both jobs); score a live transcript with `--score <scenario> <file>`. To extend: add a scenario file (Prompt, Checks, Threshold, embedded PASS/FAIL fixtures) — the self-test picks it up automatically. Never edit a shipped workflow to make a scenario pass.

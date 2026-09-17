@@ -129,6 +129,7 @@ foreach ($a in $AllArgs) {
         "--help" { 
             Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
             Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
+            Write-Host 'PROMPTKIT_NO_PREFLIGHT=1 skips advisory local security inspection independently of PROMPTKIT_NO_INTERACTIVE.'
             exit 0
         }
         default {
@@ -231,6 +232,22 @@ if ($Profile -eq "lite") {
     Write-Host "   ✨ Lite: 6 utility workflows, <1,500 tok, 80% value — perfect for onboarding" -ForegroundColor Green
 }
 Write-Host ""
+
+if ($env:PROMPTKIT_NO_PREFLIGHT -eq '1') {
+    Write-Output 'PREFLIGHT|SKIPPED|USER_OPT_OUT'
+} else {
+    $savedExitCode = $global:LASTEXITCODE
+    try {
+        & (Join-Path $ScriptDir 'scripts/check-harness-security.ps1') -Root $ProjectRootPath
+        if ($LASTEXITCODE -ne 0) {
+            Write-Output 'PREFLIGHT|ADVISORY|Review findings or incomplete checks; installation continues'
+        }
+    } catch {
+        Write-Output 'PREFLIGHT|INCOMPLETE|SCANNER_UNAVAILABLE'
+    } finally {
+        $global:LASTEXITCODE = $savedExitCode
+    }
+}
 
 # 1. Ensure Core Documentation Directories Exist in Host Project
 $DocDirs = @(

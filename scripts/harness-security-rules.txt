@@ -1,0 +1,4 @@
+SUSPECTED_SECRET|all|-----BEGIN ([A-Z]+ )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{36,}
+BROAD_APPROVAL|config|"(autoApprove|alwaysAllow)"[ \t\r\n]*:[ \t\r\n]*(true|\[[ \t\r\n]*"\*")
+PERMISSION_BYPASS|config|"(dangerouslySkipPermissions|bypassPermissions|allowAllTools)"[ \t\r\n]*:[ \t\r\n]*true|"(defaultMode|permissionMode)"[ \t\r\n]*:[ \t\r\n]*"(bypassPermissions|dontAsk)"
+BROAD_PERMISSION|config|"allow"[ \t\r\n]*:[ \t\r\n]*\[[ \t\r\n]*"(\*|Bash\(\*\))"

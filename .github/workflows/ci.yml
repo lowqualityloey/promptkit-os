@@ -46,6 +46,9 @@ jobs:
       - name: Run Behavioral Eval Offline Self-Test (Bash)
         run: bash scripts/run-behavioral-eval.sh --self-test
 
+      - name: Run Harness Security Tests (Bash)
+        run: bash scripts/tests/run-harness-security-tests.sh
+
       - name: Run init.sh Safety Regression Tests (Bash)
         run: bash scripts/tests/run-init-safety-tests.sh
 
@@ -190,6 +193,10 @@ jobs:
       - name: Run Behavioral Eval Offline Self-Test (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\run-behavioral-eval.ps1 -SelfTest
+
+      - name: Run Harness Security Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-harness-security-tests.ps1
 
       - name: Run init.ps1 Safety Regression Tests (PowerShell)
         shell: pwsh
