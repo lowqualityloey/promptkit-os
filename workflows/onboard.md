@@ -206,7 +206,7 @@ After completing the scan and presenting the findings summary / Executive Scorec
    Copy `.promptkit/templates/state-tracker-template.md` to `./docs/STATE.md`:
    - Populate project name, current branch, and active status.
    - If monorepo, set initial Target Workspace / Package in Section 3 (`Active Working Set`).
-   - Record detected architectural invariants in Section 4.
+   - Record detected architectural invariants in Section 4, keeping each line's documented source (user-stated constraint vs manifest-derived observation) so intake findings are distinguishable from human-approved policy.
    - Seed Section 8 (`Session Continuity Log`) with an initial onboarding entry:
      `| YYYY-MM-DD | Assistant (pk:onboard) | Project Intake (Greenfield or Brownfield) | Generated PROMPTKIT.md and initialized docs/STATE.md |`
 
@@ -231,7 +231,7 @@ After completing the scan and presenting the findings summary / Executive Scorec
    - Record discovered debt tasks in `docs/STATE.md` under initial remediation items.
 
 3. **Invariant Handoff (Sync to STATE.md)**:
-   Append any hard constraints, non-negotiables, or architectural rules discovered during the intake or manifest scan (e.g., "Must use UUIDv7", "Zero raw hex colors in CSS", "No ORM") directly into Section 4 (`Locked Technical Invariants`) of `docs/STATE.md`.
+   Append any hard constraints, non-negotiables, or architectural rules discovered during the intake or manifest scan (e.g., "Must use UUIDv7", "Zero raw hex colors in CSS", "No ORM") directly into Section 4 (`Locked Technical Invariants`) of `docs/STATE.md`, annotating each entry's source. Rules stated by the human are invariants; agent observations from manifests or code are **Candidate Learnings** staged in Section 5 with status `pending` under the memory-vs-policy boundary (`protocols/context-sync.md` §3.1) and require explicit human approval to promote.
 
 4. **Announce Ready State**:
    Confirm that `./PROMPTKIT.md` and `./docs/STATE.md` are active and suggest the immediate next workflow:
@@ -247,6 +247,6 @@ After completing the scan and presenting the findings summary / Executive Scorec
 - `./PROMPTKIT.md` generated with non-generic, working project commands.
 - `./DESIGN.md` generated or skipped with explicit rationale.
 - `./docs/STATE.md` initialized with project baseline and active branch.
-- **Invariant Handoff**: Discovered architectural rules persisted to `docs/STATE.md` Section 4.
+- **Invariant Handoff**: Human-stated rules persisted to `docs/STATE.md` Section 4; manifest-derived observations staged as pending Candidate Learnings per the memory-vs-policy boundary.
 - Executive Architecture Scorecard delivered to developer.
 - Workspace ready for immediate `pk:` workflow pairing.

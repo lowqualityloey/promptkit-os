@@ -375,6 +375,16 @@ Assert-Contains "workflows/auto.md" "review ready" "Auto workflow defaults to re
 Assert-Contains "workflows/route.md" "workflows/auto.md" "Router decision matrix registers pk:auto"
 Assert-Contains "templates/agent-directive-template.md" "pk:auto" "Directive template registers pk:auto trigger"
 
+Write-Host "`n📌 Scenario Q: Memory vs Policy Boundary (pk:checkpoint / pk:sync / pk:onboard)" -ForegroundColor Yellow
+Assert-Contains "protocols/context-sync.md" "Observation -> Candidate Learning -> Human Review -> Invariant" "Context-sync defines the memory-vs-policy promotion ladder"
+Assert-Contains "protocols/context-sync.md" "Memory vs Policy Boundary" "Context-sync carries the memory-vs-policy boundary section"
+Assert-Contains "protocols/context-sync.md" "not approval to promote a rule" "Context-sync rejects silence and implicit signals as promotion approval"
+Assert-Contains "protocols/context-sync.md" "remains a projection" "Context-sync keeps STATE.md execution-control scoped as a projection"
+Assert-Contains "templates/state-tracker-template.md" "Candidate Learnings" "State template stages unverified candidate learnings"
+Assert-Contains "workflows/checkpoint.md" "Candidate Learnings" "Checkpoint preserves pending candidate status on sync"
+Assert-Contains "workflows/onboard.md" "Candidate Learnings" "Onboard stages manifest-derived observations as candidates"
+Assert-Contains "workflows/sync.md" "never automatically promoted" "Sync never promotes candidates on reread"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

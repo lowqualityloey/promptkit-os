@@ -356,6 +356,17 @@ assert_contains "workflows/route.md" "workflows/auto.md" "Router decision matrix
 assert_contains "templates/agent-directive-template.md" "pk:auto" "Directive template registers pk:auto trigger"
 
 echo ""
+echo "📌 Scenario Q: Memory vs Policy Boundary (pk:checkpoint / pk:sync / pk:onboard)"
+assert_contains "protocols/context-sync.md" "Observation -> Candidate Learning -> Human Review -> Invariant" "Context-sync defines the memory-vs-policy promotion ladder"
+assert_contains "protocols/context-sync.md" "Memory vs Policy Boundary" "Context-sync carries the memory-vs-policy boundary section"
+assert_contains "protocols/context-sync.md" "not approval to promote a rule" "Context-sync rejects silence and implicit signals as promotion approval"
+assert_contains "protocols/context-sync.md" "remains a projection" "Context-sync keeps STATE.md execution-control scoped as a projection"
+assert_contains "templates/state-tracker-template.md" "Candidate Learnings" "State template stages unverified candidate learnings"
+assert_contains "workflows/checkpoint.md" "Candidate Learnings" "Checkpoint preserves pending candidate status on sync"
+assert_contains "workflows/onboard.md" "Candidate Learnings" "Onboard stages manifest-derived observations as candidates"
+assert_contains "workflows/sync.md" "never automatically promoted" "Sync never promotes candidates on reread"
+
+echo ""
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"

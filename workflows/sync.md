@@ -90,5 +90,11 @@ Unrecorded new requirements must be reconciled before execution continues.
 
 ---
 
+### Candidate Learnings Are Not Policy
+
+Disk re-reads and session syncs treat `docs/STATE.md` §4A Candidate Learnings as non-authoritative staging: entries with status `pending`, `rejected`, or `deferred` are **never automatically promoted** to Section 4 invariants or project guardrails by rereading, repetition, or checkpoint persistence. Promotion requires the recorded human decision defined in `protocols/context-sync.md` §3.1; if a candidate conflicts with an existing invariant or scoped authority, surface the conflict for human resolution instead of applying it.
+
+---
+
 ## Related References
 - Canonical workflow navigation: [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md)
