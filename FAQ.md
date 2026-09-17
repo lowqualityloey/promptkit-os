@@ -1,6 +1,6 @@
 # PromptKit OS FAQ
 
-**The 18 questions every developer asks before adopting PromptKit OS.**
+**The 19 questions every developer asks before adopting PromptKit OS.**
 
 ---
 
@@ -584,6 +584,24 @@ For complete line-by-line token breakdowns and mathematical analysis, see [docs/
 ## 18. How does PromptKit OS handle a brand-new (greenfield) project with no code yet?
 
 Run `pk:onboard` first. On an empty repo it skips the brownfield scan and runs a **bounded Project Discovery Interview** instead (`protocols/discovery-intake.md`): a size-classed (small / medium / large) set of questions covering MVP intent, target surfaces, deployment target, auth & data needs, constraints, and design references (Figma links, screenshots, `STYLE.md`/`DESIGN.md`, tracker boards). Questions are asked in the context window — not modal pickers — so you can answer with links, screenshots, or documents. The interview closes with a recorded `close_reason`; anything you defer or the AI suggests goes to a **Later ledger**, not the plan. Results land in `PROMPTKIT.md` as machine-readable `size:` / `intake-status:` signals, which `pk:plan` Step 0 consults before proposing architecture. Existing (brownfield) installs resolve to `legacy-partial` and are never re-interviewed.
+
+---
+
+## 19. Can I use PromptKit OS alongside other prompt packs, external skill libraries, or domain-specific tools?
+
+**Short Answer**: Yes. PromptKit OS acts as the **Engineering Control Plane (Layer 2)**, governing task risk, Git boundaries, and verification done-gates, while external skills, linters, and prompt packs plug in cleanly as **Subordinate Helpers (Layer 3)**.
+
+### How to Compose Multiple Tools Safely:
+1. **The Single Control Owner Principle**: If two independent systems both attempt to govern the planning, task decomposition, and verification lifecycle simultaneously, the agent enters a *Control Loop Collision* (conflicting prompts, recursive loops, and massive context bloat). Always let one system own the engineering control plane and verification done-gates.
+2. **Layer Separation**:
+   - **Layer 1 (Specification)**: Use any requirements format, PRD, or user story to define *what* to build.
+   - **Layer 2 (Governance — PromptKit OS)**: Governs *how much process* is needed (adaptive ceremony Levels 0–3), manages cross-session state (`STATE.md`), enforces non-breaking Expand-Contract database migrations, and validates machine-verified `exit code 0` (Bounded Oracle).
+   - **Layer 3 (Capabilities & Skills)**: External libraries (e.g., domain helpers, CSS frameworks, specialized regex/refactoring prompts, or linters) provide specialized code generation assistance.
+   - **Layer 4 (Agent Runtime)**: The host environment (Claude Code, Antigravity, Cursor, Windsurf, Copilot, etc.).
+3. **Keep External Skills Subordinate**: External helpers must never silently bypass verification gates, commit code, or alter milestone state.
+4. **Use JIT Loading**: Rather than statically loading hundreds of external skills into context at once, reference external capabilities Just-In-Time when triggered. This preserves PromptKit's lean static footprint (~1,146 tok Lite / ~2,498 tok Balanced).
+
+For full architectural details, see [docs/COMPARISONS.md](docs/COMPARISONS.md).
 
 ---
 

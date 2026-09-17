@@ -18,9 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`pk:auto` Simulation Kata**: Added `activities/05-auto-orchestration.md`, providing a hands-on simulation covering the test immobility invariant, search circuit breakers, and review-ready handoff. (#248, #252)
 - **Living Skill Matrix Retrospective Link**: Added an explicit step in `workflows/reflect.md` (`pk:retro`) prompting developers and contributors to identify exercised skill dimensions and update `notes/skill-matrix.md`. (#249, #253)
 - **Lite Profile Quickstart Example**: Added `examples/lite-quickstart/` containing an annotated walkthrough, minimal `docs/STATE.md`, and an explicit upgrade path to Balanced. (#250, #254)
+- **4-Layer AI Engineering Stack & Multi-Tool Layering Guidance**: Added to `docs/COMPARISONS.md` and `FAQ.md` (Question 19). Defines the 4-layer taxonomy (Specification ➔ Engineering Control Plane [PromptKit] ➔ Capabilities & Skills ➔ Host Runtime) and the Single Control Owner Principle to avoid control loop collisions when composing external prompt packs and skill collections alongside PromptKit. (#259)
 
 ### Changed
 - **Advisory Search Circuit Breaker Semantics**: Updated `templates/agent-directive-template.md` and `agent-directive-lite-template.md` to define the breaker as an advisory instruction rather than mechanical tool control, changed the counting unit to per-call (batch tool calls count individually), carved out legitimate read-only research, and prohibited trivial edits from resetting the counter. Refreshed token counts across `docs/BENCHMARKS.md`. (#241, #255)
+- **Documentation Workflow Count & Profile Framing Synchronization**: Updated historical 23-workflow references to 24 workflows across `README.md` and `docs/COMPARISONS.md`, modernized profile callouts to remove dated v1.6 phrasing, and synchronized FAQ counts (19 questions) in `README.md` and `docs/ARCHITECTURE.md`. (#259)
 
 ### Fixed
 - **CLI Host Probe Precision**: Fixed false-positive detection in `init.sh` and `init.ps1` where stale or leftover configuration directories (e.g. `~/.claude`, `~/.copilot`) caused uninstalled CLI assistants to be marked as `[detected]`. CLI hosts now strictly probe active executable binaries in `$PATH`. (#226)

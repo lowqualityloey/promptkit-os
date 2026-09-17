@@ -19,7 +19,7 @@ PromptKit OS equips your coding assistant with disciplined engineering workflows
 | **Who it is for** | Developers pairing with AI coding agents who want structured specs, living project state, non-breaking schema migrations, and clean git history. |
 | **Who it is NOT for** | Developers looking for an autocomplete inline plugin, a CLI binary, or an npm dependency. PromptKit OS is pure markdown protocols and prompts. |
 | **Key differences** | Namespaced triggers (`pk:` prefix), Bounded Oracle Gates (machine-verified `exit code 0` required for quality gate verification with 2-attempt bounded repair), Search Circuit Breakers (consecutive read bounds halt context churn), guardrails against single-step destructive schema drops (phased Expand-Contract policy), strict project-scoped database container isolation, Socratic guidance that avoids unsolicited code dumps, and monorepo workspace isolation (scoped `--filter` commands). |
-| **Token Efficiency** | **Zero Static Token Bloat**: Injects only a compact router directive (~1,146 tok Lite [94% reduction] / ~2,498 tok Balanced [87% reduction] vs the ~19.8k derived core-subset baseline (v1.6.0-dated; re-derives with workflow growth, and ~97-99% vs the full 23-workflow set)). Full workflows are read Just-In-Time (JIT) from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md). |
+| **Token Efficiency** | **Zero Static Token Bloat**: Injects only a compact router directive (~1,146 tok Lite [94% reduction] / ~2,498 tok Balanced [87% reduction] vs the ~19.8k derived core-subset baseline (v1.6.0-dated; re-derives with workflow growth, and ~97-99% vs the full 24-workflow set)). Full workflows are read Just-In-Time (JIT) from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md). |
 | **Durable State Persistence** | **Cross-Session Memory**: State is never lost when chat sessions compact or reset. All active milestones, tasks in flight, and architectural invariants persist directly in Git-tracked markdown (`docs/STATE.md` and `docs/tasks/`). Architectural constraints discovered in `pk:onboard` are automatically synced to `STATE.md`. Run `pk:checkpoint` and resume in any fresh session via `pk:route`. |
 | **Adaptive Ceremony & Model Tiering** | **Scales with Risk**: Bypasses heavy templates for daily tweaks (Level 0/1) while reserving deep reasoning, Task Records, and verification gates for schema, auth, and release risks (Level 2/3). Matches LLM model tiers to task risk to prevent token waste. |
 | **Enforced Done-Gates** | **Not Inert Advice**: PromptKit OS enforces verifiable engineering done-gates: Bounded Oracle Verification (machine-verified `exit code 0` required to pass quality gates), strict milestone git boundaries (blocking milestone transitions on the task's own uncommitted changes), automated pre-commit secret leak scans (`pk:commit`), and required Gherkin Acceptance Criteria verification proof. Sampled prompt compliance is measured, not asserted: 15/15 baseline + 5/5 regression controls (see [`docs/BEHAVIORAL-EVAL.md`](./docs/BEHAVIORAL-EVAL.md)). |
@@ -46,7 +46,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 
 ## Quick Start (60 Seconds)
 
-**New to PromptKit?** → See **[FAQ.md](./FAQ.md)** for the 18 most common questions  
+**New to PromptKit?** → See **[FAQ.md](./FAQ.md)** for the 19 most common questions  
 **Getting started?** → See **[QUICKSTART.md](./QUICKSTART.md)** for a 5-minute guided tour  
 **Release History?** → See **[CHANGELOG.md](./CHANGELOG.md)** for version notes and release provenance  
 **Full-Stack Example?** → See **[examples/saas-dashboard/](./examples/saas-dashboard/README.md)** for a populated end-to-end feature walkthrough, or **[examples/fullstack-feature/](./examples/fullstack-feature/README.md)** for a narrative lifecycle reference  
@@ -56,7 +56,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 **Want to know more?** → See **[INTERESTING-FACTS.md](./docs/INTERESTING-FACTS.md)** for unique insights and design principles
 
 > [!TIP]
-> **Start with just 2 workflows.** You do not need to learn all 24 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand. New in v1.6.0: **2+1 profiles** — Lite (6 utility workflows, 1,146 tok), Balanced (24 workflows, default), Turbo experimental (parallel waves, ~2x measured cost).
+> **Start with just 2 workflows.** You do not need to learn all 24 workflows. Use `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia) to get 80% of the value immediately. Everything else is modular and on-demand. **Profiles (2+1 modes)**: Lite (6 utility workflows, 1,146 tok), Balanced (24 workflows, default), Turbo experimental (parallel waves, ~2x measured cost).
 
 ### 1. Add to Your Project
 
@@ -79,7 +79,7 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit;
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --turbo --experimental
 ```
 
-**Profiles (v1.6.0 — 2+1 modes):**
+**Profiles (2+1 modes):**
 - **Lite** (`--lite`): 6 utility workflows, 1,146 tok static (94% reduction vs ~19.8k core-subset), 80% value — new users, learning, tiny fixes
 - **Balanced** (`--balanced` or no flag, default): full 24 workflows, 2,498 tok, Level 0-3 adaptive ceremony — teams, production
 - **Turbo** (`--turbo --experimental`): Balanced + parallel waves, up to ~2x measured token cost, experimental, still requires human L3 approval — greenfield

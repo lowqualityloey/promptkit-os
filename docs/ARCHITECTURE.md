@@ -117,7 +117,7 @@ promptkit-os/
 │   └── workflows/
 │       └── ci.yml               # Maintainer CI (script syntax, initialization dry-run/idempotency, workflow structure, reference validation, fixture harnesses, and behavioral-contract tests)
 ├── CHANGELOG.md                 # Official release provenance adhering to Keep a Changelog
-├── FAQ.md                       # The 18 questions every developer asks before adopting
+├── FAQ.md                       # The 19 questions every developer asks before adopting
 ├── QUICKSTART.md                # 5-minute introduction with core workflows & 1-line setup
 ├── init.ps1                     # Setup script for Windows (PowerShell)
 ├── init.sh                      # Setup script for Linux/macOS (Bash)
