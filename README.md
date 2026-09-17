@@ -239,15 +239,24 @@ When new workflows, quality gates, or presets are released, pull the latest chan
 
 **If installed via Git Submodule:**
 ```bash
-git submodule update --remote .promptkit
-./.promptkit/init.sh     # or .\.promptkit\init.ps1 on Windows
+# Recommended: switch to submodule, pull latest main, and re-run initialization
+cd .promptkit && git checkout main && git pull origin main && cd ..
+bash .promptkit/init.sh     # or .\.promptkit\init.ps1 on Windows
+```
+*Or using submodule commands (requires `branch = main` configured in `.gitmodules`):*
+```bash
+git submodule update --remote --merge .promptkit
+bash .promptkit/init.sh
 ```
 
 **If installed via Direct Clone:**
 ```bash
-git -C .promptkit pull
-./.promptkit/init.sh     # or .\.promptkit\init.ps1 on Windows
+git -C .promptkit checkout main && git -C .promptkit pull origin main
+bash .promptkit/init.sh     # or .\.promptkit\init.ps1 on Windows
 ```
+
+> [!TIP]
+> **WSL & Linux Note**: Always use `bash .promptkit/init.sh` instead of `./.promptkit/init.sh` to prevent executable permission errors (`Permission denied`) or Windows CRLF line-ending mismatches.
 
 The initialization script is idempotent: it refreshes your agent directives in place without duplicating blocks or touching existing project specs.
 
