@@ -32,7 +32,7 @@ measure_file() {
         return
     fi
     local chars
-    chars=$(wc -c < "$file" | tr -d ' ')
+    chars=$(tr -d '\r' < "$file" | wc -c | tr -d ' ')
     echo $(( (chars + 2) / 4 ))
 }
 

@@ -89,9 +89,9 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **7,726 tok** | **6,362 tok** | **-40% Balanced, -51% Lite (-5,135 to -6,499 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **16,917 tok** | **15,553 tok** | **-31% Balanced, -37% Lite** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **12,404 tok** | **11,040 tok** | **-50% Balanced, -55% Lite (-12,357 to -13,721 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **7,642 tok** | **6,290 tok** | **-41% Balanced, -51% Lite (-5,219 to -6,571 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **16,740 tok** | **15,388 tok** | **-32% Balanced, -38% Lite** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **12,256 tok** | **10,904 tok** | **-51% Balanced, -56% Lite (-12,505 to -13,857 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 
