@@ -126,6 +126,7 @@ promptkit-os/
 │   ├── ARCHITECTURE.md          # Operating model, enforcement, command reference & layout (this file)
 │   ├── BEHAVIORAL-EVAL.md       # Sampled prompt-compliance results & methodology
 │   ├── BENCHMARKS.md            # Factual token economics, JIT benchmarks & model tiering
+│   ├── BENCHMARK-METHODOLOGY.md # Cost Per Accepted Change (CPAC) empirical benchmark framework
 │   ├── COMPARISONS.md           # Host support matrix & competitor comparison
 │   ├── WORKFLOW-MAP.md          # Visual decision trees and Mermaid diagrams
 │   ├── ADOPTION-GUIDE.md        # Incremental adoption for existing projects
@@ -216,6 +217,8 @@ promptkit-os/
 │   ├── isolate-worktree.ps1            # PowerShell: Git worktree sandbox manager (create, merge, remove)
 │   ├── measure-tokens.sh               # Bash: Mechanical directive character and token counter
 │   ├── measure-tokens.ps1              # PowerShell: Mechanical directive character and token counter
+│   ├── measure-cpac.sh                 # Bash: Cost Per Accepted Change (CPAC) measurement utility
+│   ├── measure-cpac.ps1                # PowerShell: Cost Per Accepted Change (CPAC) measurement utility
 │   ├── measure-tokenizer-delta.sh      # Bash: bytes/4 vs real-tokenizer validation
 │   ├── measure-tokenizer-delta.ps1     # PowerShell: bytes/4 vs real-tokenizer validation
 │   ├── run-behavioral-eval.sh          # Bash: Prompt-compliance eval harness + offline self-test

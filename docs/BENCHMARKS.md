@@ -233,7 +233,27 @@ Every figure above uses the `bytes/4` proxy. This section validates that convent
 
 ---
 
+## 10. Empirical Runtime Economics: The Cost Per Accepted Change (CPAC) Framework (Issue #279)
+
+While sections 1–9 measure the **static and dynamic instruction footprint** of PromptKit OS, the **Cost Per Accepted Change (CPAC)** framework measures real-world economic efficiency during active iterative development.
+
+Unconstrained AI coding agents often appear cheap on turn 1, but incur massive economic waste through the **rework spiral**:
+1. Unbounded file searches reading 20+ files across the repo.
+2. Formulating incorrect framework or architectural assumptions.
+3. Repeated compilation failures, broken tests, and hallucinated API corrections.
+4. Violating non-negotiable security or concurrency invariants that require expensive senior human developer triage.
+
+PromptKit OS bounds this waste by coupling JIT Stack Playbooks (`docs/stacks/`), Contract Boundary Recipes (`docs/recipes/`), and the Evidence-Gated Verification Matrix (`protocols/telemetry-cards.md`).
+
+For full mathematical definitions, pricing constants, and the A/B evaluation protocol:
+- [`BENCHMARK-METHODOLOGY.md`](./BENCHMARK-METHODOLOGY.md) — Formal CPAC mathematical model and telemetry schema.
+- [`specs/SPEC-empirical-benchmark.md`](./specs/SPEC-empirical-benchmark.md) — Multi-ecosystem benchmark scenarios (`WEB-01`, `SYS-02`, `DATA-03`).
+- [`../scripts/measure-cpac.sh`](../scripts/measure-cpac.sh) — Telemetry parsing and automated CPAC scorecard generation utility.
+
+---
+
 ## Related References
+- [`BENCHMARK-METHODOLOGY.md`](./BENCHMARK-METHODOLOGY.md) — Cost Per Accepted Change (CPAC) empirical evaluation protocol
 - [`protocols/subagent-delegation.md`](../protocols/subagent-delegation.md) — Subagent delegation & context preservation rules
 - [`protocols/context-sync.md`](../protocols/context-sync.md) — 30-turn reset threshold & MCP discovery
 - [`workflows/route.md`](../workflows/route.md) — Canonical task ceremony levels & model tiering
