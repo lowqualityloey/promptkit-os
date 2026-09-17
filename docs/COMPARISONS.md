@@ -32,12 +32,67 @@ PromptKit OS coexists cleanly with host-specific instruction files (`AGENTS.md`,
 
 ---
 
+## The 4-Layer AI Engineering Stack
+
+To understand where PromptKit OS fits alongside other developer tools, prompts, and plugins, it helps to view the AI-assisted development ecosystem across four distinct layers:
+
+```mermaid
+flowchart TD
+    Human["👤 Human Developer (Intent & Strategic Authority)"] --> L1["Layer 1: Specification Layer<br/><i>'WHAT are we building?'</i><br/>(PRDs, user stories, Gherkin specs)"]
+    L1 --> L2["Layer 2: Engineering Control Plane — PromptKit OS<br/><i>'HOW MUCH process, risk management, and verification does this task deserve?'</i><br/>(Adaptive ceremony L0–L3, context budgets, Expand-Contract migrations, Bounded Oracle)"]
+    L2 --> L3["Layer 3: Capability & Execution Layer<br/><i>'HOW to execute specialized technical work?'</i><br/>(Domain skills, linters, specialized code generators, subagent execution)"]
+    L3 --> L4["Layer 4: Agent Runtime / Host<br/><i>'WHERE does the AI execute?'</i><br/>(Claude Code, Antigravity, Cursor, Windsurf, Copilot, Trae, OpenCode, Aider)"]
+```
+
+### Layer Breakdown
+
+1. **Layer 1: Specification Layer (`WHAT`)**: Defines requirements, business constraints, user journeys, and acceptance criteria before implementation starts.
+2. **Layer 2: Engineering Control Plane (`HOW MUCH PROCESS & RISK`) — PromptKit OS**: Operates as the neutral governor of the software development lifecycle. It determines whether a task is trivial (Level 0/1) or high-risk (Level 2/3), injects only the required workflow Just-In-Time, tracks cross-session state (`STATE.md`), enforces non-breaking database safety, and validates done-gates.
+3. **Layer 3: Capability & Execution Layer (`HOW TO EXECUTE`)**: Contains specialized assistance: language-specific tools, domain prompt libraries, refactoring helpers, or local scripts.
+4. **Layer 4: Agent Runtime / Host (`WHERE`)**: The underlying LLM interface and tool-use environment (Claude Code, Gemini CLI, Cursor, Windsurf, Copilot, etc.).
+
+---
+
+## Multi-Tool Composition & Avoiding Control Loop Collisions
+
+A common failure mode in AI-assisted workflows occurs when developers install multiple prompt frameworks, orchestration systems, or autonomous loops simultaneously.
+
+### The Single Control Owner Principle
+
+If two independent systems both attempt to govern the task lifecycle (planning ➔ task decomposition ➔ execution ➔ verification ➔ done-gates), they enter a **Control Loop Collision**:
+- Conflicting instructions confuse the host model into recursive meta-planning loops.
+- Token consumption balloons as multiple monolithic instruction sets are dumped into context.
+- Done-gate ambiguity causes premature commits or infinite repair loops.
+
+**Rule**: *Only one system should own the engineering control plane and verification done-gates for a repository.*
+
+### How to Layer Helpers Safely
+
+PromptKit OS is designed to act as the authoritative **Layer 2 Control Plane** while allowing external prompt packs and skill collections to plug in as **Layer 3 Subordinate Helpers**:
+
+1. **PromptKit Remains Authoritative**: Level 0–3 risk classification, milestone boundaries, Git commit gating (`pk:commit`), and machine-verified exit code 0 (`Bounded Oracle`) are governed by PromptKit.
+2. **Subordinate Execution**: External tools provide specialized domain help (e.g., writing a complex CSS animation, drafting a regex, or running a specific linter) without attempting to bypass PromptKit's git boundary or lifecycle state.
+3. **JIT Loading Prevents Bloat**: Rather than loading hundreds of external skills statically, reference specialized capabilities on-demand so static context remains sub-1,500 tokens (Lite) or sub-2,500 tokens (Balanced).
+
+### PromptKit's Defining Question: Adaptive Ceremony
+
+While rigid methodologies force heavy specification and testing loops on every localized tweak, PromptKit's core philosophy is:
+
+> **"How much engineering process does this specific task actually deserve?"**
+
+- **Level 0 (Trivial)**: Single-line typo, string update, documentation touch. Zero ceremony, no Task Records.
+- **Level 1 (Standard)**: Localized component tweak, bug fix, isolated utility. Socratic focus, minimum workflow, no Task Record.
+- **Level 2 (Coordinated)**: Multi-file feature, internal contract change, new route. Mandatory Task Record, architecture check, Bounded Oracle verification.
+- **Level 3 (High-Risk)**: Public API contract, database schema migration, authentication/authorization, production release. Strict Expand-Contract phased migrations, human sign-off, full verification evidence.
+
+---
+
 ## How PromptKit Differs from Other Tools
 
 | Dimension | Single-File Directives | Static Prompt Packs | Autonomous Multi-Agent Swarms | **PromptKit OS** |
 | :--- | :--- | :--- | :--- | :--- |
-| **Scope** | Tool-specific instruction endpoint | Workflow templates for one tool | Multi-agent unmonitored loops | Cross-tool engineering OS with 23 lifecycle workflows |
-| **Token Overhead** | Minimal initial overhead | High monolithic bloat (~18k tokens inlined) | Higher aggregate token cost from multi-agent pipeline calls | **~1,146 tok Lite / ~2,498 tok Balanced baseline\***  (~94% / ~87% static context reduction vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set); unused workflows consume 0 tokens) |
+| **Scope** | Tool-specific instruction endpoint | Workflow templates for one tool | Multi-agent unmonitored loops | Cross-tool engineering OS with 24 lifecycle workflows |
+| **Token Overhead** | Minimal initial overhead | High monolithic bloat (~18k tokens inlined) | Higher aggregate token cost from multi-agent pipeline calls | **~1,146 tok Lite / ~2,498 tok Balanced baseline\***  (~94% / ~87% static context reduction vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 24-workflow set); unused workflows consume 0 tokens) |
 | **Persistence** | Per-session only | Per-session only | Hidden cache directories prone to context exhaustion | Git-tracked `docs/STATE.md` survives context resets & fresh chats |
 | **Execution Model** | Unstructured chat | Manual template pasting | Background loop until timeout or crash | Disciplined human-in-the-loop pairing (Levels 0–3) |
 | **Database Safety** | No schema guardrails | Varies | Risk of destructive drops in unmonitored edits | Expand-Contract only (phased, non-breaking migrations) & strict Project-Scoped DB container isolation |
@@ -45,7 +100,7 @@ PromptKit OS coexists cleanly with host-specific instruction files (`AGENTS.md`,
 | **Done-Gates** | Trust the model | Trust the model | Fragile timeout heuristics | Artifact gates + Gherkin verification + CI + human review |
 | **Lock-in** | Tool-specific format | Tool-specific format | Framework-specific runtime & daemons | Pure markdown, works with any AI coding assistant |
 
-*\* Measured mechanically via `scripts/measure-tokens.sh` / `measure-tokens.ps1` (bytes/4 convention, ~1,146 tokens Lite / ~2,498 tokens Balanced vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 23-workflow set)). See [`BENCHMARKS.md`](./BENCHMARKS.md) for full context window analysis.*
+*\* Measured mechanically via `scripts/measure-tokens.sh` / `measure-tokens.ps1` (bytes/4 convention, ~1,146 tokens Lite / ~2,498 tokens Balanced vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 24-workflow set)). See [`BENCHMARKS.md`](./BENCHMARKS.md) for full context window analysis.*
 
 ---
 
@@ -53,4 +108,4 @@ PromptKit OS coexists cleanly with host-specific instruction files (`AGENTS.md`,
 
 - [`../README.md`](../README.md) — Front door: pitch, install, Level model, worked example
 - [`BENCHMARKS.md`](./BENCHMARKS.md) — Token economics behind the comparison figures
-- [`../FAQ.md`](../FAQ.md) — The 18 questions every developer asks before adopting
+- [`../FAQ.md`](../FAQ.md) — The 19 questions every developer asks before adopting
