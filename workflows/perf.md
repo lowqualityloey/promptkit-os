@@ -70,16 +70,27 @@ Isolate the exact layer responsible for the degradation. Do not assume where the
    - Check caching effectiveness:
      - Missing Cache-Control headers, Redis key misses, or stale-while-revalidate opportunities.
 
-3. **Frontend & Client Runtime Layer**:
-   - Check React 19 / client render churn:
-     - Unstable object references or inline handlers triggering full subtree re-renders.
-     - Context providers passing un-memoized values to deeply nested component trees.
-   - Check JavaScript bundle bloat:
-     - Duplicate packages across node_modules.
-     - Non-tree-shakeable imports (e.g., importing entire utility libraries for a single function).
-   - Check Core Web Vitals:
-     - INP (Interaction to Next Paint): heavy JavaScript execution on click/keyboard interaction.
-     - LCP (Largest Contentful Paint): unoptimized images, render-blocking resources, or slow server time-to-first-byte (TTFB).
+3. **Frontend & Core Web Vitals Layer**:
+   - **Interaction to Next Paint (INP $\le 200\text{ms}$)**:
+     - Isolate main-thread blocking long tasks ($>50\text{ms}$) triggered by clicks, keyboard inputs, or taps.
+     - Yield to the browser main thread during heavy computation using `await scheduler.yield()` or task chunking.
+     - Wrap non-urgent client state updates in React `startTransition` to unblock immediate keystroke and click feedback.
+     - Eliminate synchronous layout thrashing (interleaved DOM reads like `offsetHeight`/`getBoundingClientRect` with DOM writes).
+   - **Largest Contentful Paint (LCP $\le 2.5\text{s}$)**:
+     - Priority-hint critical hero elements: `<img fetchpriority="high" ... />` or `<link rel="preload" as="image" ... />`.
+     - Eliminate render-blocking synchronous external CSS, webfonts, or script tags in `<head>`.
+     - Verify server response time (TTFB $\le 800\text{ms}$) and leverage edge rendering / streaming HTML.
+   - **Cumulative Layout Shift (CLS $\le 0.1$)**:
+     - Mandate explicit `width` and `height` or CSS `aspect-ratio` on all images, videos, iframes, and canvas embeds.
+     - Reserve dimensional skeleton placeholders for dynamically loaded client components and third-party widgets.
+     - Enforce `font-display: swap` paired with fallback font metrics (`size-adjust`) to stop FOUT layout shift.
+   - **Client Script & Bundle Budgets**:
+     - Budget critical-path initial JavaScript payload to $\le 150\text{kB}$ gzipped.
+     - Code-split routes, heavy modals, and charts dynamically via `next/dynamic` or `React.lazy`.
+     - Audit third-party script overhead; defer analytics, tag managers, and widgets via `next/script` (`strategy="lazyOnload"`).
+   - **Render Churn & Hydration**:
+     - Prevent unstable object/function references in top-level context providers triggering subtree re-renders.
+     - Minimize client-side hydration mismatches and oversized initial React Server Component (RSC) payload serialization.
 
 ---
 
