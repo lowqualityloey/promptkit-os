@@ -9,7 +9,7 @@ Eliminate instruction decay, stale working assumptions, and formatting divergenc
 ---
 
 ## Preconditions & When to Sync
-- **PromptKit Engine Updated**: `git submodule update --remote .promptkit` or `./.promptkit/init.sh` was just run.
+- **PromptKit Engine Updated**: Submodule updated, `git -C .promptkit pull origin main`, or `bash .promptkit/init.sh` was just run.
 - **Instruction Drift / Formatting Divergence**: The AI is omitting visual callouts (`> [!TIP]`, `> [!IMPORTANT]`), failing to render the telemetry status card (3 mandatory lines `📊 / 🎯 / 🟢` + optional `📈`), or not prioritizing native interactive selection tools.
 - **Post-Compaction Re-Entry**: After a conversation summary/continuation, the first substantive action should be a disk re-read of `docs/STATE.md` and the active workflow — do not act from a summarized recollection of protocol.
 - **New Session Startup / Protocol Verification**: Starting work on a fresh branch or verifying that the active agent is fully aligned with host repository guardrails.
