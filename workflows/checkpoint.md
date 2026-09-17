@@ -112,7 +112,7 @@ Ensure the workspace is in a clean state before switching sessions:
    - Check off completed tasks in Section 2 (`- [x] TASK-XX: ...`).
    - Update `Last Updated` date and overall status.
    - Update Section 3 (`Active Working Set`) with files in flight and test commands.
-   - Record newly agreed-upon non-negotiables in Section 4 (`Locked Technical Invariants`).
+   - Record newly agreed-upon non-negotiables in Section 4 (`Locked Technical Invariants`) — only rules with a recorded human approval. Inferred or tentative rules go to Section 4A as **Candidate Learnings** with status `pending` under the memory-vs-policy boundary (`protocols/context-sync.md` §3.1); checkpointing, persistence, and rereading never promote them.
    - Record active blockers in Section 5 (`Known Blockers, Risks & Open Questions`).
    - Set the prioritized next tasks in Section 7 (`Next Immediate Actions`).
     - Append an entry to Section 8 (`Session Continuity Log`):

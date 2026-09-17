@@ -83,6 +83,16 @@ Document non-negotiable architectural decisions agreed upon during pairing sessi
 
 ---
 
+## 4A. Candidate Learnings (Unpromoted)
+
+Staging area for rules observed during sessions but not yet approved as invariants. Entries here are **never pre-filled** and are non-authoritative: agents must not treat them as policy, quote them as invariants, or copy them into project guardrails. Promotion requires a recorded human decision (`approved` / `rejected` / `deferred`) with approver, date, evidence reference, and destination (see `protocols/context-sync.md` §3.1).
+
+| Date | Proposed Rule | Source / Evidence | Scope | Status | Human Decision (approver, date, destination) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| not tracked | not tracked | not tracked | not tracked | not tracked | not tracked |
+
+---
+
 ## 5. Known Blockers, Risks & Open Questions
 - **Blockers**:
   - [e.g., TASK-06 blocked on third-party API sandbox credentials from devops team]

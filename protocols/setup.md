@@ -72,6 +72,8 @@ To optimize context window efficiency and minimize token overhead, agents must f
 
 Progressive loading is an instruction-efficiency policy to conserve context, not a runtime guarantee or hidden enforcement mechanism.
 
+Persistent memory is not policy: setup and reinjection must not import session learnings as project rules. Follow the Memory vs Policy Boundary in `protocols/context-sync.md` §3.1; candidate notes remain non-authoritative until explicit human approval, and existing scoped document authorities remain unchanged.
+
 ### Workflows & Protocols Reference
 - **Route**: `.promptkit/workflows/route.md`
 - **Tutor**: `.promptkit/workflows/tutor.md`
