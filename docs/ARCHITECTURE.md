@@ -132,7 +132,7 @@ promptkit-os/
 │   ├── INTERESTING-FACTS.md     # Unique insights and design principles
 │   ├── DESIGN-MD-FAQ.md         # FAQ on custom DESIGN.md usage & safety
 │   ├── token-efficiency-review.md # Token efficiency audit trail
-│   ├── stacks/                  # JIT stack playbooks (Next.js, Turso, Supabase, Render, Vercel)
+│   ├── stacks/                  # JIT stack playbooks (Next.js, Turso, Supabase, Render, Vercel, Cloudflare)
 │   └── adrs/                    # Architecture Decision Records (0001 headroom, 0002 lifecycle)
 ├── protocols/                   # Non-negotiable AI rules & operating standards
 │   ├── setup.md                 # Universal multi-agent configuration protocol
