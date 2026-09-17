@@ -89,7 +89,7 @@ Staging area for rules observed during sessions but not yet approved as invarian
 
 | Date | Proposed Rule | Source / Evidence | Scope | Status | Human Decision (approver, date, destination) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| not tracked | not tracked | not tracked | not tracked | pending | not tracked |
+| not tracked | not tracked | not tracked | not tracked | not tracked | not tracked |
 
 ---
 

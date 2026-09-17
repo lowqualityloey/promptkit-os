@@ -384,6 +384,12 @@ Assert-Contains "templates/state-tracker-template.md" "Candidate Learnings" "Sta
 Assert-Contains "workflows/checkpoint.md" "Candidate Learnings" "Checkpoint preserves pending candidate status on sync"
 Assert-Contains "workflows/onboard.md" "Candidate Learnings" "Onboard stages manifest-derived observations as candidates"
 Assert-Contains "workflows/sync.md" "never automatically promoted" "Sync never promotes candidates on reread"
+Assert-Contains "protocols/context-sync.md" 'Stage a proposed rule.*§4A.*pending' "Context-sync stages pending rules in section 4A"
+Assert-Contains "workflows/checkpoint.md" 'Inferred or tentative rules go to Section 4A' "Checkpoint stages inferred rules outside locked invariants"
+Assert-Contains "workflows/onboard.md" 'observations belong only in Section 4A' "Onboard never places observations directly in locked invariants"
+Assert-Contains "protocols/context-sync.md" 'Rejected or deferred candidates remain non-authoritative; changed scope or wording requires fresh approval' "Rejected and changed candidates cannot inherit approval"
+Assert-Contains "protocols/setup.md" 'setup and reinjection must not import session learnings as project rules' "Setup preserves the promotion boundary"
+Assert-Contains "templates/state-tracker-template.md" 'approver, date, evidence reference, and destination' "Candidate promotion records decision provenance"
 
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
