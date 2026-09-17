@@ -228,6 +228,8 @@ assert_contains "workflows/route.md" "New Project / Greenfield Inception" "Route
 assert_contains "protocols/context-sync.md" "Product & Design Inputs" "Context-sync authority table covers Figma/screenshot/doc design inputs"
 assert_contains "workflows/plan.md" "never a full re-interview" "Plan workflow caps partial-intake repair to missing critical slots only (legacy protection)"
 assert_contains "workflows/commit.md" "closed-set operational choices" "Blanket Recommended-pickers are bounded to closed-set operational choices"
+assert_contains "workflows/perf.md" "Frontend & Core Web Vitals Layer" "Perf workflow defines Core Web Vitals audit protocol"
+assert_contains "workflows/refactor.md" "Code Simplification Pass" "Refactor workflow defines Code Simplification Pass and deflation heuristics"
 
 echo ""
 echo "📌 Scenario O: Protocol registry & FAQ count drift guards"
