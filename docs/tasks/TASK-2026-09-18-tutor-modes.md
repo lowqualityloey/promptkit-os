@@ -50,12 +50,12 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Execution State**: `completed`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-18 11:00 UTC`
 - **Current Actor**: `PromptKit maintainer (review)`
-- **Next Action**: `Human PR review and merge decision`
+- **Next Action**: `None - task complete; PR #306 merged`
 
 ### Transition History
 
@@ -65,6 +65,7 @@
 | planned | ready | 2026-09-18 11:00 UTC | Implementor agent | Readiness complete; scope pre-approved in Issues #302/#303 | This record |
 | ready | in_progress | 2026-09-18 11:00 UTC | Implementor agent | Branch `fix/tutor-modes-302-303`; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-18 11:30 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
+| awaiting_review | completed | 2026-09-18 12:00 UTC | PromptKit maintainer | PR #306 squash-merged as 1361a92; CI green both OSes | Merge commit 1361a92 |
 
 ## 6. Evidence and Completion Gate
 
@@ -79,14 +80,14 @@
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Documentation Work`
-- **CI Evidence**: pending PR run (Linux + Windows)
-- **Review Evidence**: pending human PR review
-- **Commit Evidence**: pending commit on branch `fix/tutor-modes-302-303`
-- **Pull Request Evidence**: pending PR referencing Issues #302 and #303
+- **CI Evidence**: PR #306 CI green both OSes at merge (Lint and Validate Linux SUCCESS, Windows SUCCESS)
+- **Review Evidence**: Maintainer-merged PR #306 on 2026-09-18; no separate review record
+- **Commit Evidence**: Branch commits squash-merged as 1361a92
+- **Pull Request Evidence**: PR #306 merged 2026-09-18T06:00:40Z, closes Issue #302 and #303
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: AC-1 Complete (tiered self-sufficient probes, teaching rules suspended in drills); AC-2 Complete (mode precedence, code boundary, ADR verification, journal writer); AC-3 Complete (debug.md primary, Mode 6 overlay, teach-back stop); AC-4 Complete (178/178, zero figure rot)
 - **Changed-File Summary**: 2 files; tutor.md mode repair, Task Record
 - **Completion Exception**: `None`
-- **Completion Decision and Timestamp**: `awaiting_review; Implementor agent; 2026-09-18 11:30 UTC`
+- **Completion Decision and Timestamp**: `completed; PromptKit maintainer; 2026-09-18 12:00 UTC`
