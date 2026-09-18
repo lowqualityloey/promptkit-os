@@ -23,6 +23,7 @@ Unlike functional bugs handled in `pk:debug`, performance regressions rarely thr
 1. Developer reports sluggish behavior, high latency, memory consumption, or bundle bloat, OR a performance regression was detected in automated testing.
 2. The target endpoint, database query, background worker, or frontend component is identifiable.
 3. Benchmarking or profiling tooling is available (`autocannon`, `k6`, `EXPLAIN ANALYZE`, Lighthouse, Chrome DevTools, or Node.js profilers).
+4. Profiling is Level 1; resulting schema, index, or auth changes are Level 2 (Controlled) and require a canonical Task Record at `docs/tasks/<task-id>.md` before implementation (see `workflows/route.md`). Benchmarks run against local or staging targets only — never production URLs.
 
 ---
 

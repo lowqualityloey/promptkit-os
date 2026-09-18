@@ -82,10 +82,10 @@ Large refactorings fail when agents attempt to change everything at once. Use th
 1. **Attempt the Immediate Transformation**: Try to extract the target function or interface.
 2. **Detect Blockers**: If the compiler, linter, or test suite fails due to a downstream dependency:
    - **Do NOT continue editing other files in a broken state.**
-   - **Immediately Revert**: `git checkout -- .` (or undo the breaking edit).
+   - **Revert Scoped, Never Blanket**: revert only the files this step modified (`git checkout -- <touched-paths>`). Check `git status -s` first — if unrelated uncommitted work is present, halt with `> [!WARNING] Blocked: Waiting on Human Input` instead of reverting.
    - Record the blocking dependency as a child prerequisite on your task list.
 3. **Execute Prerequisites First**: Refactor the leaf prerequisite, verify all tests pass, and commit atomically (`pk:commit`).
-4. **Retry the Target**: Return to the parent transformation now that the blocker has been cleanly separated.
+4. **Retry the Target**: Return to the parent transformation now that the blocker has been cleanly separated. Bound the recursion: maximum 3 prerequisite levels per target and 2 retries of the same target — a third failure halts with `> [!WARNING] Blocked: Waiting on Human Input` and the Mikado graph recorded as evidence.
 
 ### Stage 3: Strangler Fig Seam (Parallel Implementation)
 For multi-file or cross-module refactors, never execute a destructive "big-bang" overwrite:

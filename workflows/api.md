@@ -12,8 +12,9 @@ Eliminate the leading causes of API integration friction: inconsistent error sha
 
 ## Preconditions
 - Developer is designing an API endpoint, tRPC router, Next.js Server Action, or webhook handler.
+- Public or breaking contract work is Level 2 (Controlled): a canonical Task Record at `docs/tasks/<task-id>.md` is required before implementation (see `workflows/route.md`).
 - Target storage directory: `./docs/api/` in the host project.
-- Access to `.promptkit/templates/api-contract-spec.md`.
+- Access to `templates/api-contract-spec.md`.
 
 ---
 

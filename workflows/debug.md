@@ -97,6 +97,7 @@ Construct a feedback loop using the first viable option from this hierarchy:
 - [ ] You have identified **one single command** (script path, test run, or curl).
 - [ ] You have run it and verified it is **red-capable** (fails with the user's exact symptom).
 - [ ] The command runs quickly and deterministically unattended.
+- **HALT path**: if no red-capable loop is buildable after exhausting the hierarchy above (including option 10), do not proceed to hypotheses. Halt with `> [!WARNING] Blocked: Waiting on Human Input`, recording the attempted loop options and their failure modes. Maximum 3 hypothesis-test iterations per hypothesis before reassessing the loop itself.
 
 ---
 

@@ -46,18 +46,20 @@ Facilitate a deep, high-impact Engineering Retrospective following a development
 3. Present a crisp 3-bullet snapshot of what was built or refactored.
 
 ### Step 2: Socratic Retrospective Inquiry
-Prompt the developer with 3-4 targeted reflective questions:
+Ask exactly one round of 3-4 targeted reflective questions (no follow-up rounds without new session evidence):
 1. **Mental Model**: *"What assumption did you have before this session that changed during implementation?"*
 2. **Trade-Offs**: *"What trade-offs (e.g., speed vs. flexibility, memory vs. compute, simplicity vs. extensibility) did you make in your solution?"*
 3. **Resilience & Edge Cases**: *"Where is the weakest point in this implementation under extreme load, network failure, or corrupted input?"*
 4. **Tooling / DX**: *"What slowed you down during this session, and how can tooling or automation eliminate that friction next time?"*
+
+If the developer does not answer (non-interactive session or no response), proceed with agent-drafted observations explicitly marked unconfirmed and continue to Step 3.
 
 ### Step 3: Extract Architectural Decisions (ADR Check)
 Evaluate whether significant architectural or technology choices were made:
 - Examples: Choosing an ORM, selecting a state management library, structuring server/client boundaries, defining an authentication strategy, introducing a caching layer.
 - If a significant decision occurred:
   1. Recommend drafting an ADR in the project's `./docs/adrs/` folder.
-  2. Use `.promptkit/templates/adr-template.md` to scaffold `./docs/adrs/YYYY-MM-DD-<decision-title>.md`.
+   2. Use `templates/adr-template.md` to scaffold `./docs/adrs/YYYY-MM-DD-<decision-title>.md`.
   3. Assist the developer in documenting Context, Decision, Consequences, and Alternatives Considered.
 
 ### Step 4: Extract Bug Root Cause Analysis (RCA Check)
