@@ -187,7 +187,7 @@ When operating in AI development environments with Model Context Protocol (MCP) 
 | **Source Control & PRs** | `github-mcp` (`create_pull_request`, `issue_read`, `issue_write`, `list_commits`) | N/A | `gh pr create`, `gh issue view`, `git` | Asking developer to open PR manually |
 | **Database Discovery** | `postgres-mcp` / DB MCP (`query`, `list_tables`, `describe_table`) | N/A | `psql`, `sqlite3`, ORM migration CLI | Asking developer for table schemas |
 | **Interactive Selection** | Modal Prompt / `ask_question` / prompt picker modal | Native IDE UI Pickers | Terminal CLI input / raw prompt | Free-form conversational text |
-| **Codebase Search** | N/A | `grep_search`, `find_by_name`, `file_search` | `rg`, `grep`, `find`, `fd` | Asking developer for file paths |
+| **Codebase Search** | `context-mcp` / Indexing MCP (`context_search`, `expand_chunk`, `related_context`) | `grep_search`, `find_by_name`, `file_search` | `rg`, `grep`, `find`, `fd` | Asking developer for file paths |
 | **File Manipulation** | N/A | `view_file`, `replace_file_content`, `write_to_file` | `cat`, `sed`, `awk`, shell redirection | Asking developer to edit code |
 | **Diagnostics & Type Integrity** | `lsp-mcp` (`textDocument/diagnostic`, `hover`, `references`) | Native IDE diagnostics panel | `tsc --noEmit`, `biome check`, `eslint` (JSON output) | Manual reviewer inspection |
 

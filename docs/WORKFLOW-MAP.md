@@ -25,7 +25,7 @@ Before selecting a workflow, classify the request using the composable 4-level c
 - **Level 2 — Controlled (Controlled Work)**: Relational schema/data migrations, auth, permissions, breaking API contracts, or multi-component architectural changes. Requires a canonical Local Task Source at `docs/tasks/<task-id>.md` and RFC specification (`pk:plan`, `pk:data`, `pk:auth`) before implementation.
 - **Level 3 — Release-Critical (Release Work)**: Production releases, deployments, tag creation, or high-impact contract changes. Uses Level 2 evidence plus full candidate evaluation (`pk:ship`), QA review, contract evidence, and explicit human authorization. A Level 3 downgrade requires a documented reason, confirmation that no release actions remain in scope, Release Coordinator approval, and evidence preservation.
 
-For authoritative Level 0–3 classification, escalation, downgrade, and Task Record rules, see [`workflows/route.md`](../workflows/route.md).
+For authoritative Level 0–3 classification, escalation, downgrade, and Task Record rules, see [`workflows/route.md`](../workflows/route.md). For context acquisition rules, the Z0–Z4 zoom ladder, and the Context Provider Capability Contract, see [`protocols/context-economy.md`](../protocols/context-economy.md).
 
 - The Task Record is authoritative for Controlled Work. `docs/STATE.md` is a synchronized projection owned by `pk:checkpoint`; external issues, dated breakdowns, board statuses, and conversation claims are supporting references.
 - Existing records, workflow triggers, owners, approval boundaries, release protections, and rollback boundaries remain valid. Adaptation fields and sections are additive and do not require retroactive migration.

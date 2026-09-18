@@ -94,6 +94,20 @@ In multi-agent environments (Antigravity, Claude Code, Cursor background agents)
 - **Native Selection Modals**: When concluding a task, workflow milestone, or decision point, the assistant executes the host's native interactive selection tool (e.g. OpenCode prompt picker, `ask_question`) as your final tool call of the turn with `(Recommended)` prefixing Option 1. Bounded to closed-set operational choices: for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead — see the Picker routing rule in `workflows/plan.md`.
 - **Fast Keyboard Navigation**: Renders an interactive menu right in your chat/terminal interface where you can navigate with arrow keys, press `Enter` for 1-key confirmation, or type custom input instead of staring at a blank prompt.
 
+### Context Economy, Z0–Z4 Progressive Zoom & Capability Contract
+
+PromptKit OS governs how agents acquire and validate code context via [`protocols/context-economy.md`](../protocols/context-economy.md):
+- **Minimum Sufficient Context**: Context minimization never overrides evidence requirements. The agent begins with narrow context and escalates when risk, coupling, or uncertainty demands it.
+- **Z0–Z4 Context Zoom Taxonomy**: Context aperture is explicitly decoupled from Task Ceremony (`L0–L3`):
+  - `Z0`: Symbol & Signatures (interfaces, types, AST signatures; satisfied via native bounded reads or AST search)
+  - `Z1`: Target & Local Window (symbol body + bounded slice)
+  - `Z2`: File & Interface (full target file + imports)
+  - `Z3`: Module & Dependencies (callers, consumers, shared state)
+  - `Z4`: Macro & Architecture (cross-package, DB schemas, RFCs)
+- **Context Provider Capability Contract**: PromptKit defines a vendor-neutral capability interface. Minimal providers (native CLI tools like `grep` and bounded reads) satisfy required capabilities (`text_search`, `bounded_read`, `source_locations`) with zero dependencies. Advanced indexing MCPs (such as Code Context Engine or ACE) expose optional capabilities (`symbol_search`, `semantic_search`, `graph_expansion`, `freshness`).
+- **Evidence vs. Authority**: *"Retrieval confidence is evidence, not authority."* High provider confidence cannot bypass Hard Escalation Triggers (Auth, DB schemas, Public APIs, Shared State).
+- **Provider Freshness Invariant**: Context from an indexing provider whose freshness cannot be verified cannot satisfy freshness-sensitive evidence requirements by itself; agents fall back to live repository reads.
+
 ---
 
 ## Enforcement Model & CI
