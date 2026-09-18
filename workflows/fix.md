@@ -102,7 +102,7 @@ Before writing or editing code:
 1. **Lock-In Regression Test**:
    Convert the reproduction check into a permanent regression test at the real call-site seam (`pk:test`).
 2. **Evidence-Gated Verification (Machine-Verified Quality Gate)**:
-   - **Tiered Execution**: Execute the verification command matching the task ceremony level defined in `project-profile.md`:
+    - **Tiered Execution**: Execute the verification command matching the task ceremony level defined in `PROMPTKIT.md`:
      - *Level 0 (Direct)*: `fast` verification tier (e.g. `pnpm tsc --noEmit` or `cargo check`).
      - *Level 1 (Standard)*: `fast` + `required` verification tier (targeted unit/component tests).
      - *Level 2/3 (Controlled/Release)*: `fast` + `required` + `extended` verification tiers (full suite, schema validation, lint).

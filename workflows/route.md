@@ -116,9 +116,9 @@ To eliminate cognitive confusion, duplicate context loads, and conflicting instr
 - **Rule**: Never load multiple parallel primary workflow files in a single turn. Declare `Primary: <workflow>` and list active `Supporting Checks: [<protocol/workflow>]`.
 
 4d. **JIT Stack Playbook Discovery & Injection**:
-To prevent framework bloat while providing deep architectural invariants, the router checks `.promptkit/project-profile.md` for active stack playbooks:
+To prevent framework bloat while providing deep architectural invariants, the router checks `PROMPTKIT.md` for active stack playbooks:
 - **Repository Manifest Signals**: Candidate manifests (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`, `render.yaml`) map to bounded playbooks in `docs/stacks/`.
-- **Bounded JIT Loading**: The assistant loads **only** the candidate playbook(s) declared in `project-profile.md` (e.g. `docs/stacks/database-turso.md`).
+- **Bounded JIT Loading**: The assistant loads **only** the candidate playbook(s) declared in `PROMPTKIT.md` (e.g. `docs/stacks/database-turso.md`).
 - **Context Exclusion**: Unrelated stack playbooks (e.g. Rust playbooks in a Next.js repo) are strictly excluded to preserve token budgets.
 - **Precedence Hierarchy**: Local Project Profile Overrides > PromptKit Stack Playbooks > External Host Skills.
 
