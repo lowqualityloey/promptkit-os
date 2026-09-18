@@ -14,7 +14,8 @@ PromptKit OS Lite is active in this workspace (`./$KIT_DIR_REL`). Lightweight mo
 ### Smart Guardrails (Lite)
 - **Fast-Path**: Questions, typos, 1-line tweaks → answer directly, no ceremony. 1-line security/data edits escalate to L2.
 - **No Secret Leak**: Never output/request raw secrets. Use `.env.example` + local `.env`.
-- **Circuit Breaker (advisory)**: One unit = one read/search call (parallel batch counts per call). Halt past **6** with no edit/test: HALT, ask for paths. Resets on task-advancing edit/test — trivial edits do not reset. Read-only needs no edit; static budgets only.
+- **Context Economy**: Lowest-cost context first; escalate on Hard Triggers. Anti-Starvation: halt before guessing.
+- **Circuit Breaker (advisory)**: 1 unit=1 read. Halt >6 w/o edit: ask for paths. Trivial edits do not reset. Read-only tasks exempt; static budget only.
 - **Anti-Slop**: TL;DR 1-3 bullets (≤40w) → Details (tables/checklists) → Next. No essay walls. L0 exempt.
 - **Choices**: max 3-4 options (action+outcome+time+req) + safe exit under `> [!TIP] Next Steps (Type number & Enter):`, Option 1 `(Recommended + why)`. Single number executes.
 - **Telemetry Cards & Callout**: single 3-line blockquote `📊 Milestone [■■■■■■■■□□] n/m (source: STATE.md read this turn)` / `🎯 Active` / `🟢 Quality Gate (measured/not measured)`; every value traced. Max 1 callout/turn (IMPORTANT > WARNING > TIP). Suppress on `status-cards: off` (default on). Halting → `> [!IMPORTANT] ### 🛑ACTION REQUIRED:` (PR links `👉 [#N](url)`).

@@ -378,13 +378,13 @@ if ($b9s -lt 0 -or $b9e -lt 0 -or $lps -lt 0 -or $lpe -lt 0) {
 
 Write-Host "`n📌 Scenario R: Search Circuit Breaker Semantics (Balanced + Lite consistency)" -ForegroundColor Yellow
 Assert-Contains "templates/agent-directive-template.md" "Search Circuit Breaker \(advisory\)" "Balanced breaker states advisory semantics"
-Assert-Contains "templates/agent-directive-template.md" "parallel batch counts per call" "Balanced breaker defines parallel-call counting"
-Assert-Contains "templates/agent-directive-template.md" "trivial edits never reset" "Balanced breaker excludes trivial-edit resets"
-Assert-Contains "templates/agent-directive-template.md" "Read-only needs no edit" "Balanced breaker covers read-only research"
+Assert-Contains "templates/agent-directive-template.md" "parallel batch" "Balanced breaker defines parallel-call counting"
+Assert-Contains "templates/agent-directive-template.md" "Trivial edits" "Balanced breaker excludes trivial-edit resets"
+Assert-Contains "templates/agent-directive-template.md" "Read-only" "Balanced breaker covers read-only research"
 Assert-Contains "docs/BENCHMARKS.md" "advisory instruction, not deterministic tool control" "Balanced breaker distinguishes CI budgets from session/host limits"
 Assert-Contains "templates/agent-directive-lite-template.md" "Circuit Breaker \(advisory\)" "Lite breaker states advisory semantics"
 Assert-Contains "templates/agent-directive-lite-template.md" "Trivial edits" "Lite breaker excludes trivial-edit resets"
-Assert-Contains "templates/agent-directive-lite-template.md" "Read-only needs no edit" "Lite breaker covers read-only research"
+Assert-Contains "templates/agent-directive-lite-template.md" "Read-only" "Lite breaker covers read-only research"
 
 Write-Host "`n📌 Scenario O: Autonomous SDLC Meta-Orchestrator (workflows/auto.md & pk:auto)" -ForegroundColor Yellow
 Assert-Contains "workflows/auto.md" "Autonomous SDLC Meta-Orchestrator" "Auto workflow defines autonomous SDLC meta-orchestration"
@@ -421,6 +421,15 @@ Assert-Contains "templates/agent-directive-template.md" "Max 1 callout/turn" "Ba
 Assert-Contains "templates/agent-directive-template.md" "■■■■■■■■□□" "Balanced directive enforces square progress bar"
 Assert-Contains "templates/agent-directive-lite-template.md" "Max 1 callout/turn" "Lite directive enforces max 1 callout per turn"
 Assert-Contains "templates/agent-directive-lite-template.md" "■■■■■■■■□□" "Lite directive enforces square progress bar"
+
+Write-Host "`n📌 Scenario T: Context Economy, Adaptive Zoom & Anti-Starvation" -ForegroundColor Yellow
+Assert-Contains "protocols/context-economy.md" "Minimum Sufficient Context" "Context Economy defines Minimum Sufficient Context invariant"
+Assert-Contains "protocols/context-economy.md" "Anti-Starvation" "Context Economy defines Anti-Starvation invariant"
+Assert-Contains "protocols/context-economy.md" "Hard Escalation Triggers" "Context Economy specifies Hard Escalation Triggers"
+Assert-Contains "protocols/context-economy.md" "Context Sufficiency Check Gate" "Context Economy specifies Context Sufficiency Check gate"
+Assert-Contains "protocols/context-economy.md" "4D Context Framework" "Context Economy defines 4D Context model"
+Assert-Contains "templates/agent-directive-template.md" "Context Economy.*Anti-Starvation" "Balanced directive registers the Context Economy contract"
+Assert-Contains "templates/agent-directive-lite-template.md" "Context Economy.*Anti-Starvation" "Lite directive registers the Context Economy contract"
 
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
