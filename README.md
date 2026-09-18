@@ -154,6 +154,8 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit;
 > [!TIP]
 > Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia). You do not need to learn all 24 before getting value.
 
+Already installed? To pull updates, see [Updating PromptKit](./QUICKSTART.md#updating-promptkit).
+
 ### 2. Configure
 
 The installer creates `PROMPTKIT.md` (your project profile — test commands, stack constraints, architectural invariants) and `docs/STATE.md` (living project state). Run `pk:onboard` for a guided setup interview.

@@ -1,0 +1,42 @@
+# Scope Change Record: restore PromptKit update instructions in QUICKSTART
+
+<a id="SCOPE-2026-09-18-docs-salvage-1"></a>
+
+- **Record Type**: `Scope Change Record`
+- **Scope Change ID**: `SCOPE-2026-09-18-docs-salvage-1`
+- **Task ID**: `TASK-2026-09-18-docs-salvage`
+- **Specification**: `https://github.com/lowqualityloey/promptkit-os/issues/285`
+- **Proposer / Actor**: `PromptKit maintainer`
+- **Created**: `2026-09-18 02:00 UTC`
+- **Approval Boundary**: `Human confirmation required for commit, PR, and merge. No release or tag actions.`
+- **Reason or Discovery**: During #285 implementation the maintainer asked why the README has no PromptKit update instructions; trace showed PR #284 cut the old README update section without relocation and no specialist doc received it
+- **Current Task Value**: `In Scope covered WORKFLOW-MAP.md, ARCHITECTURE.md, README.md problem list, this record`
+- **Proposed Value**: `Add QUICKSTART.md Updating PromptKit section plus one-line README pointer`
+- **Affected Objective**: unchanged objective; restores the consumer update path dropped by PR #284
+- **Affected Files or Artifacts**: `QUICKSTART.md`, `README.md` (one pointer line)
+- **Affected Acceptance Criteria**: AC-2 reference check must still exit 0 with the new anchor link
+- **Affected Dependencies**: none new
+- **New or Changed Non-Goals**: none
+- **Risk / Estimate Impact**: Low; consumer docs only, restores pre-#284 procedure verbatim in compact form
+- **Changed Verification Condition**: unchanged (references, tokens, execution-control, behavioral, playbook)
+- **Disposition**: `Approved and delivered within PR #286`
+- **Independent Work Discovered**: none
+- **Required Human Confirmation**: maintainer direction in review session 2026-09-18 02:00 UTC
+- **Required New Task Record**: `N/A - handled under existing task via this record`
+- **Block Until Resolved**: No
+- **Decision**: Approved
+- **Approver**: `PromptKit maintainer`
+- **Decision Timestamp**: `2026-09-18 02:00 UTC`
+- **Approval Evidence**: `Maintainer approval in session chat selecting Add it (Recommended) for QUICKSTART plus one-line README pointer on PR #286`
+- **Related Checkpoint**: `N/A`
+- **Related Handoff**: `N/A`
+- **Branch / Revision**: `docs/salvage-gpt-diagrams-285`
+- **Verification Plan or Result**: `validate-references.sh` 0 warnings incl. new anchor; `validate-execution-control.sh --root . --strict` VALID
+- **Blocker and Resume Condition**: `None`
+- **Previous Task State**: `awaiting_review`
+- **Resulting Task State**: `in_progress`
+- **Task Record Updated**: Yes - `docs/tasks/TASK-2026-09-18-docs-salvage.md` (In Scope extended, Scope Change Records linked, state returned to in_progress for delivery)
+- **New Task / Exception Links**: None
+- **Changed Scope Summary**: QUICKSTART.md added to delivered scope; update-instructions restoration, additive docs-only
+- **Next Action**: Deliver QUICKSTART section plus README pointer, re-validate, return record to awaiting_review
+- **Recorded By and Timestamp**: `Implementor agent, 2026-09-18 02:00 UTC`

@@ -23,6 +23,8 @@
   - `docs/WORKFLOW-MAP.md` - JIT routing tree, VERIFY/bounded-repair loop, search-discipline visual (skip already-covered)
   - `docs/ARCHITECTURE.md` - stack fan-out diagram, token philosophy visual (skip already-covered)
   - `README.md` - merge only 2 stronger problem questions (stop condition, mid-scope change)
+  - `QUICKSTART.md` - Updating PromptKit section (via SCOPE-2026-09-18-docs-salvage-1)
+  - `README.md` - one-line update pointer (via SCOPE-2026-09-18-docs-salvage-1)
   - `docs/tasks/TASK-2026-09-18-docs-salvage.md` (this record)
 - **Explicit Non-Goals**:
   - No README restructure or re-inflation with relocated detail
@@ -68,6 +70,8 @@
 | planned | ready | 2026-09-18 01:00 UTC | Implementor agent | Readiness complete; scope pre-approved in Issue #285 | This record |
 | ready | in_progress | 2026-09-18 01:00 UTC | Implementor agent | Branch `docs/salvage-gpt-diagrams-285`; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-18 01:30 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
+| awaiting_review | in_progress | 2026-09-18 02:00 UTC | Implementor agent | Approved scope expansion SCOPE-2026-09-18-docs-salvage-1; pointer reassumed | This record |
+| in_progress | awaiting_review | 2026-09-18 02:15 UTC | Implementor agent | Scope expansion delivered; battery green | Section 6 |
 
 ## 6. Evidence and Completion Gate
 
@@ -75,11 +79,14 @@
   - `docs/WORKFLOW-MAP.md` - Execution Visuals section (JIT routing, verification loop, search discipline)
   - `docs/ARCHITECTURE.md` - Knowledge and Token Architecture section (stack fan-out, token philosophy)
   - `README.md` - two stronger problem questions (stop condition, mid-scope change)
+  - `QUICKSTART.md` - Updating PromptKit section (via scope change record)
+  - `README.md` - one-line update pointer (via scope change record)
   - `docs/tasks/TASK-2026-09-18-docs-salvage.md` - this record
-- **Scope Change Records**: `None`
+  - `docs/tasks/TASK-2026-09-18-docs-salvage.scope-1.md` - scope change record
+- **Scope Change Records**: `SCOPE-2026-09-18-docs-salvage-1`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: Local battery green at HEAD: self-validator VALID|RECORDS=13 (0 diagnostics); behavioral 178/178; playbook 11/11; references 0 warnings; measure-tokens --strict PASS (Balanced 2498<=2500, Lite 1146<=1500)
+- **Verification Evidence**: Local battery green at HEAD: self-validator VALID|RECORDS=14 (0 diagnostics); behavioral 178/178; playbook 11/11; references 0 warnings incl. new QUICKSTART anchor; measure-tokens --strict PASS (Balanced 2498<=2500, Lite 1146<=1500)
 - **Behavior IDs**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
@@ -91,7 +98,7 @@
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
 - **Completion State**: `awaiting_review`
-- **Acceptance Results**: AC-1 Complete (no draft file stored, relocation only); AC-2 Complete (references 0 warnings); AC-3 Complete (Balanced 2498, Lite 1146); AC-4 Complete (VALID|RECORDS=13, 0 diagnostics)
-- **Changed-File Summary**: 4 files; Execution Visuals + Knowledge and Token Architecture sections plus 2 README problem questions, decision-tree mermaid repair (quoted paren edge label, split duplicate Onboard node), and this Task Record
+- **Acceptance Results**: AC-1 Complete (no draft file stored, relocation only); AC-2 Complete (references 0 warnings incl. new anchor); AC-3 Complete (Balanced 2498, Lite 1146); AC-4 Complete (VALID|RECORDS=14, 0 diagnostics)
+- **Changed-File Summary**: 6 files; Execution Visuals + Knowledge and Token Architecture sections, 2 README problem questions, QUICKSTART update section plus README pointer (via scope-1), decision-tree mermaid repair, Task Record plus scope record
 - **Completion Exception**: `None`
-- **Completion Decision and Timestamp**: `awaiting_review; Implementor agent; 2026-09-18 01:30 UTC`
+- **Completion Decision and Timestamp**: `awaiting_review; Implementor agent; 2026-09-18 02:15 UTC`
