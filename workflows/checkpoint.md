@@ -202,6 +202,15 @@ Please inspect the files listed above and confirm you are ready to proceed with 
   * Unit tests passing in `tests/auth/verify-email.test.ts`.
 * **Pending**: Adding verification barrier in the `inviteUser` server action.
 
+> 📊 **Milestone**: M2: Auth & Invitations `[■■■■■■■■□□]` 8/10 (80%) — source: `docs/STATE.md`  
+> 🎯 **Active**: TASK-304-invite-verification (In Progress)  
+> 🟢 **Quality Gate**: 12 passed, 0 failed · `tsc --noEmit` exit 0  
+
+> [!TIP]
+> ### 💡NEXT STEPS (Type number & Enter):
+> 1. **(Recommended)** Resume in fresh chat using the Handover Prompt below.
+> 2. Continue in current session: implement server action barrier (`src/server/actions/invite.ts`).
+
 ### Ready-to-Paste Handover Prompt for New Chat:
 
 ```markdown
