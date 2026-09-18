@@ -72,9 +72,21 @@ For Level 2 (Controlled) and Level 3 (Release-Critical) Work, checkpointing is a
 - `checkpoint_due`, `blocked`, `paused`, and `handoff_ready` are stop states. They prohibit implementation edits, commits, pull-request actions, and task switches until the recorded resume condition is satisfied. Read-only diagnosis may continue when it does not change project state.
 - A Handoff Record at `docs/tasks/<task-id>.handoff-<sequence>.md` is required at a session/role boundary, handoff state, or major milestone. The receiver must validate the task ID, revision, changed files, acceptance criteria, invariants, blockers, and next action before editing.
 - Scope changes require a linked Scope Change Record before changing objective, files, acceptance criteria, dependencies, non-goals, risk, or verification. Expansion requires human confirmation or a separate Task Record.
-- Mid-implementation new requirements are intercepted, never silently absorbed: documentation-only deltas append to the intake record and `PROMPTKIT.md` signals; scope or acceptance-criteria changes require the Scope Change Record above; architecture, data-model, auth, or deployment-target changes block execution (`blocked` / `checkpoint_due`) and re-open planning via `pk:plan` with intake status returned to `partial`; unsolicited ideas go to the intake record's **Later ledger**.
+- Mid-implementation new requirements are intercepted, never silently absorbed, per the canonical New-Requirement Interception table in `workflows/sync.md` (doc-only appends, Scope Change Records, planning re-open with intake status `partial`, Later ledger).
 
 Phase 4 may synchronize `docs/STATE.md`, but STATE is a projection owned by `pk:checkpoint`; the canonical `docs/tasks/<task-id>.md` Task Record remains the Local Task Source. At a session or role boundary, the receiver must validate the Task ID, revision, changed files, acceptance criteria, blockers, invariants, and exactly one next action before editing. A mismatch leaves execution blocked or `checkpoint_due` until reconciled.
+
+#### State Mutation Contract (single arbitration rule)
+
+Multiple workflows invoke STATE writes, but none invents STATE semantics. Section writers:
+
+- **§2 Milestone & Task Progress**: `pk:tasks` (decomposition sync) and `pk:checkpoint` (phase sync).
+- **§3 Working Set and §3A Execution-Control Projection**: `pk:checkpoint` stewards; `pk:tasks` contributes generated-spec links without rewriting other §3 content.
+- **§4 Locked Invariants**: human-stated rules only, recorded via `pk:onboard` handoff or `pk:checkpoint` with recorded human approval. No workflow writes §4 from inference.
+- **§4A Candidate Learnings**: any workflow may stage; promotion requires the recorded human decision per `protocols/context-sync.md` §3.1.
+- **§§8–9 Session logs and spend**: the owning workflow appends.
+
+Writers touch only their sections and never rewrite another writer's sections; conflicts surface to the human instead of being silently overwritten. The Task Record overrides STATE on any disagreement.
 
 ---
 

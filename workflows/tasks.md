@@ -171,8 +171,8 @@ For each decomposed task, fill out `.promptkit/templates/issue-task-template.md`
      - `## Done`: `- [x] <Task description> #priority/pX ✅ YYYY-MM-DD`
 5. **Living State Projection Sync (`docs/STATE.md`)**:
    - If `./docs/STATE.md` exists, update Section 2 (`Milestone & Task Progress`) with the newly decomposed tasks (`- [ ] TASK-XX: ...`).
-   - Update Section 3 (`Active Working Set`) with links to the generated task spec in `docs/tasks/`.
-   - `docs/STATE.md` is a synchronized projection owned by `pk:checkpoint`; the canonical `docs/tasks/<task-id>.md` Task Record remains authoritative. If no state file exists, offer to scaffold it from `templates/state-tracker-template.md`.
+   - Contribute links to the generated task spec in `docs/tasks/` to Section 3 (`Active Working Set`) without rewriting other Section 3 content.
+   - `docs/STATE.md` is a synchronized projection owned by `pk:checkpoint` (see State Mutation Contract in `workflows/checkpoint.md`); the canonical `docs/tasks/<task-id>.md` Task Record remains authoritative. If no state file exists, offer to scaffold it from `templates/state-tracker-template.md`.
 
 ### Engineer Handoff
 
