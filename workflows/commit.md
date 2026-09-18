@@ -212,11 +212,13 @@ docs(adrs): record decision to adopt UUIDv7 for primary keys
    > 🎯 **Active**: `TASK-04: Tenant CRUD` (Committed)  
    > 🟢 **Quality Gate**: Clean (`5/5 ACs ✓` · `🔒 7 Invariants`)
 
-   > [!TIP]
-   > ### 💡 Next Recommended Step
-   > - If completing a task or milestone: run **`pk:checkpoint`** (compact session state & sync `docs/STATE.md`)
-   > - If ready to open a pull request for review: run **`pk:pr`**
-   > - If continuing work on the next issue: run **`pk:tasks`**
+    > [!TIP]
+    > ### 💡 Next Recommended Step
+    > - If completing a task or milestone: run **`pk:checkpoint`** (compact session state & sync `docs/STATE.md`)
+    > - If ready to open a pull request for review: run **`pk:pr`**
+    > - If continuing work on the next issue: run **`pk:tasks`**
+
+    Single-callout rule (`protocols/telemetry-cards.md`): pair this TIP with an action callout only when each carries information the other lacks; otherwise emit one. Close order is always card, TL;DR line, then the callout.
 
    *(You MUST invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`; Bounded to closed-set operational choices — for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead, see the Picker routing rule in `workflows/plan.md`)*
 
