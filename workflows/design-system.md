@@ -111,7 +111,7 @@ When inspired by an existing product or visual reference, extract its design DNA
 3. **Macrostructure & Layout Rhythm Variety**:
    - **Break the Generic Rut**: Refuse the automatic AI template (`Hero + Badge ──> 3 Bento Cards ──> Fake Logos ──> Pill CTA ──> 4-col Footer`).
    - **Refuse Uniform Bento Grids**: Do not generate pages with uniform repeating card grids (e.g. 6 identical floating boxes). Introduce layout rhythm: alternating full-bleed surface bands, asymmetric feature spotlights, and varied card column spans.
-   - **Curated Non-Slop Iconify Families**: Recommend human-crafted sets via Iconify (`ph:*` Phosphor for modern fintech/SaaS, `radix-icons:*` for 15px micro-density, `tabler:*` for sharp enterprise). Warn against generic 24px Lucide defaults to avoid the recognizable AI template aesthetic.
+   - **Curated Non-Slop Iconify Families**: Recommend human-crafted sets via Iconify (`ph:*` Phosphor for modern fintech/SaaS, `radix-icons:*` for 15px micro-density, `tabler:*` for sharp enterprise). Never accept the framework's default icon set without a deliberate single-family choice — including Lucide, which is acceptable only as a curated project-wide pick, never as an unconsidered default that reproduces the recognizable AI template aesthetic.
    - Diversify section rhythms based on the product's genre:
      - *Asymmetric Split*: Left-aligned punchy headline + right-aligned interactive artifact (working terminal or API demo).
      - *Editorial Magazine*: Asymmetric columns, rich pull-quotes, and generous whitespace.
@@ -225,7 +225,7 @@ When inspired by an existing product or visual reference, extract its design DNA
            destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
          },
          size: {
-           sm: 'min-h-[36px] h-9 px-3 text-xs',
+           sm: 'min-h-[44px] h-11 px-3 text-xs',
            md: 'min-h-[44px] h-11 px-4 text-sm',
            lg: 'min-h-[48px] h-12 px-6 text-base',
            icon: 'min-h-[44px] min-w-[44px] h-11 w-11 p-0',
@@ -320,6 +320,17 @@ Ensure all async components support the 4 fundamental UI states with meaningful 
 2. **Empty State**: Explain *why* the view is empty and provide the single primary action button to populate it (e.g., `"No books in your library yet. Browse the catalog to add your first book."`).
 3. **Error State**: Actionable recovery message with a `"Retry"` trigger.
 4. **Success / Data State**: Fluid rendering with optimistic UI updates where appropriate.
+
+### Step 8: Emit Design Tokens Artifact
+Persist the decisions from Steps 1–7 using `templates/design-tokens-spec.md`, saved to `./docs/design/YYYY-MM-DD-design-<surface>.md`. A run that produces no artifact file has produced no durable output — chat-only guidance does not count as delivery.
+
+---
+
+## Completion Criteria
+- Design tokens artifact generated in `./docs/design/` from `templates/design-tokens-spec.md`.
+- Every interactive element meets the ≥44px target and the 8-state contract.
+- Exactly one icon family selected deliberately and applied consistently.
+- UI Delivery Gate Checklist below passes without exceptions.
 
 ---
 

@@ -131,7 +131,7 @@ In multi-package monorepos (Turborepo, pnpm workspaces, Nx), running full test s
 
 ## TDD Intent and Task Record Boundary
 
-`pk:test` owns test strategy and the TDD intent register inside the existing `docs/tests/<test-plan>.md` artifact. It does not activate TDD, set execution state, or replace the Local Task Record. The test plan may propose or reference `TDD Enforcement Mode: disabled | enabled`; the canonical Task Record owns the actual mode, and an absent Task Record field defaults to `disabled`.
+`pk:test` owns test strategy and the TDD intent register inside `docs/tests/<test-plan>.md`. It does not activate TDD, set execution state, or replace the Local Task Record. Specify intent rows during planning and persist them when generating the plan artifact in Step 7 (create the file if absent). The test plan may propose or reference `TDD Enforcement Mode: disabled | enabled`; the canonical Task Record owns the actual mode, and an absent Task Record field defaults to `disabled`.
 
 The test plan is a supporting intent view. It records the expected behavior and Red evidence before implementation, while the Local Task Record records Red, Green, and Refactor execution results and controls readiness or completion.
 
@@ -170,29 +170,28 @@ A disagreement between the test plan, Planning Record, and Task Record blocks re
    - What belongs in Integration? (database queries, RLS policies, multi-step services)
    - What belongs in E2E? (happy path browser flow)
 
-### Step 2.5: The Ironclad TDD Assertion (Observe RED First)
-> 🛑 **Mandatory TDD Law**: Never write implementation code against a hypothetical test failure.
-1. **Write the Minimal Failing Test**: Construct a concise test asserting the desired public behavior or reproducing the defect.
-2. **Execute and Observe RED**: Run the test suite before touching production source files. Confirm:
+### Step 3: Specify the RED Assertion (Planning Stops at RED)
+> 🛑 **Mandatory TDD Law**: Never write implementation code against a hypothetical test failure — and never write production source code inside `pk:test` at all.
+1. **Write the Minimal Failing Test**: Construct a concise test asserting the desired public behavior or reproducing the defect. Test files only; production source files are untouched.
+2. **Execute and Observe RED**: Run the test suite before any implementation exists. Confirm:
    - The test fails with the expected assertion error (not a compilation error or missing import).
    - The failure confirms the defect or missing functionality exists.
-3. **Write Minimal Implementation (GREEN)**: Write only enough production code to turn the failing test green.
-4. **Refactor Cleanly (REFACTOR)**: Clean up duplication, enforce design patterns, and ensure all tests stay green.
+3. **Hand Off GREEN**: Record the RED evidence in the intent row and stop. GREEN implementation and refactor belong to the owning workflow (`pk:fix` for defects, feature implementation otherwise) — `pk:test` plans the test, it does not write the fix.
 
-### Step 3: Define External Mock Boundaries
+### Step 4: Define External Mock Boundaries
 1. Identify all third-party dependencies (Stripe, email, S3).
 2. Specify MSW handlers or typed fake adapters for each external dependency.
 
-### Step 4: Specify Test Data Factories
+### Step 5: Specify Test Data Factories
 1. List required entities and build factory helper signatures.
 2. Define boundary fixtures (empty sets, maximum payload sizes, expired tokens).
 
-### Step 5: Establish CI Execution and Coverage Targets
+### Step 6: Establish CI Execution and Coverage Targets
 1. Define test execution commands and parallelization strategy.
 2. Establish coverage thresholds for core domain business logic.
 
-### Step 6: Generate Test Plan Artifact
-1. Use `.promptkit/templates/test-plan-template.md`.
+### Step 7: Generate Test Plan Artifact
+1. Use `templates/test-plan-template.md`.
 2. Save specification to `./docs/tests/YYYY-MM-DD-test-<feature-name>.md`.
 
 ---
