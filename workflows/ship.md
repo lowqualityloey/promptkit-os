@@ -15,7 +15,7 @@ Eliminate production deployment outages: missing or invalid environment variable
 ## Preconditions
 - Code has passed code review (`pk:review`) and testing gates (`pk:test`).
 - Target storage directory: `./docs/releases/` in the host project.
-- Access to `.promptkit/templates/release-checklist.md`.
+- Access to `templates/release-checklist.md`.
 
 ---
 
@@ -108,8 +108,8 @@ Trigger an immediate rollback if within 15 minutes of deployment:
 - Core checkout, authentication, or data persistence flows fail in smoke tests.
 
 #### Execution Runbook
-1. **Application Code Rollback**:
-   - Redeploy the previous verified commit SHA or platform deployment immediately (1-click rollback in Vercel, Railway, or Kubernetes).
+1. **Application Code Rollback (human executes)**:
+    - If the rollback criteria above are met, record a rollback proposal as an action block (proposed action, bounded scope, reversal action, resume condition) for the Release Coordinator — do not execute it. The prepared command (redeploy the previous verified commit SHA or platform 1-click rollback in Vercel, Railway, or Kubernetes) is recorded so the human can act immediately.
 2. **Database Reversion**:
    - Because all pre-deploy migrations follow the Expand phase, the database schema remains 100% compatible with the previous application version. **Do not roll back database schema during an active incident** unless the migration itself degraded database performance.
 3. **Transition to Root Cause Analysis**:
@@ -166,7 +166,7 @@ A pending action remains blocked until the human approver records a separate con
 - For a release candidate, link the Remediation Plan and successful Verification Evidence to the existing `pk:ship` pre-release record. Keep `pk:ship` release readiness blocked until the CI Triage Record contains Verification Evidence and reaches `verified`, then link `CI-<provider>-<run-id>` from `docs/releases/<release>.md` and record the release's Verification Link, Verified Result, and Resume Condition. The release linkage state is `linked_to_pk_ship` only after the verified result is linked.
 - A classification, proposed remediation, empty blocker list, passing unrelated validator, or successful check that is not the recorded verification does not permit release resumption. A CI Triage Record never becomes release approval; Release Coordinator approval and external-action decisions remain separate.
 
-Task 6 defines this evidence-first entry path, bounded linkage, and action-confirmation boundary. Task 12 owns the later state-transition implementation, declined-action lifecycle, release handoff behavior, and valid or invalid fixtures. Do not implement those deferred mechanics here.
+Deferred mechanics (state-transition implementation, declined-action lifecycle, release handoff behavior, valid or invalid fixtures) are out of scope here. Do not implement them.
 
 ### Execution-Control Release Evidence Gate
 
@@ -176,7 +176,7 @@ Before Step 3, record the execution evidence needed by the release evaluation:
 - Confirm the task and milestone are in a releasable state and that no unresolved blocker, hard checkpoint, stale handoff, scope mismatch, or revision mismatch remains.
 - Link the applicable release-impact evaluation and preserve the distinction between a preliminary candidate and an Approved Release Version.
 - Record host/timer limitations and any execution-control validator result as evidence only. A passing validator or CI job cannot approve a version or authorize a tag, hosted release, publication, deployment, or rollback.
-- Release Coordinator approval remains explicit and separate. The existing Step 3-5 actions, release checklist, production safety gates, and rollback authority remain owned by `pk:ship` and must not be automated by this overlay.
+- Release Coordinator approval remains explicit and separate. Steps 3-5 below prepare proposals, verification plans, and records; executing tag, push, deployment, or rollback commands remains human-only (see Action Authority Model in `protocols/code-quality-gate.md`).
 
 ### Release Evidence Template Cross-Reference
 
@@ -184,7 +184,7 @@ Use the optional **Execution-Control Evidence** section in `templates/release-ch
 
 ### Canonical Artifact Linkage
 
-Use the shared [`Canonical Artifact Contract`](../docs/WORKFLOW-MAP.md#canonical-artifact-contract) for release linkage. Save the existing release record at `docs/releases/<release>.md`, expose `RELEASE-<release-slug>` as an explicit anchor, and link the verified result and resume condition there. For a CI failure, link the canonical `CI-<provider>-<run-id>` record from `docs/releases/ci-triage/<ci-failure-id>.md#CI-<provider>-<run-id>` only after the CI record is `verified`; the release record then reaches `linked_to_pk_ship` only after that verified result and its Verification Link, Verified Result, and Resume Condition are recorded. A CI record never becomes release approval. Task 12 owns the future state-transition and release-handoff implementation.
+Use the shared [`Canonical Artifact Contract`](../docs/WORKFLOW-MAP.md#canonical-artifact-contract) for release linkage. Save the existing release record at `docs/releases/<release>.md`, expose `RELEASE-<release-slug>` as an explicit anchor, and link the verified result and resume condition there. For a CI failure, link the canonical `CI-<provider>-<run-id>` record from `docs/releases/ci-triage/<ci-failure-id>.md#CI-<provider>-<run-id>` only after the CI record is `verified`; the release record then reaches `linked_to_pk_ship` only after that verified result and its Verification Link, Verified Result, and Resume Condition are recorded. A CI record never becomes release approval. Future state-transition and release-handoff mechanics are out of scope here.
 
 ### PromptKit OS Internal Release Evaluation
 
@@ -195,21 +195,23 @@ This repository's release-candidate evaluation procedure is maintained separatel
 - **Release Notes & Records**: Every public contract change requires Public Release Notes with exactly one supported note entry, draft Changelog Entries, and an Approved Release Record aligning the Approved Release Tag with the Approved Release Version.
 - **External Actions**: External-action decisions remain data-only records; `pk:ship` must not automatically run tag commands, push refs, publish changelogs, deploy, or execute rollbacks.
 
-`pk:ship` Steps 3–5 and the production-safety guidance below remain in force regardless.
+`pk:ship` Steps 3–5 below prepare release actions, verification plans, and records; production-safety guidance stays in force as planning the human executor follows.
 
 ---
 
-### Step 3: Trigger Production Deployment
-1. Create a version tag (`git tag -a vX.Y.Z -m "Release message"`).
-2. Push to production deployment pipeline.
+### Step 3: Prepare Production Deployment (human executes)
+1. Prepare the version tag command (`git tag -a vX.Y.Z -m "Release message"`) as a proposal for the Release Coordinator — do not run it.
+2. Prepare the production deployment plan (pipeline, migration order per Step 2, verification probes per Step 4) as a proposal — do not push, deploy, or publish. Each remote action is recorded as a separate human-confirmation block per the CI-triage action-block pattern.
 
-### Step 4: Execute Post-Deploy Smoke Testing
-1. Run automated health check endpoints and inspect deployment logs.
-2. Manually or synthetically verify the primary user journey in production.
+### Step 4: Define Post-Deploy Smoke Verification (executor runs after deploy)
+Specify the probes the release executor runs immediately after traffic shifts to the new release (see Pillar 4 definitions above):
+1. Automated health check endpoints and deployment log inspection.
+2. Manual or synthetic verification of the primary user journey in production.
+Record expected results and pass thresholds now; the human-executed deploy is what puts them into effect.
 
-### Step 5: Monitor and Sign-off
-1. Monitor error tracking (Sentry / Datadog / CloudWatch) for 15 minutes post-deploy.
-2. Complete and commit the release record to `./docs/releases/`.
+### Step 5: Monitor Criteria and Release Record
+1. Record the monitoring criteria for the 15-minute post-deploy window (error tracking in Sentry / Datadog / CloudWatch; rollback decision criteria above).
+2. Draft the release record in `./docs/releases/` with revision, verification evidence, and sign-off status. Committing follows `pk:commit` with human confirmation — drafting the record does not approve the release.
 
 ---
 
@@ -228,5 +230,8 @@ This repository's release-candidate evaluation procedure is maintained separatel
 ## Completion Criteria
 - Environment variables validated with startup schema checks.
 - Migration sequencing planned and executed in correct phase order.
-- Post-deployment smoke tests executed and passed.
-- Release document saved to `./docs/releases/`.
+- Post-deployment smoke verification defined with expected results and thresholds.
+- Release document drafted in `./docs/releases/`.
+- CI-triage linkage recorded (`linked_to_pk_ship` only after verified result, where a CI failure exists).
+- Release-impact evaluation linked; preliminary candidate distinguished from Approved Release Version.
+- Release Coordinator authorization recorded for every remote action; no tag, push, deploy, or rollback executed by the agent.
