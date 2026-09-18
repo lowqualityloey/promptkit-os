@@ -389,6 +389,63 @@ pk:onboard → pk:tutor → pk:plan → [Continue]
 
 ---
 
+## Execution Visuals (Illustrations — Authority Lives in the Workflows)
+
+These diagrams illustrate rules owned by `workflows/route.md` and `workflows/debug.md`. They create no new policy.
+
+### JIT Context Routing
+
+```text
+Task
+ │
+ ▼
+Route
+ │
+ ├── Risk level
+ ├── Required workflow
+ ├── Required stack knowledge
+ └── Required verification
+          │
+          ▼
+      Load only that
+      relevant context
+```
+
+Context is treated as an engineering resource: load the minimum relevant slice, not everything.
+
+### Evidence-Gated Verification Loop
+
+```text
+IMPLEMENT
+   │
+   ▼
+VERIFY
+   │
+   ├── PASS ──────► Evidence recorded
+   │
+   └── FAIL
+        │
+        ▼
+   Bounded repair (max 2 attempts)
+        │
+        ├── PASS ─► Evidence recorded
+        │
+        └── FAIL ─► STOP / HUMAN
+```
+
+A quality gate is evidence, not a claim. The human remains the authority for acceptance and release.
+
+### Search Discipline
+
+Investigation without editing or verification burns context invisibly. Consecutive read bounds halt the loop and force reassessment:
+
+```text
+search → search → search → edit / verify   (healthy)
+search → search → search → search → …      (halt and reassess)
+```
+
+---
+
 ## Workflow Complexity Matrix
 
 Visual guide to workflow depth and time investment:
