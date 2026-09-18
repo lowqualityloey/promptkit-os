@@ -92,6 +92,6 @@
 - **Blocker and Resume Condition**: `None`
 - **Completion State**: `awaiting_review`
 - **Acceptance Results**: AC-1 Complete (no draft file stored, relocation only); AC-2 Complete (references 0 warnings); AC-3 Complete (Balanced 2498, Lite 1146); AC-4 Complete (VALID|RECORDS=13, 0 diagnostics)
-- **Changed-File Summary**: 4 files; Execution Visuals + Knowledge and Token Architecture sections plus 2 README problem questions and this Task Record
+- **Changed-File Summary**: 4 files; Execution Visuals + Knowledge and Token Architecture sections plus 2 README problem questions, decision-tree mermaid repair (quoted paren edge label, split duplicate Onboard node), and this Task Record
 - **Completion Exception**: `None`
 - **Completion Decision and Timestamp**: `awaiting_review; Implementor agent; 2026-09-18 01:30 UTC`

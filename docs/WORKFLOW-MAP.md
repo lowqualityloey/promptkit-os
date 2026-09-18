@@ -183,7 +183,7 @@ graph TD
     
     Question3 -->|New feature| Plan[pk:plan Step 0 intake preflight<br/>Spec-Driven Architecture + MVP floor]
     Question3 -->|Existing codebase| Onboard[pk:onboard<br/>Codebase Intake]
-    Question3 -->|Greenfield (no code yet)| Onboard[pk:onboard<br/>Project Discovery Intake]
+    Question3 -->|"Greenfield (no code yet)"| OnboardGreen[pk:onboard<br/>Project Discovery Intake]
     
     Question4 -->|Database schema| Data[pk:data<br/>Schema & Migrations]
     Question4 -->|Authentication| Auth[pk:auth<br/>Sessions & RBAC]
