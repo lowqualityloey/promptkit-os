@@ -116,5 +116,5 @@ context_provider:
 ```
 
 ### Provider Adaptation
-1. **Minimal Provider (Native CLI)**: Uses `grep`, `find_by_name`, and bounded reads. Satisfies all required capabilities with zero external dependencies.
+1. **Minimal Provider (Native CLI)**: Uses `grep`, `find_by_name`, and bounded reads. Satisfies all required capabilities with zero external dependencies. Z0 may be satisfied through native text/search capabilities when semantic symbol extraction is unavailable; `symbol_search` is an optimization, not a prerequisite.
 2. **Rich Provider (MCP / Indexing Engine)**: When an active MCP server (such as Code Context Engine or ACE) is detected in the host environment, PromptKit leverages its optional capabilities (e.g., `symbol_search` for Z0/Z1, `graph_expansion` for Z3) while strictly holding PromptKit's Governance, Anti-Starvation, and Hard Escalation Triggers authoritative.
