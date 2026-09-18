@@ -12,8 +12,9 @@ Eliminate the primary causes of authentication vulnerabilities: token storage in
 
 ## Preconditions
 - Developer is implementing user registration, authentication, third-party OAuth, session management, or role-based permissions.
+- Auth work is Level 2 (Controlled): a canonical Task Record at `docs/tasks/<task-id>.md` is required before implementation (see `workflows/route.md`).
 - Target storage directory: `./docs/auth/` in the host project.
-- Access to `.promptkit/templates/auth-matrix-template.md`.
+- Access to `templates/auth-matrix-template.md`.
 
 ---
 
@@ -126,9 +127,10 @@ Avoid hardcoding role checks like `if (user.role === 'ADMIN')` throughout the co
 ### Step 4: Threat Modeling and Attack Surface Review
 1. Review brute-force mitigations, rate-limit thresholds, and lockout policies.
 2. Ensure secrets (signing keys, OAuth client secrets) are loaded via environment variables and never exposed to client bundles.
+3. Record threat-model findings (threat, affected surface, mitigation, residual risk) in the Step 5 specification artifact — findings have no other destination and must not evaporate into chat.
 
 ### Step 5: Generate Auth Specification Artifact
-1. Use `.promptkit/templates/auth-matrix-template.md`.
+1. Use `templates/auth-matrix-template.md`.
 2. Save specification to `./docs/auth/YYYY-MM-DD-auth-<subsystem>.md`.
 
 ---

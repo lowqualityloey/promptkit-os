@@ -12,8 +12,9 @@ Prevent common data architecture failures: unindexed foreign keys, race conditio
 
 ## Preconditions
 - Developer is designing a new entity, data model, relational schema, or database migration.
+- Schema and migration work is Level 2 (Controlled): a canonical Task Record at `docs/tasks/<task-id>.md` is required before implementation (see `workflows/route.md`).
 - Target storage directory: `./docs/data/` in the host project.
-- Access to `.promptkit/templates/data-model-spec.md`.
+- Access to `templates/data-model-spec.md`.
 
 ---
 
@@ -176,9 +177,10 @@ For applications using PostgreSQL or Supabase, enforce tenancy guarantees at the
 ### Step 5: Document Rollback and Seeding Strategy
 1. Provide deterministic seed data for local development.
 2. Detail Expand-Contract rollback procedures in the event of failure following the phased policy: Expand → migrate/backfill → compatibility period → verify consumers → Contract (where removal of deprecated columns or tables occurs only after verified consumer migration and rollback assessment).
+3. Record the seed dataset reference and the rollback plan in the Step 6 specification artifact — neither has any other destination.
 
 ### Step 6: Generate Data Specification Artifact
-1. Use `.promptkit/templates/data-model-spec.md`.
+1. Use `templates/data-model-spec.md`.
 2. Save specification to `./docs/data/YYYY-MM-DD-data-<subsystem>.md`.
 
 ---

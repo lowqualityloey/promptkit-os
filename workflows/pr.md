@@ -101,6 +101,7 @@ Structure the PR description using `templates/pull-request-template.md`:
    - [x] **AC-1**: [Given / When / Then scenario]
    - [x] **AC-2**: [Given / When / Then scenario]
    ```
+   AC provenance by level: Level 2/3 items transcribe the Task Record / RFC `AC-*` with their recorded evidence. Level 0/1 items describe the diff's observable behavior change, and no box is checked without in-turn verification evidence (test command plus `exit code 0`) cited beside it — never invent criteria just to check them off.
 4. **Database Checklist**: State whether migrations are present and verify Expand-Contract safety.
 5. **Testing Evidence**: Paste test runner pass counts and provide numbered manual testing steps.
 6. **Rollback Strategy**: Document whether this PR is zero-state reversible or requires step-by-step database rollbacks.
@@ -112,7 +113,7 @@ Structure the PR description using `templates/pull-request-template.md`:
 
 Provide the generated PR description to the developer in two formats:
 
-1. **Markdown Document**: For copy-pasting directly into GitHub, GitLab, or Bitbucket web interfaces.
+1. **Markdown Document**: For copy-pasting directly into GitHub, GitLab, or Bitbucket web interfaces. When a file is needed (e.g. `--body-file`), write it to the repository's OS temp directory and delete it after the PR is created — never commit it.
 2. **GitHub CLI Command (`gh pr create`)**:
     Offer a pre-formatted CLI command to open the PR immediately:
     ```bash
