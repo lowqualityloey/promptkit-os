@@ -54,12 +54,12 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Execution State**: `completed`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-18 05:30 UTC`
 - **Current Actor**: `PromptKit maintainer (review)`
-- **Next Action**: `Human PR review and merge decision`
+- **Next Action**: `None - task complete; PR #297 merged`
 
 ### Transition History
 
@@ -69,6 +69,7 @@
 | planned | ready | 2026-09-18 05:30 UTC | Implementor agent | Readiness complete; scope pre-approved in Issue #292 | This record |
 | ready | in_progress | 2026-09-18 05:30 UTC | Implementor agent | Branch `refactor/state-ownership-292`; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-18 06:00 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
+| awaiting_review | completed | 2026-09-18 09:00 UTC | PromptKit maintainer | PR #297 squash-merged as 6cef2a8; CI green both OSes | Merge commit 6cef2a8 |
 
 ## 6. Evidence and Completion Gate
 
@@ -88,14 +89,14 @@
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Documentation Work`
-- **CI Evidence**: pending PR run (Linux + Windows)
-- **Review Evidence**: pending human PR review
-- **Commit Evidence**: pending commit on branch `refactor/state-ownership-292`
-- **Pull Request Evidence**: pending PR referencing Issue #292
+- **CI Evidence**: PR #297 CI green both OSes at merge (Lint and Validate Linux SUCCESS, Windows SUCCESS)
+- **Review Evidence**: Maintainer-merged PR #297 on 2026-09-18; no separate review record
+- **Commit Evidence**: Branch commits squash-merged as 6cef2a8
+- **Pull Request Evidence**: PR #297 merged 2026-09-18T02:44:26Z, closes Issue #292
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: AC-1 Complete (State Mutation Contract with section writers); AC-2 Complete (sync.md canonical table, others reference); AC-3 Complete (178/178 after plan figure sync); AC-4 Complete (VALID|RECORDS=17, 0 diagnostics)
 - **Changed-File Summary**: 7 files; checkpoint contract, sync/plan references, onboard/tasks scoping, BENCHMARKS plan sync, Task Record
 - **Completion Exception**: `None`
-- **Completion Decision and Timestamp**: `awaiting_review; Implementor agent; 2026-09-18 06:00 UTC`
+- **Completion Decision and Timestamp**: `completed; PromptKit maintainer; 2026-09-18 09:00 UTC`
