@@ -6,6 +6,58 @@ How the assistant operates, how enforcement works, the full command reference, a
 
 ## Operating Model
 
+### System Flow
+
+```text
+                        HUMAN
+                          │
+                          ▼
+                 ┌──────────────────┐
+                 │   PROMPTKIT OS   │
+                 │                  │
+                 │ Authority        │
+                 │ Risk L0–L3       │
+                 │ Routing          │
+                 │ State            │
+                 │ Autonomy bounds  │
+                 │ Scope governance │
+                 │ Verification     │
+                 └────────┬─────────┘
+                          │
+                     JIT knowledge
+                          │
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+      Workflow       Stack Playbook     Recipe
+          │               │               │
+          └───────────────┼───────────────┘
+                          ▼
+                    AI CODING AGENT
+                          │
+                  actual execution
+                          │
+                          ▼
+                   evidence/results
+                          │
+                          ▼
+                 quality verification
+                          │
+                    ┌─────┴─────┐
+                    │           │
+                  pass        fail
+                    │           │
+                    ▼           ▼
+             HUMAN            bounded
+          acceptance           repair
+          (merge,              │
+          release)           limit
+                                │
+                                ▼
+                              HALT
+```
+
+PromptKit owns engineering policy and control; the host agent owns capability and execution. Verification gates require executed evidence (`exit code 0`), never claims — and the human remains the terminal authority for acceptance, merge, and release.
+
 ### Subagent Delegation & Sandboxed Worktree Isolation
 
 In multi-agent environments (Antigravity, Claude Code, Cursor background agents), the assistant follows [`protocols/subagent-delegation.md`](../protocols/subagent-delegation.md):
