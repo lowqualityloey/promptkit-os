@@ -54,6 +54,59 @@ When invoked, `workflows/auto.md` operates under a declared terminal boundary:
 | **`--until pr`** | **`pr ready`** | Runs full pipeline, generates atomic Conventional Commits (`pk:commit`), pushes the feature branch, and opens a draft PR (`pk:pr`). Halts before merge or deployment. |
 | **`--full`** | **`all tasks completed`** | Iterates sequentially through all uncompleted tasks in `docs/STATE.md`. Commits each atomically upon green test proof, opens PR, and halts. |
 
+---
+
+## Wave Mode & Bounded Auto-Refine (Turbo-gated)
+
+### Strict Eligibility (hard invariant — all required)
+- independent task contracts (no shared mutable contract surface)
+- disjoint file ownership
+- no shared generated artifacts, migrations, or schema ownership
+- no dependency between workers in the same wave
+
+### Wave Boundary
+No worker consumes another worker's unreviewed output within the same wave. Dependent tasks belong to later waves — a wave with hidden dependencies is sequential work mislabeled parallel.
+
+### Budget Linkage
+Worker, wave, and repair caps compose with the #258 autonomy budgets (referenced, not duplicated). PromptKit governs when parallelism is permissible; the host executes it — no scheduler, daemon, or second orchestration engine, ever.
+
+### Flags (Turbo profile only)
+
+| Flag | Effect | Fallback |
+| :--- | :--- | :--- |
+| **`--waves N`** | Execute N waves in parallel (default 1, max 4). Requires Turbo profile. Sequential review-ready fallback on unsupported hosts. | Sequential review-ready |
+
+### Per-Task Verify
+Each worker runs: implement → test → verify. Automatic pass → merge queue. Fail → bounded auto-refine (max 2 attempts). Third failure → human escalation with diagnostics.
+
+### Refine Loop (Bounded Oracle Discipline)
+```text
+worker
+  ↓
+test
+  ↓
+FAIL
+  ↓
+refine #1
+  ↓
+test
+  ↓
+FAIL
+  ↓
+refine #2
+  ↓
+test
+  ↓
+FAIL
+  ↓
+HUMAN
+```
+
+### Human Gates
+Review checkpoint after every wave; merge/deploy never enter the loop. Scope changes during refine use the normal Scope Change path, not silent mutation.
+
+---
+
 ### Upfront Announcement Protocol (Turn 1 Banner)
 On Turn 1 of autonomous execution, announce the active leash:
 
