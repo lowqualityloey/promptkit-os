@@ -109,6 +109,32 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 
 ---
 
+## Knowledge & Token Architecture
+
+The core stays technology-agnostic. Stack-specific knowledge lives in [`docs/stacks/`](./stacks/) and cross-cutting contracts in [`docs/recipes/`](./recipes/), loaded just in time:
+
+```text
+                    PromptKit Core
+                         │
+             ┌───────────┼───────────┐
+             ▼           ▼           ▼
+          Web          Systems      Mobile
+             │           │           │
+       Next.js, etc.  Rust, Go,   Expo, Flutter,
+                      Python, …   …
+```
+
+This keeps the core instruction layer from becoming a framework manual. Token philosophy: minimize unnecessary context and unnecessary work, not every prompt's length:
+
+```text
+Not this:  Load everything → Think about everything → Maybe use something
+But this:  Task → Risk → Relevant knowledge → Relevant workflow → Execute → Verify
+```
+
+Static footprint evidence: [`BENCHMARKS.md`](./BENCHMARKS.md). Engineering cost methodology: [`BENCHMARK-METHODOLOGY.md`](./BENCHMARK-METHODOLOGY.md).
+
+---
+
 ## Repository Layout
 
 ```text

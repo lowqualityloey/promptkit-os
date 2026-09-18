@@ -24,6 +24,8 @@ The harder problem is controlling everything around the code:
 - What project constraints must survive across sessions?
 - How do you prevent architectural decisions from disappearing after context compaction?
 - How do you verify that the claimed result was actually executed?
+- When should the agent stop instead of continuing unchecked?
+- What happens when the scope changes halfway through implementation?
 - How do you keep the instruction layer small enough that it does not become another source of token waste?
 
 PromptKit OS is designed around those problems.
@@ -151,6 +153,8 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit;
 
 > [!TIP]
 > Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia). You do not need to learn all 24 before getting value.
+
+Already installed? To pull updates, see [Updating PromptKit](./QUICKSTART.md#updating-promptkit).
 
 ### 2. Configure
 

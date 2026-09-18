@@ -183,7 +183,7 @@ graph TD
     
     Question3 -->|New feature| Plan[pk:plan Step 0 intake preflight<br/>Spec-Driven Architecture + MVP floor]
     Question3 -->|Existing codebase| Onboard[pk:onboard<br/>Codebase Intake]
-    Question3 -->|Greenfield (no code yet)| Onboard[pk:onboard<br/>Project Discovery Intake]
+    Question3 -->|"Greenfield (no code yet)"| OnboardGreen[pk:onboard<br/>Project Discovery Intake]
     
     Question4 -->|Database schema| Data[pk:data<br/>Schema & Migrations]
     Question4 -->|Authentication| Auth[pk:auth<br/>Sessions & RBAC]
@@ -385,6 +385,63 @@ pk:onboard → pk:tutor → pk:plan → [Continue]
 ### Sequence 7: Session or Role Handoff
 ```
 [Work within Task Record scope] → pk:checkpoint → [Receiver validates revision, files, acceptance, blockers, invariants, next action] → [Resume]
+```
+
+---
+
+## Execution Visuals (Illustrations — Authority Lives in the Workflows)
+
+These diagrams illustrate rules owned by `workflows/route.md` and `workflows/debug.md`. They create no new policy.
+
+### JIT Context Routing
+
+```text
+Task
+ │
+ ▼
+Route
+ │
+ ├── Risk level
+ ├── Required workflow
+ ├── Required stack knowledge
+ └── Required verification
+          │
+          ▼
+      Load only that
+      relevant context
+```
+
+Context is treated as an engineering resource: load the minimum relevant slice, not everything.
+
+### Evidence-Gated Verification Loop
+
+```text
+IMPLEMENT
+   │
+   ▼
+VERIFY
+   │
+   ├── PASS ──────► Evidence recorded
+   │
+   └── FAIL
+        │
+        ▼
+   Bounded repair (max 2 attempts)
+        │
+        ├── PASS ─► Evidence recorded
+        │
+        └── FAIL ─► STOP / HUMAN
+```
+
+A quality gate is evidence, not a claim. The human remains the authority for acceptance and release.
+
+### Search Discipline
+
+Investigation without editing or verification burns context invisibly. Consecutive read bounds halt the loop and force reassessment:
+
+```text
+search → search → search → edit / verify   (healthy)
+search → search → search → search → …      (halt and reassess)
 ```
 
 ---

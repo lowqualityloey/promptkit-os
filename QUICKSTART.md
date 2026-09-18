@@ -60,6 +60,22 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit
 
 **What this does**: Creates core `docs/` directories (`tasks/`, `specs/`, `adrs/`, `tests/`), scaffolds `PROMPTKIT.md` and `docs/STATE.md`, asks where tasks live (`tracking: local|github|jira|linear` — Jira/Linear manual import), advises MCP (or CLI fallback), and injects the lightweight directive router into your AI assistant configuration (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, etc.).
 
+### Updating PromptKit
+
+Pull the latest engine and re-run the installer (idempotent — never overwrites files you own):
+
+```bash
+# Installed via git submodule
+git submodule update --remote --merge .promptkit
+bash .promptkit/init.sh      # macOS/Linux (use --balanced or --lite to switch profile)
+.\.promptkit\init.ps1        # Windows
+
+# Installed via direct clone
+git -C .promptkit pull origin main && bash .promptkit/init.sh
+```
+
+Then run `pk:sync` in your next session so the agent hot-reloads the updated rules.
+
 ---
 
 ## Step 2: Your First Workflow (1 minute)
