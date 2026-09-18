@@ -436,6 +436,18 @@ Assert-Contains "protocols/context-economy.md" "required_capabilities" "Context 
 Assert-Contains "templates/agent-directive-template.md" "Context Economy.*Anti-Starvation" "Balanced directive registers the Context Economy contract"
 Assert-Contains "templates/agent-directive-lite-template.md" "Context Economy.*Anti-Starvation" "Lite directive registers the Context Economy contract"
 
+Write-Host "`n📌 Scenario U: Table Structural Integrity & Installer Host Auto-Detection" -ForegroundColor Yellow
+Assert-Contains "scripts/validate-execution-control.ps1" "ORPHANED_TABLE_ROW" "Validator PS1 defines ORPHANED_TABLE_ROW diagnostic"
+Assert-Contains "scripts/validate-execution-control.ps1" "TABLE_COLUMN_MISMATCH" "Validator PS1 defines TABLE_COLUMN_MISMATCH diagnostic"
+Assert-Contains "scripts/validate-execution-control.sh" "ORPHANED_TABLE_ROW" "Validator SH defines ORPHANED_TABLE_ROW diagnostic"
+Assert-Contains "scripts/validate-execution-control.sh" "TABLE_COLUMN_MISMATCH" "Validator SH defines TABLE_COLUMN_MISMATCH diagnostic"
+Assert-Contains "templates/state-tracker-template.md" "Table Invariant" "State tracker template includes table invariant comment"
+Assert-Contains "workflows/checkpoint.md" "Table Integrity Invariant" "Checkpoint workflow defines Table Integrity Invariant"
+Assert-Contains "init.ps1" "Reconfigure" "init.ps1 supports Reconfigure switch"
+Assert-Contains "init.sh" "reconfigure" "init.sh supports reconfigure flag"
+Assert-Contains "init.ps1" "Keeping installed hosts" "init.ps1 auto-detects and preserves installed hosts on update"
+Assert-Contains "init.sh" "Keeping installed hosts" "init.sh auto-detects and preserves installed hosts on update"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

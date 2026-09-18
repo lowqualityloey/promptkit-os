@@ -117,6 +117,7 @@ Staging area for rules observed during sessions but not yet approved as invarian
 
 ## 8. Session Continuity Log
 Compact record of pairing sessions to enable instant chat resumption:
+<!-- Table Invariant: Keep rows strictly contiguous without blank lines; escape literal pipes as \|; use <br> for multi-line cells -->
 
 | Date | Engineer / Agent | Milestone / Focus | Key Changes & Artifacts |
 | :--- | :--- | :--- | :--- |
@@ -125,6 +126,7 @@ Compact record of pairing sessions to enable instant chat resumption:
 ---
 
 ## 9. Session Spend Ledger
+<!-- Table Invariant: Keep rows strictly contiguous without blank lines; escape literal pipes as \|; use <br> for multi-line cells -->
 
 | Session | Turns | Measured in/out | Estimated payload | Note |
 | :--- | :--- | :--- | :--- | :--- |

@@ -487,9 +487,66 @@ if (-not (Test-Path -LiteralPath $taskDir -PathType Container)) {
 
 $stateFile = Join-Path $RootPath 'docs/STATE.md'
 if (Test-Path -LiteralPath $stateFile -PathType Leaf) {
+    $statePath = Get-RelativePath $stateFile
+
+    # Validate Markdown table structural integrity and pipe hygiene in STATE.md
+    $stateLines = Get-Content -LiteralPath $stateFile
+    $inCodeBlock = $false
+    $inTable = $false
+    $headerCols = 0
+    $delimLineIndex = -1
+
+    for ($i = 0; $i -lt $stateLines.Count; $i++) {
+        $lineNum = $i + 1
+        $line = $stateLines[$i]
+
+        if ($line -match '^\s*```') {
+            $inCodeBlock = -not $inCodeBlock
+            $inTable = $false
+            continue
+        }
+        if ($inCodeBlock) { continue }
+
+        $isTableLine = ($line -match '^\s*\|.*\|\s*$')
+
+        if (-not $inTable) {
+            if ($isTableLine) {
+                # Check if next line is a delimiter
+                $nextIsDelim = $false
+                if ($i + 1 -lt $stateLines.Count) {
+                    $nextIsDelim = ($stateLines[$i + 1] -match '^\s*\|(?:\s*:?-+:?\s*\|)+\s*$')
+                }
+                if ($nextIsDelim) {
+                    $inTable = $true
+                    $delimLineIndex = $i + 1
+                    $cells = [regex]::Split($line.Trim(), '(?<!\\)\|')
+                    $headerCols = if ($cells.Count -ge 2 -and [string]::IsNullOrWhiteSpace($cells[0]) -and [string]::IsNullOrWhiteSpace($cells[-1])) { $cells.Count - 2 } else { $cells.Count }
+                } else {
+                    Add-Diagnostic 'ORPHANED_TABLE_ROW' 'STATE' $statePath ("Table row at line {0} appears without a preceding table header or delimiter" -f $lineNum) 'Keep table rows contiguous without blank lines, or ensure table has a header and delimiter'
+                }
+            }
+        } else {
+            if ([string]::IsNullOrWhiteSpace($line) -or -not $isTableLine) {
+                $inTable = $false
+            } elseif ($i -eq $delimLineIndex) {
+                $dcells = [regex]::Split($line.Trim(), '(?<!\\)\|')
+                $dCols = if ($dcells.Count -ge 2 -and [string]::IsNullOrWhiteSpace($dcells[0]) -and [string]::IsNullOrWhiteSpace($dcells[-1])) { $dcells.Count - 2 } else { $dcells.Count }
+                if ($dCols -ne $headerCols) {
+                    Add-Diagnostic 'TABLE_COLUMN_MISMATCH' 'STATE' $statePath ("Table delimiter at line {0} has {1} columns (expected {2})" -f $lineNum, $dCols, $headerCols) 'Ensure table delimiter matches header column count'
+                }
+            } else {
+                $rcells = [regex]::Split($line.Trim(), '(?<!\\)\|')
+                $rCols = if ($rcells.Count -ge 2 -and [string]::IsNullOrWhiteSpace($rcells[0]) -and [string]::IsNullOrWhiteSpace($rcells[-1])) { $rcells.Count - 2 } else { $rcells.Count }
+                if ($rCols -ne $headerCols) {
+                    Add-Diagnostic 'TABLE_COLUMN_MISMATCH' 'STATE' $statePath ("Table row at line {0} has {1} columns (expected {2})" -f $lineNum, $rCols, $headerCols) 'Ensure all cells are on a single line and literal pipes are escaped with \|'
+                }
+            }
+        }
+    }
+
     $stateText = Get-Content -LiteralPath $stateFile -Raw
     if ($stateText -match '(?i)Execution-Control Projection|3A\. Execution-Control') {
-        $stateId = Get-FieldValue $stateFile 'Task ID'; $statePath = Get-RelativePath $stateFile
+        $stateId = Get-FieldValue $stateFile 'Task ID'
         if (-not $TaskById.ContainsKey($stateId)) { Add-Diagnostic 'STATE_PROJECTION_MISMATCH' $stateId $statePath "STATE projection references unknown Task ID: $stateId" 'Synchronize docs/STATE.md from the canonical Task Record' }
         if ($TaskById.ContainsKey($stateId)) {
             $taskFile = $TaskById[$stateId]

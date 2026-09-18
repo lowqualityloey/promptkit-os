@@ -132,6 +132,7 @@ Ensure the workspace is in a clean state before switching sessions:
     - Append one row to the Session Spend Ledger (new Section 9 in the state template; skip trivial sessions under ~5 turns with no workflow usage):
       `| YYYY-MM-DD (focus) | [turns] | [measured in/out or host telemetry unavailable] | [~estimated payload] | [host usage source or why not measured] |`
       and refresh its Running-total line.
+    - **Table Integrity Invariant**: Keep table rows strictly contiguous (zero blank lines between rows); escape literal pipes as `\|` (even in inline code or markers); format each row on a single physical line (use `<br>` for multi-line cells).
       - **Fallback Estimation Heuristic**: If the host runtime does not expose live per-turn token metering (e.g. OpenCode, Cursor, Windsurf, Copilot, or Neovim), do **NOT** emit `not measured` for Estimated payload. Compute the engineering estimate using the standard session formula:
         - Average cumulative turn context: `~8k–15k tok/turn` (prompt directives + conversation history + tool reads).
         - `Estimated payload`: `~[turns × 10k] tok total (~8k–15k tok/turn)` (or the specific observed range).

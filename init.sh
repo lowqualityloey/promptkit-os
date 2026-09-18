@@ -16,6 +16,7 @@ TRACKING_SET=0
 TRACKING_PROJECTION=""
 HOSTS=""
 HOST_SET=0
+RECONFIGURE=0
 EXTRA_TARGETS=""
 PROJECT_ROOT=""
 # Known host -> directive file map (defined early: arg parsing validates against it).
@@ -83,6 +84,9 @@ for arg in "$@"; do
             esac
             EXTRA_TARGETS="$EXTRA_TARGETS $TARGET_PATH"
             ;;
+        --reconfigure)
+            RECONFIGURE=1
+            ;;
         --help|-h)
             echo -e "\nPromptKit OS init.sh — 1-Click Setup\n"
             echo -e "Usage: ./init.sh [options] [project-root]\n"
@@ -94,6 +98,7 @@ for arg in "$@"; do
             echo -e "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import, no auto-push)"
             echo -e "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,windsurf,copilot,cline,trae,aider)"
             echo -e "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
+            echo -e "  --reconfigure       Force interactive host re-selection on existing installations"
             echo -e "  --target=rel/path  Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
             echo -e "  -h, --help          Show this help\n"
             echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
@@ -159,6 +164,25 @@ if [[ "$TRACKING_SET" -eq 0 ]]; then
             fi
             echo -e "  Keeping installed tracker: $TRACKING${TRACKING_PROJECTION:+ + $TRACKING_PROJECTION projection} (pass --tracking= to change)" ;;
     esac
+fi
+if [[ "$HOST_SET" -eq 0 && "$RECONFIGURE" -eq 0 && -f "$PROJECT_ROOT/PROMPTKIT.md" ]]; then
+    installed_hosts=""
+    for h in $KNOWN_HOSTS; do
+        hf="$(host_file "$h")"
+        if [[ -n "$hf" && -f "$PROJECT_ROOT/$hf" ]]; then
+            installed_hosts="$installed_hosts $h"
+        elif [[ "$h" == "cline" && (-f "$PROJECT_ROOT/.clinerules" || -f "$PROJECT_ROOT/.clinerules/promptkit.md") ]]; then
+            installed_hosts="$installed_hosts $h"
+        elif [[ "$h" == "cursor" && (-f "$PROJECT_ROOT/.cursorrules" || -f "$PROJECT_ROOT/.cursor/rules/promptkit.mdc") ]]; then
+            installed_hosts="$installed_hosts $h"
+        fi
+    done
+    installed_hosts="${installed_hosts# }"
+    if [[ -n "$installed_hosts" ]]; then
+        HOSTS="$(echo "$installed_hosts" | tr ' ' ',')"
+        HOST_SET=1
+        echo -e "  Keeping installed hosts: $HOSTS (pass --host= or --reconfigure to change)"
+    fi
 fi
 
 # Interactive TTY picker when no profile flag provided (visual decision for onboarding)
@@ -457,6 +481,17 @@ if [[ "$HOST_SET" -eq 1 ]]; then
 fi
 DETECTED_HOSTS=""
 probe_host() {
+    local hf
+    hf="$(host_file "$1")"
+    if [[ -n "$hf" && -f "$PROJECT_ROOT/$hf" ]]; then
+        return 0
+    fi
+    if [[ "$1" == "cline" && (-f "$PROJECT_ROOT/.clinerules" || -f "$PROJECT_ROOT/.clinerules/promptkit.md") ]]; then
+        return 0
+    fi
+    if [[ "$1" == "cursor" && (-f "$PROJECT_ROOT/.cursorrules" || -f "$PROJECT_ROOT/.cursor/rules/promptkit.mdc") ]]; then
+        return 0
+    fi
     case "$1" in
         claude) command -v claude >/dev/null 2>&1 ;;
         opencode) command -v opencode >/dev/null 2>&1 || [[ -d "$HOME/.config/opencode" ]] ;;

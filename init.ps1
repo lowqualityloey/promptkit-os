@@ -24,6 +24,7 @@ param (
     [string]$Tracking = "local",
     [string]$Hosts = "",
     [string]$AddHost = "",
+    [switch]$Reconfigure,
     [string[]]$Target = @(),
     [switch]$Help,
     [Parameter(ValueFromRemainingArguments = $true)]
@@ -61,6 +62,7 @@ if ($Help) {
     Write-Host "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import)"
     Write-Host "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,windsurf,copilot,cline,trae,aider)"
     Write-Host "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
+    Write-Host "  --reconfigure       Force interactive host re-selection on existing installations"
     Write-Host "  --target=rel/path   Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
     Write-Host "  -Help               Show this help`n"
     Write-Host "Interactive (TTY): If no profile flag is given and running in interactive host,"
@@ -126,6 +128,7 @@ foreach ($a in $AllArgs) {
             }
             $ExtraTargets += $tp
         }
+        "--reconfigure" { $Reconfigure = $true }
         "--help" { 
             Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
             Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
@@ -164,6 +167,24 @@ if (-not $TrackingSet -and (Test-Path $probeProfile)) {
         }
         $projNote = if ($TrackingProjection -ne "") { " + $TrackingProjection projection" } else { "" }
         Write-Host "  Keeping installed tracker: $Tracking$projNote (pass --tracking= to change)" -ForegroundColor DarkGray
+    }
+}
+if (-not $HostSet -and -not $Reconfigure -and (Test-Path $probeProfile)) {
+    $installedHosts = @()
+    foreach ($h in $KnownHostsList) {
+        $hf = Get-HostFile $h
+        if ($hf -ne "" -and (Test-Path (Join-Path $probeRoot $hf))) {
+            $installedHosts += $h
+        } elseif ($h -eq "cline" -and ((Test-Path (Join-Path $probeRoot ".clinerules")) -or (Test-Path (Join-Path $probeRoot ".clinerules/promptkit.md")))) {
+            $installedHosts += $h
+        } elseif ($h -eq "cursor" -and ((Test-Path (Join-Path $probeRoot ".cursorrules")) -or (Test-Path (Join-Path $probeRoot ".cursor/rules/promptkit.mdc")))) {
+            $installedHosts += $h
+        }
+    }
+    if ($installedHosts.Count -gt 0) {
+        $Hosts = ($installedHosts | Select-Object -Unique) -join ','
+        $HostSet = $true
+        Write-Host "  Keeping installed hosts: $Hosts (pass -Hosts or -Reconfigure to change)" -ForegroundColor DarkGray
     }
 }
 
@@ -454,6 +475,10 @@ if ($HostSet) {
     }
 }
 function Test-HostDetected($Name) {
+    $hf = Get-HostFile $Name
+    if ($hf -ne "" -and (Test-Path (Join-Path $probeRoot $hf))) { return $true }
+    if ($Name -eq "cline" -and ((Test-Path (Join-Path $probeRoot ".clinerules")) -or (Test-Path (Join-Path $probeRoot ".clinerules/promptkit.md")))) { return $true }
+    if ($Name -eq "cursor" -and ((Test-Path (Join-Path $probeRoot ".cursorrules")) -or (Test-Path (Join-Path $probeRoot ".cursor/rules/promptkit.mdc")))) { return $true }
     switch ($Name) {
         "claude" { return ($null -ne (Get-Command claude -ErrorAction SilentlyContinue)) }
         "opencode" { return ($null -ne (Get-Command opencode -ErrorAction SilentlyContinue)) -or (Test-Path (Join-Path $HOME ".config/opencode")) }
@@ -567,7 +592,13 @@ foreach ($xp in $ExtraTargets) {
 function New-TargetFile($Rel) {
     if ($Rel -eq ".clinerules") {
         $dir = Join-Path $ProjectRoot ".clinerules"
-        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        if (Test-Path $dir -PathType Leaf) {
+            $script:TargetsFound += $dir
+            return
+        }
+        if (-not (Test-Path $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        }
         $inner = Join-Path $dir "promptkit.md"
         if (-not (Test-Path $inner)) { New-Item -ItemType File -Path $inner -Force | Out-Null }
         $script:TargetsFound += $inner
