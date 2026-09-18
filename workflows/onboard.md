@@ -153,7 +153,7 @@ After completing the scan and presenting the findings summary / Executive Scorec
          - label: "Lite (Recommended for new users)"
            description: "6 utility workflows (route, debug, commit, checkpoint, sync, profile), 80% of value, fastest onboarding, fits the <1,500 tok lite budget"
          - label: "Balanced (Recommended for teams)"
-           description: "Full 23-workflow set, Level 0-3 adaptive ceremony, teams/production, default"
+           description: "Full 24-workflow set, Level 0-3 adaptive ceremony, teams/production, default"
          - label: "Turbo (Experimental)"
            description: "Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval, needs --experimental acknowledgement"
        multiSelect: false
