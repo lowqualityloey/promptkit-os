@@ -136,6 +136,31 @@ if [[ -z "$PROJECT_ROOT" ]]; then
     fi
 fi
 
+# Keep installed settings on update re-runs (flags always win over installed values)
+if [[ "$PROFILE_SET" -eq 0 ]]; then
+    installed_profile="$(grep -E '^profile:[[:space:]]' "$PROJECT_ROOT/PROMPTKIT.md" 2>/dev/null | tail -n 1 | awk '{print $2}' || true)"
+    case "$installed_profile" in
+        lite|balanced)
+            PROFILE="$installed_profile"; PROFILE_SET=1
+            echo -e "  Keeping installed profile: $PROFILE (pass --lite/--balanced/--turbo to change)" ;;
+        turbo)
+            PROFILE="turbo"; EXPERIMENTAL=1; PROFILE_SET=1
+            echo -e "  Keeping installed profile: turbo (previously acknowledged --experimental)" ;;
+    esac
+fi
+if [[ "$TRACKING_SET" -eq 0 ]]; then
+    installed_tracking="$(grep -E '^tracking:[[:space:]]' "$PROJECT_ROOT/PROMPTKIT.md" 2>/dev/null | tail -n 1 | awk '{print $2}' || true)"
+    case "$installed_tracking" in
+        local|github|jira|linear)
+            TRACKING="$installed_tracking"; TRACKING_SET=1
+            if [[ "$TRACKING" == "local" ]]; then
+                TRACKING_PROJECTION="$(grep -E '^projection:[[:space:]]' "$PROJECT_ROOT/PROMPTKIT.md" 2>/dev/null | tail -n 1 | awk '{print $2}' || true)"
+                [[ "$TRACKING_PROJECTION" != "github" ]] && TRACKING_PROJECTION=""
+            fi
+            echo -e "  Keeping installed tracker: $TRACKING${TRACKING_PROJECTION:+ + $TRACKING_PROJECTION projection} (pass --tracking= to change)" ;;
+    esac
+fi
+
 # Interactive TTY picker when no profile flag provided (visual decision for onboarding)
 # This is the shell-level equivalent of native interactive selection tools (ask_question)
 # Agent-level picker is in workflows/onboard.md which uses ask_question for same choice
@@ -214,6 +239,7 @@ if [[ "$TRACKING_SET" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}
             esac
         done
         if [ "$bad" -eq 0 ] && { [ "$has3" -eq 0 ] || { [ "$has1" -eq 0 ] && [ "$has2" -eq 0 ] && [ "$has4" -eq 0 ]; }; } && { [ "$has4" -eq 0 ] || { [ "$has1" -eq 0 ] && [ "$has2" -eq 0 ] && [ "$has3" -eq 0 ]; }; }; then
+            TRACKING_PROJECTION=""
             if [ "$has1" -eq 1 ] || { [ "$has2" -eq 0 ] && [ "$has3" -eq 0 ] && [ "$has4" -eq 0 ]; }; then
                 TRACKING="local"
                 [ "$has2" -eq 1 ] && TRACKING_PROJECTION="github"
@@ -230,6 +256,7 @@ if [[ "$TRACKING_SET" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}
         if [ "$tracker_attempts" -ge 3 ]; then
             echo -e "\033[0;33m[!] Unrecognized tracker selection after 3 attempts — defaulting to Local Markdown.\033[0m"
             TRACKING="local"
+            TRACKING_PROJECTION=""
             break
         fi
         echo -e "\033[0;33m[!] Could not parse '$tchoice'. Use numbers 1-4 (e.g. 1, 2, or 1,2 for local + GitHub projection).\033[0m"
@@ -353,6 +380,15 @@ if [[ -f "$PROJECT_PROFILE" ]]; then
             echo "projection: $TRACKING_PROJECTION" >> "$PROJECT_PROFILE"
         fi
         echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md projection: $TRACKING_PROJECTION"
+    else
+        if grep -q "^projection:" "$PROJECT_PROFILE" 2>/dev/null; then
+            if sed --version >/dev/null 2>&1; then
+                sed -i "/^projection:/d" "$PROJECT_PROFILE"
+            else
+                sed -i.bak "/^projection:/d" "$PROJECT_PROFILE" && rm -f "$PROJECT_PROFILE.bak"
+            fi
+            echo -e "  \033[0;33m[✓]\\033[0m Removed stale PROMPTKIT.md projection line"
+        fi
     fi
 fi
 
