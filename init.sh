@@ -13,6 +13,7 @@ PROFILE_SET=0
 EXPERIMENTAL=0
 TRACKING="local"
 TRACKING_SET=0
+TRACKING_PROJECTION=""
 HOSTS=""
 HOST_SET=0
 EXTRA_TARGETS=""
@@ -190,13 +191,49 @@ if [[ "$TRACKING_SET" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}
     echo -e "  4) Linear — manual import / copy-paste, no auto-push, needs project key"
     echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo ""
-    read -p "Choose tracker [1-4, default 1]: " tchoice
-    case "$tchoice" in
-        2) TRACKING="github" ;;
-        3) TRACKING="jira" ;;
-        4) TRACKING="linear" ;;
-        *) TRACKING="local" ;;
-    esac
+    echo -e "  Tip: combine local with GitHub projection, e.g. '1,2' or '1 and 2'."
+    echo ""
+    TRACKING_PROJECTION=""
+    tracker_attempts=0
+    while true; do
+        read -p "Choose tracker [1-4, combos like 1,2 allowed, default 1]: " tchoice
+        if [ -z "$tchoice" ]; then
+            TRACKING="local"
+            break
+        fi
+        norm="$(printf '%s' "$tchoice" | tr '[:upper:]' '[:lower:]' | sed -e 's/[,&+]/ /g' -e 's/[^0-9 ]//g' -e 's/  */ /g' -e 's/^ //;s/ $//')"
+        has1=0; has2=0; has3=0; has4=0; bad=0
+        [ -z "$norm" ] && bad=1
+        for tok in $norm; do
+            case "$tok" in
+                1) has1=1 ;;
+                2) has2=1 ;;
+                3) has3=1 ;;
+                4) has4=1 ;;
+                *) bad=1 ;;
+            esac
+        done
+        if [ "$bad" -eq 0 ] && { [ "$has3" -eq 0 ] || { [ "$has1" -eq 0 ] && [ "$has2" -eq 0 ] && [ "$has4" -eq 0 ]; }; } && { [ "$has4" -eq 0 ] || { [ "$has1" -eq 0 ] && [ "$has2" -eq 0 ] && [ "$has3" -eq 0 ]; }; }; then
+            if [ "$has1" -eq 1 ] || { [ "$has2" -eq 0 ] && [ "$has3" -eq 0 ] && [ "$has4" -eq 0 ]; }; then
+                TRACKING="local"
+                [ "$has2" -eq 1 ] && TRACKING_PROJECTION="github"
+            elif [ "$has2" -eq 1 ]; then
+                TRACKING="github"
+            elif [ "$has3" -eq 1 ]; then
+                TRACKING="jira"
+            else
+                TRACKING="linear"
+            fi
+            break
+        fi
+        tracker_attempts=$((tracker_attempts + 1))
+        if [ "$tracker_attempts" -ge 3 ]; then
+            echo -e "\033[0;33m[!] Unrecognized tracker selection after 3 attempts — defaulting to Local Markdown.\033[0m"
+            TRACKING="local"
+            break
+        fi
+        echo -e "\033[0;33m[!] Could not parse '$tchoice'. Use numbers 1-4 (e.g. 1, 2, or 1,2 for local + GitHub projection).\033[0m"
+    done
     TRACKING_SET=1
     echo ""
 fi
@@ -304,6 +341,19 @@ if [[ -f "$PROJECT_PROFILE" ]]; then
         echo "tracking: $TRACKING" >> "$PROJECT_PROFILE"
     fi
     echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md tracking: $TRACKING"
+    if [ -n "$TRACKING_PROJECTION" ]; then
+        if grep -q "^projection:" "$PROJECT_PROFILE" 2>/dev/null; then
+            if sed --version >/dev/null 2>&1; then
+                sed -i "s/^projection:.*/projection: $TRACKING_PROJECTION/" "$PROJECT_PROFILE"
+            else
+                sed -i.bak "s/^projection:.*/projection: $TRACKING_PROJECTION/" "$PROJECT_PROFILE" && rm -f "$PROJECT_PROFILE.bak"
+            fi
+        else
+            echo "" >> "$PROJECT_PROFILE"
+            echo "projection: $TRACKING_PROJECTION" >> "$PROJECT_PROFILE"
+        fi
+        echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md projection: $TRACKING_PROJECTION"
+    fi
 fi
 
 DESIGN_PROFILE="$PROJECT_ROOT/DESIGN.md"
