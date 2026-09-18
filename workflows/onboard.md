@@ -203,7 +203,7 @@ After completing the scan and presenting the findings summary / Executive Scorec
    - Scaffold `./DESIGN.md` incorporating PromptKit OS anti-slop directives and detected tokens.
 
 4. **Auto-Populate `docs/STATE.md` (Living Project Tracker)**:
-   `docs/STATE.md` is pre-seeded by `init.sh` / `init.ps1` from `.promptkit/templates/state-tracker-template.md` (or copied from the template if missing). You must preserve all 9 canonical sections intact (never truncate or drop Sections 8 and 9):
+   `docs/STATE.md` is pre-seeded by `init.sh` / `init.ps1` from `templates/state-tracker-template.md` (or copied from the template if missing). Section writes follow the State Mutation Contract in `workflows/checkpoint.md` (seed §§2/8/9, stage §4A candidates). You must preserve all 9 canonical sections intact (never truncate or drop Sections 8 and 9):
    - Populate project name, current branch, and active status.
    - If monorepo, set initial Target Workspace / Package in Section 3 (`Active Working Set`).
    - Record existing documented policies and explicitly human-approved rules in Section 4 with source references. Stage manifest-derived observations and inferred rules in Section 4A (`Candidate Learnings`) with status `pending`; they are not locked invariants.

@@ -77,6 +77,10 @@ Session: ~<n>/30 turns — consider pk:checkpoint (estimate; write `not measured
 
 ### New-Requirement Interception (Mid-Implementation Deltas)
 
+<a id="new-requirement-interception"></a>
+
+Canonical table: `workflows/checkpoint.md` and `workflows/plan.md` reference this section instead of restating it.
+
 During the Phase 2 diff, treat any new requirement, attachment, or scope statement the developer introduces mid-implementation as an interception candidate — never absorb it silently into current execution:
 
 | Delta type | Required handling |
