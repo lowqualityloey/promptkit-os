@@ -55,12 +55,12 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Execution State**: `completed`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-18 01:00 UTC`
 - **Current Actor**: `PromptKit maintainer (review)`
-- **Next Action**: `Human PR review and merge decision`
+- **Next Action**: `None - task complete; PR #286 merged`
 
 ### Transition History
 
@@ -72,6 +72,7 @@
 | in_progress | awaiting_review | 2026-09-18 01:30 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
 | awaiting_review | in_progress | 2026-09-18 02:00 UTC | Implementor agent | Approved scope expansion SCOPE-2026-09-18-docs-salvage-1; pointer reassumed | This record |
 | in_progress | awaiting_review | 2026-09-18 02:15 UTC | Implementor agent | Scope expansion delivered; battery green | Section 6 |
+| awaiting_review | completed | 2026-09-18 03:00 UTC | PromptKit maintainer | PR #286 squash-merged as a716958; CI green both OSes | Merge commit a716958 |
 
 ## 6. Evidence and Completion Gate
 
@@ -91,14 +92,14 @@
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Documentation Work`
-- **CI Evidence**: pending PR run (Linux + Windows)
-- **Review Evidence**: pending human PR review
-- **Commit Evidence**: pending commit on branch `docs/salvage-gpt-diagrams-285`
-- **Pull Request Evidence**: pending PR referencing Issue #285
+- **CI Evidence**: PR #286 CI green both OSes at merge (Lint and Validate Linux SUCCESS, Windows SUCCESS)
+- **Review Evidence**: Maintainer-merged PR #286 on 2026-09-18; no separate review record
+- **Commit Evidence**: Branch commits a9d9d57, a45c436, 389f30c squash-merged as a716958
+- **Pull Request Evidence**: PR #286 merged 2026-09-18T00:58:41Z, closes Issue #285
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: AC-1 Complete (no draft file stored, relocation only); AC-2 Complete (references 0 warnings incl. new anchor); AC-3 Complete (Balanced 2498, Lite 1146); AC-4 Complete (VALID|RECORDS=14, 0 diagnostics)
 - **Changed-File Summary**: 6 files; Execution Visuals + Knowledge and Token Architecture sections, 2 README problem questions, QUICKSTART update section plus README pointer (via scope-1), decision-tree mermaid repair, Task Record plus scope record
 - **Completion Exception**: `None`
-- **Completion Decision and Timestamp**: `awaiting_review; Implementor agent; 2026-09-18 02:15 UTC`
+- **Completion Decision and Timestamp**: `completed; PromptKit maintainer; 2026-09-18 03:00 UTC`
