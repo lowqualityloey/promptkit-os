@@ -201,10 +201,11 @@ docs(adrs): record decision to adopt UUIDv7 for primary keys
 1. Present the staged files and the complete proposed commit message to the developer.
 2. If multiple concerns exist, explain the proposed commit sequence.
 3. Upon developer confirmation, run the commit command:
-   ```bash
-   git add <staged-files>
-   git commit -m "<subject>" -m "<body-paragraphs>"
-   ```
+    ```bash
+    git add <staged-files>
+    git commit -m "<subject>" -m "<body-paragraphs>"
+    ```
+    Exception: inside an explicitly authorized `pk:auto` run (`--until pr` / `--full`), the declared run boundary satisfies the confirmation requirement for commits within that run; commit evidence is recorded and the draft PR serves as the human review checkpoint (see Action Authority Model in `protocols/code-quality-gate.md`).
 4. Confirm commit creation with `git log -n 1 --stat`.
 5. **Dual-Compatible Telemetry Status Card & Interactive Handoff**: Conclude the turn by displaying the status card and invoking the native interactive selection tool (skip the decorative card only when PROMPTKIT.md declares `status-cards: off`; halts still fire):
    > 📊 **Milestone**: `M2: Core Features` `[■■■■■□□□□□]` 42% (5/12)  

@@ -77,6 +77,24 @@ Define the non-negotiable definition-of-done (DoD) and engineering quality bar f
 
 ---
 
+## Action Authority Model
+
+Single source for which actions an agent may take alone and which require explicit human authorization. Workflows reference this table instead of restating their own rules.
+
+| Action | Agent may execute alone | Requires explicit human authorization |
+| :--- | :---: | :---: |
+| Read repository, edit local files, run verification | ✓ | |
+| Write Task Record / STATE evidence | ✓ | |
+| Local commit (with confirmation) | ✓ (confirmed) | |
+| Push branch | | ✓ human — see run-authorization exception |
+| Create (draft) PR | | ✓ human — see run-authorization exception |
+| Merge, tag, publish, deploy, rollback | | ✓ human, no exception |
+
+- **No implicit remote authority**: no workflow may grant push/PR/merge/deploy/rollback authority by implication, default, or convenience. Silence is denial.
+- **Run-authorization exception (only)**: an explicitly declared `pk:auto` run (`--until pr` / `--full`) carries standing authorization for push and draft-PR creation **within that run only** — bounded by its declared terminal boundary, circuit breakers, deny-list, and invocation snapshot. Merge, tag, publish, deploy, and rollback are never included and always require a separate explicit human action.
+
+---
+
 ## Protocol Execution in Pair-Programming
 Before completing any coding task or finishing a PromptKit OS session:
 1a. Pull optional diagnostics evidence (read-only, when `./PROMPTKIT.md` Section 5a enables LSP): capture `tsc --noEmit --pretty false` / `biome check --json` / `eslint --format json` locations for the review report. Never auto-fix; record `not measured` when unavailable.
