@@ -188,12 +188,37 @@ if (-not $TrackingSet -and [Environment]::UserInteractive `
     Write-Host "  2) GitHub Issues — via gh CLI or MCP, needs gh auth" -ForegroundColor White
     Write-Host "  3) Jira — manual import, no auto-push" -ForegroundColor DarkGray
     Write-Host "  4) Linear — manual import, no auto-push" -ForegroundColor DarkGray
-    $tchoice = Read-Host "Choose tracker [1-4, default 1]"
-    switch ($tchoice) {
-        "2" { $Tracking = "github" }
-        "3" { $Tracking = "jira" }
-        "4" { $Tracking = "linear" }
-        default { $Tracking = "local" }
+    Write-Host "  Tip: combine local with GitHub projection, e.g. '1,2' or '1 and 2'."
+    Write-Host ""
+    $TrackingProjection = ""
+    $trackerAttempts = 0
+    while ($true) {
+        $tchoice = Read-Host "Choose tracker [1-4, combos like 1,2 allowed, default 1]"
+        if ([string]::IsNullOrWhiteSpace($tchoice)) { $Tracking = "local"; break }
+        $norm = $tchoice.ToLower() -replace '\band\b',' ' -replace '[,&+]',' ' -replace '[^0-9 ]',''
+        $norm = ($norm -split '\s+' | Where-Object { $_ -ne '' }) -join ' '
+        $toks = @($norm -split ' ' | Where-Object { $_ -ne '' })
+        $bad = @($toks | Where-Object { $_ -notin @('1','2','3','4') }).Count -gt 0
+        if ($toks.Count -eq 0) { $bad = $true }
+        $has1 = $toks -contains '1'; $has2 = $toks -contains '2'
+        $has3 = $toks -contains '3'; $has4 = $toks -contains '4'
+        $comboOk = -not $bad -and (($has3 -eq $false) -or (-not $has1 -and -not $has2 -and -not $has4)) -and (($has4 -eq $false) -or (-not $has1 -and -not $has2 -and -not $has3))
+        if ($comboOk) {
+            if ($has1 -or (-not $has2 -and -not $has3 -and -not $has4)) {
+                $Tracking = "local"
+                if ($has2) { $TrackingProjection = "github" }
+            } elseif ($has2) { $Tracking = "github" }
+            elseif ($has3) { $Tracking = "jira" }
+            else { $Tracking = "linear" }
+            break
+        }
+        $trackerAttempts++
+        if ($trackerAttempts -ge 3) {
+            Write-Host "[!] Unrecognized tracker selection after 3 attempts — defaulting to Local Markdown." -ForegroundColor Yellow
+            $Tracking = "local"
+            break
+        }
+        Write-Host "[!] Could not parse '$tchoice'. Use numbers 1-4 (e.g. 1, 2, or 1,2 for local + GitHub projection)." -ForegroundColor Yellow
     }
     $TrackingSet = $true
     Write-Host ""
@@ -314,6 +339,16 @@ if (Test-Path $ProjectProfile) {
     }
     [System.IO.File]::WriteAllText($ProjectProfile, $tcontent, (New-Object System.Text.UTF8Encoding($false)))
     Write-Host "  [✓] Updated PROMPTKIT.md tracking: $Tracking" -ForegroundColor Yellow
+    if (-not [string]::IsNullOrEmpty($TrackingProjection)) {
+        $pcontent = Get-Content $ProjectProfile -Raw -ErrorAction SilentlyContinue
+        if ($pcontent -match "^projection:") {
+            $pcontent = $pcontent -replace "^projection:.*", "projection: $TrackingProjection"
+        } else {
+            $pcontent = "$pcontent`n`nprojection: $TrackingProjection`n"
+        }
+        [System.IO.File]::WriteAllText($ProjectProfile, $pcontent, (New-Object System.Text.UTF8Encoding($false)))
+        Write-Host "  [✓] Updated PROMPTKIT.md projection: $TrackingProjection" -ForegroundColor Yellow
+    }
 }
 
 $DesignProfile = Join-Path $ProjectRoot "DESIGN.md"
