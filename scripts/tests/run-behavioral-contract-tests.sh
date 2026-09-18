@@ -412,6 +412,11 @@ assert_contains "protocols/context-economy.md" "Anti-Starvation" "Context Econom
 assert_contains "protocols/context-economy.md" "Hard Escalation Triggers" "Context Economy specifies Hard Escalation Triggers"
 assert_contains "protocols/context-economy.md" "Context Sufficiency Check Gate" "Context Economy specifies Context Sufficiency Check gate"
 assert_contains "protocols/context-economy.md" "4D Context Framework" "Context Economy defines 4D Context model"
+assert_contains "protocols/context-economy.md" "Z0–Z4 Taxonomy" "Context Economy defines Z0-Z4 zoom taxonomy"
+assert_contains "protocols/context-economy.md" "Context Provider Capability Contract" "Context Economy defines Context Provider Capability Contract"
+assert_contains "protocols/context-economy.md" "Retrieval Confidence is Evidence, Not Authority" "Context Economy establishes evidence vs authority invariant"
+assert_contains "protocols/context-economy.md" "Provider Freshness & Stale-Index Fallback" "Context Economy defines provider freshness invariant"
+assert_contains "protocols/context-economy.md" "required_capabilities" "Context Economy defines required provider capabilities"
 assert_contains "templates/agent-directive-template.md" "Context Economy.*Anti-Starvation" "Balanced directive registers the Context Economy contract"
 assert_contains "templates/agent-directive-lite-template.md" "Context Economy.*Anti-Starvation" "Lite directive registers the Context Economy contract"
 
