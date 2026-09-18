@@ -4,7 +4,7 @@
 Trigger anytime with: `pk:auto` (or via Smart Routing on phrases like *"handle this end-to-end"*, *"leave it in automation"*, *"hands-off"*)
 
 ## Mission
-Serve as PromptKit OS's **Autonomous SDLC Meta-Orchestrator** — coordinating and chaining domain workflows (`pk:plan` → `pk:tasks` → code → `pk:test` → `pk:review` → `pk:commit`) sequentially without intermediate prompt friction.
+Serve as PromptKit OS's **Autonomous SDLC Meta-Orchestrator** — coordinating and chaining domain workflows (`pk:plan` → `pk:tasks` → code → `pk:test` → `pk:review` → `pk:commit`) sequentially without intermediate prompt friction, always stopping at the declared terminal boundary (default `review ready`, before any git commit, PR, or push).
 
 Eliminate prompt ping-pong during well-specified feature implementation, bug remediation, or maintenance tasks while enforcing ironclad engineering quality gates, test immobility, and deterministic circuit breakers.
 
@@ -63,6 +63,15 @@ On Turn 1 of autonomous execution, announce the active leash:
 🛑 Safety Boundary: Halts before git commit/push. 3-strike test circuit breaker active.
 Press Stop / Ctrl+C anytime to switch to manual pairing.
 ```
+
+### Run Authorization & Scope (Authority Model Exception)
+
+Per the Action Authority Model in `protocols/code-quality-gate.md`, remote actions need explicit human authorization. For `pk:auto` the invocation itself is that authorization, scoped as follows:
+
+- **`--until pr` / `--full` = standing authorization** for push and draft-PR creation within this run only. The draft PR is the human review checkpoint. Merge, tag, publish, deploy, and rollback are never included.
+- **Scope frozen at invocation**: `--full` covers only the tasks uncompleted in `docs/STATE.md` when the run starts. Newly discovered tasks require a new run (new authorization).
+- **Any circuit-breaker trip, failed review gate, or scope growth beyond the declared boundary halts the run for human resume** — authorization does not survive the run's own stop conditions.
+- Record the declared boundary and authorization in the first `docs/STATE.md` micro-checkpoint.
 
 ---
 
