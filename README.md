@@ -90,12 +90,14 @@ The principle: use the minimum ceremony appropriate to the risk.
 
 For authoritative Level 0–3 classification, escalation, downgrade, and Task Record rules, see [`workflows/route.md`](./workflows/route.md).
 
-### Context — Just-In-Time Loading
+### Context — Just-In-Time Loading & Context Economy
 
 The core instruction layer stays small. Workflows, stack playbooks, and boundary recipes are loaded only when the task requires them.
 
-- **Balanced** profile: 2,498 tok static footprint (87% reduction vs ~19.8k derived core-subset baseline)
+- **Balanced** profile: 2,500 tok static footprint (87% reduction vs ~19.8k derived core-subset baseline)
 - **Lite** profile: 1,146 tok static footprint (94% reduction)
+
+PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), enforcing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 task risk ceremony). Retrieval confidence is treated as evidence rather than authority, ensuring high-risk boundaries trigger mandatory zoom-outs.
 
 Full workflows are read from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md) and [`docs/BENCHMARK-METHODOLOGY.md`](./docs/BENCHMARK-METHODOLOGY.md) for Cost Per Accepted Change (CPAC) methodology.
 

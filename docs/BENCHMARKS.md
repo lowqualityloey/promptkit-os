@@ -254,6 +254,7 @@ For full mathematical definitions, pricing constants, and the A/B evaluation pro
 
 ## Related References
 - [`BENCHMARK-METHODOLOGY.md`](./BENCHMARK-METHODOLOGY.md) — Cost Per Accepted Change (CPAC) empirical evaluation protocol
+- [`protocols/context-economy.md`](../protocols/context-economy.md) — Context Economy, Z0–Z4 progressive zoom, & provider capability contract
 - [`protocols/subagent-delegation.md`](../protocols/subagent-delegation.md) — Subagent delegation & context preservation rules
 - [`protocols/context-sync.md`](../protocols/context-sync.md) — 30-turn reset threshold & MCP discovery
 - [`workflows/route.md`](../workflows/route.md) — Canonical task ceremony levels & model tiering
