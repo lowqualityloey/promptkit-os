@@ -411,6 +411,17 @@ Assert-Contains "protocols/context-sync.md" 'Rejected or deferred candidates rem
 Assert-Contains "protocols/setup.md" 'setup and reinjection must not import session learnings as project rules' "Setup preserves the promotion boundary"
 Assert-Contains "templates/state-tracker-template.md" 'approver, date, evidence reference, and destination' "Candidate promotion records decision provenance"
 
+Write-Host "`n📌 Scenario S: Dual-Mode Telemetry & Single-Callout Invariants" -ForegroundColor Yellow
+Assert-Contains "protocols/telemetry-cards.md" "The Single-Callout Invariant" "Telemetry protocol defines Single-Callout Invariant"
+Assert-Contains "protocols/telemetry-cards.md" "At most ONE human callout block per turn" "Telemetry protocol mandates at most one callout per turn"
+Assert-Contains "protocols/telemetry-cards.md" "Universal Square Progress Bar Contract" "Telemetry protocol defines square progress bar contract"
+Assert-Contains "protocols/telemetry-cards.md" "■■■■■■■■□□" "Telemetry protocol specifies square progress bar format"
+Assert-Contains "protocols/telemetry-cards.md" "Mode 2: CLI / Terminal Mode" "Telemetry protocol specifies CLI mode with ceiling and floor"
+Assert-Contains "templates/agent-directive-template.md" "Max 1 callout/turn" "Balanced directive enforces max 1 callout per turn"
+Assert-Contains "templates/agent-directive-template.md" "■■■■■■■■□□" "Balanced directive enforces square progress bar"
+Assert-Contains "templates/agent-directive-lite-template.md" "Max 1 callout/turn" "Lite directive enforces max 1 callout per turn"
+Assert-Contains "templates/agent-directive-lite-template.md" "■■■■■■■■□□" "Lite directive enforces square progress bar"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

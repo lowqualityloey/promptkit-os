@@ -394,6 +394,18 @@ assert_contains "protocols/setup.md" 'setup and reinjection must not import sess
 assert_contains "templates/state-tracker-template.md" 'approver, date, evidence reference, and destination' "Candidate promotion records decision provenance"
 
 echo ""
+echo "📌 Scenario S: Dual-Mode Telemetry & Single-Callout Invariants"
+assert_contains "protocols/telemetry-cards.md" "The Single-Callout Invariant" "Telemetry protocol defines Single-Callout Invariant"
+assert_contains "protocols/telemetry-cards.md" "At most ONE human callout block per turn" "Telemetry protocol mandates at most one callout per turn"
+assert_contains "protocols/telemetry-cards.md" "Universal Square Progress Bar Contract" "Telemetry protocol defines square progress bar contract"
+assert_contains "protocols/telemetry-cards.md" "■■■■■■■■□□" "Telemetry protocol specifies square progress bar format"
+assert_contains "protocols/telemetry-cards.md" "Mode 2: CLI / Terminal Mode" "Telemetry protocol specifies CLI mode with ceiling and floor"
+assert_contains "templates/agent-directive-template.md" "Max 1 callout/turn" "Balanced directive enforces max 1 callout per turn"
+assert_contains "templates/agent-directive-template.md" "■■■■■■■■□□" "Balanced directive enforces square progress bar"
+assert_contains "templates/agent-directive-lite-template.md" "Max 1 callout/turn" "Lite directive enforces max 1 callout per turn"
+assert_contains "templates/agent-directive-lite-template.md" "■■■■■■■■□□" "Lite directive enforces square progress bar"
+
+echo ""
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"
