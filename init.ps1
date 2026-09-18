@@ -140,6 +140,33 @@ foreach ($a in $AllArgs) {
     }
 }
 
+# Keep installed settings on update re-runs (flags always win over installed values)
+$TrackingProjection = ""
+$probeRoot = if ($TargetDir -ne "") { $TargetDir } elseif ((Split-Path -Leaf (Split-Path -Parent $MyInvocation.MyCommand.Path)) -in @(".promptkit", "promptkit")) { Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) ".." } else { (Get-Location).Path }
+$probeProfile = Join-Path $probeRoot "PROMPTKIT.md"
+if (-not $ProfileSet -and (Test-Path $probeProfile)) {
+    $ip = Select-String -Path $probeProfile -Pattern '^profile:\s*(\S+)' | Select-Object -Last 1
+    if ($null -ne $ip -and $ip.Matches[0].Groups[1].Value -in @('lite', 'balanced')) {
+        $Profile = $ip.Matches[0].Groups[1].Value; $ProfileSet = $true
+        Write-Host "  Keeping installed profile: $Profile (pass a flag to change)" -ForegroundColor DarkGray
+    } elseif ($null -ne $ip -and $ip.Matches[0].Groups[1].Value -eq 'turbo') {
+        $Profile = "turbo"; $Experimental = $true; $ProfileSet = $true
+        Write-Host "  Keeping installed profile: turbo (previously acknowledged --experimental)" -ForegroundColor DarkGray
+    }
+}
+if (-not $TrackingSet -and (Test-Path $probeProfile)) {
+    $it = Select-String -Path $probeProfile -Pattern '^tracking:\s*(\S+)' | Select-Object -Last 1
+    if ($null -ne $it -and $it.Matches[0].Groups[1].Value -in @('local', 'github', 'jira', 'linear')) {
+        $Tracking = $it.Matches[0].Groups[1].Value; $TrackingSet = $true
+        if ($Tracking -eq "local") {
+            $ipr = Select-String -Path $probeProfile -Pattern '^projection:\s*(\S+)' | Select-Object -Last 1
+            if ($null -ne $ipr -and $ipr.Matches[0].Groups[1].Value -eq 'github') { $TrackingProjection = "github" }
+        }
+        $projNote = if ($TrackingProjection -ne "") { " + $TrackingProjection projection" } else { "" }
+        Write-Host "  Keeping installed tracker: $Tracking$projNote (pass --tracking= to change)" -ForegroundColor DarkGray
+    }
+}
+
 # Interactive TTY picker when no profile flag provided (visual decision for onboarding)
 # Shell-level equivalent of native interactive selection tools (ask_question)
 # Agent-level picker is in workflows/onboard.md
@@ -204,6 +231,7 @@ if (-not $TrackingSet -and [Environment]::UserInteractive `
         $has3 = $toks -contains '3'; $has4 = $toks -contains '4'
         $comboOk = -not $bad -and (($has3 -eq $false) -or (-not $has1 -and -not $has2 -and -not $has4)) -and (($has4 -eq $false) -or (-not $has1 -and -not $has2 -and -not $has3))
         if ($comboOk) {
+            $TrackingProjection = ""
             if ($has1 -or (-not $has2 -and -not $has3 -and -not $has4)) {
                 $Tracking = "local"
                 if ($has2) { $TrackingProjection = "github" }
@@ -216,6 +244,7 @@ if (-not $TrackingSet -and [Environment]::UserInteractive `
         if ($trackerAttempts -ge 3) {
             Write-Host "[!] Unrecognized tracker selection after 3 attempts — defaulting to Local Markdown." -ForegroundColor Yellow
             $Tracking = "local"
+            $TrackingProjection = ""
             break
         }
         Write-Host "[!] Could not parse '$tchoice'. Use numbers 1-4 (e.g. 1, 2, or 1,2 for local + GitHub projection)." -ForegroundColor Yellow
@@ -348,6 +377,10 @@ if (Test-Path $ProjectProfile) {
         }
         [System.IO.File]::WriteAllText($ProjectProfile, $pcontent, (New-Object System.Text.UTF8Encoding($false)))
         Write-Host "  [✓] Updated PROMPTKIT.md projection: $TrackingProjection" -ForegroundColor Yellow
+    } elseif ($pcontent -match "(?m)^projection:.*\r?$") {
+        $pcontent = $pcontent -replace "(?m)^projection:.*\r?$", ""
+        [System.IO.File]::WriteAllText($ProjectProfile, $pcontent, (New-Object System.Text.UTF8Encoding($false)))
+        Write-Host "  [✓] Removed stale PROMPTKIT.md projection line" -ForegroundColor Yellow
     }
 }
 
