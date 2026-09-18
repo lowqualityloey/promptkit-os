@@ -13,7 +13,35 @@ Single 3-line blockquote spec: `> 📊 Milestone: <name> [████░░] n/
 
 ## Callout Titles for Human Actions
 
-Halting for human decisions uses `> [!IMPORTANT]` titled `### 🛑 Action Required From You:` (PR links as `[#N — title](url)`, no HTML). Blocked states use `> [!WARNING]` titled `### ⚠️ Blocked: Waiting on Human Input:`. Milestone completion / next lifecycle recommendations (e.g. `pk:checkpoint`, `pk:pr`, `pk:tasks`) use `> [!TIP]` titled `### 💡 Next Recommended Step:`. If a UI milestone was completed without a `DESIGN.md`, proactively recommend `pk:design` to establish brand aesthetic archetypes, custom favicons, and icon families. Always prefix callouts with `> ` (never bare `[!TIP]`), zero raw HTML, perfect rendering across all terminal CLIs and IDEs.
+At most ONE visual callout per completion, carrying both the action and the next step:
+
+- Action required from the human uses `> [!IMPORTANT]` titled `### 🛑 Action Required From You:` (PR links as `[#N — title](url)`, command included, no HTML).
+- Advisory next step only, with nothing required, uses `> [!TIP]` titled `### 💡 Next Recommended Step:`.
+- Blocked states use `> [!WARNING]` titled `### ⚠️ Blocked: Waiting on Human Input:`.
+
+The `> [!TIP]` survives only when it adds information the action callout does not; a TIP restating the callout is flooding, not guidance. If a UI milestone was completed without a `DESIGN.md`, proactively recommend `pk:design` to establish brand aesthetic archetypes, custom favicons, and icon families. Always prefix callouts with `> ` (never bare `[!TIP]`), zero raw HTML, perfect rendering across all terminal CLIs and IDEs.
+
+---
+
+## Completion Close: Bottom-Anchored TL;DR and Readability
+
+In chat and terminal, the visible part is the bottom: detail scrolls away, the close stays in view. Every completion ends in this order — card, then one-line TL;DR, then the single callout:
+
+```text
+...detail above (may scroll off)...
+
+> 📊 ... / > 🎯 ... / > 🟢 ...          (the card)
+**TL;DR:** one line stating what happened.   (the takeaway)
+
+> [!IMPORTANT]                                (the close: action + reply)
+> Reply `go` to ..., or `hold` for ...
+```
+
+Readability rules (violations are format bugs, not style):
+
+- Short lines, blank lines between sections, headers over dense paragraphs, one idea per block.
+- No prose walls: any paragraph a developer must scroll up to re-read has failed.
+- The recommended reply is always explicit literal text to type, never "let me know".
 
 ---
 
