@@ -390,6 +390,7 @@ Write-Host "`n📌 Scenario O: Autonomous SDLC Meta-Orchestrator (workflows/auto
 Assert-Contains "workflows/auto.md" "Autonomous SDLC Meta-Orchestrator" "Auto workflow defines autonomous SDLC meta-orchestration"
 Assert-Contains "workflows/auto.md" "Test Immobility Invariant" "Auto workflow enforces Test Immobility Invariant"
 Assert-Contains "workflows/auto.md" "3-Strike Circuit Breaker" "Auto workflow enforces 3-strike circuit breaker on failures"
+Assert-Contains "workflows/auto.md" "Strike 1" "Auto workflow defines explicit 3-strike failure budget (initial failure + 2 refines)"
 Assert-Contains "workflows/auto.md" "Path Deny-List" "Auto workflow enforces path deny-list"
 Assert-Contains "workflows/auto.md" "review ready" "Auto workflow defaults to review ready stop boundary"
 Assert-Contains "workflows/route.md" "workflows/auto.md" "Router decision matrix registers pk:auto"
