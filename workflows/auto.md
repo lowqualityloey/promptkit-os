@@ -103,7 +103,7 @@ HUMAN
 ```
 
 ### Human Gates
-Review checkpoint after every wave; merge/deploy never enter the loop. Scope changes during refine use the normal Scope Change path, not silent mutation. Tick the [wave pre-flight checklist](../docs/recipes/auto-waves-preflight-checklist.md) before `--waves`.
+Review checkpoint after every wave; merge/deploy never enter the loop. Scope changes during refine use the normal Scope Change path, not silent mutation. Tick the [wave pre-flight checklist](../docs/recipes/auto-waves-preflight-checklist.md) before `--waves`; map plain-English intent with the [phrase→boundary sheet](../docs/recipes/auto-phrase-boundary-sheet.md).
 
 ---
 
