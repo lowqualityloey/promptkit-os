@@ -391,6 +391,8 @@ Assert-Contains "workflows/auto.md" "Autonomous SDLC Meta-Orchestrator" "Auto wo
 Assert-Contains "workflows/auto.md" "Test Immobility Invariant" "Auto workflow enforces Test Immobility Invariant"
 Assert-Contains "workflows/auto.md" "3-Strike Circuit Breaker" "Auto workflow enforces 3-strike circuit breaker on failures"
 Assert-Contains "workflows/auto.md" "Strike 1" "Auto workflow defines explicit 3-strike failure budget (initial failure + 2 refines)"
+Assert-Contains "workflows/auto.md" "One park/resume boundary per wave" "Auto workflow bounds Turbo pause/resume to one park per wave"
+Assert-Contains "workflows/auto.md" "never an execution trigger" "Auto halt record is passive observable state, not a trigger"
 Assert-Contains "workflows/auto.md" "Path Deny-List" "Auto workflow enforces path deny-list"
 Assert-Contains "workflows/auto.md" "review ready" "Auto workflow defaults to review ready stop boundary"
 Assert-Contains "workflows/route.md" "workflows/auto.md" "Router decision matrix registers pk:auto"
