@@ -148,7 +148,7 @@ To optimize API cost, token consumption, and reasoning depth, match your LLM sel
 | Architecture → task source | `pk:plan` → `pk:tasks` | Carry objective, scope, non-goals, dependencies, acceptance, verification, and invariants into the canonical Task Record. |
 | Task source → implementation | `pk:tasks` → Engineer | Start only after readiness and active-task ownership are recorded; implement within scope. |
 | Implementation → review/evidence | Engineer → `pk:checkpoint` / `pk:review` | Preserve checkpoints, handoffs, changed files, acceptance, blockers, and review findings. |
-| Review → commit/PR/release | `pk:review` → `pk:commit` → `pk:pr` → `pk:ship` | Link evidence while keeping human approval for commit, push, merge, tag, release, deployment, and rollback. |
+| Review → commit/PR/release | `pk:review` → `pk:commit` → `pk:pr` → `pk:ship` | Link evidence while keeping human approval for commit, push, merge, tag, release, deployment, and rollback (except an explicitly authorized `pk:auto` run; see the canonical Action Authority Model in `protocols/code-quality-gate.md`). |
 
 The Local Task Record remains authoritative throughout. `docs/STATE.md` is a synchronized projection, and external issues or dated breakdowns are optional references.
 
