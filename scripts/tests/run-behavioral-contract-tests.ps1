@@ -184,14 +184,54 @@ if ($WfCount -eq 24) {
     Write-Host "  ❌ FAIL: On-disk workflow count is $WfCount but shipped docs claim 24 — reconcile counts or update this drift guard" -ForegroundColor Red
     $script:FailCount++
 }
-$staleFiles = @("README.md","QUICKSTART.md","FAQ.md","docs/WORKFLOW-MAP.md","docs/BENCHMARKS.md","templates/lite-profile.md","workflows/sync.md") | ForEach-Object { Join-Path $RepoRoot $_ }
-$stale = Select-String -Path $staleFiles -Pattern 'full 23 workflow|\(23 workflow|23 workflow files|23 Inlined|All 23|23 workflows|full 22 workflow|\(22 workflow|22 workflow files|22 Inlined|All 22|22 workflows|All 21 workflow|21 workflow files|19 workflows' -ErrorAction SilentlyContinue
+# Canonical-count drift guard (#347): every live workflow-count claim must state
+# the mechanically enforced on-disk count ($WfCount). Claim candidates are
+# matched separator-agnostically, then canonical-count claims are blanked —
+# whatever remains is stale by definition, so the guard self-maintains when the
+# count changes instead of denylisting past values. Historical records
+# (docs/releases/, docs/tasks/, docs/archive/, docs/internal/, docs/spikes/,
+# CHANGELOG.md) are exempt and are never rewritten silently.
+$staleFiles = @(
+    "README.md", "QUICKSTART.md", "FAQ.md", "PROMPTKIT.md",
+    "docs/WORKFLOW-MAP.md", "docs/BENCHMARKS.md", "docs/ARCHITECTURE.md",
+    "docs/COMPARISONS.md", "docs/INTERESTING-FACTS.md",
+    "templates/lite-profile.md", "templates/project-profile-template.md", "workflows/sync.md"
+) | ForEach-Object { Join-Path $RepoRoot $_ }
+$claimPattern = 'full [0-9][0-9]?[- ]workflows?|[Aa]ll [0-9][0-9]? workflows?|[0-9][0-9]? workflow files|[0-9][0-9]? Inlined Workflows?|[(][0-9][0-9]? workflows?'
+$stale = Select-String -Path $staleFiles -Pattern $claimPattern -ErrorAction SilentlyContinue | Where-Object {
+    $line = $_.Line
+    $line = $line -replace "$WfCount Inlined Workflows?", ""
+    $line = $line -replace "$WfCount[-]workflow", ""
+    $line = $line -replace "$WfCount workflow", ""
+    $line -match $claimPattern
+}
 if ($stale) {
-    Write-Host "  ❌ FAIL: Stale 19/21/22/23 workflow-count claims found in shipped docs" -ForegroundColor Red
+    Write-Host "  ❌ FAIL: Stale workflow-count claims found (docs contradict the on-disk count $WfCount):" -ForegroundColor Red
+    $stale | Select-Object -First 6 | ForEach-Object { Write-Host "  - $($_.Path):$($_.LineNumber): $($_.Line.Trim())" }
     $script:FailCount++
 } else {
-    Write-Host "  ✅ PASS: No stale 21/22/23 workflow-count claims in shipped docs" -ForegroundColor Green
+    Write-Host "  ✅ PASS: All live workflow-count claims state the on-disk count ($WfCount) across the claim surface" -ForegroundColor Green
     $script:PassCount++
+}
+# Fail-closed canonical assertions (#347): the engine profile and the shipped
+# project-profile template must positively state the current count, because the
+# template seeds PROMPTKIT.md into every fresh project.
+$engineProfileOk = ((Select-String -Path (Join-Path $RepoRoot "PROMPTKIT.md") -Pattern ("^  - .balanced.: the full {0}-workflow set" -f $WfCount) -ErrorAction SilentlyContinue) -ne $null) -and
+    ((Select-String -Path (Join-Path $RepoRoot "PROMPTKIT.md") -Pattern ('Locked workflow count \(ADR 0002\)\*{0,2}: ' + $WfCount + ' workflows') -ErrorAction SilentlyContinue) -ne $null)
+if ($engineProfileOk) {
+    Write-Host "  ✅ PASS: Engine PROMPTKIT.md profile states the current count ($WfCount workflows, ADR 0002)" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: Engine PROMPTKIT.md does not state the current workflow count ($WfCount) — reconcile with ADR 0002" -ForegroundColor Red
+    $script:FailCount++
+}
+$templateProfileOk = (Select-String -Path (Join-Path $RepoRoot "templates/project-profile-template.md") -Pattern ("full {0}-workflow set" -f $WfCount) -ErrorAction SilentlyContinue) -ne $null
+if ($templateProfileOk) {
+    Write-Host "  ✅ PASS: project-profile template seeds the current count ($WfCount workflows) into fresh projects" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: project-profile template does not state the current count ($WfCount) — fresh projects would inherit a stale claim" -ForegroundColor Red
+    $script:FailCount++
 }
 
 Write-Host "`n📌 Scenario N: Greenfield Discovery Intake & Planning Gate (pk:onboard / pk:plan)" -ForegroundColor Yellow

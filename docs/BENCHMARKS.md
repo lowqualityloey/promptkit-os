@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Measurement Date:** 2026-09-14 · **Environment:** `main` branch (v1.6.0 with 2+1 profiles) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · **Baseline Monolithic:** core-6 lifecycle subset ~19,794 tok / full 23-workflow set ~75,505 tok (derived live)
+**Measurement Date:** 2026-09-14 · **Environment:** `main` branch (v1.6.0 with 2+1 profiles) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · **Baseline Monolithic:** core-6 lifecycle subset ~19,794 tok / full 24-workflow set ~75,505 tok (derived live)
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
