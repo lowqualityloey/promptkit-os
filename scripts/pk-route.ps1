@@ -41,7 +41,15 @@ if ($Help) {
 Usage: pk-route.ps1 [-Prompt] "YOUR TASK PROMPT" [-TimeoutSec 2] [-Offline] [-DryRun]
 
 Fast PromptKit ceremony level (L0-L3) classifier and workflow router.
-Queries TypeSafe AI System One (/v1/system_one) with deterministic safety arbitration.
+Queries TypeSafe AI Jev (System One) with deterministic safety arbitration.
+
+Transport fallback hierarchy (see #343):
+  1. AI_GATEWAY_API_KEY -> Vercel AI Gateway evaluation route
+  2. TYPESAFE_API_KEY   -> Direct TypeSafe endpoint
+  3. Neither set         -> deterministic offline route
+  4. Any transport failure (timeout / 4xx / 5xx / malformed)
+                         -> deterministic offline route
+Transport failure never changes PromptKit's safety policy.
 
 Parameters:
   -Prompt <string>     Task or user prompt to classify
@@ -51,7 +59,8 @@ Parameters:
   -Help                Show this help message
 
 Environment:
-  `$env:TYPESAFE_API_KEY  TypeSafe API Key (optional; offline routing used if unset)
+  $env:AI_GATEWAY_API_KEY  Vercel AI Gateway key (preferred; Jev is Free/free-tier eligible)
+  $env:TYPESAFE_API_KEY    TypeSafe direct API key (fallback; offline routing if neither set)
 "@
   exit 0
 }
@@ -141,15 +150,26 @@ if ($Offline) {
   exit 0
 }
 
-$apiKey = $env:TYPESAFE_API_KEY
-if ([string]::IsNullOrWhiteSpace($apiKey)) {
-  # Scenario 1: Missing API Key
-  Emit-DeterministicRoute $inputPrompt "Offline fallback (TYPESAFE_API_KEY unset)"
-  exit 0
+$transport = "none"
+$jevUrl = ""
+$apiKey = $env:AI_GATEWAY_API_KEY
+if (-not [string]::IsNullOrWhiteSpace($apiKey)) {
+  $transport = "gateway"
+  $jevUrl = "https://ai-gateway.vercel.sh/v4/ai/evaluation-model"
+} else {
+  $apiKey = $env:TYPESAFE_API_KEY
+  if (-not [string]::IsNullOrWhiteSpace($apiKey)) {
+    $transport = "direct"
+    $jevUrl = "https://api.typesafe.ai/v1/systemone"
+  } else {
+    # Scenario 1: No credential for any transport
+    Emit-DeterministicRoute $inputPrompt "Offline fallback (no AI_GATEWAY_API_KEY nor TYPESAFE_API_KEY)"
+    exit 0
+  }
 }
 
 if ($DryRun) {
-  Write-Output "[DryRun] Would query TypeSafe System One at https://api.typesafe.ai/v1/system_one (Timeout: ${TimeoutSec}s)"
+  Write-Output "[DryRun] Would query Jev via $transport at $jevUrl (Timeout: ${TimeoutSec}s)"
   Emit-DeterministicRoute $inputPrompt "Dry-run deterministic projection"
   exit 0
 }
@@ -193,10 +213,17 @@ $headers = @{
   "Authorization" = "Bearer $apiKey"
   "Content-Type"  = "application/json"
 }
+# Gateway transport (see #343) requires the evaluation-protocol headers.
+if ($transport -eq "gateway") {
+  $headers["ai-gateway-protocol-version"] = "0.0.1"
+  $headers["ai-gateway-auth-method"] = "api-key"
+  $headers["ai-evaluation-model-specification-version"] = "4"
+  $headers["ai-model-id"] = "typesafe-ai/jev"
+}
 
 $response = $null
 try {
-  $response = Invoke-RestMethod -Uri "https://api.typesafe.ai/v1/system_one" `
+  $response = Invoke-RestMethod -Uri $jevUrl `
     -Method Post `
     -Headers $headers `
     -Body $jsonBody `

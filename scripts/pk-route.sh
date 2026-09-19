@@ -24,7 +24,15 @@ print_help() {
 Usage: pk-route.sh [OPTIONS] "YOUR TASK PROMPT"
 
 Fast PromptKit ceremony level (L0-L3) classifier and workflow router.
-Queries TypeSafe AI System One (/v1/system_one) with deterministic safety arbitration.
+Queries TypeSafe AI Jev (System One) with deterministic safety arbitration.
+
+Transport fallback hierarchy (see #343):
+  1. AI_GATEWAY_API_KEY -> Vercel AI Gateway evaluation route
+  2. TYPESAFE_API_KEY   -> Direct TypeSafe endpoint
+  3. Neither set         -> deterministic offline route
+  4. Any transport failure (timeout / 4xx / 5xx / malformed)
+                         -> deterministic offline route
+Transport failure never changes PromptKit's safety policy.
 
 Options:
   --prompt <text>     Task or user prompt to classify
@@ -34,7 +42,8 @@ Options:
   --help, -h          Show this help message
 
 Environment:
-  TYPESAFE_API_KEY    TypeSafe API Key (optional; offline routing used if unset)
+  AI_GATEWAY_API_KEY  Vercel AI Gateway key (preferred; Jev is Free/free-tier eligible)
+  TYPESAFE_API_KEY    TypeSafe direct API key (fallback; offline routing if neither set)
 
 Zero-Lock-In Contract:
   Never halts or blocks. If the API is unreachable, times out, or fails,
@@ -178,14 +187,22 @@ if [[ "$OFFLINE" -eq 1 ]]; then
   exit 0
 fi
 
-if [[ -z "${TYPESAFE_API_KEY:-}" ]]; then
-  # Scenario 1: Missing API Key
-  emit_deterministic_route "$PROMPT_INPUT" "Offline fallback (TYPESAFE_API_KEY unset)"
+if [[ -n "${AI_GATEWAY_API_KEY:-}" ]]; then
+  JEV_TRANSPORT="gateway"
+  JEV_URL="https://ai-gateway.vercel.sh/v4/ai/evaluation-model"
+  JEV_KEY="$AI_GATEWAY_API_KEY"
+elif [[ -n "${TYPESAFE_API_KEY:-}" ]]; then
+  JEV_TRANSPORT="direct"
+  JEV_URL="https://api.typesafe.ai/v1/systemone"
+  JEV_KEY="$TYPESAFE_API_KEY"
+else
+  # Scenario 1: No credential for any transport
+  emit_deterministic_route "$PROMPT_INPUT" "Offline fallback (no AI_GATEWAY_API_KEY nor TYPESAFE_API_KEY)"
   exit 0
 fi
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
-  echo "[DryRun] Would query TypeSafe System One at https://api.typesafe.ai/v1/system_one (Timeout: ${TIMEOUT_SEC}s)"
+  echo "[DryRun] Would query Jev via $JEV_TRANSPORT at $JEV_URL (Timeout: ${TIMEOUT_SEC}s)"
   emit_deterministic_route "$PROMPT_INPUT" "Dry-run deterministic projection"
   exit 0
 fi
@@ -239,17 +256,31 @@ PAYLOAD=$(cat <<EOF
 EOF
 )
 
-# Execute API call with strict timeout
+# Execute API call with strict timeout.
+# Gateway transport (see #343) requires the evaluation-protocol headers;
+# direct transport uses plain auth. Fail-open: any failure falls through
+# to deterministic routing below — transport never changes safety policy.
 CURL_OUTPUT=""
 HTTP_STATUS=0
 CURL_EXIT=0
+CURL_ARGS=(
+  -sS --max-time "$TIMEOUT_SEC"
+  -H "Authorization: Bearer $JEV_KEY"
+  -H "Content-Type: application/json"
+)
+if [[ "$JEV_TRANSPORT" == "gateway" ]]; then
+  CURL_ARGS+=(
+    -H "ai-gateway-protocol-version: 0.0.1"
+    -H "ai-gateway-auth-method: api-key"
+    -H "ai-evaluation-model-specification-version: 4"
+    -H "ai-model-id: typesafe-ai/jev"
+  )
+fi
 
-if ! CURL_OUTPUT=$(curl -sS --max-time "$TIMEOUT_SEC" \
-  -H "Authorization: Bearer $TYPESAFE_API_KEY" \
-  -H "Content-Type: application/json" \
+if ! CURL_OUTPUT=$(curl "${CURL_ARGS[@]}" \
   -w "\n%{http_code}" \
   -d "$PAYLOAD" \
-  "https://api.typesafe.ai/v1/system_one" 2>&1); then
+  "$JEV_URL" 2>&1); then
   CURL_EXIT=$?
 fi
 
