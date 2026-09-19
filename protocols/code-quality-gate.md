@@ -60,7 +60,7 @@ Define the non-negotiable definition-of-done (DoD) and engineering quality bar f
 - [ ] Full keyboard navigability (focus states visible via `focus-visible`, tab traps avoided, escape keys handled).
 - [ ] ARIA attributes applied accurately according to WAI-ARIA 1.2 patterns (Radix/Aria primitives preferred).
 - [ ] Color contrast meets WCAG 2.2 Level AA (minimum 4.5:1 for normal text).
-- [ ] **Mandatory 8-State Component Contract**: All interactive elements (buttons, inputs, selects, toggles) explicitly implement `default`, `hover`, `:focus-visible`, `:active`, `disabled`, `loading`, `error`, and `success`.
+- [ ] **Applicability-Based State Contract**: Interactive elements explicitly implement all states applicable to their role — `default`, `hover`, `:focus-visible`, `:active` for pointer-interactive controls, plus `disabled` when disableable and `loading`/`error`/`success` for async/stateful controls.
 - [ ] **Honest Copy & Data Integrity**: Zero hallucinated marketing claims, fake customer counts ("Join 100,000+ engineers"), synthetic logos, or generic AI buzzwords in user-facing UI.
 - [ ] **Unified Icon Family**: Icons drawn from a single cohesive family (Iconify catalog, Lucide/Tabler/Heroicons); `simple-icons` used strictly for brand logos; no mismatched weights.
 

@@ -124,6 +124,9 @@ Assert-Contains "workflows/design-system.md" "Design Study Protocol" "Design wor
 Assert-Contains "workflows/design-system.md" "Refuse Uniform Bento Grids" "Design workflow defines anti-bento layout rhythm rule"
 Assert-Contains "protocols/discovery-intake.md" "Slot 6 Design Vibe" "Discovery intake includes aesthetic design vibe slot"
 Assert-Contains "workflows/design-system.md" "Visual Floor Enforced" "Design workflow checklist includes Visual Floor enforcement"
+Assert-Contains "workflows/design-system.md" "Requirement Over Implementation" "Design workflow separates design requirements from implementation examples"
+Assert-Contains "workflows/design-system.md" "Design Ceremony Tiers" "Design workflow defines D0-D3 minimum-sufficient ceremony tiers"
+Assert-Contains "workflows/design-system.md" "Applicability-Based" "Design workflow scopes interaction states by applicability instead of a blanket 8-state mandate"
 
 Write-Host "`n📌 Scenario K: Project Database & Harness Isolation" -ForegroundColor Yellow
 Assert-Contains "templates/agent-directive-template.md" "Project Database & Harness Isolation" "Directive enforces project database isolation guardrail"

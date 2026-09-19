@@ -5,6 +5,19 @@
 ---
 
 ## 1. Brand Essence & Visual Character
+
+### Resolution Status
+> Resolve every section below before treating any `DESIGN.md` value as authoritative. Placeholder examples in brackets are illustrations, never decisions.
+- [ ] Brand identity resolved (product name, personality)
+- [ ] Theme resolved (preset accepted or custom; light/dark default)
+- [ ] Typography resolved (pairing accepted or system stack waived)
+- [ ] Icon strategy resolved (single family chosen, or text-only navigation declared)
+- [ ] Accessibility target resolved (contrast + touch-target floor)
+- [ ] Responsive strategy resolved (reflow + viewport rules)
+
+---
+
+## 1.1 Brand Identity Fields
 - **Product Name**: [e.g., Shelf / Acme Analytics]
 - **Theme Preset**: [Custom | Cobalt Dev-Tool (Cool Technical) | Hum Warm Editorial (Artisanal Humanist)]
 - **Brand Personality**: [e.g., Clean, industrial, high-signal, utilitarian, editorial]
@@ -77,7 +90,7 @@ External font downloads are not required. Modern system fonts provide zero-laten
 ---
 
 ## 5. Mobile Ergonomics & Responsive Reflow
-- **Touch Target Minimum**: Every button, input, toggle, and nav link must have a hit area of at least **$44 \times 44\text{px}$** with $\ge 8\text{px}$ finger spacing.
+- **Touch Target Guidance**: Primary controls (buttons, inputs, toggles) should target a hit area of ~**$44 \times 44\text{px}$** where practical, with $\ge 8\text{px}$ finger spacing. The WCAG 2.2 AA floor (SC 2.5.8) is $24 \times 24\text{px}$ with spacing/equivalent/inline exceptions — inline text links are exempt from the 44px target.
 - **Reflow over Shrinking**: Multi-column grids must collapse and stack into single-column flows on mobile viewports.
 - **Zero Horizontal Scroll**: All flex/grid children must declare `min-w-0` to allow clean text truncation (`truncate`, `line-clamp-*`).
 - **Viewport Units**: Use `dvh` (dynamic viewport height) for full-screen dialogs and drawers; never use `100vh`.
@@ -86,9 +99,9 @@ External font downloads are not required. Modern system fonts provide zero-laten
 ---
 
 ## 6. Motion & Interaction Rules
-- **The Mandatory 8-State Component Contract**:
-  - Every interactive element must implement: `default`, `hover`, `:focus-visible`, `:active`, `disabled`, `loading`, `error`, `success`.
-- **Compositor Transitions Only**: Animate `transform` and `opacity` only. Never use `transition: all`.
+- **The Applicability-Based State Contract**:
+  - Every interactive element must implement all states applicable to its role: `default` and `:focus-visible` universally; `hover` and `:active` for pointer-interactive elements; `disabled` for disableable controls; `loading`, `error`, `success` for async/stateful controls. Text-only navigation links owe only `default` and `:focus-visible`.
+- **Compositor-First Motion**: Prefer animating `transform` and `opacity`; `color`, `background-color`, and `border-color` transitions are permitted for interaction feedback. Never animate layout-affecting properties. Never use `transition: all`.
 - **Physical Press Feedback**: Buttons compress with `active:scale-[0.98]`.
 - **Reduced Motion**: Always provide reduced-motion fallbacks (`@media (prefers-reduced-motion: reduce)`).
 - **No Endless Loops**: No unprompted pulsing, floating, or bouncing animations.
@@ -103,7 +116,7 @@ External font downloads are not required. Modern system fonts provide zero-laten
   - *Phosphor*: Warm, editorial, and humanist products.
   - *Tabler*: Expressive, wide-domain application suites.
 - **Brand Logos**: Always pull official third-party brand marks (GitHub, Stripe, PostgreSQL, Docker, Figma) from Iconify's `simple-icons` collection. Never draw manual brand paths.
-- **Sizing & Inheritance**: Standardize sizes (`14px`, `16px`, `20px`), use `currentColor` for automatic state/theme inheritance, and enclose icons in $\ge 44 \times 44\text{px}$ hit areas.
+- **Sizing & Inheritance**: Standardize sizes (`14px`, `16px`, `20px`), use `currentColor` for automatic state/theme inheritance, and give icon hit areas ~$44 \times 44\text{px}$ where practical (AA floor $24 \times 24\text{px}$, SC 2.5.8).
 
 ---
 

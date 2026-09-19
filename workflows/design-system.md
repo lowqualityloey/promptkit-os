@@ -4,7 +4,13 @@
 Trigger anytime with: `pk:design` (or `/pk-design`)
 
 ## Mission
-Guide the developer in designing, engineering, and auditing production-grade, human-crafted UI/UX architectures. Standardize **Design Tokens**, accessible headless primitives (Radix UI / React Aria), anti-slop aesthetic discipline, responsive mobile reflow, compositor-friendly transitions, and WCAG 2.2 Level AA compliance.
+Guide the developer in designing, engineering, and auditing production-grade, human-crafted UI/UX architectures. Standardize **Design Tokens**, accessible interaction contracts, anti-slop aesthetic discipline, responsive mobile reflow, compositor-friendly motion, and WCAG 2.2 Level AA compliance.
+
+---
+
+## Requirement Over Implementation
+
+`pk:design` MUST specify the required UX, accessibility, visual, responsive, and behavioral outcome. It MUST NOT prescribe an implementation stack. Resolve the project's stack first (see `./PROMPTKIT.md`): React, Radix UI, React Aria, CVA, and Tailwind appear in this workflow as labeled **implementation examples** for React + Tailwind projects — never as mandatory dependencies. Port every example to the project's own stack (e.g., semantic HTML plus the project's CSS in an Astro project) while preserving the stated contract.
 
 ---
 
@@ -15,19 +21,20 @@ Guide the developer in designing, engineering, and auditing production-grade, hu
 │               MODERN UI COMPONENT ARCHITECTURE              │
 ├─────────────────────────────────────────────────────────────┤
 │ 1. Design Tokens & Aesthetic Foundation Layer               │
-│    (Brand palette, semantic aliases, fluid type clamp, radii)│
+│    (Brand palette, semantic aliases, type clamp, radii)     │
 ├─────────────────────────────────────────────────────────────┤
-│ 2. Headless Accessibility & Behavior Layer                  │
-│    (Radix UI / React Aria: focus-visible, ARIA, key traps)  │
+│ 2. Accessible Interaction Layer (stack-agnostic)            │
+│    (Semantic HTML + headless primitives — e.g. Radix UI /   │
+│     React Aria — for focus-visible, ARIA, focus traps)      │
 ├─────────────────────────────────────────────────────────────┤
-│ 3. Style & Variant Layer                                    │
-│    (Tailwind CSS v4, CVA, compositor-only transform/opacity)│
+│ 3. Style & Variant Layer (project styling system)           │
+│    (e.g. Tailwind CSS v4 + CVA; compositor-only motion)     │
 ├─────────────────────────────────────────────────────────────┤
-│ 4. Composable Component & React Performance Layer           │
-│    (Radix Slot asChild, ternary conditionals, derived state)│
+│ 4. Composable Component Layer (project framework idioms)    │
+│    (e.g. Radix Slot asChild, ternaries, derived state)      │
 ├─────────────────────────────────────────────────────────────┤
 │ 5. Mobile Ergonomics & Responsive Reflow Layer              │
-│    (≥44px tap targets, min-w-0 flex, dvh, safe-area insets) │
+│    (~44px tap targets, min-w-0 flex, dvh, safe-area insets) │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -36,7 +43,7 @@ Guide the developer in designing, engineering, and auditing production-grade, hu
 ## Preconditions
 - Developer is building or refactoring UI components, a design system, or user interaction flows.
 - Access to `.promptkit/templates/design-tokens-spec.md`.
-- Review project profile in `./PROMPTKIT.md` (if present) for brand identity and styling stack.
+- Review project profile in `./PROMPTKIT.md` (if present) for brand identity and styling stack — resolve the project's implementation stack here before any component work (see **Requirement Over Implementation**).
 
 ---
 
@@ -74,8 +81,8 @@ Figma frames are static desktop or mobile snapshots that frequently omit critica
 1. **Responsive Reflow over Fixed Widths**:
    - Replace static pixel widths (e.g., `w-[384px]`, `w-[1200px]`) with fluid containers (`w-full max-w-md mx-auto`) and collapsible flex/grid layouts.
    - Collapse horizontal navigation or multi-column grids into single-column flows on small viewports.
-2. **Touch Targets ($\ge 44 \times 44\text{px}$)**:
-   - Designers frequently draw compact $16\text{px}$–$24\text{px}$ icons or links. Enforce a minimum interactive hit area of $\ge 44 \times 44\text{px}$ using padding or invisible touch expanders (`min-h-[44px] min-w-[44px]`).
+2. **Touch Targets (~44×44px target; 24×24px AA floor)**:
+   - Designers frequently draw compact $16\text{px}$–$24\text{px}$ icons or links. Give primary interactive controls a practical hit area of ~$44 \times 44\text{px}$ using padding or invisible touch expanders (`min-h-[44px] min-w-[44px]`); WCAG 2.2 AA's floor (SC 2.5.8) is $24 \times 24\text{px}$ with spacing/equivalent/inline exceptions — inline text links are not required to become 44px boxes.
 3. **Async Content Resilience**:
    - Figma mockups only show the happy data state. Author content-shaped loading skeletons, empty states with clear calls to action, and error recovery banners.
 4. **Accessible Interaction States**:
@@ -90,6 +97,19 @@ When inspired by an existing product or visual reference, extract its design DNA
 2. **Extract Typography Roles**: Identify distinct display, body, and tabular numeral roles. Refuse using a single generic sans-serif for all roles.
 3. **Derive Color Bands & Signal Accent**: Map surface paper/background, border hairlines, and isolate the single $\le 5\%$ accent hue.
 4. **Export Portable `DESIGN.md`**: Emit a project-root `DESIGN.md` declaring tokens, typography pairing, and chosen Iconify family so any agent builds against it.
+
+---
+
+## Design Ceremony Tiers (D0–D3)
+
+Before any design work, resolve the design ceremony tier. This is `pk:design`'s analogue of routing levels: minimum sufficient procedure, escalated only when risk requires it — D-level is not determined solely by change size.
+
+- **D0 — Micro**: spacing, color, typography tweak, small visual correction. Apply the relevant rule directly (tokens, states, contrast); no study, no tokens artifact beyond a note in the target file.
+- **D1 — Component**: a button, card, nav item, form field, interactive element. Steps for the touched surfaces (states, touch targets, a11y); no full-surface reflow audit.
+- **D2 — Surface**: a page, responsive layout, form flow, navigation system, major section. Full relevant steps plus mobile reflow, content states, and the UI Delivery Gate Checklist.
+- **D3 — System**: design system, theme architecture, major UX restructuring, accessibility overhaul, cross-surface redesign. Full workflow: study protocol, tokens artifact in `./docs/design/`, and the gate checklist.
+
+Escalate D0→D1→D2→D3 when risk requires it (a11y impact, cross-surface reach, new interactive patterns); never downgrade a D3 need to ceremony savings.
 
 ---
 
@@ -149,14 +169,14 @@ When inspired by an existing product or visual reference, extract its design DNA
    - **Authoritative Catalog**: Designate [Iconify](https://icon-sets.iconify.design/) as the universal directory to verify exact icon names and clean SVG paths without forcing `@iconify/react` as an npm dependency.
    - **Single-Family Consistency**: Pick exactly one primary icon family per project (e.g. Lucide for modern minimal, Radix for dense tools, Phosphor for warm editorial). Never mix mismatched line weights in the same view.
    - **Brand & Tech Marks**: Use Iconify's `simple-icons` collection for third-party brand marks (GitHub, Stripe, Docker, Figma, PostgreSQL) rather than hand-drawing distorted paths.
-   - **Sizing & Inheritance**: Standardize sizes (`14px`, `16px`, `20px`), use `currentColor` for automatic theme/hover inheritance, and always maintain $\ge 44 \times 44\text{px}$ touch target padding.
+   - **Sizing & Inheritance**: Standardize sizes (`14px`, `16px`, `20px`), use `currentColor` for automatic theme/hover inheritance, and give icon hit areas ~$44 \times 44\text{px}$ where practical (AA floor $24 \times 24\text{px}$, SC 2.5.8).
 
 ---
 
-### Step 2: Headless Accessibility & Interaction Parity
+### Step 2: Accessibility & Interaction Parity
 
-1. **Headless Primitives (Radix UI / React Aria / Ark UI)**:
-   - Always build composite widgets (modals, dropdowns, comboboxes, tabs, tooltips) on top of battle-tested headless primitives to help maintain correct focus trapping, screen reader announcements, and portal rendering.
+1. **Headless Primitives (stack-resolved)**:
+   - Build composite widgets (modals, dropdowns, comboboxes, tabs, tooltips) on battle-tested headless primitives — Radix UI, React Aria, or Ark UI in React projects; the equivalent accessible library or pattern in other stacks — to inherit correct focus trapping, screen reader announcements, and portal rendering. Where a stack offers no equivalent, implement the interaction contract (focus trap, ARIA attributes, Escape handling) directly on semantic HTML.
 
 2. **Focus State Discipline**:
    - **Never use `outline-none` without an immediate replacement**: Always pair with `:focus-visible:ring-2` (e.g., `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary`).
@@ -177,8 +197,8 @@ When inspired by an existing product or visual reference, extract its design DNA
    - **Decorative Icons**: Icons paired with visible text must include `aria-hidden="true"`.
    - **Live Regions**: Dynamic async notifications (toasts, inline form validation) must declare `aria-live="polite"`.
 
-5. **The Mandatory 8-State Interactive Component Contract**:
-   - Every interactive component (buttons, inputs, toggles, select triggers, interactive cards) must explicitly implement and style all **8 fundamental states**:
+5. **Applicability-Based Interactive State Contract**:
+   - Every interactive component must explicitly implement and style all states **applicable to its role** — not a blanket list. Generally applicable: `default`, `:focus-visible`. Pointer-interactive elements add `hover`, `:active`. Disableable controls add `disabled`. Async/stateful controls (submit buttons, save actions, validated form fields) add `loading`, `error`, `success`. A textual navigation link, for example, owes only `default` and `:focus-visible`. The catalog below defines each state:
      1. **`default`**: Rested baseline presentation on the matte paper or card surface.
      2. **`hover`**: Perceptible contrast adjustment (`hover:bg-primary/90` or subtle border shift).
      3. **`:focus-visible`**: Crisp keyboard navigation ring (`focus-visible:ring-2 focus-visible:ring-offset-2`).
@@ -205,9 +225,9 @@ When inspired by an existing product or visual reference, extract its design DNA
 
 ---
 
-### Step 4: Component Variant Architecture & React Runtime Performance
+### Step 4: Component Variant Architecture & Runtime Performance (React example)
 
-1. **Type-Safe Variants with Class Variance Authority (`cva`)**:
+1. **Type-Safe Variants — React + CVA implementation example**: the following is one idiomatic implementation for a React + Tailwind project; port the variant, focus-visible, disabled, and press contract to the project's own styling system:
    ```typescript
    import * as React from 'react';
    import { cva, type VariantProps } from 'class-variance-authority';
@@ -259,7 +279,7 @@ When inspired by an existing product or visual reference, extract its design DNA
    Button.displayName = 'Button';
    ```
 
-2. **React Rendering Discipline (`vercel-react-best-practices`)**:
+2. **Rendering Discipline — React example (`vercel-react-best-practices`)**: applies when the project's stack is React:
    - **Ternary Conditionals**: Always use `condition ? <Component /> : null` instead of `condition && <Component />` to prevent accidental `0` DOM renders.
    - **Derived State During Render**: Calculate filtered lists, selected items, and derived state directly in the render body. Do not duplicate state inside `useEffect`.
    - **No Inline Component Declarations**: Never define helper components inside the render scope of another component (causes unmount/remount loops and lost focus).
@@ -274,8 +294,8 @@ When inspired by an existing product or visual reference, extract its design DNA
    - Multi-column grids must collapse and stack into single-column reflowing flows at narrow viewports rather than squeezing content into unreadable slivers.
    - Breakpoints must be placed where content breaks, not based on arbitrary device model dimensions.
 
-2. **Touch Targets ($\ge 44 \times 44\text{px}$)**:
-   - Every interactive target (buttons, icons, toggles, links) must maintain a minimum touch hit area of **$44 \times 44\text{px}$**, even if the visual icon inside is smaller.
+2. **Touch Targets (~44×44px target; 24×24px AA floor)**:
+   - Every primary interactive target (buttons, icons, toggles, controls) should provide ~**$44 \times 44\text{px}$** of usable hit area where practical — even if the visual icon inside is smaller; WCAG 2.2 AA (SC 2.5.8) floors at $24 \times 24\text{px}$ with spacing/equivalent/inline exceptions, so inline text links are exempt.
    - Maintain at least $8\text{px}$ spacing between adjacent touch targets so thumbs never mis-tap.
 
 3. **Prevent Horizontal Scroll Leaks**:
@@ -294,9 +314,11 @@ When inspired by an existing product or visual reference, extract its design DNA
 
 ### Step 6: Motion & Compositor-Friendly Transitions
 
-1. **Animate `transform` and `opacity` Only**:
-   - Avoid animating layout properties (`width`, `height`, `margin`, `padding`, `top`, `left`) which trigger browser layout recalculations and jank.
-   - **Never use `transition: all`**: Explicitly declare transitioned properties (e.g., `transition-colors duration-150 ease-out`, `transition-transform duration-200`).
+1. **Compositor-First Motion**:
+   - Prefer animating `transform` and `opacity` — they avoid browser layout recalculation and jank.
+   - `color`, `background-color`, and `border-color` transitions are permitted for interaction feedback (e.g., `transition-colors duration-150 ease-out`).
+   - **Never animate layout-affecting properties** (`width`, `height`, `margin`, `padding`, `top`, `left`).
+   - **Never use `transition: all`**: explicitly declare transitioned properties (e.g., `transition-colors duration-150 ease-out`, `transition-transform duration-200`).
 
 2. **Respect `prefers-reduced-motion`**:
    - Always provide a reduced-motion fallback:
@@ -328,7 +350,7 @@ Persist the decisions from Steps 1–7 using `templates/design-tokens-spec.md`, 
 
 ## Completion Criteria
 - Design tokens artifact generated in `./docs/design/` from `templates/design-tokens-spec.md`.
-- Every interactive element meets the ≥44px target and the 8-state contract.
+- Every interactive element meets the applicability-based state contract and practical touch-target guidance (~44×44px primary targets; 24×24px AA floor).
 - Exactly one icon family selected deliberately and applied consistently.
 - UI Delivery Gate Checklist below passes without exceptions.
 
@@ -343,7 +365,7 @@ When no `DESIGN.md` exists, UI work still ships finished — restraint plus a de
   2. *High-Density Fintech*: Rich slate `oklch(15% 0.015 250)` (`#0f1115`), `Inter` / `Geist` + tabular numerals, `Radix 15px` (`radix-icons:*`) or `Phosphor Light` (`ph:*-light`), emerald status indicators.
   3. *Clean Modern SaaS*: Crisp neutral white/zinc, bold geometric headings, single saturated $\le 5\%$ accent.
   4. *Dark Terminal*: Monochrome dark graphite, high-contrast 1px hairlines, pure monospace / technical grotesque, zero decorative noise.
-- **One icon family**: the Iconify single-family rule applies as a requirement, not guidance — every view gets its icon pass (no icon-less interactive controls, no mixed weights). Prefer curated human sets (`ph:*`, `radix-icons:*`, `tabler:*`) over generic Lucide.
+- **One icon family**: the Iconify single-family rule applies as a requirement, not guidance — every view gets its icon pass (no mixed weights). Prefer curated human sets (`ph:*`, `radix-icons:*`, `tabler:*`) over generic Lucide. Icons must have a functional or navigational purpose; never add icons merely to fill visual space — text-only controls and navigation links are complete without icons.
 - **Tabular figures**: `tabular-nums` on all metrics, counters, and tables.
 - **Favicon**: every shipped page declares a favicon derived from a stated rule (e.g. first letterform of the wordmark on the primary token, or the primary action glyph); no blank-tab default ships (never leave framework default favicons like Next.js triangle).
 - **One type pairing, proposed**: a single accept-or-change pairing (display + body, with 2026-era rationale); the system stack remains the default unless explicitly accepted.
@@ -362,12 +384,12 @@ Before marking any UI task complete, verify all criteria pass:
 - [ ] **Accessible Icon Buttons**: Every icon-only button includes an `aria-label`; decorative icons have `aria-hidden="true"`.
 - [ ] **Semantic Elements**: Buttons use `<button>`, links use `<a>`/`<Link>`; zero `<div onClick>`.
 - [ ] **Form Hygiene**: Paste is never blocked; fields have `autocomplete`, shared hit targets, and inline error recovery.
-- [ ] **Touch Targets**: All interactive targets are $\ge 44 \times 44\text{px}$ with adequate finger spacing.
+- [ ] **Touch Targets**: Primary interactive targets provide ~$44 \times 44\text{px}$ hit area where practical (AA floor $24 \times 24\text{px}$, SC 2.5.8; inline text links exempt) with adequate finger spacing.
 - [ ] **Mobile Reflow**: Zero horizontal scroll leaks (`min-w-0` on flex/grid children), viewport uses `dvh`, and bottom nav respects safe-area insets.
-- [ ] **Compositor Motion**: Only `transform` and `opacity` animate; no `transition: all`; `prefers-reduced-motion` honored.
+- [ ] **Compositor-First Motion**: Never animate layout-affecting properties; `transform`/`opacity` preferred, `color`/`background-color`/`border-color` permitted for feedback; no `transition: all`; `prefers-reduced-motion` honored.
 - [ ] **React Performance**: Conditionals use ternary (`? : null`); derived state is computed during render; no nested inline components.
-- [ ] **Figma Blindspots Remediated**: Static pixel widths replaced with fluid reflow, touch targets $\ge 44 \times 44\text{px}$ verified, and loading skeletons / empty states implemented.
-- [ ] **8-State Contract**: Interactive components implement default, hover, focus-visible, active, disabled, loading, error, and success.
+- [ ] **Figma Blindspots Remediated**: Static pixel widths replaced with fluid reflow, ~44×44px touch targets verified, and loading skeletons / empty states implemented.
+- [ ] **Applicability-Based State Contract**: Interactive components explicitly implement all states applicable to their role (default + focus-visible universally; hover/active for pointer-interactive; disabled when disableable; loading/error/success for async/stateful controls).
 - [ ] **Honest Copy**: Copy contains zero fabricated metrics, fake customer counts, or invented social proof.
 - [ ] **5% Signal Accent**: Saturated accent is confined to $<5\%$ of viewport area; no decorative gradient floods.
 - [ ] **Typography & AI Tells**: Headings are upright (no italic titles); `tabular-nums` enabled on data/counters; no hand-drawn browser chrome.
