@@ -145,7 +145,7 @@ Write-Host "  ┌─────────────────────
 Write-Host "  │ Model Architecture                 Static Overhead          │" -ForegroundColor DarkGray
 Write-Host "  ├─────────────────────────────────────────────────────────────┤" -ForegroundColor DarkGray
 Write-Host "  │ Monolithic (core-6 subset derived)   ~$MonolithicTokens tokens           │" -ForegroundColor Red
-Write-Host "  │ Monolithic (full 23-workflow set)    ~$FullsetTokens tokens           │" -ForegroundColor Red
+Write-Host "  │ Monolithic (full 24-workflow set)    ~$FullsetTokens tokens           │" -ForegroundColor Red
 Write-Host "  │ PromptKit OS JIT Router            ~$EstimatedTokens tokens (measured)      │" -ForegroundColor Green
 Write-Host "  ├─────────────────────────────────────────────────────────────┤" -ForegroundColor DarkGray
 Write-Host "  │ Static Context Reduction:          $SavingsPercent% reduction             │" -ForegroundColor Cyan

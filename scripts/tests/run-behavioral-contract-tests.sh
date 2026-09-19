@@ -189,14 +189,52 @@ else
     echo "  ❌ FAIL: On-disk workflow count is $WF_COUNT but shipped docs claim 24 — reconcile counts or update this drift guard"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
-STALE_CLAIMS=$(grep -rE 'full 23 workflow|\(23 workflow|23 workflow files|23 Inlined|All 23|23 workflows|full 22 workflow|\(22 workflow|22 workflow files|22 Inlined|All 22|22 workflows|All 21 workflow|21 workflow files|19 workflows' \
-    "$REPO_ROOT/README.md" "$REPO_ROOT/QUICKSTART.md" "$REPO_ROOT/FAQ.md" "$REPO_ROOT/docs/WORKFLOW-MAP.md" "$REPO_ROOT/docs/BENCHMARKS.md" "$REPO_ROOT/templates/lite-profile.md" "$REPO_ROOT/workflows/sync.md" 2>/dev/null || true)
+# Canonical-count drift guard (#347): every live workflow-count claim must state
+# the mechanically enforced on-disk count (WF_COUNT above). Claim candidates are
+# matched separator-agnostically ("23-workflow", "23 workflow", "23 workflow
+# files", "(23 workflows)", "23 Inlined Workflows", "All 23 workflows"), then
+# canonical-count claims are blanked — whatever remains is stale by definition.
+# This self-maintains when the count changes instead of denylisting past values.
+# Historical records (docs/releases/, docs/tasks/, docs/archive/, docs/internal/,
+# docs/spikes/, CHANGELOG.md, token-efficiency audit trail) are exempt and are
+# never rewritten silently.
+STALE_CLAIMS=$(grep -rnE 'full [0-9][0-9]?[- ]workflows?|[Aa]ll [0-9][0-9]? workflows?|[0-9][0-9]? workflow files|[0-9][0-9]? Inlined Workflows?|[(][0-9][0-9]? workflows?' \
+    "$REPO_ROOT/README.md" "$REPO_ROOT/QUICKSTART.md" "$REPO_ROOT/FAQ.md" "$REPO_ROOT/PROMPTKIT.md" \
+    "$REPO_ROOT/docs/WORKFLOW-MAP.md" "$REPO_ROOT/docs/BENCHMARKS.md" "$REPO_ROOT/docs/ARCHITECTURE.md" \
+    "$REPO_ROOT/docs/COMPARISONS.md" "$REPO_ROOT/docs/INTERESTING-FACTS.md" \
+    "$REPO_ROOT/templates/lite-profile.md" "$REPO_ROOT/templates/project-profile-template.md" "$REPO_ROOT/workflows/sync.md" 2>/dev/null \
+    | awk -v wf="$WF_COUNT" '
+        {
+            line = $0
+            gsub(wf " Inlined Workflows?", "", line)
+            gsub(wf "[-]workflow", "", line)
+            gsub(wf " workflow", "", line)
+            if (line ~ /full [0-9][0-9]?[- ]workflows?|[Aa]ll [0-9][0-9]? workflows?|[0-9][0-9]? workflow files|[0-9][0-9]? Inlined Workflows?|[(][0-9][0-9]? workflows?/) print
+        }' || true)
 if [ -z "$STALE_CLAIMS" ]; then
-    echo "  ✅ PASS: No stale 19/21/22/23 workflow-count claims in shipped docs"
+    echo "  ✅ PASS: All live workflow-count claims state the on-disk count ($WF_COUNT) across the claim surface"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo "  ❌ FAIL: Stale workflow-count claims found:"
+    echo "  ❌ FAIL: Stale workflow-count claims found (docs contradict the on-disk count $WF_COUNT):"
     echo "$STALE_CLAIMS" | sed "s|$REPO_ROOT/|  - |" | head -6
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+# Fail-closed canonical assertions (#347): the engine profile and the shipped
+# project-profile template must positively state the current count, because the
+# template seeds PROMPTKIT.md into every fresh project.
+if grep -qE "^  - .balanced.: the full ${WF_COUNT}-workflow set" "$REPO_ROOT/PROMPTKIT.md" && \
+   grep -qE "Locked workflow count \\(ADR 0002\\)\\*{0,2}: ${WF_COUNT} workflows" "$REPO_ROOT/PROMPTKIT.md"; then
+    echo "  ✅ PASS: Engine PROMPTKIT.md profile states the current count ($WF_COUNT workflows, ADR 0002)"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: Engine PROMPTKIT.md does not state the current workflow count ($WF_COUNT) — reconcile with ADR 0002"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+if grep -qE "full ${WF_COUNT}-workflow set" "$REPO_ROOT/templates/project-profile-template.md"; then
+    echo "  ✅ PASS: project-profile template seeds the current count ($WF_COUNT workflows) into fresh projects"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: project-profile template does not state the current count ($WF_COUNT) — fresh projects would inherit a stale claim"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 

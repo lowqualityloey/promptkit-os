@@ -118,7 +118,7 @@ CHAR_COUNT=${#BLOCK}
 WORD_COUNT=$(echo "$BLOCK" | wc -w | tr -d ' ')
 ESTIMATED_TOKENS=$(( (CHAR_COUNT + 2) / 4 ))
 # Monolithic baselines are DERIVED (issue #145 audit): the core-6 lifecycle
-# subset Lite would inline (~19.6k) and the full 23-workflow set (~75.3k).
+# subset Lite would inline (~19.6k) and the full 24-workflow set (~75.3k).
 KIT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SUBSET_CHARS=$(cat "$KIT_ROOT"/workflows/route.md "$KIT_ROOT"/workflows/debug.md "$KIT_ROOT"/workflows/commit.md "$KIT_ROOT"/workflows/checkpoint.md "$KIT_ROOT"/workflows/sync.md "$KIT_ROOT"/workflows/profile.md 2>/dev/null | tr -d '\r' | wc -c | tr -d ' ')
 MONOLITHIC_TOKENS=$(( (SUBSET_CHARS + 2) / 4 ))
@@ -137,7 +137,7 @@ echo -e "  \033[0;90m┌──────────────────�
 echo -e "  \033[0;90m│ Model Architecture                 Static Overhead          │\033[0m"
 echo -e "  \033[0;90m├─────────────────────────────────────────────────────────────┤\033[0m"
 echo -e "  │ Monolithic (core-6 subset derived)   \033[0;31m~$MONOLITHIC_TOKENS tokens\033[0m          │"
-echo -e "  │ Monolithic (full 23-workflow set)    \033[0;31m~$FULLSET_TOKENS tokens\033[0m         │"
+echo -e "  │ Monolithic (full 24-workflow set)    \033[0;31m~$FULLSET_TOKENS tokens\033[0m         │"
 echo -e "  │ PromptKit OS JIT Router            \033[0;32m~$ESTIMATED_TOKENS tokens (measured)\033[0m      │"
 echo -e "  \033[0;90m├─────────────────────────────────────────────────────────────┤\033[0m"
 echo -e "  │ Static Context Reduction:          \033[0;36m~$SAVINGS_PERCENT% reduction\033[0m             │"
