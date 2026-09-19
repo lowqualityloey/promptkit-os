@@ -103,6 +103,52 @@ Write-Host "Test 7: Scenario 5 - Secret hygiene (API key never leaked)"
 $secretKey = "super-secret-token-do-not-leak-999"
 $secretOut = pwsh -NoProfile -Command "`$env:TYPESAFE_API_KEY='$secretKey'; & '$pkRoute' -TimeoutSec 1 -Prompt 'fix bug'" 2>&1 | Out-String
 Assert-NotContains $secretOut $secretKey "Stdout/stderr does not leak API key"
+# ------------------------------------------------------------------------------
+# Test 8: Issue #345 - Synonym hard triggers (auth, release, API contract)
+# ------------------------------------------------------------------------------
+Write-Host "Test 8: Issue #345 - Synonym hard triggers (deterministic, offline)"
+
+# Scenario 1: Auth synonyms must reach L2
+$auth1Out = pwsh -NoProfile -File $pkRoute -Offline -Prompt "Add Google login to the app" | Out-String
+Assert-Contains $auth1Out "Level 2 (Controlled)" "H2: 'Add Google login' -> Level 2"
+Assert-Contains $auth1Out "Task Record required" "H2: L2 notes Task Record required"
+
+$auth2Out = pwsh -NoProfile -File $pkRoute -Offline -Prompt "Let people sign in with their Google account" | Out-String
+Assert-Contains $auth2Out "Level 2 (Controlled)" "H2a: 'sign in with Google' -> Level 2"
+
+$auth3Out = pwsh -NoProfile -File $pkRoute -Offline -Prompt "Add SSO to the dashboard" | Out-String
+Assert-Contains $auth3Out "Level 2 (Controlled)" "Auth synonym: 'SSO' -> Level 2"
+
+$auth4Out = pwsh -NoProfile -File $pkRoute -Offline -Prompt "Let users sign-up with an email and password" | Out-String
+Assert-Contains $auth4Out "Level 2 (Controlled)" "Auth synonym: 'sign-up'/'password' -> Level 2"
+
+# Scenario 2: Release and live-publication synonyms must reach L3
+$rel1Out = pwsh -NoProfile -File $pkRoute -Offline -Prompt "Ship the new version to real users" | Out-String
+Assert-Contains $rel1Out "Level 3 (Release-Critical)" "H3a: bare 'ship' -> Level 3"
+
+$rel2Out = pwsh -NoProfile -File $pkRoute -Offline -Prompt "Could we turn this on for everyone now" | Out-String
+Assert-Contains $rel2Out "Level 3 (Release-Critical)" "H5a: 'turn this on' -> Level 3"
+
+$rel3Out = pwsh -NoProfile -File $pkRoute -Offline -Prompt "Make the app live tomorrow morning" | Out-String
+Assert-Contains $rel3Out "Level 3 (Release-Critical)" "Live publication with modifier -> Level 3"
+
+# Scenario 3: API-contract synonyms must reach L2
+$api1Out = pwsh -NoProfile -File $pkRoute -Offline -Prompt "Change the public API response format for /v1/users" | Out-String
+Assert-Contains $api1Out "Level 2 (Controlled)" "H6: 'API response format' -> Level 2"
+
+$api2Out = pwsh -NoProfile -File $pkRoute -Offline -Prompt "Tweak what the users endpoint gives back" | Out-String
+Assert-Contains $api2Out "Level 2 (Controlled)" "H6a: 'users endpoint' -> Level 2"
+
+$api3Out = pwsh -NoProfile -File $pkRoute -Offline -Prompt "Adjust the API payload for the create-order call" | Out-String
+Assert-Contains $api3Out "Level 2 (Controlled)" "API synonym: 'API payload' -> Level 2"
+
+# Bare ship must NOT defeat an L2 trigger (existing floor behaviour preserved)
+$shipL2Out = pwsh -NoProfile -File $pkRoute -Offline -Prompt "just change the migration and ship it" | Out-String
+Assert-Contains $shipL2Out "Level 2 (Controlled)" "Bare 'ship' with L2 trigger stays Level 2"
+
+# ------------------------------------------------------------------------------
+# Summary
+# ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
 # Summary

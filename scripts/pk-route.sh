@@ -98,9 +98,23 @@ fi
 detect_hard_l3() {
   local input_lower
   input_lower=$(echo "$1" | tr '[:upper:]' '[:lower:]')
-  
-  # Release, deploy, publish, tag candidate, make this live, production push
-  if [[ "$input_lower" =~ (deploy|release|publish|tag\ candidate|make\ this\ live|production\ deploy|hotfix\ prod|ship\ release|v[0-9]+\.[0-9]+) ]]; then
+
+  # Release, deploy, publish, tag candidate, production push (#345: live
+  # publication now tolerates ordinary modifiers, e.g. "make the app live",
+  # "turn this on for everyone").
+  local l3_core='(deploy|release|publish|tag candidate|make (this|it|that|everything)( [a-z]+)? (live|public)|make the [a-z]+ (live|public)|turn (this|it|that|everything) on|production deploy|hotfix prod|ship release|v[0-9]+\.[0-9]+)'
+  if [[ "$input_lower" =~ $l3_core ]]; then
+    return 0
+  fi
+  # Bare "ship" (#345): a release verb on its own is release-critical, but when
+  # a controlled-change (L2) trigger coexists, the L2 trigger claims the input.
+  # This keeps "change the migration and ship it" at Level 2 while
+  # "ship the new version to real users" reaches Level 3.
+  local ship_re='\bship\b'
+  if [[ "$input_lower" =~ $ship_re ]]; then
+    if detect_hard_l2 "$input_lower"; then
+      return 1
+    fi
     return 0
   fi
   return 1
@@ -109,9 +123,12 @@ detect_hard_l3() {
 detect_hard_l2() {
   local input_lower
   input_lower=$(echo "$1" | tr '[:upper:]' '[:lower:]')
-  
-  # Schema, migration, alter table, drop, auth, session, jwt, credentials, production database
-  if [[ "$input_lower" =~ (alter\ table|migration|migrate|drop\ table|create\ table|schema|database|production\ database|auth|token|session|jwt|oauth|credentials|secret|api\ contract|breaking) ]]; then
+
+  # Schema, migration, alter table, drop, auth, session, jwt, credentials,
+  # production database (#345: extended auth vocabulary and API-contract
+  # synonyms: login, sign in/sign-in, signup, SSO, password; API response
+  # format, API payload, API endpoint, bare endpoint).
+  if [[ "$input_lower" =~ (alter\ table|migration|migrate|drop\ table|create\ table|schema|database|production\ database|auth|login|sign[-\ ]?in|signup|sso|password|token|session|jwt|oauth|credentials|secret|api\ (contract|response\ format|payload|endpoint)|endpoint|breaking) ]]; then
     return 0
   fi
   return 1

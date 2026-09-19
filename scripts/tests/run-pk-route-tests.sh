@@ -119,6 +119,52 @@ assert_not_contains "$SECRET_OUT" "$SECRET_KEY" "Stdout does not leak API key"
 assert_not_contains "$SECRET_ERR_CONTENT" "$SECRET_KEY" "Stderr does not leak API key"
 
 # ------------------------------------------------------------------------------
+# Test 8: Issue #345 - Synonym hard triggers (auth, release, API contract)
+# ------------------------------------------------------------------------------
+echo "Test 8: Issue #345 - Synonym hard triggers (deterministic, offline)"
+
+# Scenario 1: Auth synonyms must reach L2
+AUTH1_OUT=$(bash "$PK_ROUTE" --offline "Add Google login to the app")
+assert_contains "$AUTH1_OUT" "Level 2 (Controlled)" "H2: 'Add Google login' -> Level 2"
+assert_contains "$AUTH1_OUT" "Task Record required" "H2: L2 notes Task Record required"
+
+AUTH2_OUT=$(bash "$PK_ROUTE" --offline "Let people sign in with their Google account")
+assert_contains "$AUTH2_OUT" "Level 2 (Controlled)" "H2a: 'sign in with Google' -> Level 2"
+
+AUTH3_OUT=$(bash "$PK_ROUTE" --offline "Add SSO to the dashboard")
+assert_contains "$AUTH3_OUT" "Level 2 (Controlled)" "Auth synonym: 'SSO' -> Level 2"
+
+AUTH4_OUT=$(bash "$PK_ROUTE" --offline "Let users sign-up with an email and password")
+assert_contains "$AUTH4_OUT" "Level 2 (Controlled)" "Auth synonym: 'sign-up'/'password' -> Level 2"
+
+# Scenario 2: Release and live-publication synonyms must reach L3
+REL1_OUT=$(bash "$PK_ROUTE" --offline "Ship the new version to real users")
+assert_contains "$REL1_OUT" "Level 3 (Release-Critical)" "H3a: bare 'ship' -> Level 3"
+
+REL2_OUT=$(bash "$PK_ROUTE" --offline "Could we turn this on for everyone now")
+assert_contains "$REL2_OUT" "Level 3 (Release-Critical)" "H5a: 'turn this on' -> Level 3"
+
+REL3_OUT=$(bash "$PK_ROUTE" --offline "Make the app live tomorrow morning")
+assert_contains "$REL3_OUT" "Level 3 (Release-Critical)" "Live publication with modifier -> Level 3"
+
+# Scenario 3: API-contract synonyms must reach L2
+API1_OUT=$(bash "$PK_ROUTE" --offline "Change the public API response format for /v1/users")
+assert_contains "$API1_OUT" "Level 2 (Controlled)" "H6: 'API response format' -> Level 2"
+
+API2_OUT=$(bash "$PK_ROUTE" --offline "Tweak what the users endpoint gives back")
+assert_contains "$API2_OUT" "Level 2 (Controlled)" "H6a: 'users endpoint' -> Level 2"
+
+API3_OUT=$(bash "$PK_ROUTE" --offline "Adjust the API payload for the create-order call")
+assert_contains "$API3_OUT" "Level 2 (Controlled)" "API synonym: 'API payload' -> Level 2"
+
+# Bare ship must NOT defeat an L2 trigger (existing floor behaviour preserved)
+SHIP_L2_OUT=$(bash "$PK_ROUTE" --offline "just change the migration and ship it")
+assert_contains "$SHIP_L2_OUT" "Level 2 (Controlled)" "Bare 'ship' with L2 trigger stays Level 2"
+
+# ------------------------------------------------------------------------------
+# Summary
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Summary
 # ------------------------------------------------------------------------------
 echo ""
