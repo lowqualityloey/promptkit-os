@@ -27,6 +27,9 @@ Unlike functional bugs handled in `pk:debug`, performance regressions rarely thr
 
 ---
 
+> [!NOTE]
+> **Stack Neutrality**: This workflow defines the stack-neutral method — baseline → localize → optimize → verify delta — and the baseline-first law. Select profiling and benchmarking tooling appropriate to the detected project stack (e.g. Rust: `cargo bench` / `criterion` / flamegraph; Go: `pprof` / benchmarks; Python: `py-spy` / `cProfile`; CLI: benchmark harnesses; databases: `EXPLAIN ANALYZE`-style query plans). The web/Node/Postgres tooling in the phases below (Lighthouse, Core Web Vitals, `autocannon`, React profiling) is illustrative for web-stack projects, not a universal requirement.
+
 ## 4-Phase Profiling Protocol
 
 ### Phase 1: Baseline Quantification

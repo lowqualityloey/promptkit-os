@@ -17,12 +17,15 @@ Refactoring changes the **internal structure** of software without changing its 
 > **No Opportunistic Bug Fixes or Feature Creep**:
 > If you discover a bug while refactoring, do NOT fix it opportunistically. Document it, complete or revert the current refactoring step, and route the bug separately to `pk:fix` or `pk:debug`. If you are adding a feature, complete the refactoring first to prepare the seam, commit cleanly, and route the feature to `pk:plan`.
 
+> [!IMPORTANT]
+> **Boundary — Refactor vs. Migration**: A refactor preserves observable behavior and public contracts. It may *prepare* a seam for a contract or schema migration, but executing that migration is a behavior-changing change that belongs to its own authorized workflow (`pk:plan` / `pk:data` / `pk:api`) with its own Task Record and evidence. Never fold a migration into a refactoring diff.
+
 ---
 
 ## Level 0–3 Task Ceremony Alignment
 
 - **Level 1 — Localized Refactor (Standard)**: Self-contained module or function cleanup, extracting helpers, or removing local duplication without touching public interfaces, database schemas, or authentication boundaries. Does **not** require a Task Record file (`docs/tasks/<task-id>.md`).
-- **Level 2 — Architectural Refactor (Controlled)**: Cross-module decoupling, migrating to Clean/Hexagonal Architecture (Ports and Adapters), public API contract changes, or schema alterations. Requires an explicit RFC spec (`pk:plan`) and a canonical Task Record in `docs/tasks/`.
+- **Level 2 — Architectural Refactor (Controlled)**: Cross-module decoupling and migrating to Clean/Hexagonal Architecture (Ports and Adapters), including structural preparation for a separately authorized contract or schema migration. Requires an explicit RFC spec (`pk:plan`) and a canonical Task Record in `docs/tasks/`. The contract or schema change itself is not a refactor: it intentionally changes behavior or contract and belongs to its owning workflow (`pk:plan`, `pk:data`, `pk:api`) with its own Task Record and evidence.
 - **Level 3 — Release-Critical Refactor**: Core engine rewrite touching multi-tenant isolation, billing, or encryption. Requires Level 2 evidence plus dual-lens review (`pk:review`) and explicit human approval.
 
 ---

@@ -73,7 +73,7 @@ Always redact credentials, tokens, passwords, auth headers, and PII before displ
 > **This is the skill. Everything else is mechanical.**
 > If you have a tight, fast, deterministic command that goes red on *this specific bug*, finding the cause is 90% solved. If you don't, staring at code will only produce false theories.
 > 
-> **Hard Rule**: Do NOT read code to construct theories before this command exists. Jumping straight to a hypothesis is the exact failure mode this workflow prevents.
+> **Hard Rule**: Do not form an untested root-cause conclusion from code inspection alone. Brief inspection to locate the seam is permitted; establish a red-capable feedback loop as early as practical. Jumping straight to a hypothesis is the exact failure mode this workflow prevents.
 
 Construct a feedback loop using the first viable option from this hierarchy:
 1. **Automated Failing Test**: Unit, integration, or E2E test at whatever seam reaches the bug.
@@ -82,7 +82,7 @@ Construct a feedback loop using the first viable option from this hierarchy:
 4. **Headless Browser Script**: Playwright / Puppeteer driving UI and asserting on DOM, console, or network.
 5. **Replay Captured Trace**: Save network payload / event log to disk; replay through the isolated code path.
 6. **Throwaway Harness**: Spin up a minimal subset of the system (single service, mocked dependencies) exercising the bug path with one function call.
-7. **Property / Fuzz Loop**: If the bug is intermittent, run 1,000 random inputs to expose the failure mode.
+7. **Property / Fuzz Loop**: If the bug is intermittent and the target is safe to stress, run 1,000 random inputs to expose the failure mode — never against production, paid-per-call, rate-limited, or shared services (see the stress-safety bound under Tighten the Loop).
 8. **Bisection Harness**: If the bug appeared between two known commits or versions, automate `git bisect run`.
 9. **Differential Loop**: Run identical input through old vs. new version and diff the outputs.
 10. **Human-in-the-Loop Script**: Last resort. A structured shell script prompting the developer for specific manual checks.
@@ -91,7 +91,7 @@ Construct a feedback loop using the first viable option from this hierarchy:
 - **Speed**: Target execution in < 3 seconds (skip unrelated init, narrow test scope).
 - **Sharpness**: Assert the exact user-reported symptom, not merely "didn't crash".
 - **Determinism**: For flaky or race condition bugs, increase reproduction rate (loop trigger 100x, add load, narrow timing windows).
-- **Concurrency Chaos Jitter**: For intermittent async or race-condition defects, widen the timing window by injecting random micro-delay jitter (`await new Promise(r => setTimeout(r, Math.random() * 50))`) or executing parallel stress loops (`Promise.all(Array.from({length: 50}, ...))`) until reproduction is 100% deterministic.
+- **Concurrency Chaos Jitter**: For intermittent async or race-condition defects, widen the timing window by injecting random micro-delay jitter (`await new Promise(r => setTimeout(r, Math.random() * 50))`) or executing parallel stress loops (`Promise.all(Array.from({length: 50}, ...))`) until reproduction is 100% deterministic. **Stress-safety bound**: escalate stress volume only when the defect remains intermittent and the target is safe and permitted to stress — never against production, paid or rate-limited third-party APIs, or shared environments.
 
 #### Phase 1 Completion Gate
 - [ ] You have identified **one single command** (script path, test run, or curl).

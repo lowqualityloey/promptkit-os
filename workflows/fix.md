@@ -137,6 +137,6 @@ Once verified, hand off to downstream workflows:
 - [ ] Security-first ordering enforced (`🚨 [BLOCKING]` resolved first).
 - [ ] Reproduction check or performance baseline captured prior to editing code.
 - [ ] Minimal surgical fix applied without unrelated scope creep.
-- [ ] Regression test added and full test suite passing.
+- [ ] Verification required by the task's ceremony level passes (Step 5 `fast` / `required` / `extended` tiers). Regression test added when the defect is behaviorally testable and an appropriate test seam exists.
 - [ ] Changes staged cleanly via `pk:commit` with atomic Conventional Commit message.
 - [ ] **Dual-Compatible Telemetry Status Card**: Conclude with a 3-line telemetry status card (`> 📊 **Milestone**: ... \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: ...`) and a `> [!TIP]` callout recommending `pk:commit` or downstream verification. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; `[!IMPORTANT]` / `[!WARNING]` halts still fire. Bounded to closed-set operational choices: for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead — see the Picker routing rule in `workflows/plan.md`.
