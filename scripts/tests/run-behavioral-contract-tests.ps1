@@ -453,6 +453,32 @@ Assert-Contains "init.sh" "reconfigure" "init.sh supports reconfigure flag"
 Assert-Contains "init.ps1" "Keeping installed hosts" "init.ps1 auto-detects and preserves installed hosts on update"
 Assert-Contains "init.sh" "Keeping installed hosts" "init.sh auto-detects and preserves installed hosts on update"
 
+Write-Host "`n📌 Scenario V: Profile Drift Audit (pk:sync vs Repository Reality — Issue #338)" -ForegroundColor Yellow
+Assert-Contains "workflows/sync.md" "Profile Drift Audit" "Sync defines the PROMPTKIT.md drift audit section"
+Assert-Contains "workflows/sync.md" "detection-only pass" "Sync drift audit is detection-only"
+Assert-Contains "workflows/sync.md" "No dependency resolution" "Sync drift audit is bounded to manifest presence"
+Assert-Contains "workflows/sync.md" "Detection is observation, not promotion" "Sync drift findings stay on the observation side of the memory-vs-policy boundary"
+Assert-Contains "workflows/sync.md" "Never auto-rewrite user-authored sections" "Sync drift audit never auto-rewrites PROMPTKIT.md"
+Assert-Contains "workflows/sync.md" "Clean profile is silent" "Clean profile produces no findings and no extra ceremony"
+
+Write-Host "`n📌 Scenario W: Turbo Suitability Check (pk:profile — Issue #337)" -ForegroundColor Yellow
+Assert-Contains "workflows/profile.md" "Turbo suitability check" "Profile workflow asks the Turbo suitability question"
+Assert-Contains "workflows/profile.md" "zero benefit on sequential work" "Sequential workloads are warned that waves buy zero benefit"
+Assert-Contains "workflows/profile.md" "Advisory, never blocking" "Suitability check is advisory and never blocks Turbo"
+Assert-Contains "workflows/profile.md" "auto-waves-preflight-checklist.md" "Suitability check links the pre-flight checklist as evidence"
+Assert-Contains "workflows/profile.md" "never restate its ticks" "Suitability check links the checklist instead of duplicating it"
+Assert-Contains "workflows/profile.md" "still honored" "Explicit Turbo override remains honored after a no answer"
+Assert-Contains "workflows/onboard.md" "advisory suitability check" "Onboarding runs the advisory suitability check before Turbo acknowledgement"
+
+Write-Host "`n📌 Scenario X: Proactive Downgrade & Checkpoint Cadence Guidance (pk:route — Issue #339)" -ForegroundColor Yellow
+Assert-Contains "workflows/route.md" "Proactive Level-Fit Check" "Router performs a proactive per-milestone level-fit check"
+Assert-Contains "workflows/route.md" "Milestone Boundaries" "Level-fit check is anchored to milestone boundaries"
+Assert-Contains "workflows/route.md" "Proposed, never forced" "Downgrades stay proposed, never forced"
+Assert-Contains "workflows/route.md" "Verification is not downgraded" "Downgrade reduces records, never verification"
+Assert-Contains "workflows/route.md" "Checkpoint Cadence by Project Size" "Router documents checkpoint cadence by project size"
+Assert-Contains "workflows/route.md" "record-keeping is not progress" "Small-project cadence guidance avoids manufactured checkpoint pairs"
+Assert-Contains "workflows/route.md" "workflows/checkpoint.md" "Cadence numbers defer to the canonical checkpoint workflow"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

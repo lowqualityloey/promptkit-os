@@ -52,6 +52,24 @@ Before responding, the AI assistant inspects the physical workspace:
 2. **Mandate Fresh Disk Reads**:
    All subsequent workflow triggers (`pk:plan`, `pk:commit`, `pk:pr`, `pk:tasks`, `pk:test`, `pk:ship`) must be read directly from the engine's `workflows/<name>.md` upon invocation rather than recalled from conversational memory.
 
+#### Profile Drift Audit (`PROMPTKIT.md` vs Repository Reality)
+
+A stale profile makes every session re-derive settled facts. When `./PROMPTKIT.md` declares a stack, toolchain, or commands (Sections 2-3), run one bounded, **detection-only pass**:
+
+1. **Bounded manifest scan (presence only)**: check the canonical candidate manifests in [`workflows/route.md`](./route.md) §4d (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`, `render.yaml`) plus lockfiles. No dependency resolution, no version analysis, no deep stack inference — that is `pk:onboard`'s job.
+2. **Compare declared vs detected** on three surfaces only:
+
+| Surface | Declared in `PROMPTKIT.md` | Detected from the repository |
+| :--- | :--- | :--- |
+| Manifest presence | "no `package.json` exists", or an unqualified stack claim | manifest present or absent |
+| Toolchain selection | declared runner/toolchain, or "unselected" | runner binaries, lockfile, and script entries actually present |
+| Root commands | Section 3 command list | command entries that exist in the detected manifests |
+
+3. **Findings, never rewrites**: report the mismatch as findings with the observed evidence and propose the profile patch. **Detection is observation, not promotion** — the memory-vs-policy boundary holds (see "Candidate Learnings Are Not Policy" below). Never auto-rewrite user-authored sections; apply nothing until the developer confirms.
+4. **Clean profile is silent**: when declarations match detected reality, report no findings and add no ceremony — the session proceeds normally.
+
+Mismatches that require judgment (framework choice, workspace layout, an intentional aspiration) are surfaced as a question, not silently corrected.
+
 ---
 
 ### Phase 3: Telemetry Confirmation & Protocol Alignment

@@ -127,6 +127,19 @@ To prevent framework bloat while providing deep architectural invariants, the ro
 - **Context Exclusion**: Unrelated stack playbooks (e.g. Rust playbooks in a Next.js repo) are strictly excluded to preserve token budgets.
 - **Precedence Hierarchy**: Local Project Profile Overrides > PromptKit Stack Playbooks > External Host Skills.
 
+5. **Proactive Level-Fit Check (Milestone Boundaries)**:
+   Escalation has triggers; de-escalation has none — ceremony must not ratchet upward and then coast there. At the **start of each milestone**, before inheriting the previous milestone's level, run a one-line fit check and propose a downgrade when the criteria hold:
+   - **Level-1 fit criteria**: single component, no schema/data migration, no auth/permission change, no public or breaking contract change, no new dependency surface.
+   - **Proposed, never forced**: announce the proposed level with a one-line rationale and proceed on operator confirmation. The existing downgrade announcement rule above still applies; silence is not confirmation.
+   - **Verification is not downgraded**: the Evidence-Gated Verification Matrix above applies at every level. A downgrade reduces records, never verification — Level 1 still requires `fast` + `required` evidence with exit code 0.
+   - **Large work unaffected**: schema, auth, multi-component, or contract work keeps its level exactly as today.
+   - *Worked example*: a milestone scoped to "add CSV export to the reports page" (one component, no schema/auth/contract change) is proposed as **Level 1** — no Task Record file, verification still required. The same milestone adding a stored `exports` table or a public API route is **Level 2** — Task Record required, cadence unchanged.
+
+5b. **Checkpoint Cadence by Project Size**:
+   - **Small projects** (`size: small`, single component, one active lane): a **milestone boundary** is the natural checkpoint. Do not manufacture extra checkpoint/handoff pairs inside a single Level 1 milestone — record-keeping is not progress.
+   - **Medium/large or multi-component projects**: keep session-boundary cadence.
+   - Canonical cadence numbers (soft/hard checkpoint windows, turn nudges) live in [`workflows/checkpoint.md`](./checkpoint.md) — this rule selects *when a boundary is worth a record*; it never relaxes a Level 2/3 hard checkpoint.
+
 ### Model-Tiering & Resource Optimization Guidance
 
 To optimize API cost, token consumption, and reasoning depth, match your LLM selection to the active ceremony level:
