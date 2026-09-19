@@ -18,6 +18,8 @@ Tick every box **before** running `pk:auto --waves N`. One unticked box means se
 - [ ] **Disjoint file ownership** — no two workers create or modify the same file.
 - [ ] **No shared generated artifacts, migrations, or schema ownership** — one owner per artifact per wave.
 - [ ] **No dependency between workers in the same wave** — dependent tasks belong to later waves; no worker consumes another worker's unreviewed output.
+- [ ] **Needs/produces declared (one line each, evidence not proof)** — every worker states what it needs satisfied before launch and what files/contracts it produces; anything unconfident stays sequential.
+- [ ] **Task size justifies coordination** — skip waves for fewer than 2 genuinely independent tasks, trivial/L0 work, or lanes cheaper than dispatch + synthesis; run those sequentially.
 
 ## 2. Host & profile
 
