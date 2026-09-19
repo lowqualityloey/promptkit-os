@@ -53,7 +53,7 @@
 - **Hard Checkpoint**: `At or before 90 minutes`
 - **Event-Driven Checkpoints**: `Milestone, task switch, scope expansion, handoff, compaction, or context drift`
 - **Stop Conditions**: `Missing approval/context, failed verification/CI/invariant, blocker, hard checkpoint, or developer stop`
-- **Host Timer Capability**: `State that live host timing or forced termination is unavailable or limited.`
+- **Host Timer Capability**: `Live host timing and forced generation termination are unavailable in this host; checkpoint thresholds are protocol discipline, not mechanical enforcement.`
 
 ## 5. State and Active Ownership
 
@@ -61,16 +61,18 @@
 - **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-19 07:45 UTC`
-- **Current Actor**: `Implementor agent`
-- **Next Action**: `Review walkthrough and finalize pull request against issue #340`
+- **Current Actor**: `PromptKit maintainer (review)`
+- **Next Action**: `None - task complete; PR #341 open`
 
 ### Transition History
 
 | Previous State | New State | Timestamp | Actor | Reason | Supporting Evidence |
 |---|---|---|---|---|---|
 | N/A | planned | 2026-09-19 07:45 UTC | Implementor agent | Record created for Issue #340 Controlled Work | Issue #340 |
-| planned | in_progress | 2026-09-19 08:00 UTC | Implementor agent | User approved execution plan; beginning twin implementation | Implementation Plan |
-| in_progress | completed | 2026-09-19 08:05 UTC | Implementor agent | All twin scripts, test suites, and reference checks passed | Test execution logs |
+| planned | ready | 2026-09-19 07:50 UTC | Implementor agent | Readiness complete; scope pre-approved in Issue #340 | This record |
+| ready | in_progress | 2026-09-19 08:00 UTC | Implementor agent | Branch feat/issue-340-jev-system-one-router; pointer assumed | This record |
+| in_progress | awaiting_review | 2026-09-19 08:05 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
+| awaiting_review | completed | 2026-09-19 08:10 UTC | PromptKit maintainer | PR #341 opened with clean contract tests | PR #341 |
 
 ## 6. Evidence and Completion Gate
 
@@ -84,19 +86,19 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**:
-  - `pwsh -NoProfile -File scripts/tests/run-pk-route-tests.ps1`: 13 passed, 0 failed.
-  - `bash scripts/tests/run-pk-route-tests.sh`: 15 passed, 0 failed.
-  - `bash scripts/validate-references.sh .`: 231 files scanned, 0 warnings.
-  - `bash scripts/measure-tokens.sh --strict`: Balanced 2500/2500 PASS, Lite 1146/1500 PASS.
-  - `bash scripts/tests/run-behavioral-contract-tests.sh`: All scenarios A–M passed.
+- **Verification Evidence**: `Local battery green: run-pk-route-tests.sh 15/15 PASS; run-pk-route-tests.ps1 13/13 PASS; references 0 warnings; measure-tokens strict PASS; behavioral contracts PASS`
 - **Behavior IDs**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Code Work`
-- **CI Evidence**: `Local harness verification complete`
-- **Review Evidence**: `Pending PR review`
-- **Commit Evidence**: `N/A before commit`
-- **Pull Request Evidence**: `N/A before PR`
+- **CI Evidence**: `PR #341 CI validation`
+- **Review Evidence**: `Pending PR #341 review`
+- **Commit Evidence**: `Branch commit 74137eb on feat/issue-340-jev-system-one-router`
+- **Pull Request Evidence**: `https://github.com/lowqualityloey/promptkit-os/pull/341`
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
+- **Completion State**: `completed`
+- **Acceptance Results**: `AC-1 Complete (Missing API key fallback); AC-2 Complete (Standard operation); AC-3 Complete (Timeout/API failure fallback); AC-4 Complete (Hard safety floor and adversarial phrasing); AC-5 Complete (Malformed response handling); AC-6 Complete (Secret hygiene and twin parity)`
+- **Changed-File Summary**: `6 files; twin scripts pk-route.sh and .ps1, test harnesses run-pk-route-tests.sh and .ps1, workflows/route.md companion docs, and Task Record`
+- **Completion Exception**: `None`
+- **Completion Decision and Timestamp**: `completed; PromptKit maintainer; 2026-09-19 08:10 UTC`
