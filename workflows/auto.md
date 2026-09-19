@@ -36,7 +36,7 @@ Any tool call attempting to modify a deny-listed path without explicit instructi
 3. 🧹 **No Shallow Stubs (Anti-Slop Implementation)**:
    Reject any generated code with unhandled exceptions, fake in-memory mocks in production source files, or newly introduced `// TODO` or `// FIXME` stubs. All acceptance criteria must be genuinely implemented.
 4. ⚡ **3-Strike Circuit Breaker**:
-   Allow a maximum of 3 automated remediation cycles on failing tests or build errors. If tests remain red after the 3rd attempt, or if an irreversible architectural ambiguity is hit, **halt immediately**, checkpoint state to `docs/STATE.md`, and yield control to the developer with exact diagnostic evidence.
+   **3-strike failure budget**: Strike 1 = initial verification failure; Strike 2 = refine attempt #1 + re-verify; Strike 3 = refine attempt #2 + re-verify. This is the full budget — consistent with the 2 bounded repairs in the [#258 autonomy budgets](https://github.com/lowqualityloey/promptkit-os/issues/258); no fourth automated refinement is permitted. After Strike 3, or on irreversible architectural ambiguity, **halt immediately**, checkpoint state to `docs/STATE.md`, and yield control to the developer with exact diagnostic evidence.
 5. ⏱️ **Execution Timeouts & Step Caps**:
    Enforce a maximum 30-second timeout per test command execution and a cap of ≤15 tool calls per subtask to prevent async deadlocks and runaway token consumption.
 
@@ -68,7 +68,7 @@ When invoked, `workflows/auto.md` operates under a declared terminal boundary:
 No worker consumes another worker's unreviewed output within the same wave. Dependent tasks belong to later waves — a wave with hidden dependencies is sequential work mislabeled parallel.
 
 ### Budget Linkage
-Worker, wave, and repair caps compose with the #258 autonomy budgets (referenced, not duplicated). PromptKit governs when parallelism is permissible; the host executes it — no scheduler, daemon, or second orchestration engine, ever.
+Worker, wave, and repair caps compose with the [#258 autonomy budgets](https://github.com/lowqualityloey/promptkit-os/issues/258) (referenced, not duplicated). PromptKit governs when parallelism is permissible; the host executes it — no scheduler, daemon, or second orchestration engine, ever.
 
 ### Flags (Turbo profile only)
 
@@ -77,7 +77,7 @@ Worker, wave, and repair caps compose with the #258 autonomy budgets (referenced
 | **`--waves N`** | Execute N waves in parallel (default 1, max 4). Requires Turbo profile. Sequential review-ready fallback on unsupported hosts. | Sequential review-ready |
 
 ### Per-Task Verify
-Each worker runs: implement → test → verify. Automatic pass → merge queue. Fail → bounded auto-refine (max 2 attempts). Third failure → human escalation with diagnostics.
+Each worker runs: implement → test → verify. Automatic pass → merge queue. Fail → bounded auto-refine (max 2 attempts = Strikes 2–3 of the 3-strike budget). Third failure → human escalation with diagnostics.
 
 ### Refine Loop (Bounded Oracle Discipline)
 ```text
@@ -103,7 +103,7 @@ HUMAN
 ```
 
 ### Human Gates
-Review checkpoint after every wave; merge/deploy never enter the loop. Scope changes during refine use the normal Scope Change path, not silent mutation.
+Review checkpoint after every wave; merge/deploy never enter the loop. Scope changes during refine use the normal Scope Change path, not silent mutation. Tick the [wave pre-flight checklist](../docs/recipes/auto-waves-preflight-checklist.md) before `--waves`; map plain-English intent with the [phrase→boundary sheet](../docs/recipes/auto-phrase-boundary-sheet.md).
 
 ---
 
