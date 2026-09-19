@@ -4,7 +4,7 @@
 - **Target CSS Framework**: [Tailwind CSS v4 / CSS Variables / CVA]
 - **Upstream Design Tool**: [Figma Variables / Tokens Studio / Sketch / Penpot / None]
 - **Accessibility Target**: WCAG 2.2 Level AA Compliance
-- **Mobile Target**: Fluid responsive reflow with touch targets at the $24 \times 24\text{px}$ AA floor (SC 2.5.8); primary controls target ~$44 \times 44\text{px}$ where practical
+- **Mobile Target**: Fluid responsive reflow with $\ge 44 \times 44\text{px}$ touch targets
 
 ---
 
@@ -224,7 +224,7 @@ h1, h2, h3 {
   --space-8: 2rem;     /* 32px */
   --space-12: 3rem;    /* 48px */
 
-  /* Touch Targets (Primary controls ~44px; AA floor 24px, SC 2.5.8) */
+  /* Touch Targets (Minimum 44px for thumb accessibility) */
   --touch-target-min: 44px;
 
   /* Icon Sizing Tokens */
@@ -254,7 +254,7 @@ h1, h2, h3 {
 
 ## 4. Transitions & Motion Tokens
 
-> ⚠️ **Compositor Rule**: Prefer animating `transform` and `opacity`; `color`, `background-color`, and `border-color` transitions are permitted for interaction feedback. Never animate layout-affecting properties. Never use `transition: all`.
+> ⚠️ **Compositor Rule**: Animate `transform` and `opacity` only. Never use `transition: all`.
 
 ```css
 :root {
