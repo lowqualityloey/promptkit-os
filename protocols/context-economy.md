@@ -31,12 +31,14 @@ Agents acquire context in expanding layers termed **Zoom Apertures (Z0–Z4)**. 
 *   **Context Aperture (`Z0–Z4`)**: Defines the physical scope of code and documentation inspected for a given decision.
 
 ```text
-TASK RISK CEREMONY                      CONTEXT APERTURE
-L0: Direct (typos, 1-line tweaks)       Z0: Symbol & Signatures (types, interfaces, AST contracts)
-L1: Standard (localized bugs, features) Z1: Target & Local Window (symbol body + bounded slice)
-L2: Controlled (substantive risk)       Z2: File & Interface (full target file + imports)
-L3: Release-Critical (release safety)   Z3: Module & Dependencies (callers, consumers, shared state)
-                                        Z4: Macro & Architecture (cross-package, DB schema, RFCs)
+TASK RISK CEREMONY                    DEFAULT CONTEXT APERTURE
+
+L0: Direct (typos, 1-line tweaks)     Z0: Symbol & Signatures (types, interfaces, AST contracts)
+L1: Standard (localized bugs)         Z1: Target & Local Window (symbol body + bounded slice)
+L2: Controlled (substantive risk)     Z2+: File & Interface (full target file + imports)
+L3: Release-Critical (release safety) Z3+: Module & Dependencies (callers, consumers, shared state)
+
+Context aperture is independent of task risk and may escalate to Z4 (Macro & Architecture) when evidence requires it.
 ```
 
 **Adaptive Relationship (Risk Informs Aperture, Not Identity)**:
