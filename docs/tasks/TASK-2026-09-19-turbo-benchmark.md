@@ -102,6 +102,8 @@ Headline: at this trivial task size, subagent spawn latency dominates — B harm
 
 **Recommendation for #213: REFINE** — Turbo useful above a task-size threshold; propose (not implement) a task-size tick for the pre-flight checklist. No promotion evidence; no removal case. #213 itself untouched.
 
+ICFR column (opened, no interpretation): waves executed 3 (Phase-3 arms B/C count as 2 parallel waves + 0 production waves) · independence failures detected 0 · ICFR not computed below ~30 waves — raw counts only, with workload-type description.
+
 ### Transition update
 
 | in_progress | completed | 2026-09-19 UTC | Implementor agent | Arms + probes done; scorecard above | This section |

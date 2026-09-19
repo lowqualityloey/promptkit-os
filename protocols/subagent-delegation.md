@@ -69,6 +69,11 @@ Strictly forbid raw dumps. Require the subagent to return a compact 5-15 line sy
 - **Findings**: What was discovered (with exact file paths and line numbers).
 - **Risks / Invariants**: What constraints must be respected.
 - **Actionable Recommendation**: 1-3 concrete next steps.
+- **Structured worker evidence** (for wave workers — evidence, not prose assurance):
+  - `files_changed`: exact paths touched
+  - `verification`: each command run with its exit code (failures reported, never summarized away)
+  - `contract`: which acceptance criteria are satisfied
+  - `known_risks`: explicit list, or `none`
 
 ---
 

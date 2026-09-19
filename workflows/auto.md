@@ -68,7 +68,7 @@ When invoked, `workflows/auto.md` operates under a declared terminal boundary:
 No worker consumes another worker's unreviewed output within the same wave. Dependent tasks belong to later waves — a wave with hidden dependencies is sequential work mislabeled parallel.
 
 ### Budget Linkage
-Worker, wave, and repair caps compose with the [#258 autonomy budgets](https://github.com/lowqualityloey/promptkit-os/issues/258) (referenced, not duplicated). PromptKit governs when parallelism is permissible; the host executes it — no scheduler, daemon, or second orchestration engine, ever.
+Worker, wave, and repair caps compose with the [#258 autonomy budgets](https://github.com/lowqualityloey/promptkit-os/issues/258) (referenced, not duplicated). PromptKit governs when parallelism is permissible; the host executes it — no scheduler, daemon, or second orchestration engine, ever. Wave functionality must remain a capability of `pk:auto`, never become an orchestration subsystem.
 
 ### Flags (Turbo profile only)
 
@@ -77,7 +77,7 @@ Worker, wave, and repair caps compose with the [#258 autonomy budgets](https://g
 | **`--waves N`** | Execute N waves in parallel (default 1, max 4). Requires Turbo profile. Sequential review-ready fallback on unsupported hosts. | Sequential review-ready |
 
 ### Per-Task Verify
-Each worker runs: implement → test → verify. Automatic pass → merge queue. Fail → bounded auto-refine (max 2 attempts = Strikes 2–3 of the 3-strike budget). Third failure → human escalation with diagnostics.
+Each worker runs: implement → test → verify. Automatic pass → merge queue. Fail → bounded auto-refine (max 2 attempts = Strikes 2–3 of the 3-strike budget). Third failure → human escalation with diagnostics. Worker GREEN ≠ Wave GREEN: integrated state must pass verification before the wave succeeds.
 
 ### Refine Loop (Bounded Oracle Discipline)
 ```text
