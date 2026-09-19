@@ -3,6 +3,11 @@
 ## Fast Shorthand
 Trigger anytime with: `pk:route` (or `/pk-route`)
 
+### Fast Companion Scripts (Optional Sub-150ms Routing)
+- **Bash**: `bash scripts/pk-route.sh "YOUR PROMPT"`
+- **PowerShell**: `pwsh -NoProfile -File scripts/pk-route.ps1 "YOUR PROMPT"`
+- **Axiom**: *"Jev Recommends, PromptKit Decides."* Powered by TypeSafe AI's Jev (System One) with deterministic PromptKit policy arbitration. Hard safety triggers strictly enforce a 0% Unsafe Underclassification floor, falling back cleanly to offline deterministic routing if the API key is missing or the endpoint is unreachable.
+
 ## Mission
 Quickly orient the developer and AI agent to the right workflow, template, and quality gate based on the current engineering state.
 
