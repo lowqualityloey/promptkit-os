@@ -1,5 +1,8 @@
 # Performance Audit & Optimization Report
 
+> [!NOTE]
+> **Stack Neutrality**: The worked example in this template illustrates a web/API/PostgreSQL stack. Treat every layer, metric, and tool as *illustrative*: keep the structure (baseline → layered findings → root cause → surgical change → measured delta → regression guards) and substitute the layers, metrics, and tooling of the detected project stack (e.g., Rust: `criterion` / flamegraph; Go: `pprof` / benchmarks; Python: `py-spy` / `cProfile`; CLI: benchmark harnesses; databases: `EXPLAIN ANALYZE`-style query plans). Drop sections that do not apply and record `N/A - not applicable to this stack` rather than inventing measurements.
+
 ## Metadata & Target Scope
 
 | Attribute | Specification |
