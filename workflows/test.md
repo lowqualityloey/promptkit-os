@@ -212,8 +212,8 @@ A disagreement between the test plan, Planning Record, and Task Record blocks re
 ## Completion Criteria
 - Comprehensive test plan generated in `./docs/tests/`.
 - Scenarios allocated across Unit, Integration, and E2E seams.
-- Real-database harness configured for integration tests.
+- Real-database harness configured for integration tests when the project has a database; record `N/A - no database` otherwise.
 - External mock boundaries and test data factories documented.
-- **Observable Red-to-Green**: Test failure confirmed and documented prior to writing production code for all active code work.
+- **Observable Red-to-Green**: Test failure confirmed and documented prior to writing production code for Code Work under an enabled TDD Enforcement Mode (the canonical Task Record owns the mode; an absent field defaults to `disabled` — record `N/A - TDD Enforcement Mode disabled` otherwise, per Disabled Code Work).
 - **Project Database Isolation**: Test harnesses use project-scoped database containers (e.g. `./docker-compose.yml`) and never attach to foreign project instances.
 - **Dual-Compatible Telemetry Status Card**: Conclude with a 3-line telemetry status card (`> 📊 **Milestone**: ... \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: ...`) and a `> [!TIP]` callout recommending implementation of the red-to-green test suite. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; `[!IMPORTANT]` / `[!WARNING]` halts still fire. Bounded to closed-set operational choices: for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead — see the Picker routing rule in `workflows/plan.md`.
