@@ -105,6 +105,25 @@ HUMAN
 ### Human Gates
 Review checkpoint after every wave; merge/deploy never enter the loop. Scope changes during refine use the normal Scope Change path, not silent mutation. Tick the [wave pre-flight checklist](../docs/recipes/auto-waves-preflight-checklist.md) before `--waves`; map plain-English intent with the [phrase→boundary sheet](../docs/recipes/auto-phrase-boundary-sheet.md).
 
+### Pause, Checkpoint & Resume (Turbo-gated experiment)
+
+Turbo-only (`--experimental` acknowledgement required; Balanced/Lite behavior unchanged). A wave may **pause at its boundary**, persist its checkpoint to `docs/STATE.md`, and wait for explicit human resume — then continue from the checkpoint with task/contract/evidence integrity intact.
+
+- **One park/resume boundary per wave** (max waves 4 stands). No recursive parking: a resumed wave that parks again halts the run.
+- **Halt-block schema** (YAML in `docs/STATE.md`):
+```yaml
+halt:
+  reason: strike_exhausted | review_failed | scope_growth
+  wave: 2
+  worker: worker-3
+  evidence:
+    command: npm test
+    exit_code: 1
+  required_action: human_diagnosis
+```
+- **Passive-artifact rule**: a halt record is an observable state artifact, **never an execution trigger**. No poller, no auto-resume, no queue, no scheduler, no daemon — generalize none of this.
+- **Separation of concerns**: PromptKit defines governance, context, workflow, and evidence; the host executes; the agent reasons; the human authorizes. Experiment complexity must not become permanent architecture until its measured benefit exceeds its coordination and maintenance cost. Worked example: [`docs/recipes/auto-wave-pause-resume.md`](../docs/recipes/auto-wave-pause-resume.md).
+
 ---
 
 ### Upfront Announcement Protocol (Turn 1 Banner)
