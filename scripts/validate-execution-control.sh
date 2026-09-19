@@ -75,6 +75,7 @@ diagnostic() {
 
 trim() {
     local value="$1"
+    value="${value%$'\r'}"
     value="${value#${value%%[![:space:]]*}}"
     value="${value%${value##*[![:space:]]}}"
     printf '%s' "$value"
@@ -83,13 +84,13 @@ trim() {
 field_exists() {
     local file="$1"
     local label="$2"
-    awk -v needle="- **${label}**:" 'index($0, needle) == 1 { found=1; exit } END { exit(found ? 0 : 1) }' "$file"
+    awk -v needle="- **${label}**:" '{ sub(/\r$/, ""); } index($0, needle) == 1 { found=1; exit } END { exit(found ? 0 : 1) }' "$file"
 }
 
 field_value() {
     local file="$1"
     local label="$2"
-    awk -v needle="- **${label}**:" 'index($0, needle) == 1 { value=substr($0, length(needle)+1); sub(/^[[:space:]]+/, "", value); if (value ~ /^`.*`$/) value=substr(value, 2, length(value)-2); print value; exit }' "$file"
+    awk -v needle="- **${label}**:" '{ sub(/\r$/, ""); } index($0, needle) == 1 { value=substr($0, length(needle)+1); sub(/^[[:space:]]+/, "", value); sub(/[[:space:]]+$/, "", value); if (value ~ /^`.*`$/) value=substr(value, 2, length(value)-2); sub(/^[[:space:]]+/, "", value); sub(/[[:space:]]+$/, "", value); print value; exit }' "$file"
 }
 
 list_items() {
@@ -581,23 +582,95 @@ else
 fi
 
 STATE_FILE="$ROOT/docs/STATE.md"
-if [ -f "$STATE_FILE" ] && grep -Eiq 'Execution-Control Projection|3A\. Execution-Control' "$STATE_FILE"; then
-    state_id="$(field_value "$STATE_FILE" "Task ID")"
+if [ -f "$STATE_FILE" ]; then
     state_path="$(relative_path "$STATE_FILE")"
-    [ -n "${TASK_FILE_BY_ID[$state_id]+set}" ] || diagnostic STATE_PROJECTION_MISMATCH "$state_id" "$state_path" "STATE projection references unknown Task ID: $state_id" "Synchronize docs/STATE.md from the canonical Task Record"
-    if [ -n "${TASK_FILE_BY_ID[$state_id]+set}" ]; then
-        task_file="${TASK_FILE_BY_ID[$state_id]}"
-        compare_pairs=("Execution State|Execution State" "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status" "Active Task Pointer|Active Task Pointer" "Owner / Current Actor|Current Actor")
-        for pair in "${compare_pairs[@]}"; do
-            IFS='|' read -r state_label task_label <<< "$pair"
-            state_value="$(field_value "$STATE_FILE" "$state_label")"
-            task_value="$(field_value "$task_file" "$task_label")"
-            [ "$state_value" = "$task_value" ] || diagnostic STATE_PROJECTION_MISMATCH "$state_id" "$state_path" "STATE $state_label '$state_value' disagrees with Task Record '$task_value'" "Reconcile the projection without overriding the Task Record"
-        done
-        state_revision="$(revision_token "$(field_value "$STATE_FILE" "Current Revision")")"
-        task_revision="${TASK_REVISION_BY_ID[$state_id]-}"
-        if [ -n "$state_revision" ] && [ -n "$task_revision" ] && [ "$state_revision" != "$task_revision" ]; then
-            diagnostic REVISION_MISMATCH "$state_id" "$state_path" "STATE revision '$state_revision' disagrees with Task Record revision '$task_revision'" "Use one exact validated revision across linked evidence"
+
+    # Validate Markdown table structural integrity and pipe hygiene in STATE.md
+    in_code_block=0
+    in_table=0
+    header_cols=0
+    delim_line_index=-1
+
+    state_lines=()
+    while IFS= read -r line || [ -n "$line" ]; do
+        state_lines+=("${line%$'\r'}")
+    done < "$STATE_FILE"
+
+    count_table_cols() {
+        local raw="$1"
+        local clean="${raw//\\|/__PIPE__}"
+        clean="${clean#"${clean%%[![:space:]]*}"}"
+        clean="${clean%"${clean##*[![:space:]]}"}"
+        clean="${clean#|}"
+        clean="${clean%|}"
+        local without="${clean//|/}"
+        echo $(( ${#clean} - ${#without} + 1 ))
+    }
+
+    total_lines="${#state_lines[@]}"
+    for ((i=0; i<total_lines; i++)); do
+        line_num=$((i + 1))
+        line="${state_lines[i]}"
+
+        if [[ "$line" =~ ^[[:space:]]*\`\`\` ]]; then
+            in_code_block=$((1 - in_code_block))
+            in_table=0
+            continue
+        fi
+        [ "$in_code_block" -eq 1 ] && continue
+
+        is_table_line=0
+        [[ "$line" =~ ^[[:space:]]*\|.*\|[[:space:]]*$ ]] && is_table_line=1
+
+        if [ "$in_table" -eq 0 ]; then
+            if [ "$is_table_line" -eq 1 ]; then
+                next_is_delim=0
+                if [ $((i + 1)) -lt "$total_lines" ]; then
+                    next_line="${state_lines[i + 1]}"
+                    [[ "$next_line" =~ ^[[:space:]]*\|([[:space:]]*:?-+:?[[:space:]]*\|)+[[:space:]]*$ ]] && next_is_delim=1
+                fi
+                if [ "$next_is_delim" -eq 1 ]; then
+                    in_table=1
+                    delim_line_index=$((i + 1))
+                    header_cols="$(count_table_cols "$line")"
+                else
+                    diagnostic ORPHANED_TABLE_ROW "STATE" "$state_path" "Table row at line $line_num appears without a preceding table header or delimiter" "Keep table rows contiguous without blank lines, or ensure table has a header and delimiter"
+                fi
+            fi
+        else
+            if [ -z "$(echo "$line" | tr -d '[:space:]')" ] || [ "$is_table_line" -eq 0 ]; then
+                in_table=0
+            elif [ "$i" -eq "$delim_line_index" ]; then
+                d_cols="$(count_table_cols "$line")"
+                if [ "$d_cols" -ne "$header_cols" ]; then
+                    diagnostic TABLE_COLUMN_MISMATCH "STATE" "$state_path" "Table delimiter at line $line_num has $d_cols columns (expected $header_cols)" "Ensure table delimiter matches header column count"
+                fi
+            else
+                r_cols="$(count_table_cols "$line")"
+                if [ "$r_cols" -ne "$header_cols" ]; then
+                    diagnostic TABLE_COLUMN_MISMATCH "STATE" "$state_path" "Table row at line $line_num has $r_cols columns (expected $header_cols)" "Ensure all cells are on a single line and literal pipes are escaped with \|"
+                fi
+            fi
+        fi
+    done
+
+    if grep -Eiq 'Execution-Control Projection|3A\. Execution-Control' "$STATE_FILE"; then
+        state_id="$(field_value "$STATE_FILE" "Task ID")"
+        [ -n "${TASK_FILE_BY_ID[$state_id]+set}" ] || diagnostic STATE_PROJECTION_MISMATCH "$state_id" "$state_path" "STATE projection references unknown Task ID: $state_id" "Synchronize docs/STATE.md from the canonical Task Record"
+        if [ -n "${TASK_FILE_BY_ID[$state_id]+set}" ]; then
+            task_file="${TASK_FILE_BY_ID[$state_id]}"
+            compare_pairs=("Execution State|Execution State" "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status" "Active Task Pointer|Active Task Pointer" "Owner / Current Actor|Current Actor")
+            for pair in "${compare_pairs[@]}"; do
+                IFS='|' read -r state_label task_label <<< "$pair"
+                state_value="$(field_value "$STATE_FILE" "$state_label")"
+                task_value="$(field_value "$task_file" "$task_label")"
+                [ "$state_value" = "$task_value" ] || diagnostic STATE_PROJECTION_MISMATCH "$state_id" "$state_path" "STATE $state_label '$state_value' disagrees with Task Record '$task_value'" "Reconcile the projection without overriding the Task Record"
+            done
+            state_revision="$(revision_token "$(field_value "$STATE_FILE" "Current Revision")")"
+            task_revision="${TASK_REVISION_BY_ID[$state_id]-}"
+            if [ -n "$state_revision" ] && [ -n "$task_revision" ] && [ "$state_revision" != "$task_revision" ]; then
+                diagnostic REVISION_MISMATCH "$state_id" "$state_path" "STATE revision '$state_revision' disagrees with Task Record revision '$task_revision'" "Use one exact validated revision across linked evidence"
+            fi
         fi
     fi
 fi
