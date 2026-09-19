@@ -80,12 +80,32 @@ $inputPrompt = if (-not [string]::IsNullOrWhiteSpace($Prompt)) {
 # ------------------------------------------------------------------------------
 
 function Test-HardL3 ([string]$text) {
-  $pattern = '(?i)\b(deploy|release|publish|tag\s+candidate|make\s+this\s+live|production\s+deploy|hotfix\s+prod|ship\s+release|v\d+\.\d+)'
-  return ($text -match $pattern)
+  # Release, deploy, publish, tag candidate, production push (#345: live
+  # publication now tolerates ordinary modifiers, e.g. "make the app live",
+  # "turn this on for everyone").
+  $corePattern = '(?i)\b(deploy|release|publish|tag\s+candidate|make\s+(this|it|that|everything)(\s+[a-z]+)?\s+(live|public)|make\s+the\s+[a-z]+\s+(live|public)|turn\s+(this|it|that|everything)\s+on|production\s+deploy|hotfix\s+prod|ship\s+release|v\d+\.\d+)'
+  if ($text -match $corePattern) {
+    return $true
+  }
+  # Bare "ship" (#345): a release verb on its own is release-critical, but when
+  # a controlled-change (L2) trigger coexists, the L2 trigger claims the input.
+  # This keeps "change the migration and ship it" at Level 2 while
+  # "ship the new version to real users" reaches Level 3.
+  if ($text -match '(?i)\bship\b') {
+    if (Test-HardL2 $text) {
+      return $false
+    }
+    return $true
+  }
+  return $false
 }
 
 function Test-HardL2 ([string]$text) {
-  $pattern = '(?i)\b(alter\s+table|migration|migrate|drop\s+table|create\s+table|schema|database|production\s+database|auth|token|session|jwt|oauth|credentials|secret|api\s+contract|breaking)'
+  # Schema, migration, alter table, drop, auth, session, jwt, credentials,
+  # production database (#345: extended auth vocabulary and API-contract
+  # synonyms: login, sign in/sign-in, signup, SSO, password; API response
+  # format, API payload, API endpoint, bare endpoint).
+  $pattern = '(?i)\b(alter\s+table|migration|migrate|drop\s+table|create\s+table|schema|database|production\s+database|auth|login|sign[-\s]?in|signup|sso|password|token|session|jwt|oauth|credentials|secret|api\s+(contract|response\s+format|payload|endpoint)|endpoint|breaking)'
   return ($text -match $pattern)
 }
 
