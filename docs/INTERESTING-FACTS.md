@@ -412,7 +412,7 @@ From `workflows/design-system.md`:
 
 **Specific Requirements**:
 - Color contrast ≥ 4.5:1 for normal text
-- Touch targets ≥ 44×44px on mobile
+- Touch targets: ~44×44px on primary mobile controls (24×24px AA floor, SC 2.5.8)
 - Full keyboard navigation
 - ARIA attributes on custom components
 

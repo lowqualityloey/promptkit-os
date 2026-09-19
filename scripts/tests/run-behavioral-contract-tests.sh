@@ -130,6 +130,9 @@ assert_contains "workflows/design-system.md" "Design Study Protocol" "Design wor
 assert_contains "workflows/design-system.md" "Refuse Uniform Bento Grids" "Design workflow defines anti-bento layout rhythm rule"
 assert_contains "protocols/discovery-intake.md" "Slot 6 Design Vibe" "Discovery intake includes aesthetic design vibe slot"
 assert_contains "workflows/design-system.md" "Visual Floor Enforced" "Design workflow checklist includes Visual Floor enforcement"
+assert_contains "workflows/design-system.md" "Requirement Over Implementation" "Design workflow separates design requirements from implementation examples"
+assert_contains "workflows/design-system.md" "Design Ceremony Tiers" "Design workflow defines D0-D3 minimum-sufficient ceremony tiers"
+assert_contains "workflows/design-system.md" "Applicability-Based" "Design workflow scopes interaction states by applicability instead of a blanket 8-state mandate"
 
 echo ""
 echo "📌 Scenario K: Project Database & Harness Isolation"

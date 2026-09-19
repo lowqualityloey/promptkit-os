@@ -323,7 +323,7 @@ PromptKit will use the closest DESIGN.md to the active workspace.
 ✅ "Primary: #1a56db, Accent: #f59e0b, use as CSS variables"
 
 ❌ "Make it accessible"
-✅ "Minimum contrast 4.5:1, touch targets ≥44×44px"
+✅ "Minimum contrast 4.5:1, touch targets ≥24×24px AA floor (~44×44px on primary controls)"
 ```
 
 ### 3. **Update When Brand Changes**
