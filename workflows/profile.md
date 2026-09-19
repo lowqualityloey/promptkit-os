@@ -35,6 +35,11 @@ Profile economics and token budgets are maintained in [`docs/BENCHMARKS.md`](../
 ### Phase 2: Decide (flags, picker, or non-interactive default)
 1. **Flag form**: `pk:profile --lite | --balanced | --turbo --experimental`. A flag is an explicit instruction — skip the picker.
 2. **Turbo guard**: `--turbo` without `--experimental` (or without explicit in-chat acknowledgement) is **refused**, mirroring `init.sh`: Turbo is experimental, carries up to ~2x measured token cost, and **never** removes the Level 3 human-approval boundary. No files are touched on refusal.
+2b. **Turbo suitability check (advisory — runs before the acknowledgement is accepted)**:
+   - Ask one question: **"Is this milestone's work parallelizable?"** Evidence source: [`docs/recipes/auto-waves-preflight-checklist.md`](../docs/recipes/auto-waves-preflight-checklist.md) — link it, never restate its ticks.
+   - On a "no" answer — dependency-ordered milestones, a single active lane, or sequential review chains — state that parallel waves buy **zero benefit on sequential work** while the experimental cost still applies, offer **Balanced** with the rationale, and record the answer.
+   - **Advisory, never blocking**: a "no" routes to Balanced only on operator confirmation, and an explicit `--turbo --experimental` instruction is still honored. Refusal semantics and the Balanced/Lite paths are unchanged.
+   - Non-interactive / CI: skip the question, keep the existing acknowledgement requirement, and render no prompt.
 3. **Interactive, no flag**: invoke the host's native selection tool (`ask_question` / prompt picker) as the final action of this decision step, with the SAME three options as `pk:onboard`:
    - Option 1: current profile — keep unchanged `(Recommended)`
    - Option 2: Lite — 6 workflows, fastest onboarding path
@@ -63,6 +68,7 @@ Profile economics and token budgets are maintained in [`docs/BENCHMARKS.md`](../
 ## Completion Criteria
 - [ ] Profile line AND `## 0.` body agree on the new profile; exactly one directive block present in each configured agent file.
 - [ ] Turbo refusal honored when experimental acknowledgement is absent.
+- [ ] Turbo suitability question asked before the acknowledgement; the advisory outcome is recorded and an explicit override is still honored.
 - [ ] No prompt rendered in non-interactive contexts (`PROMPTKIT_NO_INTERACTIVE=1`, piped stdin, CI).
 - [ ] Token measurement shown post-switch matches expectations for the target profile.
 - [ ] `pk:sync` recommended (or executed) so the live session adopts the new directive.

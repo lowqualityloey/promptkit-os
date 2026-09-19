@@ -159,7 +159,7 @@ After completing the scan and presenting the findings summary / Executive Scorec
        multiSelect: false
      ```
    - Hosts without `ask_question` support: fallback to `> [!TIP] ### 💡 Choose profile (Type number & Enter):` with Option 1 prefixed `(Recommended)` and Option 2 as default.
-   - If developer chooses Turbo, require explicit experimental acknowledgement: second confirmation `Acknowledge Turbo experimental cost (up to ~2x measured tokens) and that human approval still required for L3? [y/N]`
+   - If developer chooses Turbo, run the advisory suitability check first (sequential or dependency-ordered work pays the experimental cost with **zero benefit on sequential work** — evidence source: `docs/recipes/auto-waves-preflight-checklist.md`), then require explicit experimental acknowledgement: second confirmation `Acknowledge Turbo experimental cost (up to ~2x measured tokens) and that human approval still required for L3? [y/N]`. The suitability answer is advisory and never blocks an explicit Turbo choice.
    - Store choice as machine-readable `profile: lite|balanced|turbo` in `PROMPTKIT.md` (both human section `## 0. PromptKit OS Profile` and bottom `profile:` line) so future sessions don't re-ask.
     - Non-interactive / CI: respect flags `--lite`, `--balanced`, `--turbo --experimental` passed to `init.sh` / `init.ps1`, or `PROMPTKIT.md` existing profile, or default to `balanced`. When `PROMPTKIT_NO_INTERACTIVE=1` is set, skip any picker (this agent-level prompt and the shell-level TTY picker in `init.sh` / `init.ps1`) and apply flags/default only.
 
