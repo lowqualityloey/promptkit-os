@@ -23,6 +23,8 @@ Eliminate decision fatigue and guesswork by mapping every software development s
 
 `workflows/route.md` is the canonical authority for Level 0–3 task ceremony classification, level-selection criteria, escalation, downgrade, and Task Record rules.
 
+> **Terminology:** Use `Level 0`–`Level 3` in explanatory prose and canonical definitions. Use `L0`–`L3` as compact notation in tables, banners, telemetry, injected directives, and other token-sensitive contexts.
+
 > A decision-grade summary of Levels 0–3 ships in the injected directive so agents can classify a request without loading this file. This document remains the canonical authority; where the summary and this file differ, this file wins.
 
 ### Upfront Ceremony Declaration Protocol (Turn 1 Announcement)
