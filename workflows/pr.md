@@ -10,8 +10,8 @@ Transform a series of local commits into a high-signal, staff-level Pull Request
 
 ## Preconditions
 - Active feature or bugfix branch with commits ready for review.
-- Target base branch identified (default: `main` or `origin/main`).
-- All tests and typechecks passing per `protocols/code-quality-gate.md`.
+- Target base branch and remote identified (default: `main` on the resolved base remote).
+- Verification required by the task's ceremony level and project quality contract is passing per `protocols/code-quality-gate.md` (not every project has a compile/typecheck step — docs-only changes use the artifact-appropriate gate).
 
 ---
 
@@ -33,17 +33,17 @@ Transform a series of local commits into a high-signal, staff-level Pull Request
 
 1. **Verify Target Comparison**:
     ```bash
-    BASE_BRANCH="origin/main"
+    BASE_BRANCH="<resolved-base-remote>/main"  # e.g. origin/main; resolve remote/branch from the PR target, not assumed
     git log ${BASE_BRANCH}..HEAD --oneline
     git diff --stat ${BASE_BRANCH}...HEAD
     ```
 2. **Pre-PR Conflict & Gate Check (Mandatory)**:
     ```bash
     git status -s
-    git fetch origin && git log HEAD..origin/main --oneline
+    git fetch <resolved-remote> && git log HEAD..<resolved-remote>/main --oneline
     ```
     - If the tree is dirty with this task's uncommitted changes, stop: stage via `pk:commit` first (milestone git boundary).
-    - If `origin/main` advanced (log shows commits), rebase or merge before opening the PR; never push a known-conflicted branch.
+    - If the resolved base remote's `main` advanced (log shows commits), rebase or merge before opening the PR; never push a known-conflicted branch.
     - Require `Quality Gate: measured this turn` (tests/typecheck actually run) before `gh pr create`. Otherwise record `not measured` and do not open the PR.
     - On conflict or dirty tree, emit `> [!WARNING]` titled `### ⚠️ Blocked: Waiting on Human Input` with exact resolve commands. No auto-push; human approval boundary holds — except inside an explicitly authorized `pk:auto` run (`--until pr` / `--full`), where the declared run boundary is the standing authorization for push and draft-PR creation within that run (see Action Authority Model in `protocols/code-quality-gate.md`). Merge always requires separate explicit human action.
 2. **Review Commit History**:
@@ -56,16 +56,13 @@ Transform a series of local commits into a high-signal, staff-level Pull Request
 Before writing the PR body, collect verifiable evidence:
 
 1. **Test Verification**:
-   Execute the project test suite and capture the result:
-   ```bash
-   pnpm test        # or npm test / pytest
-   pnpm test:e2e    # if E2E suites exist
-   ```
-2. **Database Migration Safety**:
+   Execute the verification required by the task's ceremony level and project quality contract and capture the result (e.g. `pnpm test` / `pytest` / `cargo test` / `go test`; add `pnpm test:e2e` where an E2E suite exists and is relevant to the change). L0 uses focused verification; L1 uses `fast` + `required`; L2/L3 use the task-defined full verification — not a universal full-suite run.
+
+2. **Database Migration Safety** (when persistence or schema changes are present; otherwise `N/A - <reason>`):
    Inspect whether any migration files were touched:
-   - Are schema changes additive (Expand-Contract pattern)?
-   - Are there any `DROP TABLE`, `DROP COLUMN`, or `TRUNCATE` calls? If so, halt and require multi-phase migration planning.
-   - Are Row-Level Security (RLS) policies and composite indexes defined?
+   - Are schema changes additive under the applicable migration safety strategy (e.g. Expand-Contract for live or compatibility-sensitive data; one-shot/disposable/pre-deployment may skip with documented rationale)?
+   - Are there any `DROP TABLE`, `DROP COLUMN`, or `TRUNCATE` calls that violate the applicable strategy? If so, halt and require multi-phase migration planning.
+   - Are the project's applicable Row-Level Security (RLS) policies and composite indexes defined where multi-tenant or query efficiency applies?
 3. **Secret & Probe Check**:
    Confirm that zero secrets or temporary debug probes (`[DEBUG-xxxx]`) exist across the branch diff.
 
@@ -93,18 +90,18 @@ For Level 2 (Controlled) and Level 3 (Release-Critical) Work, use the optional *
 
 Structure the PR description using `templates/pull-request-template.md`:
 
-1. **Title**: Follow Conventional Commits format (`type(scope): concise summary under 72 chars`).
+1. **Title**: Follow the PromptKit PR title convention — Conventional Commit format (`type(scope): concise summary under 72 chars`). Scope and 72-char limit are project convention, not spec mandates.
 2. **Summary**: Group changes by architectural layer (Data, Backend, Frontend, Config).
-3. **Acceptance Criteria Checklist**: Include a mandatory `### Acceptance Criteria Checklist` section containing verified Gherkin scenarios:
+3. **Acceptance Criteria Checklist**: Include a mandatory `### Acceptance Criteria Checklist` section containing verified Gherkin scenarios (where Gherkin is required by the Task Record/spec; otherwise describe the observable behavior change with AC IDs):
    ```markdown
    ### Acceptance Criteria Checklist
    - [x] **AC-1**: [Given / When / Then scenario]
    - [x] **AC-2**: [Given / When / Then scenario]
    ```
    AC provenance by level: Level 2/3 items transcribe the Task Record / RFC `AC-*` with their recorded evidence. Level 0/1 items describe the diff's observable behavior change, and no box is checked without in-turn verification evidence (test command plus `exit code 0`) cited beside it — never invent criteria just to check them off.
-4. **Database Checklist**: State whether migrations are present and verify Expand-Contract safety.
-5. **Testing Evidence**: Paste test runner pass counts and provide numbered manual testing steps.
-6. **Rollback Strategy**: Document whether this PR is zero-state reversible or requires step-by-step database rollbacks.
+4. **Database Checklist**: State whether migrations are present and, when applicable, verify the project's migration safety strategy (e.g. Expand-Contract for live data).
+5. **Testing Evidence**: Paste test runner pass counts and, when human interaction is required to establish acceptance evidence, provide numbered manual verification steps (otherwise `N/A — no manual verification applicable`).
+6. **Rollback Strategy**: Document whether this PR is zero-state reversible or requires step-by-step database rollbacks (when persistence exists).
 7. **Reviewer Focus**: Point reviewers to the most load-bearing lines or complex logic.
 
 ---
