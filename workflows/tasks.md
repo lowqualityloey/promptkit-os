@@ -4,7 +4,7 @@
 Trigger anytime with: `pk:tasks` (or `/pk-tasks`, `pk:issue`, `pk:kanban`, `pk:task`)
 
 ## Mission
-Transform architectural specifications (`pk:plan`), technical RFCs (`docs/specs/`), or user feature requests into atomic, single-responsibility GitHub issues with strict Acceptance Criteria (Gherkin format + checklists), technical invariant locking, priority tagging (`#priority/p0-p3`), copy-pasteable GitHub CLI (`gh issue create`) commands, and GitHub Projects v2 (Kanban) tracking.
+Transform architectural specifications (`pk:plan`), technical RFCs (`docs/specs/`), or user feature requests into atomic, single-responsibility tasks with strict Acceptance Criteria (Gherkin format + checklists), technical invariant locking, priority tagging (`#priority/p0-p3`), and traceability to the configured tracking system — GitHub Issues (copy-pasteable `gh issue create` commands, Projects v2 Kanban) or manual import for Linear, Jira, or Local Markdown.
 
 Bridge the critical operational gap between high-level architectural design and hands-on coding. Prevent scope creep, untracked work, and forgotten edge cases before any code is written.
 
@@ -104,9 +104,8 @@ The Task Record, not a conversational completion claim or board status alone, co
 
 ### Phase 2: Atomic Task Decomposition & Sizing
 
-1. **Apply the 1-to-4 Hour Sizing Rule**:
-   - Every issue must represent a single, cohesive unit of work achievable in 1 to 4 hours.
-   - If an issue requires more than 4 hours or touches multiple architectural layers at once, split it.
+1. **Prefer the 1-to-4 Hour Task Size**:
+    - Prefer atomic tasks completable in roughly 1 to 4 hours. If a task materially exceeds that range, split it where meaningful; if splitting would create artificial boundaries, document the reason instead of splitting.
 2. **Assign Priority Tags**:
    - `#priority/p0`: Blocker or critical path (data migrations, core security, authentication).
    - `#priority/p1`: High priority / core user flow.
@@ -125,19 +124,19 @@ For each decomposed task, fill out `.promptkit/templates/issue-task-template.md`
 1. **User Story / Intent**:
    - State the actor, capability, and value: `As a <user>, I want <action> so that <value>`.
 2. **Technical Scope & Invariants**:
-   - Exact files, endpoints, and database tables touched.
-   - Non-negotiable invariants: Tenant Row-Level Security (RLS), Expand-Contract schema safety, input validation schemas, performance budgets.
-   - Explicit "Out of Scope" declaration to prevent mid-flight scope creep.
+    - Exact files, endpoints, and database tables touched.
+    - Applicable technical invariants identified by the planning/specification process (e.g. tenant isolation, Expand-Contract schema safety, input validation schemas, performance budgets) — include only what applies; record the rest as `N/A - <reason>`.
+    - Explicit "Out of Scope" declaration to prevent mid-flight scope creep.
 3. **Verifiable Acceptance Criteria**:
-   - **Happy Path (Gherkin)**: `Given <context>, When <action>, Then <outcome>`.
-   - **Negative & Error Path**: Explicit assertions for 400 Bad Request, 401 Unauthorized, 403 Forbidden, 409 Conflict, or 429 Rate Limit.
+    - **Happy Path (Gherkin)**: `Given <context>, When <action>, Then <outcome>`.
+    - **Negative & Error Path**: Explicit assertions for the task's interface-appropriate failure paths (e.g. for HTTP APIs: 400 Bad Request, 401 Unauthorized, 403 Forbidden, 409 Conflict, or 429 Rate Limit).
    - **Boundary Conditions**: Empty states, maximum payload boundaries, concurrent double-submit guards.
 4. **Automated Verification Command**:
    - Provide the exact test runner command that validates the criteria (e.g., `pnpm test path/to/feature.test.ts`).
 
 ---
 
-### Phase 4: Local Storage & GitHub Projects Sync
+### Phase 4: Local Storage & Tracker Sync (GitHub steps below are the GitHub adapter)
 
 1. **Persist the Canonical Local Source of Truth**:
    - For each Controlled Work unit, create one canonical Task Record at `docs/tasks/<task-id>.md` from `.promptkit/templates/execution-task-record-template.md`.
@@ -181,10 +180,10 @@ Before implementation, the Engineer validates the Task ID, scope, acceptance cri
 ---
 
 ## Completion Criteria
-- Tasks decomposed into atomic 1-to-4 hour units with priority tags (`p0`-`p3`).
+- Tasks decomposed into preferentially 1-to-4 hour atomic units (exceptions documented with reason) with priority tags (`p0`-`p3`).
 - Every task includes non-negotiable technical invariants and out-of-scope boundaries.
 - Every task includes both happy path and negative/edge-case Acceptance Criteria.
 - Automated verification commands provided for every testable task.
 - Tasks document saved to `docs/tasks/` with copy-pasteable `gh issue create` commands.
 - Living tracker in `docs/STATE.md` updated with the active milestone tasks (if present).
-- **Dual-Compatible Telemetry Status Card**: Conclude with the single 3-line blockquote spec (`> 📊 **Milestone**: <name> [████░░] n/m — source: STATE.md read this turn \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: measured this turn / not measured`) and a `> [!TIP]` callout recommending `pk:test` or implementing the first task. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended + why)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; `[!IMPORTANT]` / `[!WARNING]` halts still fire.
+- **Dual-Compatible Telemetry Status Card**: Conclude with the single 3-line blockquote spec (`> 📊 **Milestone**: <name> [■■■■□□] n/m — source: STATE.md read this turn \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: measured this turn / not measured`) and a `> [!TIP]` callout recommending `pk:test` or implementing the first task. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended + why)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; `[!IMPORTANT]` / `[!WARNING]` halts still fire.
