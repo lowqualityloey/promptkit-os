@@ -4,7 +4,7 @@
 Trigger anytime with: `pk:onboard` (or `/pk-onboard`, `pk:scan`, `pk:init-repo`)
 
 ## Mission
-Bring any project into the PromptKit OS engineering operating system: interview a greenfield repository that has no code yet, or ingest an existing repository in under 60 seconds. For brownfield work, inspect package manifests, active developer scripts, database schemas, and architectural boundaries. For greenfield work, run the bounded Project Discovery Intake to establish MVP intent, surfaces, deployment target, constraints, and design inputs before any architecture is proposed. Auto-populate `./PROMPTKIT.md` (and `./DESIGN.md` if frontend surfaces exist), establish a concrete baseline for code quality gates, and index existing technical debt into `docs/tasks/`.
+Bring any project into the PromptKit OS engineering operating system: interview a greenfield repository that has no code yet, or rapidly ingest an existing repository through bounded discovery. For brownfield work, inspect package manifests, active developer scripts, database schemas, and architectural boundaries. For greenfield work, run the bounded Project Discovery Intake to establish MVP intent, surfaces, deployment target, constraints, and design inputs before any architecture is proposed. Auto-populate `./PROMPTKIT.md` (and `./DESIGN.md` if frontend surfaces exist), establish a concrete baseline for code quality gates, and index existing technical debt into `docs/tasks/`.
 
 Eliminate day-one setup friction. Replace manual configuration chores with deterministic discovery for existing code, and with a bounded low-technical interview for new projects. Brownfield keeps the passive read-only discovery path; greenfield asks instead of assuming.
 
@@ -18,10 +18,10 @@ The assistant must perform the investigative heavy lifting: reading manifests, c
 
 ---
 
-## Non-Negotiable Guardrail: 100% Passive Inspection (Zero Rogue Modifications)
-The `pk:onboard` workflow and setup scripts are strictly passive and read-only regarding host application code. The assistant performs non-destructive discovery: scanning manifests, tooling, and directory structures. It must **never** create, modify, or delete project application source files unprompted. 
+## Non-Negotiable Guardrail: Passive Discovery, Human-Authorized Generation
+Phases 0–2 perform passive non-destructive discovery: scanning manifests, tooling, and directory structures without modifying host application source or configuration files. The assistant must **never** create, modify, or delete host application source files unprompted.
 
-After completing the scan and presenting the findings summary / Executive Scorecard, the assistant must halt and ask the human for confirmation before generating configs or taking any further action.
+Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESIGN.md`, `docs/STATE.md`) only after explicit human confirmation following the findings summary / Executive Scorecard. Host application source/configuration remains untouched without authorization.
 
 ---
 
@@ -99,11 +99,11 @@ After completing the scan and presenting the findings summary / Executive Scorec
 ### Phase 2: Architecture & Boundary Mapping
 
 1. **Structural Layering & Pattern Detection**:
-   Inspect directory layout to classify architecture:
-   - **Next.js App Router**: `app/` directory, Server Components, Route Handlers.
-   - **Next.js Pages Router**: `pages/` directory, `pages/api/`.
-   - **Clean / Hexagonal Architecture**: `domain/`, `application/`, `infrastructure/`, `adapters/`.
-   - **Feature-Sliced Design**: `src/features/*`, `src/modules/*`.
+   Detect architecture from repository evidence; do not assume a known framework pattern. Representative patterns include (treat as examples, not an exhaustive checklist):
+   - **Web — Next.js App Router**: `app/` directory, Server Components, Route Handlers.
+   - **Web — Next.js Pages Router**: `pages/` directory, `pages/api/`.
+   - **Backend — Clean / Hexagonal**: `domain/`, `application/`, `infrastructure/`, `adapters/`.
+   - **Frontend — Feature-Sliced / Component**: `src/features/*`, `src/modules/*`.
    - **Monorepo Multi-Package Topology**:
      If monorepo manifests are detected:
      - Scan all packages matching workspace globs (`apps/*`, `packages/*`, `libs/*`).
@@ -111,21 +111,21 @@ After completing the scan and presenting the findings summary / Executive Scorec
      - Inspect inter-package dependencies (`dependencies` using `workspace:*`).
      - Map boundary rules: identify server vs client packages and verify that shared UI packages do not depend on backend services.
 
-2. **Data & Persistence Inspection**:
+2. **Data & Persistence Inspection** (representative examples; detect from evidence):
    Identify database engine and ORM layers:
    - Prisma: `prisma/schema.prisma`.
    - Drizzle: `drizzle.config.ts`, `schema/`.
    - Supabase: `supabase/migrations/`, `supabase/config.toml`.
    - SQL / Raw: `migrations/`, `db/`.
 
-3. **Authentication & Authorization Model**:
+3. **Authentication & Authorization Model** (representative providers; detect from evidence):
    Detect identity providers and session strategies:
-   - Supabase Auth, NextAuth / Auth.js, Clerk, Lucia, Better-Auth, Stytch, Firebase.
+   - Web-auth examples: Supabase Auth, NextAuth / Auth.js, Clerk, Lucia, Better-Auth, Stytch, Firebase.
    - Session storage mechanism: HttpOnly cookies, JWT headers, or server sessions.
 
-4. **API Communication Style**:
+4. **API Communication Style** (representative styles; detect from evidence):
    Identify communication conventions:
-   - tRPC (`server/routers/`), Server Actions (`"use server"`), GraphQL, RESTful endpoints (`app/api/*`).
+   - Examples: tRPC (`server/routers/`), Server Actions (`"use server"`), GraphQL, RESTful endpoints (`app/api/*`).
 
 5. **Standard Root Documentation Scan**:
    Passively check for pre-existing repository documentation:
@@ -145,15 +145,15 @@ After completing the scan and presenting the findings summary / Executive Scorec
 1. **Profile Selection via Native Interactive Tools (Visual Decision):**
    - Check `PROMPTKIT.md` for existing `profile: lite|balanced|turbo` line. If present, respect it and skip prompt.
    - If missing and running in interactive host (Claude Code, Cursor, OpenCode, etc.), invoke native selection tool as final action of Phase 2 / first action of Phase 3:
-     ```
-     ask_question:
-       question: "Choose PromptKit OS profile for this project"
-       header: "Profile"
-       options:
-         - label: "Lite (Recommended for new users)"
-           description: "6 utility workflows (route, debug, commit, checkpoint, sync, profile), 80% of value, fastest onboarding, fits the <1,500 tok lite budget"
-         - label: "Balanced (Recommended for teams)"
-           description: "Full 24-workflow set, Level 0-3 adaptive ceremony, teams/production, default"
+      ```
+      ask_question:
+        question: "Choose PromptKit OS profile for this project"
+        header: "Profile"
+        options:
+          - label: "Lite (Recommended for new users)"
+            description: "6 utility workflows (route, debug, commit, checkpoint, sync, profile), 80% of value, fastest onboarding, fits the <1,500 tok lite budget"
+          - label: "Balanced (default for teams/production)"
+            description: "Full 24-workflow set, Level 0-3 adaptive ceremony, teams/production, default"
          - label: "Turbo (Experimental)"
            description: "Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval, needs --experimental acknowledgement"
        multiSelect: false
@@ -202,10 +202,10 @@ After completing the scan and presenting the findings summary / Executive Scorec
    - Extract primary brand colors, font families, base radius (`rounded-md`), and typography tokens.
    - Scaffold `./DESIGN.md` incorporating PromptKit OS anti-slop directives and detected tokens.
 
-4. **Auto-Populate `docs/STATE.md` (Living Project Tracker)**:
-   `docs/STATE.md` is pre-seeded by `init.sh` / `init.ps1` from `templates/state-tracker-template.md` (or copied from the template if missing). Section writes follow the State Mutation Contract in `workflows/checkpoint.md` (seed §§2/8/9, stage §4A candidates). You must preserve all 9 canonical sections intact (never truncate or drop Sections 8 and 9):
-   - Populate project name, current branch, and active status.
-   - If monorepo, set initial Target Workspace / Package in Section 3 (`Active Working Set`).
+4. **Auto-Populate `docs/STATE.md` (Living Project Tracker — Initialization-Only)**:
+   `docs/STATE.md` is pre-seeded by `init.sh` / `init.ps1` from `templates/state-tracker-template.md` (or copied from the template if missing). During onboarding, `pk:onboard` obeys the State Mutation Contract in `workflows/checkpoint.md` as an **initialization-only** writer: it may seed §§2/8/9 and stage §4A candidates, and must preserve all 9 canonical sections intact (never truncate or drop Sections 8 and 9). Subsequent mutations follow the contract's section owners (`pk:tasks`/`pk:checkpoint`):
+   - Populate project name, current branch, and active status (Section 2).
+   - If monorepo, set initial Target Workspace / Package in Section 3 (`Active Working Set`) — initialization only; later Section 3 mutations belong to `pk:checkpoint`/`pk:tasks`.
    - Record existing documented policies and explicitly human-approved rules in Section 4 with source references. Stage manifest-derived observations and inferred rules in Section 4A (`Candidate Learnings`) with status `pending`; they are not locked invariants.
    - Seed Section 8 (`Session Continuity Log`) with an initial onboarding entry:
      `| YYYY-MM-DD | Assistant (pk:onboard) | Project Intake (Greenfield or Brownfield) | Generated PROMPTKIT.md and initialized docs/STATE.md |`
@@ -217,19 +217,19 @@ After completing the scan and presenting the findings summary / Executive Scorec
 
 1. **Emit Executive Architecture Scorecard**:
    Present the developer with a concise summary table in the conversation:
-    - **Stack & Tooling**: Confirmed runtime, framework, ORM, and test runners.
-    - **Task Tracking System**: Confirmed task lifecycle backend from Step 1b (`tracking: local|github|jira|linear`). Jira/Linear are manual import with no auto-push.
-    - **Active MCP Capabilities**: Catalog detected Model Context Protocol servers (e.g. GitHub MCP, Postgres MCP, Linear) or record `N/A (Standard CLI Fallback)`. This step is non-blocking advise only — the agent cannot enable MCP; the human configures it in-host. Recommend: tracker=github → `github-mcp-server`; `pk:data` planned → `postgres-mcp` read-only; frontend → `playwright`. Always add fallback line: `No MCP? Zero errors — falls back to gh CLI + markdown.` Store in `PROMPTKIT.md §5`. Alongside detected state, record intended MCP (`intended: <servers or CLI-only>`) so a later enablement is a planned change, not silent drift.
+   - **Stack & Tooling**: Confirmed runtime, framework, ORM, and test runners.
+   - **Task Tracking System**: Confirmed task lifecycle backend from Step 1b (`tracking: local|github|jira|linear`). Jira/Linear are manual import with no auto-push.
+   - **Active MCP Capabilities**: Catalog detected Model Context Protocol servers (e.g. GitHub MCP, Postgres MCP, Linear) or record `N/A (Standard CLI Fallback)`. This step is non-blocking advise only — the agent cannot enable MCP; the human configures it in-host. Relevant MCP capabilities may be recommended when supported by the detected project and host (e.g. tracker=github → `github-mcp-server`; `pk:data` planned → `postgres-mcp` read-only; frontend → `playwright`). Always add fallback line: `No MCP? Zero errors — falls back to gh CLI + markdown.` Store in `PROMPTKIT.md §5`. Alongside detected state, record intended MCP (`intended: <servers or CLI-only>`) so a later enablement is a planned change, not silent drift.
    - **Existing System Documentation**: Catalog detected standard root documentation (`ARCHITECTURE.md`, `ROADMAP.md`, `RUNBOOK.md`, `STYLE.md`) or record `N/A (None Detected)`.
-   - **Architectural Strengths**: High test coverage, strict typing, clean modular boundaries.
-   - **Vulnerabilities & Missing Seams**: Zero integration tests, unindexed foreign keys, loose `any` types, missing error boundaries.
+   - **Architectural Strengths** (examples of evidence to report): High test coverage, strict typing, clean modular boundaries.
+   - **Vulnerabilities & Missing Seams** (examples of evidence to report): Zero integration tests, unindexed foreign keys, loose `any` types, missing error boundaries.
 
 2. **Technical Debt Indexing (Optional Backlog Scaffolding)**:
    Search for existing codebase debt markers:
    - `git grep -in "TODO:"` or `git grep -in "FIXME:"`.
    - Unmigrated database drafts or missing test suites.
    - Offer to run `pk:tasks` to structure high-priority debt items into atomic task cards in `docs/tasks/`.
-   - Record discovered debt tasks in `docs/STATE.md` under initial remediation items.
+   - Record discovered debt tasks in `docs/STATE.md` under initial remediation items (initialization-only; later remediation tracking follows the State Mutation Contract).
 
 3. **Invariant Handoff (Sync to STATE.md)**:
    Copy existing documented policies into Section 4 (`Locked Technical Invariants`) with their sources. New inferred rules and manifest observations belong only in Section 4A (`Candidate Learnings`) with status `pending`. Promote them only after recording explicit human approval, approver, date, decision evidence, and destination under `protocols/context-sync.md` §3.1; a human-stated tentative idea is not approval.
