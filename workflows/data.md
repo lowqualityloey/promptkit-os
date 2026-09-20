@@ -176,7 +176,7 @@ For applications using PostgreSQL or Supabase, enforce tenancy guarantees at the
 
 ### Step 5: Document Rollback and Seeding Strategy
 1. Provide deterministic seed data for local development.
-2. Detail Expand-Contract rollback procedures in the event of failure following the phased policy: Expand → migrate/backfill → compatibility period → verify consumers → Contract (where removal of deprecated columns or tables occurs only after verified consumer migration and rollback assessment).
+2. Detail Expand-Contract rollback procedures in the event of failure following the phased policy: Expand → migrate/backfill → compatibility period → verify consumers → Contract (where removal of deprecated columns or tables occurs only after verified consumer migration and rollback assessment). This phased policy governs live or compatibility-sensitive data, consistent with `workflows/plan.md` and `workflows/ship.md`; one-shot, disposable, or pre-deployment changes may skip Expand-Contract with a documented rationale.
 3. Record the seed dataset reference and the rollback plan in the Step 6 specification artifact — neither has any other destination.
 
 ### Step 6: Generate Data Specification Artifact
