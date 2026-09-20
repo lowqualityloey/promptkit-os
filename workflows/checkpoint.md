@@ -130,15 +130,17 @@ Record the complete workspace state before switching sessions, including intenti
     - Append an entry to Section 8 (`Session Continuity Log`):
       `| YYYY-MM-DD | [Agent/Author] | [Active Task/Milestone] | [Summary of work & decisions] |`
     - Append one row to the Session Spend Ledger (new Section 9 in the state template; skip trivial sessions under ~5 turns with no workflow usage):
-      `| YYYY-MM-DD (focus) | [turns] | [measured in/out or host telemetry unavailable] | [~estimated payload] | [host usage source or why not measured] |`
+      `| YYYY-MM-DD (focus) | [turns] | [measured in/out or host telemetry unavailable] | [estimated context-payload range] | duration=[value]; repairs=[count or not tracked]; interventions=[count or not tracked]; verification=[result or not tracked]; outcome=[accepted/rejected/incomplete/blocked/not tracked] |`
       and refresh its Running-total line.
     - **Table Integrity Invariant**: Keep table rows strictly contiguous (zero blank lines between rows); escape literal pipes as `\|` (even in inline code or markers); format each row on a single physical line (use `<br>` for multi-line cells).
-      - **Fallback Estimation Heuristic**: If the host runtime does not expose live per-turn token metering (e.g. OpenCode, Cursor, Windsurf, Copilot, or Neovim), do **NOT** emit `not measured` for Estimated payload. Compute the engineering estimate using the standard session formula:
+      - **Fallback Estimation Heuristic**: If the host runtime does not expose live per-turn token metering (e.g. OpenCode, Cursor, Windsurf, Copilot, or Neovim), do **NOT** emit `not measured` for Estimated context payload. Compute the engineering range using the standard session formula:
         - Average cumulative turn context: `~8k–15k tok/turn` (prompt directives + conversation history + tool reads).
-        - `Estimated payload`: `~[turns × 10k] tok total (~8k–15k tok/turn)` (or the specific observed range).
+        - `Estimated context payload`: calculate the lower and upper bounds independently as `[turns × 8k]–[turns × 15k] tok`. For example, 15 turns yields `120k–225k heuristic context payload`. Do not collapse the range into a midpoint estimate.
         - In `Measured in/out`: write `host telemetry unavailable`.
-        - In `Running total`: sum the estimated totals across recorded sessions (e.g. `~56 turns (3 sessions) · ~400k–650k total tokens estimated cumulative spend`).
-        - These figures are heuristic engineering estimates only: not provider billing telemetry and not measured token counts. Preserve the Measured / Estimated / Unavailable distinction in every ledger row.
+        - In `Running total`: sum heuristic lower and upper bounds independently, but keep that range separate from any measured-token total. Never add measured tokens to a heuristic range or describe heuristic context payload as cumulative spend.
+        - These figures are heuristic engineering estimates only: not provider billing telemetry, actual spend, or measured token counts. Preserve the Measured / Estimated / Unavailable distinction in every ledger row.
+      - **Process Evidence**: Record duration, repair cycles, human interventions, verification, and outcome in the existing `Note` column. Use `not tracked` when evidence is unavailable; never infer `0`, `passed`, or `accepted`. Record avoided rework as `not measured` unless comparative evidence exists.
+      - **Compatibility & Authority**: Preserve the five-column table and historical rows without silent backfill. Host transitions and cross-task conflict details belong in the Session Continuity Log or canonical Task Record, with only a concise reference here. The ledger is operational telemetry, not CPAC benchmark evidence; formal comparisons follow `docs/BENCHMARK-METHODOLOGY.md`.
       Per-turn card figures stay in chat history; the ledger is the only durable spend artifact.
     If `docs/STATE.md` does not yet exist, offer to scaffold it from `templates/state-tracker-template.md`.
 
