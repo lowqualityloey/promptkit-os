@@ -44,12 +44,12 @@ Use this section for Controlled Work. Enter `N/A` for Trivial Work or for a cons
 ---
 
 ## Database & Data Safety Checklist
-<!-- If this PR touches database schemas, migrations, or data models, complete this section. -->
+<!-- If this PR touches database schemas, migrations, or data models, complete this section; otherwise check No Database Changes and mark the rest N/A. -->
 - [ ] **No Database Changes**: This PR does not touch schemas, tables, or queries.
-- [ ] **Expand-Contract Pattern**: All schema alterations are additive (non-breaking for rolling deploys).
-- [ ] **No Destructive Drops**: No unauthorized `DROP TABLE`, `DROP COLUMN`, or `TRUNCATE` operations in this phase.
-- [ ] **Row-Level Security (RLS)**: Policies verified for tenant/organization boundary enforcement.
-- [ ] **Query Efficiency**: Composite indexes added for high-cardinality filters and sorted queries.
+- [ ] **Expand-Contract Pattern** (when live/compatibility-sensitive data): All schema alterations are additive (non-breaking for rolling deploys); one-shot/disposable/pre-deployment may skip with documented rationale; otherwise `N/A`.
+- [ ] **No Destructive Drops**: No unauthorized `DROP TABLE`, `DROP COLUMN`, or `TRUNCATE` operations in this phase (when EC applies).
+- [ ] **Row-Level Security (RLS)** (when multi-tenant data exists): Policies verified for tenant/organization boundary enforcement; otherwise `N/A`.
+- [ ] **Query Efficiency** (when DB queries exist): Composite indexes added for high-cardinality filters and sorted queries; otherwise `N/A`.
 
 ---
 
@@ -94,8 +94,8 @@ Use this section for Controlled Work. Enter `N/A` for Trivial Work or for a cons
 ---
 
 ## Pre-Submission Quality Gate
-- [ ] Strict TypeScript compiles with 0 errors (`tsc --noEmit`)
-- [ ] All automated test suites pass locally
+- [ ] Static checks pass with 0 errors (`tsc --noEmit` for TypeScript, or project's equivalent — `cargo check` / `ruff check` / `go vet` / `flutter analyze`)
+- [ ] All automated test suites pass locally per the project's verification
 - [ ] Scanned for secret leaks (`.env`, credentials, private tokens)
 - [ ] Verified all temporary debug probes (`[DEBUG-xxxx]`) are removed
 - [ ] Conforms to project guidelines in `PROMPTKIT.md` (and `DESIGN.md` if applicable)

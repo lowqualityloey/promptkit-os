@@ -28,8 +28,8 @@
 ## 1. Pre-Flight Verification
 
 - [ ] All code merged to `main` with approved PR review (`pk:review`).
-- [ ] All automated tests passing in CI (`pnpm test`, `pnpm test:e2e`).
-- [ ] Build succeeds with zero bundle size alerts (`pnpm build`).
+- [ ] All automated tests passing in CI per the project's verification (e.g. `pnpm test` / `pytest` / `cargo test` / `go test`; add `pnpm test:e2e` where an E2E suite exists).
+- [ ] Build succeeds with zero bundle size alerts per the project's build (e.g. `pnpm build`).
 - [ ] Git tag created and pushed: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
 
 ## Execution-Control Evidence (Optional)
@@ -110,46 +110,47 @@ Record decisions only. Do not execute actions from this appendix.
 
 ---
 
-## 2. Environment Variables & Secrets Audit
+## 2. Environment Variables & Secrets Audit (use the project's native config mechanism; `env.ts` below is a TypeScript example)
 
-| Variable Name | Required Scope | Verified in Prod Dashboard | Validated via `env.ts` |
+| Variable Name | Required Scope | Verified in Prod Dashboard | Validated via native mechanism |
 | :--- | :--- | :---: | :---: |
 | `DATABASE_URL` | Server Only | [ ] | [ ] |
 | `SESSION_SECRET` | Server Only | [ ] | [ ] |
 | `STRIPE_SECRET_KEY` | Server Only | [ ] | [ ] |
-| `NEXT_PUBLIC_APP_URL` | Public Client | [ ] | [ ] |
+| `NEXT_PUBLIC_APP_URL` | Public Client (e.g. `NEXT_PUBLIC_` for Next.js) | [ ] | [ ] |
 
 ---
 
-## 3. Database Migration Sequencing
+## 3. Database Migration Sequencing (when persistence/schema exists; otherwise `N/A - <reason>`)
 
-- **Migration Present**: [Yes / No]
-- **Migration Type**: [Expand Phase (Additive) | Contract Phase (Cleanup) | None]
+- **Migration Present**: [Yes / No / N/A]
+- **Migration Type**: [Expand Phase (Additive) | Contract Phase (Cleanup) | None | N/A — one-shot/disposable/pre-deployment with rationale]
+- **Escape Rationale** (when not using Expand-Contract): `[reason or N/A — live/compatibility-sensitive data must use Expand-Contract]`
 
-### Sequencing Execution Plan
-1. [ ] **Step 1**: [Run migrations before deploy / Deploy code first]
-   - Command: `pnpm db:migrate:deploy`
+### Sequencing Execution Plan (when migration present; otherwise `N/A`)
+1. [ ] **Step 1**: [Run migrations before deploy / Deploy code first / N/A]
+   - Command: `[project migrate command, e.g. pnpm db:migrate:deploy]`
 2. [ ] **Step 2**: Trigger application code deployment.
 3. [ ] **Step 3**: Verify active application pods report healthy status.
 
 ---
 
-## 4. Post-Deployment Smoke Testing
+## 4. Post-Deployment Smoke Testing (interface-appropriate probes; HTTP examples below are for web services)
 
 | Probe Target | Verification Command / URL | Expected Output | Actual Result |
 | :--- | :--- | :--- | :--- |
-| **System Health** | `GET /api/health` | `HTTP 200 { "status": "ok" }` | Pass / Fail |
-| **Authentication Flow** | Synthetic login test | Session cookie set and redirected | Pass / Fail |
-| **Critical User Flow** | [e.g., Create invitation or checkout] | Resource persisted in DB | Pass / Fail |
-| **Client Bundle Check** | Production URL in incognito | Zero unhandled browser console errors| Pass / Fail |
+| **System Health** | `GET /api/health` (or project's health signal) | `HTTP 200 { "status": "ok" }` or equivalent | Pass / Fail |
+| **Authentication Flow** | Synthetic login test (where auth exists) | Session/token valid | Pass / Fail |
+| **Critical User Flow** | [e.g., Create invitation or checkout] | Resource persisted / observable effect | Pass / Fail |
+| **Client Bundle Check** (web clients only) | Production URL in incognito | Zero unhandled browser console errors | Pass / Fail |
 
 ---
 
-## 5. Post-Release Observation Window (15 Minutes)
+## 5. Post-Release Observation Window (use release-specific thresholds defined before deploy; 15 min / values below are illustrative defaults)
 
-- [ ] Sentry / error tracking inspected: zero new unhandled exception spikes.
-- [ ] P99 latency within baseline thresholds (< 250ms).
-- [ ] Database connection pool utilization healthy (< 60%).
+- [ ] Error tracking inspected vs release thresholds (e.g. Sentry: zero new unhandled spikes).
+- [ ] Latency within release thresholds (e.g. P99 < 250ms where HTTP/latency applies).
+- [ ] Resource utilization within release thresholds (e.g. DB pool < 60% where applicable).
 
 ---
 
@@ -157,8 +158,8 @@ Record decisions only. Do not execute actions from this appendix.
 
 - **Application Rollback Command / Action**:
   - [e.g., Redeploy previous deployment ID via platform CLI / Vercel dashboard / git checkout]
-- **Database Action**:
-  - [e.g., Schema is in Expand phase and fully backwards-compatible; no database rollback required]
+- **Database Action** (when persistence exists; otherwise `N/A`):
+  - [e.g., Schema was verified Expand-compatible with previous version; no database rollback required unless migration is the demonstrated cause — otherwise record recovery procedure]
 - **Sign-off**:
   - Release Status: [Successful | Rolled Back | Investigating]
   - Notes: [Any follow-up items or technical debt to track]
