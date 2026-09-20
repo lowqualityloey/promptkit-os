@@ -128,8 +128,10 @@ Compact record of pairing sessions to enable instant chat resumption:
 ## 9. Session Spend Ledger
 <!-- Table Invariant: Keep rows strictly contiguous without blank lines; escape literal pipes as \|; use <br> for multi-line cells -->
 
-| Session | Turns | Measured in/out | Estimated payload | Note |
+| Session | Turns | Measured in/out | Estimated context payload | Note |
 | :--- | :--- | :--- | :--- | :--- |
 | not tracked | not tracked | not tracked | not tracked | not tracked |
 
-- **Running total**: not tracked — refreshed by `pk:checkpoint`; one row per real work session (trivial sessions under ~5 turns with no workflow usage write nothing). When host metering is unavailable, compute `Estimated payload` via heuristic (`turns × ~8k–15k tok/turn`) rather than emitting `not measured`.
+- **Running total**: not tracked — refreshed by `pk:checkpoint`; keep measured tokens and heuristic context-payload ranges as separate totals and never add them together. One row per real work session (trivial sessions under ~5 turns with no workflow usage write nothing). When host metering is unavailable, compute the lower and upper bounds independently via the heuristic (`turns × 8k` through `turns × 15k tok/turn`) rather than emitting a midpoint or `not measured`.
+- **Note evidence**: use `duration=<value>; repairs=<count or not tracked>; interventions=<count or not tracked>; verification=<result or not tracked>; outcome=<accepted | rejected | incomplete | blocked | not tracked>`. Never infer `0`, `passed`, or `accepted` from missing evidence.
+- **Evidence boundary**: this ledger is operational telemetry, not CPAC benchmark evidence. Heuristic context payload is not provider billing telemetry or actual spend; avoided rework remains `not measured` without comparative evidence. Preserve historical rows and the five-column shape without silent backfill.
