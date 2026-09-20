@@ -82,7 +82,7 @@ Conclude the synchronization turn with the standard telemetry status card (3 man
 📊 Milestone: PromptKit OS Synced — Engine Rules Reloaded From Disk
 🎯 Active: pk:sync (disk-first reload complete)
 🟢 Quality Gate: <results of checks actually executed this turn>
-Session: ~<n>/30 turns — consider pk:checkpoint (estimate; write `not measured` if unknown)
+Session: ~<n>/30 turns — consider pk:checkpoint (estimate; write `not measured` if unknown) (appended)
 ```
 
 > [!TIP]
@@ -101,7 +101,7 @@ Session: ~<n>/30 turns — consider pk:checkpoint (estimate; write `not measured
 
 Canonical table: `workflows/checkpoint.md` and `workflows/plan.md` reference this section instead of restating it.
 
-During the Phase 2 diff, treat any new requirement, attachment, or scope statement the developer introduces mid-implementation as an interception candidate — never absorb it silently into current execution:
+During the Phase 2 diff, treat any new requirement, constraint, artifact, or scope statement the developer introduces mid-implementation as an interception candidate — never absorb it silently into current execution:
 
 | Delta type | Required handling |
 | :--- | :--- |
