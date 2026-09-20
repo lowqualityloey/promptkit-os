@@ -6,7 +6,7 @@ Trigger anytime with: `pk:ship` (or `/pk-ship`)
 ## Mission
 Guide the developer through safe, reliable production releases, deployment sequencing, and verification.
 
-Eliminate production deployment outages: missing or invalid environment variables at runtime, race conditions between database migrations and application code deployments, unverified releases, and panicked rollbacks.
+Reduce preventable production deployment failures: missing or invalid environment variables at runtime, race conditions between database migrations and application code deployments, unverified releases, and panicked rollbacks.
 
 > **Developer-friendly ship guide:** Treat each release step as a recordable decision, not an implicit action. **Required** evidence identifies the exact revision, environment, command or probe, result, and accountable owner. Use **Not applicable** only with a reason, and use `None` only when there is genuinely no item to record. `CI` means Continuous Integration, `QA` means Quality Assurance, `PII` means Personally Identifiable Information, and `SemVer` means Semantic Versioning. **Example:** `Verification: GET /api/health returned HTTP 200 at the release revision` is clearer than `smoke test passed`. These explanations clarify the workflow without changing its human-only approval boundaries.
 >
@@ -24,8 +24,9 @@ Eliminate production deployment outages: missing or invalid environment variable
 ### 1. Runtime Environment Variable Validation (Fail-Fast Boot)
 Never allow an application with missing or malformed secrets to boot into production:
 
-1. **Type-Safe Schema Validation at Startup**:
-   - Validate `process.env` using Zod or `@t3-oss/env-nextjs` inside an `env.ts` configuration module imported at the application entrypoint:
+1. **Native Configuration Validation at Startup**:
+    - Validate all production configuration and secrets at the application's startup or deployment boundary using the project's native configuration mechanism. Fail before serving production traffic when required configuration is missing or malformed.
+    - Web-application example (TypeScript): validate `process.env` using Zod or `@t3-oss/env-nextjs` inside an `env.ts` configuration module imported at the application entrypoint:
      ```typescript
      // src/env.ts
      import { z } from 'zod';
@@ -48,14 +49,14 @@ Never allow an application with missing or malformed secrets to boot into produc
      ```
 2. **Fail-Fast Crash**:
    - If a required secret is missing, the application process crashes immediately during initialization with an explicit error naming the missing variable. It must never fail hours later during an active user transaction.
-3. **Client vs Server Boundary**:
-   - Never prefix server secrets with `NEXT_PUBLIC_` or `VITE_`.
-   - Audit client bundle outputs to verify zero server secret leakage.
+3. **Client vs Server Boundary** (applications with a browser-built client bundle; otherwise record `N/A - <reason>`):
+    - Never prefix server secrets with the client-exposed prefix of the project's framework (e.g. `NEXT_PUBLIC_` for Next.js, `VITE_` for Vite).
+    - Audit client bundle outputs to verify zero server secret leakage.
 
 ---
 
 ### 2. Zero-Downtime Migration Sequencing
-Database schema changes and application code updates do not deploy at the exact same instant. Follow the **Golden Deployment Rule**:
+For production systems where multiple application revisions may coexist or rollback compatibility matters, evaluate Expand-Contract sequencing. Database schema changes and application code updates do not deploy at the exact same instant. Follow the **Golden Deployment Rule** (default pattern for live or compatibility-sensitive data; if inapplicable — disposable or pre-deployment database, first deploy with no prior version, one-shot migration, or a system where concurrent versions cannot exist — record the reason and applicable compatibility/rollback evidence):
 
 ```
 EXPAND PHASE (Additive Changes):
@@ -70,13 +71,13 @@ Step 3: Apply database migration to drop deprecated column or table.
 Result: Zero downtime. No running instance queries a deleted column.
 ```
 
-- **Hard Rule**: Never combine an additive change (Expand) and a destructive drop (Contract) in the same release or migration script.
+- **Hard Rule**: Never combine an additive change (Expand) and a destructive drop (Contract) in the same release or migration script when Expand-Contract applies (live or compatibility-sensitive data).
 
 ---
 
 ### 3. Staging and Preview Environment Parity
-1. **Ephemeral Preview Deployments**:
-   - Verify features in preview environments (Vercel previews, Supabase database branch, Railway staging) before merging to `main`.
+1. **Representative Pre-Production Environments**:
+    - Validate the release candidate in an environment sufficiently representative of production before production deployment, when such an environment exists. Examples: ephemeral preview deployments (e.g. Vercel previews, Supabase database branches, Railway staging) verified before merging to `main`.
 2. **Data Sanitization**:
    - Non-production environments must use synthetic seed fixtures.
    - Never replicate unmasked production customer PII or payment records into staging environments.
@@ -102,7 +103,7 @@ Before declaring a release complete, verify production behavior with active prob
 When production metrics degrade post-release, do not guess or attempt complex live debugging in production. Follow the structured rollback protocol:
 
 #### Rollback Decision Criteria
-Trigger an immediate rollback if within 15 minutes of deployment:
+Use release-specific rollback thresholds defined before deployment and recorded in the release record. Where the project has no established thresholds, record explicit human-approved thresholds or state that automatic thresholding is unavailable. Illustrative defaults (calibrate per project — HTTP/latency signals are meaningless for batch, mobile, or low-volume systems without adaptation): trigger an immediate rollback if within 15 minutes of deployment:
 - HTTP 5xx error rate spikes above 1%.
 - P99 latency degrades by more than 50% from baseline.
 - Core checkout, authentication, or data persistence flows fail in smoke tests.
@@ -111,7 +112,7 @@ Trigger an immediate rollback if within 15 minutes of deployment:
 1. **Application Code Rollback (human executes)**:
     - If the rollback criteria above are met, record a rollback proposal as an action block (proposed action, bounded scope, reversal action, resume condition) for the Release Coordinator — do not execute it. The prepared command (redeploy the previous verified commit SHA or platform 1-click rollback in Vercel, Railway, or Kubernetes) is recorded so the human can act immediately.
 2. **Database Reversion**:
-   - Because all pre-deploy migrations follow the Expand phase, the database schema remains 100% compatible with the previous application version. **Do not roll back database schema during an active incident** unless the migration itself degraded database performance.
+    - Production migrations intended to support rollback must preserve compatibility with the previous application version (Expand phase) — treat this as a verified precondition, not a guaranteed fact. **Do not roll back database schema during an active incident** unless the migration itself is the demonstrated cause and a separately verified database recovery procedure exists.
 3. **Transition to Root Cause Analysis**:
    - After production stability is restored, trigger `pk:debug` in local development to reproduce the failure.
 
@@ -219,17 +220,17 @@ Record expected results and pass thresholds now; the human-executed deploy is wh
 
 | Anti-Pattern | Consequence | Remedy |
 | :--- | :--- | :--- |
-| **Unvalidated Environment Variables** | Silent crashes hours after deploy when missing secrets are first accessed. | Validate all environment variables with Zod at application startup. |
-| **Deploying Code and Migration Simultaneously** | Container start races against migration execution, causing broken queries during rolling update. | Follow the Golden Deployment Rule (Expand before deploy; Contract after deploy). |
+| **Unvalidated Environment Variables** | Silent crashes hours after deploy when missing secrets are first accessed. | Validate all production configuration with the project's native mechanism at application startup. |
+| **Deploying Code and Migration Simultaneously** | Container start races against migration execution, causing broken queries during rolling update. | Follow the Golden Deployment Rule for live data (Expand before deploy; Contract after deploy); document the escape where it does not apply. |
 | **Debugging Live in Production** | Extended customer downtime while developers scramble under pressure. | Roll back immediately; debug safely in local development using `pk:debug`. |
-| **Untested Rollbacks** | Rollback fails because new schema broke backwards compatibility with old code. | Ensure every schema migration is backwards-compatible with previous application version. |
+| **Untested Rollbacks** | Rollback fails because new schema broke backwards compatibility with old code. | Ensure every live-data schema migration is backwards-compatible with previous application version (verified precondition, not assumed). |
 | **Skipping Smoke Tests** | Broken client bundles or routing errors discovered by customers instead of engineers. | Run automated smoke tests immediately post-deployment. |
 
 ---
 
 ## Completion Criteria
-- Environment variables validated with startup schema checks.
-- Migration sequencing planned and executed in correct phase order.
+- Environment variables validated with startup schema checks using the project's native mechanism.
+- Migration sequencing planned and executed in correct phase order (or escape documented with rationale where Expand-Contract does not apply).
 - Post-deployment smoke verification defined with expected results and thresholds.
 - Release document drafted in `./docs/releases/`.
 - CI-triage linkage recorded (`linked_to_pk_ship` only after verified result, where a CI failure exists).
