@@ -1,7 +1,7 @@
 ---
 name: systems-rust
 category: systems
-version: 1
+version: 2
 token_budget: 1500
 activation:
   manifests:
@@ -55,3 +55,10 @@ Operational guidelines, invariants, and failure modes for systems software, CLI 
   `cargo test` to execute unit tests, integration tests, and doc-tests.
 - **Extended (L3 Release / CI)**:
   `cargo clippy -- -D warnings` to enforce idiomatic Rust syntax, performance lints, and deny all warnings.
+
+## 4. Performance Profiling Baseline
+
+- **Named Bench Baselines**: Use `cargo bench` with Criterion (`--save-baseline <name>`) to lock a named baseline before optimizing; compare candidates with `critcmp <baseline> <candidate>` instead of eyeballing single runs.
+- **Hot-Path Localization**: Profile before touching code: `cargo flamegraph` (or `perf record --call-graph dwarf` + `perf report`) on a release-profile build to find where cycles actually go; optimize what the flamegraph shows, not what intuition says.
+- **Measurement Discipline**: Benchmarks are extended-tier (L3/CI) evidence — never the fast inner loop (`cargo check` stays the loop); no micro-benchmarks from debug builds (inlining and overflow checks distort results); change one variable per measurement.
+- **Workflow Bridge**: Baseline → localize → optimize → measure delta per `pk:perf`; this playbook supplies the Rust tooling.

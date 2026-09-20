@@ -1,7 +1,7 @@
 ---
 name: cli-python
 category: cli
-version: 1
+version: 2
 token_budget: 1500
 activation:
   manifests:
@@ -55,3 +55,10 @@ Operational guidelines, invariants, and failure modes for command-line utilities
   `pytest` to execute unit tests, CLI runner assertions (e.g. `CliRunner` with Typer/Click), and mock fixtures.
 - **Extended (L3 Release / CI)**:
   `mypy .` to enforce strict type checking and interface compatibility across all modules.
+
+## 4. Performance Profiling Baseline
+
+- **Zero-Instrumentation Sampling**: For live processes or slow runs, start with `py-spy top --pid <PID>` / `py-spy record -o profile.svg --pid <PID>` — sampling with no code changes and negligible overhead; reach for it before adding timers.
+- **Deterministic Hot-Path Profiling**: Use `python -m cProfile -o profile.out <entry>` and inspect with `pstats` (sort by cumulative time, then tottime) for reproducible hot paths; optimize the cumulative-time leaders, one hypothesis per measurement.
+- **Measurement Discipline**: Never benchmark with in-process `time.time()` wall-clock — timer variance swamps small deltas; use `timeit` with enough repetitions for micro-measurements, and re-run inside the project's activated virtual environment with dependencies pinned.
+- **Workflow Bridge**: Baseline → localize → optimize → measure delta per `pk:perf`; this playbook supplies the Python tooling.
