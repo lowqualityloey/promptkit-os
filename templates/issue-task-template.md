@@ -47,11 +47,11 @@
 - **API Endpoints**: `[METHOD /api/v1/path]`
 - **UI Components**: `[path/to/component.tsx]`
 
-### Non-Negotiable Invariants
-- [ ] **Data Isolation**: Tenant Row-Level Security (RLS) or organization ID enforced on every query.
-- [ ] **Schema Safety**: Expand-Contract pattern followed; zero instantaneous destructive drops.
-- [ ] **Security & Validation**: Runtime schema validation (Zod/Valibot) applied to all external input.
-- [ ] **Budget & Performance**: No N+1 query loops; API response p95 within target SLA.
+### Non-Negotiable Invariants (mark applicable items; use `N/A - <reason>` where not applicable)
+- [ ] **Data Isolation** (when multi-tenant or persistent data exists): Tenant Row-Level Security (RLS) or organization ID enforced on every query; otherwise `N/A - <reason>`.
+- [ ] **Schema Safety** (when schema or migration exists): Expand-Contract pattern followed for live or compatibility-sensitive data — one-shot, disposable, or pre-deployment changes may skip with documented rationale; otherwise `N/A - <reason>` and zero instantaneous destructive drops when EC applies.
+- [ ] **Security & Validation** (when external input exists): Runtime schema validation using the project's native mechanism (e.g. Zod/Valibot for TypeScript) applied to all external input; otherwise `N/A - <reason>`.
+- [ ] **Budget & Performance** (when API or data path exists): No N+1 query loops; API response p95 within target SLA; otherwise `N/A - <reason>`.
 
 ### Out of Scope
 <!-- Explicitly list what this issue will NOT address to prevent scope creep. -->
@@ -86,10 +86,10 @@ Acceptance Criteria in this issue should use stable IDs such as `AC-1` and link 
 
 ## Implementation Tasks (The Build)
 <!-- Concrete, ordered sequence of files and functions to create or modify. -->
-- [ ] 1. Define schema types and database migration (`Expand` phase).
+- [ ] 1. Define schema types and database migration (`Expand` phase) where persistent storage exists; otherwise `N/A - <reason>`.
 - [ ] 2. Implement domain service logic and state validation.
-- [ ] 3. Expose API endpoint with structured error envelope.
-- [ ] 4. Wire client query hook and presentation component.
+- [ ] 3. Expose API endpoint with structured error envelope (or interface-appropriate contract).
+- [ ] 4. Wire client query hook and presentation component (or interface-appropriate surface).
 - [ ] 5. Write automated unit and integration tests.
 
 ---
@@ -105,7 +105,7 @@ Acceptance Criteria in this issue should use stable IDs such as `AC-1` and link 
 ### Scenario 2: Negative & Error Edge Cases
 - **Given** `[unauthenticated user or invalid payload]`
 - **When** `[request is dispatched]`
-- **Then** `[expected error code (e.g. 400, 401, 403, 409, 429) and structured message]`
+- **Then** `[expected error (e.g. for HTTP APIs: 400, 401, 403, 409, 429) or interface-appropriate error and structured message]`
 
 ### Scenario 3: Boundary & Concurrency (If Applicable)
 - **Given** `[duplicate concurrent requests with same idempotency key]`

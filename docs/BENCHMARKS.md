@@ -90,8 +90,8 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **8,013 tok** | **6,659 tok** | **-38% Balanced, -48% Lite (-4,848 to -6,202 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **17,667 tok** | **16,313 tok** | **-28% Balanced, -34% Lite** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **13,435 tok** | **12,081 tok** | **-46% Balanced, -51% Lite (-11,326 to -12,680 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **17,853 tok** | **16,499 tok** | **-28% Balanced, -33% Lite** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **13,701 tok** | **12,347 tok** | **-45% Balanced, -50% Lite (-11,060 to -12,414 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 
@@ -144,7 +144,7 @@ Beyond token counts, PromptKit's structured protocols deliver qualitative engine
 
 ### 2. Eliminating Single-Step Destructive Migrations (`pk:data` / `pk:ship`)
 - **Unstructured Database Changes**: Direct `DROP COLUMN` or column renaming causing downtime or breaking rolling deployment pods.
-- **PromptKit Protocol**: Strict Expand-Contract phased migrations (add additive column -> backfill -> switch reads -> deprecate -> drop in separate release).
+- **PromptKit Protocol**: Strict Expand-Contract phased migrations for live or compatibility-sensitive data (add additive column -> backfill -> switch reads -> deprecate -> drop in separate release; one-shot/disposable/pre-deployment may skip with rationale).
 
 ### 3. Preventing Session Amnesia (`pk:checkpoint`)
 - **Unstructured Multi-Turn Drift**: After 30 turns, LLM forgets locked architectural decisions.
