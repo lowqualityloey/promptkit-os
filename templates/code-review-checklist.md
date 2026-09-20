@@ -12,7 +12,7 @@ Use this checklist during PR reviews and self-audits to ensure the highest stand
 
 ## 2. Accidental Data Loss Prevention (Zero-Destruction Gate)
 - [ ] **No Irreversible Schema Drops**: Are database migrations free from destructive `DROP TABLE`, `DROP COLUMN`, or `TRUNCATE` operations?
-- [ ] **Expand-Contract Pattern**: Are column or table renames performed in multi-phase backward-compatible deployments?
+- [ ] **Expand-Contract Pattern** (when live or compatibility-sensitive data exists; otherwise `N/A - <reason>` — one-shot, disposable, or pre-deployment changes may skip with documented rationale): Are column or table renames performed in multi-phase backward-compatible deployments?
 - [ ] **Bounded Deletions**: Are SQL `DELETE` or ORM delete queries strictly bounded with `WHERE` conditions?
 - [ ] **Safe Storage Operations**: Are file deletions or cloud bucket mutations guarded with soft-delete flags or explicit backup guarantees?
 
@@ -33,7 +33,7 @@ Use this checklist during PR reviews and self-audits to ensure the highest stand
 
 ## 5. Type Safety & Schema Contracts
 - [ ] **No `any` or Loose Casts**: Are types strictly declared without unsafe `as` assertions?
-- [ ] **Runtime Validation**: Are all external inputs (API params, webhooks, query strings, localStorage) validated via Zod / Valibot schemas?
+- [ ] **Runtime Validation** (when external inputs exist; otherwise `N/A - <reason>`): Are all external inputs (API params, webhooks, query strings, localStorage) validated using the project's native mechanism (e.g., Zod/Valibot for TypeScript)?
 - [ ] **Discriminated Unions**: Are asynchronous or multi-variant states modeled with tagged unions?
 - [ ] **Immutability**: Are state mutations pure and immutable?
 
@@ -50,7 +50,7 @@ Use this checklist during PR reviews and self-audits to ensure the highest stand
 - [ ] **Secrets & PII Hygiene**: Are sensitive fields (passwords, tokens, emails, phone numbers) excluded from public client payloads and logs?
 
 ## 8. Performance & Resource Efficiency
-- [ ] **Database & Query Indexing**: Are all foreign keys and frequently filtered columns indexed? Are N+1 query patterns eliminated?
+- [ ] **Database & Query Indexing** (when DB queries exist; otherwise `N/A - <reason>`): Are all foreign keys and frequently filtered columns indexed? Are N+1 query patterns eliminated?
 - [ ] **Frontend Rendering**: Are expensive calculations memoized? Does the component re-render only when its specific props change?
 - [ ] **Bundle Size & Asset Optimization**: Are large third-party libraries dynamic-imported / code-split? Are images optimized and sized?
 

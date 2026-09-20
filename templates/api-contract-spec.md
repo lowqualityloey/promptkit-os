@@ -19,6 +19,8 @@
 
 ## 2. Request Schema Contracts
 
+> **Stack-neutral:** Examples below use TypeScript + Zod. Substitute your project's native validator (e.g., Valibot, Pydantic, Go `validator`, Rust `validator` crate) and language.
+
 ### Path Parameters
 ```typescript
 export const WorkspaceParamsSchema = z.object({
@@ -98,10 +100,10 @@ export type PaginatedInvitationsResponse = z.infer<typeof PaginatedInvitationsRe
 }
 ```
 
-### Error Code Catalog
+### Error Code Catalog (HTTP API example — adapt to interface; use interface-appropriate error codes)
 | HTTP Status | Error Code (`error.code`) | Human Message (`error.message`) | Trigger Condition |
 | :--- | :--- | :--- | :--- |
-| `400` | `INVALID_PAYLOAD` | Invalid request parameters. | Request fails Zod validation. |
+| `400` | `INVALID_PAYLOAD` | Invalid request parameters. | Request fails schema validation (e.g., Zod for TypeScript; use project's native validator). |
 | `401` | `UNAUTHENTICATED` | Authentication required. | Missing or expired session cookie. |
 | `403` | `PERMISSION_DENIED` | You lack permission to invite members. | User lacks `members:invite` permission. |
 | `404` | `WORKSPACE_NOT_FOUND` | Workspace not found. | Target workspace ID does not exist. |
