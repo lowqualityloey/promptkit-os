@@ -1,7 +1,7 @@
 ---
 name: systems-go
 category: systems
-version: 1
+version: 2
 token_budget: 1500
 activation:
   manifests:
@@ -53,3 +53,10 @@ Operational guidelines, invariants, and failure modes for systems services, micr
   `go test -race ./...` to execute all unit and integration tests with data race detection enabled.
 - **Extended (L3 Release / CI)**:
   `golangci-lint run` to run comprehensive multi-linter checks, static check analysis, and dead code detection.
+
+## 4. Performance Profiling Baseline
+
+- **Statistically Valid Benchmarks**: Use `go test -bench=. -benchmem -count=10` and compare runs with `benchstat` — a single benchmark run is scheduler noise, not evidence; lock the baseline before optimizing and re-measure the delta after.
+- **CPU & Heap Localization**: Profile before touching code: `go test -cpuprofile=cpu.out -memprofile=mem.out -bench=.` then `go tool pprof -http=:<port>` to find where cycles and allocations actually go; optimize top pprof entries, one variable per measurement.
+- **Race/Perf Separation**: The `-race` mandate covers correctness runs, not timing runs — benchmarks measured for performance must run without `-race`, whose instrumentation overhead distorts timings by an order of magnitude.
+- **Workflow Bridge**: Baseline → localize → optimize → measure delta per `pk:perf`; this playbook supplies the Go tooling.
