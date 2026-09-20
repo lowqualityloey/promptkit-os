@@ -164,7 +164,7 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:review` | [`workflows/review.md`](../workflows/review.md) | Core | Review report | Two-axis review: Spec Fidelity vs Technical Standards (Fowler's smells). |
 | `pk:commit` | [`workflows/commit.md`](../workflows/commit.md) | Core | Git history | Atomic Conventional Commits, single-concern staging, and secret scanning. |
 | `pk:pr` | [`workflows/pr.md`](../workflows/pr.md) | Core | PR body / `gh pr` | Pull request descriptions with test evidence and rollback procedures. |
-| `pk:ship` | [`workflows/ship.md`](../workflows/ship.md) | Core 🧪 | `docs/releases/` | Runtime env validation (Zod/T3), migration ordering, and smoke tests. |
+| `pk:ship` | [`workflows/ship.md`](../workflows/ship.md) | Core 🧪 | `docs/releases/` | Runtime env validation (project-native mechanism), migration ordering, and smoke tests. |
 | `pk:checkpoint` | [`workflows/checkpoint.md`](../workflows/checkpoint.md) | Core | `docs/STATE.md` | Session compaction, invariant locking, and fresh chat handover prompt. |
 | `pk:sync` | [`workflows/sync.md`](../workflows/sync.md) | Core 🧪 | Active context | Hot-reload protocols, purge stale memory, and synchronize with disk. |
 | `pk:profile` | [`workflows/profile.md`](../workflows/profile.md) | New 🧪 | `PROMPTKIT.md` + directive | Switch Lite/Balanced/Turbo at runtime via the idempotent installer re-injection path. |

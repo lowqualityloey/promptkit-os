@@ -160,18 +160,20 @@ When a source is unavailable, inaccessible, stale, or conflicting, keep the affe
 
 ## 3. Architecture & System Context
 
-### High-Level Architecture Diagram
+> Worked example below is illustrative for a web service (Next.js + PostgreSQL + queue/worker). Replace with the project's native architecture and stack-appropriate diagram.
+
+### High-Level Architecture Diagram (example — replace with project's native architecture)
 ```text
 ┌──────────────┐       HTTPS        ┌────────────────┐       SQL        ┌──────────────────┐
 │ Client (Web) ├───────────────────►│ Next.js API    ├─────────────────►│ PostgreSQL (DB) │
 └──────────────┘                    │ (Server Action)│                  └──────────────────┘
-                                    └───────┬────────┘
-                                            │ Dispatches
-                                            ▼
-                                    ┌────────────────┐       Async      ┌──────────────────┐
-                                    │ Event Queue    ├─────────────────►│ Transactional    │
-                                    │ (Redis / SQS)  │                  │ Email Worker     │
-                                    └────────────────┘                  └──────────────────┘
+                                     └───────┬────────┘
+                                             │ Dispatches
+                                             ▼
+                                     ┌────────────────┐       Async      ┌──────────────────┐
+                                     │ Event Queue    ├─────────────────►│ Transactional    │
+                                     │ (Redis / SQS)  │                  │ Email Worker     │
+                                     └────────────────┘                  └──────────────────┘
 ```
 
 ### Deep Module Decomposition & Seams
@@ -187,7 +189,7 @@ When a source is unavailable, inaccessible, stale, or conflicting, keep the affe
 
 ## 4. Detailed Design & Contracts First
 
-### 4.1 Data Models & Schemas
+### 4.1 Data Models & Schemas (example — Prisma for a relational web app; use the project's native representation)
 ```prisma
 // Example Schema Definition
 model WorkspaceInvitation {
@@ -205,14 +207,14 @@ model WorkspaceInvitation {
 }
 ```
 
-### 4.2 Zero-Downtime Migration Plan (Expand-Contract)
-If modifying existing schemas or columns, describe the zero-downtime lifecycle:
+### 4.2 Zero-Downtime Migration Plan (Expand-Contract) — when live or compatibility-sensitive data exists; otherwise `N/A - <reason>` (one-shot/disposable/pre-deployment may skip with rationale)
+If modifying existing live or compatibility-sensitive schemas or columns, describe the zero-downtime lifecycle:
 1. **Phase 1 (Expand)**: Add new column as nullable; write to both old and new columns.
 2. **Phase 2 (Backfill & Read Switch)**: Backfill historical records via background job; switch application read queries to new column.
 3. **Phase 3 (Contract)**: Stop writes to old column; drop old column in subsequent deployment after verification.
 - **Rollback Plan (RPO/RTO)**: [How to revert safely if the migration fails during deployment]
 
-### 4.3 API Endpoints & Zod Contracts
+### 4.3 API Endpoints & Contracts (example — Zod for TypeScript; use the project's native validation mechanism)
 ```typescript
 export const SendInviteRequestSchema = z.object({
   workspaceId: z.string().cuid(),
@@ -233,10 +235,10 @@ export type SendInviteResponse = z.infer<typeof SendInviteResponseSchema>;
 
 ## 5. Security, Privacy & Failure Modes (FMEA)
 
-### Security & Multi-Tenancy Audit
-- **Tenancy Boundary**: How do we ensure Tenant A cannot read or mutate Tenant B's data?
-- **Authentication & RBAC**: Required permissions to invoke this endpoint (`MANAGE_MEMBERS`).
-- **Input Sanitization**: Runtime validation schemas (Zod) on all inputs; parameterized database queries.
+### Security & Multi-Tenancy Audit (scope each item to the change — `N/A - <reason>` where not applicable)
+- **Tenancy Boundary** (multi-tenant systems only): How do we ensure Tenant A cannot read or mutate Tenant B's data?
+- **Authentication & RBAC** (where auth exists): Required permissions to invoke this endpoint (`MANAGE_MEMBERS`).
+- **Input Sanitization**: Runtime validation using the project's native mechanism (e.g. Zod for TypeScript) on all inputs; parameterized database queries.
 - **Secrets & PII**: Ensure email addresses and tokens are omitted from public client payloads and unredacted logs.
 
 ### FMEA Resilience Matrix

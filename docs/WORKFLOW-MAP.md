@@ -12,7 +12,7 @@ pk:route → pk:plan / pk:tasks → pk:debug → pk:commit → pk:checkpoint
 ```
 
 - Tracker lives at `PROMPTKIT.md` `tracking: local|github|jira|linear` (Jira/Linear = manual import, no auto-push).
-- Output: TL;DR top → Details → Next; choices priced; single 3-line card with `[████░░]` bar.
+- Output: TL;DR top → Details → Next; choices priced; single 3-line card with `[■■■■□□]` bar.
 
 ---
 
