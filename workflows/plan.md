@@ -23,7 +23,7 @@ Transform ambiguous product or technical requirements into clear technical speci
 > [!CAUTION]
 > **Accidental Data Loss & Downtime Prevention**: Never plan destructive migrations (`DROP COLUMN`, `DROP TABLE`, table renames) as single instantaneous changes.
 >
-> All schema modifications must plan for the **Expand-Contract (Parallel Run)** lifecycle:
+> All schema modifications to live or compatibility-sensitive data must plan for the **Expand-Contract (Parallel Run)** lifecycle. For one-shot, disposable, or pre-deployment changes, Expand-Contract may be skipped with a documented rationale — the destructive-migration prohibition above still governs all cases:
 > 1. **Expand**: Add new columns/tables as nullable or with defaults. Dual-write to old and new schemas.
 > 2. **Backfill & Read**: Migrate historical records in asynchronous batches; switch application read paths to the new schema.
 > 3. **Contract**: Remove dual-write logic; deprecate and safely drop old columns only after zero running services reference them.
@@ -75,6 +75,8 @@ After `pk:route` classifies the request into Levels 0–3:
 
 A lightweight request cannot override Full Planning when the work affects public or external contracts, persistent data or schema, authentication or authorization, external integrations, release configuration or release risk, multiple Behavioral Components, serious safety/rollback/data-loss risk, or an explicitly requested architecture plan. These triggers select planning depth only; they do not create a new route or execution class.
 
+A trigger selects planning depth, not every technique: once Full Planning is selected, individual techniques (contract formalism, schema planning, FMEA depth) still scale to the change's actual risk and project stack.
+
 ### Source-Grounded Technology and Vendor Decisions
 
 Create Decision, Material Claim, Citation, and Uncertainty records only for a material Technology or Vendor Decision. A decision is material when the work adopts, replaces, configures, versions, or materially depends on an external technology, service, platform, framework, library, or managed service and the decision affects compatibility, security behavior, supported limits, pricing, availability, lifecycle, or integration behavior.
@@ -112,6 +114,8 @@ Minimal planning limits questions, not Controlled Work readiness. `pk:tasks` mus
 
 Dependencies, risk, owner/approval boundary, execution policy, stop conditions, execution scope, active ownership, state, and all existing completion evidence remain governed by the canonical Local Task Record. A Minimal Planning Record alone never makes Controlled Work ready or permits implementation.
 
+**Steps 2–6 below are Full-Planning-only**: Minimal Planning hands off its three mapped inputs and stops; it never continues into the full RFC steps.
+
 ---
 
 ## Workflow Steps
@@ -146,8 +150,10 @@ Before any planning interrogation, read the machine-readable signals at the top 
 
 ### Step 2: System Context & Deep Module Architecture
 1. **Map the System Context**:
-   - Diagram request/response lifecycles and event flows:
-     `Client -> Edge Gateway -> Core Domain Engine -> Storage / Message Queue`
+    - Diagram request/response lifecycles and event flows in the project's native terms. Stack examples (illustrative — use whichever matches the detected stack):
+      - Web service: `Client -> Edge Gateway -> Core Domain Engine -> Storage / Message Queue`
+      - CLI: `argv / config -> Command Dispatcher -> Core Engine -> Filesystem / Stdout`
+      - Library: `Public API -> Core Module -> Dependencies`
 2. **Identify Deep Modules & Seams**:
    - Group cohesive business logic together. Avoid splitting code across too many layers unless each layer provides distinct transformative value.
    - Define clear architectural seams that enable testing without network or filesystem mocking.
@@ -157,20 +163,20 @@ Before any planning interrogation, read the machine-readable signals at the top 
 
 ### Step 3: Define Domain Models & Expand-Contract Evolution
 1. **Domain Models & API Contracts First**:
-   - Write TypeScript interfaces, Zod validation schemas, or Protocol Buffers before writing implementation code.
-   - Specify request parameters, response bodies, and explicit error status codes.
-2. **Database Schema & Migration Plan**:
-   - Define tables, foreign keys, constraints, and query indexes upfront.
-   - For changes to existing data, specify the **Expand-Contract** stages and rollback plan (RPO/RTO).
+    - Define domain models and contracts in the project's native representation before writing implementation code — e.g. TypeScript interfaces, Zod validation schemas, Protocol Buffers, Rust structs and traits, Go types, OpenAPI schemas, or CLI argument contracts.
+    - Specify request parameters, response bodies, and explicit error status codes.
+2. **Database Schema & Migration Plan** (where persistent storage exists; otherwise record `N/A - <reason>`):
+    - Define tables, foreign keys, constraints, and query indexes upfront.
+    - For changes to existing live or compatibility-sensitive data, specify the **Expand-Contract** stages and rollback plan (RPO/RTO). One-shot, disposable, or pre-deployment changes may skip Expand-Contract with a documented rationale.
 
 ### Step 4: Threat Modeling & Failure Mode and Effects Analysis (FMEA)
 Analyze system failure modes systematically before coding:
 
-1. **Security & Authorization Audit**:
-   - Multi-tenant data isolation: How do we isolate multi-tenant data so Tenant A cannot access Tenant B's data?
-   - Input validation: Runtime schema boundaries (Zod/Valibot) for all external inputs.
-   - Rate limiting, CSRF protection, and secret/PII redaction.
-2. **FMEA Matrix (Resilience & Degradation)**:
+1. **Security & Authorization Audit** (scope each item to the change — skip with `N/A - <reason>` where inapplicable):
+    - Multi-tenant data isolation (multi-tenant systems only): How do we isolate multi-tenant data so Tenant A cannot access Tenant B's data?
+    - Input validation: Runtime schema boundaries for all external inputs (e.g. Zod/Valibot for TypeScript, native validation for the project's stack).
+    - Rate limiting, CSRF protection (browser-facing surfaces only), and secret/PII redaction.
+2. **FMEA Matrix (Resilience & Degradation)** — depth proportionate to risk: the full matrix applies to broad-surface or data/auth-sensitive changes; narrow changes with no data/auth risk use a proportionate subset. Matrix rows below are illustrative examples, not required entries:
    | Failure Scenario | Probability / Severity | Detection Method | Mitigation / Fallback | Recovery Strategy |
    | :--- | :--- | :--- | :--- | :--- |
    | Downstream Service Timeout | Medium / High | APM 5xx alert | Circuit breaker + cached response | Exponential backoff retry |
@@ -217,8 +223,8 @@ The Planner / Architect hands the objective, bounded files or behaviors, accepta
 ## Completion Criteria
 - Technical specification documented and approved in `./docs/specs/`.
 - Deep module boundaries and test surfaces clearly mapped.
-- Zero-downtime Expand-Contract migration plan detailed for all database changes.
-- FMEA failure modes and mitigation fallbacks explicitly documented.
+- Zero-downtime Expand-Contract migration plan detailed for all live or compatibility-sensitive database changes (disposable/pre-deployment escapes documented with rationale).
+- FMEA failure modes and mitigation fallbacks documented at a depth proportionate to the change's risk.
 - Implementation milestones follow the Task Record's TDD Enforcement Mode: enabled Code Work has Red -> Green -> Refactor evidence; disabled Code Work has complete dependency-ordered milestones without mandatory TDD.
 - Documentation, Configuration, and Research Work use an explicit exception verification path, and ambiguous work remains on the Code Work path until clarified.
 - **Dual-Compatible Telemetry Status Card**: Conclude with the single 3-line blockquote spec (`> 📊 **Milestone**: <name> [████░░] n/m (pct%) — source: STATE.md read this turn \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: measured this turn / not measured`) and a `> [!TIP]` callout recommending `pk:grill` or `pk:tasks`. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended + why)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; `[!IMPORTANT]` / `[!WARNING]` halts still fire.
