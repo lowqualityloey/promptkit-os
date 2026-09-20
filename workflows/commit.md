@@ -10,7 +10,7 @@ Transform uncommitted workspace diffs into clean, atomic, high-signal Convention
 
 ## Preconditions
 - Active Git repository with uncommitted changes (`git status -s` shows modifications).
-- Code compiles, passes relevant linter checks, and adheres to `protocols/code-quality-gate.md`.
+- The relevant quality checks for the changed artifact and ceremony tier are available per `protocols/code-quality-gate.md` — docs-only changes use the artifact-appropriate gate (e.g. reference/markdown checks), not a compile/typecheck gate.
 
 ---
 
@@ -44,14 +44,14 @@ After the existing hygiene checks and before staging, Level 2 (Controlled) and L
 - Confirm changed files remain within the recorded scope and every scope expansion has a linked Scope Change Record and required approval or separate Task Record.
 - Confirm acceptance-criteria results, verification evidence, changed-file summary, blockers/resume condition, and review prerequisites are recorded. A commit link is not required before the first commit exists; it is added after the human-confirmed commit.
 - Confirm the current revision and checkpoint/handoff state are consistent. A hard checkpoint blocks staging and commit actions until explicit resume evidence is recorded.
-- Route commit construction, Conventional Commit formatting, staging, and developer confirmation through the rest of this workflow. A passing record or validator does not authorize `git add`, `git commit`, push, or any remote action.
+- Route commit construction, Conventional Commit formatting, staging, and developer confirmation through the rest of this workflow. Validation does not grant commit authority: staging is reversible local preparation, while creating the commit requires developer confirmation (see also the Action Authority Model in `protocols/code-quality-gate.md`).
 - After the human confirms the commit, record the exact revision and commit evidence in the canonical Task Record. Validator success proves evidence consistency only; it does not approve the commit.
 
 ---
 
-### Phase 2: Atomic Staging (One Concern Per Commit)
+### Phase 2: Atomic Staging (Prefer One Concern Per Commit)
 
-Senior Git history is **atomic**: each commit represents a single, complete, reversible logical change. Never bundle unrelated concerns into a single massive commit.
+Prefer atomic commits: each commit should represent one coherent, reversible logical change. Avoid bundling unrelated concerns into a single massive commit; if splitting would produce misleading or incomplete history, document the reason instead of force-splitting.
 
 If a session touched multiple layers, propose splitting into sequential commits:
 
@@ -72,12 +72,12 @@ Run the local harness preflight first: `bash <kit>/scripts/check-harness-securit
 
 Immediately after staging and before commit construction, perform a mandatory scan of the staged index for accidental secrets or debug probes (Time-of-Check to Time-of-Use safety):
 
-1. **Staged Content Secret Scan**:
+1. **Staged Content Secret Scan** (known credential-pattern checks — advisory coverage, not proof of absence):
    Verify no embedded private keys, tokens, or credentials are staged for commit:
    ```bash
    git diff --cached | grep -E 'BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82}|sk_live_[0-9a-zA-Z]{24}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|password\s*[:=]\s*["'\''][^"'\'']{8,}["'\'']' || true
    ```
-   If matching credential patterns are discovered in staged lines (`+`), halt immediately, alert the developer, and do not proceed with staging or committing.
+   Pattern checks are advisory and do not establish absence of all secrets. If matching credential patterns are discovered in staged lines (`+`), halt immediately, alert the developer, and do not proceed with staging or committing.
 
 2. **Suspicious Credential Filename Scan**:
    Verify no credential or environment files are staged or untracked (excluding safe templates like `.env.example`, `.env.template`, or `.env.dist`):
@@ -113,11 +113,11 @@ Format all commit messages strictly according to the Conventional Commits specif
 
 #### Contract Impact Evidence or Maintenance Classification
 
-Before developer confirmation, classify every PromptKit OS eligible commit using one of the two paths below. The classification may be recorded in the commit body or in a stable linked planning or review record. It provides traceability for later QA and release evaluation; it does not approve a version or release.
+Before developer confirmation, classify every PromptKit OS eligible commit using one of the two paths below. The classification may be recorded in the commit body or in a stable linked planning or review record. It provides traceability for later QA and release evaluation; it does not approve a version or release. No public contract impact → Maintenance classification; potential public contract impact → Contract Impact Evidence.
 
 ##### Public PromptKit Contract Impact
 
-Use this path when the commit intentionally changes a user-observable PromptKit OS workflow, template, protocol, command trigger, documented output schema, required artifact, or documented behavior. Record all of the following in the commit body or linked record:
+Use this path when the commit intentionally changes a user-observable PromptKit OS workflow, template, protocol, command trigger, documented output schema, required artifact, or documented behavior (otherwise use Maintenance Commit). Record all of the following in the commit body or linked record:
 
 - **Evidence ID**: A stable evidence reference such as `EVIDENCE-YYYY-MM-DD-slug`.
 - **Commit Evidence Location**: The commit-body field or linked planning/review record path and anchor containing this evidence.
