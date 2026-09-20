@@ -36,21 +36,21 @@
 
 ## 3. Acceptance Criteria
 
-- [ ] **AC-1**: An unmetered 15-turn session records a `120k–225k` heuristic context-payload range, not a midpoint estimate.
-  - **Result**: `Pending`
-  - **Evidence**: `Behavioral-contract assertions and source review`
-- [ ] **AC-2**: Running totals keep measured tokens separate from heuristic ranges and never call heuristic payload actual spend.
-  - **Result**: `Pending`
-  - **Evidence**: `Behavioral-contract assertions and source review`
-- [ ] **AC-3**: The existing five-column ledger remains compatible while Note records duration, repairs, interventions, verification, and outcome.
-  - **Result**: `Pending`
-  - **Evidence**: `State template and checkpoint row contract`
-- [ ] **AC-4**: Missing evidence remains `not tracked`, and avoided rework remains `not measured` without comparative evidence.
-  - **Result**: `Pending`
-  - **Evidence**: `Checkpoint evidence rules`
-- [ ] **AC-5**: Bash and PowerShell twins enforce equivalent contract assertions and all required gates pass.
-  - **Result**: `Pending`
-  - **Evidence**: `Verification commands in Section 6`
+- [x] **AC-1**: An unmetered 15-turn session records a `120k–225k` heuristic context-payload range, not a midpoint estimate.
+  - **Result**: `Pass`
+  - **Evidence**: `Behavioral contract plus Linux and Windows CI`
+- [x] **AC-2**: Running totals keep measured tokens separate from heuristic ranges and never call heuristic payload actual spend.
+  - **Result**: `Pass`
+  - **Evidence**: `Behavioral contract plus source review`
+- [x] **AC-3**: The existing five-column ledger remains compatible while Note records duration, repairs, interventions, verification, and outcome.
+  - **Result**: `Pass`
+  - **Evidence**: `State template contract and CI`
+- [x] **AC-4**: Missing evidence remains `not tracked`, and avoided rework remains `not measured` without comparative evidence.
+  - **Result**: `Pass`
+  - **Evidence**: `Checkpoint evidence boundary and CI`
+- [x] **AC-5**: Bash and PowerShell twins enforce equivalent contract assertions and all required gates pass.
+  - **Result**: `Pass`
+  - **Evidence**: `GitHub Actions run 35514349952: Linux and Windows jobs passed`
 
 ## 4. Execution Policy
 
@@ -65,12 +65,12 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `in_progress`
-- **Mapped `pk:tasks` Status**: `In Progress`
-- **Active Task Pointer**: `TASK-2026-09-21-session-spend-ledger-evidence`
+- **Execution State**: `awaiting_review`
+- **Mapped `pk:tasks` Status**: `In Review`
+- **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-21 00:00 UTC`
 - **Current Actor**: `Implementor agent`
-- **Next Action**: `Run the required verification battery.`
+- **Next Action**: `Human reviews and merges PR #378.`
 
 ### Transition History
 
@@ -79,6 +79,7 @@
 | N/A | planned | 2026-09-21 00:00 UTC | Implementor agent | Controlled-work record created | Issue #377 |
 | planned | ready | 2026-09-21 00:00 UTC | Implementor agent | Scope and verification plan approved | Issue #377 |
 | ready | in_progress | 2026-09-21 00:00 UTC | Implementor agent | Local implementation authorized | Maintainer approval |
+| in_progress | awaiting_review | 2026-09-21 00:45 UTC | Implementor agent | Acceptance and cross-platform CI passed | PR #378 |
 
 ## 6. Evidence and Completion Gate
 
@@ -91,19 +92,19 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `pending`
+- **Verification Evidence**: `Bash behavioral 244/244; execution control VALID with 33 records; strict token gate PASS at 2500/2500 Balanced and 1146/1500 Lite; per-task baselines PASS; references PASS with zero broken links; diff, syntax, and staged-security checks PASS.`
 - **Behavior IDs**: `N/A - exception work type`
 - **TDD Intent Register**: `N/A - exception work type`
 - **TDD Execution Evidence**: `N/A - exception work type`
 - **TDD Exception Verification**: `Documentation contract verified by Bash/PowerShell behavioral suites and repository gates.`
-- **CI Evidence**: `pending`
-- **Review Evidence**: `pending`
-- **Commit Evidence**: `pending`
-- **Pull Request Evidence**: `pending`
+- **CI Evidence**: `GitHub Actions run 35514349952: Lint & Validate Linux PASS in 3m06s; Windows PASS in 3m28s.`
+- **Review Evidence**: `Local two-axis diff review complete with no findings; PR #378 ready for human review.`
+- **Commit Evidence**: `1778be2 fix(checkpoint): make session spend estimates evidence-safe`
+- **Pull Request Evidence**: `https://github.com/lowqualityloey/promptkit-os/pull/378`
 - **Release Evidence**: `N/A - no release action in scope`
 - **Blocker and Resume Condition**: `None`
 - **Completion State**: `awaiting_review`
-- **Acceptance Results**: `pending`
+- **Acceptance Results**: `AC-1 through AC-5 pass`
 - **Changed-File Summary**: `5 files modified or created within Issue #377 scope`
 - **Completion Exception**: `None`
-- **Completion Decision and Timestamp**: `pending`
+- **Completion Decision and Timestamp**: `awaiting human merge decision; Implementor agent; 2026-09-21 00:45 UTC`
