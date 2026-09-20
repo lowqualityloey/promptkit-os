@@ -67,7 +67,7 @@ Before applying any fix, classify the task using the PromptKit OS ceremony model
 
 When remediating a batch of findings (e.g., from `pk:review` or an audit report), process issues in strict priority order:
 
-1. **🚨 [BLOCKING] Security & Data Safety**: Parameterized queries (SQLi immunity), sanitized inputs (XSS prevention), authorization guards, HttpOnly cookie flags, zero `DROP TABLE`/`DROP COLUMN` drops without Expand-Contract.
+1. **🚨 [BLOCKING] Security & Data Safety**: Parameterized queries (SQLi immunity), sanitized inputs (XSS prevention), authorization guards, HttpOnly cookie flags, zero `DROP TABLE`/`DROP COLUMN` drops without Expand-Contract when live or compatibility-sensitive data exists — one-shot, disposable, or pre-deployment changes may skip with documented rationale; otherwise `N/A - <reason>`.
 2. **⚠️ [IMPORTANT] Performance & Reliability**: Missing `AbortController` signal, N+1 query elimination, unhandled promise rejections, missing error handling.
 3. **💡 [SUGGEST] Code Smells & Maintainability**: Martin Fowler code smells (Mysterious Name, Duplicated Code, Primitive Obsession, Feature Envy).
 

@@ -88,7 +88,7 @@ CREATE TABLE documents (
 
 ---
 
-## 4. Multi-Tenant Row-Level Security (RLS)
+## 4. Multi-Tenant Row-Level Security (RLS) (when multi-tenant data exists; otherwise `N/A - <reason>` — e.g., single-tenant or non-Postgres engine with org-ID isolation)
 
 ```sql
 -- Enable RLS
@@ -143,7 +143,7 @@ ON CONFLICT (id) DO NOTHING;
 
 ---
 
-## 7. Zero-Downtime Migration & Rollback Plan
+## 7. Zero-Downtime Migration & Rollback Plan (when live or compatibility-sensitive data exists; otherwise `N/A - <reason>` — one-shot, disposable, or pre-deployment changes may skip with documented rationale)
 
 1. **Phase 1 (Expand)**: [Add column/table as nullable]
 2. **Phase 2 (Backfill)**: [Backfill historical rows via background job]
