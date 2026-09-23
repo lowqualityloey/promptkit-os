@@ -58,7 +58,7 @@ From `examples/saas-dashboard/docs/STATE.md`:
 **Why This Matters**:
 - UUIDv4: Random, causes B-tree index fragmentation
 - UUIDv7: Time-ordered, maintains database index locality
-- **Performance impact**: 2-3× faster inserts at scale
+- **Performance impact**: Hypothetically faster inserts at scale due to reduced index fragmentation
 - **Bonus**: Sortable by creation time without separate `created_at` column
 
 **Rarely Mentioned**: This is a 2024+ best practice that most tutorials still miss.
@@ -118,7 +118,7 @@ From `workflows/tutor.md`:
 - PromptKit **forbids** it in the protocol
 - Forces learning by doing
 
-**Evidence**: From real usage patterns, developers retain knowledge 10× better.
+**Evidence**: From real usage patterns, developers retain knowledge more effectively when they explain it themselves.
 
 ---
 
@@ -231,7 +231,7 @@ From `protocols/subagent-delegation.md`:
 - Offload heavy exploration to subagents
 - Main thread for decisions, not data scraping
 
-**Impact**: 99% context window preservation
+**Impact**: Illustrative reduction in context window usage
 
 ---
 
@@ -294,7 +294,7 @@ From `workflows/auth.md` and examples:
 
 **Why HttpOnly Cookies**:
 - Browser sends automatically
-- JavaScript **cannot** read (XSS-proof)
+- JavaScript **cannot** read (Mitigates XSS token theft)
 - SameSite=Lax prevents CSRF
 
 **PromptKit's Stance**: This is non-negotiable in `PROMPTKIT.md` examples.
@@ -561,7 +561,7 @@ These are example figures from a fictional project used to show what a PromptKit
 3. ✅ Evidence-based (metrics, not opinions)
 4. ✅ Zero lock-in (pure markdown)
 5. ✅ Structured workflows designed to reduce redundant back-and-forth
-6. ✅ Universally compatible (all AI assistants)
+6. ✅ Highly compatible (most modern AI assistants supporting markdown)
 7. ✅ Continuously validated (git-tracked state)
 8. ✅ Teaching-focused (Socratic, not code dumps)
 

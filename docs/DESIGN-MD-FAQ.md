@@ -54,8 +54,7 @@ Check if ./DESIGN.md exists in the repository root:
 ```
 
 **What this means**:
-- AI assistant **reads your DESIGN.md** at session start
-- Uses it to inform all UI-related decisions
+- AI assistant uses DESIGN.md to inform all UI-related decisions when prompted or relevant to the task
 - Enforces your rules automatically
 
 ---
@@ -139,13 +138,13 @@ cp .promptkit/templates/design-profile-template.md ./DESIGN.md
 # Edit it with your brand
 vim DESIGN.md
 
-# Next AI session automatically uses it
+# AI assistant uses it in relevant workflows
 ```
 
 **What happens**:
 - Template gives you structure
 - You customize with your brand
-- AI assistant picks it up automatically (no re-init needed)
+- AI assistant picks it up when evaluating design workflows (no re-init needed)
 
 ---
 
@@ -286,27 +285,7 @@ See BRAND-GUIDELINES.md for full brand details.
 **A**: No problem. DESIGN.md is for frontend projects. Backend-only projects don't need it.
 
 ### Q: Can I have multiple design systems?
-**A**: Yes, if you're in a monorepo:
-```bash
-monorepo/
-├── DESIGN.md              ← Global design system
-├── apps/
-│   ├── web/
-│   │   └── DESIGN.md      ← App-specific overrides
-│   └── mobile/
-│       └── DESIGN.md      ← Mobile-specific rules
-```
-
-PromptKit will use the closest DESIGN.md to the active workspace.
-
-### Q: How do I tell AI to ignore parts of my DESIGN.md?
-**A**: Add a comment:
-```markdown
-<!-- AI: Skip this section - internal team notes only -->
-## Internal Design Process
-(Team meeting notes that AI doesn't need to see)
-<!-- AI: End skip -->
-```
+**A**: PromptKit OS currently supports a single root-level `DESIGN.md`. If you have a monorepo, define your core brand tokens there and specify app-specific overrides within that single document.
 
 ---
 
@@ -328,7 +307,7 @@ PromptKit will use the closest DESIGN.md to the active workspace.
 
 ### 3. **Update When Brand Changes**
 - DESIGN.md is git-tracked
-- Changes automatically picked up in next AI session
+- Changes are automatically referenced by UI workflows
 - No re-init needed
 
 ### 4. **Reference from Code**

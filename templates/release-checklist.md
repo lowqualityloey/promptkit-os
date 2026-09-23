@@ -3,7 +3,7 @@
 <!-- Replace the example anchor with the immutable Release ID, for example: <a id="RELEASE-2026-09-release"></a> -->
 <a id="RELEASE-release-slug"></a>
 
-> **Developer-friendly fill-in guide:** **Required** means the release record cannot be complete without a concrete value. **Optional** means record it when the condition applies and use the stated `N/A` value otherwise. **Not applicable** means the release or appendix does not use that concern, such as `N/A` for Trivial Work or a consumer repository. Prefer short evidence with a stable link, exact revision, command, result, and owner. For example, `Verification Link: [CHECK-123](../tests/checks.md#CHECK-123)` and `Verified Result: Pass` are stronger than `verified` alone.
+> **Developer-friendly fill-in guide:** **Required** means the release record cannot be complete without a concrete value. **Optional** means record it when the condition applies and use the stated `N/A` value otherwise. **Not applicable** means the release or appendix does not use that concern, such as `N/A` for L0 Work or a consumer repository. Prefer short evidence with a stable link, exact revision, command, result, and owner. For example, `Verification Link: [CHECK-123](../tests/checks.md#CHECK-123)` and `Verified Result: Pass` are stronger than `verified` alone.
 >
 > **Field status summary:** Release identity, version/tag, deploy lead, target environment, date, commit, linkage state, verification result, and resume condition are **Required**. Execution-control evidence is **Required when Controlled Work applies** and **Not applicable** otherwise. Internal release-evaluation fields are **Required when the PromptKit OS appendix applies**, **Optional** when conditional, and **Not applicable** for consumers. Environment, migration, smoke-test, observation, and rollback entries are **Required when that release concern exists**; record `None` or `N/A` only where the surrounding prompt permits it.
 >
@@ -30,11 +30,11 @@
 - [ ] All code merged to `main` with approved PR review (`pk:review`).
 - [ ] All automated tests passing in CI per the project's verification (e.g. `pnpm test` / `pytest` / `cargo test` / `go test`; add `pnpm test:e2e` where an E2E suite exists).
 - [ ] Build succeeds with zero bundle size alerts per the project's build (e.g. `pnpm build`).
-- [ ] Git tag created and pushed: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
+- [ ] Release tag proposal drafted for the Release Coordinator: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z` (Do not execute without explicit human authorization).
 
 ## Execution-Control Evidence (Optional)
 
-Use this section for Controlled Work. Enter `N/A` for Trivial Work or for a consumer repository that does not adopt the optional protocol.
+Use this section for Controlled Work. Enter `N/A` for L0 Work or for a consumer repository that does not adopt the optional protocol.
 
 - **Local Task Record**: `docs/tasks/<task-id>.md`
 - **Task ID / Specification**: `[TASK-YYYY-MM-DD-slug]` / `[specification path]`

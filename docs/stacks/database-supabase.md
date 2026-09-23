@@ -17,7 +17,7 @@ verification:
     - supabase db diff
 invariants:
   - "Row Level Security (RLS) must be enabled on every table exposed in public schemas"
-  - "Every RLS mutation policy must define both USING and WITH CHECK expressions"
+  - "RLS mutation policies must be defined correctly: UPDATE policies need both USING and WITH CHECK, INSERT needs WITH CHECK, DELETE needs USING"
   - "Never expose the service_role key to browser clients — use anon key with JWT auth.uid() scoping"
   - "SECURITY DEFINER database functions must specify an explicit search_path"
   - "Index every foreign key and tenant column evaluated in RLS policies"
@@ -35,7 +35,10 @@ Operational guidelines, invariants, and failure modes for Supabase Postgres back
 ## 1. Architectural Invariants
 
 - **Mandatory Row Level Security (RLS)**: Every table created in the `public` schema must have RLS explicitly enabled: `ALTER TABLE <table_name> ENABLE ROW LEVEL SECURITY;`. By default, Postgres allows read/write access if RLS is omitted.
-- **Bi-Directional Policy Guards**: Policies for mutations (`INSERT`, `UPDATE`) must specify both `USING` (governing which existing rows can be seen for modification) and `WITH CHECK` (governing the validity of the incoming modified data).
+- **Policy Operation Guards**: Define RLS policies by operation:
+  - `SELECT` / `DELETE` require only a `USING` clause (governing visibility).
+  - `INSERT` requires only a `WITH CHECK` clause (governing validity of incoming data).
+  - `UPDATE` requires both `USING` (visibility) and `WITH CHECK` (validity of new data) to prevent hijacking records.
 - **Key Boundary Isolation**: 
   - `anon` key: Safe for browser and client applications, gated strictly by RLS and `auth.uid()`.
   - `service_role` key: Elevated administrative bypass key. NEVER expose to the client, frontend bundles, or unauthenticated server endpoints.

@@ -1,3 +1,7 @@
+---
+status: Shipped
+---
+
 # Technical Design Document (RFC): Bounded Project Intake & Anti-Overengineering Gate
 
 - **Author**: PromptKit OS maintainer
@@ -16,7 +20,7 @@
 - **Planning Record ID [Required]**: `PLAN-planning-intake`
 - **Planning Depth [Required]**: `Full` (affects documented public contracts: workflows, protocol, template, output contract)
 - **Owner [Required]**: Maintainer / human Release Coordinator
-- **Record Status [Required]**: `draft`
+- **Record Status [Required]**: `shipped`
 - **Workflow Links [Optional]**: `pk:onboard`, `pk:plan`, `pk:sync`, `pk:checkpoint`, `pk:route`
 
 ### Planning Inputs
@@ -31,7 +35,7 @@
 - **Explicit Non-Goals**: No new routing trigger; no edits to `templates/agent-directive-template.md` (2,496 of a 2,500 token gate) or the Lite directive; no `init.sh` / `init.ps1` changes; no new `docs/` directory; no change to Levels 0-3 authority, Task Record authority, or Mandatory Full Planning Triggers; no removal of pickers for bounded decisions; no mechanical host enforcement.
 - **Affected Behavioral Components**: Greenfield intake; onboarding phases and scorecard; planning Step 0 preflight; interactive-decision guidance; anti-overengineering gate; mid-implementation delta handling; published token claims.
 - **Externally Visible Contracts**: `workflows/onboard.md` phase contract and title; `workflows/plan.md` step order and picker guidance; `templates/project-profile-template.md` machine lines (`size:`, `Intake Status:`); Intake Record shape. Existing `profile:` and `tracking:` lines, and `> [!TYPE]` callout standards, are unchanged.
-- **Failure or Rollback Considerations**: Over-ceremony -> activation predicate, hard question caps, and an always-available human stop; legacy install re-interview -> a missing `Intake Status:` is treated as `partial (legacy)`; CI collateral -> the turbo human-approval phrase in `onboard.md` and the literal `Interactive Decision & Trade-Off Clarification` string in `plan.md` are preserved; documentation drift -> live measurements are quoted, never estimated. Rollback is `git revert` of the affected phase PR.
+- **Failure or Rollback Considerations**: Over-ceremony -> activation predicate, hard question caps, and an always-available human stop; legacy install re-interview -> a missing `Intake Status:` is treated as `legacy-partial`; CI collateral -> the turbo human-approval phrase in `onboard.md` and the literal `Interactive Decision & Trade-Off Clarification` string in `plan.md` are preserved; documentation drift -> live measurements are quoted, never estimated. Rollback is `git revert` of the affected phase PR.
 - **Verification Approach**: `measure-tokens.sh --strict`, `measure-per-task-tokens.sh --strict`, `measure-turbo-overhead.sh --strict`, `validate-references.sh`, `run-behavioral-contract-tests.sh` plus its PowerShell twin, `validate-execution-control.sh --root . --strict`, and a static dry-run of the small and medium intake paths.
 
 ### Assumption Records
@@ -57,7 +61,7 @@
 <a id="ASSUMPTION-planning-intake-003"></a>
 - **Assumption ID [Required]**: `ASSUMPTION-planning-intake-003`
 - **Unanswered Decision [Required]**: Are existing consumer profile files without `Intake Status:` treated as incomplete?
-- **Provisional Answer [Required]**: No - a missing field is `partial (legacy)` and never triggers a full re-interview.
+- **Provisional Answer [Required]**: No - a missing field is `legacy-partial` and never triggers a full re-interview.
 - **Impact if Wrong [Required]**: Existing users are re-interviewed, which is the primary adoption risk.
 - **Validation Action [Required]**: Phase 1 template rules plus `pk:sync` backfill wording, verified in the post-Phase-2 dry-run.
 - **Decision Owner [Required]**: PromptKit maintainer
@@ -195,7 +199,7 @@ Interception rule: when `pk:sync` or `pk:checkpoint` observes new requirements i
 Not applicable - documentation-only change. Two machine lines are added to the project profile using the existing parser-friendly convention:
 
 - `size: small | medium | large`
-- `Intake Status: unanswered | partial | complete`, where an absent value resolves to `partial (legacy)`
+- `Intake Status: unanswered | legacy-partial | complete`, where an absent value resolves to `legacy-partial`
 
 ### 4.9 Interfaces and Contracts
 
@@ -212,7 +216,7 @@ No new secret surface, no authentication change, and no tenancy impact. Generate
 | Failure | Prob/Sev | Detection | Mitigation | Recovery |
 | :--- | :--- | :--- | :--- | :--- |
 | Over-ceremony creep into small work | Med / High | Dry-run question counts | Activation predicate, hard caps, always-available human stop | Tighten the predicate and caps |
-| Legacy install re-interviewed | High / Med | Template rules review | Missing `Intake Status:` resolves to `partial (legacy)` | Restore the skip rule and re-test |
+| Legacy install re-interviewed | High / Med | Template rules review | Missing `Intake Status:` resolves to `legacy-partial` | Restore the skip rule and re-test |
 | CI guard collateral in `onboard.md` | Med / Med | `measure-turbo-overhead.sh --strict` | Preserve the turbo human-approval phrase | Restore the phrase, re-run the gate |
 | Orphaned trigger token shipped | Low / High | `validate-references.sh` warnings | Never introduce an unresolvable trigger token | Replace the wording |
 | Published token claims drift | High / Low-Med | `measure-tokens.sh --strict` versus docs | Quote live measurements only | Refresh the documented figures |

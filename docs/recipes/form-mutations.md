@@ -78,9 +78,11 @@ export async function updateProfile(
     const data = await db.update(userId, parsed.data);
     return { success: true, data };
   } catch (err) {
+    // Preserve full error details only in server-side logs/evidence
+    console.error("Profile update error:", err);
     return {
       success: false,
-      message: err instanceof Error ? err.message : "Mutation failed",
+      message: "An internal error occurred during the update.",
     };
   }
 }
@@ -110,7 +112,8 @@ export async function runOptimisticMutation<TState, TData>(opts: {
     }
   } catch (err) {
     opts.setState(snapshot); // Rollback on network/runtime error
-    opts.onError(err instanceof Error ? err.message : "Network failure");
+    // Do not return arbitrary error messages from caught network/runtime exceptions
+    opts.onError("Network or server failure");
   }
 }
 ```

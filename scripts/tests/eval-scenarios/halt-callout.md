@@ -11,6 +11,6 @@ all
 ## Transcript-PASS
 > [!WARNING]
 > ### ⚠️ Blocked: Waiting on Human Input
-> - **[Blocker]**: DATABASE_URL is missing and no project-scoped test database exists. Provide credentials or a container name to resume.
+> - **[Blocker]**: DATABASE_URL is missing and no project-scoped test database exists. Configure the database URL in your local `.env` file or provide a container name to resume.
 ## Transcript-FAIL
 I cannot run the migration right now since the database is not available. Please fix that whenever you can.

@@ -51,7 +51,7 @@ Transform ambiguous product or technical requirements into clear technical speci
 
 For the PromptKit SDLC Adaptation, `pk:route` classifies work into the canonical 4-level task ceremony model (Level 0 Direct, Level 1 Standard, Level 2 Controlled, Level 3 Release-Critical) before selecting planning depth:
 
-- **Level 0 (Direct / Trivial Work)**: Direct fast-path execution. No formal planning or Task Record required.
+- **Level 0 (Direct / L0 Work)**: Direct fast-path execution. No formal planning or Task Record required.
 - **Level 1 (Standard / Lightweight Work)**: Localized bug fixes or small self-contained features. Uses lightweight inline planning without requiring a formal Task Record file (`docs/tasks/<task-id>.md`).
 - **Level 2 (Controlled Work)**: Schema migrations, auth, permissions, breaking API contracts, or multi-component architectural risks. Requires `Minimal` or `Full` planning depth and the canonical Local Task Record at `docs/tasks/<task-id>.md`.
 - **Level 3 (Release-Critical Work)**: Releases, deployments, tag generation, or high-impact contract changes. Requires Level 2 planning and Task Record readiness plus release candidate evaluation (`pk:ship`), QA review, and human Release Coordinator authorization.
@@ -62,7 +62,7 @@ The planner maps Minimal or Full results into existing architecture, contract, m
 
 After `pk:route` classifies the request into Levels 0–3:
 
-1. **Level 0 (Direct / Trivial Work):** Direct execution (`understand → change → verify`). Do not create a Planning Record, Assumption Record, or Adaptation artifact.
+1. **Level 0 (Direct / L0 Work):** Direct execution (`understand → change → verify`). Do not create a Planning Record, Assumption Record, or Adaptation artifact.
 2. **Level 1 (Standard / Lightweight Work):** Lightweight inline planning only (outcome, completion condition, scope boundary) directly in conversation or `docs/STATE.md`. Do NOT create or populate `docs/tasks/<task-id>.md`.
 3. **Level 2 (Controlled Work):** Requires canonical Local Task Record readiness at `docs/tasks/<task-id>.md`. Select `Minimal` or `Full` planning depth:
    - **Minimal Planning (Level 2 default):** Record only requested outcome, observable completion condition, and scope boundary. Map them into the canonical Task Record at `docs/tasks/<task-id>.md` via `pk:tasks`, then stop the planning interrogation without continuing into the full RFC.
@@ -88,7 +88,7 @@ Create Decision, Material Claim, Citation, and Uncertainty records only for a ma
 - **MCP Accelerator Note (Optional)**: If active, the `fetch` or doc-reader MCP server can be used to pull current primary documentation into context without search bloat, and `sequentialthinking` can be invoked to systematically evaluate architectural tradeoffs, failure modes, and migration branches before drafting specs.
 - If primary documentation is unavailable, inaccessible, stale, or conflicting, do not mark the affected claim verified. Choose only one of these dispositions: defer the decision, run a targeted `pk:spike`, or proceed with an explicitly accepted assumption owned by a named decision maker. Record the impact, resolution action, owner, and status in an Uncertainty Record.
 - `pk:spike` owns investigation method and comparison depth. The Planning Record owns the decision provenance and links to any spike or downstream ADR; neither a spike nor an ADR replaces the Planning Record decision record.
-- Do not perform automatic web research. Research is targeted to material decisions and must not add ceremony to Trivial Work or incidental technology mentions.
+- Do not perform automatic web research. Research is targeted to material decisions and must not add ceremony to L0 Work or incidental technology mentions.
 
 #### Version Selection Policy
 

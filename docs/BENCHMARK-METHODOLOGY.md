@@ -39,14 +39,16 @@ $$\text{CPAC} = \frac{C_{\text{inference}} + C_{\text{rework}} + C_{\text{human}
 
 Where:
 
+> **Implementation vintage note:** `scripts/measure-cpac.sh` (and its `.ps1` twin) still compute inference from total-turn tokens with a flat per-loop rework penalty — an earlier model vintage than the successful-turn/rework split documented below. Until the twins are updated, pass successful-turn tokens as the inference inputs and failed-loop counts as rework. Follow-up: update both twins together.
+
 ### A. Direct Inference Cost ($C_{\text{inference}}$)
-The raw LLM API consumption across all conversation turns:
-$$C_{\text{inference}} = (T_{\text{in}} \times P_{\text{in}}) + (T_{\text{out}} \times P_{\text{out}})$$
-- $T_{\text{in}}, T_{\text{out}}$: Total prompt and completion tokens.
+The raw LLM API consumption across all successful conversation turns. Note that inference costs from failed rework loops are accounted for in $C_{\text{rework}}$ instead of here, to avoid double counting:
+$$C_{\text{inference}} = (T_{\text{successful\_in}} \times P_{\text{in}}) + (T_{\text{successful\_out}} \times P_{\text{out}})$$
+- $T_{\text{successful\_in}}, T_{\text{successful\_out}}$: Total prompt and completion tokens during successful execution phases.
 - $P_{\text{in}}, P_{\text{out}}$: Standard model pricing per token (e.g., \$3.00/1M in, \$15.00/1M out for frontier models).
 
 ### B. Rework Penalty Cost ($C_{\text{rework}}$)
-The economic waste incurred from failed compilation loops, unconstrained search loops, and broken assumptions:
+The economic waste incurred from failed compilation loops, unconstrained search loops, and broken assumptions. This isolates the cost of mistakes:
 $$C_{\text{rework}} = \sum_{k=1}^{R} \left( T_{\text{loop}(k)} \times P_{\text{avg}} + \tau_{\text{tool}(k)} \right)$$
 - $R$: Number of failed verification iterations.
 - $T_{\text{loop}(k)}$: Tokens consumed during failed repair cycle $k$.

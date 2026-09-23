@@ -30,7 +30,7 @@ Define the non-negotiable definition-of-done (DoD) and engineering quality bar f
 - [ ] Immutable data structures favored (`readonly`, `as const`, immutable update patterns).
 
 ### 2. Testing Pyramid & Test Quality
-- [ ] **Observable Red-to-Green Execution**: For new features and bug fixes, test failure (RED) with the expected assertion error was observed before writing production code.
+- [ ] **Observable Red-to-Green Execution (When TDD Enabled)**: For new features and bug fixes where TDD is enabled in the Task Record, test failure (RED) with the expected assertion error was observed before writing production code.
 - [ ] **Unit Tests**: Pure business logic, utilities, state reducers, and domain algorithms tested in isolation with 100% path coverage for edge cases (null, empty, boundary numbers, unexpected types).
 - [ ] **Integration Tests**: Database queries, API handlers, service boundaries tested with realistic fixtures or testcontainers.
 - [ ] **E2E / Component Tests**: Critical user flows and interaction states verified with tools like Playwright or React Testing Library (testing behavior, not implementation details).
