@@ -1,3 +1,7 @@
+---
+status: Shipped
+---
+
 # Issue LSP-02: LSP Detection + Setup Matrix Row + Profile Opt-In
 
 ### Metadata

@@ -1,3 +1,7 @@
+---
+status: Superseded
+---
+
 # JIT Implementation Spec: Issue A — PowerShell Parity with init.sh
 
 ## Problem and Evidence

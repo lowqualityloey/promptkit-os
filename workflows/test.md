@@ -171,7 +171,7 @@ A disagreement between the test plan, Planning Record, and Task Record blocks re
    - What belongs in E2E? (happy path browser flow)
 
 ### Step 3: Specify the RED Assertion (Planning Stops at RED)
-> 🛑 **Mandatory TDD Law**: Never write implementation code against a hypothetical test failure — and never write production source code inside `pk:test` at all.
+> 🛑 **TDD Enforcement (When Enabled)**: Never write implementation code against a hypothetical test failure — and never write production source code inside `pk:test` at all.
 1. **Write the Minimal Failing Test**: Construct a concise test asserting the desired public behavior or reproducing the defect. Test files only; production source files are untouched.
 2. **Execute and Observe RED**: Run the test suite before any implementation exists. Confirm:
    - The test fails with the expected assertion error (not a compilation error or missing import).

@@ -88,7 +88,7 @@ Result: Zero downtime. No running instance queries a deleted column.
 Before declaring a release complete, verify production behavior with active probes:
 
 1. **Pre-Flight Sanity Check**:
-   - Clean git tag generated: `vX.Y.Z`.
+   - Clean git tag proposed (do not generate or push without human authorization): `vX.Y.Z`.
    - CI pipeline passed: lint, type-check, unit tests, integration tests.
    - Build artifact size verified (check for bundle size regressions).
 2. **Automated Smoke Test Verification**:

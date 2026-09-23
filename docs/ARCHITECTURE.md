@@ -301,7 +301,7 @@ promptkit-os/
 │   ├── README.md                   # Knowledge base guide
 │   ├── learning-plan.md            # Template for engineering OKRs & practice katas
 │   ├── progress-journal.md         # Template for progressive retro logs
-│   ├── skill-matrix.md             # Software Engineering Competency Matrix (L1 → L4)
+│   ├── skill-matrix.md             # Software Engineering Competency Matrix (T1 → T4)
 │   ├── adrs/                       # Local ADR directory (for standalone vault mode)
 │   └── spikes/                     # Local Spikes directory (for standalone vault mode)
 ├── scripts/                     # Validation, isolation, and token measurement utilities
