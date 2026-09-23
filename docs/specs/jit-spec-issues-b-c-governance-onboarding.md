@@ -1,3 +1,7 @@
+---
+status: Superseded
+---
+
 # JIT Implementation Spec: Issues B & C — Governance Relocation & Contribution Documentation
 
 ## Problem and Evidence

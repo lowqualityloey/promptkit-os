@@ -61,7 +61,7 @@ When Phase 1 classifies work as Level 2 (Controlled) or Level 3 (Release-Critica
 - Reject or escalate a Minimal request when a Full trigger applies: public/external contract, persistent data, auth/authorization, external integration, release configuration or risk, multiple components, serious safety/rollback/data-loss risk, or explicit architecture planning. Full planning must complete before task decomposition continues.
 - Carry forward the objective, in-scope files/work, explicit non-goals, dependencies or `None`, owner/approval boundary, risk, verification condition, and execution policy. Any unanswered required planning input must link to its owned Assumption Record; an assumption is not a confirmed decision.
 - Give every acceptance condition a stable `AC-*` identifier and link it to the issue-facing Gherkin scenario or checklist result.
-- Keep external GitHub/Jira/Linear references optional. A dated breakdown document or external issue may index the work, but the per-task Local Task Record remains authoritative for Controlled Work.
+- Keep external GitHub/Jira/Linear references optional. A dated breakdown document or external issue may index the work, but the per-task Local Task Record remains authoritative for L1-L3 Work.
 - Do not move the record to `in_progress` until readiness is complete, the start time and execution scope are recorded, and the active-task pointer is owned by exactly one task in the current scope.
 - If the task expands its objective, files, acceptance criteria, dependencies, non-goals, risk, or verification, create a Scope Change Record before implementation. Independent discoveries become separate Task Records.
 
@@ -139,7 +139,7 @@ For each decomposed task, fill out `.promptkit/templates/issue-task-template.md`
 ### Phase 4: Local Storage & Tracker Sync (GitHub steps below are the GitHub adapter)
 
 1. **Persist the Canonical Local Source of Truth**:
-   - For each Controlled Work unit, create one canonical Task Record at `docs/tasks/<task-id>.md` from `.promptkit/templates/execution-task-record-template.md`.
+   - For each L1-L3 Work unit, create one canonical Task Record at `docs/tasks/<task-id>.md` from `.promptkit/templates/execution-task-record-template.md`.
    - A dated breakdown document may index the per-task records, but it cannot replace them or become a second lifecycle authority.
    - This provides offline resilience and protects against agent context compaction (`pk:checkpoint`).
 2. **Provision Standard GitHub Labels & Issue Template**:

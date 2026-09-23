@@ -15,7 +15,7 @@ verification:
     - git diff --check
 invariants:
   - "Web services must bind to 0.0.0.0 and listen on the dynamically assigned $PORT"
-  - "Handle SIGTERM signals gracefully within the 30-second shutdown deadline"
+  - "Handle SIGTERM signals gracefully within the platform's configured shutdown deadline (default 30 seconds)"
   - "Treat container filesystems as ephemeral — route persistent files to mounted disks or S3/R2"
   - "Declare environment variable keys in render.yaml with sync: false for confidential values"
   - "Configure a dedicated lightweight health check path that avoids deep database ping cascades"
@@ -33,7 +33,7 @@ Operational guidelines, invariants, and failure modes for containerized web serv
 ## 1. Architectural Invariants
 
 - **Host & Dynamic Port Binding**: Render dynamically allocates an open port via the `PORT` environment variable. Applications must bind to `0.0.0.0` (all interfaces) rather than `127.0.0.1` or `localhost`. Example in Node: `server.listen(process.env.PORT, '0.0.0.0')`.
-- **Graceful SIGTERM Handling**: During zero-downtime rolling deploys and autoscaling scale-down events, Render dispatches a `SIGTERM` signal. The application has 30 seconds to cease accepting new connections, finish inflight requests, close database connection pools, and exit cleanly before `SIGKILL` is issued.
+- **Graceful SIGTERM Handling**: During zero-downtime rolling deploys and autoscaling scale-down events, Render dispatches a `SIGTERM` signal. The application must cease accepting new connections, finish inflight requests, close database connection pools, and exit cleanly before `SIGKILL` is issued. The shutdown deadline is a platform behavior (default 30 seconds, but check current Render docs and project configuration).
 - **Ephemeral Storage Separation**: Instance filesystems are wiped clean on every git deploy, configuration change, or instance restart. Any file that must persist across deploys must either reside on a persistent Render Disk (`disk` mount defined in `render.yaml`) or an external object storage bucket (e.g. AWS S3, Cloudflare R2).
 - **Blueprint Secret Sanitization**: In `render.yaml` Infrastructure-as-Code files, declare environment variable schemas with `sync: false` to designate secret values populated manually in the dashboard or via environment groups. Never commit literal secrets.
 - **Dedicated Health Route**: Define a deterministic endpoint (e.g. `/healthz` or `/api/health`) returning HTTP 200 with minimal overhead. Avoid heavy database queries on health checks to prevent health check timeouts under high load.

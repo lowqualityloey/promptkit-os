@@ -42,7 +42,7 @@ Operational guidelines, invariants, and failure modes for serverless, edge, and 
 ## 2. Critical Anti-Patterns & Pitfalls
 
 - **Unawaited Background Work**: Executing asynchronous tasks (`fetch()`, analytics logging) after sending the HTTP response without `waitUntil()` causes the runtime environment to freeze immediately, abruptly terminating the incomplete promise.
-- **Exceeding Lambda Duration**: Configuring long-running database migrations or synchronous heavy tasks in serverless route handlers triggers `FUNCTION_INVOCATION_TIMEOUT` (default 10s on Hobby, 15s–60s on Pro). Offload asynchronous tasks to background message queues (e.g. QStash, Inngest).
+- **Exceeding Lambda Duration**: Configuring long-running database migrations or synchronous heavy tasks in serverless route handlers triggers `FUNCTION_INVOCATION_TIMEOUT` (duration limits depend on the Vercel plan and Next.js version; check current Vercel documentation). Offload asynchronous tasks to background message queues (e.g. QStash, Inngest).
 - **Hardcoding Production URLs**: Relying on static production URLs inside preview branches breaks preview testing. Use `process.env.VERCEL_URL` or `VERCEL_BRANCH_URL` for dynamic domain resolution in preview environments.
 - **Local Filesystem Persistence**: Writing files to `/tmp` and expecting them to be accessible on subsequent user requests fails because subsequent invocations may run in entirely different serverless instances.
 

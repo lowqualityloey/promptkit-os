@@ -57,7 +57,7 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
+- **Execution State**: `completed`
 - **Mapped `pk:tasks` Status**: `In Review`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-18 00:00 UTC`
@@ -97,7 +97,7 @@
 - **Pull Request Evidence**: PR #317 `feat/dual-mode-telemetry-formatting` -> main, closes #316
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: AC-1 through AC-6 Complete
 - **Changed-File Summary**: 7 files modified/created per commit `f16d992`
 - **Completion Exception**: `None`

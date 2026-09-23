@@ -55,7 +55,7 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
+- **Execution State**: `completed`
 - **Mapped `pk:tasks` Status**: `In Review`
 - **Active Task Pointer**: None
 - **Start Time**: 2026-09-08 15:24:18 UTC
@@ -102,7 +102,7 @@
 
 ### Completion Decision
 
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: AC-1 Pass; AC-2 Pass; AC-3 Pass.
 - **Changed-File Summary**: Added one dedicated Wave 8 Task Record; no implementation, release, CI, consumer, or unrelated planning files are in scope.
 - **Completion Exception**: None

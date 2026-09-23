@@ -14,7 +14,7 @@
 | Cookie Name | Scope | HttpOnly | Secure | SameSite | Max-Age | Purpose |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `__Host-session_id` | Top-level domain | Yes | Yes | `Lax` | 7 days | Primary authenticated session identifier |
-| `__Host-refresh_token` | `/api/auth/refresh` | Yes | Yes | `Strict`| 30 days | Rotating refresh token for session renewal |
+| `__Host-refresh_token` | `/` | Yes | Yes | `Strict`| 30 days | Rotating refresh token for session renewal |
 
 ### Token Expiry & Rotation Rules
 - **Access Token TTL**: [e.g., 15 minutes]

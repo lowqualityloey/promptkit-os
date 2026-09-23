@@ -51,9 +51,9 @@ Transform ambiguous product or technical requirements into clear technical speci
 
 For the PromptKit SDLC Adaptation, `pk:route` classifies work into the canonical 4-level task ceremony model (Level 0 Direct, Level 1 Standard, Level 2 Controlled, Level 3 Release-Critical) before selecting planning depth:
 
-- **Level 0 (Direct / Trivial Work)**: Direct fast-path execution. No formal planning or Task Record required.
+- **Level 0 (Direct / L0 Work)**: Direct fast-path execution. No formal planning or Task Record required.
 - **Level 1 (Standard / Lightweight Work)**: Localized bug fixes or small self-contained features. Uses lightweight inline planning without requiring a formal Task Record file (`docs/tasks/<task-id>.md`).
-- **Level 2 (Controlled Work)**: Schema migrations, auth, permissions, breaking API contracts, or multi-component architectural risks. Requires `Minimal` or `Full` planning depth and the canonical Local Task Record at `docs/tasks/<task-id>.md`.
+- **Level 2 (L1-L3 Work)**: Schema migrations, auth, permissions, breaking API contracts, or multi-component architectural risks. Requires `Minimal` or `Full` planning depth and the canonical Local Task Record at `docs/tasks/<task-id>.md`.
 - **Level 3 (Release-Critical Work)**: Releases, deployments, tag generation, or high-impact contract changes. Requires Level 2 planning and Task Record readiness plus release candidate evaluation (`pk:ship`), QA review, and human Release Coordinator authorization.
 
 The planner maps Minimal or Full results into existing architecture, contract, migration, FMEA, milestone, and task inputs. Planning supplies inputs; it does not change execution state or approve implementation, commits, pull requests, releases, deployment, or rollback. Existing workflow ownership and approval boundaries remain authoritative; the shared matrix is maintained in [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md).
@@ -62,9 +62,9 @@ The planner maps Minimal or Full results into existing architecture, contract, m
 
 After `pk:route` classifies the request into Levels 0–3:
 
-1. **Level 0 (Direct / Trivial Work):** Direct execution (`understand → change → verify`). Do not create a Planning Record, Assumption Record, or Adaptation artifact.
+1. **Level 0 (Direct / L0 Work):** Direct execution (`understand → change → verify`). Do not create a Planning Record, Assumption Record, or Adaptation artifact.
 2. **Level 1 (Standard / Lightweight Work):** Lightweight inline planning only (outcome, completion condition, scope boundary) directly in conversation or `docs/STATE.md`. Do NOT create or populate `docs/tasks/<task-id>.md`.
-3. **Level 2 (Controlled Work):** Requires canonical Local Task Record readiness at `docs/tasks/<task-id>.md`. Select `Minimal` or `Full` planning depth:
+3. **Level 2 (L1-L3 Work):** Requires canonical Local Task Record readiness at `docs/tasks/<task-id>.md`. Select `Minimal` or `Full` planning depth:
    - **Minimal Planning (Level 2 default):** Record only requested outcome, observable completion condition, and scope boundary. Map them into the canonical Task Record at `docs/tasks/<task-id>.md` via `pk:tasks`, then stop the planning interrogation without continuing into the full RFC.
    - **Full Planning (Level 2 triggering work):** Record requested outcome, explicit non-goals, affected Behavioral Components, externally visible contracts, failure/rollback considerations, and verification approach. Continue through the full RFC architecture, contracts, Expand-Contract migrations, FMEA matrix, milestones, and grilling steps.
 4. **Level 3 (Release-Critical Work):** Requires Level 2 planning and Task Record readiness (`docs/tasks/<task-id>.md`), plus release-critical provenance, candidate evaluation (`pk:ship`), QA review, and explicit human Release Coordinator authorization.
@@ -88,7 +88,7 @@ Create Decision, Material Claim, Citation, and Uncertainty records only for a ma
 - **MCP Accelerator Note (Optional)**: If active, the `fetch` or doc-reader MCP server can be used to pull current primary documentation into context without search bloat, and `sequentialthinking` can be invoked to systematically evaluate architectural tradeoffs, failure modes, and migration branches before drafting specs.
 - If primary documentation is unavailable, inaccessible, stale, or conflicting, do not mark the affected claim verified. Choose only one of these dispositions: defer the decision, run a targeted `pk:spike`, or proceed with an explicitly accepted assumption owned by a named decision maker. Record the impact, resolution action, owner, and status in an Uncertainty Record.
 - `pk:spike` owns investigation method and comparison depth. The Planning Record owns the decision provenance and links to any spike or downstream ADR; neither a spike nor an ADR replaces the Planning Record decision record.
-- Do not perform automatic web research. Research is targeted to material decisions and must not add ceremony to Trivial Work or incidental technology mentions.
+- Do not perform automatic web research. Research is targeted to material decisions and must not add ceremony to L0 Work or incidental technology mentions.
 
 #### Version Selection Policy
 
@@ -104,7 +104,7 @@ For a material decision that includes a technology version:
 
 ### Minimal-to-Controlled Readiness Mapping
 
-Minimal planning limits questions, not Controlled Work readiness. `pk:tasks` must still populate every existing Local Task Record readiness field with a concrete value or an explicit `None`/`N/A - <reason>` explanation where applicable:
+Minimal planning limits questions, not L1-L3 Work readiness. `pk:tasks` must still populate every existing Local Task Record readiness field with a concrete value or an explicit `None`/`N/A - <reason>` explanation where applicable:
 
 | Minimal planning input | Local Task Record contribution |
 |---|---|
@@ -112,7 +112,7 @@ Minimal planning limits questions, not Controlled Work readiness. `pk:tasks` mus
 | Observable completion condition | `Acceptance Criteria` input and `Verification Condition` |
 | Scope boundary | `In Scope` files/behaviors and `Explicit Non-Goals` |
 
-Dependencies, risk, owner/approval boundary, execution policy, stop conditions, execution scope, active ownership, state, and all existing completion evidence remain governed by the canonical Local Task Record. A Minimal Planning Record alone never makes Controlled Work ready or permits implementation.
+Dependencies, risk, owner/approval boundary, execution policy, stop conditions, execution scope, active ownership, state, and all existing completion evidence remain governed by the canonical Local Task Record. A Minimal Planning Record alone never makes L1-L3 Work ready or permits implementation.
 
 **Steps 2–6 below are Full-Planning-only**: Minimal Planning hands off its three mapped inputs and stops; it never continues into the full RFC steps.
 

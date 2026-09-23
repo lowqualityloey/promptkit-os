@@ -61,9 +61,9 @@
 
 ## Controlled Work Execution (Optional)
 
-> Complete this section when the request is Controlled Work. Trivial Work may use the existing issue flow unless it expands into Controlled Work. The Local Task Record under `docs/tasks/` is authoritative; GitHub or another external tracker is an optional reference only.
+> Complete this section when the request is L1–L3 Work. L0 Work may use the existing issue flow unless it expands into L1–L3 Work. The Local Task Record under `docs/tasks/` is authoritative; GitHub or another external tracker is an optional reference only.
 
-- **Work Classification**: `[Trivial | Controlled]`
+- **Work Classification**: `[L0 | L1 | L2 | L3]`
 - **Task ID**: `TASK-[YYYY-MM-DD]-[slug]`
 - **Local Task Record**: `docs/tasks/<task-id>.md`
 - **Specification**: `docs/specs/[specification].md`

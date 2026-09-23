@@ -64,7 +64,7 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
+- **Execution State**: `completed`
 - **Mapped `pk:tasks` Status**: `In Review`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 09:05 UTC`
@@ -118,7 +118,7 @@
 - **Pull Request Evidence**: branch `audit-remediation-151a` -> PR opened on push
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: AC-1 Complete (VALID 42->0 + both CI jobs wired); AC-2 Complete (three records + scope-1; narratives preserved, repairs labeled); AC-3 Complete (sync.md: derived counts, rendered paths, 3+1 card, honest purge); AC-4 Complete (19,794/75,505 derived + footnote + script derivation); AC-5 Complete (4 rules shipped, budget 2,319/961 with CI-asserted presence); AC-6 Complete (17-questions unified; CONVENTIONS.md injected when present + matrix-consistent); AC-7 Complete (grep now covers BENCHMARKS/lite-profile/FAQ/sync.md, patterns incl. 22 Inlined/All 22/19)
 - **Changed-File Summary**: 21 files: 4 governance records completed, 1 scope record created, CI self-gate wired, guards widened, sync.md repaired, claims derived/corrected, 4 directive endurance+provenance rules, installer parity
 - **Completion Exception**: `None`

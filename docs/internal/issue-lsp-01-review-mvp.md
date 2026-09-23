@@ -1,3 +1,7 @@
+---
+status: Shipped
+---
+
 # Issue LSP-01: LSP-Aware Diagnostics Injection for pk:review (TS CLI MVP)
 
 ### Metadata

@@ -83,12 +83,12 @@ The 4-level ceremony model refines and clarifies the system's execution boundari
 
 | Level | Ceremony Class | Scope & File Impact | Required Task Record? |
 | :--- | :--- | :--- | :--- |
-| **Level 0** | **Direct (Trivial Work)** | Conceptual queries, syntax lookups, doc typos, formatting, 1-line micro-fixes | **No** (Fast-path direct execution + `fast` verify) |
+| **Level 0** | **Direct (L0 Work)** | Conceptual queries, syntax lookups, doc typos, formatting, 1-line micro-fixes | **No** (Fast-path direct execution + `fast` verify) |
 | **Level 1** | **Standard (Lightweight Work)** | Localized bug fixes, small self-contained feature tweaks, or single-component changes modifying source files without schema/auth/breaking contract risks | **No** (Natural workflow `pk:debug`/`pk:test` with inline/`STATE.md` tracking + `required` verify) |
-| **Level 2** | **Controlled Work** | Relational schema/data migrations, auth, permissions, breaking API contracts, or multi-component architectural changes | **Yes** (Canonical Task Record at `docs/tasks/<task-id>.md` + `extended` verify) |
+| **Level 2** | **L1-L3 Work** | Relational schema/data migrations, auth, permissions, breaking API contracts, or multi-component architectural changes | **Yes** (Canonical Task Record at `docs/tasks/<task-id>.md` + `extended` verify) |
 | **Level 3** | **Release-Critical Work** | Release candidates, deployments, tag generation, or high-impact contract changes | **Yes** (Level 2 evidence plus release candidate evaluation `pk:ship` & human approval) |
 
-**Important Rule**: Modifying durable source files during an ordinary bug fix or small localized tweak is classified as **Level 1 (Standard)** and does **not** trigger Level 2 Controlled Work requirements or mandate creating `docs/tasks/<task-id>.md`. Where protocols or templates refer to "Controlled Work", those requirements apply specifically to **Level 2 (Controlled)** and **Level 3 (Release-Critical)** tasks.
+**Important Rule**: Modifying durable source files during an ordinary bug fix or small localized tweak is classified as **Level 1 (Standard)** and does **not** trigger Level 2 Controlled Work requirements or mandate creating `docs/tasks/<task-id>.md`. Where protocols or templates refer to "L1-L3 Work", those requirements apply specifically to **Level 2 (Controlled)** and **Level 3 (Release-Critical)** tasks.
 
 ### Level Decision, Escalation, Upgrade, and Downgrade Rules
 
@@ -155,7 +155,7 @@ To optimize API cost, token consumption, and reasoning depth, match your LLM sel
 
 *Rule of Thumb*: Never waste expensive frontier reasoning budgets on Level 0 syntax formatting; never under-power Level 2/3 database migrations with economy models.
 
-### Controlled Work Ownership Handoff
+### L1-L3 Work Ownership Handoff
 
 | Handoff | Owner | Output and boundary |
 | :--- | :--- | :--- |
@@ -172,9 +172,9 @@ The Local Task Record remains authoritative throughout. `docs/STATE.md` is a syn
 The PromptKit SDLC Adaptation is an additive evidence layer over this router:
 
 - `pk:route` remains the sole authority for Level 0–3 task ceremony classification (Level 0 Direct, Level 1 Standard, Level 2 Controlled, Level 3 Release-Critical).
-- After classification, `Minimal` or `Full` Planning Interrogation may describe planning depth for Controlled Work; neither is a new execution class or routing branch.
-- Trivial Work keeps its existing Fast-Path and receives no mandatory Adaptation artifact or interrogation solely because the Adaptation exists.
-- Controlled Work keeps the existing Local Task Record readiness, state, active-ownership, and completion gates before implementation.
+- After classification, `Minimal` or `Full` Planning Interrogation may describe planning depth for L1-L3 Work; neither is a new execution class or routing branch.
+- L0 Work keeps its existing Fast-Path and receives no mandatory Adaptation artifact or interrogation solely because the Adaptation exists.
+- L1-L3 Work keeps the existing Local Task Record readiness, state, active-ownership, and completion gates before implementation.
 - Existing workflow owners and human approval boundaries remain unchanged. Planning supplies inputs; it does not approve implementation, commits, pull requests, releases, deployment, or rollback.
 - Future Adaptation fields and sections are additive. Existing records remain valid without retroactive migration, and no new execution-control trigger is introduced here.
 
@@ -323,13 +323,15 @@ When a developer asks for help without specifying a command, the assistant shoul
 
 When working in an environment with PromptKit OS, the developer may prompt using natural language without specifying a `pk:` shorthand. The assistant must evaluate incoming requests according to this two-tier routing policy:
 
-### Tier 1: Fast-Path (Zero Overhead Guardrail)
+### Tier 1: Fast-Path / L0 (Zero Overhead Guardrail)
 If the request is:
 - A conceptual question, syntax lookup, or library query (e.g., "How does `useId` work in React 19?")
 - A quick single-line or small localized tweak (e.g., "Rename this variable to `userEmail`")
 - A simple code explanation, formatting, or lightweight helper request
 
-**Action**: Answer directly, concisely, and immediately. Do **not** trigger a workflow ceremony, do **not** write files to `docs/`, and do **not** add unnecessary process overhead. Preserve tokens and developer velocity.
+**Action**: Answer directly, concisely, and immediately.
+- For an **informational L0** request (no code changes): Do **not** trigger a workflow ceremony, do **not** write files to `docs/`, do **not** require an atomic commit or Task Record, do **not** output terminal execution evidence, and do **not** add a banner.
+- For a **small L0 edit**: Apply proportional local verification only. Do **not** trigger a workflow ceremony or add unnecessary process overhead. Preserve tokens and developer velocity.
 
 ### Tier 2: Substantive Protocol Auto-Route
 If the request involves non-trivial engineering changes (new features, crashes, schema changes, auth, API modifications, or releases):

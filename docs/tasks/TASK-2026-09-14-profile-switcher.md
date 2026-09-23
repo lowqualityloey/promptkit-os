@@ -72,7 +72,7 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
+- **Execution State**: `completed`
 - **Mapped `pk:tasks` Status**: `In Review`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 06:50 UTC`
@@ -109,7 +109,7 @@
 - **Pull Request Evidence**: branch `142-profile-switcher` -> PR opened upon push (number linked in PR thread)
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: AC-1 Complete (Section 0 body sync + matrix assertion); AC-2 Complete (workflow guard text + inherited init guard, matrix test 4); AC-3 Complete (non-interactive rule in workflow Phase 2.4, matrix test 7); AC-4 Complete (all claims reconciled, Scenario M tripwires green); AC-5 Complete (strict gate green at 877/2,110, docs cite measured values)
 - **Changed-File Summary**: 1 new workflow, 1 task record, 2 directives, 1 project template, 2 installer scripts, 4 test harnesses, 8 docs reconciled
 - **Completion Exception**: `None`

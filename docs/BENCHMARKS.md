@@ -89,9 +89,9 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **8,054 tok** | **6,700 tok** | **-37% Balanced, -48% Lite (-4,807 to -6,161 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **17,853 tok** | **16,499 tok** | **-28% Balanced, -33% Lite** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **13,701 tok** | **12,347 tok** | **-45% Balanced, -50% Lite (-11,060 to -12,414 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **8,069 tok** | **6,715 tok** | **-37% Balanced, -48% Lite (-4,807 to -6,161 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **17,859 tok** | **16,505 tok** | **-28% Balanced, -33% Lite** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **13,746 tok** | **12,392 tok** | **-44% Balanced, -50% Lite (-11,060 to -12,414 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 
@@ -105,8 +105,8 @@ The intake wave adds a bounded one-time cost and no steady-state cost (measured 
 | **Steady state after intake closes** (`complete` or `legacy-partial`) | protocol unloaded | **0 additional** |
 
 ### Key Runtime Efficiencies:
-1. **Time-to-First-Action (TTFA)**: Eliminates 1 full tool-reading turn on Turn 1 (no longer loads `route.md` 6,962 tok to discover Level 0 is zero overhead), saving **~3–6 seconds** of latency on every interaction. Measured via Turn 1 file reads before/after Change A.
-2. **Context Window Endurance**: Chat conversations maintain high attention reasoning for an additional **5–10 turns** before reaching compaction thresholds (parent thread saves ~98.7% via subagent delegation, see §4).
+1. **Time-to-First-Action (TTFA)**: Eliminates 1 full tool-reading turn on Turn 1 (no longer loads `route.md` 6,962 tok to discover Level 0 is zero overhead), saving modeled latency on every interaction. Measured via Turn 1 file reads before/after Change A.
+2. **Context Window Endurance**: Chat conversations maintain high attention reasoning for longer durations (modeled at additional turns) before reaching compaction thresholds (parent thread saves ~98.7% via subagent delegation, see §4).
 3. **Pure Host Isolation**: Repository-internal governance (e.g. `docs/internal/release-evaluation.md`) is decoupled from consumer workflows, keeping `ship.md` lean (~4,627 tokens vs 8,292 before extraction).
 
 ---
@@ -148,7 +148,7 @@ Beyond token counts, PromptKit's structured protocols deliver qualitative engine
 
 ### 3. Preventing Session Amnesia (`pk:checkpoint`)
 - **Unstructured Multi-Turn Drift**: After 30 turns, LLM forgets locked architectural decisions.
-- **PromptKit Protocol**: Compresses state into git-tracked `docs/STATE.md` and generates fresh-session handover prompts with zero progress loss.
+- **PromptKit Protocol**: Compresses state into git-tracked `docs/STATE.md` and generates fresh-session handover prompts intended to mitigate context-loss regressions.
 
 ---
 
@@ -159,7 +159,7 @@ While autonomous multi-agent looping frameworks attempt to solve software engine
 | Architectural Dimension | PromptKit OS (Disciplined Pairing OS) | Autonomous Multi-Agent Swarms |
 | :--- | :--- | :--- |
 | **Execution Model** | **Human-in-the-Loop Pairing**: AI proposes, verifies against Gherkin AC, and human reviews/commits. | **Autonomous Looping**: Agents iterate in unmonitored background loops until stopped or timed out. |
-| **Token Footprint** | **Lean 1x Baseline**: Just-In-Time filesystem loading (~1,928 tokens, ~90% static context reduction). Unused workflows consume 0 tokens. | **Additional Model Calls**: Multi-agent pipelines (research $\rightarrow$ planning $\rightarrow$ execution waves) introduce additional model calls and aggregate token overhead proportional to pipeline depth and context size. |
+| **Token Footprint** | **Lean 1x Baseline**: Just-In-Time filesystem loading (measured token overhead vs monolithic). Unused workflows consume 0 tokens. | **Additional Model Calls**: Multi-agent pipelines (research $\rightarrow$ planning $\rightarrow$ execution waves) introduce additional model calls and aggregate token overhead proportional to pipeline depth and context size. |
 | **State Persistence** | **Git-Tracked Plain Markdown**: `docs/STATE.md` and `docs/tasks/` survive session resets and IDE restarts. | **Hidden Local Cache Directories**: Prone to lock-file race conditions and uncommitted state drift. |
 | **Context Degradation** | **Proactive Reset Cadence**: `pk:checkpoint` flushes state before context window limits cause attention degradation. | **Exhaustion Vulnerability**: Looping pipelines frequently drive model working memory to limits before persisting state. |
 | **Quality & Done-Gates** | **Enforced Verifiable Gates**: Strict Milestone Git Boundaries, automated secret scans, and test verification proof. | **Timeout Heuristics**: Fragile duration or turn heuristics that can stall or abort long-running tasks. |
@@ -183,7 +183,7 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Avoid Flagship Burn on Trivial Tasks**: Standard coding assistants frequently waste expensive flagship reasoning tokens on basic single-line formatting, regex syntax checks, or documentation typo fixes. Routing Level 0 tasks to economy models reduces token spend by **80–90%** on daily ad-hoc queries (this is a static footprint estimation, turn-by-turn dynamic token efficiency may vary based on model usage).
+- **Avoid Flagship Burn on L0 Tasks**: Standard coding assistants frequently waste expensive flagship reasoning tokens on basic single-line formatting, regex syntax checks, or documentation typo fixes. Routing Level 0 tasks to economy models reduces token spend significantly on daily ad-hoc queries.
 - **Avoid Reasoning Failures on Hard Tasks**: Conversely, under-powering database migrations (Expand-Contract) or authentication boundary redesigns with lightweight models causes expensive defect repair loops. Deploying deep reasoning models exclusively on Level 2/3 work provides a verification standard for intended zero-downtime safety while keeping total aggregate token budgets lean.
 
 ---

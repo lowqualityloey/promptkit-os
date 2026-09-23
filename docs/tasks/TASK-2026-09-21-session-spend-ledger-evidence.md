@@ -65,7 +65,7 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
+- **Execution State**: `completed`
 - **Mapped `pk:tasks` Status**: `In Review`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-21 00:00 UTC`
@@ -103,7 +103,7 @@
 - **Pull Request Evidence**: `https://github.com/lowqualityloey/promptkit-os/pull/378`
 - **Release Evidence**: `N/A - no release action in scope`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: `AC-1 through AC-5 pass`
 - **Changed-File Summary**: `5 files modified or created within Issue #377 scope`
 - **Completion Exception**: `None`

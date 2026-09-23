@@ -1,3 +1,7 @@
+---
+status: Superseded
+---
+
 # JIT Implementation Spec: Issue D — Dedicated pk:fix Workflow
 
 ## Problem and Evidence

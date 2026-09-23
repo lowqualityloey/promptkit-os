@@ -63,7 +63,7 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
+- **Execution State**: `completed`
 - **Mapped `pk:tasks` Status**: `In Review`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 08:14 UTC`
@@ -101,7 +101,7 @@
 - **Pull Request Evidence**: branch `145-turbo-benchmark` -> PR opened on push
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: AC-1 Complete (deterministic bounds table); AC-2 Complete (section 8 decision from measured data, no threshold shopping - measured below the rule's band, decision reasoned); AC-3 Complete (invariant grep-asserted in script, exits 1 on regression)
 - **Changed-File Summary**: 1 record, 1 new script, 10 claim surfaces corrected, 1 docs section added, 1 CI wiring
 - **Completion Exception**: `None`

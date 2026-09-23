@@ -59,7 +59,7 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
+- **Execution State**: `completed`
 - **Mapped `pk:tasks` Status**: `In Review`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 10:45 UTC`
@@ -102,7 +102,7 @@
 - **Pull Request Evidence**: branch `155-prb-ceremony-guards` -> PR opened on push
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: AC-1 Complete (announced-downgrade requirement + silent-downgrade violation text); AC-2 Complete (route.md 4b + both directives, asserted); AC-3 Complete (definition + task-scope + post-init exception in gate/directive/checklist/README, asserted); AC-4 Complete (README legend+CI bullet, FAQ Q13, ci.yml display names); AC-5 Complete (zero validator diagnostics, budgets hold)
 - **Changed-File Summary**: 10 governance/contract surfaces; additive ceremony rules + definitional repairs + terminology honesty pass
 - **Completion Exception**: `None`

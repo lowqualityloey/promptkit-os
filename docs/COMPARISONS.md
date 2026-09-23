@@ -80,10 +80,10 @@ While rigid methodologies force heavy specification and testing loops on every l
 
 > **"How much engineering process does this specific task actually deserve?"**
 
-- **Level 0 (Trivial)**: Single-line typo, string update, documentation touch. Zero ceremony, no Task Records.
+- **Level 0**: Single-line typo, string update, documentation touch. Zero ceremony, no Task Records.
 - **Level 1 (Standard)**: Localized component tweak, bug fix, isolated utility. Socratic focus, minimum workflow, no Task Record.
-- **Level 2 (Coordinated)**: Multi-file feature, internal contract change, new route. Mandatory Task Record, architecture check, Bounded Oracle verification.
-- **Level 3 (High-Risk)**: Public API contract, database schema migration, authentication/authorization, production release. Strict Expand-Contract phased migrations, human sign-off, full verification evidence.
+- **Level 2 (Controlled)**: Multi-file feature, internal contract change, new route. Mandatory Task Record, architecture check, Bounded Oracle verification.
+- **Level 3 (Release-Critical)**: Public API contract, database schema migration, authentication/authorization, production release. Strict Expand-Contract phased migrations, human sign-off, full verification evidence.
 
 ---
 
@@ -92,7 +92,7 @@ While rigid methodologies force heavy specification and testing loops on every l
 | Dimension | Single-File Directives | Static Prompt Packs | Autonomous Multi-Agent Swarms | **PromptKit OS** |
 | :--- | :--- | :--- | :--- | :--- |
 | **Scope** | Tool-specific instruction endpoint | Workflow templates for one tool | Multi-agent unmonitored loops | Cross-tool engineering OS with 24 lifecycle workflows |
-| **Token Overhead** | Minimal initial overhead | High monolithic bloat (~18k tokens inlined) | Higher aggregate token cost from multi-agent pipeline calls | **~1,146 tok Lite / ~2,498 tok Balanced baseline\***  (~94% / ~87% static context reduction vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 24-workflow set); unused workflows consume 0 tokens) |
+| **Token Overhead** | Minimal initial overhead | High monolithic bloat | Higher aggregate token cost from multi-agent pipeline calls | **Measured baseline profile overhead\*** (See `BENCHMARKS.md` for current measurements; unused workflows consume 0 tokens) |
 | **Persistence** | Per-session only | Per-session only | Hidden cache directories prone to context exhaustion | Git-tracked `docs/STATE.md` survives context resets & fresh chats |
 | **Execution Model** | Unstructured chat | Manual template pasting | Background loop until timeout or crash | Disciplined human-in-the-loop pairing (Levels 0–3) |
 | **Database Safety** | No schema guardrails | Varies | Risk of destructive drops in unmonitored edits | Expand-Contract only (phased, non-breaking migrations) & strict Project-Scoped DB container isolation |
@@ -100,7 +100,7 @@ While rigid methodologies force heavy specification and testing loops on every l
 | **Done-Gates** | Trust the model | Trust the model | Fragile timeout heuristics | Artifact gates + Gherkin verification + CI + human review |
 | **Lock-in** | Tool-specific format | Tool-specific format | Framework-specific runtime & daemons | Pure markdown, works with any AI coding assistant |
 
-*\* Measured mechanically via `scripts/measure-tokens.sh` / `measure-tokens.ps1` (bytes/4 convention, ~1,146 tokens Lite / ~2,498 tokens Balanced vs the ~19.8k derived core-subset baseline (and ~97-99% vs the full 24-workflow set)). See [`BENCHMARKS.md`](./BENCHMARKS.md) for full context window analysis.*
+*\* Measured mechanically via `scripts/measure-tokens.sh` / `measure-tokens.ps1` (bytes/4 convention). See [`BENCHMARKS.md`](./BENCHMARKS.md) for current full context window analysis.*
 
 ---
 

@@ -51,7 +51,7 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
+- **Execution State**: `completed`
 - **Mapped `pk:tasks` Status**: `In Review`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-18 00:00 UTC`
@@ -86,7 +86,7 @@
 - **Pull Request Evidence**: PR #284 `docs/readme-control-plane-rewrite` -> main, closes #283
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: AC-1 Complete (control-plane hero, problem, architecture diagram lead); AC-2 Complete (references 0 errors per PR battery); AC-3 Complete (Balanced 2498, Lite 1146); AC-4 Complete (178/178); AC-5 Complete (11/11)
 - **Changed-File Summary**: 2 files; README.md restructure (+128/-185) plus this canonical Task Record
 - **Completion Exception**: `None`

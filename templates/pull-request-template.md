@@ -10,7 +10,7 @@
 
 ## Execution-Control Traceability (Optional)
 
-Use this section for Controlled Work. Enter `N/A` for Trivial Work or for a consumer repository that does not adopt the optional protocol.
+Use this section for L1-L3 Work. Enter `N/A` for L0 Work or for a consumer repository that does not adopt the optional protocol.
 
 - **Task ID / Canonical Task Record**: `[TASK-YYYY-MM-DD-slug]` / `docs/tasks/<task-id>.md`
 - **Specification / Execution Scope**: `[specification path]` / `[bounded files, artifacts, or behaviors]`

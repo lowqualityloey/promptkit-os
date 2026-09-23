@@ -1,3 +1,7 @@
+---
+status: Shipped
+---
+
 # Issue LSP-03: LSP Evidence Validator + Adoption Docs
 
 ### Metadata
