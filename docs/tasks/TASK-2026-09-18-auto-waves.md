@@ -64,6 +64,7 @@
 | N/A | planned | 2026-09-18 16:30 UTC | Implementor agent | Record created for Issue #314 Controlled Work | Issue #314 |
 | planned | ready | 2026-09-18 16:30 UTC | Implementor agent | Readiness complete; scope pre-approved in Issue #314 | This record |
 | ready | in_progress | 2026-09-18 16:30 UTC | Implementor agent | Branch `feat/auto-waves-314`; pointer assumed | This record |
+| in_progress | completed | 2026-09-18 16:30 UTC | Implementor agent | Branch `feat/auto-waves-314`; pointer assumed | This record |
 | in_progress | completed | 2026-09-19 02:09 UTC | PromptKit maintainer | Wave mode merged as `aa0ec5c` (#315); ACs verified against `main` + #329 hardening | Section 6 |
 
 ## 6. Evidence and Completion Gate

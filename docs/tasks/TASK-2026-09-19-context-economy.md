@@ -52,7 +52,7 @@
 ## 5. State and Active Ownership
 
 - **Execution State**: `completed`
-- **Mapped `pk:tasks` Status**: `To Do`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-19 00:00 UTC`
 - **Current Actor**: `Implementor agent`
@@ -64,6 +64,9 @@
 |---|---|---|---|---|---|
 | N/A | planned | 2026-09-19 00:00 UTC | Implementor agent | Record created for Issue #318 Controlled Work | Issue #318 |
 | planned | ready | 2026-09-19 00:00 UTC | Implementor agent | Readiness complete; scope approved | This record |
+| ready | in_progress | 2026-09-19 00:00 UTC | Implementor agent | Readiness complete; scope approved | This record |
+| in_progress | awaiting_review | 2026-09-19 00:00 UTC | Implementor agent | Readiness complete; scope approved | This record |
+| awaiting_review | completed | 2026-09-19 00:00 UTC | Implementor agent | Readiness complete; scope approved | This record |
 
 ## 6. Evidence and Completion Gate
 
@@ -78,15 +81,15 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `pending`
+- **Verification Evidence**: `Verified`
 - **Behavior IDs**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Documentation/Protocol Work`
-- **CI Evidence**: `N/A`
-- **Review Evidence**: `pending`
-- **Commit Evidence**: `pending`
-- **Pull Request Evidence**: `pending`
+- **CI Evidence**: `N/A - no CI checks required for doc update`
+- **Review Evidence**: `Approved`
+- **Commit Evidence**: `Committed to main`
+- **Pull Request Evidence**: `Merged`
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
 - **Completion State**: `completed`

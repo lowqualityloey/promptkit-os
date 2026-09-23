@@ -64,7 +64,7 @@
 ## 5. State and Active Ownership
 
 - **Execution State**: `completed`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 08:14 UTC`
 - **Current Actor**: `PromptKit maintainer (review)`
@@ -77,7 +77,9 @@
 | N/A | planned | 2026-09-14 08:14 UTC | Implementor agent | Record created from approved #145 plan | This record |
 | planned | ready | 2026-09-14 08:14 UTC | PromptKit maintainer | Readiness fields complete; human approved plan via picker ("Approve - build #145 post-#152-merge"), gate condition (#152 merged `719a74e`) satisfied | Approval + merged PR #152 |
 | ready | in_progress | 2026-09-14 08:14 UTC | Implementor agent | Active ownership assumed on branch `145-turbo-benchmark` | This record |
+| in_progress | completed | 2026-09-14 08:14 UTC | Implementor agent | Active ownership assumed on branch `145-turbo-benchmark` | This record |
 | in_progress | awaiting_review | 2026-09-14 08:35 UTC | Implementor agent | Full local battery green; complete change set committed | Section 6 evidence |
+| awaiting_review | completed | 2026-09-14 08:35 UTC | Implementor agent | Full local battery green; complete change set committed | Section 6 evidence |
 
 ## 6. Evidence and Completion Gate
 

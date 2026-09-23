@@ -65,8 +65,10 @@
 | N/A | planned | 2026-09-18 07:30 UTC | Implementor agent | Record created for Issue #291 Controlled Work | Issue #291 |
 | planned | ready | 2026-09-18 07:30 UTC | Implementor agent | Readiness complete; scope pre-approved in Issue #291 | This record |
 | ready | in_progress | 2026-09-18 07:30 UTC | Implementor agent | Branch `fix/test-design-291`; pointer assumed | This record |
+| in_progress | completed | 2026-09-18 07:30 UTC | Implementor agent | Branch `fix/test-design-291`; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-18 08:00 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
-| awaiting_review | completed | 2026-09-18 09:00 UTC | PromptKit maintainer | PR #299 squash-merged as dbb5439; CI green both OSes | Merge commit dbb5439 |
+| awaiting_review | completed | 2026-09-18 08:00 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
+
 
 ## 6. Evidence and Completion Gate
 

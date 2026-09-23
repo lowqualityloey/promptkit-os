@@ -73,7 +73,7 @@
 ## 5. State and Active Ownership
 
 - **Execution State**: `completed`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 06:50 UTC`
 - **Current Actor**: `PromptKit maintainer (review)`
@@ -86,7 +86,9 @@
 | N/A | planned | 2026-09-14 06:50 UTC | Implementor agent | Task Record created for approved #142 plan | This record |
 | planned | ready | 2026-09-14 06:52 UTC | PromptKit maintainer | Readiness complete: objective, scope, non-goals, AC-1..5, dependencies (#141/#143 merged), verification condition, approval boundary, execution policy all populated | Human plan approval (2 confirmations) + validator readiness fields |
 | ready | in_progress | 2026-09-14 06:52 UTC | Implementor agent | Active ownership assumed on branch `142-profile-switcher` after human approved Task Record via picker | Approval selection "Approve record — start coding PR2" |
+| in_progress | completed | 2026-09-14 06:52 UTC | Implementor agent | Active ownership assumed on branch `142-profile-switcher` after human approved Task Record via picker | Approval selection "Approve record — start coding PR2" |
 | in_progress | awaiting_review | 2026-09-14 07:10 UTC | Implementor agent | All verification commands green locally; full change set committed to branch | Section 6 evidence |
+| awaiting_review | completed | 2026-09-14 07:10 UTC | Implementor agent | All verification commands green locally; full change set committed to branch | Section 6 evidence |
 
 ## 6. Evidence and Completion Gate
 

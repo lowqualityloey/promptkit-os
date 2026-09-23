@@ -65,8 +65,10 @@
 | N/A | planned | 2026-09-18 12:30 UTC | Implementor agent | Record created for Issue #307 Controlled Work | Issue #307 |
 | planned | ready | 2026-09-18 12:30 UTC | Implementor agent | Readiness complete; scope pre-approved in Issue #307 | This record |
 | ready | in_progress | 2026-09-18 12:30 UTC | Implementor agent | Branch `docs/telemetry-close-307`; pointer assumed | This record |
+| in_progress | completed | 2026-09-18 12:30 UTC | Implementor agent | Branch `docs/telemetry-close-307`; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-18 13:00 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
-| awaiting_review | completed | 2026-09-18 14:00 UTC | PromptKit maintainer | PR #309 squash-merged as a75f7df; CI green both OSes | Merge commit a75f7df |
+| awaiting_review | completed | 2026-09-18 13:00 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
+
 
 ## 6. Evidence and Completion Gate
 

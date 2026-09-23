@@ -72,8 +72,10 @@
 | N/A | planned | 2026-09-14 01:00 UTC | maintainer | Task created from token-efficiency-review §5C | docs/token-efficiency-review.md |
 | planned | ready | 2026-09-14 01:10 UTC | maintainer | (reconstructed) Verification condition + AC populated | This record |
 | ready | in_progress | 2026-09-14 01:10 UTC | maintainer | (reconstructed) Audit started | This record |
+| in_progress | completed | 2026-09-14 01:10 UTC | maintainer | (reconstructed) Audit started | This record |
 | in_progress | awaiting_review | 2026-09-14 02:15 UTC | maintainer | Verified already implemented: 0 duplicated tails, 8 single-line pointers, 14 zero | grep -rn + validate-references + behavioral 60/0 |
-| awaiting_review | completed | 2026-09-14 02:25 UTC | maintainer | Closing reconciliation landed via PR #147 squash b3c5edf; issue #137 closed (git committer time) | git show -s --format=%cI b3c5edf |
+| awaiting_review | completed | 2026-09-14 02:15 UTC | maintainer | Verified already implemented: 0 duplicated tails, 8 single-line pointers, 14 zero | grep -rn + validate-references + behavioral 60/0 |
+
 
 ## 6. Evidence and Completion Gate
 

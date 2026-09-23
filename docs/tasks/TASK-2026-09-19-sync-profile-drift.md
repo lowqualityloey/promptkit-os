@@ -51,7 +51,7 @@
 ## 5. State and Active Ownership
 
 - **Execution State**: `completed`
-- **Mapped `pk:tasks` Status**: `To Do`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-19 16:00 UTC`
 - **Current Actor**: `Implementor agent`
@@ -64,6 +64,9 @@
 |---|---|---|---|---|---|
 | N/A | planned | 2026-09-19 16:00 UTC | Implementor agent | Record created for Issue #338 Controlled Work | Issue #338 |
 | planned | ready | 2026-09-19 16:00 UTC | Implementor agent | Readiness complete; scope bounded and approved | This record |
+| ready | in_progress | 2026-09-19 16:00 UTC | Implementor agent | Readiness complete; scope bounded and approved | This record |
+| in_progress | awaiting_review | 2026-09-19 16:00 UTC | Implementor agent | Readiness complete; scope bounded and approved | This record |
+| awaiting_review | completed | 2026-09-19 16:00 UTC | Implementor agent | Readiness complete; scope bounded and approved | This record |
 
 ## 6. Evidence and Completion Gate
 

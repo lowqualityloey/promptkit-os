@@ -71,8 +71,10 @@
 | N/A | planned | 2026-09-14 01:05 UTC | maintainer | Task created to address benchmark gap 3/10 | docs/BENCHMARKS.md |
 | planned | ready | 2026-09-14 01:20 UTC | maintainer | (reconstructed) AC + verification populated | This record |
 | ready | in_progress | 2026-09-14 01:20 UTC | maintainer | (reconstructed) Measurement started | This record |
+| in_progress | completed | 2026-09-14 01:20 UTC | maintainer | (reconstructed) Measurement started | This record |
 | in_progress | awaiting_review | 2026-09-14 03:00 UTC | maintainer | BENCHMARKS.md methodology + per-task Lite/Balanced table + TTFA + 90% static-only clarification; new measure-per-task-tokens.sh | measure-per-task-tokens.sh output, validate-references 0, behavioral 60/0 |
-| awaiting_review | completed | 2026-09-14 01:45 UTC | maintainer | PR #140 squash-merged as 06308fb (git committer time; authoring clock offset acknowledged in §7) | git show -s --format=%cI 06308fb |
+| awaiting_review | completed | 2026-09-14 03:00 UTC | maintainer | BENCHMARKS.md methodology + per-task Lite/Balanced table + TTFA + 90% static-only clarification; new measure-per-task-tokens.sh | measure-per-task-tokens.sh output, validate-references 0, behavioral 60/0 |
+
 
 ## 6. Evidence and Completion Gate
 

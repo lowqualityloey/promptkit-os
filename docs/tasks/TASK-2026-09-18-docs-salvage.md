@@ -69,10 +69,13 @@
 | N/A | planned | 2026-09-18 01:00 UTC | Implementor agent | Record created for Issue #285 Controlled Work | Issue #285 |
 | planned | ready | 2026-09-18 01:00 UTC | Implementor agent | Readiness complete; scope pre-approved in Issue #285 | This record |
 | ready | in_progress | 2026-09-18 01:00 UTC | Implementor agent | Branch `docs/salvage-gpt-diagrams-285`; pointer assumed | This record |
+| in_progress | completed | 2026-09-18 01:00 UTC | Implementor agent | Branch `docs/salvage-gpt-diagrams-285`; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-18 01:30 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
+| awaiting_review | completed | 2026-09-18 01:30 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
 | awaiting_review | in_progress | 2026-09-18 02:00 UTC | Implementor agent | Approved scope expansion SCOPE-2026-09-18-docs-salvage-1; pointer reassumed | This record |
 | in_progress | awaiting_review | 2026-09-18 02:15 UTC | Implementor agent | Scope expansion delivered; battery green | Section 6 |
-| awaiting_review | completed | 2026-09-18 03:00 UTC | PromptKit maintainer | PR #286 squash-merged as a716958; CI green both OSes | Merge commit a716958 |
+| awaiting_review | completed | 2026-09-18 02:15 UTC | Implementor agent | Scope expansion delivered; battery green | Section 6 |
+
 
 ## 6. Evidence and Completion Gate
 

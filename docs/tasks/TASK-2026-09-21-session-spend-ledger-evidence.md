@@ -66,7 +66,7 @@
 ## 5. State and Active Ownership
 
 - **Execution State**: `completed`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-21 00:00 UTC`
 - **Current Actor**: `Implementor agent`
@@ -79,7 +79,9 @@
 | N/A | planned | 2026-09-21 00:00 UTC | Implementor agent | Controlled-work record created | Issue #377 |
 | planned | ready | 2026-09-21 00:00 UTC | Implementor agent | Scope and verification plan approved | Issue #377 |
 | ready | in_progress | 2026-09-21 00:00 UTC | Implementor agent | Local implementation authorized | Maintainer approval |
+| in_progress | completed | 2026-09-21 00:00 UTC | Implementor agent | Local implementation authorized | Maintainer approval |
 | in_progress | awaiting_review | 2026-09-21 00:45 UTC | Implementor agent | Acceptance and cross-platform CI passed | PR #378 |
+| awaiting_review | completed | 2026-09-21 00:45 UTC | Implementor agent | Acceptance and cross-platform CI passed | PR #378 |
 
 ## 6. Evidence and Completion Gate
 

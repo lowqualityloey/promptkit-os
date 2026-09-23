@@ -58,7 +58,7 @@
 ## 5. State and Active Ownership
 
 - **Execution State**: `completed`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-18 00:00 UTC`
 - **Current Actor**: `PromptKit maintainer (review)`
@@ -71,7 +71,9 @@
 | N/A | planned | 2026-09-18 00:00 UTC | Implementor agent | Record created for Issue #316 Controlled Work | Issue #316 |
 | planned | ready | 2026-09-18 00:00 UTC | Implementor agent | Readiness complete; scope approved in Issue #316 | This record |
 | ready | in_progress | 2026-09-18 00:00 UTC | Implementor agent | Branch `feat/dual-mode-telemetry-formatting`; pointer assumed | This record |
+| in_progress | completed | 2026-09-18 00:00 UTC | Implementor agent | Branch `feat/dual-mode-telemetry-formatting`; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-18 00:30 UTC | Implementor agent | Telemetry protocol and behavioral tests complete; PR #317 opened | PR #317 |
+| awaiting_review | completed | 2026-09-18 00:30 UTC | Implementor agent | Telemetry protocol and behavioral tests complete; PR #317 opened | PR #317 |
 
 ## 6. Evidence and Completion Gate
 

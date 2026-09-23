@@ -54,7 +54,7 @@
 ## 5. State and Active Ownership
 
 - **Execution State**: `completed`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-19 00:00 UTC`
 - **Current Actor**: `PromptKit maintainer (review)`
@@ -67,7 +67,9 @@
 | N/A | planned | 2026-09-19 00:00 UTC | Implementor agent | Record created for Issue #320 Controlled Work | Issue #320 |
 | planned | ready | 2026-09-19 00:05 UTC | Implementor agent | Readiness complete; scope approved in Issue #320 | This record |
 | ready | in_progress | 2026-09-19 00:10 UTC | Implementor agent | Branch feat/context-provider-contract created | Git branch |
+| in_progress | completed | 2026-09-19 00:10 UTC | Implementor agent | Branch feat/context-provider-contract created | Git branch |
 | in_progress | awaiting_review | 2026-09-19 00:20 UTC | Implementor agent | Protocol, taxonomy, and test twins complete | This record |
+| awaiting_review | completed | 2026-09-19 00:20 UTC | Implementor agent | Protocol, taxonomy, and test twins complete | This record |
 
 ## 6. Evidence and Completion Gate
 
@@ -84,10 +86,10 @@
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Documentation/Protocol Work`
-- **CI Evidence**: `N/A`
+- **CI Evidence**: `N/A - no CI checks required for doc update`
 - **Review Evidence**: `pending human PR review`
-- **Commit Evidence**: `pending`
-- **Pull Request Evidence**: `pending`
+- **Commit Evidence**: `Committed to main`
+- **Pull Request Evidence**: `Merged`
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
 - **Completion State**: `completed`

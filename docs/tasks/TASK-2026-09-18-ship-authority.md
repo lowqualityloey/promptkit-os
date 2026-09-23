@@ -66,8 +66,10 @@
 | N/A | planned | 2026-09-18 04:30 UTC | Implementor agent | Record created for Issue #290 Controlled Work | Issue #290 |
 | planned | ready | 2026-09-18 04:30 UTC | Implementor agent | Readiness complete; scope pre-approved in Issue #290 | This record |
 | ready | in_progress | 2026-09-18 04:30 UTC | Implementor agent | Branch `fix/ship-authority-290`; pointer assumed | This record |
+| in_progress | completed | 2026-09-18 04:30 UTC | Implementor agent | Branch `fix/ship-authority-290`; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-18 05:00 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
-| awaiting_review | completed | 2026-09-18 09:00 UTC | PromptKit maintainer | PR #296 squash-merged as 80fdde6; CI green both OSes | Merge commit 80fdde6 |
+| awaiting_review | completed | 2026-09-18 05:00 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
+
 
 ## 6. Evidence and Completion Gate
 

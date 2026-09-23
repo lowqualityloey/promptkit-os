@@ -90,10 +90,13 @@
 | N/A | planned | 2026-09-14 01:10 UTC | maintainer | Task created to address recommendability gap (5/10) | QUICKSTART.md |
 | planned | ready | 2026-09-14 02:00 UTC | maintainer | (reconstructed) Scope refined to 2+1 modes per maintainer proposal; readiness fields + verification populated | User proposal + BENCHMARKS.md §6 |
 | ready | in_progress | 2026-09-14 02:00 UTC | maintainer | (reconstructed) Implementation begun on lite template + installer flags | This record |
+| in_progress | completed | 2026-09-14 02:00 UTC | maintainer | (reconstructed) Implementation begun on lite template + installer flags | This record |
 | in_progress | awaiting_review | 2026-09-14 02:45 UTC | maintainer | Implemented 2+1 profiles: lite template 845 tok, init flags, PROMPTKIT.md profile injection, README/QUICKSTART; PR #140 opened | init.sh --lite 842 tok, --balanced 2073 tok, behavioral 60/0, references 0 errors |
+| awaiting_review | completed | 2026-09-14 02:45 UTC | maintainer | Implemented 2+1 profiles: lite template 845 tok, init flags, PROMPTKIT.md profile injection, README/QUICKSTART; PR #140 opened | init.sh --lite 842 tok, --balanced 2073 tok, behavioral 60/0, references 0 errors |
 | awaiting_review | in_progress | 2026-09-14 03:30 UTC | maintainer | Review iteration: native interactive picker added to init.sh/init.ps1 + onboard.md ask_question | Record Updated line; onboard.md Phase 3 |
 | in_progress | awaiting_review | 2026-09-14 03:40 UTC | maintainer | Picker commits pushed into PR #140 (branch commits squashed at merge) | PR #140 files tab |
-| awaiting_review | completed | 2026-09-14 01:45 UTC | maintainer | PR #140 squash-merged as 06308fb (git committer time; record authored on an offset local clock — skew acknowledged in §7) | git show -s --format=%cI 06308fb |
+| awaiting_review | completed | 2026-09-14 03:40 UTC | maintainer | Picker commits pushed into PR #140 (branch commits squashed at merge) | PR #140 files tab |
+
 
 ## 6. Evidence and Completion Gate
 

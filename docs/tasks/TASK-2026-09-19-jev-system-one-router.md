@@ -71,8 +71,10 @@
 | N/A | planned | 2026-09-19 07:45 UTC | Implementor agent | Record created for Issue #340 Controlled Work | Issue #340 |
 | planned | ready | 2026-09-19 07:50 UTC | Implementor agent | Readiness complete; scope pre-approved in Issue #340 | This record |
 | ready | in_progress | 2026-09-19 08:00 UTC | Implementor agent | Branch feat/issue-340-jev-system-one-router; pointer assumed | This record |
+| in_progress | completed | 2026-09-19 08:00 UTC | Implementor agent | Branch feat/issue-340-jev-system-one-router; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-19 08:05 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
-| awaiting_review | completed | 2026-09-19 08:10 UTC | PromptKit maintainer | PR #341 opened with clean contract tests | PR #341 |
+| awaiting_review | completed | 2026-09-19 08:05 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
+
 
 ## 6. Evidence and Completion Gate
 

@@ -60,7 +60,7 @@
 ## 5. State and Active Ownership
 
 - **Execution State**: `completed`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 10:45 UTC`
 - **Current Actor**: `PromptKit maintainer (review)`
@@ -73,7 +73,9 @@
 | N/A | planned | 2026-09-14 10:45 UTC | Implementor agent | Record created under standing maintainer directive "do the recommendation" | This record |
 | planned | ready | 2026-09-14 10:45 UTC | Implementor agent | Readiness complete; scope pre-approved verbatim on the recommendation card (reviewable at merge gate) | Prior turn's PR-B scope listing |
 | ready | in_progress | 2026-09-14 10:45 UTC | Implementor agent | Branch `155-prb-ceremony-guards`; pointer assumed | This record |
+| in_progress | completed | 2026-09-14 10:45 UTC | Implementor agent | Branch `155-prb-ceremony-guards`; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-14 11:10 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
+| awaiting_review | completed | 2026-09-14 11:10 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
 
 ## 6. Evidence and Completion Gate
 

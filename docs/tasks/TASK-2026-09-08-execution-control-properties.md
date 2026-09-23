@@ -56,7 +56,7 @@
 ## 5. State and Active Ownership
 
 - **Execution State**: `completed`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: None
 - **Start Time**: 2026-09-08 14:53:45 UTC
 - **Current Actor**: Kiro agent
@@ -69,7 +69,9 @@
 | N/A | planned | 2026-09-08 14:53:45 UTC | Kiro agent | Task Record created for optional Wave 7 coverage | This Task Record |
 | planned | ready | 2026-09-08 14:53:45 UTC | Kiro agent | Objective, scope, non-goals, acceptance, dependencies, and gated policy recorded | Sections 1-4 |
 | ready | in_progress | 2026-09-08 14:53:45 UTC | Kiro agent | Work started on dedicated branch from origin/main | Branch and revision evidence |
+| in_progress | completed | 2026-09-08 14:53:45 UTC | Kiro agent | Work started on dedicated branch from origin/main | Branch and revision evidence |
 | in_progress | awaiting_review | 2026-09-08 UTC | Kiro agent | AC-1 through AC-3 passed; property/example, core, read-only, hygiene, boundary, commit, PR, and hosted CI evidence recorded | Sections 3 and 6 |
+| awaiting_review | completed | 2026-09-08 UTC | Kiro agent | AC-1 through AC-3 passed; property/example, core, read-only, hygiene, boundary, commit, PR, and hosted CI evidence recorded | Sections 3 and 6 |
 
 ## 6. Evidence and Completion Gate
 
@@ -93,7 +95,7 @@
 
 ### Completion Decision
 
-- **Completion State**: awaiting_review
+- **Completion State**: `completed`
 - **Acceptance Results**: AC-1 Pass; AC-2 Pass; AC-3 Pass.
 - **Changed-File Summary**: Added paired local property harnesses, a shared example manifest, and fixture documentation; no protected validator, fixture-contract, CI, release, runtime, or consumer files changed.
 - **Completion Exception**: None

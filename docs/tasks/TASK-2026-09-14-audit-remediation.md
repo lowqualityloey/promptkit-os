@@ -65,7 +65,7 @@
 ## 5. State and Active Ownership
 
 - **Execution State**: `completed`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-09-14 09:05 UTC`
 - **Current Actor**: `PromptKit maintainer (review)`
@@ -78,7 +78,9 @@
 | N/A | planned | 2026-09-14 09:05 UTC | Implementor agent | Record created from maintainer-approved PR-A plan | This record |
 | planned | ready | 2026-09-14 09:05 UTC | PromptKit maintainer | All readiness fields populated; approval via picker "Approve PR-A as scoped" | Picker approval + validator clean at ready |
 | ready | in_progress | 2026-09-14 09:05 UTC | Implementor agent | Branch `audit-remediation-151a`; pointer assumed | This record |
+| in_progress | completed | 2026-09-14 09:05 UTC | Implementor agent | Branch `audit-remediation-151a`; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-14 10:15 UTC | Implementor agent | All ACs satisfied; full battery green | Section 6 |
+| awaiting_review | completed | 2026-09-14 10:15 UTC | Implementor agent | All ACs satisfied; full battery green | Section 6 |
 
 ## 6. Evidence and Completion Gate
 

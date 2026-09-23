@@ -56,7 +56,7 @@
 ## 5. State and Active Ownership
 
 - **Execution State**: `completed`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: None
 - **Start Time**: 2026-09-08 15:24:18 UTC
 - **Current Actor**: Kiro agent
@@ -69,7 +69,9 @@
 | N/A | planned | 2026-09-08 15:24:18 UTC | Kiro agent | Wave 8 release-impact review Task Record created | This Task Record |
 | planned | ready | 2026-09-08 15:24:18 UTC | Kiro agent | Objective, scope, non-goals, acceptance, dependencies, and gated policy recorded | Sections 1-4 |
 | ready | in_progress | 2026-09-08 15:24:18 UTC | Kiro agent | Review started on dedicated branch from cached origin/main | Candidate revision in Sections 2 and 6 |
+| in_progress | completed | 2026-09-08 15:24:18 UTC | Kiro agent | Review started on dedicated branch from cached origin/main | Candidate revision in Sections 2 and 6 |
 | in_progress | awaiting_review | 2026-09-08 15:31 UTC | Kiro agent | History, public-contract, consumer, boundary, and local validation evidence recorded; no release action was performed | Sections 3 and 6 |
+| awaiting_review | completed | 2026-09-08 15:31 UTC | Kiro agent | History, public-contract, consumer, boundary, and local validation evidence recorded; no release action was performed | Sections 3 and 6 |
 
 ## 6. Evidence and Completion Gate
 

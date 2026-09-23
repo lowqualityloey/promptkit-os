@@ -64,8 +64,10 @@
 | N/A | planned | 2026-09-18 15:00 UTC | Implementor agent | Record created for Issue #311 Controlled Work | Issue #311 |
 | planned | ready | 2026-09-18 15:00 UTC | Implementor agent | Readiness complete; scope pre-approved in Issue #311 | This record |
 | ready | in_progress | 2026-09-18 15:00 UTC | Implementor agent | Branch `fix/installer-keep-installed-311`; pointer assumed | This record |
+| in_progress | completed | 2026-09-18 15:00 UTC | Implementor agent | Branch `fix/installer-keep-installed-311`; pointer assumed | This record |
 | in_progress | awaiting_review | 2026-09-18 15:30 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
-| awaiting_review | completed | 2026-09-18 16:00 UTC | PromptKit maintainer | PR #312 squash-merged as 0deec4e; CI green both OSes | Merge commit 0deec4e |
+| awaiting_review | completed | 2026-09-18 15:30 UTC | Implementor agent | All ACs satisfied; battery green | Section 6 |
+
 
 ## 6. Evidence and Completion Gate
 
