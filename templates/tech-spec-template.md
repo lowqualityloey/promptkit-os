@@ -18,7 +18,7 @@
 <!-- Replace the example anchor with the immutable planning ID, for example: <a id="PLAN-checkout"></a> -->
 <a id="PLAN-spec-slug"></a>
 
-> **Use this section for Controlled Work only.** Trivial Work keeps the existing fast path and does not require a Planning Record or Assumption Record. This section is the canonical planning location; do not create a parallel `docs/plans/` artifact.
+> **Use this section for Controlled Work only.** Level 0 Work keeps the existing fast path and does not require a Planning Record or Assumption Record. This section is the canonical planning location; do not create a parallel `docs/plans/` artifact.
 
 ### Planning Record Metadata
 

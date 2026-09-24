@@ -54,8 +54,8 @@ Check if ./DESIGN.md exists in the repository root:
 ```
 
 **What this means**:
-- AI assistant uses DESIGN.md to inform all UI-related decisions when prompted or relevant to the task
-- Enforces your rules automatically
+- AI assistant uses DESIGN.md to inform UI-related decisions when prompted or relevant to the task (e.g. `pk:design`, `pk:review`)
+- Enforces visual and component standards during design and review workflows
 
 ---
 
@@ -68,7 +68,7 @@ Check if ./DESIGN.md exists in the repository root:
 | **pk:plan** | Ensures proposed UI fits your design boundaries |
 | **pk:onboard** | Extracts existing design tokens if DESIGN.md is present |
 
-**Key Point**: If you have DESIGN.md, it's **automatically** enforced.
+**Key Point**: If you have DESIGN.md, it is enforced by relevant workflows (e.g., `pk:design`, `pk:review`).
 
 ---
 

@@ -39,7 +39,7 @@ $$\text{CPAC} = \frac{C_{\text{inference}} + C_{\text{rework}} + C_{\text{human}
 
 Where:
 
-> **Implementation vintage note:** `scripts/measure-cpac.sh` (and its `.ps1` twin) still compute inference from total-turn tokens with a flat per-loop rework penalty — an earlier model vintage than the successful-turn/rework split documented below. Until the twins are updated, pass successful-turn tokens as the inference inputs and failed-loop counts as rework. Follow-up: update both twins together.
+> **Implementation note:** `scripts/measure-cpac.sh` and its `.ps1` twin accept successful-turn tokens ($T_{\text{successful\_in}}$, $T_{\text{successful\_out}}$) for direct inference calculations, isolating failed iterations to the rework penalty ($C_{\text{rework}}$) and avoiding double-counting failed-loop inference.
 
 ### A. Direct Inference Cost ($C_{\text{inference}}$)
 The raw LLM API consumption across all successful conversation turns. Note that inference costs from failed rework loops are accounted for in $C_{\text{rework}}$ instead of here, to avoid double counting:
