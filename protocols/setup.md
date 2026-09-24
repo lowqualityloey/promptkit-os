@@ -31,6 +31,8 @@ If no known agent configuration file exists in the repository root, create `AGEN
 ### 1. Identify Workspace & Configuration Files
 Inspect the repository root for existing agent configuration files:
 - Check for: `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `.cursorrules`, `.cursor/rules/`, `.windsurfrules`, `.github/copilot-instructions.md`, `.clinerules`, `.opencode/rules.md`, `CONVENTIONS.md`.
+- Inspect for installed host skill packs: `.claude/skills/`, `.agents/skills/`, `.agents/`, and host-global skill configurations.
+- When skill packs are detected, confirm governance primacy with the developer: *"Detected external skill packs. PromptKit OS workflows govern ceremony levels and verification gates, while your skills provide specialized domain knowledge."* Record confirmation in living project state (`docs/STATE.md`).
 - If none exist, default to creating `./AGENTS.md`.
 - **Update & Re-run**: When re-running setup or updating an existing installation, scripts inspect the repository root for existing configured host files and refresh them automatically without prompting for host selection, unless explicitly forced with `--reconfigure` (`-Reconfigure`).
 

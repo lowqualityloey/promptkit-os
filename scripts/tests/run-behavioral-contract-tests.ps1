@@ -527,6 +527,15 @@ Assert-Contains "workflows/route.md" "Checkpoint Cadence by Project Size" "Route
 Assert-Contains "workflows/route.md" "record-keeping is not progress" "Small-project cadence guidance avoids manufactured checkpoint pairs"
 Assert-Contains "workflows/route.md" "workflows/checkpoint.md" "Cadence numbers defer to the canonical checkpoint workflow"
 
+Write-Host "`n📌 Scenario Y: Skill Coexistence & Precedence Contract (workflows/route.md & protocols/setup.md — Issue #385)" -ForegroundColor Yellow
+Assert-Contains "workflows/route.md" "never reclassifies work" "Router enforces that skill invocation never reclassifies work"
+Assert-Contains "workflows/route.md" "yield to PromptKit Hard Gates" "Router mandates skill process instructions yield to hard gates"
+Assert-Contains "workflows/route.md" "collide with PromptKit" "Router warns against host skills named with pk- prefix"
+Assert-Contains "protocols/setup.md" "\.claude/skills/" "Setup Phase 1 inspects host skill directories"
+Assert-Contains "protocols/setup.md" "confirm governance primacy" "Setup confirms governance primacy when skills are detected"
+Assert-Contains "docs/ADOPTION-GUIDE.md" "External Skill Coexistence & Deduplication Matrix" "Adoption guide carries skill dedup table"
+Assert-Contains "docs/ADOPTION-GUIDE.md" "Git Commit Skills" "Adoption guide dedup table maps commit skills"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
