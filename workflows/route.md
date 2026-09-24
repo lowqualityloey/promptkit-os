@@ -128,6 +128,9 @@ To prevent framework bloat while providing deep architectural invariants, the ro
 - **Bounded JIT Loading**: The assistant loads **only** the candidate playbook(s) declared in `PROMPTKIT.md` (e.g. `docs/stacks/database-turso.md`).
 - **Context Exclusion**: Unrelated stack playbooks (e.g. Rust playbooks in a Next.js repo) are strictly excluded to preserve token budgets.
 - **Precedence Hierarchy**: Local Project Profile Overrides > PromptKit Stack Playbooks > External Host Skills.
+  - *Invocation vs. Classification*: Invoking an external host skill or slash command never reclassifies work. Classification is determined strictly by the produced work (e.g. database migrations produced via a host skill remain Level 2 Controlled Work).
+  - *Gate Subordination*: Skill-specific process instructions yield to PromptKit Hard Gates (machine-verified oracle compliance, Expand-Contract data safety, secret hygiene, and milestone boundaries). Domain knowledge is preserved; process instructions yield.
+  - *Namespace Collisions*: Host skills named with a `pk-*` prefix collide with PromptKit's `pk:*` text-convention triggers and shadow workflow routing. Host skills should use domain-specific names (e.g. `sql-optimizer`, not `pk-db`).
 
 5. **Proactive Level-Fit Check (Milestone Boundaries)**:
    Escalation has triggers; de-escalation has none — ceremony must not ratchet upward and then coast there. At the **start of each milestone**, before inheriting the previous milestone's level, run a one-line fit check and propose a downgrade when the criteria hold:
