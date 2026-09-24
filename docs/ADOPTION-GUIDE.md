@@ -455,6 +455,20 @@ Add to your client's MCP configuration settings (`mcpServers` object):
 
 ---
 
+## External Skill Coexistence & Deduplication Matrix
+
+When using PromptKit OS alongside agent environments with rich skill ecosystems (such as Antigravity, Claude Code, Cursor, or Windsurf):
+
+| External Skill Type | Skill's Role (Keep) | PromptKit's Role (Governs) | Coexistence Pattern |
+| :--- | :--- | :--- | :--- |
+| **Git Commit Skills** | Message analysis, diff staging logic | `pk:commit` (Secret hygiene, gate check, atomic boundaries) | Let skill stage changes; require PromptKit oracle gate verification before commit. |
+| **TDD / Testing Skills** | Test generation, assertion synthesis | `pk:test` (Pyramid allocation, seam boundaries, TDD mode) | Skill generates unit tests; `pk:test` defines seam allocation and test plans. |
+| **Task / Issue Managers** | Board sync, backlog manipulation | `pk:tasks` (Local Task Record authority, Gherkin AC) | Local `docs/tasks/` remains authoritative; skill syncs external board as projection. |
+| **Design System Skills** | Component code, CSS/Tailwind tokens | `pk:design` + `./DESIGN.md` (Visual authority, anti-slop) | Skill implements UI components; `./DESIGN.md` serves as supreme visual truth. |
+| **Architecture / Spikes** | Deep domain lookups, library comparisons | `pk:spike` / `pk:plan` (Trade-off matrix, Expand-Contract) | Skill executes technical probes; PromptKit structures the durable spec. |
+
+---
+
 ## Rollback Plan (If It's Not Working)
 
 PromptKit is **zero lock-in**. To remove:

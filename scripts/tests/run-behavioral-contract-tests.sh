@@ -513,6 +513,16 @@ assert_contains "workflows/route.md" "Checkpoint Cadence by Project Size" "Route
 assert_contains "workflows/route.md" "record-keeping is not progress" "Small-project cadence guidance avoids manufactured checkpoint pairs"
 assert_contains "workflows/route.md" "workflows/checkpoint.md" "Cadence numbers defer to the canonical checkpoint workflow"
 
+echo ""
+echo "📌 Scenario Y: Skill Coexistence & Precedence Contract (workflows/route.md & protocols/setup.md — Issue #385)"
+assert_contains "workflows/route.md" "never reclassifies work" "Router enforces that skill invocation never reclassifies work"
+assert_contains "workflows/route.md" "yield to PromptKit Hard Gates" "Router mandates skill process instructions yield to hard gates"
+assert_contains "workflows/route.md" "collide with PromptKit" "Router warns against host skills named with pk- prefix"
+assert_contains "protocols/setup.md" "\.claude/skills/" "Setup Phase 1 inspects host skill directories"
+assert_contains "protocols/setup.md" "confirm governance primacy" "Setup confirms governance primacy when skills are detected"
+assert_contains "docs/ADOPTION-GUIDE.md" "External Skill Coexistence & Deduplication Matrix" "Adoption guide carries skill dedup table"
+assert_contains "docs/ADOPTION-GUIDE.md" "Git Commit Skills" "Adoption guide dedup table maps commit skills"
+
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"
