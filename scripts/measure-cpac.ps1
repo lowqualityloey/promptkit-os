@@ -15,6 +15,12 @@ $PriceOutPerToken = 0.000015  # $15.00 per 1M output tokens
 $ReworkPenaltyUsd = 0.05      # Execution penalty per failed loop
 $HumanInterventionUsd = 8.33  # 5 minutes of engineering review @ $100/hr
 
+# Calculate-Cpac implements the successful-turn/rework split:
+# TokensIn: T_successful_in (prompt tokens from successful conversation turns)
+# TokensOut: T_successful_out (completion tokens from successful conversation turns)
+# ReworkLoops: R (failed verification loop iterations)
+# HumanInterventions: N_human (developer intervention units)
+# Accepted: boolean flag
 function Calculate-Cpac {
     param (
         [double]$TokensIn,

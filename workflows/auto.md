@@ -225,3 +225,4 @@ If the assistant modifies an unintended file during autonomous execution:
 - Code Quality Gate: [`protocols/code-quality-gate.md`](../protocols/code-quality-gate.md)
 - Subagent delegation: [`protocols/subagent-delegation.md`](../protocols/subagent-delegation.md)
 - Lifecycle policy: [`docs/adrs/0002-workflow-lifecycle-policy.md`](../docs/adrs/0002-workflow-lifecycle-policy.md)
+- Turbo Waves guide: [`docs/TURBO-WAVES-GUIDE.md`](../docs/TURBO-WAVES-GUIDE.md)

@@ -17,7 +17,7 @@
 
 - **Task Record Link [Required for Controlled Work]**: `[TASK-<task-slug>](../tasks/<task-id>.md#TASK-<task-slug>)`
 - **Work Type Reference [Required for Controlled Work]**: `Code Work | Documentation Work | Configuration Work | Research Work`; ambiguous work follows Code Work until clarified
-- **TDD Enforcement Mode Reference [Optional]**: `disabled | enabled | N/A - no Task Record or Trivial Work`; an absent Task Record field is effective `disabled`
+- **TDD Enforcement Mode Reference [Optional]**: `disabled | enabled | N/A - no Task Record or Level 0 Work`; an absent Task Record field is effective `disabled`
 - **Mode Authority [Required]**: `Canonical Local Task Record`; this test plan is a supporting reference and cannot activate TDD.
 - **Mode Reconciliation [Required]**: `[Matches Task Record | Disagreement blocks readiness | N/A]`
 

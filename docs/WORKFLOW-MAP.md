@@ -20,7 +20,7 @@ pk:route → pk:plan / pk:tasks → pk:debug → pk:commit → pk:checkpoint
 
 Before selecting a workflow, classify the request using the composable 4-level ceremony model:
 
-- **Level 0 — Direct (Trivial Work)**: Questions, explanations, doc typos, syntax lookups, formatting, or tiny single-line tweaks. `understand → change → verify` with zero workflow ceremony or task record creation.
+- **Level 0 — Direct (Level 0 Work)**: Questions, explanations, doc typos, syntax lookups, formatting, or tiny single-line tweaks. `understand → change → verify` with zero workflow ceremony or task record creation.
 - **Level 1 — Standard (Lightweight Work)**: Localized bug fixes, small self-contained feature tweaks, or single-component enhancements modifying source files without schema/auth/breaking contract risks. Uses natural workflow routing (`pk:debug`, `pk:test`) with lightweight inline planning; does NOT require a formal Task Record file (`docs/tasks/<task-id>.md`).
 - **Level 2 — Controlled (Controlled Work)**: Relational schema/data migrations, auth, permissions, breaking API contracts, or multi-component architectural changes. Requires a canonical Local Task Source at `docs/tasks/<task-id>.md` and RFC specification (`pk:plan`, `pk:data`, `pk:auth`) before implementation.
 - **Level 3 — Release-Critical (Release Work)**: Production releases, deployments, tag creation, or high-impact contract changes. Uses Level 2 evidence plus full candidate evaluation (`pk:ship`), QA review, contract evidence, and explicit human authorization. A Level 3 downgrade requires a documented reason, confirmation that no release actions remain in scope, Release Coordinator approval, and evidence preservation.
@@ -255,7 +255,7 @@ graph TD
 | Write PR description | `pk:pr` | High-signal PR body |
 | Deploy without downtime | `pk:ship` | `docs/releases/*.md` |
 | Pause and hand off work | `pk:checkpoint` | Handover prompt + STATE.md (spend ledger, closeout record at COMPLETED) |
-| Capture decisions | `pk:retro` | ADRs in `docs/adrs/` |
+| Capture decisions | `pk:reflect` / `pk:retro` | ADRs in `docs/adrs/` |
 
 ### 🧭 Navigation & Routing
 | I Want To... | Use | Output |
@@ -315,7 +315,7 @@ graph LR
     subgraph "Meta Cluster"
         Route[pk:route]
         Checkpoint[pk:checkpoint]
-        Retro[pk:retro]
+        Retro["pk:reflect / pk:retro"]
     end
     
     Tasks --> Commit
@@ -616,6 +616,7 @@ Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycl
 
 - [`BENCHMARKS.md`](./BENCHMARKS.md) — Factual token economics, architecture analysis, and context window preservation
 - [`ADOPTION-GUIDE.md`](./ADOPTION-GUIDE.md) — Gradual adoption strategies and ceremony level transitions
+- [`TURBO-WAVES-GUIDE.md`](./TURBO-WAVES-GUIDE.md) — Unattended parallel execution guide for `pk:auto` and Turbo profile
 - [`../FAQ.md`](../FAQ.md) — Frequently asked questions and adoption details
 
 ---

@@ -76,7 +76,7 @@ Gate coverage: the static dual-profile budget runs in **both** Linux and Windows
 
 PromptKit OS benchmarks both the **static footprint** (1,146 tok Lite, 2,254 tok Balanced) and the **dynamic per-task runtime context**. 
 
-By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without preloading `workflows/route.md` (~6,962 tokens). This is Change A from `docs/token-efficiency-review.md` — verified saving 6,915 tok per task.
+By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without preloading `workflows/route.md` (~6,962 tokens at `fc98f2f` benchmark vintage; current file is ~8,830 tokens). This is Change A from `docs/token-efficiency-review.md` — verified saving 6,915 tok per task.
 
 **Methodology for per-task table:**
 - SHA: `fc98f2f` (after 2+1 profiles), also valid at `c34be80` (before profiles, Balanced only)

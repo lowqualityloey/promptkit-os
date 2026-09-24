@@ -271,7 +271,7 @@ You: [Reviews, edits, commits]
    - No more "try this... that didn't work... try this..."
    - Systematic debugging finds root cause on first attempt
 
-2. **Subagent delegation** (99% context preservation)
+2. **Subagent delegation** (up to ~98% context preservation)
    - Heavy exploration happens in subagents
    - Main context stays lean and focused
 

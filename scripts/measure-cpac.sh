@@ -24,6 +24,12 @@ for arg in "$@"; do
     esac
 done
 
+# calculate_cpac implements the successful-turn/rework split:
+# tin: T_successful_in (prompt tokens from successful conversation turns)
+# tout: T_successful_out (completion tokens from successful conversation turns)
+# rework: R (failed verification loop iterations)
+# human: N_human (developer intervention units)
+# accepted: boolean flag
 calculate_cpac() {
     local tin="$1"
     local tout="$2"
