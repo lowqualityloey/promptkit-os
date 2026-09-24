@@ -91,7 +91,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **7,823 tok** | **6,715 tok** | **-39% Balanced, -48% Lite (-5,038 to -6,146 tok)** |
 | **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **17,618 tok** | **16,510 tok** | **-29% Balanced, -33% Lite** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **13,502 tok** | **12,394 tok** | **-45% Balanced, -50% Lite (-11,259 to -12,367 tok)** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **13,651 tok** | **12,543 tok** | **-45% Balanced, -49% Lite (-11,110 to -12,218 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 

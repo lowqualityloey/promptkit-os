@@ -126,7 +126,7 @@ QA/Reviewer records stale or inconsistent execution evidence as findings in the 
 
 > [!TIP]
 > **Subagent Delegation for Dual-Axis Auditing (`protocols/subagent-delegation.md`)**:
-> In agentic environments, delegate Axis 1 (Spec Fidelity) and Axis 2 (Technical Standards) to concurrent subagents. The parent agent receives both synthesized reports and merges them into the final side-by-side review comment table.
+> In agentic environments, delegate Axis 1 (Spec Fidelity) and Axis 2 (Technical Standards) to concurrent subagents. Both reviewers inherit the **Claims-Audit duty**: re-verifying task-record and PR-body claims against the diff and recorded exit codes before synthesizing findings. The parent agent receives both synthesized reports and merges them into the final side-by-side review comment table. A conditional **security-lens third reviewer** is strictly trigger-based (spawned only when auth, schema, or permission files are touched — never a standing reviewer). Review reports remain recommendation-only and create no approval, merge, release, deployment, or rollback authority.
 
 ### Axis 1: Spec Fidelity Review
 Review the diff against the originating specification, issue description, or PR requirements:
@@ -300,7 +300,9 @@ For **Level 2 (Controlled)** and **Level 3 (Release-Critical)** Work, the lead a
      - The target Gherkin Acceptance Criteria (`AC-*`) from `docs/tasks/<task-id>.md` or RFC spec.
      - The fixed-point git diff (`git diff <baseline>...HEAD`).
      - The automated test runner commands.
-3. **Strict Bounds & Token Caps**:
+3. **Claims-Audit Duty**:
+   - Re-verify every verifiable claim in the Task Record and PR body directly against the resolved diff and recorded test exit codes before synthesizing findings.
+4. **Strict Bounds & Token Caps**:
    - **Single-Pass Contract**: Perform a single-pass audit; child-agent delegation and background iteration loops are strictly forbidden. Hosts capable of enforcing tool/turn budgets should apply them.
    - **15-Line Synthesis**: Output is capped at a 15-line Pass/Fail matrix with file/line references for missing edge cases.
    - **Targeted Verifier Scope**: Input is strictly bounded to the target Acceptance Criteria, fixed-point diff, and test commands; returns a concise synthesis, preventing expensive multi-turn downstream debugging.

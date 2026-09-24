@@ -536,6 +536,20 @@ Assert-Contains "protocols/setup.md" "confirm governance primacy" "Setup confirm
 Assert-Contains "docs/ADOPTION-GUIDE.md" "External Skill Coexistence & Deduplication Matrix" "Adoption guide carries skill dedup table"
 Assert-Contains "docs/ADOPTION-GUIDE.md" "Git Commit Skills" "Adoption guide dedup table maps commit skills"
 
+Write-Host "`n📌 Scenario Z: Sharpened Subagent Verifier & Reviewer Briefs (Issue #390)" -ForegroundColor Yellow
+Assert-Contains "protocols/subagent-delegation.md" "Claims-Audit [Dd]uty" "Subagent delegation defines Claims-Audit duty for reviewers and verifiers"
+Assert-Contains "protocols/subagent-delegation.md" "re-verifying.*against the diff and recorded exit codes" "Subagent delegation requires re-verifying claims against diff and exit codes"
+Assert-Contains "workflows/review.md" "Claims-Audit [Dd]uty" "Review workflow inherits Claims-Audit duty in dual-axis delegation"
+Assert-Contains "workflows/review.md" "security-lens third reviewer" "Review workflow defines trigger-based security-lens third reviewer"
+Assert-Contains "workflows/review.md" "create[s]? no approval.*authority" "Review report creates no approval or merge authority"
+Assert-Contains "workflows/debug.md" "adversarial pass" "Debug workflow includes adversarial pass in L2+ verifier brief"
+Assert-Contains "workflows/debug.md" "attempt to make the fix fail; try the failure mode the fix claims to close" "Debug workflow specifies attempting to break the fix"
+Assert-Contains "workflows/debug.md" "Level 0 and Level 1.*bypass" "Debug workflow preserves L0/L1 bypass for Pattern C verification"
+Assert-Contains "workflows/ship.md" "evidence audit" "Ship workflow requires Pattern C evidence audit before coordinator review"
+Assert-Contains "workflows/ship.md" "tag proposals are unexecuted" "Ship evidence audit verifies tag proposals are unexecuted"
+Assert-Contains "workflows/ship.md" "verification links resolve" "Ship evidence audit verifies verification links resolve"
+Assert-Contains "workflows/ship.md" "rollback records exist" "Ship evidence audit verifies rollback records exist"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

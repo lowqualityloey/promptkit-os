@@ -174,6 +174,9 @@ Once the failure point is proven, trace the failure back to the fundamental brok
    - Run full project test suite $\rightarrow$ verify zero regressions.
 5. **Resource Teardown & Listener Leak Verification**:
    - For memory leaks, unclosed WebSockets, or lingering timers, assert that cleanup handlers run completely on unmount or cancellation (e.g. `expect(emitter.listenerCount('event')).toBe(0)` or `expect(abortSignal.aborted).toBe(true)`).
+6. **Independent Fresh-Context Verification (Pattern C - Level 2+ Only)**:
+   - For Level 2+ fixes, the Pattern C verifier's brief includes an **adversarial pass**: attempt to make the fix fail; try the failure mode the fix claims to close, test edge conditions, and actively attempt to break the fix.
+   - Level 0 and Level 1 fixes bypass Pattern C verification completely (zero token impact on the fast path). Single-pass contract applies (max 15-line synthesis, zero child delegation).
 
 ---
 
