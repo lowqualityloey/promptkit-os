@@ -45,24 +45,7 @@ You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigge
 - **Disk-First Protocol Loading & Hot-Reload (`pk:sync`)**: Never rely on conversational memory or past turn habits for workflows or quality gates. Always read `$KIT_DIR_REL/workflows/<trigger>.md` freshly from disk. When receiving `pk:sync` or after engine updates, immediately refresh context from disk.
 - **Project Database & Harness Isolation**: Integration tests and DB verification must use dedicated project-scoped containers (e.g. `./docker-compose.yml`). Never run destructive queries against foreign project containers or credentials.
 - **Strict Milestone Git Boundaries**: A milestone boundary is the turn after a `pk:plan`/`pk:tasks` milestone or Task Record closes. Never cross it carrying **this task's** uncommitted changes; pre-existing dirt (e.g. init output) is surfaced and recommended for `pk:commit`, never a stall reason. At milestone end: stage atomically (`pk:commit`), update `docs/STATE.md`, request human sign-off (`> [!IMPORTANT]`).
-- **Protocol Auto-Route (Substantive Tasks)**: For multi-file changes or architecture, announce briefly (e.g. `[PromptKit OS: Auto-routed to pk:plan]`) and adopt the matching workflow:
-  - Defects, bugs, crashes, test failures -> `pk:debug`
-  - Known defects, review findings, security patches -> `pk:fix`
-  - Code refactoring, structural cleanup -> `pk:refactor`
-  - Performance regressions, latency -> `pk:perf`
-  - New features, redesigns -> `pk:plan`
-  - Repo intake, setup, audit -> `pk:onboard`
-  - Task breakdowns, issue creation -> `pk:tasks`
-  - DB schema, indexing, migrations -> `pk:data`
-  - Auth, sessions, cookies, RBAC -> `pk:auth`
-  - Endpoints, contracts, client types -> `pk:api`
-  - Test suites, seam allocation, mocking -> `pk:test`
-  - Code audits, PR reviews -> `pk:review`
-  - Git commits, staging -> `pk:commit`
-  - Pull requests, PR descriptions -> `pk:pr`
-  - Context bloat, session handover -> `pk:checkpoint`
-  - Deployments, env validation, releases -> `pk:ship`
-  - Unattended automation, hands-off SDLC -> `workflows/auto.md` (`pk:auto`)
+- **Protocol Auto-Route (Substantive Tasks)**: For multi-file changes or architecture, announce briefly (e.g. `[PromptKit OS: Auto-routed to pk:plan]`) and adopt the matching workflow from the Fast Shorthand Triggers above (`pk:auto` for unattended execution).
 
 ### Workflows & Protocols Reference
 Load lazily by convention — never preload:
@@ -81,20 +64,5 @@ Declare on line 1 of Turn 1: `[PromptKit OS: Level <0-3> (<Name>) — <1-line re
 - **Escalate** immediately if scope grows into persistent data, auth, public contracts, or multiple components. **Ties take the higher level.** Downgrades must be announced with a one-line reason; silent downgrade is a protocol violation. `workflows/route.md` remains the canonical authority for these rules and for downgrade guardrails.
 
 ### Project Artifact Output Paths
-All generated project documentation must be saved to the host project:
-- State Tracker: docs/STATE.md
-- ADRs: docs/adrs/
-- Technical Specs: docs/specs/
-- Task Breakdowns: docs/tasks/
-- Post-Mortems: docs/rca/
-- Spikes: docs/spikes/
-- Design Specs: docs/design/
-- Data Models: docs/data/
-- Auth Specs: docs/auth/
-- API Contracts: docs/api/
-- Test Plans: docs/tests/
-- Review Reports: docs/reviews/
-- Performance Audits: docs/perf/
-- Releases: docs/releases/
-- CI Triage Evidence: docs/releases/ci-triage/
+Save generated project documentation to host `./docs/` per `PROMPTKIT.md` (State: `docs/STATE.md`, Tasks: `docs/tasks/`, Specs: `docs/specs/`, ADRs: `docs/adrs/`, Releases: `docs/releases/`). Specialized directories (`data/`, `auth/`, `api/`, `tests/`, `design/`, `perf/`, `rca/`, `spikes/`, `reviews/`) are created on-demand.
 <!-- PROMPTKIT_END -->
