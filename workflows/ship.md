@@ -179,6 +179,14 @@ Before Step 3, record the execution evidence needed by the release evaluation:
 - Record host/timer limitations and any execution-control validator result as evidence only. A passing validator or CI job cannot approve a version or authorize a tag, hosted release, publication, deployment, or rollback.
 - Release Coordinator approval remains explicit and separate. Steps 3-5 below prepare proposals, verification plans, and records; executing tag, push, deployment, or rollback commands remains human-only (see Action Authority Model in `protocols/code-quality-gate.md`).
 
+### Pattern C Release Evidence Audit
+
+Before Release Coordinator review, a Pattern C **evidence audit** verifies checklist claims:
+- Confirm tag proposals are unexecuted proposals for the Release Coordinator (no git tags created or pushed).
+- Confirm verification links resolve to valid artifacts, test logs, and CI triage records.
+- Confirm rollback records exist with concrete rollback triggers, commands, and reversal procedures.
+- The verifier operates under the single-pass Pattern C contract (recommendation-only report capped at $\le 15$ lines; creates no release or deployment authority).
+
 ### Release Evidence Template Cross-Reference
 
 Use the optional **Execution-Control Evidence** section in `templates/release-checklist.md` for the Task Record path and ID, specification, state, owner/approval boundary, acceptance and changed-file evidence, candidate revision, verification/CI/review/commit/PR links, checkpoint/handoff, scope or exception records, blockers, host/timer limitation, and release-impact evaluation. `N/A` is valid for Level 0 Work or consumers that do not adopt the optional protocol. This evidence evaluates a candidate against the approved immutable `v1.0.0` baseline; it does not rewrite that baseline or authorize tag, push, publication, deployment, or rollback.

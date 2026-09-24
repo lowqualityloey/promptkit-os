@@ -101,13 +101,15 @@ When running `pk:spike` to evaluate competing architectures:
 When running `pk:review` on a substantial pull request:
 1. **Subagent 1 (Spec Fidelity)**: Compares modified files against `docs/specs/` to catch missing requirements or scope creep.
 2. **Subagent 2 (Technical Standards)**: Audits diff against Fowler's 12 code smells, security hygiene, and `DESIGN.md`.
-3. **Parent Agent**: Merges both reports side-by-side into the final PR review.
+3. **Claims-Audit Duty**: Both reviewers enumerate verifiable claims in the Task Record and PR body, re-verifying each against the diff and recorded exit codes before synthesizing findings.
+4. **Parent Agent**: Merges both reports side-by-side into the final PR review.
 
 ### Pattern C: Independent Fresh-Context Verification (Level 2/3 Controlled Work)
 When an agent writes a complex feature (relational schema changes, authentication rewiring, breaking public APIs, or release candidates), reviewing its own implementation in the same thread introduces author confirmation bias.
 1. **Scope Exclusions**: Level 0 and Level 1 tasks bypass this pattern completely (0 token impact; standard single-agent review).
 2. **Execution Contract**: The parent agent spawns a single fresh-context verifier subagent with *only* the Gherkin Acceptance Criteria, the fixed-point git diff, and the runnable test commands.
-3. **Strict Bounded Caps**:
+3. **Claims-Audit Duty**: The verifier enumerates every verifiable claim in the Task Record, PR body, or release checklist, re-verifying each claim against the diff and recorded exit codes before synthesizing a verdict.
+4. **Strict Bounded Caps**:
    - **Single-Pass Contract**: Verifier performs a single-pass evaluation; child-agent delegation and recursive loops are strictly forbidden. Hosts with tool/turn budgets may enforce this ceiling.
    - **Targeted Verifier Scope**: Keep context strictly bounded to Acceptance Criteria, the resolved diff, and test commands to minimize token consumption.
    - **Concise Output Ceiling**: Max 15-line response with a concise Pass/Fail matrix and exact line references.
