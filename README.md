@@ -153,6 +153,16 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit 
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --balanced
 ```
 
+Optional convenience path (needs Node 18+, no git):
+
+```bash
+npx promptkit-os@latest --balanced
+npx promptkit-os@latest --lite
+```
+
+> [!NOTE]
+> The git submodule flow above is canonical. The npm package is a **courier, not a dependency** — it fetches the release tarball matching its version into `.promptkit/` and runs the same installer, producing an identical tree. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`. Removal: delete `.promptkit/` (plus generated `PROMPTKIT.md` / `docs/STATE.md` if unwanted) — no daemon, nothing left behind.
+
 > [!TIP]
 > Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia). You do not need to learn all 24 before getting value.
 

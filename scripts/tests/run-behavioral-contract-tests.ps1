@@ -633,6 +633,19 @@ Assert-Contains "workflows/checkpoint.md" "Delegated & Assumed Decisions" "Check
 Write-Host "`n📌 Scenario AI: Turbo Verdict Revisit Trigger (Issue #213)" -ForegroundColor Yellow
 Assert-Contains "docs/BENCHMARKS.md" "Revisit trigger" "Turbo verdict carries an expiry trigger"
 
+Write-Host "`n📌 Scenario AJ: npm Courier Wrapper (Issue #413)" -ForegroundColor Yellow
+Assert-Contains "package/bin/promptkit-os.js" "refs/tags/v" "Courier resolves a pinned release tag, never a moving ref"
+Assert-Contains "package/bin/promptkit-os.js" "delivery vehicle, not a second implementation" "Courier declares itself a courier, not a reimplementation"
+Assert-Contains "package/bin/promptkit-os.js" "init\.sh" "Courier delegates to the canonical init.sh"
+Assert-Contains "package/bin/promptkit-os.js" "init\.ps1" "Courier delegates to the canonical init.ps1 on Windows"
+Assert-Contains "package/package.json" '"name": "promptkit-os"' "Courier package name matches the reserved registry name"
+Assert-Contains "package/package.json" "provenance" "Courier publishes with provenance attestation"
+Assert-Contains ".github/workflows/release-npm.yml" "npm publish --provenance" "Release job publishes with provenance"
+Assert-Contains ".github/workflows/release-npm.yml" "id-token: write" "Release job requests OIDC for attestation"
+Assert-Contains "README.md" "courier, not a dependency" "README states the courier contract"
+Assert-Contains "README.md" "git submodule add" "Submodule path stays first-documented and canonical"
+Assert-Contains "QUICKSTART.md" "npx promptkit-os@latest" "QUICKSTART documents the optional npx path"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
