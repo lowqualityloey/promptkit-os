@@ -26,6 +26,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          # Full history so the smoke test can `git archive` the tag under test. A depth-1
+          # clone checks out the tag's commit but does not reliably carry the tag ref.
+          fetch-depth: 0
 
       - name: Resolve Release Tag
         id: tag
