@@ -605,6 +605,18 @@ assert_contains "docs/stacks/cms-wordpress.md" "Mandatory Prepared SQL Statement
 assert_contains "docs/stacks/cms-wordpress.md" "State Mutation Nonce Verification" "WordPress playbook defines nonce verification invariant"
 assert_contains "workflows/onboard.md" "CMS — WordPress" "Onboarding workflow detects WordPress pattern"
 
+echo ""
+echo "📌 Scenario AG: Human Decision & Question Comprehensibility Contract (Issue #406)"
+assert_contains "protocols/code-quality-gate.md" "DECISION NEEDED" "Decision Card format sections defined in quality gate"
+assert_contains "protocols/code-quality-gate.md" "Recommendation mandatory" "Recommendation mandatory on every decision card"
+assert_contains "protocols/code-quality-gate.md" "accountability.*always human" "Type D accountability routing requires the card"
+assert_contains "protocols/code-quality-gate.md" "you decide" "You-decide delegation default declared on the card"
+assert_contains "workflows/plan.md" "Assumption-conversion rule" "Plan workflow defines assumption-conversion rule"
+assert_contains "workflows/plan.md" "Random answers are worse than assumptions" "Plan workflow forbids extracting guesses"
+assert_contains "workflows/debug.md" "render the Decision Card" "Debug halt path adopts the Decision Card"
+assert_contains "workflows/ship.md" "renders the Decision Card" "Ship approval request adopts the Decision Card"
+assert_contains "templates/agent-directive-lite-template.md" "Assumption Records, never guesses" "Lite directive carries the decision routing one-liner"
+
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"

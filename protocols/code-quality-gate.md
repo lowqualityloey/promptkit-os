@@ -77,6 +77,36 @@ Define the non-negotiable definition-of-done (DoD) and engineering quality bar f
 
 ---
 
+## Human Decision & Question Comprehensibility Contract
+
+Gates govern *when* the agent must halt for a human. This contract governs *how* the question is presented and *what happens when the owner cannot evaluate it*. A gate the human cannot evaluate is a rubber stamp; a random answer recorded as a decision is worse than an assumption.
+
+### Decision Card (halt points)
+
+Every human decision halt (blocker callouts, L-level gates, escalation points) renders this card:
+
+```
+> [!NOTE] DECISION NEEDED — <slug> (irreversible: yes/no)
+> CONTEXT: <one line — why this decision exists>
+> OPTIONS:
+>   A) <plain-language option> — consequence: <speed/cost/risk>, reversible: <yes/no, ~time-to-revert>
+>   B) ...
+> RECOMMENDATION: <letter> — <one-sentence why>
+> DEFAULT: Reply "you decide" to execute <letter>; rationale recorded in the Task Record.
+```
+
+- **Recommendation mandatory** — never present unfenced options.
+- **"You decide" default declared** on every card; delegation is a recorded decision owned by the agent with rationale logged.
+
+### Decision routing (presentation follows decision type)
+
+- **Type A — discoverable right answer exists** (regex choice, equivalence check): agent decides and reports; asking is offloading.
+- **Type B — taste among acceptable options** (library, naming, approach): 2–3 options + mandatory recommendation; human picks or delegates.
+- **Type C — consequences the human owns** (cost, data loss, security exposure, irreversible): human decides; card required.
+- **Type D — accountability** (ship, publish, license, privacy): always human; card required regardless of technical content.
+
+---
+
 ## Action Authority Model
 
 Single source for which actions an agent may take alone and which require explicit human authorization. Workflows reference this table instead of restating their own rules.
