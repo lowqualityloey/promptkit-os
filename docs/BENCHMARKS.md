@@ -38,7 +38,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 ¹ Core-subset baseline = live sum of the six lifecycle files the Lite profile loads (route, debug, commit, checkpoint, sync, profile) = ~19,794 tok; full-set baseline = all 24 workflow files = ~75,505 tok (2026-09-14 measurement; replaces the previously unsourced "18.5k" constant).
 
-> **Clarification:** The often-quoted "~90% savings" is **static overhead only** (directive vs monolithic inlining). Per-task payload (directive + workflow + gate) saves 26-47% after Change A (removing mandatory `route.md` 6,962 tok load). See §3 for per-task numbers.
+> **Clarification:** The often-quoted "~90% savings" is **static overhead only** (directive vs monolithic inlining). Per-task payload (directive + workflow + gate) saves 25-46% after Change A (removing mandatory `route.md` 6,962 tok load). See §3 for per-task numbers.
 
 | Component (Balanced) | Lines | Approx. Token Weight | Purpose |
 | :--- | :---: | :---: | :--- |
@@ -89,9 +89,9 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **8,236 tok** | **7,192 tok** | **-36% Balanced, -44% Lite (-4,625 to -5,669 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **18,215 tok** | **17,171 tok** | **-26% Balanced, -30% Lite** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **14,118 tok** | **13,074 tok** | **-43% Balanced, -47% Lite (-10,643 to -11,687 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **8,507 tok** | **7,463 tok** | **-34% Balanced, -42% Lite (-4,354 to -5,398 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **18,559 tok** | **17,515 tok** | **-25% Balanced, -29% Lite** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` stub + `gate`) | 24,761 tok | **14,389 tok** | **13,345 tok** | **-42% Balanced, -46% Lite (-10,372 to -11,416 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 

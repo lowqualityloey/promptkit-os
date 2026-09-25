@@ -622,6 +622,14 @@ Assert-Contains "workflows/debug.md" "render the Decision Card" "Debug halt path
 Assert-Contains "workflows/ship.md" "renders the Decision Card" "Ship approval request adopts the Decision Card"
 Assert-Contains "templates/agent-directive-lite-template.md" "Assumption Records, never guesses" "Lite directive carries the decision routing one-liner"
 
+Write-Host "`n📌 Scenario AH: Decision Budget Caps Type B Volume (Issue #408)" -ForegroundColor Yellow
+Assert-Contains "protocols/code-quality-gate.md" "Decision Budget" "Decision Budget rule stated in quality gate"
+Assert-Contains "protocols/code-quality-gate.md" "Types C and D are never capped" "Types C and D exempt from the budget"
+Assert-Contains "protocols/code-quality-gate.md" "Overflow behavior" "Budget overflow converts to Assumption Records"
+Assert-Contains "protocols/code-quality-gate.md" "remaining budget when asking" "Agent states remaining budget when asking"
+Assert-Contains "workflows/plan.md" "Decision-budget overflow" "Plan workflow wires overflow to Assumption Records"
+Assert-Contains "workflows/checkpoint.md" "Delegated & Assumed Decisions" "Checkpoint carries the delegation summary slot"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

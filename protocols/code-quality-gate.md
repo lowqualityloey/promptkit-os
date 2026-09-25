@@ -105,6 +105,14 @@ Every human decision halt (blocker callouts, L-level gates, escalation points) r
 - **Type C — consequences the human owns** (cost, data loss, security exposure, irreversible): human decides; card required.
 - **Type D — accountability** (ship, publish, license, privacy): always human; card required regardless of technical content.
 
+### Decision Budget (caps Type B volume per session)
+
+Even well-framed questions exhaust evaluative capacity — fifteen perfect cards are still fifteen interruptions. Per session (or milestone), interactive **Type B** decision cards and clarification questions are capped:
+
+- **Budget default: 3** (provisional — calibrate against real sessions; configurable in the Task Record, same conditional-control shape as TDD Enforcement Mode). The agent states the remaining budget when asking.
+- **Types C and D are never capped** — cost, data loss, security exposure, and accountability decisions always reach the human regardless of budget state. The budget limits fatigue-driven delegation mistakes, not human authority.
+- **Overflow behavior**: when the budget is exhausted, further Type B questions are not asked interactively; they convert to owned Assumption Records with the recommended default under the existing Missing Inputs mechanics. Delegated items join the session-end delegation summary (`pk:checkpoint` Phase 2 signal 6) for batch review instead of interrupt review.
+
 ---
 
 ## Action Authority Model

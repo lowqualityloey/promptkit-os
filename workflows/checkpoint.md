@@ -57,6 +57,7 @@ Extract and structure the 5 vital signals of the session:
 3. **Locked Architectural Invariants**: What non-negotiable decisions were agreed upon that the next session must not undo? (e.g., "Using UUIDv7 keys", "HttpOnly cookie sessions instead of localStorage", "Zod boundary schemas").
 4. **Active Blockers & Open Questions**: What is currently unresolved, failing, or pending user input?
 5. **Immediate Next Step**: Exactly what should the very next prompt or turn accomplish?
+6. **Delegated & Assumed Decisions**: Every decision delegated via "you decide" or converted to an Assumption Record through Decision-Budget overflow (slug, choice taken, one-line rationale) — batch review beats interrupt review.
 
 ---
 
