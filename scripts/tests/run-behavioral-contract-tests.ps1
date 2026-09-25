@@ -611,6 +611,17 @@ Assert-Contains "docs/stacks/cms-wordpress.md" "Mandatory Prepared SQL Statement
 Assert-Contains "docs/stacks/cms-wordpress.md" "State Mutation Nonce Verification" "WordPress playbook defines nonce verification invariant"
 Assert-Contains "workflows/onboard.md" "CMS — WordPress" "Onboarding workflow detects WordPress pattern"
 
+Write-Host "`n📌 Scenario AG: Human Decision & Question Comprehensibility Contract (Issue #406)" -ForegroundColor Yellow
+Assert-Contains "protocols/code-quality-gate.md" "DECISION NEEDED" "Decision Card format sections defined in quality gate"
+Assert-Contains "protocols/code-quality-gate.md" "Recommendation mandatory" "Recommendation mandatory on every decision card"
+Assert-Contains "protocols/code-quality-gate.md" "accountability.*always human" "Type D accountability routing requires the card"
+Assert-Contains "protocols/code-quality-gate.md" "you decide" "You-decide delegation default declared on the card"
+Assert-Contains "workflows/plan.md" "Assumption-conversion rule" "Plan workflow defines assumption-conversion rule"
+Assert-Contains "workflows/plan.md" "Random answers are worse than assumptions" "Plan workflow forbids extracting guesses"
+Assert-Contains "workflows/debug.md" "render the Decision Card" "Debug halt path adopts the Decision Card"
+Assert-Contains "workflows/ship.md" "renders the Decision Card" "Ship approval request adopts the Decision Card"
+Assert-Contains "templates/agent-directive-lite-template.md" "Assumption Records, never guesses" "Lite directive carries the decision routing one-liner"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

@@ -97,7 +97,7 @@ Construct a feedback loop using the first viable option from this hierarchy:
 - [ ] You have identified **one single command** (script path, test run, or curl).
 - [ ] You have run it and verified it is **red-capable** (fails with the user's exact symptom).
 - [ ] The command runs quickly and deterministically unattended.
-- **HALT path**: if no red-capable loop is buildable after exhausting the hierarchy above (including option 10), do not proceed to hypotheses. Halt with `> [!WARNING] Blocked: Waiting on Human Input`, recording the attempted loop options and their failure modes. Maximum 3 hypothesis-test iterations per hypothesis before reassessing the loop itself.
+- **HALT path**: if no red-capable loop is buildable after exhausting the hierarchy above (including option 10), do not proceed to hypotheses. Halt with `> [!WARNING] Blocked: Waiting on Human Input`, recording the attempted loop options and their failure modes. When the halt needs a human decision (not just a blocker notice), render the Decision Card per the Human Decision & Question Comprehensibility Contract in `protocols/code-quality-gate.md`. Maximum 3 hypothesis-test iterations per hypothesis before reassessing the loop itself.
 
 ---
 

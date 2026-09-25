@@ -177,7 +177,7 @@ Before Step 3, record the execution evidence needed by the release evaluation:
 - Confirm the task and milestone are in a releasable state and that no unresolved blocker, hard checkpoint, stale handoff, scope mismatch, or revision mismatch remains.
 - Link the applicable release-impact evaluation and preserve the distinction between a preliminary candidate and an Approved Release Version.
 - Record host/timer limitations and any execution-control validator result as evidence only. A passing validator or CI job cannot approve a version or authorize a tag, hosted release, publication, deployment, or rollback.
-- Release Coordinator approval remains explicit and separate. Steps 3-5 below prepare proposals, verification plans, and records; executing tag, push, deployment, or rollback commands remains human-only (see Action Authority Model in `protocols/code-quality-gate.md`).
+- Release Coordinator approval remains explicit and separate. Steps 3-5 below prepare proposals, verification plans, and records; executing tag, push, deployment, or rollback commands remains human-only (see Action Authority Model in `protocols/code-quality-gate.md`). Every approval request to the Release Coordinator renders the Decision Card per the Human Decision & Question Comprehensibility Contract in `protocols/code-quality-gate.md` (Type D — always human, card required).
 
 ### Pattern C Release Evidence Audit
 
