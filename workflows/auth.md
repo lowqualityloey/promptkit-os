@@ -15,6 +15,7 @@ Eliminate the primary causes of authentication vulnerabilities: token storage in
 - Auth work is Level 2 (Controlled): a canonical Task Record at `docs/tasks/<task-id>.md` is required before implementation (see `workflows/route.md`).
 - Target storage directory: `./docs/auth/` in the host project.
 - Access to `templates/auth-matrix-template.md`.
+- Recipe: see `docs/recipes/auth-session.md` for cookie vs bearer lifecycles, route guards, and refresh token rotation.
 
 ---
 
@@ -25,7 +26,7 @@ Eliminate the primary causes of authentication vulnerabilities: token storage in
   - **Server-Managed Database Sessions (Recommended for Web Apps)**: Store an opaque session ID in an `HttpOnly` cookie; query session state in Redis or PostgreSQL. Allows immediate server-side revocation on account compromise.
   - **Stateless JWTs**: Use only when cross-domain microservice token propagation is strictly necessary. Keep access token lifetimes short (5 to 15 minutes) and pair with refresh tokens.
 - **Strict Cookie Configuration**:
-  - Never store access or refresh tokens in `localStorage` or `sessionStorage` (vulnerable to XSS extraction).
+  - Never store access or refresh tokens in `localStorage` or `sessionStorage` (vulnerable to XSS extraction; see `docs/recipes/auth-session.md`).
   - All auth cookies must carry explicit security attributes:
     ```typescript
     res.setHeader('Set-Cookie', [

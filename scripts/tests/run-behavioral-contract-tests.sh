@@ -538,6 +538,17 @@ assert_contains "workflows/ship.md" "tag proposals are unexecuted" "Ship evidenc
 assert_contains "workflows/ship.md" "verification links resolve" "Ship evidence audit verifies verification links resolve"
 assert_contains "workflows/ship.md" "rollback records exist" "Ship evidence audit verifies rollback records exist"
 
+echo ""
+echo "📌 Scenario AA: Recipe Schema & Workflow Wiring (Issue #393)"
+assert_contains "docs/recipes/README.md" "Recipe Catalog Matrix" "Recipe README includes catalog matrix"
+assert_contains "docs/recipes/README.md" "Architectural Intake Criteria" "Recipe README documents intake criteria and guidance tiers"
+assert_contains "docs/recipes/README.md" "1,500 tokens" "Recipe README specifies strict 1,500 token ceiling"
+assert_contains "workflows/auth.md" "docs/recipes/auth-session.md" "Auth workflow links auth-session recipe"
+assert_contains "workflows/debug.md" "docs/recipes/env-validation.md" "Debug workflow links env-validation recipe"
+assert_contains "workflows/api.md" "docs/recipes/form-mutations.md" "API workflow links form-mutations recipe"
+assert_contains "workflows/api.md" "docs/recipes/webhook-idempotency.md" "API workflow links webhook-idempotency recipe"
+assert_contains "workflows/test.md" "docs/recipes/test-isolation.md" "Test workflow links test-isolation recipe"
+
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"

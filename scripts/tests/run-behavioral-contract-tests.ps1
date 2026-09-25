@@ -550,6 +550,16 @@ Assert-Contains "workflows/ship.md" "tag proposals are unexecuted" "Ship evidenc
 Assert-Contains "workflows/ship.md" "verification links resolve" "Ship evidence audit verifies verification links resolve"
 Assert-Contains "workflows/ship.md" "rollback records exist" "Ship evidence audit verifies rollback records exist"
 
+Write-Host "`n📌 Scenario AA: Recipe Schema & Workflow Wiring (Issue #393)" -ForegroundColor Yellow
+Assert-Contains "docs/recipes/README.md" "Recipe Catalog Matrix" "Recipe README includes catalog matrix"
+Assert-Contains "docs/recipes/README.md" "Architectural Intake Criteria" "Recipe README documents intake criteria and guidance tiers"
+Assert-Contains "docs/recipes/README.md" "1,500 tokens" "Recipe README specifies strict 1,500 token ceiling"
+Assert-Contains "workflows/auth.md" "docs/recipes/auth-session.md" "Auth workflow links auth-session recipe"
+Assert-Contains "workflows/debug.md" "docs/recipes/env-validation.md" "Debug workflow links env-validation recipe"
+Assert-Contains "workflows/api.md" "docs/recipes/form-mutations.md" "API workflow links form-mutations recipe"
+Assert-Contains "workflows/api.md" "docs/recipes/webhook-idempotency.md" "API workflow links webhook-idempotency recipe"
+Assert-Contains "workflows/test.md" "docs/recipes/test-isolation.md" "Test workflow links test-isolation recipe"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

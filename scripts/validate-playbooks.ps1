@@ -53,53 +53,74 @@ function Validate-SinglePlaybook {
         param ([string]$Pattern, [string]$Description)
         if ($frontmatterText -notmatch $Pattern) {
             Write-Host "[FAIL] ${fileName}: Missing required frontmatter field: $Description" -ForegroundColor Red
-            $script:errors++
+            return $false
+        }
+        return $true
+    }
+
+    if (-not (Assert-Field "(?m)^name:\s+[a-zA-Z0-9_-]+" "name: <string>")) { $errors++ }
+    if (-not (Assert-Field "(?m)^version:\s+[0-9]+" "version: <integer>")) { $errors++ }
+    if (-not (Assert-Field "(?m)^token_budget:\s+[0-9]+" "token_budget: <integer <= 1500>")) { $errors++ }
+
+    if ($frontmatterText -match "(?m)^token_budget:\s+([0-9]+)") {
+        $declaredBudget = [int]$Matches[1]
+        if ($declaredBudget -gt 1500) {
+            Write-Host "[FAIL] ${fileName}: Declared token_budget ($declaredBudget) exceeds 1500 limit" -ForegroundColor Red
+            $errors++
         }
     }
 
-    Assert-Field "(?m)^name:\s+[a-zA-Z0-9_-]+" "name: <string>"
-    Assert-Field "(?m)^category:\s+(web|database|cloud|mobile|systems|cli)" "category: <web|database|cloud|mobile|systems|cli>"
-    Assert-Field "(?m)^version:\s+[0-9]+" "version: <integer>"
-    Assert-Field "(?m)^token_budget:\s+[0-9]+" "token_budget: <integer <= 1500>"
-
-    if ($frontmatterText -notmatch "(?m)^activation:") {
-        Write-Host "[FAIL] ${fileName}: Missing 'activation:' block" -ForegroundColor Red
-        $errors++
-    }
-    if ($frontmatterText -notmatch "(?m)manifests:") {
-        Write-Host "[FAIL] ${fileName}: Missing 'manifests:' array under activation" -ForegroundColor Red
-        $errors++
+    $category = $null
+    if ($frontmatterText -match "(?m)^category:\s+([a-zA-Z0-9_-]+)") {
+        $category = $Matches[1].Trim()
     }
 
-    if ($frontmatterText -notmatch "(?m)^verification:") {
-        Write-Host "[FAIL] ${fileName}: Missing 'verification:' block" -ForegroundColor Red
-        $errors++
-    }
-    if ($frontmatterText -notmatch "(?m)fast:") {
-        Write-Host "[FAIL] ${fileName}: Missing 'fast:' verification tier" -ForegroundColor Red
-        $errors++
-    }
-    if ($frontmatterText -notmatch "(?m)required:") {
-        Write-Host "[FAIL] ${fileName}: Missing 'required:' verification tier" -ForegroundColor Red
-        $errors++
-    }
-    if ($frontmatterText -notmatch "(?m)extended:") {
-        Write-Host "[FAIL] ${fileName}: Missing 'extended:' verification tier" -ForegroundColor Red
-        $errors++
-    }
+    if ($category -eq "recipe") {
+        if (-not (Assert-Field "(?m)^description:\s+.+" "description: <string>")) { $errors++ }
+    } elseif ($category -match "^(web|database|cloud|mobile|systems|cli)$") {
+        if ($frontmatterText -notmatch "(?m)^activation:") {
+            Write-Host "[FAIL] ${fileName}: Missing 'activation:' block" -ForegroundColor Red
+            $errors++
+        }
+        if ($frontmatterText -notmatch "(?m)manifests:") {
+            Write-Host "[FAIL] ${fileName}: Missing 'manifests:' array under activation" -ForegroundColor Red
+            $errors++
+        }
 
-    if ($frontmatterText -notmatch "(?m)^invariants:") {
-        Write-Host "[FAIL] ${fileName}: Missing 'invariants:' block" -ForegroundColor Red
-        $errors++
-    }
-    if ($frontmatterText -notmatch "(?m)^anti_patterns:") {
-        Write-Host "[FAIL] ${fileName}: Missing 'anti_patterns:' block" -ForegroundColor Red
-        $errors++
-    }
+        if ($frontmatterText -notmatch "(?m)^verification:") {
+            Write-Host "[FAIL] ${fileName}: Missing 'verification:' block" -ForegroundColor Red
+            $errors++
+        }
+        if ($frontmatterText -notmatch "(?m)fast:") {
+            Write-Host "[FAIL] ${fileName}: Missing 'fast:' verification tier" -ForegroundColor Red
+            $errors++
+        }
+        if ($frontmatterText -notmatch "(?m)required:") {
+            Write-Host "[FAIL] ${fileName}: Missing 'required:' verification tier" -ForegroundColor Red
+            $errors++
+        }
+        if ($frontmatterText -notmatch "(?m)extended:") {
+            Write-Host "[FAIL] ${fileName}: Missing 'extended:' verification tier" -ForegroundColor Red
+            $errors++
+        }
 
-    # Shell composition anti-patterns in verification
-    if ($frontmatterText -match "(?m)-\s+.*(&&|\|\||;)") {
-        Write-Host "[FAIL] ${fileName}: Prohibited shell composition (&&, ||, ;) found in verification arrays. Use discrete array items." -ForegroundColor Red
+        if ($frontmatterText -notmatch "(?m)^invariants:") {
+            Write-Host "[FAIL] ${fileName}: Missing 'invariants:' block" -ForegroundColor Red
+            $errors++
+        }
+        if ($frontmatterText -notmatch "(?m)^anti_patterns:") {
+            Write-Host "[FAIL] ${fileName}: Missing 'anti_patterns:' block" -ForegroundColor Red
+            $errors++
+        }
+
+        # Shell composition anti-patterns in verification
+        if ($frontmatterText -match "(?m)-\s+.*(&&|\|\||;)") {
+            Write-Host "[FAIL] ${fileName}: Prohibited shell composition (&&, ||, ;) found in verification arrays. Use discrete array items." -ForegroundColor Red
+            $errors++
+        }
+    } else {
+        $displayCategory = if ([string]::IsNullOrWhiteSpace($category)) { "<empty>" } else { $category }
+        Write-Host "[FAIL] ${fileName}: Invalid or missing category '$displayCategory': must be 'recipe' or one of (web|database|cloud|mobile|systems|cli)" -ForegroundColor Red
         $errors++
     }
 
@@ -121,12 +142,12 @@ function Validate-SinglePlaybook {
 }
 
 if ($TestSchema) {
-    Write-Host "[TEST] Running Playbook Contract Schema Self-Tests (PowerShell)..." -ForegroundColor Cyan
+    Write-Host "[TEST] Running Playbook & Recipe Contract Schema Self-Tests (PowerShell)..." -ForegroundColor Cyan
     $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.Guid]::NewGuid().ToString())
     New-Item -ItemType Directory -Path $tmpDir | Out-Null
 
     try {
-        $validLines = @(
+        $validStackLines = @(
             '---',
             'name: sample-rust',
             'category: systems',
@@ -151,10 +172,10 @@ if ($TestSchema) {
             '---',
             '# Sample Rust Stack Playbook'
         )
-        $validPath = Join-Path $tmpDir "valid.md"
-        [System.IO.File]::WriteAllText($validPath, ($validLines -join "`n"))
+        $validStackPath = Join-Path $tmpDir "valid-stack.md"
+        [System.IO.File]::WriteAllText($validStackPath, ($validStackLines -join "`n"))
 
-        $invalidLines = @(
+        $invalidStackLines = @(
             '---',
             'name: invalid-stack',
             'category: unknown-category',
@@ -173,23 +194,61 @@ if ($TestSchema) {
             '---',
             '# Invalid Stack Playbook'
         )
-        $invalidPath = Join-Path $tmpDir "invalid.md"
-        [System.IO.File]::WriteAllText($invalidPath, ($invalidLines -join "`n"))
+        $invalidStackPath = Join-Path $tmpDir "invalid-stack.md"
+        [System.IO.File]::WriteAllText($invalidStackPath, ($invalidStackLines -join "`n"))
 
-        Write-Host "--- Testing Valid Fixture ---"
-        if (-not (Validate-SinglePlaybook -File $validPath)) {
-            Write-Error "Schema Self-Test Failed: valid fixture was rejected"
+        $validRecipeLines = @(
+            '---',
+            'name: sample-recipe',
+            'category: recipe',
+            'version: 1',
+            'token_budget: 1500',
+            'description: Sample recipe description for self-test.',
+            '---',
+            '# Sample Recipe'
+        )
+        $validRecipePath = Join-Path $tmpDir "valid-recipe.md"
+        [System.IO.File]::WriteAllText($validRecipePath, ($validRecipeLines -join "`n"))
+
+        $invalidRecipeLines = @(
+            '---',
+            'name: invalid-recipe',
+            'category: recipe',
+            'version: 1',
+            'token_budget: 2000',
+            '---',
+            '# Invalid Recipe'
+        )
+        $invalidRecipePath = Join-Path $tmpDir "invalid-recipe.md"
+        [System.IO.File]::WriteAllText($invalidRecipePath, ($invalidRecipeLines -join "`n"))
+
+        Write-Host "--- Testing Valid Stack Fixture ---"
+        if (-not (Validate-SinglePlaybook -File $validStackPath)) {
+            Write-Error "Schema Self-Test Failed: valid stack fixture was rejected"
         }
 
-        Write-Host "--- Testing Invalid Fixture (Should Fail) ---"
-        $invalidPassed = Validate-SinglePlaybook -File $invalidPath
-        if ($invalidPassed) {
-            Write-Error "Schema Self-Test Failed: invalid fixture was incorrectly accepted"
+        Write-Host "--- Testing Invalid Stack Fixture (Should Fail) ---"
+        $invalidStackPassed = Validate-SinglePlaybook -File $invalidStackPath
+        if ($invalidStackPassed) {
+            Write-Error "Schema Self-Test Failed: invalid stack fixture was incorrectly accepted"
         } else {
-            Write-Host "[PASS] Invalid fixture properly caught and rejected" -ForegroundColor Green
+            Write-Host "[PASS] Invalid stack fixture properly caught and rejected" -ForegroundColor Green
         }
 
-        Write-Host "[PASS] Playbook Contract Schema Self-Tests PASSED" -ForegroundColor Green
+        Write-Host "--- Testing Valid Recipe Fixture ---"
+        if (-not (Validate-SinglePlaybook -File $validRecipePath)) {
+            Write-Error "Schema Self-Test Failed: valid recipe fixture was rejected"
+        }
+
+        Write-Host "--- Testing Invalid Recipe Fixture (Should Fail) ---"
+        $invalidRecipePassed = Validate-SinglePlaybook -File $invalidRecipePath
+        if ($invalidRecipePassed) {
+            Write-Error "Schema Self-Test Failed: invalid recipe fixture was incorrectly accepted"
+        } else {
+            Write-Host "[PASS] Invalid recipe fixture properly caught and rejected" -ForegroundColor Green
+        }
+
+        Write-Host "[PASS] Playbook & Recipe Contract Schema Self-Tests PASSED" -ForegroundColor Green
         exit 0
     }
     finally {
@@ -205,7 +264,7 @@ if ($TargetPath) {
         $totalChecked++
         if (-not (Validate-SinglePlaybook -File $TargetPath)) { $totalFailed++ }
     } elseif (Test-Path -LiteralPath $TargetPath -PathType Container) {
-        $files = Get-ChildItem -LiteralPath $TargetPath -Filter "*.md" -File
+        $files = Get-ChildItem -LiteralPath $TargetPath -Filter "*.md" -File | Where-Object { $_.Name -ne "README.md" }
         foreach ($f in $files) {
             $totalChecked++
             if (-not (Validate-SinglePlaybook -File $f.FullName)) { $totalFailed++ }
@@ -217,7 +276,15 @@ if ($TargetPath) {
 } else {
     $stacksDir = Join-Path $KitRoot "docs\stacks"
     if (Test-Path -LiteralPath $stacksDir -PathType Container) {
-        $files = Get-ChildItem -LiteralPath $stacksDir -Filter "*.md" -File
+        $files = Get-ChildItem -LiteralPath $stacksDir -Filter "*.md" -File | Where-Object { $_.Name -ne "README.md" }
+        foreach ($f in $files) {
+            $totalChecked++
+            if (-not (Validate-SinglePlaybook -File $f.FullName)) { $totalFailed++ }
+        }
+    }
+    $recipesDir = Join-Path $KitRoot "docs\recipes"
+    if (Test-Path -LiteralPath $recipesDir -PathType Container) {
+        $files = Get-ChildItem -LiteralPath $recipesDir -Filter "*.md" -File | Where-Object { $_.Name -ne "README.md" }
         foreach ($f in $files) {
             $totalChecked++
             if (-not (Validate-SinglePlaybook -File $f.FullName)) { $totalFailed++ }

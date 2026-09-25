@@ -135,6 +135,9 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    - `STYLE.md` / `STYLEGUIDE.md`: Repository-specific code style conventions.
    - If detected, record these files for linkage in `PROMPTKIT.md`. If absent, silently continue with zero warnings.
 
+6. **Environment & Configuration Validation**:
+   Passively detect configuration schema files (`.env.example`, `env.ts`, `t3-env`, `pydantic-settings`). For fail-fast boot validation and client vs. server secret isolation patterns, see `docs/recipes/env-validation.md`.
+
 ---
 
 ### Phase 3: Profile & Guardrail Generation

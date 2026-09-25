@@ -14,6 +14,7 @@ Move away from brittle mocks and slow, flaky test suites toward disciplined seam
 - Developer is planning test coverage for a new feature, refactor, or critical subsystem.
 - Target storage directory: `./docs/tests/` in the host project.
 - Access to `.promptkit/templates/test-plan-template.md`.
+- Recipe: see `docs/recipes/test-isolation.md` for hermetic network mocking, fake timers, and transactional test isolation.
 
 ---
 
@@ -82,6 +83,7 @@ Shared global seed files (`seed.sql`) create invisible dependencies across tests
    - Ensure every test runs in isolation:
      - **Option A (Tenant Isolation)**: Generate a unique `workspaceId` per test suite so concurrent tests never collide on the same rows.
      - **Option B (Transaction Rollback)**: Wrap each test in a database transaction that rolls back at completion.
+   - For network mocking (MSW), deterministic clocks, and hermetic DB rollback patterns, see `docs/recipes/test-isolation.md`.
 
 ---
 
