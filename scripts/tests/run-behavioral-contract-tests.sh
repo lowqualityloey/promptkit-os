@@ -626,6 +626,10 @@ assert_contains "protocols/code-quality-gate.md" "remaining budget when asking" 
 assert_contains "workflows/plan.md" "Decision-budget overflow" "Plan workflow wires overflow to Assumption Records"
 assert_contains "workflows/checkpoint.md" "Delegated & Assumed Decisions" "Checkpoint carries the delegation summary slot"
 
+echo ""
+echo "📌 Scenario AI: Turbo Verdict Revisit Trigger (Issue #213)"
+assert_contains "docs/BENCHMARKS.md" "Revisit trigger" "Turbo verdict carries an expiry trigger"
+
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"

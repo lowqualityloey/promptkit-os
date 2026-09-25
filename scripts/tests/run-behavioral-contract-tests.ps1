@@ -630,6 +630,9 @@ Assert-Contains "protocols/code-quality-gate.md" "remaining budget when asking" 
 Assert-Contains "workflows/plan.md" "Decision-budget overflow" "Plan workflow wires overflow to Assumption Records"
 Assert-Contains "workflows/checkpoint.md" "Delegated & Assumed Decisions" "Checkpoint carries the delegation summary slot"
 
+Write-Host "`n📌 Scenario AI: Turbo Verdict Revisit Trigger (Issue #213)" -ForegroundColor Yellow
+Assert-Contains "docs/BENCHMARKS.md" "Revisit trigger" "Turbo verdict carries an expiry trigger"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

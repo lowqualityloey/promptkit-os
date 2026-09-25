@@ -204,6 +204,8 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
 
 **Decision (per #145 threshold rule):** **KEEP Turbo experimental — do not promote, do not remove.** Measured overhead tops out near **2x**, materially below the "3-5x" band previously advertised, and the structural time benefit caps at ~50% of only the parallelizable segment. Promotion would require real multi-host wall-clock evidence that a documentation protocol cannot produce; removal would discard a genuinely useful (≤2x) pattern for greenfield spikes. All shipped "3-5x" claims were corrected in this change to "up to ~2x measured" and the claim window is now CI-gated (`--strict`, 1.00–2.60x): widening fan-out without re-baselining this section fails the build.
 
+**Revisit trigger (per #213):** this verdict expires on the earlier of (a) multi-host wall-clock evidence for promotion being presented, or (b) the next minor version release. On expiry, record a new dated verdict entry (promote / keep / remove with rationale and disconfirming evidence) and re-arm this trigger — experimental status never persists by silence.
+
 **Safety invariant (AC-3, grep-asserted by the script):** Turbo never removes the human Level-3 approval requirement for releases, tags, deployments, or rollback, in any shipped surface.
 
 ---
