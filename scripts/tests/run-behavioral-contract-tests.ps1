@@ -581,6 +581,16 @@ Assert-Contains "docs/stacks/deploy-docker.md" "Multi-Stage Build Separation" "D
 Assert-Contains "docs/stacks/deploy-docker.md" "Unprivileged Non-Root Execution" "Docker playbook defines non-root invariant"
 Assert-Contains "workflows/onboard.md" "Deploy — Docker" "Onboarding workflow detects Docker deployment pattern"
 
+Write-Host "`n📌 Scenario AD: FastAPI Stack Playbook & Discovery (Issue #398)" -ForegroundColor Yellow
+Assert-Contains "docs/stacks/README.md" "api-fastapi.md" "Stacks README catalog indexes api-fastapi playbook"
+Assert-Contains "docs/stacks/api-fastapi.md" "name: api-fastapi" "FastAPI playbook defines valid frontmatter name"
+Assert-Contains "docs/stacks/api-fastapi.md" "category: web" "FastAPI playbook uses category: web"
+Assert-Contains "docs/stacks/api-fastapi.md" "alembic.ini" "FastAPI playbook declares alembic.ini manifest activation"
+Assert-Contains "docs/stacks/api-fastapi.md" "ruff check" "FastAPI playbook declares fast verification command"
+Assert-Contains "docs/stacks/api-fastapi.md" "Pydantic v2 Schema Boundary Separation" "FastAPI playbook defines Pydantic v2 invariant"
+Assert-Contains "docs/stacks/api-fastapi.md" "Async vs Sync Handler Discipline" "FastAPI playbook defines async discipline invariant"
+Assert-Contains "workflows/onboard.md" "API — FastAPI" "Onboarding workflow detects FastAPI pattern"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
