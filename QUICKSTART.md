@@ -45,6 +45,22 @@ Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Upgrade anyt
 When run in an interactive terminal without flags, `init.sh` / `init.ps1` presents an interactive visual menu to select your profile. In CI or non-interactive environments, pass a profile flag or set `PROMPTKIT_NO_INTERACTIVE=1`.
 
 <details>
+<summary>Or install with npx (optional convenience path)</summary>
+
+```bash
+# macOS / Linux / Windows — one command, no submodule ceremony
+# (requires Node 18+; Windows also requires PowerShell 7 / pwsh)
+npx promptkit-os@latest --balanced
+npx promptkit-os@latest --lite
+```
+
+The npm package is a **courier, not a dependency**: it fetches the release tarball matching its own version into `.promptkit/` and runs the same `init.sh` / `init.ps1` above, so the resulting tree is identical to the submodule path. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`, never a moving ref. The git submodule path above remains canonical, and it is also how you **update** a submodule install — the courier refuses to overlay a non-empty `.promptkit/` and prints the update command matching your install type.
+
+**Removal**: delete `.promptkit/` (plus generated `PROMPTKIT.md` / `docs/STATE.md` if unwanted). No daemon, no cache, nothing left behind.
+
+</details>
+
+<details>
 <summary>Or install step-by-step</summary>
 
 ```bash

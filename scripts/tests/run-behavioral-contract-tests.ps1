@@ -633,6 +633,23 @@ Assert-Contains "workflows/checkpoint.md" "Delegated & Assumed Decisions" "Check
 Write-Host "`n📌 Scenario AI: Turbo Verdict Revisit Trigger (Issue #213)" -ForegroundColor Yellow
 Assert-Contains "docs/BENCHMARKS.md" "Revisit trigger" "Turbo verdict carries an expiry trigger"
 
+Write-Host "`n📌 Scenario AJ: npm Courier Wrapper (Issue #413)" -ForegroundColor Yellow
+Assert-Contains "package/bin/promptkit-os.js" "refs/tags/v" "Courier resolves a pinned release tag, never a moving ref"
+Assert-Contains "package/bin/promptkit-os.js" "delivery vehicle, not a second implementation" "Courier declares itself a courier, not a reimplementation"
+Assert-Contains "package/bin/promptkit-os.js" "init\.sh" "Courier delegates to the canonical init.sh"
+Assert-Contains "package/bin/promptkit-os.js" "init\.ps1" "Courier delegates to the canonical init.ps1 on Windows"
+Assert-Contains "package/package.json" '"name": "promptkit-os"' "Courier package name matches the reserved registry name"
+Assert-Contains "package/package.json" "provenance" "Courier publishes with provenance attestation"
+Assert-Contains ".github/workflows/release-npm.yml" "npm publish --provenance" "Release job publishes with provenance"
+Assert-Contains ".github/workflows/release-npm.yml" "id-token: write" "Release job requests OIDC for attestation"
+Assert-Contains "README.md" "courier, not a dependency" "README states the courier contract"
+Assert-Contains "README.md" "git submodule add" "Submodule path stays first-documented and canonical"
+Assert-Contains "QUICKSTART.md" "npx promptkit-os@latest" "QUICKSTART documents the optional npx path"
+Assert-Contains "package/bin/promptkit-os.js" "Refusing to overlay" "Courier refuses to overlay a non-empty .promptkit (no silent tar merge)"
+Assert-Contains "package/bin/promptkit-os.js" "assertInstallTargetIsClean" "Courier guards the install target before extracting"
+Assert-Contains "package/README.md" "PowerShell 7" "Courier README states the Windows pwsh prerequisite"
+Assert-Contains ".github/workflows/release-npm.yml" "No .cache: npm." "Release job documents why npm cache is absent (no lockfile)"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

@@ -1,0 +1,100 @@
+name: Release npm Courier
+
+# Publishes the `promptkit-os` npm wrapper on GitHub release. The wrapper is a courier:
+# this job syncs its version to the release tag and publishes with provenance attestation.
+# It never publishes PromptKit OS itself as a runtime, and never touches the product logic.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to sync and publish (e.g. v1.9.0)"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance attestation (OIDC)
+
+jobs:
+  publish-npm-courier:
+    name: Publish npm Courier
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Resolve Release Tag
+        id: tag
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ "$EVENT_NAME" = "release" ]; then
+            TAG="$RELEASE_TAG"
+          else
+            TAG="$INPUT_TAG"
+          fi
+          case "$TAG" in
+            v[0-9]*) ;;
+            *) echo "::error::tag must look like v1.9.0, got '$TAG'"; exit 1 ;;
+          esac
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing courier version $VERSION from tag $TAG"
+
+      - name: Validate Release Tag Exists
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: git ls-remote --exit-code --tags "origin" "refs/tags/$TAG"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          # No `cache: npm` — this package is intentionally zero-dependency, so no
+          # lockfile exists to key a cache on. setup-node fails hard on a missing
+          # cache-dependency-path, which would break the first release at this step.
+
+      - name: Sync Courier Version to Release Tag
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          cd package
+          npm version "$VERSION" --no-git-tag-version
+          # Refuse to ship a wrapper whose version drifted from the tag it claims to mirror.
+          node -e "const p=require('./package.json'); if(p.version!==process.env.VERSION){console.error('version mismatch');process.exit(1)}"
+          echo "Courier version: $(node -p "require('./package.json').version")"
+
+      - name: Verify Courier Contents Are Minimal
+        run: |
+          cd package
+          npm pack --dry-run --json > pack.json
+          node -e "
+            const files = require('./pack.json')[0].files.map(f => f.path);
+            const allowed = new Set(['package.json','README.md','bin/promptkit-os.js']);
+            const extra = files.filter(f => !allowed.has(f));
+            if (extra.length) { console.error('unexpected files in tarball:', extra); process.exit(1); }
+            console.log('tarball contents verified:', files.join(', '));
+          "
+
+      - name: Smoke Test Courier Against This Release
+        env:
+          PROMPTKIT_VERSION: ${{ steps.tag.outputs.version }}
+        run: bash package/test/smoke.sh
+
+      - name: Publish to npm with Provenance
+        working-directory: package
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Report
+        run: |
+          echo "::notice::published promptkit-os@${{ steps.tag.outputs.version }} (courier for ${{ steps.tag.outputs.tag }})"
