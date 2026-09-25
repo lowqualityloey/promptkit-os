@@ -34,6 +34,7 @@ function passthroughFlags(argv) {
   ]);
   const out = [];
   for (const arg of argv) {
+    if (arg === "--force") continue; // courier-only flag, never forwarded to the installer
     if (known.has(arg) || arg.startsWith("--host=") || arg.startsWith("--target=") || arg.startsWith("--tracking=")) {
       out.push(arg);
     } else if (!arg.startsWith("-")) {
@@ -43,6 +44,24 @@ function passthroughFlags(argv) {
     }
   }
   return out;
+}
+
+// Extracting a tarball over an existing tree is not idempotent the way the canonical
+// git-submodule path is: it merges, leaving stale files behind and producing a franken
+// state that mixes delivery doors. Refuse instead, and say exactly how to proceed.
+function assertInstallTargetIsClean(kitDir, force) {
+  if (!fs.existsSync(kitDir)) return;
+  const entries = fs.readdirSync(kitDir);
+  if (entries.length === 0 || force) return;
+  die(
+    `${KIT_DIR}/ already exists and is not empty.\n` +
+      "            Refusing to overlay it — a tarball merge can leave stale files behind.\n" +
+      "            To update an existing install, use the canonical path:\n" +
+      "              git submodule update --remote --merge .promptkit && bash .promptkit/init.sh\n" +
+      "            To reinstall from scratch, remove it first:\n" +
+      "              rm -rf .promptkit\n" +
+      "            To force an overlay anyway (not recommended), re-run with --force."
+  );
 }
 
 function projectRootFrom(args) {
@@ -93,6 +112,7 @@ async function main() {
   }
 
   const args = passthroughFlags(process.argv.slice(2));
+  const force = process.argv.slice(2).includes("--force");
   if (args.includes("--help") || args.includes("-h")) {
     process.stdout.write(
       "promptkit-os <version> — installs PromptKit OS into ./.promptkit and runs the canonical installer\n\n" +
@@ -102,7 +122,10 @@ async function main() {
         "  npx promptkit-os@latest --lite\n" +
         "  npx promptkit-os@latest --turbo --experimental\n" +
         "  npx promptkit-os@latest /path/to/project\n\n" +
-        "Pass-through flags: --lite --balanced --turbo --experimental --host= --target= --tracking= --reconfigure\n\n" +
+        "Pass-through flags: --lite --balanced --turbo --experimental --host= --target= --tracking= --reconfigure\n" +
+        "Courier flags: --force (overlay a non-empty .promptkit/; not recommended)\n\n" +
+        "Updating an existing install? Use the canonical path instead:\n" +
+        "  git submodule update --remote --merge .promptkit && bash .promptkit/init.sh\n\n" +
         "The npm package is a courier, not a dependency. Removal: delete .promptkit/ (and generated\n" +
         "PROMPTKIT.md / docs/STATE.md if unwanted). No daemon, nothing left behind.\n"
     );
@@ -114,6 +137,7 @@ async function main() {
 
   const url = `https://github.com/${REPO}/archive/refs/tags/v${version}.tar.gz`;
   const kitDir = path.join(root, KIT_DIR);
+  assertInstallTargetIsClean(kitDir, force);
   fs.mkdirSync(kitDir, { recursive: true });
 
   const tarball = await download(url);

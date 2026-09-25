@@ -16,7 +16,17 @@ npx promptkit-os@latest /path/to/project
 
 Pass-through flags: `--lite`, `--balanced`, `--turbo`, `--experimental`, `--host=`, `--target=`, `--tracking=`, `--reconfigure`.
 
-Requires Node 18+ (the courier runs on Node; the installed product does not).
+Requires Node 18+ (the courier runs on Node; the installed product does not). On Windows it also requires **PowerShell 7 (`pwsh`)**, which is what `init.ps1` targets — stock Windows PowerShell 5.1 is not supported.
+
+## Updating an existing install
+
+If `.promptkit/` already exists and is not empty, the courier **refuses to overlay it** — a tarball merge can leave stale files behind and mix delivery doors. Use the canonical path to update:
+
+```bash
+git submodule update --remote --merge .promptkit && bash .promptkit/init.sh
+```
+
+To reinstall from scratch, remove `.promptkit/` first. `--force` overlays anyway, but it is not recommended.
 
 ## Version pinning
 

@@ -645,6 +645,10 @@ Assert-Contains ".github/workflows/release-npm.yml" "id-token: write" "Release j
 Assert-Contains "README.md" "courier, not a dependency" "README states the courier contract"
 Assert-Contains "README.md" "git submodule add" "Submodule path stays first-documented and canonical"
 Assert-Contains "QUICKSTART.md" "npx promptkit-os@latest" "QUICKSTART documents the optional npx path"
+Assert-Contains "package/bin/promptkit-os.js" "Refusing to overlay" "Courier refuses to overlay a non-empty .promptkit (no silent tar merge)"
+Assert-Contains "package/bin/promptkit-os.js" "assertInstallTargetIsClean" "Courier guards the install target before extracting"
+Assert-Contains "package/README.md" "PowerShell 7" "Courier README states the Windows pwsh prerequisite"
+Assert-Contains ".github/workflows/release-npm.yml" "No .cache: npm." "Release job documents why npm cache is absent (no lockfile)"
 
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
