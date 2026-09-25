@@ -561,6 +561,17 @@ assert_contains "docs/stacks/web-astro.md" "category: web" "Astro playbook uses 
 assert_contains "docs/stacks/web-astro.md" "astro.config" "Astro playbook declares astro.config manifest activation"
 assert_contains "docs/stacks/web-astro.md" "npx astro check" "Astro playbook declares fast verification command"
 
+echo ""
+echo "📌 Scenario AC: Docker Stack Playbook & Discovery (Issue #396)"
+assert_contains "docs/stacks/README.md" "deploy-docker.md" "Stacks README catalog indexes deploy-docker playbook"
+assert_contains "docs/stacks/deploy-docker.md" "name: deploy-docker" "Docker playbook defines valid frontmatter name"
+assert_contains "docs/stacks/deploy-docker.md" "category: cloud" "Docker playbook uses category: cloud"
+assert_contains "docs/stacks/deploy-docker.md" "Dockerfile" "Docker playbook declares Dockerfile manifest activation"
+assert_contains "docs/stacks/deploy-docker.md" "docker compose config" "Docker playbook declares fast verification command"
+assert_contains "docs/stacks/deploy-docker.md" "Multi-Stage Build Separation" "Docker playbook defines multi-stage invariant"
+assert_contains "docs/stacks/deploy-docker.md" "Unprivileged Non-Root Execution" "Docker playbook defines non-root invariant"
+assert_contains "workflows/onboard.md" "Deploy — Docker" "Onboarding workflow detects Docker deployment pattern"
+
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"

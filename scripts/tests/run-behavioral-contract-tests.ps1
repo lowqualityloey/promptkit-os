@@ -571,6 +571,16 @@ Assert-Contains "docs/stacks/web-astro.md" "category: web" "Astro playbook uses 
 Assert-Contains "docs/stacks/web-astro.md" "astro.config" "Astro playbook declares astro.config manifest activation"
 Assert-Contains "docs/stacks/web-astro.md" "npx astro check" "Astro playbook declares fast verification command"
 
+Write-Host "`n📌 Scenario AC: Docker Stack Playbook & Discovery (Issue #396)" -ForegroundColor Yellow
+Assert-Contains "docs/stacks/README.md" "deploy-docker.md" "Stacks README catalog indexes deploy-docker playbook"
+Assert-Contains "docs/stacks/deploy-docker.md" "name: deploy-docker" "Docker playbook defines valid frontmatter name"
+Assert-Contains "docs/stacks/deploy-docker.md" "category: cloud" "Docker playbook uses category: cloud"
+Assert-Contains "docs/stacks/deploy-docker.md" "Dockerfile" "Docker playbook declares Dockerfile manifest activation"
+Assert-Contains "docs/stacks/deploy-docker.md" "docker compose config" "Docker playbook declares fast verification command"
+Assert-Contains "docs/stacks/deploy-docker.md" "Multi-Stage Build Separation" "Docker playbook defines multi-stage invariant"
+Assert-Contains "docs/stacks/deploy-docker.md" "Unprivileged Non-Root Execution" "Docker playbook defines non-root invariant"
+Assert-Contains "workflows/onboard.md" "Deploy — Docker" "Onboarding workflow detects Docker deployment pattern"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

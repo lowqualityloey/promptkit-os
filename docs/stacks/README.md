@@ -14,14 +14,15 @@ Stack playbooks are activated **just-in-time (JIT)** when detectable project man
 | [`database-supabase.md`](database-supabase.md) | `database` | `supabase/config.toml`, `supabase/migrations/` | $\le$ 1,500 tok | `supabase db lint` / `supabase test db` / `supabase db diff` |
 | [`database-turso.md`](database-turso.md) | `database` | `turso.json`, `schema.sql`, `drizzle.config.ts` | $\le$ 1,500 tok | `turso db show` / `turso quickstart` / `npm run test:db` |
 | [`deploy-cloudflare.md`](deploy-cloudflare.md) | `cloud` | `wrangler.toml`, `wrangler.json`, `wrangler.jsonc` | $\le$ 1,500 tok | `npx wrangler types` / `npx wrangler deploy --dry-run` / `npm test` |
+| [`deploy-docker.md`](deploy-docker.md) | `cloud` | `Dockerfile`, `docker-compose.yml`, `compose.yml` | $\le$ 1,500 tok | `docker compose config` / `docker build` / `trivy image` |
 | [`deploy-render.md`](deploy-render.md) | `cloud` | `render.yaml`, `Dockerfile` | $\le$ 1,500 tok | `render blueprints validate` / `docker build` / `npm test` |
 | [`deploy-vercel.md`](deploy-vercel.md) | `cloud` | `vercel.json`, `next.config.js`, `package.json` | $\le$ 1,500 tok | `npx vercel pull` / `npx vercel build` / `npm test` |
-| [`fullstack-nextjs.md`](fullstack-nextjs.md) | `web` | `next.config.js`, `next.config.mjs`, `next.config.ts` | $\le$ 1,500 tok | `npm run type-check` / `npm run build` / `npm run lint && npm test` |
+| [`fullstack-nextjs.md`](fullstack-nextjs.md) | `web` | `next.config.js`, `next.config.mjs`, `next.config.ts` | $\le$ 1,500 tok | `npm run type-check` / `npm run build` / `npm test` |
 | [`mobile-expo.md`](mobile-expo.md) | `mobile` | `app.json`, `app.config.js`, `app.config.ts` | $\le$ 1,500 tok | `npx expo-doctor` / `npx expo export` / `npm test` |
 | [`mobile-flutter.md`](mobile-flutter.md) | `mobile` | `pubspec.yaml` | $\le$ 1,500 tok | `flutter analyze` / `flutter test` / `flutter build` |
 | [`systems-go.md`](systems-go.md) | `systems` | `go.mod`, `go.sum` | $\le$ 1,500 tok | `go vet` / `go test -race ./...` / `golangci-lint run` |
 | [`systems-rust.md`](systems-rust.md) | `systems` | `Cargo.toml`, `Cargo.lock` | $\le$ 1,500 tok | `cargo check` / `cargo test` / `cargo clippy -- -D warnings` |
-| [`web-astro.md`](web-astro.md) | `web` | `astro.config.mjs`, `astro.config.ts`, `astro.config.js` | $\le$ 1,500 tok | `npx astro check` / `npx astro build` / `npm run lint && npm test` |
+| [`web-astro.md`](web-astro.md) | `web` | `astro.config.mjs`, `astro.config.ts`, `astro.config.js` | $\le$ 1,500 tok | `npx astro check` / `npx astro build` / `npm test` |
 
 ---
 
@@ -116,7 +117,7 @@ The following stacks are prioritized for upcoming playbook additions:
 
 ### Immediate Wave
 1. [`web-astro.md`](web-astro.md) (Shipped): Content-driven, islands architecture, and zero-JS baseline.
-2. `deploy-docker.md`: Universal containerization, multi-stage builds, and non-root execution.
+2. [`deploy-docker.md`](deploy-docker.md) (Shipped): Universal containerization, multi-stage builds, and non-root execution.
 3. `api-fastapi.md` (or `api-python.md`): Python backend, Pydantic v2 schemas, and async route handlers.
 4. `api-node.md`: Node.js server frameworks (Express / Hono / Fastify) and type-safe routing.
 
