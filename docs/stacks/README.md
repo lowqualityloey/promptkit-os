@@ -11,6 +11,7 @@ Stack playbooks are activated **just-in-time (JIT)** when detectable project man
 | Playbook | Category | Manifest Triggers | Token Budget | Verification (`fast` / `required` / `extended`) |
 |:---|:---|:---|:---|:---|
 | [`api-fastapi.md`](api-fastapi.md) | `web` | `pyproject.toml`, `requirements.txt`, `alembic.ini` | $\le$ 1,500 tok | `ruff check` / `mypy` / `pytest` |
+| [`api-node.md`](api-node.md) | `web` | `package.json`, `tsconfig.json`, `nest-cli.json` | $\le$ 1,500 tok | `npm run lint` / `npx tsc` / `npm test` |
 | [`cli-python.md`](cli-python.md) | `cli` | `pyproject.toml`, `requirements.txt`, `setup.py` | $\le$ 1,500 tok | `ruff check` / `pytest` / `mypy` |
 | [`database-supabase.md`](database-supabase.md) | `database` | `supabase/config.toml`, `supabase/migrations/` | $\le$ 1,500 tok | `supabase db lint` / `supabase test db` / `supabase db diff` |
 | [`database-turso.md`](database-turso.md) | `database` | `turso.json`, `schema.sql`, `drizzle.config.ts` | $\le$ 1,500 tok | `turso db show` / `turso quickstart` / `npm run test:db` |
@@ -120,7 +121,7 @@ The following stacks are prioritized for upcoming playbook additions:
 1. [`web-astro.md`](web-astro.md) (Shipped): Content-driven, islands architecture, and zero-JS baseline.
 2. [`deploy-docker.md`](deploy-docker.md) (Shipped): Universal containerization, multi-stage builds, and non-root execution.
 3. [`api-fastapi.md`](api-fastapi.md) (Shipped): Python backend, Pydantic v2 schemas, and async route handlers.
-4. `api-node.md`: Node.js server frameworks (Express / Hono / Fastify) and type-safe routing.
+4. [`api-node.md`](api-node.md) (Shipped): Node.js server frameworks (Express / Hono / Fastify) and type-safe routing.
 
 ### Planned Expansions (Demand-Driven)
 - **CMS Layer**: `cms-wordpress.md` (`wp-config.php`, theme/plugin headers, nonce verification, `$wpdb->prepare()`, capability checks).

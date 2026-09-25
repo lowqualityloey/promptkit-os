@@ -591,6 +591,16 @@ Assert-Contains "docs/stacks/api-fastapi.md" "Pydantic v2 Schema Boundary Separa
 Assert-Contains "docs/stacks/api-fastapi.md" "Async vs Sync Handler Discipline" "FastAPI playbook defines async discipline invariant"
 Assert-Contains "workflows/onboard.md" "API — FastAPI" "Onboarding workflow detects FastAPI pattern"
 
+Write-Host "`n📌 Scenario AE: Node.js API Stack Playbook & Discovery (Issue #400)" -ForegroundColor Yellow
+Assert-Contains "docs/stacks/README.md" "api-node.md" "Stacks README catalog indexes api-node playbook"
+Assert-Contains "docs/stacks/api-node.md" "name: api-node" "Node API playbook defines valid frontmatter name"
+Assert-Contains "docs/stacks/api-node.md" "category: web" "Node API playbook uses category: web"
+Assert-Contains "docs/stacks/api-node.md" "package.json" "Node API playbook declares package.json manifest activation"
+Assert-Contains "docs/stacks/api-node.md" "npm run lint" "Node API playbook declares fast verification command"
+Assert-Contains "docs/stacks/api-node.md" "Runtime Schema Boundary Validation" "Node API playbook defines runtime schema invariant"
+Assert-Contains "docs/stacks/api-node.md" "Event Loop Non-Blocking Discipline" "Node API playbook defines event loop invariant"
+Assert-Contains "workflows/onboard.md" "API — Node.js Server" "Onboarding workflow detects Node.js Server pattern"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
