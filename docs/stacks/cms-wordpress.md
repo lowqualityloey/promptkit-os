@@ -6,7 +6,6 @@ token_budget: 1500
 activation:
   manifests:
     - wp-config.php
-    - style.css
     - composer.json
     - theme.json
 verification:
