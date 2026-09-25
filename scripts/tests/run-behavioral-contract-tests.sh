@@ -617,6 +617,15 @@ assert_contains "workflows/debug.md" "render the Decision Card" "Debug halt path
 assert_contains "workflows/ship.md" "renders the Decision Card" "Ship approval request adopts the Decision Card"
 assert_contains "templates/agent-directive-lite-template.md" "Assumption Records, never guesses" "Lite directive carries the decision routing one-liner"
 
+echo ""
+echo "📌 Scenario AH: Decision Budget Caps Type B Volume (Issue #408)"
+assert_contains "protocols/code-quality-gate.md" "Decision Budget" "Decision Budget rule stated in quality gate"
+assert_contains "protocols/code-quality-gate.md" "Types C and D are never capped" "Types C and D exempt from the budget"
+assert_contains "protocols/code-quality-gate.md" "Overflow behavior" "Budget overflow converts to Assumption Records"
+assert_contains "protocols/code-quality-gate.md" "remaining budget when asking" "Agent states remaining budget when asking"
+assert_contains "workflows/plan.md" "Decision-budget overflow" "Plan workflow wires overflow to Assumption Records"
+assert_contains "workflows/checkpoint.md" "Delegated & Assumed Decisions" "Checkpoint carries the delegation summary slot"
+
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"
