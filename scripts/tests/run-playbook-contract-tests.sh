@@ -13,4 +13,9 @@ if [[ -d "$REPO_ROOT/docs/stacks" ]]; then
     bash "$REPO_ROOT/scripts/validate-playbooks.sh" "$REPO_ROOT/docs/stacks"
 fi
 
+# Also validate any actual recipes in docs/recipes if the directory exists
+if [[ -d "$REPO_ROOT/docs/recipes" ]]; then
+    bash "$REPO_ROOT/scripts/validate-playbooks.sh" "$REPO_ROOT/docs/recipes"
+fi
+
 echo "✅ All Playbook Contract tests PASSED"

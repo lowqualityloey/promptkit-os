@@ -15,6 +15,7 @@ Eliminate the leading causes of API integration friction: inconsistent error sha
 - Public or breaking contract work is Level 2 (Controlled): a canonical Task Record at `docs/tasks/<task-id>.md` is required before implementation (see `workflows/route.md`).
 - Target storage directory: `./docs/api/` in the host project.
 - Access to `templates/api-contract-spec.md`.
+- Recipes: see `docs/recipes/form-mutations.md` for mutation envelopes and optimistic rollbacks; `docs/recipes/webhook-idempotency.md` for webhook ingestion and HMAC validation.
 
 ---
 
@@ -47,7 +48,7 @@ Eliminate the leading causes of API integration friction: inconsistent error sha
 ---
 
 ### 2. The Unified Error Envelope
-Never return ad-hoc strings or inconsistent error formats. All non-2xx responses must adhere to a strict, parseable error structure:
+Never return ad-hoc strings or inconsistent error formats. All non-2xx responses must adhere to a strict, parseable error structure (see `docs/recipes/form-mutations.md` for Standard Action Envelopes and optimistic rollbacks):
 
 ```json
 {
@@ -111,6 +112,7 @@ For non-idempotent operations where network timeouts can cause accidental duplic
    - If the key is currently processing, return `409 Conflict` or queue.
    - Once completed, cache the HTTP status code and response payload against the key.
    - When a duplicate request arrives with the same key, return the cached response immediately without re-executing the business action.
+   - For webhook signature validation and idempotency ledgers, see `docs/recipes/webhook-idempotency.md`.
 
 ---
 

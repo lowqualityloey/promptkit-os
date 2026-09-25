@@ -15,7 +15,7 @@ Eliminate trial-and-error changes ("shotgun debugging") and premature theorizing
 ### 1. Secret Redaction Policy
 Always redact credentials, tokens, passwords, auth headers, and PII before displaying commands, outputs, or error logs:
 - Replace sensitive values with `<REDACTED>`.
-- Use environment variables rather than inlined credentials.
+- Use environment variables rather than inlined credentials (see `docs/recipes/env-validation.md` for fail-fast boot validation and client vs server isolation).
 - In network traces (HAR / curl dumps), quote only the specific headers carrying the diagnostic signal.
 
 ### 2. Accidental Data Loss Prevention (STOP AND VERIFY)

@@ -12,4 +12,9 @@ if (Test-Path -LiteralPath $stacksDir -PathType Container) {
     & (Join-Path $RepoRoot "scripts\validate-playbooks.ps1") -TargetPath $stacksDir
 }
 
+$recipesDir = Join-Path $RepoRoot "docs\recipes"
+if (Test-Path -LiteralPath $recipesDir -PathType Container) {
+    & (Join-Path $RepoRoot "scripts\validate-playbooks.ps1") -TargetPath $recipesDir
+}
+
 Write-Host "[PASS] All Playbook Contract tests PASSED" -ForegroundColor Green

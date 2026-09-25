@@ -63,51 +63,67 @@ validate_single_playbook() {
     }
 
     check_field "^name:[[:space:]]+[a-zA-Z0-9_-]+" "name: <string>"
-    check_field "^category:[[:space:]]+(web|database|cloud|mobile|systems|cli)" "category: <web|database|cloud|mobile|systems|cli>"
     check_field "^version:[[:space:]]+[0-9]+" "version: <integer>"
     check_field "^token_budget:[[:space:]]+[0-9]+" "token_budget: <integer <= 1500>"
 
-    # Check activation block
-    if ! echo "$frontmatter" | grep -q "^activation:"; then
-        echo "❌ $filename: Missing 'activation:' block"
-        errors=$((errors + 1))
-    fi
-    if ! echo "$frontmatter" | grep -q "manifests:"; then
-        echo "❌ $filename: Missing 'manifests:' array under activation"
+    local declared_budget
+    declared_budget="$(echo "$frontmatter" | grep -E "^token_budget:[[:space:]]+[0-9]+" | head -n 1 | awk '{print $2}' | tr -d '\r')"
+    if [[ -n "$declared_budget" && "$declared_budget" -gt 1500 ]]; then
+        echo "❌ $filename: Declared token_budget ($declared_budget) exceeds 1500 limit"
         errors=$((errors + 1))
     fi
 
-    # Check verification block
-    if ! echo "$frontmatter" | grep -q "^verification:"; then
-        echo "❌ $filename: Missing 'verification:' block"
-        errors=$((errors + 1))
-    fi
-    if ! echo "$frontmatter" | grep -q "fast:"; then
-        echo "❌ $filename: Missing 'fast:' verification tier"
-        errors=$((errors + 1))
-    fi
-    if ! echo "$frontmatter" | grep -q "required:"; then
-        echo "❌ $filename: Missing 'required:' verification tier"
-        errors=$((errors + 1))
-    fi
-    if ! echo "$frontmatter" | grep -q "extended:"; then
-        echo "❌ $filename: Missing 'extended:' verification tier"
-        errors=$((errors + 1))
-    fi
+    local category
+    category="$(echo "$frontmatter" | grep -E "^category:[[:space:]]+" | head -n 1 | awk '{print $2}' | tr -d '\r')"
 
-    # Check invariants and anti_patterns
-    if ! echo "$frontmatter" | grep -q "^invariants:"; then
-        echo "❌ $filename: Missing 'invariants:' block"
-        errors=$((errors + 1))
-    fi
-    if ! echo "$frontmatter" | grep -q "^anti_patterns:"; then
-        echo "❌ $filename: Missing 'anti_patterns:' block"
-        errors=$((errors + 1))
-    fi
+    if [[ "$category" == "recipe" ]]; then
+        check_field "^description:[[:space:]]+.+" "description: <string>"
+    elif [[ "$category" =~ ^(web|database|cloud|mobile|systems|cli)$ ]]; then
+        # Check activation block
+        if ! echo "$frontmatter" | grep -q "^activation:"; then
+            echo "❌ $filename: Missing 'activation:' block"
+            errors=$((errors + 1))
+        fi
+        if ! echo "$frontmatter" | grep -q "manifests:"; then
+            echo "❌ $filename: Missing 'manifests:' array under activation"
+            errors=$((errors + 1))
+        fi
 
-    # 3. Check for shell composition anti-patterns in verification (prohibit &&, ||, ;)
-    if echo "$frontmatter" | grep -E "(-[[:space:]]+.*(&&|\|\||;))" >/dev/null; then
-        echo "❌ $filename: Prohibited shell composition (&&, ||, ;) found in verification arrays. Use discrete array items."
+        # Check verification block
+        if ! echo "$frontmatter" | grep -q "^verification:"; then
+            echo "❌ $filename: Missing 'verification:' block"
+            errors=$((errors + 1))
+        fi
+        if ! echo "$frontmatter" | grep -q "fast:"; then
+            echo "❌ $filename: Missing 'fast:' verification tier"
+            errors=$((errors + 1))
+        fi
+        if ! echo "$frontmatter" | grep -q "required:"; then
+            echo "❌ $filename: Missing 'required:' verification tier"
+            errors=$((errors + 1))
+        fi
+        if ! echo "$frontmatter" | grep -q "extended:"; then
+            echo "❌ $filename: Missing 'extended:' verification tier"
+            errors=$((errors + 1))
+        fi
+
+        # Check invariants and anti_patterns
+        if ! echo "$frontmatter" | grep -q "^invariants:"; then
+            echo "❌ $filename: Missing 'invariants:' block"
+            errors=$((errors + 1))
+        fi
+        if ! echo "$frontmatter" | grep -q "^anti_patterns:"; then
+            echo "❌ $filename: Missing 'anti_patterns:' block"
+            errors=$((errors + 1))
+        fi
+
+        # 3. Check for shell composition anti-patterns in verification (prohibit &&, ||, ;)
+        if echo "$frontmatter" | grep -E "(-[[:space:]]+.*(&&|\|\||;))" >/dev/null; then
+            echo "❌ $filename: Prohibited shell composition (&&, ||, ;) found in verification arrays. Use discrete array items."
+            errors=$((errors + 1))
+        fi
+    else
+        echo "❌ $filename: Invalid or missing category '${category:-<empty>}': must be 'recipe' or one of (web|database|cloud|mobile|systems|cli)"
         errors=$((errors + 1))
     fi
 
@@ -131,12 +147,12 @@ validate_single_playbook() {
 
 # Self-test mode
 if [[ "$TEST_SCHEMA" -eq 1 ]]; then
-    echo "🧪 Running Playbook Contract Schema Self-Tests..."
+    echo "🧪 Running Playbook & Recipe Contract Schema Self-Tests..."
     TMP_DIR="$(mktemp -d)"
     trap 'rm -rf "$TMP_DIR"' EXIT
 
-    # Valid fixture
-    cat <<'EOF' > "$TMP_DIR/valid.md"
+    # Valid stack fixture
+    cat <<'EOF' > "$TMP_DIR/valid-stack.md"
 ---
 name: sample-rust
 category: systems
@@ -162,8 +178,8 @@ anti_patterns:
 # Sample Rust Stack Playbook
 EOF
 
-    # Invalid fixture (shell composition && missing required tier)
-    cat <<'EOF' > "$TMP_DIR/invalid.md"
+    # Invalid stack fixture (shell composition && missing required tier)
+    cat <<'EOF' > "$TMP_DIR/invalid-stack.md"
 ---
 name: invalid-stack
 category: unknown-category
@@ -183,21 +199,58 @@ anti_patterns:
 # Invalid Stack Playbook
 EOF
 
-    echo "--- Testing Valid Fixture ---"
-    if ! validate_single_playbook "$TMP_DIR/valid.md"; then
-        echo "❌ Schema Self-Test Failed: valid fixture was rejected"
+    # Valid recipe fixture
+    cat <<'EOF' > "$TMP_DIR/valid-recipe.md"
+---
+name: sample-recipe
+category: recipe
+version: 1
+token_budget: 1500
+description: Sample recipe description for self-test.
+---
+# Sample Recipe
+EOF
+
+    # Invalid recipe fixture (missing description, budget > 1500)
+    cat <<'EOF' > "$TMP_DIR/invalid-recipe.md"
+---
+name: invalid-recipe
+category: recipe
+version: 1
+token_budget: 2000
+---
+# Invalid Recipe
+EOF
+
+    echo "--- Testing Valid Stack Fixture ---"
+    if ! validate_single_playbook "$TMP_DIR/valid-stack.md"; then
+        echo "❌ Schema Self-Test Failed: valid stack fixture was rejected"
         exit 1
     fi
 
-    echo "--- Testing Invalid Fixture (Should Fail) ---"
-    if validate_single_playbook "$TMP_DIR/invalid.md" >/dev/null 2>&1; then
-        echo "❌ Schema Self-Test Failed: invalid fixture was incorrectly accepted"
+    echo "--- Testing Invalid Stack Fixture (Should Fail) ---"
+    if validate_single_playbook "$TMP_DIR/invalid-stack.md" >/dev/null 2>&1; then
+        echo "❌ Schema Self-Test Failed: invalid stack fixture was incorrectly accepted"
         exit 1
     else
-        echo "✅ Invalid fixture properly caught and rejected"
+        echo "✅ Invalid stack fixture properly caught and rejected"
     fi
 
-    echo "✅ Playbook Contract Schema Self-Tests PASSED"
+    echo "--- Testing Valid Recipe Fixture ---"
+    if ! validate_single_playbook "$TMP_DIR/valid-recipe.md"; then
+        echo "❌ Schema Self-Test Failed: valid recipe fixture was rejected"
+        exit 1
+    fi
+
+    echo "--- Testing Invalid Recipe Fixture (Should Fail) ---"
+    if validate_single_playbook "$TMP_DIR/invalid-recipe.md" >/dev/null 2>&1; then
+        echo "❌ Schema Self-Test Failed: invalid recipe fixture was incorrectly accepted"
+        exit 1
+    else
+        echo "✅ Invalid recipe fixture properly caught and rejected"
+    fi
+
+    echo "✅ Playbook & Recipe Contract Schema Self-Tests PASSED"
     exit 0
 fi
 
@@ -213,7 +266,7 @@ if [[ -n "$TARGET_PATH" ]]; then
         while IFS= read -r file; do
             TOTAL_CHECKED=$((TOTAL_CHECKED + 1))
             validate_single_playbook "$file" || TOTAL_FAILED=$((TOTAL_FAILED + 1))
-        done < <(find "$TARGET_PATH" -maxdepth 1 -name "*.md" -type f 2>/dev/null)
+        done < <(find "$TARGET_PATH" -maxdepth 1 -name "*.md" ! -name "README.md" -type f 2>/dev/null)
     else
         echo "❌ ERROR: Target path not found: $TARGET_PATH"
         exit 1
@@ -224,7 +277,14 @@ else
         while IFS= read -r file; do
             TOTAL_CHECKED=$((TOTAL_CHECKED + 1))
             validate_single_playbook "$file" || TOTAL_FAILED=$((TOTAL_FAILED + 1))
-        done < <(find "$STACKS_DIR" -maxdepth 1 -name "*.md" -type f 2>/dev/null)
+        done < <(find "$STACKS_DIR" -maxdepth 1 -name "*.md" ! -name "README.md" -type f 2>/dev/null)
+    fi
+    RECIPES_DIR="$KIT_ROOT/docs/recipes"
+    if [[ -d "$RECIPES_DIR" ]]; then
+        while IFS= read -r file; do
+            TOTAL_CHECKED=$((TOTAL_CHECKED + 1))
+            validate_single_playbook "$file" || TOTAL_FAILED=$((TOTAL_FAILED + 1))
+        done < <(find "$RECIPES_DIR" -maxdepth 1 -name "*.md" ! -name "README.md" -type f 2>/dev/null)
     fi
 fi
 
