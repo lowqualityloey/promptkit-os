@@ -13,6 +13,7 @@ Stack playbooks are activated **just-in-time (JIT)** when detectable project man
 | [`api-fastapi.md`](api-fastapi.md) | `web` | `pyproject.toml`, `requirements.txt`, `alembic.ini` | $\le$ 1,500 tok | `ruff check` / `mypy` / `pytest` |
 | [`api-node.md`](api-node.md) | `web` | `package.json`, `tsconfig.json`, `nest-cli.json` | $\le$ 1,500 tok | `npm run lint` / `npx tsc` / `npm test` |
 | [`cli-python.md`](cli-python.md) | `cli` | `pyproject.toml`, `requirements.txt`, `setup.py` | $\le$ 1,500 tok | `ruff check` / `pytest` / `mypy` |
+| [`cms-wordpress.md`](cms-wordpress.md) | `web` | `wp-config.php`, `style.css`, `composer.json`, `theme.json` | $\le$ 1,500 tok | `composer validate` / `composer test` / `phpunit` |
 | [`database-supabase.md`](database-supabase.md) | `database` | `supabase/config.toml`, `supabase/migrations/` | $\le$ 1,500 tok | `supabase db lint` / `supabase test db` / `supabase db diff` |
 | [`database-turso.md`](database-turso.md) | `database` | `turso.json`, `schema.sql`, `drizzle.config.ts` | $\le$ 1,500 tok | `turso db show` / `turso quickstart` / `npm run test:db` |
 | [`deploy-cloudflare.md`](deploy-cloudflare.md) | `cloud` | `wrangler.toml`, `wrangler.json`, `wrangler.jsonc` | $\le$ 1,500 tok | `npx wrangler types` / `npx wrangler deploy --dry-run` / `npm test` |
@@ -122,8 +123,8 @@ The following stacks are prioritized for upcoming playbook additions:
 2. [`deploy-docker.md`](deploy-docker.md) (Shipped): Universal containerization, multi-stage builds, and non-root execution.
 3. [`api-fastapi.md`](api-fastapi.md) (Shipped): Python backend, Pydantic v2 schemas, and async route handlers.
 4. [`api-node.md`](api-node.md) (Shipped): Node.js server frameworks (Express / Hono / Fastify) and type-safe routing.
+5. [`cms-wordpress.md`](cms-wordpress.md) (Shipped): WordPress CMS & Bedrock architecture, nonce verification, prepared SQL statements, and capability checks.
 
 ### Planned Expansions (Demand-Driven)
-- **CMS Layer**: `cms-wordpress.md` (`wp-config.php`, theme/plugin headers, nonce verification, `$wpdb->prepare()`, capability checks).
 - **Web**: `web-sveltekit.md`, `web-vue-nuxt.md`, `web-remix.md`.
 - **Backend / Systems**: `backend-elixir-phoenix.md`, `systems-csharp-dotnet.md`.
