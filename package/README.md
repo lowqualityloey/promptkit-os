@@ -20,13 +20,18 @@ Requires Node 18+ (the courier runs on Node; the installed product does not). On
 
 ## Updating an existing install
 
-If `.promptkit/` already exists and is not empty, the courier **refuses to overlay it** — a tarball merge can leave stale files behind and mix delivery doors. Use the canonical path to update:
+If `.promptkit/` already exists and is not empty, the courier **refuses to overlay it** — a tarball merge can leave stale files behind and mix delivery doors. The right update path depends on how it was installed:
 
 ```bash
+# git-submodule install
 git submodule update --remote --merge .promptkit && bash .promptkit/init.sh
+
+# courier install (tarball is pinned per version — replace it)
+rm -rf .promptkit
+npx promptkit-os@latest --balanced
 ```
 
-To reinstall from scratch, remove `.promptkit/` first. `--force` overlays anyway, but it is not recommended.
+The courier detects which case applies (a submodule install has `.promptkit/.git`) and prints the matching command. `--force` overlays anyway, but it is not recommended.
 
 ## Version pinning
 

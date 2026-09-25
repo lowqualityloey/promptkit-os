@@ -48,19 +48,28 @@ function passthroughFlags(argv) {
 
 // Extracting a tarball over an existing tree is not idempotent the way the canonical
 // git-submodule path is: it merges, leaving stale files behind and producing a franken
-// state that mixes delivery doors. Refuse instead, and say exactly how to proceed.
+// state that mixes delivery doors. Refuse instead, and say exactly how to proceed —
+// the correct update command depends on which door produced the existing install.
 function assertInstallTargetIsClean(kitDir, force) {
   if (!fs.existsSync(kitDir)) return;
   const entries = fs.readdirSync(kitDir);
   if (entries.length === 0 || force) return;
+
+  const isSubmoduleInstall = fs.existsSync(path.join(kitDir, ".git"));
+  const update = isSubmoduleInstall
+    ? "  git submodule update --remote --merge .promptkit && bash .promptkit/init.sh"
+    : `  rm -rf ${KIT_DIR}\n` +
+      `  npx promptkit-os@latest --balanced   # or: npx promptkit-os@latest --lite`;
+  const updateIntro = isSubmoduleInstall
+    ? "To update this git-submodule install:"
+    : "To update this courier install, replace it (the tarball is pinned per version):";
+
   die(
     `${KIT_DIR}/ already exists and is not empty.\n` +
       "            Refusing to overlay it — a tarball merge can leave stale files behind.\n" +
-      "            To update an existing install, use the canonical path:\n" +
-      "              git submodule update --remote --merge .promptkit && bash .promptkit/init.sh\n" +
-      "            To reinstall from scratch, remove it first:\n" +
-      "              rm -rf .promptkit\n" +
-      "            To force an overlay anyway (not recommended), re-run with --force."
+      `            ${updateIntro}\n` +
+      update +
+      "\n            To force an overlay anyway (not recommended), re-run with --force."
   );
 }
 
