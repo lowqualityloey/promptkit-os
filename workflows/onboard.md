@@ -103,6 +103,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    - **Web — Next.js App Router**: `app/` directory, Server Components, Route Handlers.
    - **Web — Next.js Pages Router**: `pages/` directory, `pages/api/`.
    - **Web — Astro**: `astro.config.*`, `src/content/` or `src/pages/`, islands architecture.
+   - **Deploy — Docker**: `Dockerfile`, `docker-compose.yml`, `compose.yml`, multi-stage containerization.
    - **Backend — Clean / Hexagonal**: `domain/`, `application/`, `infrastructure/`, `adapters/`.
    - **Frontend — Feature-Sliced / Component**: `src/features/*`, `src/modules/*`.
    - **Monorepo Multi-Package Topology**:
