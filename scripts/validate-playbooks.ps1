@@ -114,7 +114,11 @@ function Validate-SinglePlaybook {
         }
 
         # Shell composition anti-patterns in verification
-        if ($frontmatterText -match "(?m)-\s+.*(&&|\|\||;)") {
+        $verificationBlock = ""
+        if ($frontmatterText -match "(?ms)^verification:\r?\n(.*?)(?=^[a-zA-Z0-9_-]+:|\Z)") {
+            $verificationBlock = $Matches[1]
+        }
+        if ($verificationBlock -match "(?m)-\s+.*(&&|\|\||;)") {
             Write-Host "[FAIL] ${fileName}: Prohibited shell composition (&&, ||, ;) found in verification arrays. Use discrete array items." -ForegroundColor Red
             $errors++
         }

@@ -118,7 +118,9 @@ validate_single_playbook() {
         fi
 
         # 3. Check for shell composition anti-patterns in verification (prohibit &&, ||, ;)
-        if echo "$frontmatter" | grep -E "(-[[:space:]]+.*(&&|\|\||;))" >/dev/null; then
+        local verification_block
+        verification_block="$(echo "$frontmatter" | awk '/^verification:/{flag=1; next} /^[a-zA-Z0-9_-]+:/{flag=0} flag')"
+        if echo "$verification_block" | grep -E "(-[[:space:]]+.*(&&|\|\||;))" >/dev/null; then
             echo "❌ $filename: Prohibited shell composition (&&, ||, ;) found in verification arrays. Use discrete array items."
             errors=$((errors + 1))
         fi

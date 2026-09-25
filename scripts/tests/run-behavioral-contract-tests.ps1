@@ -559,6 +559,17 @@ Assert-Contains "workflows/debug.md" "docs/recipes/env-validation.md" "Debug wor
 Assert-Contains "workflows/api.md" "docs/recipes/form-mutations.md" "API workflow links form-mutations recipe"
 Assert-Contains "workflows/api.md" "docs/recipes/webhook-idempotency.md" "API workflow links webhook-idempotency recipe"
 Assert-Contains "workflows/test.md" "docs/recipes/test-isolation.md" "Test workflow links test-isolation recipe"
+Assert-Contains "workflows/onboard.md" "docs/recipes/env-validation.md" "Onboarding workflow links env-validation recipe"
+
+Write-Host "`n📌 Scenario AB: Stack Playbooks Catalog Index & Astro Stack (Issue #392)" -ForegroundColor Yellow
+Assert-Contains "docs/stacks/README.md" "Stack Playbook Catalog" "Stacks README includes catalog matrix"
+Assert-Contains "docs/stacks/README.md" "Architectural Intake Criteria" "Stacks README documents guidance tiers and intake rules"
+Assert-Contains "docs/stacks/README.md" "web-astro.md" "Stacks README catalog indexes web-astro playbook"
+Assert-Contains "docs/stacks/README.md" "cms-wordpress.md" "Stacks README documents CMS layer in demand-driven roadmap"
+Assert-Contains "docs/stacks/web-astro.md" "name: web-astro" "Astro playbook defines valid frontmatter name"
+Assert-Contains "docs/stacks/web-astro.md" "category: web" "Astro playbook uses category: web"
+Assert-Contains "docs/stacks/web-astro.md" "astro.config" "Astro playbook declares astro.config manifest activation"
+Assert-Contains "docs/stacks/web-astro.md" "npx astro check" "Astro playbook declares fast verification command"
 
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan

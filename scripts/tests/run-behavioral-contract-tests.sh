@@ -548,6 +548,18 @@ assert_contains "workflows/debug.md" "docs/recipes/env-validation.md" "Debug wor
 assert_contains "workflows/api.md" "docs/recipes/form-mutations.md" "API workflow links form-mutations recipe"
 assert_contains "workflows/api.md" "docs/recipes/webhook-idempotency.md" "API workflow links webhook-idempotency recipe"
 assert_contains "workflows/test.md" "docs/recipes/test-isolation.md" "Test workflow links test-isolation recipe"
+assert_contains "workflows/onboard.md" "docs/recipes/env-validation.md" "Onboarding workflow links env-validation recipe"
+
+echo ""
+echo "📌 Scenario AB: Stack Playbooks Catalog Index & Astro Stack (Issue #392)"
+assert_contains "docs/stacks/README.md" "Stack Playbook Catalog" "Stacks README includes catalog matrix"
+assert_contains "docs/stacks/README.md" "Architectural Intake Criteria" "Stacks README documents guidance tiers and intake rules"
+assert_contains "docs/stacks/README.md" "web-astro.md" "Stacks README catalog indexes web-astro playbook"
+assert_contains "docs/stacks/README.md" "cms-wordpress.md" "Stacks README documents CMS layer in demand-driven roadmap"
+assert_contains "docs/stacks/web-astro.md" "name: web-astro" "Astro playbook defines valid frontmatter name"
+assert_contains "docs/stacks/web-astro.md" "category: web" "Astro playbook uses category: web"
+assert_contains "docs/stacks/web-astro.md" "astro.config" "Astro playbook declares astro.config manifest activation"
+assert_contains "docs/stacks/web-astro.md" "npx astro check" "Astro playbook declares fast verification command"
 
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
