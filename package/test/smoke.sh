@@ -4,7 +4,7 @@
 # .promptkit/ tree whose generated artifacts match the canonical installer path, and re-running
 # is idempotent (directive count stays 1).
 #
-# Usage: PROMPTKIT_VERSION=v1.9.0 bash test/smoke.sh
+# Usage: PROMPTKIT_VERSION=1.9.0 bash test/smoke.sh   (a leading "v" is also accepted)
 set -euo pipefail
 
 VERSION="${PROMPTKIT_VERSION:-}"
@@ -12,6 +12,10 @@ if [ -z "$VERSION" ]; then
     echo "SKIP: PROMPTKIT_VERSION not set (network test; runs only in the release job)"
     exit 0
 fi
+# The release-tag URL below prepends "v". Strip a caller-supplied prefix so "v1.9.0" and
+# "1.9.0" are equivalent — otherwise the documented "v1.9.0" form builds "vv1.9.0" and 404s
+# in a way that reads like a missing tag rather than a malformed argument.
+VERSION="${VERSION#v}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
@@ -26,11 +30,15 @@ curl -fsSL "https://github.com/lowqualityloey/promptkit-os/archive/refs/tags/v${
 chmod +x "$COURIER_DIR/.promptkit/init.sh"
 (cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 bash .promptkit/init.sh --balanced "$COURIER_DIR")
 
-echo "== 2. canonical submodule-path install (same installer, same flag) =="
+echo "== 2. canonical submodule-path install (git materialization of the same tag) =="
 CANON_DIR="$WORK/canonical"
 mkdir -p "$CANON_DIR/.promptkit"
-cp -R "$REPO_ROOT/." "$CANON_DIR/.promptkit/"
-rm -rf "$CANON_DIR/.promptkit/.git"
+# Materialize the tag under test from git instead of copying the working tree. Copying
+# $REPO_ROOT compares the release tarball against whatever happens to be checked out, so any
+# version other than HEAD fails on version drift (23- vs 24-workflow PROMPTKIT.md) rather than
+# on the courier-vs-canonical property this test exists to prove. git archive also keeps the
+# two doors comparable: tracked files only, exec bit preserved, no VCS metadata to strip.
+git -C "$REPO_ROOT" archive "v$VERSION" | tar -x -C "$CANON_DIR/.promptkit"
 chmod +x "$CANON_DIR/.promptkit/init.sh"
 (cd "$CANON_DIR" && PROMPTKIT_NO_INTERACTIVE=1 bash .promptkit/init.sh --balanced "$CANON_DIR")
 
