@@ -102,6 +102,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    Detect architecture from repository evidence; do not assume a known framework pattern. Representative patterns include (treat as examples, not an exhaustive checklist):
    - **Web — Next.js App Router**: `app/` directory, Server Components, Route Handlers.
    - **Web — Next.js Pages Router**: `pages/` directory, `pages/api/`.
+   - **Web — Astro**: `astro.config.*`, `src/content/` or `src/pages/`, islands architecture.
    - **Backend — Clean / Hexagonal**: `domain/`, `application/`, `infrastructure/`, `adapters/`.
    - **Frontend — Feature-Sliced / Component**: `src/features/*`, `src/modules/*`.
    - **Monorepo Multi-Package Topology**:
