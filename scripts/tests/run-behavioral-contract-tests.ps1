@@ -601,6 +601,16 @@ Assert-Contains "docs/stacks/api-node.md" "Runtime Schema Boundary Validation" "
 Assert-Contains "docs/stacks/api-node.md" "Event Loop Non-Blocking Discipline" "Node API playbook defines event loop invariant"
 Assert-Contains "workflows/onboard.md" "API — Node.js Server" "Onboarding workflow detects Node.js Server pattern"
 
+Write-Host "`n📌 Scenario AF: WordPress CMS Stack Playbook & Discovery (Issue #402)" -ForegroundColor Yellow
+Assert-Contains "docs/stacks/README.md" "cms-wordpress.md" "Stacks README catalog indexes cms-wordpress playbook"
+Assert-Contains "docs/stacks/cms-wordpress.md" "name: cms-wordpress" "WordPress playbook defines valid frontmatter name"
+Assert-Contains "docs/stacks/cms-wordpress.md" "category: web" "WordPress playbook uses category: web"
+Assert-Contains "docs/stacks/cms-wordpress.md" "wp-config.php" "WordPress playbook declares wp-config.php manifest activation"
+Assert-Contains "docs/stacks/cms-wordpress.md" "composer validate" "WordPress playbook declares fast verification command"
+Assert-Contains "docs/stacks/cms-wordpress.md" "Mandatory Prepared SQL Statements" "WordPress playbook defines prepared statements invariant"
+Assert-Contains "docs/stacks/cms-wordpress.md" "State Mutation Nonce Verification" "WordPress playbook defines nonce verification invariant"
+Assert-Contains "workflows/onboard.md" "CMS — WordPress" "Onboarding workflow detects WordPress pattern"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

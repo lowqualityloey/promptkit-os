@@ -106,6 +106,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    - **Deploy — Docker**: `Dockerfile`, `docker-compose.yml`, `compose.yml`, multi-stage containerization.
    - **API — FastAPI**: `main.py`, `app/main.py`, `pyproject.toml` (FastAPI dependency), Pydantic schemas, async endpoints.
    - **API — Node.js Server**: `package.json` (Express/Fastify/Hono/Nest), `tsconfig.json`, route handlers, runtime validation schemas.
+   - **CMS — WordPress**: `wp-config.php`, `wp-content/`, themes/plugins, Bedrock `composer.json`.
    - **Backend — Clean / Hexagonal**: `domain/`, `application/`, `infrastructure/`, `adapters/`.
    - **Frontend — Feature-Sliced / Component**: `src/features/*`, `src/modules/*`.
    - **Monorepo Multi-Package Topology**:
