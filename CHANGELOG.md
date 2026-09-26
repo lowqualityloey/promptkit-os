@@ -9,9 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.9.1] - 2026-09-26
+## [1.9.2] - 2026-09-27
 
-Release evidence chain: `docs/releases/2026-09-26-v1.9.1-*.md` (`REL-2026-09-26-V1.9.1-001`) · Tag: `v1.9.1` at source `32aace9` — pending maintainer tag action after this chain's CI passes · No breaking changes (patch).
+Release evidence chain: `docs/releases/2026-09-27-v1.9.2-*.md` (`REL-2026-09-27-V1.9.2-001`) · Tag: `v1.9.2` at source `ed1c448` — pending maintainer tag action after this chain's CI passes · No breaking changes (patch).
+
+### Changed
+- **Courier Publish No Longer Diverts Off Trusted Publishing**: Removed the `registry-url` input from the `Setup Node` step in `.github/workflows/release-npm.yml`. That input made `actions/setup-node` write a userconfig `.npmrc` containing `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`, which is sufficient for npm to select the token authentication path even when the variable is empty — so npm never attempted the OIDC trusted-publishing exchange. The credential was gone but the mechanism that looked for one was not. Trusted publishing needs no registry configuration, so no auth entry is generated and npm has no token path to fall back to. (`init.sh`/`init.ps1` remain the single source of truth; `templates/agent-directive-template.md` is byte-unchanged.) (#417, #421)
+
+### Fixed
+- **Release Runs That Would Use Token Auth Now Fail Immediately**: Added an `Assert No Token Auth Will Be Used` step to the courier publish job, running before version sync, the minimal-tarball assertion, the AC-1 smoke test, and the publish. It fails the job with an explicit diagnostic if `NODE_AUTH_TOKEN` or `NPM_TOKEN` is present in the job environment, or if `NPM_CONFIG_USERCONFIG` points at a file containing an auth entry. The prior failure mode was a silent registry `404` after a full release run had already burned a version number; the new one is a named error in the first minute that states both the condition and the fix. Verified in all three states locally: clean environment passes, a set `NODE_AUTH_TOKEN` fails, an auth-bearing `.npmrc` fails. (#421)
+
+## [1.9.1] - 2026-09-26 — FAILED, never published to npm
+
+**This version was tagged and has a GitHub release, but was never published to npm.** Release run `36257849644` failed with `E404` at the publish step. `npm view promptkit-os versions` returns only `1.9.0`, which remains the live and valid courier; no consumer is affected and the git submodule path is canonical regardless. npm versions are immutable, so `1.9.1` is burned and is superseded by `1.9.2`. The `v1.9.1` tag and its GitHub release are retained deliberately as the immutable record of the attempt and must not be deleted, moved, or re-tagged. Root cause and full disposition are recorded in [`docs/releases/2026-09-27-v1.9.2-evaluation.md`](./docs/releases/2026-09-27-v1.9.2-evaluation.md).
+
+Release evidence chain: `docs/releases/2026-09-26-v1.9.1-*.md` (`REL-2026-09-26-V1.9.1-001`) · Tag: `v1.9.1` at source `02bbfc6` — approved and tagged, publish failed · No breaking changes (patch).
 
 > **Note on the 1.9.0 gap:** `v1.9.0` shipped on 2026-09-25 with no release-record chain in `docs/releases/`. The entries below the `1.9.1` heading that predate this release were already listed under `[Unreleased]` at the `v1.9.0` tag; they are left in place rather than retroactively re-attributed. Retro-certification of the `v1.9.0` change set is a separate record-remediation follow-up, surfaced in the v1.9.1 evaluation as an explicit coordinator-acceptance deviation.
 
