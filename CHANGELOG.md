@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.9.2] - 2026-09-27
 
-Release evidence chain: `docs/releases/2026-09-27-v1.9.2-*.md` (`REL-2026-09-27-V1.9.2-001`) · Tag: `v1.9.2` at source `ed1c448` — pending maintainer tag action after this chain's CI passes · No breaking changes (patch).
+Release evidence chain: `docs/releases/2026-09-27-v1.9.2-*.md` (`REL-2026-09-27-V1.9.2-001`) · Tag: `v1.9.2` at `d850225` — published to npm via trusted publishing (OIDC), provenance attestation verified, `NPM_TOKEN` deleted and the exposed granular token revoked · No breaking changes (patch).
 
 ### Changed
 - **Courier Publish No Longer Diverts Off Trusted Publishing**: Removed the `registry-url` input from the `Setup Node` step in `.github/workflows/release-npm.yml`. That input made `actions/setup-node` write a userconfig `.npmrc` containing `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`, which is sufficient for npm to select the token authentication path even when the variable is empty — so npm never attempted the OIDC trusted-publishing exchange. The credential was gone but the mechanism that looked for one was not. Trusted publishing needs no registry configuration, so no auth entry is generated and npm has no token path to fall back to. (`init.sh`/`init.ps1` remain the single source of truth; `templates/agent-directive-template.md` is byte-unchanged.) (#417, #421)
