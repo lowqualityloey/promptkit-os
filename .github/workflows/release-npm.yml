@@ -65,6 +65,14 @@ jobs:
           # lockfile exists to key a cache on. setup-node fails hard on a missing
           # cache-dependency-path, which would break the first release at this step.
 
+      # npm trusted publishing (OIDC) requires npm CLI >= 11.5.1 and Node >= 22.14.0.
+      # The feature gate lives on the npm CLI, not on Node: npm 10 does not attempt the
+      # OIDC exchange at all, so with no NODE_AUTH_TOKEN present it fails to
+      # authenticate. Bumping `node-version` alone is not reliable either (Node 22 can
+      # bundle npm 10, and early Node 24 bundled npm 11.4.x), so pin the CLI explicitly.
+      - name: Ensure npm Supports Trusted Publishing
+        run: npm install -g npm@^11.5.1
+
       - name: Sync Courier Version to Release Tag
         env:
           VERSION: ${{ steps.tag.outputs.version }}
@@ -94,9 +102,13 @@ jobs:
 
       - name: Publish to npm with Provenance
         working-directory: package
+        # Trusted publishing (OIDC): no long-lived token. The npmjs.com trusted
+        # publisher entry (repo promptkit-os, workflow release-npm.yml) mints a
+        # short-lived credential via the job's id-token; provenance is automatic.
+        # The dashboard entry's optional Environment field must be left EMPTY,
+        # because this job declares no `environment:` key — a non-empty value there
+        # makes the OIDC exchange 403 on publisher mismatch.
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Report
         run: |
