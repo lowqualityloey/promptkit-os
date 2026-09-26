@@ -60,7 +60,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: "https://registry.npmjs.org"
+          # No `registry-url` here, deliberately. Passing it makes setup-node write a
+          # userconfig .npmrc containing `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`.
+          # That makes npm take the TOKEN auth path even when the variable is empty, so it
+          # never attempts the OIDC trusted-publishing exchange at all. The v1.9.1 release
+          # failed with E404 for exactly this reason: the OIDC token was minted and the
+          # provenance statement was signed, but the publish still went out as a token
+          # publish. Trusted publishing needs no registry config, so we simply omit it.
           # No `cache: npm` — this package is intentionally zero-dependency, so no
           # lockfile exists to key a cache on. setup-node fails hard on a missing
           # cache-dependency-path, which would break the first release at this step.
@@ -72,6 +78,29 @@ jobs:
       # bundle npm 10, and early Node 24 bundled npm 11.4.x), so pin the CLI explicitly.
       - name: Ensure npm Supports Trusted Publishing
         run: npm install -g npm@^11.5.1
+
+      # Fail loudly and early if anything would silently divert the publish off OIDC.
+      # A token present here is the exact condition that broke v1.9.1, and it fails at the
+      # last step of a release rather than at a point anyone is watching.
+      - name: Assert No Token Auth Will Be Used
+        run: |
+          set -euo pipefail
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::NODE_AUTH_TOKEN is set in the job environment; npm would bypass trusted publishing and attempt a token publish. Remove it."
+            exit 1
+          fi
+          if [ -n "${NPM_TOKEN:-}" ]; then
+            echo "::error::NPM_TOKEN is set in the job environment; npm would bypass trusted publishing and attempt a token publish. Remove it."
+            exit 1
+          fi
+          for rc in "${NPM_CONFIG_USERCONFIG:-}"; do
+            [ -z "$rc" ] && continue
+            if [ -f "$rc" ] && grep -qiE '_authToken|_auth[[:space:]]*=' "$rc"; then
+              echo "::error::$rc contains an auth token entry; npm would bypass trusted publishing. Remove the registry-url input from Setup Node."
+              exit 1
+            fi
+          done
+          echo "No token auth present — publish will use npm trusted publishing (OIDC)."
 
       - name: Sync Courier Version to Release Tag
         env:
