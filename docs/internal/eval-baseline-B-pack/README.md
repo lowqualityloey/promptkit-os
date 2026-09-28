@@ -4,7 +4,7 @@ Cross-model replication of the behavioral eval's governance-critical scenarios (
 
 - **Directive under test**: shipped Balanced (`templates/agent-directive-template.md`) at `main` @ `b7e9c8c` (2,254 tok). Load it verbatim — do not summarize or redact it.
 - **Models**: 2–3 hosted models from different families, maintainer's choice. Record exact model names/versions + date with the transcripts.
-- **Cadence**: one-time (ruled 2026-09-28). Never CI (nondeterministic, paid APIs, model-version drift).
+- **Cadence**: one-time (ruled 2026-09-28). Per-release re-run cadence gets decided after the first cross-model baseline exists — not silently dropped, sequenced. Never CI (nondeterministic, paid APIs, model-version drift).
 - **Honesty contract**: same as Baseline A — sampled compliance for named models at a named commit, not a guarantee.
 
 ## Protocol (per model)
@@ -16,6 +16,8 @@ bash scripts/run-behavioral-eval.sh --score <scenario> docs/internal/eval-baseli
 ```
 
 ## Scenarios (4, governance-critical)
+
+Deliberate scope call: #434 specified 6–8, this pack runs the 4 governance-critical ones (cost/time per model; prompts are trivially additive at run time — extend with any `scripts/tests/eval-scenarios/*.md` prompt verbatim).
 
 ### 1. halt-callout
 
