@@ -36,6 +36,6 @@ Tick every box **before** running `pk:auto --waves N`. One unticked box means se
 
 ## Related references
 
-- Wave rules: [`workflows/auto.md`](../workflows/auto.md)
-- Delegation patterns: [`protocols/subagent-delegation.md`](../protocols/subagent-delegation.md)
+- Wave rules: [`workflows/auto.md`](../../workflows/auto.md)
+- Delegation patterns: [`protocols/subagent-delegation.md`](../../protocols/subagent-delegation.md)
 - Autonomy budgets: [#258](https://github.com/lowqualityloey/promptkit-os/issues/258)

@@ -94,6 +94,54 @@ function Test-FileReference {
     return $true
 }
 
+# Generic markdown-link resolution: a reader-facing relative link in a scanned
+# file must resolve. Historical records are exempt (same policy as the
+# canonical-count drift guard), placeholder/anchor/absolute/external targets are
+# skipped, and inline code spans are ignored so illustrative examples cannot
+# trip the gate. Without this, a root-relative link inside docs/ passes every
+# gate while 404ing for readers on the host.
+$script:LinkExemptDirs = @("docs/releases/", "docs/tasks/", "docs/archive/", "docs/internal/", "docs/spikes/")
+
+function Test-LinkExempt {
+    param([string]$RelPath)
+    foreach ($exempt in $script:LinkExemptDirs) {
+        if ($RelPath.StartsWith($exempt)) { return $true }
+    }
+    return $false
+}
+
+function Test-MarkdownLinks {
+    param(
+        [string]$SourceFile,
+        [string]$RelSource
+    )
+    $dir = Split-Path -Parent $SourceFile
+    $failed = $false
+    $lines = @(Get-Content -Path $SourceFile -ErrorAction SilentlyContinue)
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = [string]$lines[$i]
+        if ($line -notmatch '\]\([^)]+\.md') { continue }
+        # Drop inline code spans so example links written inside backticks are ignored.
+        $sanitized = [regex]::Replace($line, '`[^`]*`', '')
+        $linkMatches = [regex]::Matches($sanitized, '\]\(([^)]+\.md)(#[^)]*)?\)')
+        foreach ($m in $linkMatches) {
+            $target = $m.Groups[1].Value
+            if ($target -match '^(https?:|/|#)') { continue }
+            if ($target -match '[<{$]') { continue }
+            if ($target -match '^[A-Za-z]:') { continue }
+            $candidate = [System.IO.Path]::GetFullPath((Join-Path $dir $target))
+            if (-not (Test-Path -LiteralPath $candidate)) {
+                Write-Host "  ❌ BROKEN LINK: ${RelSource}:$($i + 1)" -ForegroundColor Red
+                Write-Host "     Link: $target" -ForegroundColor DarkGray
+                Write-Host ""
+                $script:ErrorCount++
+                $failed = $true
+            }
+        }
+    }
+    return $failed
+}
+
 # Scan each file
 foreach ($file in $AllMarkdownFiles) {
     $content = Get-Content -Path $file.FullName -Raw
@@ -188,6 +236,14 @@ foreach ($file in $AllMarkdownFiles) {
         }
     }
     
+    # Generic markdown links (reader-facing 404 guard). Historical records are
+    # exempt, matching the canonical-count drift guard's exemption policy.
+    if (-not (Test-LinkExempt $relPath)) {
+        if (Test-MarkdownLinks $file.FullName $relPath) {
+            $fileHasIssues = $true
+        }
+    }
+
     if (-not $fileHasIssues) {
         Write-Host "  ✅ $relPath" -ForegroundColor Green
     }
