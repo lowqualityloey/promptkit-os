@@ -41,5 +41,5 @@ Plain English reliably **starts** `pk:auto` (Smart Auto-Route); explicit flags a
 
 ## Related references
 
-- Boundaries: [`workflows/auto.md`](../workflows/auto.md)
-- Authority table: [`protocols/code-quality-gate.md`](../protocols/code-quality-gate.md)
+- Boundaries: [`workflows/auto.md`](../../workflows/auto.md)
+- Authority table: [`protocols/code-quality-gate.md`](../../protocols/code-quality-gate.md)

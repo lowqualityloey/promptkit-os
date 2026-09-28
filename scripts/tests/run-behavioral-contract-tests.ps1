@@ -703,6 +703,15 @@ if (-not $alFail) {
     $script:PassCount++
 }
 
+Write-Host "`n📌 Scenario AN: Reference-Link Resolution Gate (Issue #444)" -ForegroundColor Yellow
+Assert-Contains "scripts/validate-references.sh" "BROKEN LINK" "Bash validator reports broken markdown links"
+Assert-Contains "scripts/validate-references.ps1" "BROKEN LINK" "PowerShell validator reports broken markdown links"
+Assert-Contains "scripts/validate-references.sh" "LINK_EXEMPT_DIRS" "Bash validator carries the historical-record exemption list"
+Assert-Contains "scripts/validate-references.ps1" "LinkExemptDirs" "PowerShell validator carries the historical-record exemption list"
+Assert-Contains "scripts/tests/run-reference-link-tests.sh" "fails closed" "Bash link harness proves broken-link polarity"
+Assert-Contains "scripts/tests/run-reference-link-tests.ps1" "fails closed" "PowerShell link harness proves broken-link polarity"
+Assert-Contains ".github/workflows/ci.yml" "run-reference-link-tests" "CI wires the reference-link harness"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

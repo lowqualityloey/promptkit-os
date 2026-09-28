@@ -57,6 +57,6 @@ The halt block is **observable state, never an execution trigger**. Nothing poll
 
 ## Related references
 
-- Pause/resume rules: [`workflows/auto.md`](../workflows/auto.md)
+- Pause/resume rules: [`workflows/auto.md`](../../workflows/auto.md)
 - Pre-flight ticks: [`auto-waves-preflight-checklist.md`](./auto-waves-preflight-checklist.md)
-- Authority table: [`protocols/code-quality-gate.md`](../protocols/code-quality-gate.md)
+- Authority table: [`protocols/code-quality-gate.md`](../../protocols/code-quality-gate.md)

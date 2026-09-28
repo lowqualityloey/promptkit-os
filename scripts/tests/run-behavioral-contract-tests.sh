@@ -706,6 +706,16 @@ else
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 
+echo ""
+echo "📌 Scenario AN: Reference-Link Resolution Gate (Issue #444)"
+assert_contains "scripts/validate-references.sh" "BROKEN LINK" "Bash validator reports broken markdown links"
+assert_contains "scripts/validate-references.ps1" "BROKEN LINK" "PowerShell validator reports broken markdown links"
+assert_contains "scripts/validate-references.sh" "LINK_EXEMPT_DIRS" "Bash validator carries the historical-record exemption list"
+assert_contains "scripts/validate-references.ps1" "LinkExemptDirs" "PowerShell validator carries the historical-record exemption list"
+assert_contains "scripts/tests/run-reference-link-tests.sh" "fails closed" "Bash link harness proves broken-link polarity"
+assert_contains "scripts/tests/run-reference-link-tests.ps1" "fails closed" "PowerShell link harness proves broken-link polarity"
+assert_contains ".github/workflows/ci.yml" "run-reference-link-tests" "CI wires the reference-link harness"
+
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"
