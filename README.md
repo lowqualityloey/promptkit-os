@@ -68,10 +68,10 @@ It provides the engineering rules around them.
 
 ## Start Here: Most Work Is Level 1
 
-You do not need to learn all 24 workflows. Most everyday engineering tasks — bug fixes, small features, isolated component changes — are **Level 1 (Standard)** and need only `pk:route` or `pk:debug` to get started. Heavier ceremony kicks in only when the task warrants it.
+You do not need to learn all 25 workflows. Most everyday engineering tasks — bug fixes, small features, isolated component changes — are **Level 1 (Standard)** and need only `pk:route` or `pk:debug` to get started. Heavier ceremony kicks in only when the task warrants it.
 
 > [!TIP]
-> Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia). You do not need to learn all 24 before getting value.
+> Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia). You do not need to learn all 25 before getting value.
 
 ---
 
@@ -124,7 +124,7 @@ PromptKit requires a verification command to execute and return `exit code 0` be
 ```
 .promptkit/
 ├── protocols/       # Core control — risk routing, evidence gates, context sync
-├── workflows/       # 24 engineering procedures (pk:route → pk:ship)
+├── workflows/       # 25 engineering procedures (pk:route → pk:ship)
 ├── docs/
 │   ├── stacks/      # JIT stack playbooks — Next.js, Supabase, Vercel, Expo, Flutter, Rust, Go, Python
 │   ├── recipes/     # Boundary contracts — auth sessions, form mutations, webhooks, env, test isolation
@@ -164,7 +164,7 @@ npx promptkit-os@latest --lite
 > The git submodule flow above is canonical. The npm package is a **courier, not a dependency** — it fetches the release tarball matching its version into `.promptkit/` and runs the same installer, producing an identical tree. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`. It requires Node 18+ (and PowerShell 7 on Windows), and it refuses to overlay a non-empty `.promptkit/`, printing the update command that matches how the existing install was made. Removal: delete `.promptkit/` (plus generated `PROMPTKIT.md` / `docs/STATE.md` if unwanted) — no daemon, nothing left behind.
 
 > [!TIP]
-> Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia). You do not need to learn all 24 before getting value.
+> Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia). You do not need to learn all 25 before getting value.
 
 Already installed? To pull updates, see [Updating PromptKit](./QUICKSTART.md#updating-promptkit).
 
@@ -195,6 +195,7 @@ PromptKit routes the task to the appropriate ceremony level and workflow. Explic
 | **[docs/stacks/](./docs/stacks/)** | I want JIT stack playbooks (11 — Web, DB, Cloud, Mobile, Systems) |
 | **[docs/recipes/](./docs/recipes/)** | I want reusable boundary contracts (8 — Auth, Forms, Webhooks, Env, Testing + 3 pk:auto utilities) |
 | **[docs/ADOPTION-GUIDE.md](./docs/ADOPTION-GUIDE.md)** | I want to add it to an existing project gradually |
+| **[docs/MAXIMS.md](./docs/MAXIMS.md)** | I want the quotable invariants — 8 one-line maxims with canonical links |
 | **[CONTRIBUTING.md](./CONTRIBUTING.md)** | I want to extend or contribute |
 
 ---
