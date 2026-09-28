@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Execution-Control Transition Validation**: Transition checks now read only the Transition History section, accept backticked state cells, and permit gated re-plan loops (`awaiting_review→planned`, `planned→in_progress`); the canonical 36-edge graph is documented in the task template. (#427)
 - **Revision-Proofing Gates**: New `check-changelog-entry` gate (both shells, CI-wired) fails behavior-surface changes without a CHANGELOG entry; the behavioral twins gain a countersignature-consistency scenario; CONTRIBUTING carries the pre-PR checklist. (#433)
 - **Tokenizer-Delta Refresh**: `docs/BENCHMARKS.md` §9 re-measured at current main (tiktoken 0.14.0) with updated verdict bands; release checklist gains the §9 refresh step; Baseline B prompt pack staged for one-time cross-model runs. (#434)
+- **Math Label Rendering Fix**: Replaced backslash-escaped underscores inside `\text{}` math labels in `docs/BENCHMARK-METHODOLOGY.md` with hyphens — `\_` is a markdown escape that renderers resolve before KaTeX, delivering a bare `_` into text mode and failing the render. New `check-math-labels` gate (both shells, CI-wired) rejects the pattern anywhere in the docs tree. (#439)
 
 ## [1.9.2] - 2026-09-27
 

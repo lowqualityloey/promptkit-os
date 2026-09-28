@@ -30,6 +30,7 @@ jobs:
           bash -n scripts/tests/run-execution-control-properties.sh
           bash -n scripts/validate-release-records.sh
           bash -n scripts/check-changelog-entry.sh
+          bash -n scripts/check-math-labels.sh
           bash -n scripts/tests/run-release-record-properties.sh
           bash -n scripts/validate-ci-triage.sh
           bash -n scripts/tests/run-ci-triage-fixtures.sh
@@ -152,6 +153,9 @@ jobs:
       - name: Run Reference and Structural Validator (Bash)
         run: bash scripts/validate-references.sh .
 
+      - name: Assert No Fragile Math Labels (Bash)
+        run: bash scripts/check-math-labels.sh --root .
+
       - name: Assert CHANGELOG Entry for Behavior-Surface Changes (Bash)
         run: |
           git fetch origin main --depth=100
@@ -180,6 +184,7 @@ jobs:
             "scripts/tests/run-execution-control-properties.ps1",
             "scripts/validate-release-records.ps1",
             "scripts/check-changelog-entry.ps1",
+            "scripts/check-math-labels.ps1",
             "scripts/tests/run-release-record-properties.ps1",
             "scripts/validate-ci-triage.ps1",
             "scripts/tests/run-ci-triage-fixtures.ps1",
@@ -280,6 +285,10 @@ jobs:
       - name: Run Reference and Structural Validator (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir .
+
+      - name: Assert No Fragile Math Labels (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\check-math-labels.ps1 -Root .
 
       - name: Assert CHANGELOG Entry for Behavior-Surface Changes (PowerShell)
         shell: pwsh
