@@ -21,3 +21,4 @@ adaptation-valid	0	adaptation-valid.summary.txt	adaptation-valid.diagnostics.txt
 legacy-none-profile	0	legacy-none-profile.summary.txt	legacy-none-profile.diagnostics.txt
 adaptation-invalid-id	1	adaptation-invalid-id.summary.txt	adaptation-invalid-id.diagnostics.txt
 adaptation-invalid-fields	1	adaptation-invalid-fields.summary.txt	adaptation-invalid-fields.diagnostics.txt
+transition-table-scope	0	transition-table-scope.summary.txt	transition-table-scope.diagnostics.txt
