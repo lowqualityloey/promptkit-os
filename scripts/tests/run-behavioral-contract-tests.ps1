@@ -669,6 +669,20 @@ foreach ($retro in (Get-ChildItem -Path (Join-Path $RepoRoot "docs/releases/*ret
             $script:FailCount++
             $alFail = $true
         }
+        $alId = [regex]::Match((Get-Content -LiteralPath $retro.FullName -Raw), 'REL-\d{4}-\d{2}-\d{2}-V[\d.]+-\d+').Value
+        $stale = @()
+        if ($alId -ne '') {
+            $stale = @(Get-ChildItem -Path (Join-Path $RepoRoot "docs/releases/*.md") | Where-Object {
+                $t = Get-Content -LiteralPath $_.FullName -Raw
+                ($t -match 'pending coordinator countersignature') -and ($t -match $alId)
+            })
+        }
+        if ($stale.Count -gt 0) {
+            Write-Host "  ❌ FAIL: $($retro.Name) is approved but stale pending-countersignature text survives in:" -ForegroundColor Red
+            foreach ($s in $stale) { Write-Host "    - $($s.Name)" -ForegroundColor Red }
+            $script:FailCount++
+            $alFail = $true
+        }
     }
 }
 if (-not $alFail) {

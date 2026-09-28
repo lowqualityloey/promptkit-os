@@ -10,12 +10,17 @@ param(
 
 git rev-parse --verify $Base 2>$null | Out-Null
 if ($LASTEXITCODE -ne 0) {
+    Write-Host "::warning::CHANGELOG gate skipped (no base ref '$Base')"
     Write-Host "CHANGELOG_GATE|SKIP|base ref '$Base' unavailable (shallow or offline checkout)|Fetch it or pass -Base"
     exit 0
 }
 
-$files = @(git diff --name-only "$Base...$Head" 2>$null)
+$files = @(git diff --name-only "$Base...$Head")
 if ($files.Count -eq 0) {
+    if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
+        Write-Host "CHANGELOG_GATE|EMPTY-RANGE|empty diff $Base...$Head on a pull_request event|Ensure the base ref was fetched (fetch-depth) and the range is non-empty"
+        exit 1
+    }
     Write-Host "CHANGELOG_GATE|PASS|empty range $Base...$Head, nothing to gate"
     exit 0
 }

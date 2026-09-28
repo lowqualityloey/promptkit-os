@@ -25,12 +25,17 @@ while [ "$#" -gt 0 ]; do
 done
 
 if ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
+    echo "::warning::CHANGELOG gate skipped (no base ref '$BASE')"
     echo "CHANGELOG_GATE|SKIP|base ref '$BASE' unavailable (shallow or offline checkout)|Fetch it or pass --base"
     exit 0
 fi
 
-files="$(git diff --name-only "$BASE...$HEAD" 2>/dev/null || true)"
+files="$(git diff --name-only "$BASE...$HEAD" || true)"
 if [ -z "$files" ]; then
+    if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
+        echo "CHANGELOG_GATE|EMPTY-RANGE|empty diff $BASE...$HEAD on a pull_request event|Ensure the base ref was fetched (fetch-depth) and the range is non-empty"
+        exit 1
+    fi
     echo "CHANGELOG_GATE|PASS|empty range $BASE...$HEAD, nothing to gate"
     exit 0
 fi

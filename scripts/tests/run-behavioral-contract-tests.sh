@@ -669,6 +669,20 @@ for retro in "$REPO_ROOT"/docs/releases/*retro-evaluation.md; do
             echo "  ❌ FAIL: $retro is approved but CHANGELOG still says pending coordinator countersignature"
             AL_FAIL=1
         fi
+        AL_ID="$(grep -Eo 'REL-[0-9]{4}-[0-9]{2}-[0-9]{2}-V[0-9.]+-[0-9]+' "$retro" | head -n 1)"
+        if [ -n "$AL_ID" ]; then
+            AL_STALE=""
+            for candidate in "$REPO_ROOT"/docs/releases/*.md; do
+                if grep -Eq 'pending coordinator countersignature' "$candidate" && grep -Eq "$AL_ID" "$candidate"; then
+                    AL_STALE="$AL_STALE
+    - $(basename "$candidate")"
+                fi
+            done
+            if [ -n "$AL_STALE" ]; then
+                echo "  ❌ FAIL: $retro is approved but stale pending-countersignature text survives in its own chain:$AL_STALE"
+                AL_FAIL=1
+            fi
+        fi
     fi
 done
 if [ "$AL_FAIL" -eq 0 ]; then

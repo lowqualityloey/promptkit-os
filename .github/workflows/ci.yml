@@ -153,7 +153,8 @@ jobs:
 
       - name: Assert CHANGELOG Entry for Behavior-Surface Changes (Bash)
         run: |
-          git fetch origin main --depth=100 || true
+          git fetch origin main --depth=100
+          git rev-parse --verify --quiet origin/main
           bash scripts/check-changelog-entry.sh
 
   validate-windows:
@@ -282,6 +283,9 @@ jobs:
         shell: pwsh
         run: |
           git fetch origin main --depth=100
+          if ($LASTEXITCODE -ne 0) { throw "fetch of origin/main failed; cannot compute PR range" }
+          git rev-parse --verify --quiet origin/main
+          if ($LASTEXITCODE -ne 0) { throw "base ref origin/main missing after fetch" }
           pwsh -NoProfile -File .\scripts\check-changelog-entry.ps1
 
       - name: Test init.ps1 Dry-Run & Idempotency
