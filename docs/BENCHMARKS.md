@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Measurement Date:** 2026-09-14 · **Environment:** `main` branch (v1.6.0 with 2+1 profiles) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · **Baseline Monolithic:** core-6 lifecycle subset ~19,794 tok / full 24-workflow set ~75,505 tok (derived live) · §3 payload cells refreshed 2026-09-20 (#349 design-workflow hardening)
+**Measurement Date:** 2026-09-14 · **Environment:** `main` branch (v1.6.0 with 2+1 profiles) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · **Baseline Monolithic:** core-6 lifecycle subset ~19,794 tok / full 25-workflow set ~75,505 tok baseline at measurement date, ~99.9k tok with the 25th workflow at current HEAD (derived live) · §3 payload cells refreshed 2026-09-20 (#349 design-workflow hardening)
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [24 Inlined Workflows + Templates + Protocols (~75.5k tok)] │
+│ Every Turn: [25 Inlined Workflows + Templates + Protocols (~99.9k tok)] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -33,10 +33,10 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs ~19.8k core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
 | **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 4,838 | **1,210 tok** | **94% static** | Onboarding, new users, tiny fixes |
-| **Balanced** | `agent-directive-template.md` (24 workflows) | 9,014 | **2,254 tok** | **89% static** | Teams, production, default |
+| **Balanced** | `agent-directive-template.md` (25 workflows) | 9,014 | **2,254 tok** | **89% static** | Teams, production, default |
 | **Turbo** | same as Balanced + parallel waves | 9,014 | 2,254 tok + subagents (~2x measured total (bounds model, see section 8)) | 89% static, higher total | Experimental, greenfield, accepts cost |
 
-¹ Core-subset baseline = live sum of the six lifecycle files the Lite profile loads (route, debug, commit, checkpoint, sync, profile) = ~19,794 tok; full-set baseline = all 24 workflow files = ~75,505 tok (2026-09-14 measurement; replaces the previously unsourced "18.5k" constant).
+¹ Core-subset baseline = live sum of the six lifecycle files the Lite profile loads (route, debug, commit, checkpoint, sync, profile) = ~19,794 tok; full-set baseline = all 25 workflow files = ~99,851 tok at current HEAD (75,505 tok at 2026-09-14 measurement; replaces the previously unsourced "18.5k" constant).
 
 > **Clarification:** The often-quoted "~90% savings" is **static overhead only** (directive vs monolithic inlining). Per-task payload (directive + workflow + gate) saves 25-46% after Change A (removing mandatory `route.md` 6,962 tok load). See §3 for per-task numbers.
 
@@ -47,11 +47,11 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | **Engineering Quality Gates** | ~36 | ~642 tokens | Secret hygiene, timeout budgets, and anti-hallucination rules |
 | **Task Ceremony Levels & Output** | ~25 | ~397 tokens | Composable 4-level task ceremony engine & output protocol |
 | **Standard Output Directories** | ~17 | ~226 tokens | Canonical locations for generated specs, ADRs, and plans |
-| **Total Baseline Static Overhead (Balanced)** | **84 lines** | **~2,254 tokens** | **Permanent footprint in system prompt (~89% static saving vs. ~19.8k core-subset (~97% vs. full 24-file set))** |
+| **Total Baseline Static Overhead (Balanced)** | **84 lines** | **~2,254 tokens** | **Permanent footprint in system prompt (~89% static saving vs. ~19.8k core-subset (~97% vs. full 25-file set))** |
 | **Total Baseline Static Overhead (Lite)** | **~50 lines** | **~1,210 tokens** | **94% static saving, 54% saving vs Balanced** |
 | **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,210 tok — skipped silently) |
 
-By contrast, inlining all 24 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
+By contrast, inlining all 25 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
 
 > **Budget semantics:** these gates enforce **static prompt size** (directive + workflow + gate payload, bytes/4). They do not measure session token usage, estimate live-model cost, or enforce host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
 

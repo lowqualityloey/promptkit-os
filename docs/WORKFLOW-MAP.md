@@ -4,7 +4,7 @@ Visual guide to help you quickly find the right workflow for your current task.
 
 ## Lite Map (Onboarding — 5 Nodes)
 
-New users start here. Full 24-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
+New users start here. Full 25-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
 
 ```text
 pk:route → pk:plan / pk:tasks → pk:debug → pk:commit → pk:checkpoint

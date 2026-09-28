@@ -98,6 +98,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Reflect**: `.promptkit/workflows/reflect.md`
 - **Checkpoint**: `.promptkit/workflows/checkpoint.md`
 - **Profile**: `.promptkit/workflows/profile.md`
+- **Verify-Bootstrap**: `.promptkit/workflows/verify-bootstrap.md`
 - **Quality Gate (DoD)**: `.promptkit/protocols/code-quality-gate.md`
 - **Context Economy**: `.promptkit/protocols/context-economy.md`
 - **Context Sync**: `.promptkit/protocols/context-sync.md`

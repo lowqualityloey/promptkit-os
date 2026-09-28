@@ -171,7 +171,7 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:auto` | [`workflows/auto.md`](../workflows/auto.md) | New 🧪 | Verified diff / PR | Unattended SDLC meta-orchestration (plan→tasks→code→test→review) with circuit breakers and test immobility. |
 | `pk:retro` | [`workflows/reflect.md`](../workflows/reflect.md) | Core | `docs/adrs/` & journal | Post-feature retrospective: extracts decisions into standard MADRs. |
 
-*Status Legend: All 24 workflows pass CI structural link validation (`validate-references.sh`). Workflows marked with 🧪 also undergo automated documentation-contract testing (`run-behavioral-contract-tests.sh` — string-level prompt-contract assertions); sampled runtime compliance is measured separately by `scripts/run-behavioral-eval.sh` (see `docs/BEHAVIORAL-EVAL.md`).*
+*Status Legend: All 25 workflows pass CI structural link validation (`validate-references.sh`). Workflows marked with 🧪 also undergo automated documentation-contract testing (`run-behavioral-contract-tests.sh` — string-level prompt-contract assertions); sampled runtime compliance is measured separately by `scripts/run-behavioral-eval.sh` (see `docs/BEHAVIORAL-EVAL.md`).*
 
 ---
 
@@ -235,7 +235,7 @@ promptkit-os/
 │   ├── telemetry-cards.md       # Lazy-loaded status-card format spec & callout titles
 │   ├── code-quality-gate.md     # Non-negotiable definition-of-done & pre-commit gate
 │   └── subagent-delegation.md   # Subagent delegation, parallel execution & context preservation
-├── workflows/                   # Step-by-step engineering lifecycle procedures (24 workflows)
+├── workflows/                   # Step-by-step engineering lifecycle procedures (25 workflows)
 │   ├── route.md                 # Lifecycle decision matrix & workflow triage (pk:route)
 │   ├── tutor.md                 # Socratic mentorship & 3-tier progressive hints (pk:tutor, pk:grill)
 │   ├── plan.md                  # Spec-Driven Development & deep modular design (pk:plan)

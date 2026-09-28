@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **pk:verify-bootstrap Workflow**: New `workflows/verify-bootstrap.md` (Level 2, JIT-loaded outside both directives) scaffolds a project-local verification surface (`verify/` + map) so done-gates have something real to gate against on greenfield installs; records the ADR 0002 non-overlap gate in-file, restates human-authorized generation, and mechanizes the red/green demonstration (halt-not-waive). Locked workflow count moves 24 → 25 with the full artifact sweep (setup row, WORKFLOW-MAP, README/FAQ/QUICKSTART counts, guard constants, Scenario AM pins in both twins). (#440)
+- **MAXIMS.md Invariants Page**: New `docs/MAXIMS.md` — 8 one-line maxims, each linked to its canonical source; summarizes, never legislates. (#441)
+
 ### Fixed
 - **pk:grill Completion Contract**: `pk:grill` (Mode 5) now owns a zero-code completion contract — probes cleared, gap logged and closed, or developer stops — so a drill can close without writing code. The generic Completion Criteria block is scoped to tutoring modes 1–4 and 6, with the grill contract overriding on conflict per Mode Precedence. Pre-implementation grilling reads the repository before asking. (#425)
 - **Execution-Control Transition Validation**: Transition checks now read only the Transition History section, accept backticked state cells, and permit gated re-plan loops (`awaiting_review→planned`, `planned→in_progress`); the canonical 36-edge graph is documented in the task template. (#427)
