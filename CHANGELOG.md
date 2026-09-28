@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **pk:grill Completion Contract**: `pk:grill` (Mode 5) now owns a zero-code completion contract — probes cleared, gap logged and closed, or developer stops — so a drill can close without writing code. The generic Completion Criteria block is scoped to tutoring modes 1–4 and 6, with the grill contract overriding on conflict per Mode Precedence. Pre-implementation grilling reads the repository before asking. (#425)
+- **Execution-Control Transition Validation**: Transition checks now read only the Transition History section, accept backticked state cells, and permit gated re-plan loops (`awaiting_review→planned`, `planned→in_progress`); the canonical 36-edge graph is documented in the task template. (#427)
 
 ## [1.9.2] - 2026-09-27
 
