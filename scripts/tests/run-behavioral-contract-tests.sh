@@ -655,6 +655,47 @@ assert_contains "workflows/tutor.md" "Self-Sufficient Probes" "Grill probes carr
 assert_contains "workflows/tutor.md" "Grill Completion Contract" "Grill mode owns a zero-code completion contract"
 assert_contains "workflows/tutor.md" "read instead of asking" "Pre-implementation grilling reads the repo before asking"
 
+echo ""
+echo "📌 Scenario AL: Countersignature Consistency (retro-certification)"
+# An approved retro chain must agree with CHANGELOG: no "pending countersignature"
+# text may survive once the chain reads approved. Pending chains impose nothing.
+AL_FAIL=0
+AL_FOUND=0
+for retro in "$REPO_ROOT"/docs/releases/*retro-evaluation.md; do
+    [ -e "$retro" ] || continue
+    if grep -Eq '\*\*Evaluation Status\*\*: `approved`' "$retro"; then
+        AL_FOUND=1
+        if grep -Eq 'pending coordinator countersignature' "$REPO_ROOT/CHANGELOG.md"; then
+            echo "  ❌ FAIL: $retro is approved but CHANGELOG still says pending coordinator countersignature"
+            AL_FAIL=1
+        fi
+        AL_ID="$(grep -Eo 'REL-[0-9]{4}-[0-9]{2}-[0-9]{2}-V[0-9.]+-[0-9]+' "$retro" | head -n 1)"
+        if [ -n "$AL_ID" ]; then
+            AL_STALE=""
+            for candidate in "$REPO_ROOT"/docs/releases/*.md; do
+                if grep -Eq 'pending coordinator countersignature' "$candidate" && grep -Eq "$AL_ID" "$candidate"; then
+                    AL_STALE="$AL_STALE
+    - $(basename "$candidate")"
+                fi
+            done
+            if [ -n "$AL_STALE" ]; then
+                echo "  ❌ FAIL: $retro is approved but stale pending-countersignature text survives in its own chain:$AL_STALE"
+                AL_FAIL=1
+            fi
+        fi
+    fi
+done
+if [ "$AL_FAIL" -eq 0 ]; then
+    if [ "$AL_FOUND" -eq 1 ]; then
+        echo "  ✅ PASS: approved retro chains agree with CHANGELOG countersignature state"
+    else
+        echo "  ✅ PASS: no approved retro chain; no consistency obligation"
+    fi
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"
