@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **pk:grill Completion Contract**: `pk:grill` (Mode 5) now owns a zero-code completion contract — probes cleared, gap logged and closed, or developer stops — so a drill can close without writing code. The generic Completion Criteria block is scoped to tutoring modes 1–4 and 6, with the grill contract overriding on conflict per Mode Precedence. Pre-implementation grilling reads the repository before asking. (#425)
 - **Execution-Control Transition Validation**: Transition checks now read only the Transition History section, accept backticked state cells, and permit gated re-plan loops (`awaiting_review→planned`, `planned→in_progress`); the canonical 36-edge graph is documented in the task template. (#427)
 - **Revision-Proofing Gates**: New `check-changelog-entry` gate (both shells, CI-wired) fails behavior-surface changes without a CHANGELOG entry; the behavioral twins gain a countersignature-consistency scenario; CONTRIBUTING carries the pre-PR checklist. (#433)
+- **Tokenizer-Delta Refresh**: `docs/BENCHMARKS.md` §9 re-measured at current main (tiktoken 0.14.0) with updated verdict bands; release checklist gains the §9 refresh step; Baseline B prompt pack staged for one-time cross-model runs. (#434)
 
 ## [1.9.2] - 2026-09-27
 
