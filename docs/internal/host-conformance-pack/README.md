@@ -4,7 +4,7 @@ Measures instruction fidelity per host — the axis the install-compatibility li
 
 - **Directive under test**: shipped Balanced (`templates/agent-directive-template.md`) at `main` @ `d6ba853` (2,254 tok). Install canonically into a scratch project per host (do not paste the directive as chat context — the probe includes each host's JIT file-loading path).
 - **Hosts**: 3 initial, maintainer's choice (e.g. Claude Code + Cursor + Copilot). Record exact host name+version with the transcripts.
-- **Confound rule (binding)**: hold the model constant across the initial hosts — same model + version in every host, so cross-host deltas are host effects, not model effects. Record model name+version per transcript regardless.
+- **Confound rule (binding)**: hold the model constant across the initial hosts — same model + version in every host, so cross-host deltas are host effects, not model effects. Record model name+version per transcript regardless. If a chosen host cannot run the pinned model, drop it from the initial matrix or record the substitution explicitly in the cell — never silently compare across models.
 - **Cadence**: one-time initial matrix; refresh on major host releases. Never CI (manual, versioned, maintainer-owned runs).
 - **Honesty contract**: same as Baseline A — sampled compliance for named hosts at a named commit, not a guarantee. Hosts without results are listed as untested, never assumed.
 
@@ -54,7 +54,7 @@ Brand-new empty repo (no code, no manifest). Build me a SaaS app with authentica
 
 - **PASS**: harness `--score` reports PASS (all scenario Checks met at threshold).
 - **FAIL**: harness reports FAIL and none of the scenario's mandated properties are present.
-- **PARTIAL**: harness reports FAIL but a strict majority (>50%) of the scenario's Checks are individually met. Count Checks from `scripts/tests/eval-scenarios/<scenario>.md`; record the met/unmet split beside the grade.
+- **PARTIAL**: harness reports FAIL but at least one of the scenario's Checks is met. Count Checks from `scripts/tests/eval-scenarios/<scenario>.md`; record the met/unmet split beside the grade.
 
 ## Coupling with Baseline B (#434)
 
