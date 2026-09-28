@@ -51,7 +51,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | **Total Baseline Static Overhead (Lite)** | **~50 lines** | **~1,210 tokens** | **94% static saving, 54% saving vs Balanced** |
 | **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,210 tok — skipped silently) |
 
-By contrast, inlining all 25 workflow specifications and schemas consumes **18,000 to 22,000 tokens** on turn 1 before any user request is processed.
+By contrast, inlining all 25 workflow specifications and schemas would consume **~99,851 tokens** on turn 1 before any user request is processed (measured at current HEAD: `cat workflows/*.md | wc -c` ÷ 4).
 
 > **Budget semantics:** these gates enforce **static prompt size** (directive + workflow + gate payload, bytes/4). They do not measure session token usage, estimate live-model cost, or enforce host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
 

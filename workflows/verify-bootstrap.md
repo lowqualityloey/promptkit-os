@@ -68,6 +68,6 @@ Phases 1–2 are passive discovery (manifests, runners, existing checks). Phase 
 - [ ] Dual-Compatible Telemetry Status Card emitted per protocol.
 
 ## Related References
-- Oracle contract: [`protocols/code-quality-gate.md`](protocols/code-quality-gate.md) §5.
+- Oracle contract: [`protocols/code-quality-gate.md`](../protocols/code-quality-gate.md) §5.
 - Host-write authority: [`workflows/onboard.md`](onboard.md) Non-Negotiable Guardrail.
 - Host profile template: [`templates/project-profile-template.md`](../templates/project-profile-template.md).
