@@ -236,6 +236,7 @@ graph TD
 |:---|:---|:---|
 | Break feature into tasks | `pk:tasks` | `docs/tasks/<task-id>.md` plus optional issue/index |
 | Write test strategy | `pk:test` | `docs/tests/*.md` |
+| Bootstrap verification on an empty repo | `pk:verify-bootstrap` | `verify/` + map |
 | Learn without code dumps | `pk:tutor` | Interactive learning |
 | Challenge my architecture | `pk:grill` | Socratic defense drill |
 

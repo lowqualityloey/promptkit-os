@@ -199,6 +199,7 @@ Find your current engineering context below and activate the corresponding workf
 | **Auth, Cookies & Permissions**| `pk:auth` | `docs/auth/` | HttpOnly cookies, OAuth PKCE, RBAC matrix |
 | **API Contract & Handshake** | `pk:api` | `docs/api/` | Error envelopes, cursor pagination, typed clients |
 | **Upfront Test Planning** | `pk:test` | `docs/tests/` | Pyramid seams, test data factories, mock boundaries |
+| **Empty Repo / No Test Surface** | `pk:verify-bootstrap` | `verify/` + map | Project-local verification scaffold, mechanized red/green, host-authorized generation |
 | **UI, Styling & Design System**| `pk:design` | `docs/design/` | WCAG 2.2 AA contrast, design tokens, anti-slop UI |
 | **Unproven Tech or Benchmark** | `pk:spike` | `docs/spikes/` | Sharpest-risk test, baseline comparison, ADR |
 | **Defect, Bug or Regression** | `pk:debug` | `docs/rca/` | Red loop first, tagged probes, 5-Whys post-mortem |

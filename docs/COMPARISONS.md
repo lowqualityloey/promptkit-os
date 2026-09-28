@@ -91,7 +91,7 @@ While rigid methodologies force heavy specification and testing loops on every l
 
 | Dimension | Single-File Directives | Static Prompt Packs | Autonomous Multi-Agent Swarms | **PromptKit OS** |
 | :--- | :--- | :--- | :--- | :--- |
-| **Scope** | Tool-specific instruction endpoint | Workflow templates for one tool | Multi-agent unmonitored loops | Cross-tool engineering OS with 24 lifecycle workflows |
+| **Scope** | Tool-specific instruction endpoint | Workflow templates for one tool | Multi-agent unmonitored loops | Cross-tool engineering OS with 25 lifecycle workflows |
 | **Token Overhead** | Minimal initial overhead | High monolithic bloat | Higher aggregate token cost from multi-agent pipeline calls | **Measured baseline profile overhead\*** (See `BENCHMARKS.md` for current measurements; unused workflows consume 0 tokens) |
 | **Persistence** | Per-session only | Per-session only | Hidden cache directories prone to context exhaustion | Git-tracked `docs/STATE.md` survives context resets & fresh chats |
 | **Execution Model** | Unstructured chat | Manual template pasting | Background loop until timeout or crash | Disciplined human-in-the-loop pairing (Levels 0–3) |
