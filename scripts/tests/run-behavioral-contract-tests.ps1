@@ -180,11 +180,11 @@ foreach ($directive in @("templates/agent-directive-template.md", "templates/age
     }
 }
 $WfCount = @(Get-ChildItem (Join-Path $RepoRoot "workflows") -Filter "*.md").Count
-if ($WfCount -eq 24) {
-    Write-Host "  ✅ PASS: On-disk workflow file count is 24 (matches reconciled docs claims)" -ForegroundColor Green
+if ($WfCount -eq 25) {
+    Write-Host "  ✅ PASS: On-disk workflow file count is 25 (matches reconciled docs claims)" -ForegroundColor Green
     $script:PassCount++
 } else {
-    Write-Host "  ❌ FAIL: On-disk workflow count is $WfCount but shipped docs claim 24 — reconcile counts or update this drift guard" -ForegroundColor Red
+    Write-Host "  ❌ FAIL: On-disk workflow count is $WfCount but shipped docs claim 25 — reconcile counts or update this drift guard" -ForegroundColor Red
     $script:FailCount++
 }
 # Canonical-count drift guard (#347): every live workflow-count claim must state
@@ -655,6 +655,15 @@ Assert-Contains "workflows/tutor.md" "Suspend Teaching Rules" "Grill drill suspe
 Assert-Contains "workflows/tutor.md" "Self-Sufficient Probes" "Grill probes carry their own context and model answers"
 Assert-Contains "workflows/tutor.md" "Grill Completion Contract" "Grill mode owns a zero-code completion contract"
 Assert-Contains "workflows/tutor.md" "read instead of asking" "Pre-implementation grilling reads the repo before asking"
+
+Write-Host "`n📌 Scenario AM: Verify-Bootstrap Workflow (Issue #440)" -ForegroundColor Yellow
+Assert-Contains "workflows/verify-bootstrap.md" "pk:verify-bootstrap" "Verify-bootstrap workflow declares its trigger"
+Assert-Contains "workflows/verify-bootstrap.md" "Level 2 — Controlled" "Verify-bootstrap declares Level 2 ceremony"
+Assert-Contains "workflows/verify-bootstrap.md" "Non-Overlap .ADR 0002 Gate Record." "Verify-bootstrap records the ADR 0002 non-overlap gate"
+Assert-Contains "workflows/verify-bootstrap.md" "Human-Authorized Generation" "Verify-bootstrap restates the human-authorized-generation guardrail"
+Assert-Contains "workflows/verify-bootstrap.md" "Halt-not-waive" "Verify-bootstrap halts instead of waiving an unproducible red"
+Assert-Contains "workflows/verify-bootstrap.md" "incorporate, never replace" "Verify-bootstrap incorporates existing suites, never replaces them"
+Assert-Contains "protocols/setup.md" "Verify-Bootstrap" "Setup reference registers the verify-bootstrap workflow"
 
 Write-Host "`n📌 Scenario AL: Countersignature Consistency (retro-certification)" -ForegroundColor Yellow
 # An approved retro chain must agree with CHANGELOG: no "pending countersignature"

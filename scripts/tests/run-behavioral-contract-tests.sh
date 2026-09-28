@@ -185,11 +185,11 @@ for directive_file in "templates/agent-directive-template.md" "templates/agent-d
     fi
 done
 WF_COUNT=$(ls "$REPO_ROOT"/workflows/*.md | wc -l | tr -d ' ')
-if [ "$WF_COUNT" -eq 24 ]; then
-    echo "  ✅ PASS: On-disk workflow file count is 24 (matches reconciled docs claims)"
+if [ "$WF_COUNT" -eq 25 ]; then
+    echo "  ✅ PASS: On-disk workflow file count is 25 (matches reconciled docs claims)"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo "  ❌ FAIL: On-disk workflow count is $WF_COUNT but shipped docs claim 24 — reconcile counts or update this drift guard"
+    echo "  ❌ FAIL: On-disk workflow count is $WF_COUNT but shipped docs claim 25 — reconcile counts or update this drift guard"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 # Canonical-count drift guard (#347): every live workflow-count claim must state
@@ -654,6 +654,16 @@ assert_contains "workflows/tutor.md" "Suspend Teaching Rules" "Grill drill suspe
 assert_contains "workflows/tutor.md" "Self-Sufficient Probes" "Grill probes carry their own context and model answers"
 assert_contains "workflows/tutor.md" "Grill Completion Contract" "Grill mode owns a zero-code completion contract"
 assert_contains "workflows/tutor.md" "read instead of asking" "Pre-implementation grilling reads the repo before asking"
+
+echo ""
+echo "📌 Scenario AM: Verify-Bootstrap Workflow (Issue #440)"
+assert_contains "workflows/verify-bootstrap.md" "pk:verify-bootstrap" "Verify-bootstrap workflow declares its trigger"
+assert_contains "workflows/verify-bootstrap.md" "Level 2 — Controlled" "Verify-bootstrap declares Level 2 ceremony"
+assert_contains "workflows/verify-bootstrap.md" "Non-Overlap .ADR 0002 Gate Record." "Verify-bootstrap records the ADR 0002 non-overlap gate"
+assert_contains "workflows/verify-bootstrap.md" "Human-Authorized Generation" "Verify-bootstrap restates the human-authorized-generation guardrail"
+assert_contains "workflows/verify-bootstrap.md" "Halt-not-waive" "Verify-bootstrap halts instead of waiving an unproducible red"
+assert_contains "workflows/verify-bootstrap.md" "incorporate, never replace" "Verify-bootstrap incorporates existing suites, never replaces them"
+assert_contains "protocols/setup.md" "Verify-Bootstrap" "Setup reference registers the verify-bootstrap workflow"
 
 echo ""
 echo "📌 Scenario AL: Countersignature Consistency (retro-certification)"
