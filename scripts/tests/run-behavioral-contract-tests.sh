@@ -648,6 +648,13 @@ assert_contains "package/bin/promptkit-os.js" "assertInstallTargetIsClean" "Cour
 assert_contains "package/README.md" "PowerShell 7" "Courier README states the Windows pwsh prerequisite"
 assert_contains ".github/workflows/release-npm.yml" "No .cache: npm." "Release job documents why npm cache is absent (no lockfile)"
 
+echo ""
+echo "📌 Scenario AK: Grill Completion Contract (Issue #425)"
+assert_contains "workflows/tutor.md" "Suspend Teaching Rules" "Grill drill suspends Tier-3 snippets and the Just Show Me guardrail"
+assert_contains "workflows/tutor.md" "Self-Sufficient Probes" "Grill probes carry their own context and model answers"
+assert_contains "workflows/tutor.md" "Grill Completion Contract" "Grill mode owns a zero-code completion contract"
+assert_contains "workflows/tutor.md" "read instead of asking" "Pre-implementation grilling reads the repo before asking"
+
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"

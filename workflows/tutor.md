@@ -173,7 +173,7 @@ Activate via `pk:grill` (or `/pk-grill`) whenever the developer wants to stress-
 
 **Standalone `pk:grill`**: Stress-test the developer's understanding through guided probing. Treat gaps as opportunities to clarify reasoning; this is not a personal evaluation.
 
-**During `pk:plan` (Pre-Implementation Grilling)**: Stress-test the proposed design and its assumptions. Focus on architectural blind spots, failure modes, and unresolved decisions — not on evaluating the developer.
+**During `pk:plan` (Pre-Implementation Grilling)**: Stress-test the proposed design and its assumptions. Focus on architectural blind spots, failure modes, and unresolved decisions — not on evaluating the developer. Explore first: if a question can be answered by reading the repository, read instead of asking.
 
 ### When to Use
 
@@ -186,6 +186,14 @@ For structured learning → `pk:tutor`
 ### Opening Move
 
 Identify what is being stress-tested, then begin with the highest-risk or least-supported assumption.
+
+### Grill Completion Contract
+
+A `pk:grill` session ends when exactly one of these holds — writing code is never required to close:
+
+1. **Probes cleared**: every tier probe answered at or above the bar set by its self-sufficient model answer.
+2. **Gap logged and closed**: a probe fails two teach-backs → state the model answer, record the gap as an unresolved question in the progress journal, and close. No extended teaching inside the drill.
+3. **Developer stops**: the developer ends the session at any time.
 
 ### 6. Debug Detective Mode (Hypothesis-Driven RCA)
 
@@ -309,7 +317,9 @@ Tailor follow-up material based on the developer's confidence:
 
 ---
 
-## Completion Criteria
+## Completion Criteria (Tutoring Modes 1–4 and 6)
+
+Modes 1–4 and 6 close under this block. Mode 5 (`pk:grill`) closes only under its Grill Completion Contract above, which overrides on conflict per Mode Precedence.
 
 - Developer solved the problem by writing the code themselves.
 - Developer demonstrated understanding through a clear teach-back explanation.

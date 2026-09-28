@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **pk:grill Completion Contract**: `pk:grill` (Mode 5) now owns a zero-code completion contract — probes cleared, gap logged and closed, or developer stops — so a drill can close without writing code. The generic Completion Criteria block is scoped to tutoring modes 1–4 and 6, with the grill contract overriding on conflict per Mode Precedence. Pre-implementation grilling reads the repository before asking. (#425)
+
 ## [1.9.2] - 2026-09-27
 
 Release evidence chain: `docs/releases/2026-09-27-v1.9.2-*.md` (`REL-2026-09-27-V1.9.2-001`) · Tag: `v1.9.2` at `d850225` — published to npm via trusted publishing (OIDC), provenance attestation verified, `NPM_TOKEN` deleted and the exposed granular token revoked · No breaking changes (patch).
