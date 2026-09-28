@@ -656,6 +656,30 @@ Assert-Contains "workflows/tutor.md" "Self-Sufficient Probes" "Grill probes carr
 Assert-Contains "workflows/tutor.md" "Grill Completion Contract" "Grill mode owns a zero-code completion contract"
 Assert-Contains "workflows/tutor.md" "read instead of asking" "Pre-implementation grilling reads the repo before asking"
 
+Write-Host "`n📌 Scenario AL: Countersignature Consistency (retro-certification)" -ForegroundColor Yellow
+# An approved retro chain must agree with CHANGELOG: no "pending countersignature"
+# text may survive once the chain reads approved. Pending chains impose nothing.
+$alFail = $false
+$alFound = $false
+foreach ($retro in (Get-ChildItem -Path (Join-Path $RepoRoot "docs/releases/*retro-evaluation.md") -ErrorAction SilentlyContinue)) {
+    if ((Get-Content -LiteralPath $retro.FullName -Raw) -match '\*\*Evaluation Status\*\*: `approved`') {
+        $alFound = $true
+        if ((Get-Content -LiteralPath (Join-Path $RepoRoot "CHANGELOG.md") -Raw) -match 'pending coordinator countersignature') {
+            Write-Host "  ❌ FAIL: $($retro.Name) is approved but CHANGELOG still says pending coordinator countersignature" -ForegroundColor Red
+            $script:FailCount++
+            $alFail = $true
+        }
+    }
+}
+if (-not $alFail) {
+    if ($alFound) {
+        Write-Host "  ✅ PASS: approved retro chains agree with CHANGELOG countersignature state" -ForegroundColor Green
+    } else {
+        Write-Host "  ✅ PASS: no approved retro chain; no consistency obligation" -ForegroundColor Green
+    }
+    $script:PassCount++
+}
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
