@@ -31,6 +31,7 @@
 - [ ] All automated tests passing in CI per the project's verification (e.g. `pnpm test` / `pytest` / `cargo test` / `go test`; add `pnpm test:e2e` where an E2E suite exists).
 - [ ] Build succeeds with zero bundle size alerts per the project's build (e.g. `pnpm build`).
 - [ ] Release tag proposal drafted for the Release Coordinator: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z` (Do not execute without explicit human authorization).
+- [ ] Published benchmark figures re-validated where payloads moved: `bash scripts/measure-tokenizer-delta.sh` re-run and `docs/BENCHMARKS.md` §9 provenance current when directive/workflow content drifted since the last measurement (`bytes/4` stays the gated convention; §9 is validation only).
 
 ## Execution-Control Evidence (Optional)
 
