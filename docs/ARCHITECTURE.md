@@ -155,6 +155,7 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:auth` | [`workflows/auth.md`](../workflows/auth.md) | Core 🧪 | `docs/auth/` | Cookie security flags, OAuth PKCE flows, and RBAC/ABAC capability matrix. |
 | `pk:api` | [`workflows/api.md`](../workflows/api.md) | Core | `docs/api/` | Contract envelopes, cursor pagination, and mutation idempotency. |
 | `pk:test` | [`workflows/test.md`](../workflows/test.md) | Core | `docs/tests/` | Testing pyramid seam allocation, data factories, and monorepo `--filter`. |
+| `pk:verify-bootstrap` | [`workflows/verify-bootstrap.md`](../workflows/verify-bootstrap.md) | New 🧪 | `verify/` + map | Project-local verification surface for empty repos: deterministic checks, mechanized red/green, host-authorized generation. |
 | `pk:design` | [`workflows/design-system.md`](../workflows/design-system.md) | Core | `docs/design/` | Anti-slop UI tokens, WCAG 2.2 AA accessibility, and mobile ergonomics. |
 | `pk:spike` | [`workflows/research.md`](../workflows/research.md) | Core | `docs/spikes/` | Technical risk spikes comparing options against a boring baseline. |
 | `pk:debug` | [`workflows/debug.md`](../workflows/debug.md) | Core 🧪 | `docs/rca/` | Scientific debugging: fast reproduction loop, tagged logs, and 5-Whys. |
