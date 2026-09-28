@@ -104,8 +104,9 @@ $script:LinkExemptDirs = @("docs/releases/", "docs/tasks/", "docs/archive/", "do
 
 function Test-LinkExempt {
     param([string]$RelPath)
+    $normalizedRelPath = $RelPath.Replace('\', '/')
     foreach ($exempt in $script:LinkExemptDirs) {
-        if ($RelPath.StartsWith($exempt)) { return $true }
+        if ($normalizedRelPath.StartsWith($exempt)) { return $true }
     }
     return $false
 }
