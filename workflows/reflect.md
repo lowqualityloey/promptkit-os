@@ -52,7 +52,7 @@ Ask exactly one round of 3-4 targeted reflective questions (no follow-up rounds 
 3. **Resilience & Edge Cases**: *"Where is the weakest point in this implementation under extreme load, network failure, or corrupted input?"*
 4. **Tooling / DX**: *"What slowed you down during this session, and how can tooling or automation eliminate that friction next time?"*
 
-If the developer does not answer (non-interactive session or no response), proceed with agent-drafted observations explicitly marked unconfirmed and continue to Step 3.
+If the developer does not answer (non-interactive session or no response), proceed with agent-drafted observations explicitly marked unconfirmed and continue to Step 3. If the developer does not review the draft, save it as a pending draft under a `## Pending Review` heading instead: do not append it to the journal table, do not advance the skill matrix, and leave the Completion Criteria below unmet until review occurs.
 
 ### Step 3: Extract Architectural Decisions (ADR Check)
 Evaluate whether significant architectural or technology choices were made:
@@ -81,9 +81,10 @@ Draft a rich, tagged entry for the host-owned `./notes/progress-journal.md` (nev
 | YYYY-MM-DD | [Component or Feature] | - [Insight 1]<br>- [Insight 2] | - [Decision and rationale] | - [Concrete next step] | `#tag1` `#tag2` |
 ```
 
-Review the draft with the developer, make adjustments, and append it to the table in `./notes/progress-journal.md`.
+Review the draft with the developer. If reviewed, make adjustments and append it to the table in `./notes/progress-journal.md`. If not reviewed, save it as a pending draft under the `## Pending Review` heading at the top of `./notes/progress-journal.md` (outside the table), and resume later by moving it into the table once the developer reviews it.
 
 ### Step 6: Advance the Skill Competency Matrix
+Only for retros the developer reviewed (pending drafts advance nothing):
 1. Open `./notes/skill-matrix.md`.
 2. Check off or advance competencies demonstrated during the session (e.g., TypeScript Generics, State Machine Design, Database Indexing, WCAG 2.2 a11y, Clean Architecture).
 3. Align upcoming tasks in `./notes/learning-plan.md` to target the next tier in the skill matrix.
@@ -103,3 +104,4 @@ Summarize next steps:
 - Major architectural decisions are documented as ADRs under `./docs/adrs/`.
 - `./notes/learning-plan.md` and `./notes/skill-matrix.md` reflect current progress and upcoming goals.
 - Developer has clear clarity on their next engineering spike or milestone.
+- Unreviewed retros stay `pending review`: no journal append certifies them, and no competency advancement is recorded.

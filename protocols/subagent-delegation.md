@@ -35,7 +35,7 @@ Evaluate your upcoming task against this triage before executing:
 | :--- | :--- | :--- |
 | **Broad Codebase Survey** (inspecting >3 files or unfamiliar folders) | **Subagent** | Keeps raw file dumps out of the parent conversation. |
 | **External Documentation / Web Search** (API docs, GitHub issues) | **Subagent** | Eliminates long HTML/markdown search dumps. |
-| **Parallel Risk Spikes** (evaluating Library A vs Library B) | **Subagent (Parallel)** | Enables concurrent exploration in `pk:spike`. |
+| **Parallel Risk Spikes** (evaluating Library A vs Library B) | **Subagent (Parallel)** | Enables concurrent exploration in `pk:spike` — only when the host supports concurrent subagents and the profile permits parallel execution (Turbo; otherwise sequential). |
 | **Two-Axis PR Audits** (Spec Fidelity vs Fowler Code Smells) | **Subagent (Parallel)** | Enables independent, unbiased reviews in `pk:review`. |
 | **Independent Verification** (Level 2/3 Controlled Work) | **Subagent (Single-Pass)** | Eliminates author confirmation bias; single-pass audit contract; no child-agent delegation; max 15-line synthesis. |
 | **Long-Running Test / Linter Runs** (full CI simulation) | **Subagent / Task** | Prevents terminal scrollback from cluttering context. |
@@ -80,7 +80,7 @@ Strictly forbid raw dumps. Require the subagent to return a compact 5-15 line sy
 ## 4. Multi-Agent Coordination Patterns
 
 ### Pattern A: Parallel Research Spike (Fan-Out / Fan-In)
-When running `pk:spike` to evaluate competing architectures:
+When running `pk:spike` to evaluate competing architectures (profile permits parallel execution — Turbo — otherwise run candidates sequentially):
 ```text
                     [ Parent Agent: pk:spike ]
                                 │

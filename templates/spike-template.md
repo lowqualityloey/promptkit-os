@@ -30,6 +30,8 @@
 
 ## 3. Multi-Vector Comparative Matrix
 
+> Example values throughout this matrix — replace every cell with measured results; never present these numbers as evidence.
+
 | Evaluation Dimension | Candidate A (Baseline) | Candidate B: [Name] | Candidate C: [Name] |
 | :--- | :--- | :--- | :--- |
 | **Type Safety & DX** | Partial / Manual casts | Fully inferred from route tree | Strict, lightweight |
@@ -75,8 +77,8 @@
 
 ## 6. Final Recommendation & ADR Handoff
 
-- **Verdict**: [Adopt Candidate B | Retain Baseline (Candidate A) | Further Spike Required]
+- **Verdict**: [Adopt Candidate <X> | Retain Baseline (Candidate A) | No Decision (inconclusive — record open questions) | Disqualified <X> (stop-loss; remaining measures N/A) | Further Spike Required]
 - **Key Rationale**: [1-2 sentences justifying the decision based on empirical findings]
 - **Next Steps**:
-  - [ ] If adopted: Create ADR in `./docs/adrs/YYYY-MM-DD-adr-<slug>.md` using `.promptkit/templates/adr-template.md`.
+  - [ ] If adopted: Create ADR in `./docs/adrs/YYYY-MM-DD-adr-<slug>.md` using `<kit>/templates/adr-template.md` — only with the decision-policy evidence recorded (exact versions, citations, Planning Record, named-owner approval).
   - [ ] If rejected: Record rationale in progress journal to prevent repeating the spike.
