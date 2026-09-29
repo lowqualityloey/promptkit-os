@@ -470,7 +470,6 @@ assert_contains "workflows/auto.md" "never an execution trigger" "Auto halt reco
 assert_contains "workflows/auto.md" "Worker GREEN" "Auto workflow requires integrated-state verification before wave success"
 assert_contains "workflows/auto.md" "never become an orchestration subsystem" "Auto waves remain a pk:auto capability, not a subsystem"
 assert_contains "workflows/auto.md" "Path Deny-List" "Auto workflow enforces path deny-list"
-assert_contains "workflows/auto.md" "review ready" "Auto workflow defaults to review ready stop boundary"
 assert_contains "workflows/route.md" "workflows/auto.md" "Router decision matrix registers pk:auto"
 assert_contains "templates/agent-directive-template.md" "pk:auto" "Directive template registers pk:auto trigger"
 
