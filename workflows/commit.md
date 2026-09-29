@@ -73,11 +73,35 @@ Run the local harness preflight first: `bash <kit>/scripts/check-harness-securit
 Immediately after staging and before commit construction, perform a mandatory scan of the staged index for accidental secrets or debug probes (Time-of-Check to Time-of-Use safety):
 
 1. **Staged Content Secret Scan** (known credential-pattern checks — advisory coverage, not proof of absence):
-   Verify no embedded private keys, tokens, or credentials are staged for commit:
+   Scan added lines for embedded private keys, tokens, or credentials. Report only the file path, added line number, and redacted pattern category; never print a matching line or credential value:
    ```bash
-   git diff --cached | grep -E 'BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82}|sk_live_[0-9a-zA-Z]{24}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|password\s*[:=]\s*["'\''][^"'\'']{8,}["'\'']' || true
+   while IFS= read -r path; do
+     git diff --cached --unified=0 -- "$path" |
+       awk '
+         /^@@ / {
+           match($0, /\+[0-9]+/)
+           next_line = substr($0, RSTART + 1, RLENGTH - 1) + 0
+           in_hunk = 1
+           next
+         }
+         in_hunk && /^\+/ {
+           content = substr($0, 2)
+           if (content ~ /BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY/) printf "%d|private-key marker\n", next_line
+           if (content ~ /AKIA[0-9A-Z]{16}/) printf "%d|AWS access-key pattern\n", next_line
+           if (content ~ /ghp_[A-Za-z0-9]{36}/) printf "%d|GitHub token pattern\n", next_line
+           if (content ~ /github_pat_[A-Za-z0-9_]{82}/) printf "%d|GitHub fine-grained token pattern\n", next_line
+           if (content ~ /sk_live_[0-9a-zA-Z]{24}/) printf "%d|Stripe live-key pattern\n", next_line
+           if (content ~ /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/) printf "%d|JWT-like token pattern\n", next_line
+           if (content ~ /password[[:space:]]*[:=][[:space:]]*["\047][^"\047]{8,}["\047]/) printf "%d|password-assignment pattern\n", next_line
+           next_line++
+         }
+       ' |
+       while IFS='|' read -r line_number pattern; do
+         printf 'Potential %s in staged additions: %s:%s (matching content suppressed).\n' "$pattern" "$path" "$line_number"
+       done
+   done < <(git diff --cached --name-only --diff-filter=ACMRT)
    ```
-   Pattern checks are advisory and do not establish absence of all secrets. If matching credential patterns are discovered in staged lines (`+`), halt immediately, alert the developer, and do not proceed with staging or committing.
+   Pattern checks are advisory and do not establish absence of all secrets. If any path is reported, halt immediately and ask the developer to inspect and remove the credential locally. Do not copy the matching line or value into terminal output, logs, chat, or the commit.
 
 2. **Suspicious Credential Filename Scan**:
    Verify no credential or environment files are staged or untracked (excluding safe templates like `.env.example`, `.env.template`, or `.env.dist`):

@@ -44,9 +44,10 @@ autocannon -c 50 -d 30s -p 10 http://localhost:3000/api/v1/workspaces/ws_123/das
 *Run `EXPLAIN (ANALYZE, BUFFERS, TIMING, COSTS)` on slow queries. Never guess index effectiveness.*
 
 ```sql
--- Paste verbatim EXPLAIN ANALYZE output:
-Seq Scan on workspace_events (cost=0.00..18450.20 rows=452300 width=128) (actual time=0.045..82.340 rows=450000 loops=1)
-  Filter: (workspace_id = 'ws_123'::uuid AND created_at >= '2026-01-01'::timestamptz)
+-- Sanitized example. Redact credentials, customer identifiers, internal hostnames/IPs,
+-- and sensitive table/column names before saving query-plan evidence.
+Seq Scan on <EVENT_TABLE> (cost=0.00..18450.20 rows=452300 width=128) (actual time=0.045..82.340 rows=450000 loops=1)
+  Filter: (<WORKSPACE_KEY> = '<WORKSPACE_ID>'::uuid AND created_at >= '2026-01-01'::timestamptz)
   Buffers: shared hit=4210 read=14240
 Planning Time: 0.142 ms
 Execution Time: 86.410 ms

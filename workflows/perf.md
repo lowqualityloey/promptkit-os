@@ -131,7 +131,8 @@ Prove that the optimization succeeded and lock in the result against future regr
 3. **Compile Audit Report**:
    - Scaffold an audit report in `docs/perf/` using `.promptkit/templates/perf-audit-template.md`:
      - Path: `docs/perf/<feature-name>-perf-audit.md`
-   - Include the Before vs After delta table, verbatim `EXPLAIN ANALYZE` or flamegraph summaries, and regression prevention rules.
+   - Include the Before vs After delta table, sanitized `EXPLAIN ANALYZE` or flamegraph summaries, and regression prevention rules.
+   - Before saving evidence, redact credentials, personal or customer identifiers, internal hostnames/IPs, and sensitive schema names. Preserve query-plan structure and relevant measurements, but do not copy raw profiling output verbatim into tracked reports.
 
 4. **Lock Regression Guards**:
    - Add automated performance tests or bundle budgets to CI so future commits cannot reintroduce the latency regression.
