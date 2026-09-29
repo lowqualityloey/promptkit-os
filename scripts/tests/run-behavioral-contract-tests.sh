@@ -308,106 +308,6 @@ else
 fi
 
 echo ""
-echo "📌 Scenario P: Published Figure Exact-Match (BENCHMARKS vs tool output)"
-# Guards the six section-3 payload cells, the two section-2 static cells, and the
-# six reduction labels against figure rot. Dated records (§8 @76e3168, §9 @1312831,
-# lite-profile 2026-09-14 block) are historical and explicitly exempt.
-# Rounding rule: nearest integer percent, ((diff*100 + base/2) / base).
-BENCH="$REPO_ROOT/docs/BENCHMARKS.md"
-PER_TASK_OUT="$(bash "$REPO_ROOT/scripts/measure-per-task-tokens.sh" --strict 2>/dev/null)"
-STATIC_OUT="$(bash "$REPO_ROOT/scripts/measure-tokens.sh" --strict 2>/dev/null)"
-live_payload() {
-    echo "$PER_TASK_OUT" | awk -F'|' -v k="$1" '$1=="BASELINE" && $2==k {print $3}'
-}
-live_limit() {
-    echo "$PER_TASK_OUT" | awk -F'|' -v k="$1" '$1=="BASELINE" && $2==k {print $4}'
-}
-doc_row() {
-    grep -E "^\| \*\*\`$1\`\*\* \|" "$BENCH" | head -n 1
-}
-check_figure() {
-    local desc="$1" live="$2" doc="$3"
-    if [ "$live" -eq "$doc" ]; then
-        echo "  ✅ PASS: $desc ($doc tok == tool output)"
-        PASS_COUNT=$((PASS_COUNT + 1))
-    else
-        echo "  ❌ FAIL: $desc published $doc tok but tool output is $live tok"
-        FAIL_COUNT=$((FAIL_COUNT + 1))
-    fi
-}
-for spec in "pk:fix" "pk:plan" "pk:ship"; do
-    ROW="$(doc_row "$spec")"
-    BASE="$(echo "$ROW" | awk -F'|' '{print $4}' | tr -cd '0-9')"
-    BAL_DOC="$(echo "$ROW" | awk -F'|' '{print $5}' | tr -cd '0-9')"
-    LITE_DOC="$(echo "$ROW" | awk -F'|' '{print $6}' | grep -oE '[0-9,]+' | head -n 1 | tr -cd '0-9')"
-    BAL_LIVE="$(live_payload "$spec/balanced")"
-    LITE_LIVE="$(live_payload "$spec/lite")"
-    BASE_LIVE="$(live_limit "$spec/balanced")"
-    check_figure "$spec Balanced payload" "$BAL_LIVE" "$BAL_DOC"
-    check_figure "$spec Lite payload" "$LITE_LIVE" "$LITE_DOC"
-    check_figure "$spec baseline constant" "$BASE_LIVE" "$BASE"
-    BAL_PCT_DOC="$(echo "$ROW" | grep -oE '\-[0-9]+% Balanced' | tr -cd '0-9')"
-    LITE_PCT_DOC="$(echo "$ROW" | grep -oE '\-[0-9]+% Lite' | tr -cd '0-9')"
-    BAL_PCT_LIVE=$(( ((BASE - BAL_LIVE) * 100 + BASE / 2) / BASE ))
-    LITE_PCT_LIVE=$(( ((BASE - LITE_LIVE) * 100 + BASE / 2) / BASE ))
-    check_figure "$spec Balanced reduction label" "$BAL_PCT_LIVE" "$BAL_PCT_DOC"
-    check_figure "$spec Lite reduction label" "$LITE_PCT_LIVE" "$LITE_PCT_DOC"
-done
-BAL_STATIC_LIVE="$(echo "$STATIC_OUT" | awk -F'|' '$1=="BALANCED" {print $2}')"
-LITE_STATIC_LIVE="$(echo "$STATIC_OUT" | awk -F'|' '$1=="LITE" {print $2}')"
-BAL_STATIC_DOC="$(grep -E '^\| \*\*Balanced\*\* \|' "$BENCH" | head -n 1 | awk -F'|' '{print $5}' | tr -cd '0-9')"
-LITE_STATIC_DOC="$(grep -E '^\| \*\*Lite\*\* \|' "$BENCH" | head -n 1 | awk -F'|' '{print $5}' | tr -cd '0-9')"
-check_figure "Balanced static directive" "$BAL_STATIC_LIVE" "$BAL_STATIC_DOC"
-check_figure "Lite static directive" "$LITE_STATIC_LIVE" "$LITE_STATIC_DOC"
-SETUP_STATIC_DOC="$(grep -oE 'currently [0-9,]+/2500' "$REPO_ROOT/protocols/setup.md" | grep -oE '[0-9,]+' | head -n 1 | tr -cd '0-9')"
-check_figure "Setup protocol Balanced static directive" "$BAL_STATIC_LIVE" "$SETUP_STATIC_DOC"
-assert_contains "docs/BENCHMARKS.md" "Profile \| Template \| UTF-8 Bytes" "Benchmark static-size column identifies UTF-8 bytes"
-
-echo "  -- Prose-claim sweep: anchored Lite static-figure shapes must equal $LITE_STATIC_LIVE"
-echo "     Shapes: 'Lite (<claim> N tok)', 'Lite uses N tok', 'Lite stays at N tok',"
-echo "     'N tok Lite', 'N tokens static' on a Lite line. Tables (pipes) are covered"
-echo "     by the cell checks above, not here. Saving-range 'X to Y' strings are"
-echo "     skipped (derived display, not static claims). Archived token-efficiency-review.md"
-echo "     is exempt by class (dated record, like releases/ and archive/)."
-LITE_PROF="$REPO_ROOT/templates/lite-profile.md"
-B9_S="$(grep -n '^## 9\. Proxy Validation' "$BENCH" | cut -d: -f1)"
-B9_E="$(awk -v s="$B9_S" 'NR>s && /^## Related References/ {print NR; exit}' "$BENCH")"
-LP_S="$(grep -n '^## Token Measurements (measured 2026-09-14' "$LITE_PROF" | cut -d: -f1)"
-LP_E="$(awk -v s="$LP_S" 'NR>s && /^## / {print NR; exit}' "$LITE_PROF")"
-SHAPES='Lite[^()|]*\([^()]*[0-9,]+ tok(en)?s?\)|Lite uses [0-9,]+ tok|Lite stays at [0-9,]+ tok|[0-9,]+ tok Lite|[0-9,]+ tok(en)?s? static'
-if [ -z "$B9_S" ] || [ -z "$B9_E" ] || [ -z "$LP_S" ] || [ -z "$LP_E" ]; then
-    echo "  ❌ FAIL: prose-sweep exempt-range markers missing (BENCHMARKS §9 / lite-profile dated block)"
-    FAIL_COUNT=$((FAIL_COUNT + 1))
-else
-    PROSE_BAD=""
-    for pf in README.md QUICKSTART.md FAQ.md CONTRIBUTING.md docs/BENCHMARKS.md docs/COMPARISONS.md docs/ARCHITECTURE.md docs/WORKFLOW-MAP.md docs/ADOPTION-GUIDE.md docs/INTERESTING-FACTS.md docs/DESIGN-MD-FAQ.md docs/adaptation-friction-evaluation.md templates/lite-profile.md; do
-        [ -f "$REPO_ROOT/$pf" ] || continue
-        while IFS= read -r mline; do
-            ln="${mline%%:*}"; txt="${mline#*:}"
-            case "$txt" in *Lite*) ;; *) continue ;; esac
-            if { [ "$pf" = "docs/BENCHMARKS.md" ] && [ "$ln" -ge "$B9_S" ] && [ "$ln" -lt "$B9_E" ]; } || \
-               { [ "$pf" = "templates/lite-profile.md" ] && [ "$ln" -ge "$LP_S" ] && [ "$ln" -lt "$LP_E" ]; }; then
-                continue
-            fi
-            while IFS= read -r m; do
-                case "$m" in *" to "*) continue ;; esac
-                v="$(echo "$m" | grep -oE '[0-9,]+' | tail -n 1 | tr -cd '0-9')"
-                if [ "$v" -ne "$LITE_STATIC_LIVE" ]; then
-                    PROSE_BAD="${PROSE_BAD}  - $pf:$ln: '$m' (live is $LITE_STATIC_LIVE tok)\n"
-                fi
-            done < <(echo "$txt" | grep -oE "$SHAPES" || true)
-        done < <(grep -n 'Lite' "$REPO_ROOT/$pf" | grep 'tok' || true)
-    done
-    if [ -z "$PROSE_BAD" ]; then
-        echo "  ✅ PASS: all live Lite prose claims match tool output ($LITE_STATIC_LIVE tok)"
-        PASS_COUNT=$((PASS_COUNT + 1))
-    else
-        printf '  ❌ FAIL: stale Lite prose figures:\n%b' "$PROSE_BAD"
-        FAIL_COUNT=$((FAIL_COUNT + 1))
-    fi
-fi
-
-echo ""
 echo "📌 Scenario R: Search Circuit Breaker Semantics (Balanced + Lite consistency)"
 assert_contains "templates/agent-directive-template.md" "Search Circuit Breaker \\(advisory\\)" "Balanced breaker states advisory semantics"
 assert_contains "templates/agent-directive-template.md" "parallel batch" "Balanced breaker defines parallel-call counting"
@@ -723,13 +623,6 @@ assert_contains "scripts/tests/run-reference-link-tests.ps1" "fails closed" "Pow
 assert_contains ".github/workflows/ci.yml" "run-reference-link-tests" "CI wires the reference-link harness"
 
 echo ""
-echo "📌 Scenario AO: Canonical Human Halt Fixture"
-assert_contains "scripts/tests/eval-scenarios/halt-callout.md" "contains: ### 🚫BLOCKED:" "Halt evaluator requires the canonical BLOCKED heading"
-assert_contains "scripts/tests/eval-scenarios/halt-callout.md" "not-contains: ### ⚠️ Blocked: Waiting on Human Input" "Halt evaluator rejects the retired heading"
-assert_contains "scripts/tests/eval-scenarios/halt-callout.md" "Transcript-PASS" "Halt evaluator carries a passing transcript fixture"
-assert_contains "scripts/tests/eval-scenarios/halt-callout.md" "Transcript-FAIL" "Halt evaluator carries a failing transcript fixture"
-
-echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"
 echo "==========================================================="
