@@ -205,13 +205,13 @@ Developers may reclaim manual control at any instant:
 
 Because `workflows/auto.md` commits **phase-boundary micro-checkpoints** to `docs/STATE.md` after planning, coding, and testing, **zero context or progress is lost** upon interruption.
 
-### 1-Command Reversion
+### Scoped Reversion
 If the assistant modifies an unintended file during autonomous execution:
 * **Uncommitted changes**:
-  ```bash
-  git restore <path/to/unwanted-file>
-  ```
-  *(Reverts the specific file snapped back to clean HEAD; valid progress in other files is completely preserved).*
+  - From the repository root, set `path` to the exact repository-relative pathname with shell-safe quoting; never interpolate it unquoted. For a tracked path with no pre-existing worktree edits, restore only its worktree copy with a literal pathspec: `git --literal-pathspecs restore --worktree -- "$path"`; this preserves staged content.
+  - Before editing a file with pre-existing worktree edits, save its exact contents in a private, access-restricted snapshot outside the repository; remove the snapshot when it is no longer needed.
+  - Before restoring a snapshot, compare it with the current file and isolate the assistant's changes. Restore only if no newer developer edits would be lost.
+  - Never use a broad restore, reset, or clean command on a file with changes that predate the assistant's edit. For a newly created untracked file, remove it only if it is unchanged since the assistant created it. If no snapshot exists or ownership is unclear, do not overwrite the file; halt and ask the developer.
 * **Committed changes** (under `--full`):
   ```bash
   git revert <commit-hash>

@@ -73,11 +73,20 @@ Run the local harness preflight first: `bash <kit>/scripts/check-harness-securit
 Immediately after staging and before commit construction, perform a mandatory scan of the staged index for accidental secrets or debug probes (Time-of-Check to Time-of-Use safety):
 
 1. **Staged Content Secret Scan** (known credential-pattern checks — advisory coverage, not proof of absence):
-   Verify no embedded private keys, tokens, or credentials are staged for commit:
+   From the project root, run the kit scanner for your shell:
    ```bash
-   git diff --cached | grep -E 'BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82}|sk_live_[0-9a-zA-Z]{24}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|password\s*[:=]\s*["'\''][^"'\'']{8,}["'\'']' || true
+   bash <kit>/scripts/scan-staged-secrets.sh <project-root>
    ```
-   Pattern checks are advisory and do not establish absence of all secrets. If matching credential patterns are discovered in staged lines (`+`), halt immediately, alert the developer, and do not proceed with staging or committing.
+   ```powershell
+   pwsh -NoProfile -File <kit>/scripts/scan-staged-secrets.ps1 -Root <project-root>
+   ```
+   It scans added lines using NUL-safe staged paths, disables Git external diff and text-conversion filters, and reports only an escaped file path, added-line number, and detector category. Supported credential-shaped substrings in reported paths are replaced with `REDACTED`; matching content and detected credential values are never printed. Raw Git diagnostics are suppressed so repository paths or other Git error details cannot leak; failures use generic stop guidance. If Git classifies a staged change as binary, the scanner cannot inspect its added lines and fails closed with exit `2`.
+
+   - Exit `0`: no supported patterns were detected; continue.
+   - Exit `1`: potential credential patterns were detected; halt and ask the developer to inspect and remove them locally.
+   - Exit `2`: the scan could not complete; halt and resolve the scan failure before committing.
+
+   Detectors use portable regular expressions and broad credential prefixes, so false positives are possible. These checks are advisory and do not prove that staged content is free of secrets. Never copy matching content or credential values into terminal output, logs, chat, or the commit.
 
 2. **Suspicious Credential Filename Scan**:
    Verify no credential or environment files are staged or untracked (excluding safe templates like `.env.example`, `.env.template`, or `.env.dist`):

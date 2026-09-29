@@ -40,6 +40,8 @@ jobs:
           bash -n scripts/tests/run-lsp-evidence-fixtures.sh
           bash -n scripts/tests/run-reference-link-tests.sh
           bash -n scripts/tests/run-behavioral-contract-tests.sh
+          bash -n scripts/scan-staged-secrets.sh
+          bash -n scripts/tests/run-staged-secret-scan-tests.sh
           bash -n scripts/run-behavioral-eval.sh
           bash -n scripts/tests/run-init-safety-tests.sh
           bash -n scripts/tests/run-profile-matrix.sh
@@ -48,6 +50,9 @@ jobs:
 
       - name: Run Documentation-Contract Tests (Bash)
         run: bash scripts/tests/run-behavioral-contract-tests.sh
+
+      - name: Run Staged Secret Scan Regression Tests (Bash)
+        run: bash scripts/tests/run-staged-secret-scan-tests.sh
 
       - name: Run Playbook Contract Tests (Bash)
         run: bash scripts/tests/run-playbook-contract-tests.sh
@@ -198,6 +203,8 @@ jobs:
             "scripts/tests/run-lsp-evidence-fixtures.ps1",
             "scripts/tests/run-reference-link-tests.ps1",
             "scripts/tests/run-behavioral-contract-tests.ps1",
+            "scripts/scan-staged-secrets.ps1",
+            "scripts/tests/run-staged-secret-scan-tests.ps1",
             "scripts/run-behavioral-eval.ps1",
             "scripts/tests/run-init-safety-tests.ps1",
             "scripts/tests/run-profile-matrix.ps1",
@@ -216,6 +223,10 @@ jobs:
       - name: Run Documentation-Contract Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-behavioral-contract-tests.ps1
+
+      - name: Run Staged Secret Scan Regression Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-staged-secret-scan-tests.ps1
 
       - name: Run Playbook Contract Tests (PowerShell)
         shell: pwsh

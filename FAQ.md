@@ -576,7 +576,7 @@ For complete line-by-line token breakdowns and mathematical analysis, see [docs/
 
 **Why specialized refactoring matters**:
 - **Golden Master Pinning**: Captures a snapshot of current outputs (including quirks and legacy edge cases) before a single line of structural code is modified.
-- **The Mikado Method**: Graphs prerequisites for large refactorings. If an exploratory refactor breaks tests, changes are immediately reverted (`git reset --hard`) and the missing dependency is recorded as a leaf node.
+- **The Mikado Method**: Graphs prerequisites for large refactorings. If an exploratory refactor breaks tests, preserve existing work and use the scoped recovery rules in `workflows/refactor.md`; never run `git reset --hard` to discard the failed attempt. Record the missing dependency as a leaf node.
 - **Strangler Fig Migrations**: Replaces legacy submodules incrementally behind facade adapters, preventing high-risk "big-bang" rewrites.
 
 ---
