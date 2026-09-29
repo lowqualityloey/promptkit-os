@@ -78,8 +78,8 @@ try {
 
     [System.IO.File]::WriteAllText((Join-Path $unscannable ".gitattributes"), "opaque.fixture -diff`n", $utf8NoBom)
     [System.IO.File]::WriteAllText((Join-Path $unscannable "opaque.fixture"), "ordinary staged baseline`n", $utf8NoBom)
-    [System.IO.File]::WriteAllText((Join-Path $unscannable "nul.fixture"), "ordinary staged baseline`n", $utf8NoBom)
-    Invoke-GitSetup $unscannable @("add", "--", ".gitattributes", "opaque.fixture", "nul.fixture")
+    [System.IO.File]::WriteAllText((Join-Path $unscannable "embedded-null.fixture"), "ordinary staged baseline`n", $utf8NoBom)
+    Invoke-GitSetup $unscannable @("add", "--", ".gitattributes", "opaque.fixture", "embedded-null.fixture")
     Invoke-GitSetup $unscannable @("commit", "-q", "-m", "baseline")
 
     [System.IO.File]::WriteAllLines((Join-Path $positive "context.txt"), @("one", "two", "three", "four", "five", "six", "seven"), $utf8NoBom)
@@ -111,9 +111,9 @@ try {
 
     [System.IO.File]::WriteAllText((Join-Path $unscannable "opaque.fixture"), ($awsKey + "`n"), $utf8NoBom)
     $nulBytes = [System.Text.Encoding]::UTF8.GetBytes("prefix`0" + $awsKey + "`n")
-    [System.IO.File]::WriteAllBytes((Join-Path $unscannable "nul.fixture"), $nulBytes)
-    Invoke-GitSetup $unscannable @("add", "--", "opaque.fixture", "nul.fixture")
-    foreach ($path in @("opaque.fixture", "nul.fixture")) {
+    [System.IO.File]::WriteAllBytes((Join-Path $unscannable "embedded-null.fixture"), $nulBytes)
+    Invoke-GitSetup $unscannable @("add", "--", "opaque.fixture", "embedded-null.fixture")
+    foreach ($path in @("opaque.fixture", "embedded-null.fixture")) {
         $binaryDiff = & $script:gitCommand.Source -C $unscannable diff --cached --no-ext-diff --no-textconv --unified=0 -- $path 2>$null
         if ($LASTEXITCODE -ne 0 -or ($binaryDiff -join "`n") -notmatch '(?m)^Binary files .* differ$') {
             Fail "Binary-diff regression fixture did not produce Git binary output for $path."
@@ -177,8 +177,8 @@ try {
         Fail "Scanner exposed a raw Git diagnostic for the credential-shaped repository path."
     }
 
-    foreach ($path in @("opaque.fixture", "nul.fixture")) {
-        Invoke-GitSetup $unscannable @("reset", "-q", "HEAD", "--", "opaque.fixture", "nul.fixture")
+    foreach ($path in @("opaque.fixture", "embedded-null.fixture")) {
+        Invoke-GitSetup $unscannable @("reset", "-q", "HEAD", "--", "opaque.fixture", "embedded-null.fixture")
         Invoke-GitSetup $unscannable @("add", "--", $path)
         $unscannableResult = Invoke-ScannerProcess $unscannable
         if ($unscannableResult.ExitCode -ne 2) { Fail "Scanner should fail closed when Git classifies staged $path as binary." }
