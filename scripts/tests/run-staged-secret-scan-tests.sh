@@ -74,6 +74,24 @@ git -C "$clean" add -- README.md
 invalid_root="$tmp/not-a-git-repository"
 mkdir -p "$invalid_root"
 
+unscannable="$tmp/unscannable"
+mkdir -p "$unscannable"
+git -C "$unscannable" init -q
+git -C "$unscannable" config user.name "PromptKit scanner fixture"
+git -C "$unscannable" config user.email "scanner-fixture@example.invalid"
+printf '%s\n' 'opaque.fixture -diff' >"$unscannable/.gitattributes"
+printf '%s\n' 'ordinary staged baseline' >"$unscannable/opaque.fixture"
+printf '%s\n' 'ordinary staged baseline' >"$unscannable/nul.fixture"
+git -C "$unscannable" add -- .gitattributes opaque.fixture nul.fixture
+git -C "$unscannable" commit -q -m baseline
+printf '%s\n' "$aws_key" >"$unscannable/opaque.fixture"
+printf 'prefix\0%s\n' "$aws_key" >"$unscannable/nul.fixture"
+git -C "$unscannable" add -- opaque.fixture nul.fixture
+for path in opaque.fixture nul.fixture; do
+    binary_diff=$(git -C "$unscannable" diff --cached --no-ext-diff --no-textconv --unified=0 -- "$path")
+    [[ "$binary_diff" == *'Binary files '*" differ"* ]] || fail "binary-diff regression fixture did not produce Git binary output for $path"
+done
+
 run_engine() {
     local awk_bin="$1"
     local output status category escaped_value
@@ -133,7 +151,13 @@ run_engine() {
     [[ "$output" == *'stop before committing'* ]] ||
         fail "$awk_bin did not explain that an incomplete scan must stop"
 
-    printf 'PASS: %s detected thirteen redacted matches, ignored textconv, handled tricky paths and modified-file lines; clean input passed and scan errors failed closed.\n' "$awk_bin"
+    status=0
+    output=$(PROMPTKIT_AWK="$awk_bin" bash "$scanner" "$unscannable" 2>&1) || status=$?
+    [[ "$status" -eq 2 ]] || fail "$awk_bin should fail closed when Git classifies staged content as binary"
+    [[ "$output" == *'could not inspect a binary diff'* && "$output" != *"$aws_key"* ]] ||
+        fail "$awk_bin did not fail closed without exposing binary staged content"
+
+    printf 'PASS: %s detected thirteen redacted matches, ignored textconv, handled tricky paths and modified-file lines; clean input passed and scan errors and binary-classified diffs failed closed.\n' "$awk_bin"
 }
 
 run_engine awk

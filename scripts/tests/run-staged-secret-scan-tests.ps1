@@ -51,16 +51,24 @@ try {
     $positive = Join-Path $tempRoot "positive"
     $clean = Join-Path $tempRoot "clean"
     $invalid = Join-Path $tempRoot "not-a-repository"
+    $unscannable = Join-Path $tempRoot "unscannable"
     $null = New-Item -ItemType Directory -Path $tempRoot -Force
     $null = New-Item -ItemType Directory -Path $positive -Force
     $null = New-Item -ItemType Directory -Path $clean -Force
     $null = New-Item -ItemType Directory -Path $invalid -Force
+    $null = New-Item -ItemType Directory -Path $unscannable -Force
 
-    foreach ($repository in @($positive, $clean)) {
+    foreach ($repository in @($positive, $clean, $unscannable)) {
         Invoke-GitSetup $repository @("init", "-q")
         Invoke-GitSetup $repository @("config", "user.name", "PromptKit scanner fixture")
         Invoke-GitSetup $repository @("config", "user.email", "scanner-fixture@example.invalid")
     }
+
+    [System.IO.File]::WriteAllText((Join-Path $unscannable ".gitattributes"), "opaque.fixture -diff`n", $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $unscannable "opaque.fixture"), "ordinary staged baseline`n", $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $unscannable "nul.fixture"), "ordinary staged baseline`n", $utf8NoBom)
+    Invoke-GitSetup $unscannable @("add", "--", ".gitattributes", "opaque.fixture", "nul.fixture")
+    Invoke-GitSetup $unscannable @("commit", "-q", "-m", "baseline")
 
     [System.IO.File]::WriteAllLines((Join-Path $positive "context.txt"), @("one", "two", "three", "four", "five", "six", "seven"), $utf8NoBom)
     [System.IO.File]::WriteAllText((Join-Path $positive "masked.fixture"), "ordinary staged baseline`n", $utf8NoBom)
@@ -87,6 +95,17 @@ try {
     [System.IO.File]::WriteAllText((Join-Path $positive "credential-password=synthetic-value.txt"), ($classicToken + "`n"), $utf8NoBom)
     [System.IO.File]::WriteAllText((Join-Path $positive "masked.fixture"), ($awsKey + "`n"), $utf8NoBom)
     Invoke-GitSetup $positive @("add", "--", ".")
+
+    [System.IO.File]::WriteAllText((Join-Path $unscannable "opaque.fixture"), ($awsKey + "`n"), $utf8NoBom)
+    $nulBytes = [System.Text.Encoding]::UTF8.GetBytes("prefix`0" + $awsKey + "`n")
+    [System.IO.File]::WriteAllBytes((Join-Path $unscannable "nul.fixture"), $nulBytes)
+    Invoke-GitSetup $unscannable @("add", "--", "opaque.fixture", "nul.fixture")
+    foreach ($path in @("opaque.fixture", "nul.fixture")) {
+        $binaryDiff = & $script:gitCommand.Source -C $unscannable diff --cached --no-ext-diff --no-textconv --unified=0 -- $path 2>$null
+        if ($LASTEXITCODE -ne 0 -or ($binaryDiff -join "`n") -notmatch '(?m)^Binary files .* differ$') {
+            Fail "Binary-diff regression fixture did not produce Git binary output for $path."
+        }
+    }
 
     $maskedDiff = & $script:gitCommand.Source -C $positive diff --cached --no-ext-diff --unified=0 -- masked.fixture 2>$null
     if ($LASTEXITCODE -ne 0) { Fail "Textconv regression fixture could not read the staged diff." }
@@ -141,7 +160,13 @@ try {
     if ($invalidResult.ExitCode -ne 2) { Fail "Scanner should fail closed when the repository cannot be scanned." }
     if ($invalidResult.ErrorText -notlike "*stop before committing*") { Fail "Scanner did not explain that incomplete scans must stop." }
 
-    Write-Host "PASS: PowerShell scanner detected thirteen redacted matches, ignored textconv, handled NUL-delimited/tricky paths and line numbers, passed clean input, and failed closed on scan errors."
+    $unscannableResult = Invoke-ScannerProcess $unscannable
+    if ($unscannableResult.ExitCode -ne 2) { Fail "Scanner should fail closed when Git classifies staged content as binary." }
+    if ($unscannableResult.ErrorText -notlike "*could not inspect a binary diff*" -or $unscannableResult.ErrorText.Contains($awsKey)) {
+        Fail "Scanner did not fail closed without exposing binary staged content."
+    }
+
+    Write-Host "PASS: PowerShell scanner detected thirteen redacted matches, ignored textconv, handled NUL-delimited/tricky paths and line numbers, passed clean input, and failed closed on scan errors and binary-classified diffs."
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) { Remove-Item -LiteralPath $tempRoot -Recurse -Force }

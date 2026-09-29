@@ -93,6 +93,10 @@ foreach ($path in $stagedPaths) {
         Stop-Scan "Staged secret scan could not read a staged diff; stop before committing."
     }
 
+    if ($diffText -match '(?m)^(?:Binary files .* differ|GIT binary patch)\r?$') {
+        Stop-Scan "Staged secret scan could not inspect a binary diff; stop before committing."
+    }
+
     $inHunk = $false
     $lineNumber = 0
     foreach ($diffLine in ($diffText -split "`n")) {

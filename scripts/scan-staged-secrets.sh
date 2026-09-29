@@ -51,6 +51,15 @@ while IFS= read -r -d '' path; do
         exit 2
     fi
 
+    while IFS= read -r diff_line; do
+        case "$diff_line" in
+            'Binary files '*" differ"|'GIT binary patch')
+                printf '%s\n' 'Staged secret scan could not inspect a binary diff; stop before committing.' >&2
+                exit 2
+                ;;
+        esac
+    done <<< "$staged_diff"
+
     if ! detections=$(
         printf '%s\n' "$staged_diff" |
             "$awk_bin" -v q="'" '
