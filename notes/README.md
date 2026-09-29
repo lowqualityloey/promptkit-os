@@ -34,7 +34,7 @@ notes/
 
 ### 3. Architecture Decisions & Spikes (`pk:spike` / `pk:plan`)
 - When evaluating major architectural patterns or libraries, run a spike via `pk:spike`.
-- When a decision is solidified, record an ADR in `./docs/adrs/` using `.promptkit/templates/adr-template.md`.
+- When a decision is solidified, record an ADR in the host-owned `./docs/adrs/` using the read-only kit source `<kit>/templates/adr-template.md`.
 
 ---
 

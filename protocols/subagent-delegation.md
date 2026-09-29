@@ -116,9 +116,9 @@ When an agent writes a complex feature (relational schema changes, authenticatio
 
 ### Pattern D: Isolated Worktree Execution (Level 2/3 Risky Multi-File Tasks)
 When a task involves high-risk multi-file refactoring, dependency upgrades, or parallel spike implementations, running edits directly in the main working tree risks dirtying the workspace and corrupting local state.
-1. **Sandbox Creation**: Use PromptKit's zero-dependency isolation script:
-   - Windows: `.\scripts\isolate-worktree.ps1 create <task-id>`
-   - Linux/macOS: `./scripts/isolate-worktree.sh create <task-id>`
+1. **Sandbox Creation**: Use PromptKit's zero-dependency isolation script from the resolved kit root (`<kit>` — see Kit-Root & Storage-Mode Convention in `protocols/setup.md`):
+    - Windows: `<kit>/scripts/isolate-worktree.ps1 create <task-id>`
+    - Linux/macOS: `<kit>/scripts/isolate-worktree.sh create <task-id>`
 2. **Isolated Execution**:
    - The subagent or developer operates entirely inside `.worktrees/<task-id>`, backed by a dedicated branch (`worktree/<task-id>`).
    - Run tests, compile artifacts, and verify criteria in isolation.

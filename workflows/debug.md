@@ -187,9 +187,9 @@ Before closing the debugging session:
 - [ ] **Clean Prototypes**: Delete or archive throwaway reproduction scripts and fixtures.
 - [ ] **Document Proven Hypothesis**: State the validated root cause and fix mechanism clearly in the commit message or PR description.
 - [ ] **Incident Post-Mortem (High-Severity Issues)**:
-  - If the bug impacted production, customer data, or availability, draft an RCA document using `.promptkit/templates/rca-postmortem-template.md`.
-  - Save report to `./docs/rca/YYYY-MM-DD-rca-<incident-name>.md`.
-  - Record key takeaways and lessons learned in `.promptkit/notes/progress-journal.md`.
+   - If the bug impacted production, customer data, or availability, draft an RCA document using `<kit>/templates/rca-postmortem-template.md`.
+   - Save report to `./docs/rca/YYYY-MM-DD-rca-<incident-name>.md`.
+   - Record key takeaways and lessons learned in the host-owned `./notes/progress-journal.md`.
 
 ---
 

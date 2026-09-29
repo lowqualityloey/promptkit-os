@@ -24,6 +24,13 @@ Ensure any modern AI coding assistant or CLI (Antigravity, Claude Code, Gemini C
 
 If no known agent configuration file exists in the repository root, create `AGENTS.md` as the universal standard fallback.
 
+### Kit-Root & Storage-Mode Convention
+All workflows, protocols, templates, and activities use these definitions — never assume one install layout:
+- **Resolved kit root (`<kit>`)**: the directory containing the installed kit — `.promptkit/` (recommended) or `promptkit/` relative to the workspace root, resolved at setup. In the standalone PromptKit OS repository itself, `<kit>` is the repo root (`.`).
+- **Kit templates and scripts are read-only sources**: reference them as `<kit>/templates/<name>` and `<kit>/scripts/<name>` (both shells accept forward slashes). Never write project records into kit paths.
+- **Host-project records are host-owned**: ADRs, specs, RCAs, spikes, and Task Records go to host paths (`./docs/...`, `./docs/tasks/`); personal notes (progress journal, skill matrix, learning plan) go to host `./notes/...` — never `<kit>/notes/`.
+- **Storage modes**: *consumer/installed* (kit lives in `.promptkit/` or `promptkit/`; all writes land in host paths) vs *standalone vault* (repo root is both kit and host, so `notes/` and `./docs/` need no prefix).
+
 ---
 
 ## Execution Steps
@@ -55,15 +62,16 @@ Ensure the host repository contains documentation directories so generated artif
 - `docs/perf/`: Performance Audits, Query Execution Plans & Profiling Reports
 - `docs/tasks/`: Task Breakdowns, Issue Drafts & Milestone Trackers
 - `docs/releases/`: Release Checklists, Rollback Decision Logs & Verification Reports
+- `./notes/`: Host-owned personal notes (progress journal, skill matrix, learning plan) — create if missing; never write these inside `<kit>/notes/`
 
-If `PROMPTKIT.md` does not exist in the project root, copy `.promptkit/templates/project-profile-template.md` to `./PROMPTKIT.md` for project-specific rules and commands. If `DESIGN.md` is desired for custom visual identity, copy `.promptkit/templates/design-profile-template.md` to `./DESIGN.md`. If `docs/STATE.md` does not exist, copy `.promptkit/templates/state-tracker-template.md` to `./docs/STATE.md` for living project state tracking.
+If `PROMPTKIT.md` does not exist in the project root, copy `<kit>/templates/project-profile-template.md` to `./PROMPTKIT.md` for project-specific rules and commands. If `DESIGN.md` is desired for custom visual identity, copy `<kit>/templates/design-profile-template.md` to `./DESIGN.md`. If `docs/STATE.md` does not exist, copy `<kit>/templates/state-tracker-template.md` to `./docs/STATE.md` for living project state tracking.
 
 ### 4. Inject PromptKit Core Directives
-Append or merge the exact contents of `templates/agent-directive-template.md` into the detected configuration file(s). Do not hardcode the markdown here. `templates/agent-directive-template.md` is the single source of truth for the injected block. Replace `$KIT_DIR_REL` in the template with the relative path to the `.promptkit` repository (e.g. `.promptkit`).
+Append or merge the exact contents of `<kit>/templates/agent-directive-template.md` into the detected configuration file(s). Do not hardcode the markdown here. `<kit>/templates/agent-directive-template.md` is the single source of truth for the injected block. Replace `$KIT_DIR_REL` in the template with the relative path to the kit directory (e.g. `.promptkit`).
 
 ### Progressive Loading Policy
 To optimize context window efficiency and minimize token overhead, agents must follow this progressive loading sequence:
-1. **Initial context**: Load setup/entry guidance. Classify the task using the Task Ceremony Levels table in the injected directive — do not load `.promptkit/workflows/route.md` for classification. Load `route.md` only when routing is genuinely ambiguous, or when Level 3 escalation / downgrade guardrails are needed.
+1. **Initial context**: Load setup/entry guidance. Classify the task using the Task Ceremony Levels table in the injected directive — do not load `<kit>/workflows/route.md` for classification. Load `route.md` only when routing is genuinely ambiguous, or when Level 3 escalation / downgrade guardrails are needed.
 2. **After routing**: Load only the workflow or workflows relevant to the routed task.
 3. **Artifact-on-demand**: Load templates only when required by the routed level or workflow.
 4. **Level-specific behavior**:
@@ -78,35 +86,35 @@ Progressive loading is an instruction-efficiency policy to conserve context, not
 Persistent memory is not policy: setup and reinjection must not import session learnings as project rules. Follow the Memory vs Policy Boundary in `protocols/context-sync.md` §3.1; candidate notes remain non-authoritative until explicit human approval, and existing scoped document authorities remain unchanged.
 
 ### Workflows & Protocols Reference
-- **Route**: `.promptkit/workflows/route.md`
-- **Tutor**: `.promptkit/workflows/tutor.md`
-- **Plan**: `.promptkit/workflows/plan.md`
-- **Onboard**: `.promptkit/workflows/onboard.md`
-- **Tasks**: `.promptkit/workflows/tasks.md`
-- **Review**: `.promptkit/workflows/review.md`
-- **Commit**: `.promptkit/workflows/commit.md`
-- **Pull Request**: `.promptkit/workflows/pr.md`
-- **Debug**: `.promptkit/workflows/debug.md`
-- **Performance**: `.promptkit/workflows/perf.md`
-- **Data**: `.promptkit/workflows/data.md`
-- **Auth**: `.promptkit/workflows/auth.md`
-- **API**: `.promptkit/workflows/api.md`
-- **Test**: `.promptkit/workflows/test.md`
-- **Ship**: `.promptkit/workflows/ship.md`
-- **Research**: `.promptkit/workflows/research.md`
-- **Design System**: `.promptkit/workflows/design-system.md`
-- **Reflect**: `.promptkit/workflows/reflect.md`
-- **Checkpoint**: `.promptkit/workflows/checkpoint.md`
-- **Profile**: `.promptkit/workflows/profile.md`
-- **Verify-Bootstrap**: `.promptkit/workflows/verify-bootstrap.md`
-- **Quality Gate (DoD)**: `.promptkit/protocols/code-quality-gate.md`
-- **Context Economy**: `.promptkit/protocols/context-economy.md`
-- **Context Sync**: `.promptkit/protocols/context-sync.md`
-- **Subagent Delegation**: `.promptkit/protocols/subagent-delegation.md`
-- **Discovery Intake**: `.promptkit/protocols/discovery-intake.md`
-- **Telemetry Cards**: `.promptkit/protocols/telemetry-cards.md`
+- **Route**: `<kit>/workflows/route.md`
+- **Tutor**: `<kit>/workflows/tutor.md`
+- **Plan**: `<kit>/workflows/plan.md`
+- **Onboard**: `<kit>/workflows/onboard.md`
+- **Tasks**: `<kit>/workflows/tasks.md`
+- **Review**: `<kit>/workflows/review.md`
+- **Commit**: `<kit>/workflows/commit.md`
+- **Pull Request**: `<kit>/workflows/pr.md`
+- **Debug**: `<kit>/workflows/debug.md`
+- **Performance**: `<kit>/workflows/perf.md`
+- **Data**: `<kit>/workflows/data.md`
+- **Auth**: `<kit>/workflows/auth.md`
+- **API**: `<kit>/workflows/api.md`
+- **Test**: `<kit>/workflows/test.md`
+- **Ship**: `<kit>/workflows/ship.md`
+- **Research**: `<kit>/workflows/research.md`
+- **Design System**: `<kit>/workflows/design-system.md`
+- **Reflect**: `<kit>/workflows/reflect.md`
+- **Checkpoint**: `<kit>/workflows/checkpoint.md`
+- **Profile**: `<kit>/workflows/profile.md`
+- **Verify-Bootstrap**: `<kit>/workflows/verify-bootstrap.md`
+- **Quality Gate (DoD)**: `<kit>/protocols/code-quality-gate.md`
+- **Context Economy**: `<kit>/protocols/context-economy.md`
+- **Context Sync**: `<kit>/protocols/context-sync.md`
+- **Subagent Delegation**: `<kit>/protocols/subagent-delegation.md`
+- **Discovery Intake**: `<kit>/protocols/discovery-intake.md`
+- **Telemetry Cards**: `<kit>/protocols/telemetry-cards.md`
 
-> Note: `templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md`, which is lazy-loaded via `workflows/onboard.md` Phase 0 and `workflows/plan.md` Step 0. This keeps the static directive under the 2500-token Balanced budget (currently 2308/2500).
+> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md`, which is lazy-loaded via `<kit>/workflows/onboard.md` Phase 0 and `<kit>/workflows/plan.md` Step 0. This keeps the static directive under the 2500-token Balanced budget (currently 2308/2500).
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)
 - **Visual Identity & Brand**: `./DESIGN.md` (if present)
 - **Living State & Tracker**: `./docs/STATE.md` (if present)
@@ -131,7 +139,7 @@ All generated project documentation must be saved to the host project:
 
 ### 5. Initialize Context & Welcome Developer
 After updating configuration:
-1. Run `.promptkit/protocols/context-sync.md` to detect active technologies, inspect `./PROMPTKIT.md`, and check recent git status.
+1. Run `<kit>/protocols/context-sync.md` to detect active technologies, inspect `./PROMPTKIT.md`, and check recent git status.
 2. Ask the developer which workflow they wish to activate:
    - `[pk:route]`: Navigate workflows using the engineering lifecycle decision matrix.
    - `[pk:tutor]`: Explore a concept, debug together, or build mental models.
@@ -156,7 +164,7 @@ After updating configuration:
 ---
 
 ### Post-Setup Guidance: The 3-Step Day 1 Experience
-1. **Initialize**: Run `./.promptkit/init.sh` (or `.\.promptkit\init.ps1` on Windows) to scaffold `./docs/`, `./PROMPTKIT.md`, and inject root agent directives.
+1. **Initialize**: From your resolved kit root, run `init.sh` (or `init.ps1` on Windows) to scaffold `./docs/`, `./PROMPTKIT.md`, and inject root agent directives.
 2. **Inspect `PROMPTKIT.md`**: Review or customize project-specific commands, test runners, and architectural invariants in `./PROMPTKIT.md` (or run `pk:onboard` for passive stack discovery).
 3. **Prompt Task**: Start pairing by prompting your task naturally or invoking a workflow (`pk:route`, `pk:debug`, `pk:plan`). The assistant declares its ceremony level upfront and proceeds with lightweight or controlled execution.
 

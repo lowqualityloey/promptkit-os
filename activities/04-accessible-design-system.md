@@ -43,7 +43,7 @@ Build a core set of compound, polymorphic UI components:
 2. Run automated a11y tests using `@axe-core/react` or Playwright `axe-playwright`.
 
 ### Step 5: Document Component Guidelines
-1. Record component usage examples and token references in `.promptkit/templates/design-tokens-spec.md` (or `./docs/design/design-tokens-spec.md`).
+1. Record component usage examples and token references in the host-owned `./docs/design/design-tokens-spec.md`, scaffolded from the read-only kit source `<kit>/templates/design-tokens-spec.md`.
 
 ---
 
