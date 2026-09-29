@@ -15,8 +15,22 @@ function Fail([string]$Message) {
 
 function Invoke-GitSetup {
     param([string]$Repository, [string[]]$Arguments)
-    & $script:gitCommand.Source -C $Repository @Arguments 2>$null
-    if ($LASTEXITCODE -ne 0) { Fail "Git fixture setup failed." }
+    $gitOutput = & $script:gitCommand.Source -C $Repository @Arguments 2>&1
+    $gitExitCode = $LASTEXITCODE
+    if ($gitExitCode -ne 0) {
+        $safeOutput = ($gitOutput | ForEach-Object { "$_" }) -join " "
+        $safeOutput = $safeOutput.Replace($tempRoot, "<fixture-root>").Replace($Repository, "<fixture>")
+        $safeOutput = $safeOutput -replace '(?i)\b[A-Z]:\\[^\s''"]+', '<path>'
+        $safeOutput = $safeOutput -replace 'AKIA[0-9A-Z]{16}', 'REDACTED'
+        $safeOutput = $safeOutput -replace 'ghp_[A-Za-z0-9]{36}', 'REDACTED'
+        $safeOutput = $safeOutput -replace 'github_pat_[A-Za-z0-9_]{82}', 'REDACTED'
+        $safeOutput = $safeOutput -replace 'sk_live_[A-Za-z0-9]{24}', 'REDACTED'
+        $safeOutput = $safeOutput -replace '(?i)password=[^ ]+', 'password=REDACTED'
+        if ([string]::IsNullOrWhiteSpace($safeOutput)) { $safeOutput = "no diagnostic output" }
+        if ($safeOutput.Length -gt 400) { $safeOutput = $safeOutput.Substring(0, 400) }
+        $exitLabel = if ($null -eq $gitExitCode) { "unknown" } else { $gitExitCode }
+        Fail ("Git fixture setup failed for operation '{0}' (exit {1}): {2}" -f $Arguments[0], $exitLabel, $safeOutput)
+    }
 }
 
 function Invoke-ScannerProcess {
