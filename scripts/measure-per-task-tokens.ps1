@@ -102,7 +102,7 @@ function Format-PayloadLine {
     param([string]$Task, [int]$Bal, [int]$Lite, [int]$Base)
     $Save = $Base - $Bal
     $Pct = [int][Math]::Floor((($Base - $Bal) * 100.0) / $Base + 0.5)
-    printf "  %-10s Balanced: %5d tok | Lite: %5d tok | Baseline: %5d tok | Saving Balanced: %5d tok (%d%%)`n" $Task $Bal $Lite $Base $Save $Pct
+    Write-Output ("  {0,-10} Balanced: {1,5} tok | Lite: {2,5} tok | Baseline: {3,5} tok | Saving Balanced: {4,5} tok ({5}%)" -f $Task, $Bal, $Lite, $Base, $Save, $Pct)
 }
 
 Format-PayloadLine "pk:fix" $JIT_FIX_FULL $JIT_FIX_LITE $BASELINE_FIX

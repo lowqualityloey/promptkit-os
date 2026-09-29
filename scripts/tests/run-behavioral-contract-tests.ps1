@@ -300,6 +300,90 @@ if (($claimedN.Count -eq 1) -and ([int]$claimedN[0] -eq $faqN)) {
     $script:FailCount++
 }
 
+Write-Host "`n📌 Scenario P: Numeric Benchmark Values Match Measurement Tools" -ForegroundColor Yellow
+$benchPath = Join-Path $RepoRoot "docs/BENCHMARKS.md"
+$benchLines = Get-Content -Path $benchPath
+$staticToolPath = Join-Path $RepoRoot "scripts/measure-tokens.ps1"
+$perTaskToolPath = Join-Path $RepoRoot "scripts/measure-per-task-tokens.ps1"
+$staticOutput = @(& pwsh -NoProfile -NonInteractive -File $staticToolPath -Strict 2>&1)
+$staticExitCode = $LASTEXITCODE
+$perTaskOutput = @(& pwsh -NoProfile -NonInteractive -File $perTaskToolPath --strict 2>&1)
+$perTaskExitCode = $LASTEXITCODE
+if ($staticExitCode -ne 0) {
+    Write-Host "  ❌ FAIL: static measurement tool exited $staticExitCode" -ForegroundColor Red
+    $script:FailCount++
+}
+if ($perTaskExitCode -ne 0) {
+    Write-Host "  ❌ FAIL: per-task measurement tool exited $perTaskExitCode" -ForegroundColor Red
+    $script:FailCount++
+}
+
+function Normalize-TableCell([string]$Cell) {
+    return (($Cell -replace '[*`]', '').Trim() -replace '\s+', ' ').ToLowerInvariant()
+}
+function Get-BenchmarkMetric([string]$Header, [string]$Metric, [string]$Row) {
+    $metricIndex = -1
+    foreach ($line in $benchLines) {
+        if ($line -notmatch '^\s*\|') { continue }
+        $cells = $line.Split('|')
+        if ($metricIndex -lt 0) {
+            if ((Normalize-TableCell $cells[1]) -ne (Normalize-TableCell $Header)) { continue }
+            for ($i = 2; $i -lt ($cells.Length - 1); $i++) {
+                if ((Normalize-TableCell $cells[$i]).Contains((Normalize-TableCell $Metric))) {
+                    $metricIndex = $i
+                    break
+                }
+            }
+            continue
+        }
+        if ((Normalize-TableCell $cells[1]) -eq (Normalize-TableCell $Row)) {
+            $number = [regex]::Match($cells[$metricIndex], '[0-9][0-9,]*')
+            if ($number.Success) { return [int]($number.Value -replace ',', '') }
+        }
+    }
+    return $null
+}
+function Get-StaticMeasurement([string]$Name, [string[]]$Output) {
+    foreach ($line in $Output) {
+        $match = [regex]::Match([string]$line, "^$Name\|([0-9]+)\|[0-9]+\|PASS$")
+        if ($match.Success) { return [int]$match.Groups[1].Value }
+    }
+    return $null
+}
+function Get-PerTaskMeasurement([string]$Task, [string]$Profile, [string[]]$Output) {
+    foreach ($line in $Output) {
+        $match = [regex]::Match([string]$line, "(?m)^\s*$([regex]::Escape($Task))\s+Balanced:\s*([0-9]+)\s+tok\s+\|\s+Lite:\s*([0-9]+)\s+tok\s+\|\s+Baseline:\s*([0-9]+)\s+tok\b")
+        if ($match.Success) {
+            if ($Profile -eq 'balanced') { return [int]$match.Groups[1].Value }
+            if ($Profile -eq 'lite') { return [int]$match.Groups[2].Value }
+            return [int]$match.Groups[3].Value
+        }
+    }
+    return $null
+}
+function Check-BenchmarkFigure([string]$Description, [object]$Measured, [object]$Published) {
+    if ($null -ne $Measured -and $null -ne $Published -and $Measured -eq $Published) {
+        Write-Host "  ✅ PASS: $Description ($Published == measurement output)" -ForegroundColor Green
+        $script:PassCount++
+    } else {
+        Write-Host "  ❌ FAIL: $Description published '$Published', measurement output '$Measured'" -ForegroundColor Red
+        $script:FailCount++
+    }
+}
+
+Check-BenchmarkFigure "Balanced static directive" (Get-StaticMeasurement 'BALANCED' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Balanced)')
+Check-BenchmarkFigure "Lite static directive" (Get-StaticMeasurement 'LITE' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')
+$setupText = Get-Content -Path (Join-Path $RepoRoot "protocols/setup.md") -Raw
+$setupEntry = [regex]::Match($setupText, '[0-9][0-9,]*/2500')
+$setupPublished = $null
+if ($setupEntry.Success) { $setupPublished = [int](($setupEntry.Value -split '/')[0] -replace ',', '') }
+Check-BenchmarkFigure "Setup protocol Balanced static directive" (Get-StaticMeasurement 'BALANCED' $staticOutput) $setupPublished
+foreach ($task in @('pk:fix', 'pk:plan', 'pk:ship')) {
+    Check-BenchmarkFigure "$task Balanced payload" (Get-PerTaskMeasurement $task 'balanced' $perTaskOutput) (Get-BenchmarkMetric 'Workflow Path' 'PromptKit OS JIT Payload (Balanced)' $task)
+    Check-BenchmarkFigure "$task Lite payload" (Get-PerTaskMeasurement $task 'lite' $perTaskOutput) (Get-BenchmarkMetric 'Workflow Path' 'PromptKit OS JIT Payload (Lite)' $task)
+    Check-BenchmarkFigure "$task baseline payload" (Get-PerTaskMeasurement $task 'baseline' $perTaskOutput) (Get-BenchmarkMetric 'Workflow Path' 'Baseline Payload (before A)' $task)
+}
+
 Write-Host "`n📌 Scenario R: Search Circuit Breaker Semantics (Balanced + Lite consistency)" -ForegroundColor Yellow
 Assert-Contains "templates/agent-directive-template.md" "Search Circuit Breaker \(advisory\)" "Balanced breaker states advisory semantics"
 Assert-Contains "templates/agent-directive-template.md" "parallel batch" "Balanced breaker defines parallel-call counting"

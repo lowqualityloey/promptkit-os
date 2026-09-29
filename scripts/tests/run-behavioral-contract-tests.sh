@@ -308,6 +308,94 @@ else
 fi
 
 echo ""
+echo "📌 Scenario P: Numeric Benchmark Values Match Measurement Tools"
+BENCHMARKS="$REPO_ROOT/docs/BENCHMARKS.md"
+STATIC_OUT="$(bash "$REPO_ROOT/scripts/measure-tokens.sh" --strict)"
+PER_TASK_OUT="$(bash "$REPO_ROOT/scripts/measure-per-task-tokens.sh" --strict)"
+
+benchmark_metric() {
+    local header="$1" metric="$2" row="$3"
+    awk -F'|' -v header="$header" -v metric="$metric" -v row="$row" '
+        function clean(s) {
+            gsub(/[*`]/, "", s)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+            gsub(/[[:space:]]+/, " ", s)
+            return tolower(s)
+        }
+        /^\|/ {
+            if (!metric_col) {
+                if (clean($2) != clean(header)) next
+                for (i = 3; i < NF; i++) {
+                    if (index(clean($i), clean(metric)) > 0) {
+                        metric_col = i
+                        next
+                    }
+                }
+            } else if (clean($2) == clean(row)) {
+                value = $metric_col
+                gsub(/[^0-9]/, "", value)
+                if (value != "") { print value; exit }
+            }
+        }
+    ' "$BENCHMARKS"
+}
+
+check_benchmark_figure() {
+    local description="$1" measured="$2" published="$3"
+    if [[ "$measured" =~ ^[0-9]+$ && "$published" =~ ^[0-9]+$ && "$measured" == "$published" ]]; then
+        echo "  ✅ PASS: $description ($published == measurement output)"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        echo "  ❌ FAIL: $description published '${published:-missing}', measurement output '${measured:-missing}'"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+
+static_metric() {
+    printf '%s\n' "$STATIC_OUT" | awk -F'|' -v key="$1" '$1 == key { print $2; exit }'
+}
+per_task_metric() {
+    local task="$1" field="$2"
+    printf '%s\n' "$PER_TASK_OUT" | awk -F'|' -v task="$task" -v field="$field" '
+        function trim(s) {
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+            gsub(/[[:space:]]+/, " ", s)
+            return s
+        }
+        {
+            left = trim($1)
+            right = trim($2)
+            baseline_text = trim($3)
+            if (index(left, task " Balanced:") != 1) next
+            split(left, balanced, " ")
+            split(right, lite, " ")
+            split(baseline_text, baseline, " ")
+            if (field == "balanced") print balanced[3]
+            else if (field == "lite") print lite[2]
+            else print baseline[2]
+            exit
+        }
+    '
+}
+
+check_benchmark_figure "Balanced static directive" "$(static_metric BALANCED)" \
+    "$(benchmark_metric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Balanced)')"
+check_benchmark_figure "Lite static directive" "$(static_metric LITE)" \
+    "$(benchmark_metric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')"
+SETUP_STATIC_ENTRY="$(grep -oE '[0-9,]+/2500' "$REPO_ROOT/protocols/setup.md" | head -n 1 || true)"
+SETUP_STATIC_DOC="${SETUP_STATIC_ENTRY%%/*}"
+SETUP_STATIC_DOC="${SETUP_STATIC_DOC//,/}"
+check_benchmark_figure "Setup protocol Balanced static directive" "$(static_metric BALANCED)" "$SETUP_STATIC_DOC"
+for task in 'pk:fix' 'pk:plan' 'pk:ship'; do
+    check_benchmark_figure "$task Balanced payload" "$(per_task_metric "$task" balanced)" \
+        "$(benchmark_metric 'Workflow Path' 'PromptKit OS JIT Payload (Balanced)' "$task")"
+    check_benchmark_figure "$task Lite payload" "$(per_task_metric "$task" lite)" \
+        "$(benchmark_metric 'Workflow Path' 'PromptKit OS JIT Payload (Lite)' "$task")"
+    check_benchmark_figure "$task baseline payload" "$(per_task_metric "$task" baseline)" \
+        "$(benchmark_metric 'Workflow Path' 'Baseline Payload (before A)' "$task")"
+done
+
+echo ""
 echo "📌 Scenario R: Search Circuit Breaker Semantics (Balanced + Lite consistency)"
 assert_contains "templates/agent-directive-template.md" "Search Circuit Breaker \\(advisory\\)" "Balanced breaker states advisory semantics"
 assert_contains "templates/agent-directive-template.md" "parallel batch" "Balanced breaker defines parallel-call counting"
