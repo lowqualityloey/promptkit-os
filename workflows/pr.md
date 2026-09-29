@@ -139,10 +139,6 @@ Upon presenting or opening the PR, conclude with the standard Telemetry Status C
 > 🎯 **Active**: PR `#<number>` (`<head-branch> → main`)  
 > 🟢 **Quality Gate**: Clean (`<passed>/<total> CI Passing ✓` · `🔒 <n> Invariants Intact`)
 
-> [!TIP]
-> ### 💡 Next Recommended Step
-> - **To Merge**: Run **`gh pr merge <number> --squash --delete-branch`** (or review on GitHub)
-> - **Next Task**: Run **`pk:plan TASK-XX`** or **`pk:checkpoint`**
 
-Single-callout rule (`protocols/telemetry-cards.md`): when the action callout above already states review and merge, keep this TIP only for information it does not restate; a TIP duplicating the callout is flooding — drop it. Close order is always card, TL;DR line, then the one callout, so the decision point stays in view.
+Single-callout rule (`protocols/telemetry-cards.md`): this `[!IMPORTANT]` action callout takes precedence, so do not emit a TIP on PR handoff. In other workflows, suppress TIP whenever an `[!IMPORTANT]` or `[!WARNING]` halt is active. Close order is always card, TL;DR line, then the one applicable callout, so the decision point stays in view.
 *(You MUST invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`; Bounded to closed-set operational choices — for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead, see the Picker routing rule in `workflows/plan.md`)*

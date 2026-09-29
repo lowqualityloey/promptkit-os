@@ -712,6 +712,12 @@ Assert-Contains "scripts/tests/run-reference-link-tests.sh" "fails closed" "Bash
 Assert-Contains "scripts/tests/run-reference-link-tests.ps1" "fails closed" "PowerShell link harness proves broken-link polarity"
 Assert-Contains ".github/workflows/ci.yml" "run-reference-link-tests" "CI wires the reference-link harness"
 
+Write-Host "`n📌 Scenario AO: Canonical Human Halt Fixture" -ForegroundColor Yellow
+Assert-Contains "scripts/tests/eval-scenarios/halt-callout.md" "contains: ### 🚫BLOCKED:" "Halt evaluator requires the canonical BLOCKED heading"
+Assert-Contains "scripts/tests/eval-scenarios/halt-callout.md" "not-contains: ### ⚠️ Blocked: Waiting on Human Input" "Halt evaluator rejects the retired heading"
+Assert-Contains "scripts/tests/eval-scenarios/halt-callout.md" "Transcript-PASS" "Halt evaluator carries a passing transcript fixture"
+Assert-Contains "scripts/tests/eval-scenarios/halt-callout.md" "Transcript-FAIL" "Halt evaluator carries a failing transcript fixture"
+
 Write-Host "`n===========================================================" -ForegroundColor DarkGray
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

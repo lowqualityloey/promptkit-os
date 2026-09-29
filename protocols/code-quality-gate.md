@@ -131,9 +131,10 @@ Single source for which actions an agent may take alone and which require explic
 | Execute production migration (Expand/Contract DDL/DML against prod) | | ✓ human, no exception |
 | Create/retarget remote issue or work item | | ✓ human, no exception |
 | Mutate remote repo config, labels, or project boards | | ✓ human, no exception |
+| Run a production probe that creates or changes persisted data or triggers external effects | | ✓ human, explicit authorization and bounded synthetic-safe probe |
 
-- **No implicit remote authority**: no workflow may grant push/PR/merge/deploy/rollback authority by implication, default, or convenience. Silence is denial.
-- **Run-authorization exception (only)**: an explicitly declared `pk:auto` run (`--until pr` / `--full`) carries standing authorization for push and draft-PR creation **within that run only** — bounded by its declared terminal boundary, circuit breakers, deny-list, and invocation snapshot. Merge, tag, publish, deploy, rollback, production migration execution, remote issue creation, and remote repo-config/label/board mutation are never included and always require a separate explicit human action.
+- **No implicit remote authority**: no workflow may grant push/PR/merge/deploy/rollback, production-migration, remote issue/repo-configuration, or side-effecting production-probe authority by implication, default, or convenience. Silence is denial; listing a tool or recording a tracker preference grants no remote-write authorization.
+- **Run-authorization exception (only)**: an explicitly declared `pk:auto` run (`--until pr` / `--full`) carries standing authorization for push and draft-PR creation **within that run only** — bounded by its declared terminal boundary, circuit breakers, deny-list, and invocation snapshot. Merge, tag, publish, deploy, rollback, production migration execution, remote issue creation, remote repo-config/label/board mutation, and side-effecting production probes are never included and always require a separate explicit human action.
 
 ---
 

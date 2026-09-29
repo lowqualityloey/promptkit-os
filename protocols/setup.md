@@ -188,7 +188,7 @@ When operating in AI development environments with Model Context Protocol (MCP) 
 
 | Capability Domain | 1. Native MCP Tool (Highest Priority) | 2. Native IDE Tool (Second Priority) | 3. Terminal CLI (Fallback) | 4. Manual Human Prompt |
 | :--- | :--- | :--- | :--- | :--- |
-| **Source Control & PRs** | `github-mcp` (`create_pull_request`, `issue_read`, `issue_write`, `list_commits`) | N/A | `gh pr create`, `gh issue view`, `git` | Asking developer to open PR manually |
+| **Source Control & PRs** | `github-mcp` (`create_pull_request`, `issue_read`, `issue_write` only after explicit human authorization, `list_commits`) | N/A | `gh pr create`, `gh issue view`, `git` | Asking developer to open PR manually |
 | **Database Discovery** | `postgres-mcp` / DB MCP (`query`, `list_tables`, `describe_table`) | N/A | `psql`, `sqlite3`, ORM migration CLI | Asking developer for table schemas |
 | **Interactive Selection** | Modal Prompt / `ask_question` / prompt picker modal | Native IDE UI Pickers | Terminal CLI input / raw prompt | Free-form conversational text |
 | **Codebase Search** | `context-mcp` / Indexing MCP (`context_search`, `expand_chunk`, `related_context`) | `grep_search`, `find_by_name`, `file_search` | `rg`, `grep`, `find`, `fd` | Asking developer for file paths |

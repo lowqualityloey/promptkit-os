@@ -52,8 +52,12 @@ Write-Output "━━━━━━━━━━━━━━━━━━━━━━
 $measureScript = Join-Path $RepoRoot "scripts/measure-tokens.ps1"
 $out = & pwsh -NoProfile -File $measureScript --strict 2>&1
 $rc = $LASTEXITCODE
-if ($rc -eq 0 -and $out -match "BALANCED.*PASS" -and $out -match "LITE.*PASS") {
-    Ok "measure-tokens.ps1 --strict passes canonical templates with PASS lines"
+$balancedTemplate = Join-Path $RepoRoot "templates/agent-directive-template.md"
+$balancedText = [System.IO.File]::ReadAllText($balancedTemplate, [System.Text.Encoding]::UTF8) -replace "`r", ""
+$balancedBytes = [System.Text.Encoding]::UTF8.GetByteCount($balancedText)
+$balancedExpected = [Math]::Floor(($balancedBytes + 2) / 4)
+if ($rc -eq 0 -and $out -match "BALANCED\|$balancedExpected\|2500\|PASS" -and $out -match "LITE.*PASS") {
+    Ok "measure-tokens.ps1 --strict matches UTF-8 bytes/4 including the final newline"
 } else {
     NotOk "measure-tokens.ps1 --strict should exit 0 with BALANCED+LITE PASS (rc=$rc)"
     Write-Output $out

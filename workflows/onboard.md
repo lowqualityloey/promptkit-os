@@ -182,14 +182,14 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
           - label: "Local Markdown (Recommended for solo / offline)"
             description: "Writes docs/tasks/*.md + docs/STATE.md only, offline, import to GitHub/Jira later, reversible"
           - label: "GitHub Issues"
-            description: "Publishes via gh CLI or github-mcp-server, ~2 min, needs gh auth + labels script, reversible"
+            description: "Selects GitHub as the tracker; issue creation remains proposal-only until explicit human authorization, needs gh auth + labels, reversible"
           - label: "Jira"
             description: "Formats to Jira schema, manual import / copy-paste, no auto-push, needs project key"
           - label: "Linear"
             description: "Formats to Linear schema, manual import / copy-paste, no auto-push, needs project key"
         multiSelect: false
       ```
-    - Hosts without `ask_question` support: fallback to `> [!TIP] ### 💡 Choose tracker (Type number & Enter):` with Option 1 prefixed `(Recommended)`. A single-number reply (`1`) executes that option.
+    - Hosts without `ask_question` support: fallback to `> [!TIP] ### 💡 Choose tracker (Type number & Enter):` with Option 1 prefixed `(Recommended)`. A single-number reply records the selected tracker only; it does not authorize creating remote issues or changing repository configuration.
     - Store choice as machine-readable `tracking: local|github|jira|linear` in `PROMPTKIT.md` (Section 5 + bottom machine line) so future sessions don't re-ask.
     - Non-interactive / CI: respect `--tracking=<value>` passed to `init.sh` / `init.ps1`, or existing `tracking:` line, or default to `local`. When `PROMPTKIT_NO_INTERACTIVE=1` is set, skip picker and apply flags/default only.
 

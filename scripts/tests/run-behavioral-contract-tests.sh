@@ -716,6 +716,13 @@ assert_contains "scripts/tests/run-reference-link-tests.sh" "fails closed" "Bash
 assert_contains "scripts/tests/run-reference-link-tests.ps1" "fails closed" "PowerShell link harness proves broken-link polarity"
 assert_contains ".github/workflows/ci.yml" "run-reference-link-tests" "CI wires the reference-link harness"
 
+echo ""
+echo "📌 Scenario AO: Canonical Human Halt Fixture"
+assert_contains "scripts/tests/eval-scenarios/halt-callout.md" "contains: ### 🚫BLOCKED:" "Halt evaluator requires the canonical BLOCKED heading"
+assert_contains "scripts/tests/eval-scenarios/halt-callout.md" "not-contains: ### ⚠️ Blocked: Waiting on Human Input" "Halt evaluator rejects the retired heading"
+assert_contains "scripts/tests/eval-scenarios/halt-callout.md" "Transcript-PASS" "Halt evaluator carries a passing transcript fixture"
+assert_contains "scripts/tests/eval-scenarios/halt-callout.md" "Transcript-FAIL" "Halt evaluator carries a failing transcript fixture"
+
 echo "==========================================================="
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"

@@ -4,7 +4,7 @@
 Trigger anytime with: `pk:tasks` (or `/pk-tasks`, `pk:issue`, `pk:kanban`, `pk:task`)
 
 ## Mission
-Transform architectural specifications (`pk:plan`), technical RFCs (`docs/specs/`), or user feature requests into atomic, single-responsibility tasks with strict Acceptance Criteria (Gherkin format + checklists), technical invariant locking, priority tagging (`#priority/p0-p3`), and traceability to the configured tracking system — GitHub Issues (copy-pasteable `gh issue create` commands, Projects v2 Kanban) or manual import for Linear, Jira, or Local Markdown.
+Transform architectural specifications (`pk:plan`), technical RFCs (`docs/specs/`), or user feature requests into atomic, single-responsibility tasks with strict Acceptance Criteria (Gherkin format + checklists), technical invariant locking, priority tagging (`#priority/p0-p3`), and traceability to the configured tracking system — GitHub Issues (proposal-only `gh issue create` commands, Projects v2 Kanban) or manual import for Linear, Jira, or Local Markdown.
 
 Bridge the critical operational gap between high-level architectural design and hands-on coding. Prevent scope creep, untracked work, and forgotten edge cases before any code is written.
 
@@ -184,6 +184,6 @@ Before implementation, the Engineer validates the Task ID, scope, acceptance cri
 - Every task includes non-negotiable technical invariants and out-of-scope boundaries.
 - Every task includes both happy path and negative/edge-case Acceptance Criteria.
 - Automated verification commands provided for every testable task.
-- Tasks document saved to `docs/tasks/` with copy-pasteable `gh issue create` commands.
+- Tasks document saved to `docs/tasks/` with proposal-only `gh issue create` commands; remote issue creation requires explicit human authorization.
 - Living tracker in `docs/STATE.md` updated with the active milestone tasks (if present).
 - **Dual-Compatible Telemetry Status Card**: Conclude with the single 3-line blockquote spec (`> 📊 **Milestone**: <name> [■■■■□□] n/m — source: STATE.md read this turn \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: measured this turn / not measured`) and — only when no higher-priority `[!IMPORTANT]` or `[!WARNING]` halt is active (single-callout invariant: at most one human callout per turn) — a `> [!TIP]` callout recommending `pk:test` or implementing the first task. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended + why)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; `[!IMPORTANT]` / `[!WARNING]` halts still fire.

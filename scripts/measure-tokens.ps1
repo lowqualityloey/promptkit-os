@@ -5,7 +5,7 @@
     Extracts the active PromptKit OS directive block from your agent
     instructions file (AGENTS.md, CLAUDE.md, etc.) and calculates the exact
     character, word, and estimated token counts (using industry standard 4 chars/token).
-    Compares against derived monolithic baselines (core-6 subset ~19.6k; full set ~75.3k).
+    Compares against the current workflow files for live counts; historical measurements are labeled in docs/BENCHMARKS.md.
     In -Strict mode (CI gate parity with measure-tokens.sh), host detection is
     skipped and BOTH canonical directive templates are asserted against their
     profile budgets: Balanced <= 2,500 tokens and Lite <= 1,500 tokens.
@@ -40,7 +40,8 @@ if ($Strict) {
             continue
         }
         $raw = [System.IO.File]::ReadAllText($t.Path, [System.Text.Encoding]::UTF8)
-        $norm = ($raw -replace "\r\n", "`n").TrimEnd("`r", "`n")
+        # Match Bash tr -d '\r': normalize line endings without dropping the final LF.
+        $norm = $raw -replace "\r", ""
         $bytes = [System.Text.Encoding]::UTF8.GetByteCount($norm)
         $tokens = [Math]::Floor(($bytes + 2) / 4)
         if ($tokens -le $t.Budget) {
@@ -114,7 +115,7 @@ if ([string]::IsNullOrWhiteSpace($DirectiveText)) {
     Write-Error "No PromptKit OS directive block found. Run init.ps1 first or pass a file path."
     exit 1
 }
-$NormalizedDirective = ($DirectiveText -replace "\r\n", "`n").TrimEnd("`r", "`n")
+$NormalizedDirective = $DirectiveText -replace "\r", ""
 $LineCount = ($NormalizedDirective -split "\n").Count
 $CharCount = $NormalizedDirective.Length
 $WordCount = ($NormalizedDirective -split '\s+' | Where-Object { $_ -ne "" }).Count
@@ -145,7 +146,7 @@ Write-Host "  ┌─────────────────────
 Write-Host "  │ Model Architecture                 Static Overhead          │" -ForegroundColor DarkGray
 Write-Host "  ├─────────────────────────────────────────────────────────────┤" -ForegroundColor DarkGray
 Write-Host "  │ Monolithic (core-6 subset derived)   ~$MonolithicTokens tokens           │" -ForegroundColor Red
-Write-Host "  │ Monolithic (full 24-workflow set)    ~$FullsetTokens tokens           │" -ForegroundColor Red
+Write-Host "  │ Monolithic (full 25-workflow set)    ~$FullsetTokens tokens           │" -ForegroundColor Red
 Write-Host "  │ PromptKit OS JIT Router            ~$EstimatedTokens tokens (measured)      │" -ForegroundColor Green
 Write-Host "  ├─────────────────────────────────────────────────────────────┤" -ForegroundColor DarkGray
 Write-Host "  │ Static Context Reduction:          $SavingsPercent% reduction             │" -ForegroundColor Cyan
