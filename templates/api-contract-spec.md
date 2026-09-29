@@ -86,14 +86,14 @@ export type PaginatedInvitationsResponse = z.infer<typeof PaginatedInvitationsRe
 ## 4. Error Response Envelope & Error Code Dictionary
 
 ### Unified Error Envelope
+> Member identifiers are returned only to callers holding `members:read`. The `members:invite`-only caller below receives conflict context with no member email or internal user ID.
 ```json
 {
   "error": {
     "code": "MEMBER_ALREADY_EXISTS",
     "message": "A member with this email already belongs to the workspace.",
     "details": {
-      "email": "user@example.com",
-      "existingUserId": "usr_01h8x4..."
+      "workspaceId": "ws_01h8x4..."
     },
     "requestId": "req_01h8x4v9b2c3"
   }
@@ -118,13 +118,19 @@ export type PaginatedInvitationsResponse = z.infer<typeof PaginatedInvitationsRe
 ```typescript
 // Example frontend React Query mutation hook
 export function useCreateInvitation(workspaceId: string) {
+  // Idempotency key lifecycle: the caller mints one key per deliberate logical
+  // operation and passes it with the variables. React Query reuses the same
+  // variables (and key) across automatic retries of that operation, so an
+  // uncertain outcome retried is never executed twice — while each new
+  // deliberate submission (and each concurrent submission) carries its own key.
+  // Call site: mutate({ payload, idempotencyKey: crypto.randomUUID() }).
   return useMutation({
-    mutationFn: async (payload: CreateInvitationBody) => {
+    mutationFn: async ({ payload, idempotencyKey }: { payload: CreateInvitationBody; idempotencyKey: string }) => {
       const res = await fetch(`/api/v1/workspaces/${workspaceId}/invitations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Idempotency-Key': crypto.randomUUID(),
+          'Idempotency-Key': idempotencyKey,
         },
         body: JSON.stringify(payload),
       });
