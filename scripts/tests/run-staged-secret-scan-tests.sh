@@ -17,8 +17,12 @@ git -C "$positive" init -q
 git -C "$positive" config user.name "PromptKit scanner fixture"
 git -C "$positive" config user.email "scanner-fixture@example.invalid"
 printf '%s\n' one two three four five six seven >"$positive/context.txt"
+printf '%s\n' 'ordinary staged baseline' >"$positive/masked.fixture"
+printf '%s\n' 'masked.fixture diff=mask' >"$positive/.gitattributes"
 git -C "$positive" add -- context.txt
+git -C "$positive" add -- masked.fixture .gitattributes
 git -C "$positive" commit -q -m baseline
+git -C "$positive" config diff.mask.textconv 'printf masked-content'
 
 private_marker='-----BEGIN RSA'
 private_marker+=' PRIVATE KEY-----'
@@ -48,7 +52,14 @@ newline_path=$(printf 'staged\ncredential.txt')
 printf '%s\n' "$classic_token" >"$positive/$newline_path"
 pathspec_path='path[credential].txt'
 printf '%s\n' "$classic_token" >"$positive/$pathspec_path"
+credential_path="credential-${classic_token}.txt"
+printf '%s\n' "$classic_token" >"$positive/$credential_path"
+password_path='credential-password=synthetic-value.txt'
+printf '%s\n' "$classic_token" >"$positive/$password_path"
+printf '%s\n' "$aws_key" >"$positive/masked.fixture"
 git -C "$positive" add -- .
+masked_diff=$(git -C "$positive" diff --cached --no-ext-diff --unified=0 -- masked.fixture)
+[[ "$masked_diff" != *"$aws_key"* ]] || fail 'textconv regression fixture did not hide the staged addition'
 printf -v escaped_newline_path '%q' "$newline_path"
 printf -v escaped_pathspec_path '%q' "$pathspec_path"
 
@@ -82,7 +93,7 @@ run_engine() {
         [[ "$output" == *"$category"* ]] || fail "$awk_bin missed the $category detector"
     done
 
-    [[ $(grep -Fc 'GitHub token pattern' <<< "$output") -eq 3 ]] ||
+    [[ $(grep -Fc 'GitHub token pattern' <<< "$output") -eq 5 ]] ||
         fail "$awk_bin missed a pathname positive control"
     [[ "$output" == *"$escaped_newline_path:1"* ]] ||
         fail "$awk_bin did not safely report the escaped newline path"
@@ -90,13 +101,19 @@ run_engine() {
         fail "$awk_bin did not safely report the literal-pathspec path"
     [[ "$output" == *"context.txt:5"* ]] ||
         fail "$awk_bin reported an incorrect line number for a modified file"
+    [[ "$output" == *"masked.fixture:1"* ]] ||
+        fail "$awk_bin let Git textconv hide a staged credential"
+    [[ "$output" == *"credential-REDACTED.txt:1"* ]] ||
+        fail "$awk_bin exposed a credential-shaped filename instead of redacting it"
+    [[ "$output" == *"credential-REDACTED:1"* && "$output" != *'synthetic-value'* ]] ||
+        fail "$awk_bin exposed a password-shaped value in a staged filename"
 
     for expected in 1 2 3 4 5 6 7; do
         [[ "$output" == *"ordinary.txt:$expected"* ]] ||
             fail "$awk_bin reported an incorrect line number for ordinary.txt"
     done
 
-    [[ $(grep -c '^Potential ' <<< "$output") -eq 10 ]] ||
+    [[ $(grep -c '^Potential ' <<< "$output") -eq 13 ]] ||
         fail "$awk_bin returned an unexpected detection count"
 
     for escaped_value in \
@@ -116,7 +133,7 @@ run_engine() {
     [[ "$output" == *'stop before committing'* ]] ||
         fail "$awk_bin did not explain that an incomplete scan must stop"
 
-    printf 'PASS: %s detected ten redacted matches across tricky paths and modified-file line numbers; clean input passed and scan errors failed closed.\n' "$awk_bin"
+    printf 'PASS: %s detected thirteen redacted matches, ignored textconv, handled tricky paths and modified-file lines; clean input passed and scan errors failed closed.\n' "$awk_bin"
 }
 
 run_engine awk

@@ -15,6 +15,30 @@ paths_file=$(mktemp "${TMPDIR:-/tmp}/promptkit-staged-paths.XXXXXX") || {
 }
 trap 'rm -f -- "$paths_file"' EXIT
 
+escape_redacted_path() {
+    local safe_path=$1 match pattern
+    local password_pattern="password[[:space:]]*[:=][[:space:]]*[\"'][^\"']+[\"']"
+    local password_unquoted_pattern="password[[:space:]]*[:=][[:space:]]*[^[:space:]/\\\\]+"
+    local -a sensitive_patterns=(
+        'BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY'
+        'AKIA[0-9A-Z]+'
+        'ghp_[A-Za-z0-9]+'
+        'github_pat_[A-Za-z0-9_]+'
+        'sk_live_[0-9a-zA-Z]+'
+        'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'
+    )
+    sensitive_patterns+=("$password_pattern" "$password_unquoted_pattern")
+
+    for pattern in "${sensitive_patterns[@]}"; do
+        while [[ $safe_path =~ $pattern ]]; do
+            match=${BASH_REMATCH[0]}
+            safe_path=${safe_path//"$match"/REDACTED}
+        done
+    done
+
+    printf '%q' "$safe_path"
+}
+
 if ! git --literal-pathspecs -C "$repo_root" diff --cached --name-only --diff-filter=ACMRT -z >"$paths_file"; then
     printf '%s\n' 'Staged secret scan could not enumerate staged paths; stop before committing.' >&2
     exit 2
@@ -22,7 +46,7 @@ fi
 
 scan_found=0
 while IFS= read -r -d '' path; do
-    if ! staged_diff=$(git --literal-pathspecs -C "$repo_root" diff --cached --no-ext-diff --unified=0 -- "$path"); then
+    if ! staged_diff=$(git --literal-pathspecs -C "$repo_root" diff --cached --no-ext-diff --no-textconv --unified=0 -- "$path"); then
         printf '%s\n' 'Staged secret scan could not read a staged diff; stop before committing.' >&2
         exit 2
     fi
@@ -70,10 +94,11 @@ while IFS= read -r -d '' path; do
         exit 2
     fi
 
+    escaped_path=$(escape_redacted_path "$path")
     while IFS='|' read -r line_number category; do
         [[ -n "$line_number" ]] || continue
-        printf 'Potential %s in staged additions: %q:%s (matching content suppressed).\n' \
-            "$category" "$path" "$line_number"
+        printf 'Potential %s in staged additions: %s:%s (matching content suppressed).\n' \
+            "$category" "$escaped_path" "$line_number"
         scan_found=1
     done <<< "$detections"
 done <"$paths_file"

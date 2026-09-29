@@ -75,8 +75,15 @@ $detectors = @(
 
 $scanFound = $false
 foreach ($path in $stagedPaths) {
+    $redactedPath = $path
+    $pathPatterns = @($detectors.Pattern) + 'password\s*[:=]\s*[^\s/\\]+'
+    foreach ($pattern in $pathPatterns) {
+        $redactedPath = [System.Text.RegularExpressions.Regex]::Replace($redactedPath, $pattern, "REDACTED")
+    }
+    $escapedPath = ConvertTo-Json -Compress -InputObject $redactedPath
+
     try {
-        $diffResult = Invoke-GitCapture @("--literal-pathspecs", "-C", $resolvedRoot, "diff", "--cached", "--no-ext-diff", "--unified=0", "--", $path)
+        $diffResult = Invoke-GitCapture @("--literal-pathspecs", "-C", $resolvedRoot, "diff", "--cached", "--no-ext-diff", "--no-textconv", "--unified=0", "--", $path)
         if ($diffResult.ExitCode -ne 0) {
             Stop-Scan "Staged secret scan could not read a staged diff; stop before committing."
         }
@@ -105,7 +112,6 @@ foreach ($path in $stagedPaths) {
         foreach ($detector in $detectors) {
             if ($content -cmatch $detector.Pattern) {
                 $scanFound = $true
-                $escapedPath = ConvertTo-Json -Compress -InputObject $path
                 [Console]::Out.WriteLine(('Potential {0} in staged additions: {1}:{2} (matching content suppressed).' -f $detector.Category, $escapedPath, $lineNumber))
             }
         }

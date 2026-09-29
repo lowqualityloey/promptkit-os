@@ -63,8 +63,12 @@ try {
     }
 
     [System.IO.File]::WriteAllLines((Join-Path $positive "context.txt"), @("one", "two", "three", "four", "five", "six", "seven"), $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $positive "masked.fixture"), "ordinary staged baseline`n", $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $positive ".gitattributes"), "masked.fixture diff=mask`n", $utf8NoBom)
     Invoke-GitSetup $positive @("add", "--", "context.txt")
+    Invoke-GitSetup $positive @("add", "--", "masked.fixture", ".gitattributes")
     Invoke-GitSetup $positive @("commit", "-q", "-m", "baseline")
+    Invoke-GitSetup $positive @("config", "diff.mask.textconv", "printf masked-content")
 
     $privateMarker = '-----BEGIN RSA' + ' PRIVATE KEY-----'
     $awsKey = 'AKIA' + ('0' * 16)
@@ -79,7 +83,22 @@ try {
     $ordinaryLines = @($privateMarker, $awsKey, $classicToken, $fineToken, $stripeKey, $jwt, $passwordAssignment)
     [System.IO.File]::WriteAllLines((Join-Path $positive "ordinary.txt"), $ordinaryLines, $utf8NoBom)
     [System.IO.File]::WriteAllText((Join-Path $positive "path[credential].txt"), ($classicToken + "`n"), $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $positive ("credential-" + $classicToken + ".txt")), ($classicToken + "`n"), $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $positive "credential-password=synthetic-value.txt"), ($classicToken + "`n"), $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $positive "masked.fixture"), ($awsKey + "`n"), $utf8NoBom)
     Invoke-GitSetup $positive @("add", "--", ".")
+
+    $maskedDiff = & $script:gitCommand.Source -C $positive diff --cached --no-ext-diff --unified=0 -- masked.fixture 2>$null
+    if ($LASTEXITCODE -ne 0) { Fail "Textconv regression fixture could not read the staged diff." }
+    if (($maskedDiff -join "`n").Contains($awsKey)) { Fail "Textconv regression fixture did not hide the staged addition." }
+
+    $newlinePath = "staged`ncredential.txt"
+    $newlineBlobFile = Join-Path $tempRoot "newline-blob.txt"
+    [System.IO.File]::WriteAllText($newlineBlobFile, ($classicToken + "`n"), $utf8NoBom)
+    $newlineBlobId = & $script:gitCommand.Source -C $positive hash-object -w -- $newlineBlobFile 2>$null
+    if ($LASTEXITCODE -ne 0) { Fail "Could not prepare the NUL-delimited newline-path fixture." }
+    $newlineBlobId = ($newlineBlobId | Out-String).Trim()
+    Invoke-GitSetup $positive @("update-index", "--add", "--cacheinfo", "100644,$newlineBlobId,$newlinePath")
 
     [System.IO.File]::WriteAllText((Join-Path $clean "README.md"), "ordinary staged content`n", $utf8NoBom)
     Invoke-GitSetup $clean @("add", "--", "README.md")
@@ -97,13 +116,17 @@ try {
     )) {
         if ($positiveResult.Output -notlike "*$category*") { Fail "Scanner missed the $category detector." }
     }
-    if (($positiveResult.Output -split "GitHub token pattern").Count - 1 -ne 2) { Fail "Scanner missed the bracket-path positive control." }
+    if (($positiveResult.Output -split "GitHub token pattern").Count - 1 -ne 5) { Fail "Scanner missed a tricky-path positive control." }
     if ($positiveResult.Output -notlike '*"path[credential].txt":1*') { Fail "Scanner did not report the literal bracket path." }
+    if ($positiveResult.Output -notlike '*"staged\ncredential.txt":1*') { Fail "Scanner did not preserve the NUL-delimited newline path." }
+    if ($positiveResult.Output -notlike '*credential-REDACTED.txt":1*') { Fail "Scanner exposed a credential-shaped filename instead of redacting it." }
+    if ($positiveResult.Output -notlike '*credential-REDACTED":1*' -or $positiveResult.Output.Contains("synthetic-value")) { Fail "Scanner exposed a password-shaped value in a staged filename." }
     foreach ($lineNumber in 1..7) {
-        if ($positiveResult.Output -notlike "*ordinary.txt`:$lineNumber*") { Fail "Scanner reported an incorrect ordinary.txt line number." }
+        if ($positiveResult.Output -notlike "*ordinary.txt`":$lineNumber*") { Fail "Scanner reported an incorrect ordinary.txt line number." }
     }
-    if ($positiveResult.Output -notlike "*context.txt:5*") { Fail "Scanner reported an incorrect line number for a modified file." }
-    if (($positiveResult.Output -split "`n" | Where-Object { $_ -like "Potential *" }).Count -ne 9) {
+    if ($positiveResult.Output -notlike '*context.txt":5*') { Fail "Scanner reported an incorrect line number for a modified file." }
+    if ($positiveResult.Output -notlike '*masked.fixture":1*') { Fail "Scanner let Git textconv hide a staged credential." }
+    if (($positiveResult.Output -split "`n" | Where-Object { $_ -like "Potential *" }).Count -ne 13) {
         Fail "Scanner returned an unexpected detection count."
     }
     $secretValues = @($ordinaryLines) + @($awsKeyOnLaterLine)
@@ -118,7 +141,7 @@ try {
     if ($invalidResult.ExitCode -ne 2) { Fail "Scanner should fail closed when the repository cannot be scanned." }
     if ($invalidResult.ErrorText -notlike "*stop before committing*") { Fail "Scanner did not explain that incomplete scans must stop." }
 
-    Write-Host "PASS: PowerShell scanner detected nine redacted matches, handled Git pathspecs and modified-file line numbers, passed clean input, and failed closed on scan errors."
+    Write-Host "PASS: PowerShell scanner detected thirteen redacted matches, ignored textconv, handled NUL-delimited/tricky paths and line numbers, passed clean input, and failed closed on scan errors."
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
