@@ -6,6 +6,8 @@
 - **Target Engine**: [PostgreSQL 16+ / Supabase / MySQL / SQLite]
 - **ORM / Query Builder**: [Prisma / Drizzle / Kysely / Raw SQL]
 
+> **Engine scope:** the SQL below targets **Supabase (PostgreSQL + Supabase Auth)**. `auth.uid()`, `auth.users`, `gen_random_uuid()`, `UUID`, `TIMESTAMPTZ`, and `JSONB` are not plain-PostgreSQL-portable as written: on PostgreSQL without Supabase Auth, replace `auth.uid()` with a per-transaction session setting (e.g. `current_setting('app.current_user_id')`) and point user foreign keys at your own users table. For MySQL, SQLite, or other engines, substitute engine-native types and functions — do not run this DDL verbatim elsewhere.
+
 ---
 
 ## 1. Entity-Relationship Overview
@@ -76,6 +78,23 @@ CREATE TABLE documents (
 );
 ```
 
+-- Tenant immutability guard (`workflows/data.md` requires an immutable tenant
+-- column: RLS WITH CHECK alone cannot stop a dual-member move, so enforce it
+-- at the schema level)
+CREATE OR REPLACE FUNCTION forbid_workspace_transfer() RETURNS trigger AS $$
+BEGIN
+  IF NEW.workspace_id IS DISTINCT FROM OLD.workspace_id THEN
+    RAISE EXCEPTION 'workspace_id is immutable (tenant move rejected)';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_documents_no_workspace_transfer
+BEFORE UPDATE OF workspace_id ON documents
+FOR EACH ROW EXECUTE FUNCTION forbid_workspace_transfer();
+```
+
 ---
 
 ## 3. Indexing Strategy
@@ -115,6 +134,40 @@ WITH CHECK (
         WHERE user_id = auth.uid() AND role IN ('ADMIN', 'EDITOR')
     )
 );
+
+-- Update Policy
+CREATE POLICY "Editors can update workspace documents"
+ON documents FOR UPDATE
+USING (
+    workspace_id IN (
+        SELECT workspace_id FROM workspace_members
+        WHERE user_id = auth.uid() AND role IN ('ADMIN', 'EDITOR')
+    )
+    AND deleted_at IS NULL
+)
+WITH CHECK (
+    workspace_id IN (
+        SELECT workspace_id FROM workspace_members
+        WHERE user_id = auth.uid() AND role IN ('ADMIN', 'EDITOR')
+    )
+);
+
+-- Delete Policy (hard deletes restricted; application code soft-deletes via UPDATE of deleted_at)
+CREATE POLICY "Admins can hard-delete workspace documents"
+ON documents FOR DELETE
+USING (
+    workspace_id IN (
+        SELECT workspace_id FROM workspace_members
+        WHERE user_id = auth.uid() AND role = 'ADMIN'
+    )
+);
+
+-- Purge path note: PostgreSQL also applies the SELECT policy's USING check to
+-- rows matched by a filtered DELETE, so the SELECT policy above (which hides
+-- soft-deleted rows) makes tombstones invisible even to admins. Purging them
+-- requires a privileged path outside row-level checks — e.g. a scheduled
+-- maintenance job running as a role that bypasses RLS, or a SECURITY DEFINER
+-- function owned by such a role — never a relaxation of the SELECT policy.
 ```
 
 ---
@@ -148,4 +201,4 @@ ON CONFLICT (id) DO NOTHING;
 1. **Phase 1 (Expand)**: [Add column/table as nullable]
 2. **Phase 2 (Backfill)**: [Backfill historical rows via background job]
 3. **Phase 3 (Contract)**: [Add NOT NULL constraint or drop deprecated column]
-- **Rollback Procedure**: [Exact SQL to revert migration if health check fails]
+- **Rollback Procedure**: [Revert migration SQL — only when the migration itself is the demonstrated cause AND a separately verified database recovery procedure exists; otherwise roll back application code only and never roll back schema during an active incident, per `workflows/ship.md`]
