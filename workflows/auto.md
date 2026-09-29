@@ -140,7 +140,7 @@ Press Stop / Ctrl+C anytime to switch to manual pairing.
 
 Per the Action Authority Model in `protocols/code-quality-gate.md`, remote actions need explicit human authorization. For `pk:auto` the invocation itself is that authorization, scoped as follows:
 
-- **`--until pr` / `--full` = standing authorization** for push and draft-PR creation within this run only. The draft PR is the human review checkpoint. Merge, tag, publish, deploy, and rollback are never included.
+- **`--until pr` / `--full` = standing authorization** for push and draft-PR creation within this run only. Create the PR as a draft (`gh pr create --draft` or the MCP equivalent with `draft: true`); a ready/non-draft PR requires separate explicit human authorization. The draft PR is the human review checkpoint. Merge, tag, publish, deploy, and rollback are never included.
 - **Scope frozen at invocation**: `--full` covers only the tasks uncompleted in `docs/STATE.md` when the run starts. Newly discovered tasks require a new run (new authorization).
 - **Any circuit-breaker trip, failed review gate, or scope growth beyond the declared boundary halts the run for human resume** — authorization does not survive the run's own stop conditions.
 - Record the declared boundary and authorization in the first `docs/STATE.md` micro-checkpoint.

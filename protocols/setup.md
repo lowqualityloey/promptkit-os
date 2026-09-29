@@ -188,14 +188,14 @@ When operating in AI development environments with Model Context Protocol (MCP) 
 
 | Capability Domain | 1. Native MCP Tool (Highest Priority) | 2. Native IDE Tool (Second Priority) | 3. Terminal CLI (Fallback) | 4. Manual Human Prompt |
 | :--- | :--- | :--- | :--- | :--- |
-| **Source Control & PRs** | `github-mcp` (`create_pull_request` subject to the PR authorization rule below; `issue_read`; `issue_write` only after explicit human authorization; `list_commits`) | N/A | `gh pr create`, `gh issue view`, `git` | Asking developer to open PR manually |
+| **Source Control & PRs** | `github-mcp` (`create_pull_request` subject to the PR authorization rule below; `issue_read`; `issue_write` only after explicit human authorization; `list_commits`) | N/A | `gh pr create --draft` for the `pk:auto` exception; otherwise `gh pr create` only after explicit human authorization, plus `gh issue view` and `git` | Asking developer to open PR manually |
 | **Database Discovery** | `postgres-mcp` / DB MCP (`query`, `list_tables`, `describe_table`) | N/A | `psql`, `sqlite3`, ORM migration CLI | Asking developer for table schemas |
 | **Interactive Selection** | Modal Prompt / `ask_question` / prompt picker modal | Native IDE UI Pickers | Terminal CLI input / raw prompt | Free-form conversational text |
 | **Codebase Search** | `context-mcp` / Indexing MCP (`context_search`, `expand_chunk`, `related_context`) | `grep_search`, `find_by_name`, `file_search` | `rg`, `grep`, `find`, `fd` | Asking developer for file paths |
 | **File Manipulation** | N/A | `view_file`, `replace_file_content`, `write_to_file` | `cat`, `sed`, `awk`, shell redirection | Asking developer to edit code |
 | **Diagnostics & Type Integrity** | `lsp-mcp` (`textDocument/diagnostic`, `hover`, `references`) | Native IDE diagnostics panel | `tsc --noEmit`, `biome check`, `eslint` (JSON output) | Manual reviewer inspection |
 
-PR creation authorization: `create_pull_request` requires explicit human authorization. The only exception is draft PR creation within an explicitly declared `pk:auto` run (`--until pr` or `--full`), bounded by that run's terminal boundary, circuit breakers, deny-list, and invocation snapshot. This exception does not authorize merging. See the [Action Authority Model](code-quality-gate.md#action-authority-model) for the complete boundary.
+PR creation authorization: normal PR creation through `create_pull_request` or `gh pr create` requires explicit human authorization. The only exception is draft PR creation within an explicitly declared `pk:auto` run (`--until pr` or `--full`): MCP must set `draft: true`, and the CLI must use `gh pr create --draft`. This exception does not authorize ready/non-draft PR creation or merging. It is bounded by that run's terminal boundary, circuit breakers, deny-list, and invocation snapshot. See the [Action Authority Model](code-quality-gate.md#action-authority-model) for the complete boundary.
 
 #### Degradation & Progressive Enhancement Rules
 1. **Detect MCP Capabilities**: Assistants inspect available MCP tools at session start.
