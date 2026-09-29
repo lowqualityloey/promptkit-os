@@ -91,6 +91,8 @@ Assert-Contains "workflows/fix.md" "Level 1 — Standard Fix" "Remediation workf
 Write-Host "`n📌 Scenario I: Post-Staging Secret Scan Sequencing (Time-of-Check to Time-of-Use Safety)" -ForegroundColor Yellow
 Assert-Contains "workflows/commit.md" "Pre-Commit Secret & Hygiene Scan" "Commit workflow enforces post-staging secret scan"
 Assert-Contains "workflows/commit.md" "Immediately after staging" "Secret scan runs immediately after staging phase"
+Assert-Contains "workflows/commit.md" "scripts/scan-staged-secrets.sh" "Commit workflow invokes the tested staged-secret scanner"
+Assert-Contains "workflows/commit.md" "scripts/scan-staged-secrets.ps1" "Commit workflow provides the PowerShell staged-secret scanner twin"
 
 Write-Host "`n📌 Scenario J: Standardized Visual Callouts & Telemetry Status Cards" -ForegroundColor Yellow
 Assert-Contains "templates/agent-directive-template.md" "Native MCP & Interactive Turn Prompts" "Directive includes native MCP and interactive turn prompts guardrail"

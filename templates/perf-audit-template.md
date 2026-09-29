@@ -32,9 +32,12 @@ Capture verifiable baseline performance under controlled, reproducible condition
 
 ### Benchmark Reproduction Command
 ```bash
-# Example load command (autocannon or k6):
-autocannon -c 50 -d 30s -p 10 http://localhost:3000/api/v1/workspaces/ws_123/dashboard
+# Create an owner-only capture outside the repository before running the profiler. If TMPDIR is set, confirm it resolves outside the checkout.
+capture_file=$(mktemp "${TMPDIR:-/tmp}/promptkit-perf.XXXXXX")
+# Example load command (autocannon or k6); redact output before sharing a summary.
+autocannon -c 50 -d 30s -p 10 "http://localhost:3000/api/v1/workspaces/<WORKSPACE_ID>/dashboard" >"$capture_file" 2>&1
 ```
+After extracting sanitized measurements, remove the raw capture with `rm -f -- "$capture_file"`.
 
 ---
 

@@ -83,7 +83,7 @@ No. Run sequential; waves add coordination overhead that small work cannot repay
 No. The run falls back to sequential automatically with identical correctness; only the wall-clock benefit disappears.
 
 **A wave failed halfway — is progress lost?**
-No. Wave-boundary checkpoints in `docs/STATE.md` make every boundary a resume point; `git restore` / `git revert` undo unintended files or commits.
+No. Wave-boundary checkpoints in `docs/STATE.md` make every boundary a resume point. For unintended worktree edits, follow the scoped snapshot and ownership checks in `workflows/auto.md`; from the repository root, use a shell-quoted exact path with `git --literal-pathspecs restore --worktree -- "$path"` only when that tracked path has no pre-existing worktree edits. Revert an unintended commit with `git revert`. Never use a blanket reset or clean command to recover a wave.
 
 **Where do I go deeper?**
 Pre-flight ticks: `docs/recipes/auto-waves-preflight-checklist.md`. Phrase→boundary map: `docs/recipes/auto-phrase-boundary-sheet.md`. Pause/resume mechanics: `docs/recipes/auto-wave-pause-resume.md`. Normative rules: `workflows/auto.md`.

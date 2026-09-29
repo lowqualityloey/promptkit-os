@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root=$(builtin cd -- "$(dirname -- "$0")/../.." && pwd -P)
+scanner="$repo_root/scripts/scan-staged-secrets.sh"
+tmp=$(mktemp -d)
+trap 'rm -rf -- "$tmp"' EXIT
+
+fail() {
+    printf 'FAIL: %s\n' "$1" >&2
+    exit 1
+}
+
+positive="$tmp/positive"
+mkdir -p "$positive"
+git -C "$positive" init -q
+git -C "$positive" config user.name "PromptKit scanner fixture"
+git -C "$positive" config user.email "scanner-fixture@example.invalid"
+printf '%s\n' one two three four five six seven >"$positive/context.txt"
+git -C "$positive" add -- context.txt
+git -C "$positive" commit -q -m baseline
+
+private_marker='-----BEGIN RSA'
+private_marker+=' PRIVATE KEY-----'
+aws_key="AKIA$(printf '%016d' 0)"
+classic_token="ghp_$(printf '%036d' 0)"
+fine_token="github_pat_$(printf '%082d' 0)"
+stripe_key="sk_live_$(printf '%024d' 0)"
+jwt='eyJ'
+jwt+='abcdefghij.'
+jwt+='klmnopqrst.'
+jwt+='uvwxyzABCD'
+password_name=$(printf 'pass%s' 'word')
+password_value='synthetic-value-only'
+password_assignment="$password_name=\"$password_value\""
+aws_key_on_later_line="AKIA$(printf '%016d' 1)"
+printf '%s\n' one two three four "$aws_key_on_later_line" six seven >"$positive/context.txt"
+printf '%s\n' \
+    "$private_marker" \
+    "$aws_key" \
+    "$classic_token" \
+    "$fine_token" \
+    "$stripe_key" \
+    "$jwt" \
+    "$password_assignment" >"$positive/ordinary.txt"
+
+newline_path=$(printf 'staged\ncredential.txt')
+printf '%s\n' "$classic_token" >"$positive/$newline_path"
+pathspec_path='path[credential].txt'
+printf '%s\n' "$classic_token" >"$positive/$pathspec_path"
+git -C "$positive" add -- .
+printf -v escaped_newline_path '%q' "$newline_path"
+printf -v escaped_pathspec_path '%q' "$pathspec_path"
+
+clean="$tmp/clean"
+mkdir -p "$clean"
+git -C "$clean" init -q
+git -C "$clean" config user.name "PromptKit scanner fixture"
+git -C "$clean" config user.email "scanner-fixture@example.invalid"
+printf '%s\n' 'ordinary staged content' >"$clean/README.md"
+git -C "$clean" add -- README.md
+
+invalid_root="$tmp/not-a-git-repository"
+mkdir -p "$invalid_root"
+
+run_engine() {
+    local awk_bin="$1"
+    local output status category escaped_value
+
+    status=0
+    output=$(PROMPTKIT_AWK="$awk_bin" bash "$scanner" "$positive") || status=$?
+    [[ "$status" -eq 1 ]] || fail "$awk_bin should return 1 when supported patterns are found"
+
+    for category in \
+        'private-key marker' \
+        'AWS access-key pattern' \
+        'GitHub token pattern' \
+        'GitHub fine-grained token pattern' \
+        'Stripe live-key pattern' \
+        'JWT-like token pattern' \
+        'password-assignment pattern'; do
+        [[ "$output" == *"$category"* ]] || fail "$awk_bin missed the $category detector"
+    done
+
+    [[ $(grep -Fc 'GitHub token pattern' <<< "$output") -eq 3 ]] ||
+        fail "$awk_bin missed a pathname positive control"
+    [[ "$output" == *"$escaped_newline_path:1"* ]] ||
+        fail "$awk_bin did not safely report the escaped newline path"
+    [[ "$output" == *"$escaped_pathspec_path:1"* ]] ||
+        fail "$awk_bin did not safely report the literal-pathspec path"
+    [[ "$output" == *"context.txt:5"* ]] ||
+        fail "$awk_bin reported an incorrect line number for a modified file"
+
+    for expected in 1 2 3 4 5 6 7; do
+        [[ "$output" == *"ordinary.txt:$expected"* ]] ||
+            fail "$awk_bin reported an incorrect line number for ordinary.txt"
+    done
+
+    [[ $(grep -c '^Potential ' <<< "$output") -eq 10 ]] ||
+        fail "$awk_bin returned an unexpected detection count"
+
+    for escaped_value in \
+        "$private_marker" "$aws_key" "$classic_token" "$fine_token" \
+        "$stripe_key" "$jwt" "$password_assignment" "$aws_key_on_later_line"; do
+        [[ "$output" != *"$escaped_value"* ]] || fail "$awk_bin leaked a matching value"
+    done
+
+    status=0
+    output=$(PROMPTKIT_AWK="$awk_bin" bash "$scanner" "$clean") || status=$?
+    [[ "$status" -eq 0 && -z "$output" ]] ||
+        fail "$awk_bin should pass clean staged content without output"
+
+    status=0
+    output=$(PROMPTKIT_AWK="$awk_bin" bash "$scanner" "$invalid_root" 2>&1) || status=$?
+    [[ "$status" -eq 2 ]] || fail "$awk_bin should fail closed when the repository cannot be scanned"
+    [[ "$output" == *'stop before committing'* ]] ||
+        fail "$awk_bin did not explain that an incomplete scan must stop"
+
+    printf 'PASS: %s detected ten redacted matches across tricky paths and modified-file line numbers; clean input passed and scan errors failed closed.\n' "$awk_bin"
+}
+
+run_engine awk
+if command -v mawk >/dev/null 2>&1; then
+    run_engine mawk
+
+    traditional_awk="$tmp/mawk-traditional"
+    printf '%s\n' '#!/usr/bin/env bash' 'exec mawk -W traditional "$@"' >"$traditional_awk"
+    chmod +x "$traditional_awk"
+    run_engine "$traditional_awk"
+fi
+
+printf '%s\n' 'Staged secret scan regression tests passed.'
