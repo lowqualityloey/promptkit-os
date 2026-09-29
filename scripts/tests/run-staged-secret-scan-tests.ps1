@@ -50,12 +50,10 @@ function Invoke-ScannerProcess {
 try {
     $positive = Join-Path $tempRoot "positive"
     $clean = Join-Path $tempRoot "clean"
-    $invalid = Join-Path $tempRoot "not-a-repository"
     $unscannable = Join-Path $tempRoot "unscannable"
     $null = New-Item -ItemType Directory -Path $tempRoot -Force
     $null = New-Item -ItemType Directory -Path $positive -Force
     $null = New-Item -ItemType Directory -Path $clean -Force
-    $null = New-Item -ItemType Directory -Path $invalid -Force
     $null = New-Item -ItemType Directory -Path $unscannable -Force
 
     foreach ($repository in @($positive, $clean, $unscannable)) {
@@ -80,6 +78,7 @@ try {
 
     $privateMarker = '-----BEGIN RSA' + ' PRIVATE KEY-----'
     $awsKey = 'AKIA' + ('0' * 16)
+    $invalid = Join-Path $tempRoot ("not-a-repository-" + $awsKey)
     $classicToken = 'gh' + 'p_' + ('0' * 36)
     $fineToken = 'github' + '_pat_' + ('0' * 82)
     $stripeKey = 'sk' + '_live_' + ('0' * 24)
@@ -160,10 +159,18 @@ try {
     if ($invalidResult.ExitCode -ne 2) { Fail "Scanner should fail closed when the repository cannot be scanned." }
     if ($invalidResult.ErrorText -notlike "*stop before committing*") { Fail "Scanner did not explain that incomplete scans must stop." }
 
-    $unscannableResult = Invoke-ScannerProcess $unscannable
-    if ($unscannableResult.ExitCode -ne 2) { Fail "Scanner should fail closed when Git classifies staged content as binary." }
-    if ($unscannableResult.ErrorText -notlike "*could not inspect a binary diff*" -or $unscannableResult.ErrorText.Contains($awsKey)) {
-        Fail "Scanner did not fail closed without exposing binary staged content."
+    if ($invalidResult.ErrorText.Contains($awsKey) -or $invalidResult.Output.Contains($awsKey)) {
+        Fail "Scanner exposed a raw Git diagnostic for the credential-shaped repository path."
+    }
+
+    foreach ($path in @("opaque.fixture", "nul.fixture")) {
+        Invoke-GitSetup $unscannable @("reset", "-q", "HEAD", "--", "opaque.fixture", "nul.fixture")
+        Invoke-GitSetup $unscannable @("add", "--", $path)
+        $unscannableResult = Invoke-ScannerProcess $unscannable
+        if ($unscannableResult.ExitCode -ne 2) { Fail "Scanner should fail closed when Git classifies staged $path as binary." }
+        if ($unscannableResult.ErrorText -notlike "*could not inspect a binary diff*" -or $unscannableResult.ErrorText.Contains($awsKey)) {
+            Fail "Scanner did not fail closed without exposing binary staged content from $path."
+        }
     }
 
     Write-Host "PASS: PowerShell scanner detected thirteen redacted matches, ignored textconv, handled NUL-delimited/tricky paths and line numbers, passed clean input, and failed closed on scan errors and binary-classified diffs."

@@ -9,11 +9,11 @@ if ! command -v "$awk_bin" >/dev/null 2>&1; then
     exit 2
 fi
 
-paths_file=$(mktemp "${TMPDIR:-/tmp}/promptkit-staged-paths.XXXXXX") || {
+paths_file=$(mktemp "${TMPDIR:-/tmp}/promptkit-staged-paths.XXXXXX" 2>/dev/null) || {
     printf '%s\n' 'Staged secret scan could not create its private path list.' >&2
     exit 2
 }
-trap 'rm -f -- "$paths_file"' EXIT
+trap 'rm -f -- "$paths_file" 2>/dev/null' EXIT
 
 escape_redacted_path() {
     local safe_path=$1 match pattern
@@ -39,14 +39,14 @@ escape_redacted_path() {
     printf '%q' "$safe_path"
 }
 
-if ! git --literal-pathspecs -C "$repo_root" diff --cached --name-only --diff-filter=ACMRT -z >"$paths_file"; then
+if ! git --literal-pathspecs -C "$repo_root" diff --cached --name-only --diff-filter=ACMRT -z >"$paths_file" 2>/dev/null; then
     printf '%s\n' 'Staged secret scan could not enumerate staged paths; stop before committing.' >&2
     exit 2
 fi
 
 scan_found=0
 while IFS= read -r -d '' path; do
-    if ! staged_diff=$(git --literal-pathspecs -C "$repo_root" diff --cached --no-ext-diff --no-textconv --unified=0 -- "$path"); then
+    if ! staged_diff=$(git --literal-pathspecs -C "$repo_root" diff --cached --no-ext-diff --no-textconv --unified=0 -- "$path" 2>/dev/null); then
         printf '%s\n' 'Staged secret scan could not read a staged diff; stop before committing.' >&2
         exit 2
     fi

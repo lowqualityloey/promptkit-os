@@ -71,8 +71,7 @@ git -C "$clean" config user.email "scanner-fixture@example.invalid"
 printf '%s\n' 'ordinary staged content' >"$clean/README.md"
 git -C "$clean" add -- README.md
 
-invalid_root="$tmp/not-a-git-repository"
-mkdir -p "$invalid_root"
+invalid_root="$tmp/not-a-git-repository-$aws_key"
 
 unscannable="$tmp/unscannable"
 mkdir -p "$unscannable"
@@ -150,12 +149,18 @@ run_engine() {
     [[ "$status" -eq 2 ]] || fail "$awk_bin should fail closed when the repository cannot be scanned"
     [[ "$output" == *'stop before committing'* ]] ||
         fail "$awk_bin did not explain that an incomplete scan must stop"
+    [[ "$output" != *"$aws_key"* ]] ||
+        fail "$awk_bin exposed a raw Git diagnostic for the credential-shaped repository path"
 
-    status=0
-    output=$(PROMPTKIT_AWK="$awk_bin" bash "$scanner" "$unscannable" 2>&1) || status=$?
-    [[ "$status" -eq 2 ]] || fail "$awk_bin should fail closed when Git classifies staged content as binary"
-    [[ "$output" == *'could not inspect a binary diff'* && "$output" != *"$aws_key"* ]] ||
-        fail "$awk_bin did not fail closed without exposing binary staged content"
+    for path in opaque.fixture nul.fixture; do
+        git -C "$unscannable" reset -q HEAD -- opaque.fixture nul.fixture
+        git -C "$unscannable" add -- "$path"
+        status=0
+        output=$(PROMPTKIT_AWK="$awk_bin" bash "$scanner" "$unscannable" 2>&1) || status=$?
+        [[ "$status" -eq 2 ]] || fail "$awk_bin should fail closed when Git classifies staged $path as binary"
+        [[ "$output" == *'could not inspect a binary diff'* && "$output" != *"$aws_key"* ]] ||
+            fail "$awk_bin did not fail closed without exposing binary staged content from $path"
+    done
 
     printf 'PASS: %s detected thirteen redacted matches, ignored textconv, handled tricky paths and modified-file lines; clean input passed and scan errors and binary-classified diffs failed closed.\n' "$awk_bin"
 }

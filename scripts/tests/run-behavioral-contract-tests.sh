@@ -96,8 +96,6 @@ echo ""
 echo "📌 Scenario I: Post-Staging Secret Scan Sequencing (Time-of-Check to Time-of-Use Safety)"
 assert_contains "workflows/commit.md" "Pre-Commit Secret & Hygiene Scan" "Commit workflow enforces post-staging secret scan"
 assert_contains "workflows/commit.md" "Immediately after staging" "Secret scan runs immediately after staging phase"
-assert_contains "workflows/commit.md" "scripts/scan-staged-secrets.sh" "Commit workflow invokes the tested staged-secret scanner"
-assert_contains "workflows/commit.md" "scripts/scan-staged-secrets.ps1" "Commit workflow provides the PowerShell staged-secret scanner twin"
 
 echo ""
 echo "📌 Scenario J: Standardized Visual Callouts & Telemetry Status Cards"

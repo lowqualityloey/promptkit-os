@@ -80,7 +80,7 @@ Immediately after staging and before commit construction, perform a mandatory sc
    ```powershell
    pwsh -NoProfile -File <kit>/scripts/scan-staged-secrets.ps1 -Root <project-root>
    ```
-   It scans added lines using NUL-safe staged paths, disables Git external diff and text-conversion filters, and reports only an escaped file path, added-line number, and detector category. Supported credential-shaped substrings in reported paths are replaced with `REDACTED`; matching content and detected credential values are never printed. If Git classifies a staged change as binary, the scanner cannot inspect its added lines and fails closed with exit `2`.
+   It scans added lines using NUL-safe staged paths, disables Git external diff and text-conversion filters, and reports only an escaped file path, added-line number, and detector category. Supported credential-shaped substrings in reported paths are replaced with `REDACTED`; matching content and detected credential values are never printed. Raw Git diagnostics are suppressed so repository paths or other Git error details cannot leak; failures use generic stop guidance. If Git classifies a staged change as binary, the scanner cannot inspect its added lines and fails closed with exit `2`.
 
    - Exit `0`: no supported patterns were detected; continue.
    - Exit `1`: potential credential patterns were detected; halt and ask the developer to inspect and remove them locally.
