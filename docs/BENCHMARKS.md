@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Historical baseline:** 2026-09-14 on `main` (v1.6.0 with 2+1 profiles) · **Current measurements:** 2026-09-30 from source revision `0770495300bc700ce3607501601edfe91ad3fab7` · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 lifecycle subset 19,794 tok / full 25-workflow set 75,505 tok. Current live inventory: core-6 subset 26,371 tok / full 25-workflow set 101,491 tok.
+**Historical baseline:** 2026-09-14 on `main` (v1.6.0 with 2+1 profiles) · **Current measurements:** 2026-09-30 from source revision `916951878c8e3f32801995518e5e4d213167f031` · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 lifecycle subset 19,794 tok / full 25-workflow set 75,505 tok.
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -36,7 +36,14 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | **Balanced** | `agent-directive-template.md` (25 workflows) | 9,230 | **2,308 tok** | **91% static** | Teams, production, default |
 | **Turbo** | same as Balanced + parallel waves | 9,230 | 2,308 tok + subagents (~2x measured total (bounds model, see section 8)) | 91% static, higher total | Experimental, greenfield, accepts cost |
 
-¹ Current core-subset baseline = live sum of the six lifecycle files the Lite profile loads (route, debug, commit, checkpoint, sync, profile) = 26,371 tok; current full-set baseline = all 25 workflow files = 101,491 tok. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
+### Current Workflow Inventory
+
+| Inventory | Workflow Files | Measured Tokens |
+| :--- | ---: | ---: |
+| Core-six Lite subset | 6 | **26,393 tok** |
+| Full workflow set | 25 | **101,905 tok** |
+
+¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
 > **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (91% Balanced, 95% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (23–38% Balanced, 27–42% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
 
@@ -51,7 +58,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | **Total Baseline Static Overhead (Lite)** | **53 lines** | **~1,258 tokens** | **95% static saving, ~55% of Balanced** |
 | **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,258 tok — skipped silently) |
 
-By contrast, inlining all 25 workflow specifications and schemas would consume **~101,491 tokens** on turn 1 before any user request is processed (measured at the current source revision: `cat workflows/*.md | wc -c` ÷ 4).
+By contrast, the measured cost of inlining the complete workflow set is listed in the Current Workflow Inventory above; it would be paid on turn 1 before any user request is processed.
 
 > **Budget semantics:** these gates enforce **static prompt size** (directive + workflow + gate payload, bytes/4). They do not measure session token usage, estimate live-model cost, or enforce host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
 
@@ -76,11 +83,11 @@ Gate coverage: the static dual-profile budget runs in **both** Linux and Windows
 
 PromptKit OS benchmarks both the **static footprint** (1,258 tok Lite, 2,308 tok Balanced) and the **dynamic per-task runtime context**.
 
-By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without a mandatory preload of `workflows/route.md` (6,962 tokens at the historical `fc98f2f` benchmark; 9,214 tokens at the current measurement). At the historical revision, Change A's modeled saving was 6,915 tokens (6,962 route tokens less 47 tokens of directive growth); current end-to-end payloads are measured below and do not reuse that historical estimate.
+By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without a mandatory preload of `workflows/route.md` (6,962 tokens at the historical `fc98f2f` benchmark; 9,241 tokens at the current measurement). At the historical revision, Change A's modeled saving was 6,915 tokens (6,962 route tokens less 47 tokens of directive growth); current end-to-end payloads are measured below and do not reuse that historical estimate.
 
 **Methodology for per-task table:**
 - Historical comparison anchors: `fc98f2f` (after 2+1 profiles) and `c34be80` (before profiles, Balanced only). These SHAs identify historical inputs; they are not the source of the refreshed current values.
-- Current measurement input: source revision `0770495300bc700ce3607501601edfe91ad3fab7` on 2026-09-30. Reproduce with `bash scripts/measure-per-task-tokens.sh`; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
+- Current measurement input: source revision `916951878c8e3f32801995518e5e4d213167f031` on 2026-09-30. Reproduce with `bash scripts/measure-per-task-tokens.sh`; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
 - Historical baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A), plus the same task template where applicable.
 - Current JIT payload = directive 1,258-2,308 + workflow + gate + relevant task template (route.md is not loaded by default).
 - Current Lite vs Balanced static directive sizes: 1,258 vs 2,308 tokens.
@@ -89,9 +96,9 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **8,926 tok** | **7,876 tok** | **-31% Balanced, -39% Lite (-3,935 to -4,985 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **18,985 tok** | **17,935 tok** | **-23% Balanced, -27% Lite (-5,681 to -6,731 tok)** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,364 tok** | **14,314 tok** | **-38% Balanced, -42% Lite (-9,397 to -10,447 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,015 tok** | **7,965 tok** | **-30% Balanced, -38% Lite (-3,846 to -4,896 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,074 tok** | **18,024 tok** | **-23% Balanced, -27% Lite (-5,592 to -6,642 tok)** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,453 tok** | **14,403 tok** | **-38% Balanced, -42% Lite (-9,308 to -10,358 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 

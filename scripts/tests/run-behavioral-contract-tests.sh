@@ -312,8 +312,11 @@ echo "📌 Scenario P: Numeric Benchmark Values Match Measurement Tools"
 BENCHMARKS="$REPO_ROOT/docs/BENCHMARKS.md"
 STATIC_OUT="$(bash "$REPO_ROOT/scripts/measure-tokens.sh" --strict)"
 PER_TASK_OUT="$(bash "$REPO_ROOT/scripts/measure-per-task-tokens.sh" --strict)"
+BALANCED_SAVINGS_OUT="$(bash "$REPO_ROOT/scripts/measure-tokens.sh" "$REPO_ROOT/templates/agent-directive-template.md")"
+LITE_SAVINGS_OUT="$(bash "$REPO_ROOT/scripts/measure-tokens.sh" "$REPO_ROOT/templates/agent-directive-lite-template.md")"
+FULLSET_OUT="$(cd "$REPO_ROOT" && bash scripts/measure-tokens.sh)"
 
-benchmark_metric() {
+benchmark_cell() {
     local header="$1" metric="$2" row="$3"
     awk -F'|' -v header="$header" -v metric="$metric" -v row="$row" '
         function clean(s) {
@@ -332,12 +335,34 @@ benchmark_metric() {
                     }
                 }
             } else if (clean($2) == clean(row)) {
-                value = $metric_col
-                gsub(/[^0-9]/, "", value)
-                if (value != "") { print value; exit }
+                print $metric_col
+                exit
             }
         }
     ' "$BENCHMARKS"
+}
+benchmark_metric() {
+    benchmark_cell "$1" "$2" "$3" | grep -oE '[0-9][0-9,]*' | head -n 1 | tr -d ','
+}
+benchmark_reduction_percent() {
+    local profile="$1" cell="$2"
+    printf '%s\n' "$cell" | grep -oE -- "-[0-9]+% ${profile}" | grep -oE '[0-9]+' | head -n 1
+}
+plain_text() {
+    printf '%s\n' "$1" | sed -E 's/\x1B\[[0-9;]*m//g'
+}
+static_savings_percent() {
+    plain_text "$1" | sed -nE 's/.*Static Context Reduction:[[:space:]]+~([0-9]+)% reduction.*/\1/p'
+}
+fullset_measured_tokens() {
+    plain_text "$1" | sed -nE 's/.*Monolithic \(full [0-9]+-workflow set\)[[:space:]]+~([0-9,]+) tokens.*/\1/p' | tr -d ','
+}
+core_six_measured_tokens() {
+    plain_text "$1" | sed -nE 's/.*Monolithic \(core-6 subset derived\)[[:space:]]+~([0-9,]+) tokens.*/\1/p' | tr -d ','
+}
+rounded_reduction_percent() {
+    local baseline="$1" measured="$2"
+    printf '%s\n' "$(( ((baseline - measured) * 100 + baseline / 2) / baseline ))"
 }
 
 check_benchmark_figure() {
@@ -382,18 +407,46 @@ check_benchmark_figure "Balanced static directive" "$(static_metric BALANCED)" \
     "$(benchmark_metric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Balanced)')"
 check_benchmark_figure "Lite static directive" "$(static_metric LITE)" \
     "$(benchmark_metric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')"
+check_benchmark_figure "Balanced static reduction percent" "$(static_savings_percent "$BALANCED_SAVINGS_OUT")" \
+    "$(benchmark_metric 'Profile' 'Reduction vs ~26.4k current core-subset baseline¹' 'Balanced')"
+check_benchmark_figure "Lite static reduction percent" "$(static_savings_percent "$LITE_SAVINGS_OUT")" \
+    "$(benchmark_metric 'Profile' 'Reduction vs ~26.4k current core-subset baseline¹' 'Lite')"
+check_benchmark_figure "Full workflow-set token total" "$(fullset_measured_tokens "$FULLSET_OUT")" \
+    "$(benchmark_metric 'Inventory' 'Measured Tokens' 'Full workflow set')"
+check_benchmark_figure "Core-six workflow-set token total" "$(core_six_measured_tokens "$FULLSET_OUT")" \
+    "$(benchmark_metric 'Inventory' 'Measured Tokens' 'Core-six Lite subset')"
+LIVE_WORKFLOW_COUNT="$(find "$REPO_ROOT/workflows" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')"
+check_benchmark_figure "Full workflow-set file count" "$LIVE_WORKFLOW_COUNT" \
+    "$(benchmark_metric 'Inventory' 'Workflow Files' 'Full workflow set')"
 SETUP_STATIC_ENTRY="$(grep -oE '[0-9,]+/2500' "$REPO_ROOT/protocols/setup.md" | head -n 1 || true)"
 SETUP_STATIC_DOC="${SETUP_STATIC_ENTRY%%/*}"
 SETUP_STATIC_DOC="${SETUP_STATIC_DOC//,/}"
 check_benchmark_figure "Setup protocol Balanced static directive" "$(static_metric BALANCED)" "$SETUP_STATIC_DOC"
 for task in 'pk:fix' 'pk:plan' 'pk:ship'; do
+    balanced_payload="$(per_task_metric "$task" balanced)"
+    lite_payload="$(per_task_metric "$task" lite)"
+    baseline_payload="$(per_task_metric "$task" baseline)"
     check_benchmark_figure "$task Balanced payload" "$(per_task_metric "$task" balanced)" \
         "$(benchmark_metric 'Workflow Path' 'PromptKit OS JIT Payload (Balanced)' "$task")"
     check_benchmark_figure "$task Lite payload" "$(per_task_metric "$task" lite)" \
         "$(benchmark_metric 'Workflow Path' 'PromptKit OS JIT Payload (Lite)' "$task")"
     check_benchmark_figure "$task baseline payload" "$(per_task_metric "$task" baseline)" \
         "$(benchmark_metric 'Workflow Path' 'Baseline Payload (before A)' "$task")"
+    check_benchmark_figure "$task Balanced context-reduction percent" \
+        "$(rounded_reduction_percent "$baseline_payload" "$balanced_payload")" \
+        "$(benchmark_reduction_percent Balanced "$(benchmark_cell 'Workflow Path' 'Context Reduction vs Baseline' "$task")")"
+    check_benchmark_figure "$task Lite context-reduction percent" \
+        "$(rounded_reduction_percent "$baseline_payload" "$lite_payload")" \
+        "$(benchmark_reduction_percent Lite "$(benchmark_cell 'Workflow Path' 'Context Reduction vs Baseline' "$task")")"
 done
+
+if grep -Eq '[0-9][0-9,]{3,}[[:space:]]+(tok|tokens)' "$REPO_ROOT/workflows/profile.md"; then
+    echo "  ❌ FAIL: profile workflow duplicates a measured token figure; use docs/BENCHMARKS.md"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+    echo "  ✅ PASS: profile workflow points to the benchmark source without pinning token figures"
+    PASS_COUNT=$((PASS_COUNT + 1))
+fi
 
 echo ""
 echo "📌 Scenario R: Search Circuit Breaker Semantics (Balanced + Lite consistency)"
@@ -416,6 +469,12 @@ assert_contains "workflows/auto.md" "One park/resume boundary per wave" "Auto wo
 assert_contains "workflows/auto.md" "never an execution trigger" "Auto halt record is passive observable state, not a trigger"
 assert_contains "workflows/auto.md" "Worker GREEN" "Auto workflow requires integrated-state verification before wave success"
 assert_contains "workflows/auto.md" "never become an orchestration subsystem" "Auto waves remain a pk:auto capability, not a subsystem"
+assert_contains "workflows/auto.md" "boundary: <declared stop point>" "Auto announcement reflects the declared stop boundary"
+assert_contains "workflows/auto.md" "only a human executes a merge" "Auto boundary reserves merge execution to a human"
+assert_contains "docs/recipes/auto-phrase-boundary-sheet.md" "draft PR ready for human review" "Auto phrase-boundary sheet names the draft PR stop point"
+assert_contains "workflows/pr.md" "gh pr create --draft" "PR workflow uses draft creation within pk:auto authorization"
+assert_contains "workflows/pr.md" "Do not use an unqualified ready-PR command or .* fallback inside .*" "PR workflow excludes ready and browser creation from the auto-run exception"
+assert_contains "protocols/code-quality-gate.md" "separate authorization permits an agent to merge" "Canonical authority model makes merge human-executed even after authorization"
 assert_contains "workflows/auto.md" "Path Deny-List" "Auto workflow enforces path deny-list"
 assert_contains "workflows/auto.md" "review ready" "Auto workflow defaults to review ready stop boundary"
 assert_contains "workflows/route.md" "workflows/auto.md" "Router decision matrix registers pk:auto"

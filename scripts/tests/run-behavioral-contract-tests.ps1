@@ -309,6 +309,12 @@ $staticOutput = @(& pwsh -NoProfile -NonInteractive -File $staticToolPath -Stric
 $staticExitCode = $LASTEXITCODE
 $perTaskOutput = @(& pwsh -NoProfile -NonInteractive -File $perTaskToolPath --strict 2>&1)
 $perTaskExitCode = $LASTEXITCODE
+$balancedSavingsOutput = @(& pwsh -NoProfile -NonInteractive -File $staticToolPath (Join-Path $RepoRoot "templates/agent-directive-template.md") 2>&1)
+$balancedSavingsExitCode = $LASTEXITCODE
+$liteSavingsOutput = @(& pwsh -NoProfile -NonInteractive -File $staticToolPath (Join-Path $RepoRoot "templates/agent-directive-lite-template.md") 2>&1)
+$liteSavingsExitCode = $LASTEXITCODE
+$fullsetOutput = @(& pwsh -NoProfile -NonInteractive -File $staticToolPath 2>&1)
+$fullsetExitCode = $LASTEXITCODE
 if ($staticExitCode -ne 0) {
     Write-Host "  ❌ FAIL: static measurement tool exited $staticExitCode" -ForegroundColor Red
     $script:FailCount++
@@ -317,11 +323,21 @@ if ($perTaskExitCode -ne 0) {
     Write-Host "  ❌ FAIL: per-task measurement tool exited $perTaskExitCode" -ForegroundColor Red
     $script:FailCount++
 }
+if ($balancedSavingsExitCode -ne 0 -or $liteSavingsExitCode -ne 0 -or $fullsetExitCode -ne 0) {
+    Write-Host "  ❌ FAIL: static savings or full-workflow measurement exited nonzero" -ForegroundColor Red
+    $script:FailCount++
+}
 
 function Normalize-TableCell([string]$Cell) {
     return (($Cell -replace '[*`]', '').Trim() -replace '\s+', ' ').ToLowerInvariant()
 }
 function Get-BenchmarkMetric([string]$Header, [string]$Metric, [string]$Row) {
+    $cell = Get-BenchmarkCell $Header $Metric $Row
+    $number = [regex]::Match($cell, '[0-9][0-9,]*')
+    if ($number.Success) { return [int]($number.Value -replace ',', '') }
+    return $null
+}
+function Get-BenchmarkCell([string]$Header, [string]$Metric, [string]$Row) {
     $metricIndex = -1
     foreach ($line in $benchLines) {
         if ($line -notmatch '^\s*\|') { continue }
@@ -337,11 +353,42 @@ function Get-BenchmarkMetric([string]$Header, [string]$Metric, [string]$Row) {
             continue
         }
         if ((Normalize-TableCell $cells[1]) -eq (Normalize-TableCell $Row)) {
-            $number = [regex]::Match($cells[$metricIndex], '[0-9][0-9,]*')
-            if ($number.Success) { return [int]($number.Value -replace ',', '') }
+            return $cells[$metricIndex]
         }
     }
+    return ""
+}
+function Get-StaticSavingsPercent([string[]]$Output) {
+    foreach ($line in $Output) {
+        $plainLine = [regex]::Replace([string]$line, "`e\[[0-9;]*m", '')
+        $match = [regex]::Match($plainLine, 'Static Context Reduction:\s+~?([0-9]+)% reduction')
+        if ($match.Success) { return [int]$match.Groups[1].Value }
+    }
     return $null
+}
+function Get-FullsetTokens([string[]]$Output) {
+    foreach ($line in $Output) {
+        $plainLine = [regex]::Replace([string]$line, "`e\[[0-9;]*m", '')
+        $match = [regex]::Match($plainLine, 'Monolithic \(full [0-9]+-workflow set\)\s+~([0-9][0-9,]*) tokens')
+        if ($match.Success) { return [int]($match.Groups[1].Value -replace ',', '') }
+    }
+    return $null
+}
+function Get-CoreSixTokens([string[]]$Output) {
+    foreach ($line in $Output) {
+        $plainLine = [regex]::Replace([string]$line, "`e\[[0-9;]*m", '')
+        $match = [regex]::Match($plainLine, 'Monolithic \(core-6 subset derived\)\s+~([0-9][0-9,]*) tokens')
+        if ($match.Success) { return [int]($match.Groups[1].Value -replace ',', '') }
+    }
+    return $null
+}
+function Get-ReductionPercent([string]$Cell, [string]$Profile) {
+    $match = [regex]::Match($Cell, "-([0-9]+)%\s+$([regex]::Escape($Profile))")
+    if ($match.Success) { return [int]$match.Groups[1].Value }
+    return $null
+}
+function Get-RoundedReductionPercent([int]$Baseline, [int]$Measured) {
+    return [int][Math]::Floor(((($Baseline - $Measured) * 100) + ($Baseline / 2)) / $Baseline)
 }
 function Get-StaticMeasurement([string]$Name, [string[]]$Output) {
     foreach ($line in $Output) {
@@ -373,15 +420,34 @@ function Check-BenchmarkFigure([string]$Description, [object]$Measured, [object]
 
 Check-BenchmarkFigure "Balanced static directive" (Get-StaticMeasurement 'BALANCED' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Balanced)')
 Check-BenchmarkFigure "Lite static directive" (Get-StaticMeasurement 'LITE' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')
+Check-BenchmarkFigure "Balanced static reduction percent" (Get-StaticSavingsPercent $balancedSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~26.4k current core-subset baseline¹' 'Balanced')
+Check-BenchmarkFigure "Lite static reduction percent" (Get-StaticSavingsPercent $liteSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~26.4k current core-subset baseline¹' 'Lite')
+Check-BenchmarkFigure "Full workflow-set token total" (Get-FullsetTokens $fullsetOutput) (Get-BenchmarkMetric 'Inventory' 'Measured Tokens' 'Full workflow set')
+Check-BenchmarkFigure "Core-six workflow-set token total" (Get-CoreSixTokens $fullsetOutput) (Get-BenchmarkMetric 'Inventory' 'Measured Tokens' 'Core-six Lite subset')
+$liveWorkflowCount = @(Get-ChildItem (Join-Path $RepoRoot "workflows") -Filter "*.md" -File).Count
+Check-BenchmarkFigure "Full workflow-set file count" $liveWorkflowCount (Get-BenchmarkMetric 'Inventory' 'Workflow Files' 'Full workflow set')
 $setupText = Get-Content -Path (Join-Path $RepoRoot "protocols/setup.md") -Raw
 $setupEntry = [regex]::Match($setupText, '[0-9][0-9,]*/2500')
 $setupPublished = $null
 if ($setupEntry.Success) { $setupPublished = [int](($setupEntry.Value -split '/')[0] -replace ',', '') }
 Check-BenchmarkFigure "Setup protocol Balanced static directive" (Get-StaticMeasurement 'BALANCED' $staticOutput) $setupPublished
 foreach ($task in @('pk:fix', 'pk:plan', 'pk:ship')) {
-    Check-BenchmarkFigure "$task Balanced payload" (Get-PerTaskMeasurement $task 'balanced' $perTaskOutput) (Get-BenchmarkMetric 'Workflow Path' 'PromptKit OS JIT Payload (Balanced)' $task)
-    Check-BenchmarkFigure "$task Lite payload" (Get-PerTaskMeasurement $task 'lite' $perTaskOutput) (Get-BenchmarkMetric 'Workflow Path' 'PromptKit OS JIT Payload (Lite)' $task)
-    Check-BenchmarkFigure "$task baseline payload" (Get-PerTaskMeasurement $task 'baseline' $perTaskOutput) (Get-BenchmarkMetric 'Workflow Path' 'Baseline Payload (before A)' $task)
+    $balancedPayload = Get-PerTaskMeasurement $task 'balanced' $perTaskOutput
+    $litePayload = Get-PerTaskMeasurement $task 'lite' $perTaskOutput
+    $baselinePayload = Get-PerTaskMeasurement $task 'baseline' $perTaskOutput
+    Check-BenchmarkFigure "$task Balanced payload" $balancedPayload (Get-BenchmarkMetric 'Workflow Path' 'PromptKit OS JIT Payload (Balanced)' $task)
+    Check-BenchmarkFigure "$task Lite payload" $litePayload (Get-BenchmarkMetric 'Workflow Path' 'PromptKit OS JIT Payload (Lite)' $task)
+    Check-BenchmarkFigure "$task baseline payload" $baselinePayload (Get-BenchmarkMetric 'Workflow Path' 'Baseline Payload (before A)' $task)
+    $reductionCell = Get-BenchmarkCell 'Workflow Path' 'Context Reduction vs Baseline' $task
+    Check-BenchmarkFigure "$task Balanced context-reduction percent" (Get-RoundedReductionPercent $baselinePayload $balancedPayload) (Get-ReductionPercent $reductionCell 'Balanced')
+    Check-BenchmarkFigure "$task Lite context-reduction percent" (Get-RoundedReductionPercent $baselinePayload $litePayload) (Get-ReductionPercent $reductionCell 'Lite')
+}
+if (Select-String -Path (Join-Path $RepoRoot "workflows/profile.md") -Pattern '[0-9][0-9,]{3,}\s+(tok|tokens)' -Quiet) {
+    Write-Host "  ❌ FAIL: profile workflow duplicates a measured token figure; use docs/BENCHMARKS.md" -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Write-Host "  ✅ PASS: profile workflow points to the benchmark source without pinning token figures" -ForegroundColor Green
+    $script:PassCount++
 }
 
 Write-Host "`n📌 Scenario R: Search Circuit Breaker Semantics (Balanced + Lite consistency)" -ForegroundColor Yellow
@@ -403,6 +469,12 @@ Assert-Contains "workflows/auto.md" "One park/resume boundary per wave" "Auto wo
 Assert-Contains "workflows/auto.md" "never an execution trigger" "Auto halt record is passive observable state, not a trigger"
 Assert-Contains "workflows/auto.md" "Worker GREEN" "Auto workflow requires integrated-state verification before wave success"
 Assert-Contains "workflows/auto.md" "never become an orchestration subsystem" "Auto waves remain a pk:auto capability, not a subsystem"
+Assert-Contains "workflows/auto.md" "boundary: <declared stop point>" "Auto announcement reflects the declared stop boundary"
+Assert-Contains "workflows/auto.md" "only a human executes a merge" "Auto boundary reserves merge execution to a human"
+Assert-Contains "docs/recipes/auto-phrase-boundary-sheet.md" "draft PR ready for human review" "Auto phrase-boundary sheet names the draft PR stop point"
+Assert-Contains "workflows/pr.md" "gh pr create --draft" "PR workflow uses draft creation within pk:auto authorization"
+Assert-Contains "workflows/pr.md" 'Do not use an unqualified ready-PR command or .* fallback inside .*' "PR workflow excludes ready and browser creation from the auto-run exception"
+Assert-Contains "protocols/code-quality-gate.md" "separate authorization permits an agent to merge" "Canonical authority model makes merge human-executed even after authorization"
 Assert-Contains "workflows/auto.md" "Path Deny-List" "Auto workflow enforces path deny-list"
 Assert-Contains "workflows/auto.md" "review ready" "Auto workflow defaults to review ready stop boundary"
 Assert-Contains "workflows/route.md" "workflows/auto.md" "Router decision matrix registers pk:auto"
