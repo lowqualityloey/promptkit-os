@@ -6,6 +6,8 @@
 - **Lead Investigator**: [Your Name]
 - **Status**: [Investigating | Fix Deployed | Closed / Action Items In Progress]
 
+> Worked example — every name, timestamp, metric, and status below is illustrative. Replace all fields with the real incident's data; never present this example as evidence.
+
 ---
 
 ## 1. Executive Summary

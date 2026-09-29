@@ -21,4 +21,4 @@ An ADR is a lightweight document that captures a significant architectural decis
 ## ADR Index Table
 | Number | Date | Title | Status |
 | :--- | :--- | :--- | :--- |
-| ADR-001 | 2026-08-23 | Example: Adopt Clean Architecture Boundaries | Accepted |
+| ADR-001 | 2026-08-23 | Example: Adopt Clean Architecture Boundaries | Example only — no decision recorded |
