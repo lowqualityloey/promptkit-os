@@ -31,9 +31,9 @@ measure_file() {
         echo "0"
         return
     fi
-    local chars
-    chars=$(tr -d '\r' < "$file" | wc -c | tr -d ' ')
-    echo $(( (chars + 2) / 4 ))
+    local bytes
+    bytes=$(tr -d '\r' < "$file" | wc -c | tr -d ' ')
+    echo $(( (bytes + 2) / 4 ))
 }
 
 # Measure directives
@@ -57,8 +57,8 @@ echo "Date: $(date +%Y-%m-%d)"
 echo ""
 
 echo "Static Directives:"
-echo "  Full (Balanced): $FULL_TOK tok ($(wc -c < "$TEMPLATE_FULL" | tr -d ' ') chars)"
-echo "  Lite:            $LITE_TOK tok ($(wc -c < "$TEMPLATE_LITE" | tr -d ' ') chars)"
+echo "  Full (Balanced): $FULL_TOK tok ($(tr -d '\r' < "$TEMPLATE_FULL" | wc -c | tr -d ' ') bytes)"
+echo "  Lite:            $LITE_TOK tok ($(tr -d '\r' < "$TEMPLATE_LITE" | wc -c | tr -d ' ') bytes)"
 echo "  Route (old mandatory load): $ROUTE_TOK tok"
 echo "  Gate: $GATE_TOK tok"
 echo ""
@@ -86,16 +86,22 @@ JIT_FIX_LITE=$(( LITE_TOK + FIX_TOK + GATE_TOK ))
 JIT_PLAN_LITE=$(( LITE_TOK + PLAN_TOK + TECH_SPEC_TOK + GATE_TOK ))
 JIT_SHIP_LITE=$(( LITE_TOK + SHIP_TOK + RELEASE_CHECKLIST_TOK + GATE_TOK ))
 
+# Match the nearest-integer reduction labels used in docs/BENCHMARKS.md and
+# Scenario P of both behavioral-contract test twins.
+PCT_FIX_FULL=$(( ((BASELINE_FIX - JIT_FIX_FULL) * 100 + BASELINE_FIX / 2) / BASELINE_FIX ))
+PCT_PLAN_FULL=$(( ((BASELINE_PLAN - JIT_PLAN_FULL) * 100 + BASELINE_PLAN / 2) / BASELINE_PLAN ))
+PCT_SHIP_FULL=$(( ((BASELINE_SHIP - JIT_SHIP_FULL) * 100 + BASELINE_SHIP / 2) / BASELINE_SHIP ))
+
 echo "Per-Task Payloads (after Change A - no mandatory route load):"
-printf "  %-10s Balanced: %5d tok | Lite: %5d tok | Baseline: %5d tok | Saving Balanced: %5d tok (%d%%)\n" "pk:fix" "$JIT_FIX_FULL" "$JIT_FIX_LITE" "$BASELINE_FIX" "$((BASELINE_FIX - JIT_FIX_FULL))" "$((100 - JIT_FIX_FULL*100/BASELINE_FIX))"
-printf "  %-10s Balanced: %5d tok | Lite: %5d tok | Baseline: %5d tok | Saving Balanced: %5d tok (%d%%)\n" "pk:plan" "$JIT_PLAN_FULL" "$JIT_PLAN_LITE" "$BASELINE_PLAN" "$((BASELINE_PLAN - JIT_PLAN_FULL))" "$((100 - JIT_PLAN_FULL*100/BASELINE_PLAN))"
-printf "  %-10s Balanced: %5d tok | Lite: %5d tok | Baseline: %5d tok | Saving Balanced: %5d tok (%d%%)\n" "pk:ship" "$JIT_SHIP_FULL" "$JIT_SHIP_LITE" "$BASELINE_SHIP" "$((BASELINE_SHIP - JIT_SHIP_FULL))" "$((100 - JIT_SHIP_FULL*100/BASELINE_SHIP))"
+printf "  %-10s Balanced: %5d tok | Lite: %5d tok | Baseline: %5d tok | Saving Balanced: %5d tok (%d%%)\n" "pk:fix" "$JIT_FIX_FULL" "$JIT_FIX_LITE" "$BASELINE_FIX" "$((BASELINE_FIX - JIT_FIX_FULL))" "$PCT_FIX_FULL"
+printf "  %-10s Balanced: %5d tok | Lite: %5d tok | Baseline: %5d tok | Saving Balanced: %5d tok (%d%%)\n" "pk:plan" "$JIT_PLAN_FULL" "$JIT_PLAN_LITE" "$BASELINE_PLAN" "$((BASELINE_PLAN - JIT_PLAN_FULL))" "$PCT_PLAN_FULL"
+printf "  %-10s Balanced: %5d tok | Lite: %5d tok | Baseline: %5d tok | Saving Balanced: %5d tok (%d%%)\n" "pk:ship" "$JIT_SHIP_FULL" "$JIT_SHIP_LITE" "$BASELINE_SHIP" "$((BASELINE_SHIP - JIT_SHIP_FULL))" "$PCT_SHIP_FULL"
 
 echo ""
 echo "Key Insights:"
-echo "  - Change A (remove mandatory route.md load) saves ~6,915 tok per task (route 6,962 tok - directive growth 47 tok)"
-echo "  - Lite vs Balanced saves additional $((FULL_TOK - LITE_TOK)) tok static (-$(( (FULL_TOK - LITE_TOK)*100/FULL_TOK ))%)"
-echo "  - 90% claim is static-only (1,928 tok vs 18.5k monolithic), per-task saving is 28-54% Balanced, 33-63% Lite"
+echo "  - Historical Change A measurement: removing the 6,962-token route load, less 47 tokens of directive growth, modeled a 6,915-token saving at fc98f2f; current payloads are measured above."
+echo "  - Lite vs Balanced saves additional $((FULL_TOK - LITE_TOK)) tok of current static directive overhead (-$(( (FULL_TOK - LITE_TOK)*100/FULL_TOK ))%)."
+echo "  - Static-overhead reductions and per-task payload reductions use different scopes; see docs/BENCHMARKS.md for the current denominator and measured task table."
 echo ""
 echo "Verification:"
 echo "  bash scripts/measure-tokens.sh # static directive"

@@ -151,11 +151,11 @@ Mechanical gates catch most resubmission causes; the rest is judgment. Before op
 
 ## Workflow Lifecycle: Addition & Retirement Policy
 
-The surface is 24 workflows by design, not by accident. Growth is gated and retirement has a path — see [ADR 0002](./docs/adrs/0002-workflow-lifecycle-policy.md) for the full policy and the v1.8.0 `pk:auto` worked example.
+The current surface is 25 workflows by design, not by accident. Growth is gated and retirement has a path — see [ADR 0002](./docs/adrs/0002-workflow-lifecycle-policy.md) for the full policy and the v1.8.0 `pk:auto` worked example.
 
-- **Proposing the 25th workflow**: state non-overlap (which existing workflows were considered and why not), ceremony fit, all artifacts shipped in the same PR (workflow file, `setup.md` row, directive entry or recorded omission, WORKFLOW-MAP/README/FAQ updates, assertions in both test twins), and strict token-gate results.
+- **Proposing the 26th workflow**: state non-overlap (which existing workflows were considered and why not), ceremony fit, all artifacts shipped in the same PR (workflow file, `setup.md` row, directive entry or recorded omission, WORKFLOW-MAP/README/FAQ updates, assertions in both test twins), and strict token-gate results.
 - **Retiring a workflow or alias**: breaking-change path — justification plus `CHANGELOG.md` `BREAKING CHANGE` notice with migration path, count-guard updates in both twins (suite stays green), directive exception-list sync, and reference cleanup (`setup.md`, README, WORKFLOW-MAP, FAQ, QUICKSTART) with `validate-references.sh` passing.
-- **This policy retires nothing.** Count is 24; the drift guard enforces this count.
+- **This policy retires nothing.** Count is 25; the drift guard enforces this count.
 
 ## Adding a New AI Host
 

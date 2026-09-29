@@ -34,11 +34,11 @@ function Measure-File {
     }
     $bytes = [System.IO.File]::ReadAllBytes($File)
     $cleanBytes = $bytes | Where-Object { $_ -ne 13 }
-    $chars = $cleanBytes.Count
-    return [int](($chars + 2) / 4)
+    $byteCount = $cleanBytes.Count
+    return [Math]::Floor(($byteCount + 2) / 4)
 }
 
-function Get-CharCount {
+function Get-ByteCount {
     param([string]$File)
     $bytes = [System.IO.File]::ReadAllBytes($File)
     $cleanBytes = $bytes | Where-Object { $_ -ne 13 }
@@ -71,8 +71,8 @@ Write-Output "Date: $(Get-Date -Format 'yyyy-MM-dd')"
 Write-Output ""
 
 Write-Output "Static Directives:"
-Write-Output "  Full (Balanced): $FULL_TOK tok ($(Get-CharCount $TemplateFull) chars)"
-Write-Output "  Lite:            $LITE_TOK tok ($(Get-CharCount $TemplateLite) chars)"
+Write-Output "  Full (Balanced): $FULL_TOK tok ($(Get-ByteCount $TemplateFull) bytes)"
+Write-Output "  Lite:            $LITE_TOK tok ($(Get-ByteCount $TemplateLite) bytes)"
 Write-Output "  Route (old mandatory load): $ROUTE_TOK tok"
 Write-Output "  Gate: $GATE_TOK tok"
 Write-Output ""
@@ -101,8 +101,8 @@ Write-Output "Per-Task Payloads (after Change A - no mandatory route load):"
 function Format-PayloadLine {
     param([string]$Task, [int]$Bal, [int]$Lite, [int]$Base)
     $Save = $Base - $Bal
-    $Pct = [int](100 - $Bal * 100 / $Base)
-    printf "  %-10s Balanced: %5d tok | Lite: %5d tok | Baseline: %5d tok | Saving Balanced: %5d tok (%d%%)`n" $Task $Bal $Lite $Base $Save $Pct
+    $Pct = [int][Math]::Floor((($Base - $Bal) * 100.0) / $Base + 0.5)
+    Write-Output ("  {0,-10} Balanced: {1,5} tok | Lite: {2,5} tok | Baseline: {3,5} tok | Saving Balanced: {4,5} tok ({5}%)" -f $Task, $Bal, $Lite, $Base, $Save, $Pct)
 }
 
 Format-PayloadLine "pk:fix" $JIT_FIX_FULL $JIT_FIX_LITE $BASELINE_FIX
@@ -111,9 +111,9 @@ Format-PayloadLine "pk:ship" $JIT_SHIP_FULL $JIT_SHIP_LITE $BASELINE_SHIP
 
 Write-Output ""
 Write-Output "Key Insights:"
-Write-Output "  - Change A (remove mandatory route.md load) saves ~6,915 tok per task (route 6,962 tok - directive growth 47 tok)"
-Write-Output "  - Lite vs Balanced saves additional $($FULL_TOK - $LITE_TOK) tok static (-$(( ($FULL_TOK - $LITE_TOK)*100/$FULL_TOK ))%%)"
-Write-Output "  - 90% claim is static-only (1,928 tok vs 18.5k monolithic), per-task saving is 28-54% Balanced, 33-63% Lite"
+Write-Output "  - Historical Change A measurement: removing the 6,962-token route load, less 47 tokens of directive growth, modeled a 6,915-token saving at fc98f2f; current payloads are measured above."
+Write-Output "  - Lite vs Balanced saves additional $($FULL_TOK - $LITE_TOK) tok of current static directive overhead (-$(( ($FULL_TOK - $LITE_TOK)*100/$FULL_TOK ))%%)."
+Write-Output "  - Static-overhead reductions and per-task payload reductions use different scopes; see docs/BENCHMARKS.md for the current denominator and measured task table."
 Write-Output ""
 Write-Output "Verification:"
 Write-Output "  pwsh -File scripts/measure-tokens.ps1 # static directive"

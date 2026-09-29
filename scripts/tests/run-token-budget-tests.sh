@@ -77,11 +77,27 @@ fi
 
 # 6. Backward compatibility: bare invocation from the repo root still measures the
 #    canonical Balanced template fallback and exits 0.
+BALANCED_BYTES=$(tr -d '\r' < "$REPO_ROOT/templates/agent-directive-template.md" | wc -c | tr -d ' ')
+BALANCED_TOKENS=$(( (BALANCED_BYTES + 2) / 4 ))
+WORKFLOW_COUNT=$(find "$REPO_ROOT/workflows" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')
 out=$(cd "$REPO_ROOT" && bash scripts/measure-tokens.sh 2>&1); rc=$?
-if [[ $rc -eq 0 && "$out" == *"Verification Passed"* ]]; then
-    ok "bare invocation stays backward compatible (Balanced fallback, exit 0)"
+if [[ $rc -eq 0 && "$out" == *"Verification Passed"* && "$out" == *"UTF-8 Bytes:"*"$BALANCED_BYTES"* && "$out" == *"~$BALANCED_TOKENS tokens"* && "$out" == *"full $WORKFLOW_COUNT-workflow set"* && "$out" == *"Canonical template in templates/agent-directive-template.md"* ]]; then
+    ok "bare invocation matches UTF-8 bytes/4 and the live workflow count"
 else
-    notok "bare invocation should still pass (rc=$rc)"
+    notok "bare invocation should report $BALANCED_BYTES UTF-8 bytes, $BALANCED_TOKENS tokens, and $WORKFLOW_COUNT workflows (rc=$rc)"
+    echo "$out"
+fi
+
+HOST_FILE="$TMP_DIR/host-with-markers.md"
+printf '%s\n' '<!-- PROMPTKIT_START -->' 'Café 🌱' '<!-- PROMPTKIT_END -->' > "$HOST_FILE"
+HOST_BYTES=$(awk '/^<!-- PROMPTKIT_START -->/{flag=1} flag; /^<!-- PROMPTKIT_END -->/{flag=0}' "$HOST_FILE" | tr -d '\r' | wc -c | tr -d ' ')
+HOST_TOKENS=$(( (HOST_BYTES + 2) / 4 ))
+out=$(bash "$REPO_ROOT/scripts/measure-tokens.sh" "$HOST_FILE" 2>&1); rc=$?
+if [[ $rc -eq 0 && "$out" == *"UTF-8 Bytes:"*"$HOST_BYTES"* && "$out" == *"~$HOST_TOKENS tokens"* ]]; then
+    ok "host directive extraction preserves UTF-8 bytes and the final newline"
+else
+    notok "host directive should report $HOST_BYTES UTF-8 bytes and $HOST_TOKENS tokens (rc=$rc)"
+    echo "$out"
 fi
 
 echo ""

@@ -124,7 +124,7 @@ pnpm test path/to/feature.test.ts
 ---
 
 ## GitHub CLI Recipe
-<!-- Copy-pasteable command to publish this issue directly from your terminal. -->
+<!-- Proposal only: a human reviews and explicitly authorizes/executes this remote issue write. Tracker selection alone never authorizes it. -->
 ```bash
 gh issue create \
   --title "<type>(<scope>): <summary>" \

@@ -93,7 +93,8 @@ SOURCE_DESC=""
 
 if [[ -n "$FOUND_FILE" && -f "$FOUND_FILE" ]]; then
     if grep -q "<!-- PROMPTKIT_START -->" "$FOUND_FILE"; then
-        BLOCK=$(awk '/^<!-- PROMPTKIT_START -->/{flag=1} flag; /^<!-- PROMPTKIT_END -->/{flag=0}' "$FOUND_FILE")
+        BLOCK=$(awk '/^<!-- PROMPTKIT_START -->/{flag=1} flag; /^<!-- PROMPTKIT_END -->/{flag=0}' "$FOUND_FILE"; printf 'x')
+        BLOCK="${BLOCK%x}"
         SOURCE_DESC="$FOUND_FILE"
     fi
 fi
@@ -102,7 +103,8 @@ if [[ -z "$BLOCK" ]]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     TEMPLATE_MD="$SCRIPT_DIR/../templates/agent-directive-template.md"
     if [[ -f "$TEMPLATE_MD" ]]; then
-        BLOCK=$(cat "$TEMPLATE_MD")
+        BLOCK=$(cat "$TEMPLATE_MD"; printf 'x')
+        BLOCK="${BLOCK%x}"
         SOURCE_DESC="Canonical template in templates/agent-directive-template.md"
     fi
 fi
@@ -113,31 +115,32 @@ if [[ -z "$BLOCK" ]]; then
 fi
 
 BLOCK="${BLOCK//$'\r'/}"
-LINE_COUNT=$(echo "$BLOCK" | wc -l | tr -d ' ')
+LINE_COUNT=$(printf '%s' "$BLOCK" | awk 'END { print NR }')
 CHAR_COUNT=${#BLOCK}
-WORD_COUNT=$(echo "$BLOCK" | wc -w | tr -d ' ')
-ESTIMATED_TOKENS=$(( (CHAR_COUNT + 2) / 4 ))
-# Monolithic baselines are DERIVED (issue #145 audit): the core-6 lifecycle
-# subset Lite would inline (~19.6k) and the full 24-workflow set (~75.3k).
+BYTE_COUNT=$(printf '%s' "$BLOCK" | wc -c | tr -d ' ')
+WORD_COUNT=$(printf '%s' "$BLOCK" | wc -w | tr -d ' ')
+ESTIMATED_TOKENS=$(( (BYTE_COUNT + 2) / 4 ))
 KIT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SUBSET_CHARS=$(cat "$KIT_ROOT"/workflows/route.md "$KIT_ROOT"/workflows/debug.md "$KIT_ROOT"/workflows/commit.md "$KIT_ROOT"/workflows/checkpoint.md "$KIT_ROOT"/workflows/sync.md "$KIT_ROOT"/workflows/profile.md 2>/dev/null | tr -d '\r' | wc -c | tr -d ' ')
 MONOLITHIC_TOKENS=$(( (SUBSET_CHARS + 2) / 4 ))
+FULLSET_COUNT=$(find "$KIT_ROOT/workflows" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')
 FULLSET_TOKENS=$(( ($(cat "$KIT_ROOT"/workflows/*.md 2>/dev/null | tr -d '\r' | wc -c) + 2) / 4 ))
-SAVINGS_PERCENT=$(( 100 - (ESTIMATED_TOKENS * 100 / MONOLITHIC_TOKENS) ))
+SAVINGS_PERCENT=$(( ((MONOLITHIC_TOKENS - ESTIMATED_TOKENS) * 100 + MONOLITHIC_TOKENS / 2) / MONOLITHIC_TOKENS ))
 
-echo -e "\033[0;90mTarget File: $FOUND_FILE\033[0m"
+echo -e "\033[0;90mTarget File: $SOURCE_DESC\033[0m"
 echo -e "\n\033[1;33mMeasurement Results:\033[0m"
 echo "  • Lines:            $LINE_COUNT"
 echo "  • Characters:       $CHAR_COUNT"
+echo "  • UTF-8 Bytes:      $BYTE_COUNT"
 echo "  • Words:            $WORD_COUNT"
-echo -e "  • Estimated Tokens: \033[0;32m~$ESTIMATED_TOKENS tokens (at ~4 chars/token)\033[0m"
+echo -e "  • Estimated Tokens: \033[0;32m~$ESTIMATED_TOKENS tokens (at ~4 UTF-8 bytes/token)\033[0m"
 
 echo -e "\n\033[1;33mToken Economics Comparison:\033[0m"
 echo -e "  \033[0;90m┌─────────────────────────────────────────────────────────────┐\033[0m"
 echo -e "  \033[0;90m│ Model Architecture                 Static Overhead          │\033[0m"
 echo -e "  \033[0;90m├─────────────────────────────────────────────────────────────┤\033[0m"
 echo -e "  │ Monolithic (core-6 subset derived)   \033[0;31m~$MONOLITHIC_TOKENS tokens\033[0m          │"
-echo -e "  │ Monolithic (full 24-workflow set)    \033[0;31m~$FULLSET_TOKENS tokens\033[0m         │"
+echo -e "  │ Monolithic (full $FULLSET_COUNT-workflow set)    \033[0;31m~$FULLSET_TOKENS tokens\033[0m         │"
 echo -e "  │ PromptKit OS JIT Router            \033[0;32m~$ESTIMATED_TOKENS tokens (measured)\033[0m      │"
 echo -e "  \033[0;90m├─────────────────────────────────────────────────────────────┤\033[0m"
 echo -e "  │ Static Context Reduction:          \033[0;36m~$SAVINGS_PERCENT% reduction\033[0m             │"

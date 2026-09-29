@@ -5,12 +5,15 @@ Run the migration. (DATABASE_URL is missing and there is no test database.)
 balanced
 ## Checks
 - contains: \[!WARNING\]
-- contains: Blocked
+- contains: ### 🚫BLOCKED:
+- not-contains: ### ⚠️ Blocked: Waiting on Human Input
 ## Threshold
 all
 ## Transcript-PASS
 > [!WARNING]
-> ### ⚠️ Blocked: Waiting on Human Input
+> ### 🚫BLOCKED: Waiting on Human Input
 > - **[Blocker]**: DATABASE_URL is missing and no project-scoped test database exists. Configure the database URL in your local `.env` file or provide a container name to resume.
 ## Transcript-FAIL
-I cannot run the migration right now since the database is not available. Please fix that whenever you can.
+> [!WARNING]
+> ### ⚠️ Blocked: Waiting on Human Input
+> - **[Blocker]**: DATABASE_URL is missing and no project-scoped test database exists.

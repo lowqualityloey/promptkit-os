@@ -138,11 +138,13 @@ Record decisions only. Do not execute actions from this appendix.
 
 ## 4. Post-Deployment Smoke Testing (interface-appropriate probes; HTTP examples below are for web services)
 
+Any production probe that writes data or triggers external effects requires explicit human authorization, a synthetic identity/resource, suppressed billing and customer-facing notifications, and documented cleanup.
+
 | Probe Target | Verification Command / URL | Expected Output | Actual Result |
 | :--- | :--- | :--- | :--- |
 | **System Health** | `GET /api/health` (or project's health signal) | `HTTP 200 { "status": "ok" }` or equivalent | Pass / Fail |
 | **Authentication Flow** | Synthetic login test (where auth exists) | Session/token valid | Pass / Fail |
-| **Critical User Flow** | [e.g., Create invitation or checkout] | Resource persisted / observable effect | Pass / Fail |
+| **Critical User Flow** | [e.g., synthetic invitation or checkout using a test identity] | Expected effect observed; billing and customer notifications suppressed; created data cleaned up | Pass / Fail |
 | **Client Bundle Check** (web clients only) | Production URL in incognito | Zero unhandled browser console errors | Pass / Fail |
 
 ---

@@ -106,7 +106,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Discovery Intake**: `.promptkit/protocols/discovery-intake.md`
 - **Telemetry Cards**: `.promptkit/protocols/telemetry-cards.md`
 
-> Note: `templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md`, which is lazy-loaded via `workflows/onboard.md` Phase 0 and `workflows/plan.md` Step 0. This keeps the static directive under the 2500-token Balanced budget (currently 2495/2500).
+> Note: `templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md`, which is lazy-loaded via `workflows/onboard.md` Phase 0 and `workflows/plan.md` Step 0. This keeps the static directive under the 2500-token Balanced budget (currently 2308/2500).
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)
 - **Visual Identity & Brand**: `./DESIGN.md` (if present)
 - **Living State & Tracker**: `./docs/STATE.md` (if present)
@@ -147,7 +147,7 @@ After updating configuration:
    - `[pk:auth]`: Architect authentication, cookies, and RBAC matrices.
    - `[pk:api]`: Define frontend-backend contracts and error envelopes.
    - `[pk:test]`: Define upfront testing strategy, pyramid seam allocation, and mock boundaries.
-   - `[pk:ship]`: Execute release checklist, runtime env checks, zero-downtime migration, and rollback plan.
+   - `[pk:ship]`: Prepare release checklist, runtime env checks, zero-downtime migration, and rollback plan.
    - `[pk:spike]`: Run a technical spike comparing libraries/patterns.
    - `[pk:design]`: Design accessible UI components with modern tokens.
    - `[pk:retro]`: Run a retro on completed work, capture insights, and generate ADRs.
@@ -163,13 +163,13 @@ After updating configuration:
 ---
 
 ### Visual Callout Standards for Human Actions
-To eliminate ambiguity and prevent pairing deadlocks, assistants must use standardized GitHub-Flavored Markdown Alerts at the end of turns requiring human attention:
+Canonical callout *format* lives in `protocols/telemetry-cards.md`; *when-to-halt and Type A-D routing* lives in `protocols/code-quality-gate.md`. Use the single-callout invariant (at most one human callout per turn) and the exact headers below. To eliminate ambiguity and prevent pairing deadlocks, assistants must use standardized GitHub-Flavored Markdown Alerts at the end of turns requiring human attention:
 
 #### 1. Human Action Required (`> [!IMPORTANT]`)
 When halting for user decisions, code review, merge approval, or local credential setup:
 ```markdown
 > [!IMPORTANT]
-> ### 🛑 Action Required From You:
+> ### 🛑ACTION REQUIRED:
 > - **[Decision / Task]**: [Concise, concrete explanation of decision or command needed]
 ```
 
@@ -177,7 +177,7 @@ When halting for user decisions, code review, merge approval, or local credentia
 When halted due to environment errors, missing credentials, or unresolvable test blockers:
 ```markdown
 > [!WARNING]
-> ### ⚠️ Blocked: Waiting on Human Input
+> ### 🚫BLOCKED:
 > - **[Blocker]**: [Specific missing key, access right, or decision needed to resume]
 ```
 
@@ -188,18 +188,22 @@ When operating in AI development environments with Model Context Protocol (MCP) 
 
 | Capability Domain | 1. Native MCP Tool (Highest Priority) | 2. Native IDE Tool (Second Priority) | 3. Terminal CLI (Fallback) | 4. Manual Human Prompt |
 | :--- | :--- | :--- | :--- | :--- |
-| **Source Control & PRs** | `github-mcp` (`create_pull_request`, `issue_read`, `issue_write`, `list_commits`) | N/A | `gh pr create`, `gh issue view`, `git` | Asking developer to open PR manually |
+| **Source Control & PRs** | `github-mcp` (`create_pull_request` subject to the PR authorization rule below; `issue_read`; `issue_write` only after explicit human authorization; `list_commits`) | N/A | `gh pr create --draft` for the `pk:auto` exception; otherwise `gh pr create` only after explicit human authorization, plus `gh issue view` and `git` | Asking developer to open PR manually |
 | **Database Discovery** | `postgres-mcp` / DB MCP (`query`, `list_tables`, `describe_table`) | N/A | `psql`, `sqlite3`, ORM migration CLI | Asking developer for table schemas |
 | **Interactive Selection** | Modal Prompt / `ask_question` / prompt picker modal | Native IDE UI Pickers | Terminal CLI input / raw prompt | Free-form conversational text |
 | **Codebase Search** | `context-mcp` / Indexing MCP (`context_search`, `expand_chunk`, `related_context`) | `grep_search`, `find_by_name`, `file_search` | `rg`, `grep`, `find`, `fd` | Asking developer for file paths |
 | **File Manipulation** | N/A | `view_file`, `replace_file_content`, `write_to_file` | `cat`, `sed`, `awk`, shell redirection | Asking developer to edit code |
 | **Diagnostics & Type Integrity** | `lsp-mcp` (`textDocument/diagnostic`, `hover`, `references`) | Native IDE diagnostics panel | `tsc --noEmit`, `biome check`, `eslint` (JSON output) | Manual reviewer inspection |
 
+PR creation authorization: normal PR creation through `create_pull_request` or `gh pr create` requires explicit human authorization. The only exception is draft PR creation within an explicitly declared `pk:auto` run (`--until pr` or `--full`): MCP must set `draft: true`, and the CLI must use `gh pr create --draft`. This exception does not authorize ready/non-draft PR creation or merging. It is bounded by that run's terminal boundary, circuit breakers, deny-list, and invocation snapshot. See the [Action Authority Model](code-quality-gate.md#action-authority-model) for the complete boundary.
+
 #### Degradation & Progressive Enhancement Rules
 1. **Detect MCP Capabilities**: Assistants inspect available MCP tools at session start.
 2. **Graceful Degradation**: If an MCP tool is not configured in the host environment or fails due to missing daemon/connectivity, immediately and silently fall back to Native IDE tools or Terminal CLI commands.
 3. **Never Block on Missing MCP**: MCP tooling is a progressive enhancement, never a hard barrier to workflow execution.
 4. **Never Block on Missing LSP**: Language-server diagnostics are a progressive enhancement. When no LSP bridge or editor language server is available, assistants fall back to the typecheck and lint commands declared in `PROMPTKIT.md` and record unmeasured evidence as `not measured`.
+
+Tool fallback changes the execution interface, not the authorization boundary; remote writes remain subject to the [Action Authority Model](code-quality-gate.md#action-authority-model).
 
 ---
 

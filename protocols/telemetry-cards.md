@@ -16,6 +16,8 @@ Callout types are strictly tiered by priority; only the highest applicable level
 
 If a higher-priority callout is active, it carries the next action; a separate advisory TIP is strictly forbidden.
 
+**Precedence:** this document is canonical for callout *format*; `protocols/code-quality-gate.md` is canonical for *when-to-halt and Type A-D routing*; `protocols/setup.md` defers to both.
+
 ---
 
 ## Universal Square Progress Bar Contract

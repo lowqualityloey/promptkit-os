@@ -45,7 +45,7 @@ Transform a series of local commits into a high-signal, staff-level Pull Request
     - If the tree is dirty with this task's uncommitted changes, stop: stage via `pk:commit` first (milestone git boundary).
     - If the resolved base remote's `main` advanced (log shows commits), rebase or merge before opening the PR; never push a known-conflicted branch.
     - Require `Quality Gate: measured this turn` (tests/typecheck actually run) before `gh pr create`. Otherwise record `not measured` and do not open the PR.
-    - On conflict or dirty tree, emit `> [!WARNING]` titled `### ⚠️ Blocked: Waiting on Human Input` with exact resolve commands. No auto-push; human approval boundary holds — except inside an explicitly authorized `pk:auto` run (`--until pr` / `--full`), where the declared run boundary is the standing authorization for push and draft-PR creation within that run (see Action Authority Model in `protocols/code-quality-gate.md`). Merge always requires separate explicit human action.
+    - On conflict or dirty tree, emit `> [!WARNING]` titled `### 🚫BLOCKED:` with exact resolve commands. In the ordinary flow, do not commit, push, or create a PR without explicit human authorization. An explicitly authorized `pk:auto` run (`--until pr` / `--full`) supplies standing authorization only for its local commits, branch push, and draft-PR creation within that run (see Action Authority Model in `protocols/code-quality-gate.md`). A human alone executes a merge, even after explicit authorization.
 2. **Review Commit History**:
    Ensure commits on the branch follow Conventional Commits format (`feat:`, `fix:`, `refactor:`, `test:`). If commits are messy, suggest cleaning them up via `pk:commit` before opening the PR.
 
@@ -76,13 +76,13 @@ Before generating a PR body for Level 2 (Controlled) or Level 3 (Release-Critica
 - **CI and Completion Evidence**: CI provider/workflow/job/run references, validator results when available, commit evidence, and the required completion or milestone decision.
 - **Risk and Rollback**: Preserve the existing migration safety, risk, and rollback requirements. Do not smuggle scope expansion into the PR body; record it first.
 
-A consistent Task Record or validator result proves durable evidence consistency only. It does not approve opening or merging a remote pull request. Preserve the optional `gh pr create` path in Phase 4, but require explicit developer approval before executing it.
+A consistent Task Record or validator result proves durable evidence consistency only. It does not approve opening or merging a remote pull request. In the ordinary `pk:pr` flow, require explicit developer approval before creating a PR. When invoked within an explicitly authorized `pk:auto` run, create only a draft PR within that run's boundary; ready/non-draft PR creation always needs separate explicit human authorization. No authorization allows the assistant to merge.
 
 ---
 
 ### Execution-Control PR Evidence Template
 
-For Level 2 (Controlled) and Level 3 (Release-Critical) Work, use the optional **Execution-Control Traceability** section in `templates/pull-request-template.md` to link the Task ID and canonical record, `awaiting_review` state, acceptance results, exact revision, checkpoint/handoff, CI, blockers, scope changes, and exceptions. For Level 0 (Direct) and Level 1 (Standard) Work, record `N/A`. Keep `gh pr create` optional and explicitly developer-approved; a passing validator or CI job supports traceability only and does not approve opening, merging, shipping, or deploying the PR.
+For Level 2 (Controlled) and Level 3 (Release-Critical) Work, use the optional **Execution-Control Traceability** section in `templates/pull-request-template.md` to link the Task ID and canonical record, `awaiting_review` state, acceptance results, exact revision, checkpoint/handoff, CI, blockers, scope changes, and exceptions. For Level 0 (Direct) and Level 1 (Standard) Work, record `N/A`. Keep `gh pr create` optional: ordinary PR creation requires explicit developer approval, while an authorized `pk:auto` run may create only a draft PR within its declared boundary. A passing validator or CI job does not approve opening, merging, shipping, or deploying the PR; only a human executes a merge.
 
 ---
 
@@ -112,12 +112,16 @@ Provide the generated PR description to the developer in two formats:
 
 1. **Markdown Document**: For copy-pasting directly into GitHub, GitLab, or Bitbucket web interfaces. When a file is needed (e.g. `--body-file`), write it to the repository's OS temp directory and delete it after the PR is created — never commit it.
 2. **GitHub CLI Command (`gh pr create`)**:
-    Offer a pre-formatted CLI command to open the PR immediately:
+    For an explicitly authorized `pk:auto` run, offer only the draft form:
+    ```bash
+    gh pr create --draft --title "<type>(<scope>): <summary>" --body-file pr-body.md --json url --jq .url
+    ```
+    In the ordinary flow, offer the ready-PR command only after explicit human authorization:
     ```bash
     gh pr create --title "<type>(<scope>): <summary>" --body-file pr-body.md --json url --jq .url
     ```
+    `gh pr create --web` is an ordinary-flow interactive alternative only after that same authorization. Do not use an unqualified ready-PR command or `--web` fallback inside `pk:auto`.
     Capture the returned URL (or `gh pr view --json url --jq .url` for MCP-created PRs). If no URL is available, write `PR URL: not measured — paste link from browser`. Never invent a URL.
-    *(Or interactive `gh pr create --web`)*.
 
 ### PR Link Callout (Dual-Compatible)
 
@@ -125,24 +129,20 @@ Upon presenting or opening the PR, close with an attention callout (not TIP — 
 
 ```markdown
 > [!IMPORTANT]
-> ### 🛑 Action Required From You: Review PR #<number>
+> ### 🛑ACTION REQUIRED: Review PR #<number>
 > **PR:** [#<number> — <title>](<url>)
 > - Files: <url>/files · Checks: <url>/checks
-> - Merge (after green): `gh pr merge <number> --squash --delete-branch`
+> - Human merge command (after review and green checks): `gh pr merge <number> --squash --delete-branch`
 ```
 
 ### Human Authority & Merge Boundary
-The AI assistant drafts the pull request and compiles verification evidence, but the human engineer retains sole authority over code review, approval, and merging to `main`. The AI assistant must **never** execute `git push origin main` or merge pull requests directly without explicit developer authorization.
+The AI assistant drafts the pull request and compiles verification evidence, but the human engineer retains sole authority over code review, approval, and merging to `main`. The AI assistant must **never execute a merge**, even after explicit developer authorization. A human alone reviews, approves, and merges. The assistant must also never execute `git push origin main`.
 
 Upon presenting or opening the PR, conclude with the standard Telemetry Status Card and invoke the native interactive selection tool (skip the decorative card only when PROMPTKIT.md declares `status-cards: off`; halts still fire):
 > 📊 **Milestone**: `M2: Core Features` `[■■■■■□□□□□]` 50% (6/12)  
 > 🎯 **Active**: PR `#<number>` (`<head-branch> → main`)  
 > 🟢 **Quality Gate**: Clean (`<passed>/<total> CI Passing ✓` · `🔒 <n> Invariants Intact`)
 
-> [!TIP]
-> ### 💡 Next Recommended Step
-> - **To Merge**: Run **`gh pr merge <number> --squash --delete-branch`** (or review on GitHub)
-> - **Next Task**: Run **`pk:plan TASK-XX`** or **`pk:checkpoint`**
 
-Single-callout rule (`protocols/telemetry-cards.md`): when the action callout above already states review and merge, keep this TIP only for information it does not restate; a TIP duplicating the callout is flooding — drop it. Close order is always card, TL;DR line, then the one callout, so the decision point stays in view.
+Single-callout rule (`protocols/telemetry-cards.md`): this `[!IMPORTANT]` action callout takes precedence, so do not emit a TIP on PR handoff. In other workflows, suppress TIP whenever an `[!IMPORTANT]` or `[!WARNING]` halt is active. Close order is always card, TL;DR line, then the one applicable callout, so the decision point stays in view.
 *(You MUST invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`; Bounded to closed-set operational choices — for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead, see the Picker routing rule in `workflows/plan.md`)*
