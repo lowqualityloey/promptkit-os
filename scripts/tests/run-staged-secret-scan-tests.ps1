@@ -124,13 +124,16 @@ try {
     if ($LASTEXITCODE -ne 0) { Fail "Textconv regression fixture could not read the staged diff." }
     if (($maskedDiff -join "`n").Contains($awsKey)) { Fail "Textconv regression fixture did not hide the staged addition." }
 
-    $newlinePath = "staged`ncredential.txt"
-    $newlineBlobFile = Join-Path $tempRoot "newline-blob.txt"
-    [System.IO.File]::WriteAllText($newlineBlobFile, ($classicToken + "`n"), $utf8NoBom)
-    $newlineBlobId = & $script:gitCommand.Source -C $positive hash-object -w -- $newlineBlobFile 2>$null
-    if ($LASTEXITCODE -ne 0) { Fail "Could not prepare the NUL-delimited newline-path fixture." }
-    $newlineBlobId = ($newlineBlobId | Out-String).Trim()
-    Invoke-GitSetup $positive @("update-index", "--add", "--cacheinfo", "100644,$newlineBlobId,$newlinePath")
+    $supportsNewlinePath = [System.IO.Path]::GetInvalidFileNameChars() -notcontains [char]10
+    if ($supportsNewlinePath) {
+        $newlinePath = "staged`ncredential.txt"
+        $newlineBlobFile = Join-Path $tempRoot "newline-blob.txt"
+        [System.IO.File]::WriteAllText($newlineBlobFile, ($classicToken + "`n"), $utf8NoBom)
+        $newlineBlobId = & $script:gitCommand.Source -C $positive hash-object -w -- $newlineBlobFile 2>$null
+        if ($LASTEXITCODE -ne 0) { Fail "Could not prepare the NUL-delimited newline-path fixture." }
+        $newlineBlobId = ($newlineBlobId | Out-String).Trim()
+        Invoke-GitSetup $positive @("update-index", "--add", "--cacheinfo", "100644,$newlineBlobId,$newlinePath")
+    }
 
     [System.IO.File]::WriteAllText((Join-Path $clean "README.md"), "ordinary staged content`n", $utf8NoBom)
     Invoke-GitSetup $clean @("add", "--", "README.md")
@@ -148,9 +151,10 @@ try {
     )) {
         if ($positiveResult.Output -notlike "*$category*") { Fail "Scanner missed the $category detector." }
     }
-    if (($positiveResult.Output -split "GitHub token pattern").Count - 1 -ne 5) { Fail "Scanner missed a tricky-path positive control." }
+    $expectedGitHubTokenCount = if ($supportsNewlinePath) { 5 } else { 4 }
+    if (($positiveResult.Output -split "GitHub token pattern").Count - 1 -ne $expectedGitHubTokenCount) { Fail "Scanner missed a tricky-path positive control." }
     if ($positiveResult.Output -notlike '*"path[credential].txt":1*') { Fail "Scanner did not report the literal bracket path." }
-    if ($positiveResult.Output -notlike '*"staged\ncredential.txt":1*') { Fail "Scanner did not preserve the NUL-delimited newline path." }
+    if ($supportsNewlinePath -and $positiveResult.Output -notlike '*"staged\ncredential.txt":1*') { Fail "Scanner did not preserve the NUL-delimited newline path." }
     if ($positiveResult.Output -notlike '*credential-REDACTED.txt":1*') { Fail "Scanner exposed a credential-shaped filename instead of redacting it." }
     if ($positiveResult.Output -notlike '*credential-REDACTED":1*' -or $positiveResult.Output.Contains("synthetic-value")) { Fail "Scanner exposed a password-shaped value in a staged filename." }
     foreach ($lineNumber in 1..7) {
@@ -158,7 +162,8 @@ try {
     }
     if ($positiveResult.Output -notlike '*context.txt":5*') { Fail "Scanner reported an incorrect line number for a modified file." }
     if ($positiveResult.Output -notlike '*masked.fixture":1*') { Fail "Scanner let Git textconv hide a staged credential." }
-    if (($positiveResult.Output -split "`n" | Where-Object { $_ -like "Potential *" }).Count -ne 13) {
+    $expectedDetectionCount = if ($supportsNewlinePath) { 13 } else { 12 }
+    if (($positiveResult.Output -split "`n" | Where-Object { $_ -like "Potential *" }).Count -ne $expectedDetectionCount) {
         Fail "Scanner returned an unexpected detection count."
     }
     $secretValues = @($ordinaryLines) + @($awsKeyOnLaterLine)
