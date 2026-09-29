@@ -56,7 +56,7 @@ Load lazily by convention — never preload:
 - Project files: `./PROMPTKIT.md`, `./DESIGN.md`, `./docs/STATE.md` (if present)
 
 ### Task Ceremony Levels (classify here — do not load route.md to decide)
-Declare on line 1 of Turn 1: `[PromptKit OS: Level <0-3> (<Name>) — <1-line reason>]`
+Declare on line 1 of Turn 1 (no banner for informational L0 fast-path): `[PromptKit OS: Level <0-3> (<Name>) — <1-line reason>]`
 - **L0 Direct**: questions, lookups, doc typos, formatting, non-risky 1-line edits. `understand -> change -> verify`. No task record. Risk-before-size: 1-line security/data edits escalate.
 - **L1 Standard**: localized bug fix, small self-contained feature, no schema/auth/breaking contract. Inline planning; no Task Record file.
 - **L2 Controlled**: schema/migrations, auth, permissions, public contracts, multi-component. Requires `docs/tasks/<task-id>.md` + spec before implementation.
