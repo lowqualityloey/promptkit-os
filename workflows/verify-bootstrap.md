@@ -51,7 +51,7 @@ Phases 1–2 are passive discovery (manifests, runners, existing checks). Phase 
 ### Phase 3: Generate + demonstrate red/green (owner: bootstrap executor)
 1. Generate `verify/` + verification map: deterministic, re-runnable scripts or commands per behavior — language-appropriate, no new framework dependencies, exit-code-0 addressable.
 2. **Mechanized red test (#230 guard applied):** deliberately break one behavior, observe the corresponding check exit non-zero, restore, observe exit 0. Record break procedure + both exit codes as evidence.
-3. **Halt-not-waive:** if red cannot be produced, HALT with `> [!WARNING] Blocked` — never waive the guard.
+3. **Halt-not-waive:** if red cannot be produced, HALT with the canonical `> [!WARNING]` `### 🚫BLOCKED:` callout per `protocols/telemetry-cards.md` — never waive the guard.
 
 ### Phase 4: Wire into the existing contract + drift maintenance
 1. Record the verification surface as the preferred done-gate target for `pk:ship` / `pk:fix` / `pk:review` in the host profile.

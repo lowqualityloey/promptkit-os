@@ -107,7 +107,7 @@ Before writing or editing code:
      - *Level 1 (Standard)*: `fast` + `required` verification tier (targeted unit/component tests).
      - *Level 2/3 (Controlled/Release)*: `fast` + `required` + `extended` verification tiers (full suite, schema validation, lint).
    - **Strict Completion Claim Invariant**: Completion claims strictly require executed evidence with `exit code 0`. You are forbidden from emitting a green Quality Gate card until this evidence exists in the current turn.
-   - **Bounded Repair**: If verification fails (`exit code != 0`), apply a maximum of 2 automated repair attempts. If the 3rd attempt fails, HALT immediately with a `> [!WARNING] Blocked` callout.
+   - **Bounded Repair**: If verification fails (`exit code != 0`), apply a maximum of 2 automated repair attempts. If the 3rd attempt fails, HALT immediately with the canonical `> [!WARNING]` `### 🚫BLOCKED:` callout per `protocols/telemetry-cards.md`.
 3. **Deterministic Verification Escape Hatch**:
    - If an environment prerequisite is genuinely unavailable (e.g. missing Docker daemon, live database credentials, mobile emulator):
    - The assistant is **strictly prohibited from looping in blind auto-repair attempts**.

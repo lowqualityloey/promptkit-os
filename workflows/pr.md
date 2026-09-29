@@ -45,7 +45,7 @@ Transform a series of local commits into a high-signal, staff-level Pull Request
     - If the tree is dirty with this task's uncommitted changes, stop: stage via `pk:commit` first (milestone git boundary).
     - If the resolved base remote's `main` advanced (log shows commits), rebase or merge before opening the PR; never push a known-conflicted branch.
     - Require `Quality Gate: measured this turn` (tests/typecheck actually run) before `gh pr create`. Otherwise record `not measured` and do not open the PR.
-    - On conflict or dirty tree, emit `> [!WARNING]` titled `### ⚠️ Blocked: Waiting on Human Input` with exact resolve commands. No auto-push; human approval boundary holds — except inside an explicitly authorized `pk:auto` run (`--until pr` / `--full`), where the declared run boundary is the standing authorization for push and draft-PR creation within that run (see Action Authority Model in `protocols/code-quality-gate.md`). Merge always requires separate explicit human action.
+    - On conflict or dirty tree, emit `> [!WARNING]` titled `### 🚫BLOCKED:` with exact resolve commands. No auto-push; human approval boundary holds — except inside an explicitly authorized `pk:auto` run (`--until pr` / `--full`), where the declared run boundary is the standing authorization for push and draft-PR creation within that run (see Action Authority Model in `protocols/code-quality-gate.md`). Merge always requires separate explicit human action.
 2. **Review Commit History**:
    Ensure commits on the branch follow Conventional Commits format (`feat:`, `fix:`, `refactor:`, `test:`). If commits are messy, suggest cleaning them up via `pk:commit` before opening the PR.
 
@@ -125,7 +125,7 @@ Upon presenting or opening the PR, close with an attention callout (not TIP — 
 
 ```markdown
 > [!IMPORTANT]
-> ### 🛑 Action Required From You: Review PR #<number>
+> ### 🛑ACTION REQUIRED: Review PR #<number>
 > **PR:** [#<number> — <title>](<url>)
 > - Files: <url>/files · Checks: <url>/checks
 > - Merge (after green): `gh pr merge <number> --squash --delete-branch`

@@ -147,7 +147,7 @@ After updating configuration:
    - `[pk:auth]`: Architect authentication, cookies, and RBAC matrices.
    - `[pk:api]`: Define frontend-backend contracts and error envelopes.
    - `[pk:test]`: Define upfront testing strategy, pyramid seam allocation, and mock boundaries.
-   - `[pk:ship]`: Execute release checklist, runtime env checks, zero-downtime migration, and rollback plan.
+   - `[pk:ship]`: Prepare release checklist, runtime env checks, zero-downtime migration, and rollback plan.
    - `[pk:spike]`: Run a technical spike comparing libraries/patterns.
    - `[pk:design]`: Design accessible UI components with modern tokens.
    - `[pk:retro]`: Run a retro on completed work, capture insights, and generate ADRs.
@@ -163,13 +163,13 @@ After updating configuration:
 ---
 
 ### Visual Callout Standards for Human Actions
-To eliminate ambiguity and prevent pairing deadlocks, assistants must use standardized GitHub-Flavored Markdown Alerts at the end of turns requiring human attention:
+Canonical callout *format* lives in `protocols/telemetry-cards.md`; *when-to-halt and Type A-D routing* lives in `protocols/code-quality-gate.md`. Use the single-callout invariant (at most one human callout per turn) and the exact headers below. To eliminate ambiguity and prevent pairing deadlocks, assistants must use standardized GitHub-Flavored Markdown Alerts at the end of turns requiring human attention:
 
 #### 1. Human Action Required (`> [!IMPORTANT]`)
 When halting for user decisions, code review, merge approval, or local credential setup:
 ```markdown
 > [!IMPORTANT]
-> ### 🛑 Action Required From You:
+> ### 🛑ACTION REQUIRED:
 > - **[Decision / Task]**: [Concise, concrete explanation of decision or command needed]
 ```
 
@@ -177,7 +177,7 @@ When halting for user decisions, code review, merge approval, or local credentia
 When halted due to environment errors, missing credentials, or unresolvable test blockers:
 ```markdown
 > [!WARNING]
-> ### ⚠️ Blocked: Waiting on Human Input
+> ### 🚫BLOCKED:
 > - **[Blocker]**: [Specific missing key, access right, or decision needed to resume]
 ```
 

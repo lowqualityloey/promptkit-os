@@ -60,18 +60,20 @@ For production systems where multiple application revisions may coexist or rollb
 
 ```
 EXPAND PHASE (Additive Changes):
-Step 1: Apply backwards-compatible database migration (new nullable columns/tables).
+Step 1: Human applies backwards-compatible database migration (new nullable columns/tables).
 Step 2: Deploy new application code (writes to both old and new columns).
 Result: Zero downtime. Both old and new application instances function concurrently.
 
 CONTRACT PHASE (Destructive Cleanups):
 Step 1: Deploy application code that completely stops reading/writing old column.
 Step 2: Verify all old containers/pods are terminated and zero traffic references old schema.
-Step 3: Apply database migration to drop deprecated column or table.
+Step 3: Human applies database migration to drop deprecated column or table.
 Result: Zero downtime. No running instance queries a deleted column.
 ```
 
 - **Hard Rule**: Never combine an additive change (Expand) and a destructive drop (Contract) in the same release or migration script when Expand-Contract applies (live or compatibility-sensitive data).
+
+> **Actor rule for the pattern above** (Planner: agent | Authorizer: Release Coordinator | Executor: human only): the Expand/Contract steps describe human execution order — the agent plans the sequence and records evidence, never executes migrations.
 
 ---
 
@@ -124,10 +126,10 @@ Use release-specific rollback thresholds defined before deployment and recorded 
 1. Confirm all code passed review (`pk:review`) and quality gates (`pk:test`).
 2. Verify that all required environment variables are provisioned in the production dashboard.
 
-### Step 2: Determine Migration Sequencing
-1. Check if the release contains database migrations:
-   - If Expand phase: Execute migrations *before* deploying application code.
-   - If Contract phase: Verify application code is deployed and verified *before* executing cleanup migrations.
+### Step 2: Determine Migration Sequencing (plan only — human executes)
+1. Check if the release contains database migrations and record the sequence as a proposal (Planner: agent | Authorizer: Release Coordinator | Executor: human only — never execute here):
+   - If Expand phase: Propose the human execute migrations *before* deploying application code.
+   - If Contract phase: Verify application code is deployed and verified *before* proposing the human execute cleanup migrations.
 
 ### Evidence-First CI Failure Triage and Release Linkage
 
@@ -238,9 +240,9 @@ Record expected results and pass thresholds now; the human-executed deploy is wh
 
 ## Completion Criteria
 - Environment variables validated with startup schema checks using the project's native mechanism.
-- Migration sequencing planned and executed in correct phase order (or escape documented with rationale where Expand-Contract does not apply).
+- Migration sequencing planned in correct phase order (human executes; agent records evidence only) (or escape documented with rationale where Expand-Contract does not apply).
 - Post-deployment smoke verification defined with expected results and thresholds.
 - Release document drafted in `./docs/releases/`.
 - CI-triage linkage recorded (`linked_to_pk_ship` only after verified result, where a CI failure exists).
 - Release-impact evaluation linked; preliminary candidate distinguished from Approved Release Version.
-- Release Coordinator authorization recorded for every remote action; no tag, push, deploy, or rollback executed by the agent.
+- Release Coordinator authorization recorded for every remote action; no tag, push, deploy, rollback, production migration, or remote issue creation executed by the agent.

@@ -227,7 +227,7 @@ docs(adrs): record decision to adopt UUIDv7 for primary keys
     > - If ready to open a pull request for review: run **`pk:pr`**
     > - If continuing work on the next issue: run **`pk:tasks`**
 
-    Single-callout rule (`protocols/telemetry-cards.md`): pair this TIP with an action callout only when each carries information the other lacks; otherwise emit one. Close order is always card, TL;DR line, then the callout.
+    Single-callout rule (`protocols/telemetry-cards.md`): never pair this TIP with an `[!IMPORTANT]` or `[!WARNING]` halt — at most one human callout per turn. When a higher-priority halt is active, it carries the next action and no TIP is emitted. Close order is always card, TL;DR line, then the callout.
 
    *(You MUST invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`; Bounded to closed-set operational choices — for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead, see the Picker routing rule in `workflows/plan.md`)*
 

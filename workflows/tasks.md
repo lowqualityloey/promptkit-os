@@ -47,7 +47,7 @@ An issue is only ready for implementation when its completion can be objectively
    - **Localized Code Work**: Use an adaptive flat list ordered strictly by dependency (Task 1 -> Task 2 -> Task 3), applying the same enabled or disabled TDD branch.
 3. **Inspect Task Tracking Strategy**:
     - Check `PROMPTKIT.md` Section 5 (`Task Tracking System` + machine `tracking:` line).
-    - If set to `GitHub Issues`: In Phase 4, invoke `github-mcp-server` tool calls or generate `gh issue create` CLI commands, and link assigned issue numbers (`#N`) into `docs/STATE.md`.
+    - If set to `GitHub Issues`: In Phase 4, prepare `github-mcp-server` tool calls or `gh issue create` CLI commands as proposals — execute only with explicit human authorization — and link assigned issue numbers (`#N`) into `docs/STATE.md`.
     - If set to `Linear` or `Jira`: In Phase 4, format tasks matching the external tracker's schema for manual import / copy-paste. No auto-push. State explicitly in output: `Jira/Linear: manual import, no auto-push — board is projection only, Local Task Record authoritative.`
     - If set to `Local Markdown` (the default) or unspecified: Maintain task records locally in `docs/tasks/` and `docs/STATE.md` without requiring external credentials or network access.
 
@@ -142,13 +142,13 @@ For each decomposed task, fill out `.promptkit/templates/issue-task-template.md`
    - For each Controlled Work unit, create one canonical Task Record at `docs/tasks/<task-id>.md` from `.promptkit/templates/execution-task-record-template.md`.
    - A dated breakdown document may index the per-task records, but it cannot replace them or become a second lifecycle authority.
    - This provides offline resilience and protects against agent context compaction (`pk:checkpoint`).
-2. **Provision Standard GitHub Labels & Issue Template**:
+2. **Provision Standard GitHub Labels & Issue Template** (remote repo-config writes — prepare only, execute with explicit human authorization per the Action Authority Model in `protocols/code-quality-gate.md`):
    - Repositories can provision the standardized labels (`priority/p0-p3`, `type:*`, `area:*`) with zero token overhead by running the local provisioning script:
      - PowerShell: `pwsh -NoProfile -File .promptkit/scripts/setup-github-labels.ps1`
      - Bash: `bash .promptkit/scripts/setup-github-labels.sh`
    - PromptKit OS automatically scaffolds `.github/ISSUE_TEMPLATE/task.md` during `init.ps1` / `init.sh` so human contributors and agents have a consistent Gherkin structure when opening issues directly on GitHub.
 3. **Generate GitHub CLI (`gh issue create`) Commands or Invoke MCP Tools**:
-   - When `Task Tracking System` in `PROMPTKIT.md` is set to `GitHub Issues` (or if requested by the user), create issues via native MCP (`github-mcp-server`) or append ready-to-run CLI commands at the bottom of an index or issue document. External issues may coordinate work but must link to the canonical Task Record and never replace it:
+    - When `Task Tracking System` in `PROMPTKIT.md` is set to `GitHub Issues` (or if requested by the user), prepare issue proposals via native MCP (`github-mcp-server`) drafts or ready-to-run CLI commands appended at the bottom of an index or issue document — create or send them only with explicit human authorization per the Action Authority Model in `protocols/code-quality-gate.md`. External issues may coordinate work but must link to the canonical Task Record and never replace it:
      ```bash
      gh issue create \
        --title "feat(cart): implement server-side discount validation" \
@@ -156,8 +156,8 @@ For each decomposed task, fill out `.promptkit/templates/issue-task-template.md`
        --label "type:feature,priority/p1,area:backend" \
        --milestone "M2: Core Domain Logic"
      ```
-4. **GitHub Projects v2 & Kanban Sync (Optional)**:
-   - If using GitHub Projects v2, link each created issue to your project board:
+4. **GitHub Projects v2 & Kanban Sync (Optional)** (remote board mutations — proposal-only until the human authorizes):
+    - If using GitHub Projects v2, prepare the commands to link each created issue to your project board (execute only with explicit human authorization):
      ```bash
      gh project item-add <project-number> --owner <owner> --url <issue-url>
      ```
@@ -186,4 +186,4 @@ Before implementation, the Engineer validates the Task ID, scope, acceptance cri
 - Automated verification commands provided for every testable task.
 - Tasks document saved to `docs/tasks/` with copy-pasteable `gh issue create` commands.
 - Living tracker in `docs/STATE.md` updated with the active milestone tasks (if present).
-- **Dual-Compatible Telemetry Status Card**: Conclude with the single 3-line blockquote spec (`> 📊 **Milestone**: <name> [■■■■□□] n/m — source: STATE.md read this turn \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: measured this turn / not measured`) and a `> [!TIP]` callout recommending `pk:test` or implementing the first task. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended + why)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; `[!IMPORTANT]` / `[!WARNING]` halts still fire.
+- **Dual-Compatible Telemetry Status Card**: Conclude with the single 3-line blockquote spec (`> 📊 **Milestone**: <name> [■■■■□□] n/m — source: STATE.md read this turn \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: measured this turn / not measured`) and — only when no higher-priority `[!IMPORTANT]` or `[!WARNING]` halt is active (single-callout invariant: at most one human callout per turn) — a `> [!TIP]` callout recommending `pk:test` or implementing the first task. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended + why)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; `[!IMPORTANT]` / `[!WARNING]` halts still fire.
