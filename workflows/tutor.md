@@ -207,7 +207,7 @@ Activate during practice sessions, tricky regressions, or unexplained runtime be
    - **Phase 1: Observation**: Guide the developer to capture exact reproduction steps and error symptoms.
    - **Phase 2: Falsifiable Hypotheses**: Require the developer to state at least 2 distinct hypotheses explaining the defect.
    - **Phase 3: Instrumentation & State Delta**: Direct the developer to place targeted logs, assertions, or breakpoints to isolate the variable.
-   - **Phase 4: Root Cause Verification**: Ensure the developer conducts a 5-Why analysis and logs a blameless post-mortem in `templates/rca-postmortem-template.md` (saved to `docs/rca/`).
+   - **Phase 4: Root Cause Verification**: Ensure the developer conducts a 5-Why analysis and logs a blameless post-mortem in `<kit>/templates/rca-postmortem-template.md` (saved to host `./docs/rca/`).
 
 ---
 
@@ -215,7 +215,7 @@ Activate during practice sessions, tricky regressions, or unexplained runtime be
 
 - Developer has an active architectural question, concept, bug, or design challenge.
 - **Mode Selection**: Detect mode from explicit user trigger (`pk:tutor`, `pk:tutor beginner`, `pk:tutor architect`, `pk:grill`) or infer from context. Defaults to workspace configuration (`AGENTS.md` / `PROMPTKIT.md`).
-- `notes/learning-plan.md` and `notes/progress-journal.md` are accessible for tracking personal insights and progress.
+- The host-owned `./notes/learning-plan.md` and `./notes/progress-journal.md` are accessible for tracking personal insights and progress.
 - If no immediate question is stated, execute `protocols/context-sync.md` and review recent journal entries to suggest a high-leverage learning topic.
 
 ---

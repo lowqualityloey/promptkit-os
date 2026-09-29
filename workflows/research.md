@@ -106,10 +106,10 @@ Build a minimal sandbox or branch targeting exclusively the **sharpest risk**:
 ---
 
 ### Step 6: Generate Spike Artifact & ADR Handoff
-1. Save the full research spike document to `./docs/spikes/YYYY-MM-DD-spike-<topic-slug>.md` using `.promptkit/templates/spike-template.md`.
+1. Save the full research spike document to `./docs/spikes/YYYY-MM-DD-spike-<topic-slug>.md` using `<kit>/templates/spike-template.md`.
 2. **Immediate ADR Generation**:
-   - If the spike leads to an architectural decision, transition immediately:
-   - Use `.promptkit/templates/adr-template.md` to record the decision in `./docs/adrs/YYYY-MM-DD-adr-<decision-slug>.md`.
+    - If the spike leads to an architectural decision, transition immediately:
+    - Use `<kit>/templates/adr-template.md` to record the decision in `./docs/adrs/YYYY-MM-DD-adr-<decision-slug>.md`.
    - Document: Context, Decision, Considered Alternatives, and Consequences (both positive and negative).
 
 ---
