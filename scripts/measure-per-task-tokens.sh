@@ -31,9 +31,9 @@ measure_file() {
         echo "0"
         return
     fi
-    local chars
-    chars=$(tr -d '\r' < "$file" | wc -c | tr -d ' ')
-    echo $(( (chars + 2) / 4 ))
+    local bytes
+    bytes=$(tr -d '\r' < "$file" | wc -c | tr -d ' ')
+    echo $(( (bytes + 2) / 4 ))
 }
 
 # Measure directives
@@ -57,8 +57,8 @@ echo "Date: $(date +%Y-%m-%d)"
 echo ""
 
 echo "Static Directives:"
-echo "  Full (Balanced): $FULL_TOK tok ($(wc -c < "$TEMPLATE_FULL" | tr -d ' ') chars)"
-echo "  Lite:            $LITE_TOK tok ($(wc -c < "$TEMPLATE_LITE" | tr -d ' ') chars)"
+echo "  Full (Balanced): $FULL_TOK tok ($(tr -d '\r' < "$TEMPLATE_FULL" | wc -c | tr -d ' ') bytes)"
+echo "  Lite:            $LITE_TOK tok ($(tr -d '\r' < "$TEMPLATE_LITE" | wc -c | tr -d ' ') bytes)"
 echo "  Route (old mandatory load): $ROUTE_TOK tok"
 echo "  Gate: $GATE_TOK tok"
 echo ""

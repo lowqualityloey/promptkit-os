@@ -197,8 +197,11 @@ if ($WfCount -eq 25) {
 $staleFiles = @(
     "README.md", "QUICKSTART.md", "FAQ.md", "PROMPTKIT.md",
     "docs/WORKFLOW-MAP.md", "docs/BENCHMARKS.md", "docs/ARCHITECTURE.md",
-    "docs/COMPARISONS.md", "docs/INTERESTING-FACTS.md",
-    "templates/lite-profile.md", "templates/project-profile-template.md", "workflows/sync.md"
+    "docs/COMPARISONS.md", "docs/INTERESTING-FACTS.md", "CONTRIBUTING.md",
+    "init.sh", "init.ps1", "protocols/setup.md",
+    "scripts/measure-tokens.sh", "scripts/measure-tokens.ps1",
+    "templates/lite-profile.md", "templates/project-profile-template.md",
+    "workflows/onboard.md", "workflows/profile.md", "workflows/sync.md"
 ) | ForEach-Object { Join-Path $RepoRoot $_ }
 $claimPattern = 'full [0-9][0-9]?[- ]workflows?|[Aa]ll [0-9][0-9]? workflows?|[0-9][0-9]? workflow files|[0-9][0-9]? Inlined Workflows?|[(][0-9][0-9]? workflows?'
 $stale = Select-String -Path $staleFiles -Pattern $claimPattern -ErrorAction SilentlyContinue | Where-Object {
@@ -368,6 +371,14 @@ if ($null -eq $balRow -or $null -eq $liteRow) {
     Check-Figure "Balanced static directive" $fullTok (Digits (($balRow -split '\|')[4]))
     Check-Figure "Lite static directive" $liteTok (Digits (($liteRow -split '\|')[4]))
 }
+$setupStaticMatch = [regex]::Match((Get-Content -Raw (Join-Path $RepoRoot "protocols/setup.md")), 'currently\s+([0-9,]+)/2500')
+if ($setupStaticMatch.Success) {
+    Check-Figure "Setup protocol Balanced static directive" $fullTok (Digits $setupStaticMatch.Groups[1].Value)
+} else {
+    Write-Host "  ❌ FAIL: protocols/setup.md is missing its current Balanced budget measurement" -ForegroundColor Red
+    $script:FailCount++
+}
+Assert-Contains "docs/BENCHMARKS.md" "Profile \| Template \| UTF-8 Bytes" "Benchmark static-size column identifies UTF-8 bytes"
 
 Write-Host "  -- Prose-claim sweep: anchored Lite shapes must equal $liteTok (dated blocks exempt)" -ForegroundColor Gray
 $shapes = @(

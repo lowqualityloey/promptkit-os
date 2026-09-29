@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Historical baseline:** 2026-09-14 on `main` (v1.6.0 with 2+1 profiles) · **Current measurements:** 2026-09-30 from source revision `dd47f05d5b9e53d50b3aa75bcd0a89f288d30ed7` · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 lifecycle subset 19,794 tok / full 25-workflow set 75,505 tok. Current live inventory: core-6 subset 26,371 tok / full 25-workflow set 101,491 tok.
+**Historical baseline:** 2026-09-14 on `main` (v1.6.0 with 2+1 profiles) · **Current measurements:** 2026-09-30 from source revision `dd47f054e4078a022c1c035b838f7546706e968b` · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 lifecycle subset 19,794 tok / full 25-workflow set 75,505 tok. Current live inventory: core-6 subset 26,371 tok / full 25-workflow set 101,491 tok.
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -30,7 +30,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 ## 2. Static Injection Footprint (Measured Tokens)
 
-| Profile | Template | Chars | Est. Tokens (bytes/4) | Reduction vs ~26.4k current core-subset baseline¹ | Use |
+| Profile | Template | UTF-8 Bytes | Est. Tokens (bytes/4) | Reduction vs ~26.4k current core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
 | **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 5,032 | **1,258 tok** | **95% static** | Onboarding, new users, tiny fixes |
 | **Balanced** | `agent-directive-template.md` (25 workflows) | 9,230 | **2,308 tok** | **91% static** | Teams, production, default |
@@ -80,7 +80,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 **Methodology for per-task table:**
 - Historical comparison anchors: `fc98f2f` (after 2+1 profiles) and `c34be80` (before profiles, Balanced only). These SHAs identify historical inputs; they are not the source of the refreshed current values.
-- Current measurement input: source revision `dd47f05d5b9e53d50b3aa75bcd0a89f288d30ed7` on 2026-09-30. Reproduce with `bash scripts/measure-per-task-tokens.sh`; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
+- Current measurement input: source revision `dd47f054e4078a022c1c035b838f7546706e968b` on 2026-09-30. Reproduce with `bash scripts/measure-per-task-tokens.sh`; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
 - Historical baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A), plus the same task template where applicable.
 - Current JIT payload = directive 1,258-2,308 + workflow + gate + relevant task template (route.md is not loaded by default).
 - Current Lite vs Balanced static directive sizes: 1,258 vs 2,308 tokens.

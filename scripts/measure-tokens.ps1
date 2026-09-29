@@ -4,7 +4,7 @@
 .DESCRIPTION
     Extracts the active PromptKit OS directive block from your agent
     instructions file (AGENTS.md, CLAUDE.md, etc.) and calculates the exact
-    character, word, and estimated token counts (using industry standard 4 chars/token).
+    UTF-8 byte counts, character and word counts, and token estimates (bytes/4).
     Compares against the current workflow files for live counts; historical measurements are labeled in docs/BENCHMARKS.md.
     In -Strict mode (CI gate parity with measure-tokens.sh), host detection is
     skipped and BOTH canonical directive templates are asserted against their
@@ -116,10 +116,12 @@ if ([string]::IsNullOrWhiteSpace($DirectiveText)) {
     exit 1
 }
 $NormalizedDirective = $DirectiveText -replace "\r", ""
-$LineCount = ($NormalizedDirective -split "\n").Count
+$LineCount = [regex]::Matches($NormalizedDirective, "\n").Count
+if (-not $NormalizedDirective.EndsWith("`n")) { $LineCount++ }
 $CharCount = $NormalizedDirective.Length
+$ByteCount = [System.Text.Encoding]::UTF8.GetByteCount($NormalizedDirective)
 $WordCount = ($NormalizedDirective -split '\s+' | Where-Object { $_ -ne "" }).Count
-$EstimatedTokens = [Math]::Floor(($CharCount + 2) / 4)
+$EstimatedTokens = [Math]::Floor(($ByteCount + 2) / 4)
 # Monolithic baselines derived live (issue #145 audit): core-6 subset + full set.
 $KitRoot = Split-Path -Parent $PSScriptRoot
 function Measure-BytesNoCR([string]$p) {
@@ -129,8 +131,10 @@ function Measure-BytesNoCR([string]$p) {
 $subsetBytes = 0
 foreach ($s in @("route", "debug", "commit", "checkpoint", "sync", "profile")) { $subsetBytes += Measure-BytesNoCR (Join-Path $KitRoot "workflows\$s.md") }
 $MonolithicTokens = [Math]::Floor(($subsetBytes + 2) / 4)
+$workflowFiles = @(Get-ChildItem (Join-Path $KitRoot "workflows") -Filter *.md -File)
+$FullsetCount = $workflowFiles.Count
 $fullBytes = 0
-foreach ($f in (Get-ChildItem (Join-Path $KitRoot "workflows") -Filter *.md)) { $fullBytes += Measure-BytesNoCR $f.FullName }
+foreach ($f in $workflowFiles) { $fullBytes += Measure-BytesNoCR $f.FullName }
 $FullsetTokens = [Math]::Floor(($fullBytes + 2) / 4)
 $SavingsPercent = [Math]::Round((1 - ($EstimatedTokens / $MonolithicTokens)) * 100, 1)
 
@@ -138,15 +142,16 @@ Write-Host "Target File: $SourceDescription" -ForegroundColor DarkGray
 Write-Host "`nMeasurement Results:" -ForegroundColor Yellow
 Write-Host "  • Lines:            $LineCount"
 Write-Host "  • Characters:       $CharCount"
+Write-Host "  • UTF-8 Bytes:      $ByteCount"
 Write-Host "  • Words:            $WordCount"
-Write-Host "  • Estimated Tokens: ~$EstimatedTokens tokens (at ~4 chars/token)" -ForegroundColor Green
+Write-Host "  • Estimated Tokens: ~$EstimatedTokens tokens (at ~4 UTF-8 bytes/token)" -ForegroundColor Green
 
 Write-Host "`nToken Economics Comparison:" -ForegroundColor Yellow
 Write-Host "  ┌─────────────────────────────────────────────────────────────┐" -ForegroundColor DarkGray
 Write-Host "  │ Model Architecture                 Static Overhead          │" -ForegroundColor DarkGray
 Write-Host "  ├─────────────────────────────────────────────────────────────┤" -ForegroundColor DarkGray
 Write-Host "  │ Monolithic (core-6 subset derived)   ~$MonolithicTokens tokens           │" -ForegroundColor Red
-Write-Host "  │ Monolithic (full 25-workflow set)    ~$FullsetTokens tokens           │" -ForegroundColor Red
+Write-Host "  │ Monolithic (full $($FullsetCount)-workflow set)    ~$FullsetTokens tokens           │" -ForegroundColor Red
 Write-Host "  │ PromptKit OS JIT Router            ~$EstimatedTokens tokens (measured)      │" -ForegroundColor Green
 Write-Host "  ├─────────────────────────────────────────────────────────────┤" -ForegroundColor DarkGray
 Write-Host "  │ Static Context Reduction:          $SavingsPercent% reduction             │" -ForegroundColor Cyan

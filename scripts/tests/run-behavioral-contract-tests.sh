@@ -204,8 +204,11 @@ fi
 STALE_CLAIMS=$(grep -rnE 'full [0-9][0-9]?[- ]workflows?|[Aa]ll [0-9][0-9]? workflows?|[0-9][0-9]? workflow files|[0-9][0-9]? Inlined Workflows?|[(][0-9][0-9]? workflows?' \
     "$REPO_ROOT/README.md" "$REPO_ROOT/QUICKSTART.md" "$REPO_ROOT/FAQ.md" "$REPO_ROOT/PROMPTKIT.md" \
     "$REPO_ROOT/docs/WORKFLOW-MAP.md" "$REPO_ROOT/docs/BENCHMARKS.md" "$REPO_ROOT/docs/ARCHITECTURE.md" \
-    "$REPO_ROOT/docs/COMPARISONS.md" "$REPO_ROOT/docs/INTERESTING-FACTS.md" \
-    "$REPO_ROOT/templates/lite-profile.md" "$REPO_ROOT/templates/project-profile-template.md" "$REPO_ROOT/workflows/sync.md" 2>/dev/null \
+    "$REPO_ROOT/docs/COMPARISONS.md" "$REPO_ROOT/docs/INTERESTING-FACTS.md" "$REPO_ROOT/CONTRIBUTING.md" \
+    "$REPO_ROOT/init.sh" "$REPO_ROOT/init.ps1" "$REPO_ROOT/protocols/setup.md" \
+    "$REPO_ROOT/scripts/measure-tokens.sh" "$REPO_ROOT/scripts/measure-tokens.ps1" \
+    "$REPO_ROOT/templates/lite-profile.md" "$REPO_ROOT/templates/project-profile-template.md" \
+    "$REPO_ROOT/workflows/onboard.md" "$REPO_ROOT/workflows/profile.md" "$REPO_ROOT/workflows/sync.md" 2>/dev/null \
     | awk -v wf="$WF_COUNT" '
         {
             line = $0
@@ -356,6 +359,9 @@ BAL_STATIC_DOC="$(grep -E '^\| \*\*Balanced\*\* \|' "$BENCH" | head -n 1 | awk -
 LITE_STATIC_DOC="$(grep -E '^\| \*\*Lite\*\* \|' "$BENCH" | head -n 1 | awk -F'|' '{print $5}' | tr -cd '0-9')"
 check_figure "Balanced static directive" "$BAL_STATIC_LIVE" "$BAL_STATIC_DOC"
 check_figure "Lite static directive" "$LITE_STATIC_LIVE" "$LITE_STATIC_DOC"
+SETUP_STATIC_DOC="$(grep -oE 'currently [0-9,]+/2500' "$REPO_ROOT/protocols/setup.md" | grep -oE '[0-9,]+' | head -n 1 | tr -cd '0-9')"
+check_figure "Setup protocol Balanced static directive" "$BAL_STATIC_LIVE" "$SETUP_STATIC_DOC"
+assert_contains "docs/BENCHMARKS.md" "Profile \| Template \| UTF-8 Bytes" "Benchmark static-size column identifies UTF-8 bytes"
 
 echo "  -- Prose-claim sweep: anchored Lite static-figure shapes must equal $LITE_STATIC_LIVE"
 echo "     Shapes: 'Lite (<claim> N tok)', 'Lite uses N tok', 'Lite stays at N tok',"

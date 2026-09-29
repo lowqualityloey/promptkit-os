@@ -106,7 +106,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Discovery Intake**: `.promptkit/protocols/discovery-intake.md`
 - **Telemetry Cards**: `.promptkit/protocols/telemetry-cards.md`
 
-> Note: `templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md`, which is lazy-loaded via `workflows/onboard.md` Phase 0 and `workflows/plan.md` Step 0. This keeps the static directive under the 2500-token Balanced budget (currently 2495/2500).
+> Note: `templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md`, which is lazy-loaded via `workflows/onboard.md` Phase 0 and `workflows/plan.md` Step 0. This keeps the static directive under the 2500-token Balanced budget (currently 2308/2500).
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)
 - **Visual Identity & Brand**: `./DESIGN.md` (if present)
 - **Living State & Tracker**: `./docs/STATE.md` (if present)

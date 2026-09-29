@@ -34,11 +34,11 @@ function Measure-File {
     }
     $bytes = [System.IO.File]::ReadAllBytes($File)
     $cleanBytes = $bytes | Where-Object { $_ -ne 13 }
-    $chars = $cleanBytes.Count
-    return [int](($chars + 2) / 4)
+    $byteCount = $cleanBytes.Count
+    return [Math]::Floor(($byteCount + 2) / 4)
 }
 
-function Get-CharCount {
+function Get-ByteCount {
     param([string]$File)
     $bytes = [System.IO.File]::ReadAllBytes($File)
     $cleanBytes = $bytes | Where-Object { $_ -ne 13 }
@@ -71,8 +71,8 @@ Write-Output "Date: $(Get-Date -Format 'yyyy-MM-dd')"
 Write-Output ""
 
 Write-Output "Static Directives:"
-Write-Output "  Full (Balanced): $FULL_TOK tok ($(Get-CharCount $TemplateFull) chars)"
-Write-Output "  Lite:            $LITE_TOK tok ($(Get-CharCount $TemplateLite) chars)"
+Write-Output "  Full (Balanced): $FULL_TOK tok ($(Get-ByteCount $TemplateFull) bytes)"
+Write-Output "  Lite:            $LITE_TOK tok ($(Get-ByteCount $TemplateLite) bytes)"
 Write-Output "  Route (old mandatory load): $ROUTE_TOK tok"
 Write-Output "  Gate: $GATE_TOK tok"
 Write-Output ""

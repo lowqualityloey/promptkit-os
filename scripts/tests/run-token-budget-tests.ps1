@@ -16,7 +16,7 @@ function Cleanup {
         Remove-Item -Path $TmpDir -Recurse -Force
     }
 }
-trap Cleanup EXIT
+trap { Cleanup; throw }
 
 $PASS = 0
 $FAIL = 0
@@ -113,12 +113,29 @@ Push-Location $RepoRoot
 $out = & pwsh -NoProfile -File scripts/measure-tokens.ps1 2>&1
 $rc = $LASTEXITCODE
 Pop-Location
-if ($rc -eq 0 -and $out -match "Verification Passed") {
-    Ok "bare invocation stays backward compatible (Balanced fallback, exit 0)"
+$workflowCount = @(Get-ChildItem (Join-Path $RepoRoot "workflows") -Filter *.md -File).Count
+if ($rc -eq 0 -and $out -match "Verification Passed" -and $out -match "UTF-8 Bytes:\s+$balancedBytes" -and $out -match "~$balancedExpected tokens" -and $out -match "full $workflowCount-workflow set" -and $out -match "Canonical template in templates/agent-directive-template.md") {
+    Ok "bare invocation matches Balanced UTF-8 bytes/4 and the live workflow count"
 } else {
-    NotOk "bare invocation should still pass (rc=$rc)"
+    NotOk "bare invocation should report $balancedBytes UTF-8 bytes, $balancedExpected tokens, and $workflowCount workflows (rc=$rc)"
+    Write-Output $out
 }
 
+$hostFile = Join-Path $TmpDir "host-with-markers.md"
+$hostText = "<!-- PROMPTKIT_START -->`nCafé 🌱`n<!-- PROMPTKIT_END -->`n"
+[System.IO.File]::WriteAllText($hostFile, $hostText, [System.Text.UTF8Encoding]::new($false))
+$hostBytes = [System.Text.Encoding]::UTF8.GetByteCount($hostText)
+$hostExpected = [Math]::Floor(($hostBytes + 2) / 4)
+$out = & pwsh -NoProfile -File $measureScript $hostFile 2>&1
+$rc = $LASTEXITCODE
+if ($rc -eq 0 -and $out -match "UTF-8 Bytes:\s+$hostBytes" -and $out -match "~$hostExpected tokens") {
+    Ok "host directive extraction preserves UTF-8 bytes and the final newline"
+} else {
+    NotOk "host directive should report $hostBytes UTF-8 bytes and $hostExpected tokens (rc=$rc)"
+    Write-Output $out
+}
+
+Cleanup
 Write-Output ""
 Write-Output "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 Write-Output "Passed: $PASS | Failed: $FAIL"
