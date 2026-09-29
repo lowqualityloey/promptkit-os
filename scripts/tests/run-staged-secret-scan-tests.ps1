@@ -149,19 +149,19 @@ try {
         "JWT-like token pattern",
         "password-assignment pattern"
     )) {
-        if ($positiveResult.Output -notlike "*$category*") { Fail "Scanner missed the $category detector." }
+        if (-not $positiveResult.Output.Contains($category)) { Fail "Scanner missed the $category detector." }
     }
     $expectedGitHubTokenCount = if ($supportsNewlinePath) { 5 } else { 4 }
     if (($positiveResult.Output -split "GitHub token pattern").Count - 1 -ne $expectedGitHubTokenCount) { Fail "Scanner missed a tricky-path positive control." }
-    if ($positiveResult.Output -notlike '*"path[credential].txt":1*') { Fail "Scanner did not report the literal bracket path." }
-    if ($supportsNewlinePath -and $positiveResult.Output -notlike '*"staged\ncredential.txt":1*') { Fail "Scanner did not preserve the NUL-delimited newline path." }
-    if ($positiveResult.Output -notlike '*credential-REDACTED.txt":1*') { Fail "Scanner exposed a credential-shaped filename instead of redacting it." }
-    if ($positiveResult.Output -notlike '*credential-REDACTED":1*' -or $positiveResult.Output.Contains("synthetic-value")) { Fail "Scanner exposed a password-shaped value in a staged filename." }
+    if (-not $positiveResult.Output.Contains('"path[credential].txt":1')) { Fail "Scanner did not report the literal bracket path." }
+    if ($supportsNewlinePath -and -not $positiveResult.Output.Contains('"staged\ncredential.txt":1')) { Fail "Scanner did not preserve the NUL-delimited newline path." }
+    if (-not $positiveResult.Output.Contains('credential-REDACTED.txt":1')) { Fail "Scanner exposed a credential-shaped filename instead of redacting it." }
+    if (-not $positiveResult.Output.Contains('credential-REDACTED":1') -or $positiveResult.Output.Contains("synthetic-value")) { Fail "Scanner exposed a password-shaped value in a staged filename." }
     foreach ($lineNumber in 1..7) {
-        if ($positiveResult.Output -notlike "*ordinary.txt`":$lineNumber*") { Fail "Scanner reported an incorrect ordinary.txt line number." }
+        if (-not $positiveResult.Output.Contains("ordinary.txt`":$lineNumber")) { Fail "Scanner reported an incorrect ordinary.txt line number." }
     }
-    if ($positiveResult.Output -notlike '*context.txt":5*') { Fail "Scanner reported an incorrect line number for a modified file." }
-    if ($positiveResult.Output -notlike '*masked.fixture":1*') { Fail "Scanner let Git textconv hide a staged credential." }
+    if (-not $positiveResult.Output.Contains('context.txt":5')) { Fail "Scanner reported an incorrect line number for a modified file." }
+    if (-not $positiveResult.Output.Contains('masked.fixture":1')) { Fail "Scanner let Git textconv hide a staged credential." }
     $expectedDetectionCount = if ($supportsNewlinePath) { 13 } else { 12 }
     if (($positiveResult.Output -split "`n" | Where-Object { $_ -like "Potential *" }).Count -ne $expectedDetectionCount) {
         Fail "Scanner returned an unexpected detection count."
@@ -176,7 +176,7 @@ try {
 
     $invalidResult = Invoke-ScannerProcess $invalid
     if ($invalidResult.ExitCode -ne 2) { Fail "Scanner should fail closed when the repository cannot be scanned." }
-    if ($invalidResult.ErrorText -notlike "*stop before committing*") { Fail "Scanner did not explain that incomplete scans must stop." }
+    if (-not $invalidResult.ErrorText.Contains("stop before committing")) { Fail "Scanner did not explain that incomplete scans must stop." }
 
     if ($invalidResult.ErrorText.Contains($awsKey) -or $invalidResult.Output.Contains($awsKey)) {
         Fail "Scanner exposed a raw Git diagnostic for the credential-shaped repository path."
@@ -187,7 +187,7 @@ try {
         Invoke-GitSetup $unscannable @("add", "--", $path)
         $unscannableResult = Invoke-ScannerProcess $unscannable
         if ($unscannableResult.ExitCode -ne 2) { Fail "Scanner should fail closed when Git classifies staged $path as binary." }
-        if ($unscannableResult.ErrorText -notlike "*could not inspect a binary diff*" -or $unscannableResult.ErrorText.Contains($awsKey)) {
+        if (-not $unscannableResult.ErrorText.Contains("could not inspect a binary diff") -or $unscannableResult.ErrorText.Contains($awsKey)) {
             Fail "Scanner did not fail closed without exposing binary staged content from $path."
         }
     }
