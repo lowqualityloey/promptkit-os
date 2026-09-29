@@ -59,7 +59,7 @@ Profile economics and token budgets are maintained in [`docs/BENCHMARKS.md`](../
 1. Confirm mechanically:
    - `grep '^profile:' PROMPTKIT.md` shows the new profile;
    - `## 0. PromptKit OS Profile` body matches;
-   - directive token size moved in the expected direction: `bash .promptkit/scripts/measure-tokens.sh` (Lite is about 1,258 tok; Balanced is about 2,308 tok; see BENCHMARKS for truth).
+   - directive token size moved in the expected direction: `bash .promptkit/scripts/measure-tokens.sh`; consult `docs/BENCHMARKS.md` for current measured values.
 2. Display the Dual-Compatible Telemetry Status Card (`📊 / 🎯 / 🟢`) with the new profile, then recommend `pk:sync` so the session hot-reloads the new ruleset from disk.
 3. Switching to a lower ceremony profile is a **preference change, not a scope downgrade**: any task already at Level 2/3 keeps its Task Record and evidence gates.
 

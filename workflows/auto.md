@@ -4,7 +4,7 @@
 Trigger anytime with: `pk:auto` (or via Smart Routing on phrases like *"handle this end-to-end"*, *"leave it in automation"*, *"hands-off"*)
 
 ## Mission
-Serve as PromptKit OS's **Autonomous SDLC Meta-Orchestrator** — coordinating and chaining domain workflows (`pk:plan` → `pk:tasks` → code → `pk:test` → `pk:review` → `pk:commit`) sequentially without intermediate prompt friction, always stopping at the declared terminal boundary (default `review ready`, before any git commit, PR, or push).
+Serve as PromptKit OS's **Autonomous SDLC Meta-Orchestrator** — coordinating and chaining domain workflows (`pk:plan` → `pk:tasks` → code → `pk:test` → `pk:review` → `pk:commit`) sequentially without intermediate prompt friction, always stopping at the declared terminal boundary. The default `review ready` boundary halts before any git commit, PR, or push.
 
 Eliminate prompt ping-pong during well-specified feature implementation, bug remediation, or maintenance tasks while enforcing ironclad engineering quality gates, test immobility, and deterministic circuit breakers.
 
@@ -51,8 +51,8 @@ When invoked, `workflows/auto.md` operates under a declared terminal boundary:
 | **`--until review` (Default)** | **`review ready`** | Executes planning, coding, testing, and `pk:review`. Halts with green tests and verified clean diff **before any git commit, PR, or push**. |
 | **`--until test`** | **`tests green`** | Executes planning, coding, and tests. Halts immediately once tests pass, before running review audits. |
 | **`--until task`** | **`task done`** | Executes only the single active subtask from `docs/STATE.md` or `pk:tasks`. Halts after that task is verified green. |
-| **`--until pr`** | **`pr ready`** | Runs full pipeline, generates atomic Conventional Commits (`pk:commit`), pushes the feature branch, and opens a draft PR (`pk:pr`). Halts before merge or deployment. |
-| **`--full`** | **`all tasks completed`** | Iterates sequentially through all uncompleted tasks in `docs/STATE.md`. Commits each atomically upon green test proof, opens PR, and halts. |
+| **`--until pr`** | **`draft PR ready for human review`** | Runs full pipeline, generates atomic Conventional Commits (`pk:commit`), pushes the feature branch, and opens a draft PR (`pk:pr`). Halts before human review, merge, or deployment. |
+| **`--full`** | **`all tasks completed; draft PRs ready for human review`** | Iterates sequentially through all uncompleted tasks in `docs/STATE.md`. Commits each atomically upon green test proof, pushes the feature branch, opens draft PRs, and halts before human review, merge, or deployment. |
 
 ---
 
@@ -77,7 +77,7 @@ Worker, wave, and repair caps compose with the [#258 autonomy budgets](https://g
 | **`--waves N`** | Execute N waves in parallel (default 1, max 4). Requires Turbo profile. Sequential review-ready fallback on unsupported hosts. | Sequential review-ready |
 
 ### Per-Task Verify
-Each worker runs: implement → test → verify. Automatic pass → merge queue. Fail → bounded auto-refine (max 2 attempts = Strikes 2–3 of the 3-strike budget). Third failure → human escalation with diagnostics. Worker GREEN ≠ Wave GREEN: integrated state must pass verification before the wave succeeds.
+Each worker runs: implement → test → verify. Automatic pass → wave integration queue. Fail → bounded auto-refine (max 2 attempts = Strikes 2–3 of the 3-strike budget). Third failure → human escalation with diagnostics. Worker GREEN ≠ Wave GREEN: integrated state must pass verification before the wave succeeds; this queue does not merge pull requests.
 
 ### Refine Loop (Bounded Oracle Discipline)
 ```text
@@ -127,12 +127,12 @@ halt:
 ---
 
 ### Upfront Announcement Protocol (Turn 1 Banner)
-On Turn 1 of autonomous execution, announce the active leash:
+On Turn 1 of autonomous execution, announce the declared boundary rather than assuming the default. State the matching stop point from the boundary table above:
 
 ```text
-[PromptKit OS: Smart-routed to workflows/auto.md (Autonomous Loop) — stopping at 'review ready']
+[PromptKit OS: Smart-routed to workflows/auto.md (Autonomous Loop) — boundary: <declared stop point>]
 ⚡ Mode: Autonomous SDLC Pipeline
-🛑 Safety Boundary: Halts before git commit/push. 3-strike test circuit breaker active.
+🛑 Safety Boundary: Halts at the declared boundary. Only `--until pr` / `--full` authorize in-run commits, branch push, and draft-PR creation; every run halts before merge or deployment, and only a human executes a merge. 3-strike test circuit breaker active.
 Press Stop / Ctrl+C anytime to switch to manual pairing.
 ```
 
@@ -140,7 +140,7 @@ Press Stop / Ctrl+C anytime to switch to manual pairing.
 
 Per the Action Authority Model in `protocols/code-quality-gate.md`, remote actions need explicit human authorization. For `pk:auto` the invocation itself is that authorization, scoped as follows:
 
-- **`--until pr` / `--full` = standing authorization** for push and draft-PR creation within this run only. Create the PR as a draft (`gh pr create --draft` or the MCP equivalent with `draft: true`); a ready/non-draft PR requires separate explicit human authorization. The draft PR is the human review checkpoint. Merge, tag, publish, deploy, and rollback are never included.
+- **`--until pr` / `--full` = standing authorization** for local commits, branch push, and draft-PR creation within this run only. Create every PR as a draft (`gh pr create --draft` or the MCP equivalent with `draft: true`); a ready/non-draft PR requires separate explicit human authorization. The draft PR is the human review checkpoint. Merge is human-executed and never part of the exception; tag, publish, deploy, and rollback are never included.
 - **Scope frozen at invocation**: `--full` covers only the tasks uncompleted in `docs/STATE.md` when the run starts. Newly discovered tasks require a new run (new authorization).
 - **Any circuit-breaker trip, failed review gate, or scope growth beyond the declared boundary halts the run for human resume** — authorization does not survive the run's own stop conditions.
 - Record the declared boundary and authorization in the first `docs/STATE.md` micro-checkpoint.

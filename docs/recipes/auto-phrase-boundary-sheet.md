@@ -28,14 +28,14 @@ Plain English reliably **starts** `pk:auto` (Smart Auto-Route); explicit flags a
 | `--until review` (default) | `review ready` | Planning, coding, testing, review. Halts before any commit, PR, or push |
 | `--until test` | `tests green` | Halts once tests pass, before review audits |
 | `--until task` | `task done` | Single active subtask only, then halt |
-| `--until pr` | `pr ready` | Atomic commits, push feature branch, open draft PR. Halts before merge |
-| `--full` | `all tasks completed` | Iterates uncompleted tasks at invocation snapshot, commits atomically, opens PR, halts |
+| `--until pr` | `draft PR ready for human review` | Atomic commits, push feature branch, open a draft PR. Halts before human review or merge |
+| `--full` | `all tasks completed; draft PRs ready for human review` | Iterates uncompleted tasks at invocation snapshot, commits and pushes within the run, opens draft PRs, then halts before human review or merge |
 
 ## 3. Standing rules (paste with the table)
 
 - Invocation **is** the authorization, scoped to the declared boundary only; it does not survive the run's stop conditions.
 - Any circuit-breaker trip, failed review gate, or scope growth halts for human resume.
-- Merge, tag, publish, deploy, and rollback are never included — always a separate explicit human action.
+- A human alone reviews, approves, and executes merges; no `pk:auto` run or other authorization permits an agent to merge. Tag, publish, deploy, and rollback remain separate explicit human actions.
 
 ---
 

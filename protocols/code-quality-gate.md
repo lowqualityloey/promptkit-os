@@ -127,14 +127,14 @@ Single source for which actions an agent may take alone and which require explic
 | Local commit (with confirmation) | ✓ (confirmed) | |
 | Push branch | | ✓ human — see run-authorization exception |
 | Create (draft) PR | | ✓ human — see run-authorization exception |
-| Merge, tag, publish, deploy, rollback | | ✓ human, no exception |
+| Merge, tag, publish, deploy, rollback | | ✓ human, no exception; the human executes the merge, and an agent never merges |
 | Execute production migration (Expand/Contract DDL/DML against prod) | | ✓ human, no exception |
 | Create/retarget remote issue or work item | | ✓ human, no exception |
 | Mutate remote repo config, labels, or project boards | | ✓ human, no exception |
 | Run a production probe that creates or changes persisted data or triggers external effects | | ✓ human, explicit authorization and bounded synthetic-safe probe |
 
 - **No implicit remote authority**: no workflow may grant push/PR/merge/deploy/rollback, production-migration, remote issue/repo-configuration, or side-effecting production-probe authority by implication, default, or convenience. Silence is denial; listing a tool or recording a tracker preference grants no remote-write authorization.
-- **Run-authorization exception (only)**: an explicitly declared `pk:auto` run (`--until pr` / `--full`) carries standing authorization for push and draft-PR creation **within that run only** — bounded by its declared terminal boundary, circuit breakers, deny-list, and invocation snapshot. Merge, tag, publish, deploy, rollback, production migration execution, remote issue creation, remote repo-config/label/board mutation, and side-effecting production probes are never included and always require a separate explicit human action.
+- **Run-authorization exception (only)**: an explicitly declared `pk:auto` run (`--until pr` / `--full`) carries standing authorization for its local commits, branch push, and draft-PR creation **within that run only** — bounded by its declared terminal boundary, circuit breakers, deny-list, and invocation snapshot. Merge is always human-executed; no `pk:auto` run or separate authorization permits an agent to merge. Tag, publish, deploy, rollback, production migration execution, remote issue creation, remote repo-config/label/board mutation, and side-effecting production probes are never included and always require a separate explicit human action.
 
 ---
 
@@ -151,6 +151,6 @@ Before completing any coding task or finishing a PromptKit OS session:
    - **Bounded Repair Rule**: If the verification command fails (`exit code != 0`), you are allowed a maximum of **2 automated self-repair attempts**.
     - If the 3rd consecutive verification attempt fails, you MUST halt execution, print the failure output, and emit the canonical Blocked callout per `protocols/telemetry-cards.md` (`> [!WARNING]` titled `### 🚫BLOCKED:` with waiting-on-human input details) to prevent infinite token-burning loops.
 6. When ready to stage and commit, invoke `workflows/commit.md` (`pk:commit`) to ensure atomic single-concern staging, Conventional Commit formatting, and secret leak prevention.
-7. Prepare the pull request with `workflows/pr.md` (`pk:pr`), compiling the verified AC checklist for human review and merge. Before `gh pr create`: `git status -s` clean for this task, `git fetch origin` + rebase check against base, and `Quality Gate: measured this turn`. No auto-push.
+7. Prepare the pull request with `workflows/pr.md` (`pk:pr`), compiling the verified AC checklist for human review and merge. Before creating it, require `git status -s` clean for this task, `git fetch origin` plus a rebase check against base, and `Quality Gate: measured this turn`. In the ordinary flow, do not auto-push; an explicitly authorized `pk:auto` run may push only its branch and create draft PRs within that run's boundary. A human alone executes a merge.
 8. **Milestone Git Boundary & Working Tree Verification**: A **milestone boundary** is the turn after a `pk:plan`/`pk:tasks` milestone or a Task Record closes. At milestone conclusion, verify working tree status with `git status`: all changes produced **by the current task** must be cleanly committed via `pk:commit` and synchronized to `docs/STATE.md` before beginning the next milestone. Files that were already untracked/dirty **before the task started** (including fresh `init.sh` scaffold output) are a documented exception: surface them to the developer and recommend `pk:commit` or ignores — do not stall the session on dirt you did not create.
 

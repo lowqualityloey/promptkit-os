@@ -80,7 +80,7 @@ $SourceDescription = ""
 if ($TargetFile -ne "" -and (Test-Path $TargetFile)) {
     $FoundFile = Resolve-Path $TargetFile
     $Content = Get-Content $FoundFile -Raw
-    $Pattern = '(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->'
+    $Pattern = '(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->(?:\r?\n)?'
     $Match = [regex]::Match($Content, $Pattern)
     if ($Match.Success) {
         $DirectiveText = $Match.Value
@@ -90,7 +90,7 @@ if ($TargetFile -ne "" -and (Test-Path $TargetFile)) {
     foreach ($cand in $Candidates) {
         if (Test-Path $cand) {
             $Content = Get-Content $cand -Raw
-            $Pattern = '(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->'
+            $Pattern = '(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->(?:\r?\n)?'
             $Match = [regex]::Match($Content, $Pattern)
             if ($Match.Success) {
                 $DirectiveText = $Match.Value
@@ -136,7 +136,7 @@ $FullsetCount = $workflowFiles.Count
 $fullBytes = 0
 foreach ($f in $workflowFiles) { $fullBytes += Measure-BytesNoCR $f.FullName }
 $FullsetTokens = [Math]::Floor(($fullBytes + 2) / 4)
-$SavingsPercent = [Math]::Round((1 - ($EstimatedTokens / $MonolithicTokens)) * 100, 1)
+$SavingsPercent = [Math]::Floor(((($MonolithicTokens - $EstimatedTokens) * 100 / $MonolithicTokens) + 0.5))
 
 Write-Host "Target File: $SourceDescription" -ForegroundColor DarkGray
 Write-Host "`nMeasurement Results:" -ForegroundColor Yellow
