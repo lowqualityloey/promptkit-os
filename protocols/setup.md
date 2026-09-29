@@ -45,24 +45,13 @@ Inspect the repository root for existing agent configuration files:
 
 ### 2. Verify Existing Integration
 Check if the target configuration file already contains `PromptKit OS: Engineering Operating System` or `<!-- PROMPTKIT_START -->`:
-- If the configuration is already present and up to date, report status to the developer and transition immediately to active session mode.
+- If the configuration is already present and up to date, verify required core files before exiting: `./PROMPTKIT.md` exists and the core host directories from Step 3 (`docs/tasks/`, `docs/specs/`, `docs/adrs/`, `docs/tests/`, `./notes/`) are present. If all check out, report status to the developer and transition immediately to active session mode. If any are missing, proceed to Step 3 instead of exiting.
 - If missing or outdated, proceed to Step 3.
 
 ### 3. Ensure Project Documentation Directories Exist
-Ensure the host repository contains documentation directories so generated artifacts are tracked by Git:
-- `docs/adrs/`: Architectural Decision Records
-- `docs/specs/`: Technical RFC Specifications
-- `docs/rca/`: Root Cause Analysis Incident Post-Mortems
-- `docs/spikes/`: Technical Spikes & Benchmarks
-- `docs/design/`: Design Token Specs & UI Architecture
-- `docs/data/`: Database Models & Schema Specifications
-- `docs/auth/`: Authentication & Authorization Matrices
-- `docs/api/`: API Contracts & Error Specifications
-- `docs/tests/`: Test Plans, Seam Allocations & Test Matrices
-- `docs/perf/`: Performance Audits, Query Execution Plans & Profiling Reports
-- `docs/tasks/`: Task Breakdowns, Issue Drafts & Milestone Trackers
-- `docs/releases/`: Release Checklists, Rollback Decision Logs & Verification Reports
-- `./notes/`: Host-owned personal notes (progress journal, skill matrix, learning plan) — create if missing; never write these inside `<kit>/notes/`
+Ensure the host repository contains documentation directories so generated artifacts are tracked by Git. Create the core set now (the installer's four docs dirs plus host `./notes/`); create specialized directories on demand when their workflow first needs them:
+- Core (always ensure): `docs/tasks/` (Task Breakdowns, Issue Drafts & Milestone Trackers), `docs/specs/` (Technical RFC Specifications), `docs/adrs/` (Architectural Decision Records), `docs/tests/` (Test Plans, Seam Allocations & Test Matrices), `./notes/` (Host-owned personal notes — create if missing; never inside `<kit>/notes/`)
+- Specialized (on demand): `docs/rca/` (Root Cause Analysis Incident Post-Mortems), `docs/spikes/` (Technical Spikes & Benchmarks), `docs/design/` (Design Token Specs & UI Architecture), `docs/data/` (Database Models & Schema Specifications), `docs/auth/` (Authentication & Authorization Matrices), `docs/api/` (API Contracts & Error Specifications), `docs/perf/` (Performance Audits, Query Execution Plans & Profiling Reports), `docs/releases/` (Release Checklists, Rollback Decision Logs & Verification Reports)
 
 If `PROMPTKIT.md` does not exist in the project root, copy `<kit>/templates/project-profile-template.md` to `./PROMPTKIT.md` for project-specific rules and commands. If `DESIGN.md` is desired for custom visual identity, copy `<kit>/templates/design-profile-template.md` to `./DESIGN.md`. If `docs/STATE.md` does not exist, copy `<kit>/templates/state-tracker-template.md` to `./docs/STATE.md` for living project state tracking.
 
@@ -114,7 +103,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Discovery Intake**: `<kit>/protocols/discovery-intake.md`
 - **Telemetry Cards**: `<kit>/protocols/telemetry-cards.md`
 
-> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md`, which is lazy-loaded via `<kit>/workflows/onboard.md` Phase 0 and `<kit>/workflows/plan.md` Step 0. This keeps the static directive under the 2500-token Balanced budget (currently 2308/2500).
+> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md`, which is lazy-loaded via `<kit>/workflows/onboard.md` Phase 0 and `<kit>/workflows/plan.md` Step 0. This keeps the static directive under the 2500-token Balanced budget (currently 2318/2500).
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)
 - **Visual Identity & Brand**: `./DESIGN.md` (if present)
 - **Living State & Tracker**: `./docs/STATE.md` (if present)

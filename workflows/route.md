@@ -28,7 +28,7 @@ Eliminate decision fatigue and guesswork by mapping every software development s
 > A decision-grade summary of Levels 0–3 ships in the injected directive so agents can classify a request without loading this file. This document remains the canonical authority; where the summary and this file differ, this file wins.
 
 ### Upfront Ceremony Declaration Protocol (Turn 1 Announcement)
-In the opening turn (Turn 1) of every task or interaction, the assistant must explicitly classify the request and declare its ceremony level on the very first line of output using this exact standardized banner format:
+In the opening turn (Turn 1) of every task or interaction — except informational Level 0 fast-path requests, which emit no banner per Tier 1 below — the assistant must explicitly classify the request and declare its ceremony level on the very first line of output using this exact standardized banner format:
 
 ```text
 [PromptKit OS: Level <0-3> (<Name>) — <1-line justification>]
