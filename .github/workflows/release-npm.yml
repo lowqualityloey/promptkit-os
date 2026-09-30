@@ -56,10 +56,34 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
         run: git ls-remote --exit-code --tags "origin" "refs/tags/$TAG"
 
+      - name: Preserve Hardened Smoke Harness
+        run: |
+          mkdir -p "$RUNNER_TEMP/hardened-smoke"
+          cp package/test/smoke.sh "$RUNNER_TEMP/hardened-smoke/smoke.sh"
+          chmod +x "$RUNNER_TEMP/hardened-smoke/smoke.sh"
+
+      - name: Checkout Resolved Release Tag
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          git fetch origin tag "$TAG" --no-tags
+          TAG_COMMIT=$(git rev-parse --verify -q "refs/tags/${TAG}^{commit}")
+          if [ -z "$TAG_COMMIT" ]; then
+            echo "::error::Could not resolve tag refs/tags/$TAG to a commit"
+            exit 1
+          fi
+          git checkout --detach "$TAG_COMMIT"
+          CURRENT_HEAD=$(git rev-parse HEAD)
+          if [ "$CURRENT_HEAD" != "$TAG_COMMIT" ]; then
+            echo "::error::HEAD ($CURRENT_HEAD) does not match resolved tag commit ($TAG_COMMIT)"
+            exit 1
+          fi
+          echo "Successfully checked out detached commit $TAG_COMMIT for tag $TAG"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           # No `registry-url` here, deliberately. Passing it makes setup-node write a
           # userconfig .npmrc containing `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`.
           # That makes npm take the TOKEN auth path even when the variable is empty, so it
@@ -78,6 +102,27 @@ jobs:
       # bundle npm 10, and early Node 24 bundled npm 11.4.x), so pin the CLI explicitly.
       - name: Ensure npm Supports Trusted Publishing
         run: npm install -g npm@^11.5.1
+
+      - name: Validate Runtime and CLI Versions for Trusted Publishing
+        run: |
+          node -e '
+            const [major, minor] = process.versions.node.split(".").map(Number);
+            if (major < 22 || (major === 22 && minor < 14)) {
+              console.error(`Node >= 22.14.0 required for trusted publishing, got ${process.version}`);
+              process.exit(1);
+            }
+            console.log(`Node version validated: ${process.version}`);
+          '
+          node -e '
+            const { execSync } = require("child_process");
+            const v = execSync("npm --version").toString().trim();
+            const [major, minor, patch] = v.split(".").map(Number);
+            if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) {
+              console.error(`npm >= 11.5.1 required for trusted publishing, got ${v}`);
+              process.exit(1);
+            }
+            console.log(`npm CLI version validated: ${v}`);
+          '
 
       # Fail loudly and early if anything would silently divert the publish off OIDC.
       # A token present here is the exact condition that broke v1.9.1, and it fails at the
@@ -127,7 +172,8 @@ jobs:
       - name: Smoke Test Courier Against This Release
         env:
           PROMPTKIT_VERSION: ${{ steps.tag.outputs.version }}
-        run: bash package/test/smoke.sh
+          PROMPTKIT_REPO_ROOT: ${{ github.workspace }}
+        run: bash "$RUNNER_TEMP/hardened-smoke/smoke.sh"
 
       - name: Publish to npm with Provenance
         working-directory: package
