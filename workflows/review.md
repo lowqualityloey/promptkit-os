@@ -95,7 +95,10 @@ Explicitly select and document one of three distinct review modes before reviewi
    pnpm tsc --noEmit --pretty false          # or: npx tsc --noEmit --pretty false
    biome check --json .                      # or: eslint --format json .
    ```
-2. Keep only diagnostics whose `file:line:col` falls inside the resolved review diff files (`$REVIEW_FILES` matching the selected review mode: `git diff <fixed-point>...HEAD --name-only` for branch, `git diff --cached --name-only` for staged, or `git diff HEAD --name-only` plus explicitly scoped untracked files for working-tree). Out-of-diff diagnostics belong to other changes — never cite them.
+   > [!NOTE]
+   > In **Staged Changes Review Mode**, CLI diagnostics execute against live filesystem contents rather than the index snapshot. If unstaged modifications exist (`git diff --name-only` is non-empty), live CLI diagnostics must not be attributed to staged changes unless run against an isolated index snapshot (e.g. temporary worktree or checkout) without altering the user's index. When an isolated staged snapshot is unavailable and unstaged modifications exist, skip CLI diagnostics and record them as `not measured`, relying on the Axis 2 standards audit.
+
+2. Keep only diagnostics whose `file:line:col` falls inside the resolved review diff files (`$REVIEW_FILES` matching the selected review mode: `git diff <fixed-point>...HEAD --name-only` for branch, `git diff --cached --name-only` for staged, or `git diff HEAD --name-only` plus explicitly scoped untracked files for working-tree). In staged review mode, confirm cited diagnostics reflect the staged snapshot rather than live unstaged edits. Out-of-diff diagnostics belong to other changes — never cite them.
 3. Map severity: `error` → `🚨 [BLOCKING]`, `warning` → `⚠️ [IMPORTANT]`, `info`/`hint` → `💡 [SUGGEST]`.
 4. Cap injected evidence at 2 compact code blocks (<150 lines total); when the CLI emits only single-line output, cite the single line.
 5. Diagnostics are read-only evidence: never auto-fix. Values not produced this turn are recorded as `not measured`.

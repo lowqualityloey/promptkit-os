@@ -26,6 +26,7 @@ try {
     git commit -m "initial commit" | Out-Null
 
     $isolateScript = Join-Path $repoRoot "scripts\isolate-worktree.ps1"
+    $pwshCmd = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
 
     Write-Host "🧪 Running Worktree Isolation PowerShell Tests..." -ForegroundColor Cyan
 
@@ -40,19 +41,10 @@ try {
     # Test 2: Failed create on existing branch collision
     Write-Host "  [Test 2] Failed create when branch already exists elsewhere"
     git branch "worktree/task-conflict" | Out-Null
-    $failed = $false
-    $errOut = ""
-    try {
-        $errOut = & $isolateScript create task-conflict 2>&1 | Out-String
-        if ($LASTEXITCODE -ne 0) {
-            $failed = $true
-        }
-    } catch {
-        $failed = $true
-        $errOut = $_.ToString()
-    }
-    if (-not $failed) {
-        throw "Test 2 failed: Expected failure on branch collision, but succeeded."
+    $errOut = & $pwshCmd -NoProfile -File $isolateScript create task-conflict *>&1 | Out-String
+    $childExit = $LASTEXITCODE
+    if ($childExit -eq 0) {
+        throw "Test 2 failed: Expected failure on branch collision, but succeeded. Output: $errOut"
     }
     if ($errOut -match "Worktree created successfully") {
         throw "Test 2 failed: Found false success output in error case: $errOut"
@@ -83,19 +75,10 @@ try {
     Set-Content -Path "README.md" -Value "Conflict on main"
     git commit -am "main conflicting change" | Out-Null
 
-    $failedMerge = $false
-    $mergeErrOut = ""
-    try {
-        $mergeErrOut = & $isolateScript merge task-conflict2 2>&1 | Out-String
-        if ($LASTEXITCODE -ne 0) {
-            $failedMerge = $true
-        }
-    } catch {
-        $failedMerge = $true
-        $mergeErrOut = $_.ToString()
-    }
-    if (-not $failedMerge) {
-        throw "Test 4 failed: Expected failure on merge conflict, but succeeded."
+    $mergeErrOut = & $pwshCmd -NoProfile -File $isolateScript merge task-conflict2 *>&1 | Out-String
+    $mergeChildExit = $LASTEXITCODE
+    if ($mergeChildExit -eq 0) {
+        throw "Test 4 failed: Expected failure on merge conflict, but succeeded. Output: $mergeErrOut"
     }
     if ($mergeErrOut -match "Merge completed") {
         throw "Test 4 failed: Found false success output on merge conflict: $mergeErrOut"
