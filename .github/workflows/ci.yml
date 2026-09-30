@@ -103,6 +103,9 @@ jobs:
       - name: Run Release-Record Documentation Examples (Bash)
         run: bash scripts/tests/release-records.examples.sh
 
+      - name: Run Release-Record Self-Validation Wrapper Harness (Bash)
+        run: bash scripts/tests/run-release-self-validation-tests.sh
+
       - name: Assert Directive Token Budget (Bash)
         run: bash scripts/measure-tokens.sh --strict
 
@@ -117,13 +120,11 @@ jobs:
 
       - name: Run Release-Record Self-Validation with Grandfather Exemption (Bash)
         run: |
-          ERRORS=$(bash scripts/validate-release-records.sh --root . --strict 2>&1 | grep -v '2026-09-08-v1\.0\.0-' | grep -E '^[A-Z_]+\|' | grep -v -E '^(PASSED|FAILED)\|' || true)
-          if [ -n "$ERRORS" ]; then
-            echo "Release record validation errors found in non-grandfathered records:"
-            echo "$ERRORS"
-            exit 1
-          fi
-          echo "All non-grandfathered release records passed validation."
+          set +e
+          output=$(bash scripts/validate-release-records.sh --root . --strict 2>&1)
+          exit_code=$?
+          set -e
+          printf '%s\n' "$output" | bash scripts/check-release-validation-output.sh --exit-code "$exit_code"
 
       - name: Test init.sh Dry-Run & Idempotency
         run: |
@@ -296,6 +297,10 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\release-records.examples.ps1
 
+      - name: Run Release-Record Self-Validation Wrapper Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-release-self-validation-tests.ps1
+
       - name: Assert Directive Token Budget (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict
@@ -303,14 +308,9 @@ jobs:
       - name: Run Release-Record Self-Validation with Grandfather Exemption (PowerShell)
         shell: pwsh
         run: |
-          $res = & pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root . -Strict 2>&1
-          $nonGrandfathered = @($res | Where-Object { $_ -match '^[A-Z_]+\|' -and $_ -notmatch '2026-09-08-v1\.0\.0-' -and $_ -notmatch '^(PASSED|FAILED)\|' })
-          if ($nonGrandfathered.Count -gt 0) {
-            $nonGrandfathered | ForEach-Object { Write-Error $_ }
-            throw "Release record validation errors found in $($nonGrandfathered.Count) non-grandfathered check(s)."
-          }
-          $LASTEXITCODE = 0
-          Write-Host "All non-grandfathered release records passed validation."
+          $res = & pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root . -Strict *>&1
+          $exitCode = $LASTEXITCODE
+          $res | pwsh -NoProfile -File .\scripts\check-release-validation-output.ps1 -ExitCode $exitCode
 
       - name: Run Reference and Structural Validator (PowerShell)
         shell: pwsh

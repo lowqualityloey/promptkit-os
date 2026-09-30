@@ -20,6 +20,7 @@ $cases = @{
     valid                = Invoke-Case "valid" (Join-Path $FixtureRoot "valid")
     hallucinated         = Invoke-Case "hallucinated" (Join-Path $FixtureRoot "invalid-hallucinated")
     outOfRange           = Invoke-Case "outOfRange" (Join-Path $FixtureRoot "invalid-out-of-range")
+    deletionHunk         = Invoke-Case "deletionHunk" (Join-Path $FixtureRoot "invalid-deletion-hunk")
     notMeasured          = Invoke-Case "notMeasured" (Join-Path $FixtureRoot "not-measured")
 }
 
@@ -36,10 +37,12 @@ Assert-Case "hallucinated citation flagged with REVIEW id" ($cases.hallucinated.
 Assert-Case "hallucinated fixture exits 1" ($cases.hallucinated.Exit -eq 1)
 Assert-Case "out-of-range citation flagged with REVIEW id" ($cases.outOfRange.Out -match 'INVALID_EVIDENCE\|REVIEW-lsp-fixture-out-of-range')
 Assert-Case "out-of-range fixture exits 1" ($cases.outOfRange.Exit -eq 1)
+Assert-Case "deletion-only hunk citation flagged with REVIEW id" ($cases.deletionHunk.Out -match 'INVALID_EVIDENCE\|REVIEW-lsp-fixture-deletion-hunk')
+Assert-Case "deletion-only hunk fixture exits 1" ($cases.deletionHunk.Exit -eq 1)
 Assert-Case "not measured fixture exits 0 (absence is never a failure)" ($cases.notMeasured.Exit -eq 0)
 Assert-Case "not measured reports CITED=0 pass-through" ($cases.notMeasured.Out -match 'CITED=0')
 
-$total = 7
+$total = 9
 Write-Output "==========================================================="
 Write-Output "LSP Evidence Fixture Verification Summary (PowerShell)"
 Write-Output "Passed: $pass | Failed: $failures"

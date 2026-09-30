@@ -16,6 +16,7 @@
 |----------|----------|--------|---------|
 | `src/foo.ts:42:5` | 🚨 [BLOCKING] | tsc-cli | `Type 'string' is not assignable to type 'number'.` |
 | `src/bar.ts:17:3` | ⚠️ [IMPORTANT] | eslint | `'a' is assigned a value but never used.` |
+| `src/single.ts:5:1` | 💡 [SUGGEST] | eslint | `Single line change.` |
 
 ### 👏 [PRAISE]
 - Citations verified against the fixed-point diff.

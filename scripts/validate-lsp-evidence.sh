@@ -90,8 +90,7 @@ awk '
             split(spec, a, ",")
             start = a[1] + 0
             count = (a[2] == "") ? 1 : a[2] + 0
-            if (count < 1) count = 1
-            if (file != "") printf "%s\t%d\t%d\n", file, start, start + count - 1
+            if (count > 0 && file != "") printf "%s\t%d\t%d\n", file, start, start + count - 1
         }
     }
 ' "$DIFF_FILE" > "$RANGES"

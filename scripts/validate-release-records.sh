@@ -519,8 +519,20 @@ validate_cross_records() {
 
     local index
     for index in "${!RECORD_CANONICAL[@]}"; do
-        if [ "${RECORD_CANONICAL[$index]}" != 'Release Evaluation' ] && [ "${#EVALUATION_ID_SEEN[@]}" -gt 0 ] && [ -z "${EVALUATION_ID_SEEN[${RECORD_ID[$index]}]+present}" ]; then
+        if [ "${RECORD_CANONICAL[$index]}" != 'Release Evaluation' ] && [ -z "${EVALUATION_ID_SEEN[${RECORD_ID[$index]}]+present}" ]; then
             diagnostic "EVALUATION_ID_MISMATCH" "${RECORD_ID[$index]}" "${RECORD_RELATIVE[$index]}" "Evaluation ID does not match a Release Evaluation record: ${RECORD_ID[$index]}" 'Use one shared Evaluation ID across linked evaluation artifacts'
+
+            if [ "${RECORD_CANONICAL[$index]}" = 'Approved Release Record' ] && [ "$(field_value "$index" 'Approval Decision')" = 'Approved' ]; then
+                local has_qa=0 has_cand=0 check_idx
+                for check_idx in "${!RECORD_CANONICAL[@]}"; do
+                    if [ "${RECORD_ID[$check_idx]}" = "${RECORD_ID[$index]}" ]; then
+                        [ "${RECORD_CANONICAL[$check_idx]}" = 'QA Review Record' ] && has_qa=1
+                        [ "${RECORD_CANONICAL[$check_idx]}" = 'SemVer Candidate Record' ] && has_cand=1
+                    fi
+                done
+                [ "$has_qa" -eq 0 ] && diagnostic "APPROVAL_REQUIRED" "${RECORD_ID[$index]}" "${RECORD_RELATIVE[$index]}" 'Approved Release Record has no linked QA Review Record' 'Link a completed QA review under the same Evaluation ID'
+                [ "$has_cand" -eq 0 ] && diagnostic "CANDIDATE_PROVENANCE" "${RECORD_ID[$index]}" "${RECORD_RELATIVE[$index]}" 'Approved Release Record has no linked preliminary candidate' 'Link the preliminary candidate and retain its provenance'
+            fi
         fi
     done
 
@@ -677,7 +689,7 @@ else
     done < <(find "$RELEASE_DIR" -type f -name '*.md' ! -path "$RELEASE_DIR/ci-triage/*" -print | LC_ALL=C sort)
 fi
 
-[ "${#EVALUATION_INDICES[@]}" -gt 0 ] && validate_cross_records
+validate_cross_records
 
 if [ "$ERROR_COUNT" -gt 0 ]; then
     printf '%s\n' "${DIAGNOSTICS[@]}" | LC_ALL=C sort
