@@ -363,7 +363,7 @@ If the request involves non-trivial engineering changes (new features, crashes, 
    - **Unattended execution, hands-off automation, end-to-end task runs**: Auto-route to `workflows/auto.md` (`pk:auto`). Announce the active leash on Turn 1 and halt at `review ready` (or declared boundary) with a 3-strike test circuit breaker.
 
 ### Tier 3: Subagent Delegation Guardrails
-When executing workflows in agentic multi-agent environments (Antigravity, Claude Code, Cursor background agents), follow `.promptkit/protocols/subagent-delegation.md`:
+When executing workflows in agentic multi-agent environments (Antigravity, Claude Code, Cursor background agents), follow `<kit>/protocols/subagent-delegation.md`:
 - **Delegate to Subagents**:
   - `pk:spike`: Fan out parallel subagents to benchmark competing frameworks concurrently.
   - `pk:review`: Run Spec Fidelity and Fowler Code Smells audits in concurrent subagents.

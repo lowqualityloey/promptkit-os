@@ -147,7 +147,7 @@ Avoid writing separate, unlinked TypeScript interfaces on the frontend and backe
 2. Set rate-limit window and maximum allowed requests.
 
 ### Step 5: Generate API Specification Artifact
-1. Use `.promptkit/templates/api-contract-spec.md`.
+1. Use `<kit>/templates/api-contract-spec.md`.
 2. Save specification to `./docs/api/YYYY-MM-DD-api-<endpoint-name>.md`.
 
 ---

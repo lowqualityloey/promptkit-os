@@ -216,7 +216,7 @@ After the selected planning depth is complete, provide execution inputs for Leve
 The Planner / Architect hands the objective, bounded files or behaviors, acceptance inputs, verification condition, dependencies, risks, approval boundary, execution policy, and locked invariants to `pk:tasks`. External issues may be linked for coordination, but they are not required and do not replace the Local Task Source.
 
 ### Step 6: Generate Technical Specification & Grilling Pre-Flight
-1. Scaffold the RFC document using `.promptkit/templates/tech-spec-template.md`.
+1. Scaffold the RFC document using `<kit>/templates/tech-spec-template.md`.
 2. Save to `./docs/specs/YYYY-MM-DD-spec-<feature-name>.md` (or directory configured in `PROMPTKIT.md`).
 3. **Pre-Implementation Grilling**:
    - Before writing code, challenge the design using `pk:grill` to stress-test failure edge cases, scaling limits, and architectural assumptions.

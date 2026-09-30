@@ -36,7 +36,7 @@ Design a high-throughput, fault-tolerant payment webhook ingestion and dispatch 
    - Fallback strategies when downstream services degrade.
 
 ### Step 3: Draft the Technical Specification
-1. Use `.promptkit/templates/tech-spec-template.md` to draft a complete RFC in `./docs/specs/`.
+1. Use `<kit>/templates/tech-spec-template.md` to draft a complete RFC in `./docs/specs/`.
 2. Include sequence diagrams, schema definitions, and failure recovery policies.
 
 ### Step 4: Retrospective & ADR Creation (`pk:retro`)

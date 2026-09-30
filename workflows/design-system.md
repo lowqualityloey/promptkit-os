@@ -42,7 +42,7 @@ Guide the developer in designing, engineering, and auditing production-grade, hu
 
 ## Preconditions
 - Developer is building or refactoring UI components, a design system, or user interaction flows.
-- Access to `.promptkit/templates/design-tokens-spec.md`.
+- Access to `<kit>/templates/design-tokens-spec.md`.
 - Review project profile in `./PROMPTKIT.md` (if present) for brand identity and styling stack — resolve the project's implementation stack here before any component work (see **Requirement Over Implementation**).
 
 ---
