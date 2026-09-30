@@ -31,16 +31,19 @@ Eliminate the primary causes of authentication vulnerabilities: token storage in
     ```typescript
     res.setHeader('Set-Cookie', [
       'session_id=...;',
-      'HttpOnly;',                 // Disallows JavaScript access (XSS immune)
+      'HttpOnly;',                 // Blocks client-side script access (mitigates token theft via XSS; does not prevent scripted request forgery)
       'Secure;',                   // Transmitted only over HTTPS
-      'SameSite=Lax;',             // Protects against CSRF on top-level navigations
+      'SameSite=Lax;',             // Restricts cookies on cross-site subrequests; permits cross-site top-level safe-method (GET) navigations
       'Path=/;',
       'Max-Age=604800;'            // Explicit expiration in seconds
     ].join(' '));
     ```
-- **Refresh Token Rotation & Reuse Detection**:
-  - Issue refresh tokens in rotating families. When a refresh token is used, invalidate it and issue a new one.
-  - If an already-used refresh token is presented, assume token theft: immediately invalidate all sessions belonging to that user.
+- **Defense-in-Depth CSRF Strategy (see `docs/recipes/auth-session.md`)**:
+  - `SameSite=Lax` alone is not complete CSRF defense: it permits cross-site top-level GET navigations and may not be supported by legacy clients.
+  - State-mutating endpoints (`POST`, `PUT`, `PATCH`, `DELETE`) must enforce independent CSRF checks: verify `Origin` and `Referer` headers against allowed origins and/or validate synchronized anti-CSRF tokens. Never perform state mutations via `GET`.
+- **Refresh Token Rotation & Atomic Reuse Detection**:
+  - Issue refresh tokens in rotating families. Consume tokens conditionally and issue successors atomically (single transaction or conditional write).
+  - If an already-used refresh token is presented (including lost races in concurrent exchanges), assume token theft: immediately invalidate all sessions belonging to that token family.
 
 ---
 
