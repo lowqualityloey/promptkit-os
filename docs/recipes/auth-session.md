@@ -88,11 +88,7 @@ export interface RotationResult {
 export async function rotateRefreshToken(
   tokenId: string,
   store: {
-    /**
-     * Atomically consumes an unused token and creates its successor within
-     * a single transaction or conditional CAS operation (e.g. UPDATE ... WHERE id = $1 AND used = false).
-     * If the token was already used, returns reuse_detected with the familyId to revoke.
-     */
+    // Atomically consumes unused token and creates successor in a single transaction/CAS write
     consumeAndRotate: (tokenId: string) => Promise<RotationResult>;
     revokeFamily: (familyId: string) => Promise<void>;
   }
@@ -117,7 +113,7 @@ export async function rotateRefreshToken(
 }
 ```
 
-> **Transaction Atomicity Invariant**: The token check, marking as used, and successor creation must occur in a single atomic transaction or conditional write. Separate non-atomic reads and writes allow concurrent exchanges presenting the same valid token to both pass `used === false` and mint duplicate valid successors.
+> **Transaction Atomicity Invariant**: Token consumption and successor creation must occur in a single atomic transaction or conditional write (e.g. `UPDATE ... WHERE id = $1 AND used = false`). Non-atomic reads and writes allow concurrent exchanges to mint duplicate valid successors.
 
 ---
 
