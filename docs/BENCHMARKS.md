@@ -97,7 +97,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,026 tok** | **7,977 tok** | **-30% Balanced, -38% Lite (-3,835 to -4,884 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,085 tok** | **18,036 tok** | **-23% Balanced, -27% Lite (-5,581 to -6,630 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,100 tok** | **18,051 tok** | **-23% Balanced, -27% Lite (-5,566 to -6,615 tok)** |
 | **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,464 tok** | **14,415 tok** | **-38% Balanced, -42% Lite (-9,297 to -10,346 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State

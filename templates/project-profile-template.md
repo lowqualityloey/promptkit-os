@@ -18,7 +18,7 @@ status-cards: on
 > `status-cards: on` (default) emits the 3-line telemetry card on completion; `off` suppresses the decorative card only — `> [!IMPORTANT]` / `> [!WARNING]` halts still fire. A missing line means `on`.
 
 size: [small | medium | large]
-intake-status: [unanswered | partial | complete]
+intake-status: [unanswered | partial | legacy-partial | complete]
 > `size:` and `intake-status:` are written by `pk:onboard` (greenfield Phase 0 interview, or a brownfield estimate marked `legacy-partial` when fields predate intake). `unanswered` or `partial` instructs `pk:plan` Step 0 to run the bounded intake in `protocols/discovery-intake.md` before proposing architecture. Never guess these values.
 
 ---
@@ -41,7 +41,7 @@ intake-status: [unanswered | partial | complete]
 ---
 
 ## 3. Project Commands & Evidence-Gated Verification
-PromptKit OS enforces Evidence-Gated Verification. Every completion claim requires executed evidence matching the task ceremony level:
+PromptKit OS enforces Evidence-Gated Verification. Every completion claim requires executed evidence matching the task ceremony level. The `pnpm` commands below are examples — replace them with the project's native commands once `pk:onboard` observes the host stack:
 - **Fast Tier (Level 0/1)**: `pnpm tsc --noEmit` [or cargo check / ruff check . / flutter analyze]
 - **Required Tier (Level 1/2)**: `pnpm test` [or cargo test / pytest / go test -race ./...]
 - **Extended Tier (Level 2/3)**: `pnpm test:e2e && pnpm lint` [or cargo clippy -- -D warnings / mypy]
@@ -51,9 +51,9 @@ PromptKit OS enforces Evidence-Gated Verification. Every completion claim requir
 > Candidate manifests detected by `pk:onboard` map to bounded playbooks in `docs/stacks/`. Loaded strictly just-in-time; never loaded all at once.
 - **Active Playbooks**: `[e.g. docs/stacks/fullstack-nextjs.md, docs/stacks/database-turso.md | N/A]`
 
-- **Standard Commands**:
-  - **Install**: `pnpm install`
-  - **Dev Server**: `pnpm dev`
+- **Standard Commands** (replace with native commands once the stack is known):
+  - **Install**: [e.g. `pnpm install`]
+  - **Dev Server**: [e.g. `pnpm dev`]
 
 ---
 

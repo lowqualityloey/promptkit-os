@@ -26,7 +26,7 @@
 - **Planning Depth [Required]**: `Minimal | Full`
 - **Owner [Required]**: [Person, role, or team]
 - **Record Status [Required]**: `draft | ready | blocked | superseded`
-- **Local Task Record Link [Required for Controlled Work]**: `[TASK-<task-slug>](../tasks/<task-id>.md#TASK-<task-slug>)`
+- **Local Task Record Link [Required for Controlled Work once the record exists]**: `TBD — created by pk:tasks` (then `[TASK-<task-slug>](../tasks/<task-id>.md#TASK-<task-slug>)`)
 - **Workflow Links [Optional]**: `[workflow anchor links]`
 
 ### Planning Inputs

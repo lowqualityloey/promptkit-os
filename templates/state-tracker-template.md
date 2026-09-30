@@ -3,7 +3,7 @@
 ## 1. Executive Summary & Current Position
 - **Project Name**: [Project Name]
 - **Current Milestone / Epic**: [e.g., Milestone 2: Core Domain Engine]
-- **Overall Status**: ACTIVE <!-- Options: ACTIVE | PAUSED | STABILIZING | RELEASE_CANDIDATE | COMPLETED (all milestones closed, release evidence archived, zero open blockers — recording stops here) -->
+- **Overall Status**: [ACTIVE | PAUSED | STABILIZING | RELEASE_CANDIDATE | COMPLETED] <!-- ACTIVE while work is in flight; COMPLETED only when all milestones closed, release evidence archived, zero open blockers — recording stops here -->
 - **Target Release / Deadline**: [e.g., v1.0.0 / YYYY-MM-DD]
 - **Current Working Branch**: [e.g., main or feature/branch-name]
 - **Last Updated**: [YYYY-MM-DD]
@@ -24,10 +24,10 @@ Track tasks using atomic checklists (`[x]` Done, `[/]` In Progress, `[ ]` Queued
 
 ## 3. Active Working Set
 - **Target Workspace / Package (if Monorepo)**: [e.g. `apps/web` or `@repo/db` (leave blank for standalone repo)]
-- **Active RFC / Spec**: `docs/specs/YYYY-MM-DD-feature-name.md`
-- **Active Task Spec**: `docs/tasks/YYYY-MM-DD-task-breakdown.md`
+- **Active RFC / Spec**: not tracked — recorded here when planning starts, never pre-filled
+- **Active Task Spec**: not tracked — recorded here when task breakdown starts, never pre-filled
 - **Key Source Files in Flight**: not tracked — recorded here when work starts, never pre-filled
-- **Verification Commands (Scoped)**:
+- **Verification Commands (Scoped)** (replace with the project's native commands once the host stack is observed; npm shown as example):
   - Unit Tests: `npm test` (or `pnpm --filter <pkg> test`, `turbo run test --filter=<pkg>`)
   - Typecheck: `npm run typecheck` (or `pnpm --filter <pkg> typecheck`)
   - Linter: `npm run lint` (or `pnpm --filter <pkg> lint`)
@@ -39,7 +39,7 @@ Track tasks using atomic checklists (`[x]` Done, `[/]` In Progress, `[ ]` Queued
 > This section is a synchronized projection for checkpoint continuity when the host project uses Controlled Work. The canonical authority remains `docs/tasks/<task-id>.md`; disagreement with that record is a validation failure and leaves execution blocked or `checkpoint_due` until reconciled.
 
 - **Local Task Source**: `docs/tasks/<task-id>.md`
-- **Task ID**: `TASK-[YYYY-MM-DD]-[slug]`
+- **Task ID**: `TASK-<task-slug>` (preserve `TASK-YYYY-MM-DD-<slug>` for legacy/`none`-profile records)
 - **Task Record**: `docs/tasks/<task-id>.md`
 - **Specification**: `docs/specs/[specification].md`
 - **Execution Scope**: `[Repository, workspace, package, or session boundary]`
