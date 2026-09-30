@@ -60,8 +60,8 @@ Brand-new empty repo (no code, no manifest). Build me a SaaS app with authentica
 
 Baseline B transcripts are produced inside *some* host — record host name+version on them and they double as matrix cells for that host, no duplicate runs. Baseline B holds the directive constant across models; the matrix holds the model constant across hosts. Together they separate the two axes.
 
-## Published Matrix
+## Published Matrix & Fixtures
 
-The initial conformance results across Claude Code, Cursor, and GitHub Copilot are published in [`docs/HOST-CONFORMANCE.md`](../../HOST-CONFORMANCE.md).
+The initial scorer validation fixture results across Claude Code, Cursor, and GitHub Copilot are published in [`docs/HOST-CONFORMANCE.md`](../../HOST-CONFORMANCE.md).
 
-Transcripts for scored runs are located at `docs/internal/host-conformance/<host>/<scenario>.md`.
+Staged sample fixtures for scorer validation are located at `docs/internal/host-conformance/<host>/<scenario>.md`. Live host runtime captures remain pending maintainer session sweeps.

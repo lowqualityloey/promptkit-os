@@ -41,7 +41,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
 | Core-six Lite subset | 6 | **26,927 tok** |
-| Full workflow set | 25 | **104,187 tok** |
+| Full workflow set | 25 | **104,210 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -98,7 +98,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,045 tok** | **8,001 tok** | **-30% Balanced, -38% Lite (-3,816 to -4,860 tok)** |
 | **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,118 tok** | **18,074 tok** | **-22% Balanced, -27% Lite (-5,548 to -6,592 tok)** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,483 tok** | **14,439 tok** | **-37% Balanced, -42% Lite (-9,278 to -10,322 tok)** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,506 tok** | **14,462 tok** | **-37% Balanced, -42% Lite (-9,255 to -10,299 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 

@@ -1,6 +1,6 @@
 # Behavioral Evaluation: Sampled Prompt-Compliance Results
 
-The documentation-contract suite (`run-behavioral-contract-tests.sh`) proves the docs say the right thing. This harness measures whether a model given the directive **does** it: 16 scenarios score transcripts for observable properties (Level declared, code withheld, halt callout fired), never prose equality. Runner: `scripts/run-behavioral-eval.sh` (+ `.ps1` twin). Scenarios + embedded fixtures: `scripts/tests/eval-scenarios/`. CI runs the offline fixture self-test (`--self-test`, currently 16/16); live scoring is `./run-behavioral-eval.sh --score <scenario> <transcript>`.
+The documentation-contract suite (`run-behavioral-contract-tests.sh`) proves the docs say the right thing. This harness measures whether a model given the directive **does** it: 18 scenarios score transcripts for observable properties (Level declared, code withheld, halt callout fired), never prose equality. Runner: `scripts/run-behavioral-eval.sh` (+ `.ps1` twin). Scenarios + embedded fixtures: `scripts/tests/eval-scenarios/`. CI runs the offline fixture self-test (`--self-test`, currently 18/18); live scoring is `./run-behavioral-eval.sh --score <scenario> <transcript>`.
 
 **Honesty contract:** sampled compliance for named models at a named commit — not a guarantee.
 
@@ -33,7 +33,7 @@ Same scorer, transcripts produced as a model that never saw the targeted rule (`
 
 ## Cross-Host Conformance Matrix
 
-While this evaluation measures model-level compliance, host environment integration (CLI vs. IDE composer vs. extension sidecar) introduces an orthogonal fidelity axis. See [`docs/HOST-CONFORMANCE.md`](./HOST-CONFORMANCE.md) for the empirical cross-host matrix across Claude Code, Cursor, and Copilot under the pinned-model confound control.
+While this evaluation measures model-level compliance, host environment integration (CLI vs. IDE composer vs. extension sidecar) introduces an orthogonal fidelity axis. See [`docs/HOST-CONFORMANCE.md`](./HOST-CONFORMANCE.md) for the cross-host instruction fidelity matrix and scorer fixture validation framework under the pinned-model confound control.
 
 ## Limitations & replication
 

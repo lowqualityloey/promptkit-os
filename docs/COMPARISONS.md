@@ -13,7 +13,7 @@ PromptKit OS coexists cleanly with host-specific instruction files (`AGENTS.md`,
 - **Specialized Assistance**: External skills and host tools provide domain-specific knowledge, code generation assistance, or specialized refactoring helpers.
 - **PromptKit Authority**: PromptKit OS remains authoritative for **Level 0–3 task classification**, lifecycle routing, required verification evidence, Task Record requirements, release boundaries, and human authorization.
 - **Non-Bypass Rule**: External skills must act as subordinate helpers. They must **never** silently commit, push, merge, tag, publish, deploy, or bypass required verification gates.
-- **Behavioral Variation**: Host agents enforce instructions with varying degrees of fidelity. PromptKit OS provides protocol standards, but host enforcement depends on the AI agent host. For measured empirical instruction fidelity across hosts, see [`docs/HOST-CONFORMANCE.md`](HOST-CONFORMANCE.md).
+- **Behavioral Variation**: Host agents enforce instructions with varying degrees of fidelity. PromptKit OS provides protocol standards, but host enforcement depends on the AI agent host. For the cross-host instruction fidelity matrix and scorer fixture validation framework, see [`docs/HOST-CONFORMANCE.md`](HOST-CONFORMANCE.md).
 
 ### Host Compatibility Matrix
 
