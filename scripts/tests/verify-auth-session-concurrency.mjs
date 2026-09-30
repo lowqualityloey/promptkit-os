@@ -3,49 +3,78 @@
  * Deterministic Concurrency Verification for Refresh Token Rotation (Issue #465)
  *
  * Verifies:
- * 1. Given two concurrent refresh-token exchanges presenting the same valid token:
+ * 1. Automatic parity with docs/recipes/auth-session.md:
+ *    - Validates discriminated union requires familyId on reuse_detected.
+ *    - Validates unconditional store.revokeFamily(result.familyId) in the recipe text.
+ *    - Extracts and tests the exact rotateRefreshToken implementation from the recipe.
+ * 2. AC-1: Given two concurrent refresh-token exchanges presenting the same valid token:
  *    - At most one successor token issues.
- *    - The losing exchange detects reuse/conflict and triggers family revocation.
- * 2. Given a revoked token family:
- *    - When any member token is presented (including winning successor, original token, or predecessor),
- *      no token remains usable.
- * 3. Compares atomic transactional consumption vs non-atomic (demonstrating why the race occurred).
+ *    - The losing exchange detects reuse and calls store.revokeFamily unconditionally.
+ *    - The adapter does NOT revoke internally, proving that the wrapper performs the revocation.
+ * 3. AC-2: Given a revoked token family:
+ *    - Presenting any member token fails with UNAUTHORIZED: Token family is revoked.
+ * 4. Isolated wrapper verification:
+ *    - Direct adapter returning reuse_detected without internal revocation triggers store.revokeFamily.
+ * 5. Flawed comparison:
+ *    - Non-atomic read/write pattern demonstrably permits duplicate successor issuance.
  */
 
 import assert from "node:assert";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-// Implementation of Pattern C from docs/recipes/auth-session.md
-export async function rotateRefreshToken(tokenId, store) {
-  const result = await store.consumeAndRotate(tokenId);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const recipePath = path.resolve(__dirname, "../../docs/recipes/auth-session.md");
 
-  if (result.status === "not_found") {
-    throw new Error("UNAUTHORIZED: Unknown token");
-  }
+// 1. Parity validation & dynamic extraction from docs/recipes/auth-session.md
+assert(fs.existsSync(recipePath), `Recipe file missing: ${recipePath}`);
+const recipeContent = fs.readFileSync(recipePath, "utf8");
 
-  // Invariant: Failed consumption due to prior use triggers immediate family invalidation
-  if (result.status === "reuse_detected") {
-    if (result.familyId) await store.revokeFamily(result.familyId);
-    throw new Error("SECURITY_ALERT: Token reuse detected; family revoked");
-  }
+// Assert recipe publishes discriminated union requiring familyId on reuse_detected
+assert(
+  /\|\s*\{\s*status:\s*"reuse_detected";\s*familyId:\s*string\s*\}/.test(recipeContent),
+  "docs/recipes/auth-session.md must require familyId in RotationResult for reuse_detected"
+);
 
-  if (result.status === "family_revoked") {
-    throw new Error("UNAUTHORIZED: Token family is revoked");
-  }
+// Assert recipe publishes unconditional store.revokeFamily without conditional bypass
+assert(
+  recipeContent.includes("await store.revokeFamily(result.familyId);"),
+  "docs/recipes/auth-session.md must unconditionally call await store.revokeFamily(result.familyId)"
+);
+assert(
+  !recipeContent.includes("if (result.familyId) await store.revokeFamily"),
+  "docs/recipes/auth-session.md must not conditionally guard revokeFamily (familyId is required)"
+);
 
-  if (!result.successorTokenId) {
-    throw new Error("INTERNAL_ERROR: Failed to issue successor token");
-  }
+// Extract Pattern C implementation directly from recipe
+const patternCMatch = recipeContent.match(
+  /### Pattern C: Refresh Token Rotation[^\n]*\n\n```typescript\n([\s\S]*?)\n```/
+);
+assert(patternCMatch, "Failed to locate Pattern C code block in docs/recipes/auth-session.md");
 
-  return result.successorTokenId;
-}
+const tsCode = patternCMatch[1];
 
-// Atomic store simulating a single-transaction or conditional update (CAS)
+// Strip TypeScript annotations for direct Node.js execution
+const jsFunctionCode = tsCode
+  .replace(/export type RotationResult[\s\S]*?;\n/, "")
+  .replace(/export async function rotateRefreshToken\([\s\S]*?\): Promise<string> \{/, "async function rotateRefreshToken(tokenId, store) {");
+
+// Compile the extracted recipe function
+const createRecipeFunction = new Function(`${jsFunctionCode}\nreturn rotateRefreshToken;`);
+const rotateRefreshToken = createRecipeFunction();
+
+// 2. Atomic store simulating transaction/CAS
+// NOTE: consumeAndRotate deliberately DOES NOT revoke families internally upon reuse.
+// This ensures that family revocation can ONLY occur if rotateRefreshToken invokes store.revokeFamily.
 class AtomicTokenStore {
   constructor() {
     this.tokens = new Map(); // id -> { id, familyId, used, userId }
     this.revokedFamilies = new Set();
     this.tokenCounter = 1;
-    this.mutex = Promise.resolve(); // Simulates database row/table lock in transaction
+    this.mutex = Promise.resolve();
+    this.revokeFamilyCallCount = 0;
   }
 
   seedToken(id, familyId, userId) {
@@ -53,11 +82,11 @@ class AtomicTokenStore {
   }
 
   async revokeFamily(familyId) {
+    this.revokeFamilyCallCount++;
     this.revokedFamilies.add(familyId);
   }
 
   async consumeAndRotate(tokenId) {
-    // Atomically execute inside simulated transaction
     const executeInTx = async () => {
       const token = this.tokens.get(tokenId);
       if (!token) {
@@ -68,14 +97,13 @@ class AtomicTokenStore {
         return { status: "family_revoked", familyId: token.familyId };
       }
 
-      // Conditional consume: check if used == false
+      // Conditional consume
       if (token.used) {
-        // Reuse detected!
-        await this.revokeFamily(token.familyId);
+        // Return reuse detected with required familyId.
+        // DO NOT revoke internally: store.revokeFamily must be invoked by the caller.
         return { status: "reuse_detected", familyId: token.familyId };
       }
 
-      // Mark used and create successor in same atomic transaction
       token.used = true;
       const successorId = `tok_succ_${this.tokenCounter++}`;
       this.tokens.set(successorId, {
@@ -88,7 +116,6 @@ class AtomicTokenStore {
       return { status: "success", successorTokenId: successorId, familyId: token.familyId };
     };
 
-    // Serialize access across concurrent awaits to model transactional serialization
     const currentLock = this.mutex;
     let release;
     this.mutex = new Promise((resolve) => {
@@ -104,7 +131,7 @@ class AtomicTokenStore {
   }
 }
 
-// Flawed non-atomic store for comparison demonstrating the race condition
+// 3. Flawed non-atomic store for comparison demonstrating the race condition
 class FlawedNonAtomicStore {
   constructor() {
     this.tokens = new Map();
@@ -116,7 +143,6 @@ class FlawedNonAtomicStore {
   }
 
   async get(id) {
-    // Simulated async network delay before returning
     await new Promise((r) => setTimeout(r, 10));
     return this.tokens.get(id) || null;
   }
@@ -148,7 +174,10 @@ async function runTests() {
   console.log("🧪 Running Refresh-Token Concurrency Verification");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-  // 1. Verify that flawed non-atomic pattern suffers from race condition
+  // 1. Verify published recipe parity and function extraction
+  console.log("  ✅ PASS: Published recipe parity verified (discriminated union requires familyId; unconditional revocation)");
+
+  // 2. Verify flawed non-atomic pattern suffers from race condition
   {
     const flawedStore = new FlawedNonAtomicStore();
     flawedStore.seedToken("tok_flawed_1", "fam_flawed", "user_1");
@@ -158,12 +187,38 @@ async function runTests() {
       flawedRotate("tok_flawed_1", flawedStore),
     ]);
 
-    // Both succeeded! (The defect identified in audit finding 1)
     assert(res1 && res2 && res1 !== res2, "Flawed pattern issued duplicate successors");
     console.log("  ✅ PASS: Verified flawed non-atomic pattern produces race condition (duplicate successors issued)");
   }
 
-  // 2. AC-1: Given two concurrent refresh-token exchanges, at most ONE successor issues and reuse triggers family revocation
+  // 3. Verify wrapper mandatory revocation in isolation
+  {
+    let revoked = false;
+    let targetRevokedFamily = null;
+    const isolatedStore = {
+      async consumeAndRotate(id) {
+        return { status: "reuse_detected", familyId: "fam_isolated_99" };
+      },
+      async revokeFamily(familyId) {
+        revoked = true;
+        targetRevokedFamily = familyId;
+      },
+    };
+
+    await assert.rejects(
+      async () => {
+        await rotateRefreshToken("tok_any", isolatedStore);
+      },
+      /SECURITY_ALERT: Token reuse detected; family revoked/,
+      "Wrapper must reject on reuse_detected"
+    );
+
+    assert.strictEqual(revoked, true, "Wrapper must invoke store.revokeFamily");
+    assert.strictEqual(targetRevokedFamily, "fam_isolated_99", "Wrapper must pass correct familyId to revokeFamily");
+    console.log("  ✅ PASS: Isolated wrapper verification: store.revokeFamily invoked unconditionally with required familyId");
+  }
+
+  // 4. AC-1: Given two concurrent refresh-token exchanges, at most ONE successor issues and reuse triggers family revocation
   const atomicStore = new AtomicTokenStore();
   const initialToken = "tok_valid_001";
   const familyId = "fam_alpha";
@@ -184,10 +239,13 @@ async function runTests() {
   assert(winningSuccessor.startsWith("tok_succ_"), "Successor token must be minted for winner");
   assert.match(rejected[0].reason.message, /SECURITY_ALERT: Token reuse detected; family revoked/);
 
+  // Assert store.revokeFamily was called and added familyId to revokedFamilies
+  assert.strictEqual(atomicStore.revokeFamilyCallCount, 1, "store.revokeFamily must be called by wrapper");
+  assert(atomicStore.revokedFamilies.has(familyId), "Family must be marked revoked");
+
   console.log("  ✅ PASS: AC-1 verified: Exactly 1 successor issued; parallel call caught reuse and triggered family revocation");
 
-  // 3. AC-2: Given a revoked token family, no member token remains usable
-  // Check winning successor:
+  // 5. AC-2: Given a revoked token family, no member token remains usable
   await assert.rejects(
     async () => {
       await rotateRefreshToken(winningSuccessor, atomicStore);
@@ -196,7 +254,6 @@ async function runTests() {
     "Winning successor must be unusable once family is revoked"
   );
 
-  // Check original token:
   await assert.rejects(
     async () => {
       await rotateRefreshToken(initialToken, atomicStore);
@@ -207,7 +264,7 @@ async function runTests() {
 
   console.log("  ✅ PASS: AC-2 verified: Post-revocation unusability confirmed for all family tokens");
 
-  // 4. Sequential valid rotation when no race condition exists
+  // 6. Sequential valid rotation when no race condition exists
   const cleanStore = new AtomicTokenStore();
   cleanStore.seedToken("tok_clean_1", "fam_clean", "user_456");
 
@@ -226,6 +283,7 @@ async function runTests() {
     "Re-presenting already consumed token must trigger reuse alert"
   );
 
+  assert(cleanStore.revokedFamilies.has("fam_clean"), "Family must be revoked after re-presenting old token");
   console.log("  ✅ PASS: Sequential single-use rotation and reuse detection confirmed");
 
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

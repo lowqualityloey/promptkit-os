@@ -79,11 +79,11 @@ export async function authenticateRequest(
 ### Pattern C: Refresh Token Rotation with Atomic Single-Use Consumption
 
 ```typescript
-export interface RotationResult {
-  status: "success" | "reuse_detected" | "not_found";
-  successorTokenId?: string;
-  familyId?: string;
-}
+export type RotationResult =
+  | { status: "success"; successorTokenId: string; familyId: string }
+  | { status: "reuse_detected"; familyId: string }
+  | { status: "family_revoked"; familyId: string }
+  | { status: "not_found" };
 
 export async function rotateRefreshToken(
   tokenId: string,
@@ -99,14 +99,14 @@ export async function rotateRefreshToken(
     throw new Error("UNAUTHORIZED: Unknown token");
   }
 
-  // Invariant: Failed consumption due to prior use triggers immediate family invalidation
-  if (result.status === "reuse_detected") {
-    if (result.familyId) await store.revokeFamily(result.familyId);
-    throw new Error("SECURITY_ALERT: Token reuse detected; family revoked");
+  if (result.status === "family_revoked") {
+    throw new Error("UNAUTHORIZED: Token family is revoked");
   }
 
-  if (!result.successorTokenId) {
-    throw new Error("INTERNAL_ERROR: Failed to issue successor token");
+  // Invariant: Failed consumption due to prior use triggers immediate family invalidation
+  if (result.status === "reuse_detected") {
+    await store.revokeFamily(result.familyId);
+    throw new Error("SECURITY_ALERT: Token reuse detected; family revoked");
   }
 
   return result.successorTokenId;

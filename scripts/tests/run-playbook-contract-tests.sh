@@ -18,4 +18,10 @@ if [[ -d "$REPO_ROOT/docs/recipes" ]]; then
     bash "$REPO_ROOT/scripts/validate-playbooks.sh" "$REPO_ROOT/docs/recipes"
 fi
 
+if command -v node >/dev/null 2>&1 && [[ -f "$REPO_ROOT/scripts/tests/verify-auth-session-concurrency.mjs" ]]; then
+    echo "🧪 Running Recipe Concurrency Verification (Node)..."
+    node "$REPO_ROOT/scripts/tests/verify-auth-session-concurrency.mjs"
+fi
+
 echo "✅ All Playbook Contract tests PASSED"
+
