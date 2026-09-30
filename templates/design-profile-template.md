@@ -110,7 +110,7 @@ External font downloads are not required. Modern system fonts provide zero-laten
 
 ## 7. Universal Icon System Standards ([Iconify](https://icon-sets.iconify.design/))
 - **Authoritative Catalog**: Use [Iconify](https://icon-sets.iconify.design/) to verify exact icon names and SVG paths without requiring an npm package dependency.
-- **Single-Family Consistency**: Pick one primary icon set per project:
+- **Single-Family Consistency**: Pick one primary icon set per project (applied to icons that exist; text-only navigation and controls remain complete without icons):
   - *Lucide*: Clean, modern SaaS and web apps.
   - *Radix Icons*: High-density developer tools and compact dashboards.
   - *Phosphor*: Warm, editorial, and humanist products.
