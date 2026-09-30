@@ -44,7 +44,7 @@ Use this checklist during PR reviews and self-audits to ensure the highest stand
 - [ ] **Transaction Atomicity**: Are multiple database writes wrapped in atomic transactions?
 
 ## 7. Security Hygiene & Defense-in-Depth (OWASP)
-- [ ] **Authentication & Authorization**: Is every endpoint protected by explicit user session and permission checks?
+- [ ] **Authentication & Authorization**: Are protected endpoints guarded by explicit user session and permission checks, while public and service endpoints (login, registration, recovery, health, webhooks) explicitly review and declare their intended access contract?
 - [ ] **Injection Prevention**: Are all database queries parameterized (no raw template literal SQL)?
 - [ ] **Data Sanitization**: Is HTML/Markdown rendered safely against XSS attacks?
 - [ ] **Secrets & PII Hygiene**: Are sensitive fields (passwords, tokens, emails, phone numbers) excluded from public client payloads and logs?
