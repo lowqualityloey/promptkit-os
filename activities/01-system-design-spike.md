@@ -8,7 +8,7 @@ Design a high-throughput, fault-tolerant payment webhook ingestion and dispatch 
 ## Scenario & Requirements
 
 ### Functional Requirements
-1. **Idempotent Ingestion**: Ingest incoming payment event webhooks from providers (Stripe, PayPal, Adyen) ensuring at-most-once/exactly-once processing semantics.
+1. **Idempotent Ingestion**: Ingest incoming payment event webhooks from providers (Stripe, PayPal, Adyen), which guarantee at-least-once delivery: record event IDs in an idempotency ledger and return duplicates without re-executing side effects, for effectively-once processing — redeliveries and replays never drop events or double-charge customers.
 2. **Asynchronous Dispatch**: Dispatch processed payment events to internal consumer services (Order Fulfillment, Fraud Detection, Customer Notification).
 3. **Replayability & Audit**: Support event replay capabilities for failed consumer deliveries up to 7 days.
 
@@ -36,7 +36,7 @@ Design a high-throughput, fault-tolerant payment webhook ingestion and dispatch 
    - Fallback strategies when downstream services degrade.
 
 ### Step 3: Draft the Technical Specification
-1. Use `.promptkit/templates/tech-spec-template.md` to draft a complete RFC in `./docs/specs/`.
+1. Use `<kit>/templates/tech-spec-template.md` to draft a complete RFC in `./docs/specs/`.
 2. Include sequence diagrams, schema definitions, and failure recovery policies.
 
 ### Step 4: Retrospective & ADR Creation (`pk:retro`)

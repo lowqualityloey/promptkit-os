@@ -120,7 +120,7 @@ As pairing sessions progress, context window bloat causes token lag and attentio
 1. **Synchronize State**: Execute `pk:checkpoint` to persist all in-flight decisions, locked invariants, and next actions to `docs/STATE.md`.
 2. **Emit Standardized Handover Notice**: At the conclusion of the turn, emit the exact notice:
    > "Session memory synced to docs/STATE.md. To eliminate token lag and prevent hallucinations, open a fresh chat session and type `pk:route`."
-3. **Zero-Loss Reconnect**: In the fresh chat session, typing `pk:route` or any `pk:` trigger reads `docs/STATE.md` immediately, restoring full context without token bloat.
+3. **Loss-Minimized Reconnect**: In the fresh chat session, typing `pk:route` or any `pk:` trigger reads `docs/STATE.md` immediately, restoring tracked state without token bloat. Unrecorded in-flight reasoning is not recovered — record decisions before switching.
 
 ---
 

@@ -39,12 +39,12 @@ $$\text{CPAC} = \frac{C_{\text{inference}} + C_{\text{rework}} + C_{\text{human}
 
 Where:
 
-> **Implementation note:** `scripts/measure-cpac.sh` and its `.ps1` twin accept successful-turn tokens ($T_{\text{successful\_in}}$, $T_{\text{successful\_out}}$) for direct inference calculations, isolating failed iterations to the rework penalty ($C_{\text{rework}}$) and avoiding double-counting failed-loop inference.
+> **Implementation note:** `scripts/measure-cpac.sh` and its `.ps1` twin accept successful-turn tokens ($T_{\text{successful-in}}$, $T_{\text{successful-out}}$) for direct inference calculations, isolating failed iterations to the rework penalty ($C_{\text{rework}}$) and avoiding double-counting failed-loop inference.
 
 ### A. Direct Inference Cost ($C_{\text{inference}}$)
 The raw LLM API consumption across all successful conversation turns. Note that inference costs from failed rework loops are accounted for in $C_{\text{rework}}$ instead of here, to avoid double counting:
-$$C_{\text{inference}} = (T_{\text{successful\_in}} \times P_{\text{in}}) + (T_{\text{successful\_out}} \times P_{\text{out}})$$
-- $T_{\text{successful\_in}}, T_{\text{successful\_out}}$: Total prompt and completion tokens during successful execution phases.
+$$C_{\text{inference}} = (T_{\text{successful-in}} \times P_{\text{in}}) + (T_{\text{successful-out}} \times P_{\text{out}})$$
+- $T_{\text{successful-in}}, T_{\text{successful-out}}$: Total prompt and completion tokens during successful execution phases.
 - $P_{\text{in}}, P_{\text{out}}$: Standard model pricing per token (e.g., \$3.00/1M in, \$15.00/1M out for frontier models).
 
 ### B. Rework Penalty Cost ($C_{\text{rework}}$)
@@ -56,9 +56,9 @@ $$C_{\text{rework}} = \sum_{k=1}^{R} \left( T_{\text{loop}(k)} \times P_{\text{a
 
 ### C. Human Review & Triage Cost ($C_{\text{human}}$)
 The cost of developer intervention required to review diffs, diagnose failures, or fix rejected PRs:
-$$C_{\text{human}} = t_{\text{review}} \times R_{\text{dev\_hourly}}$$
+$$C_{\text{human}} = t_{\text{review}} \times R_{\text{dev-hourly}}$$
 - $t_{\text{review}}$: Developer time in hours spent reviewing diffs, intervening on stalls, or fixing security violations.
-- $R_{\text{dev\_hourly}}$: Standardized engineering rate (baseline: \$100.00/hr = \$1.67/min).
+- $R_{\text{dev-hourly}}$: Standardized engineering rate (baseline: \$100.00/hr = \$1.67/min).
 
 ### D. Accepted Output Gate ($N_{\text{accepted}}$)
 Binary acceptance gate (1 if all tests pass and all non-negotiable invariants are preserved; 0 if rejected or broken). If $N_{\text{accepted}} = 0$, $\text{CPAC} \rightarrow \infty$.

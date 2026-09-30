@@ -6,7 +6,7 @@ Trigger anytime with: `pk:spike` or `pk:research` (or `/pk-spike`)
 ## Mission
 Guide the developer through evidence-based **Technical Spikes**, empirical library evaluations, and trade-off analyses.
 
-Eliminate "paper research" (summarizing marketing blogs or hype) and avoid building toy "Hello World" prototypes that fail under production constraints. Enforce rigorous, timeboxed investigations that isolate the sharpest risk, benchmark against the boring baseline, audit licensing and longevity, and transition directly into permanent Architectural Decision Records (ADRs).
+Eliminate "paper research" (summarizing marketing blogs or hype) and avoid building toy "Hello World" prototypes that fail under production constraints. Enforce rigorous, timeboxed investigations that isolate the sharpest risk, benchmark against the boring baseline, audit licensing and longevity, and transition vetted, owner-approved outcomes into permanent Architectural Decision Records (ADRs) — gated, see Step 6.
 
 ---
 
@@ -68,7 +68,7 @@ Evaluate 2 to 4 realistic options, always including the baseline:
 
 > [!TIP]
 > **Subagent Parallel Fan-Out (`protocols/subagent-delegation.md`)**:
-> In agentic environments, fan out candidate explorations to concurrent subagents (e.g. Subagent 1 evaluates Candidate A, Subagent 2 benchmarks Candidate B). Require each subagent to return a compact 10-line synthesis adhering to the Multi-Vector Evaluation Dimensions below.
+> Check the active profile first: fan out only when the host supports concurrent subagents and the profile permits parallel execution (Turbo; otherwise evaluate candidates sequentially in-thread). When fanning out (e.g. Subagent 1 evaluates Candidate A, Subagent 2 benchmarks Candidate B), require each subagent to return a compact 10-line synthesis adhering to the Multi-Vector Evaluation Dimensions below.
 
 ### Step 3: Multi-Vector Comparative Matrix
 Audit all candidates across engineering dimensions:
@@ -106,10 +106,10 @@ Build a minimal sandbox or branch targeting exclusively the **sharpest risk**:
 ---
 
 ### Step 6: Generate Spike Artifact & ADR Handoff
-1. Save the full research spike document to `./docs/spikes/YYYY-MM-DD-spike-<topic-slug>.md` using `.promptkit/templates/spike-template.md`.
-2. **Immediate ADR Generation**:
-   - If the spike leads to an architectural decision, transition immediately:
-   - Use `.promptkit/templates/adr-template.md` to record the decision in `./docs/adrs/YYYY-MM-DD-adr-<decision-slug>.md`.
+1. Save the full research spike document to `./docs/spikes/YYYY-MM-DD-spike-<topic-slug>.md` using `<kit>/templates/spike-template.md`.
+2. **Immediate ADR Generation** (gated — a spike recommends; only a decision record decides):
+    - Transition to an ADR only when the decision-policy requirements are recorded (exact selected versions, citations with access dates, Planning Record link, and named-owner approval — see Technology Version-Selection Policy in `docs/WORKFLOW-MAP.md`). Incomplete evidence may proceed only as an explicitly accepted assumption owned by the decision maker, recorded with impact-if-wrong and a validation action. Otherwise record the spike verdict as a recommendation with open assumptions.
+    - Use `<kit>/templates/adr-template.md` to record the decision in `./docs/adrs/YYYY-MM-DD-adr-<decision-slug>.md`.
    - Document: Context, Decision, Considered Alternatives, and Consequences (both positive and negative).
 
 ---
@@ -128,7 +128,7 @@ Build a minimal sandbox or branch targeting exclusively the **sharpest risk**:
 
 ## Completion Criteria
 - Sharpest risk empirically tested in a minimal sandbox.
-- Multi-vector comparison matrix completed with real benchmark data.
+- Multi-vector comparison matrix completed with real benchmark data — or disqualified candidates recorded with their remaining measures marked `N/A`.
 - License and maintenance longevity verified.
 - Research spike saved to `./docs/spikes/`.
-- Architectural Decision Record (ADR) recorded in `./docs/adrs/` if a decision was made.
+- Architectural Decision Record (ADR) recorded in `./docs/adrs/` only if a decision was made with the Step 6 decision-policy evidence recorded; otherwise the spike verdict stands as a recommendation.

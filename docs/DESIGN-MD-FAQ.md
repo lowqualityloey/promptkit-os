@@ -133,7 +133,8 @@ my-project/
 
 ```bash
 # After init, you decide you want design rules
-cp .promptkit/templates/design-profile-template.md ./DESIGN.md
+KIT_DIR="${KIT_DIR:-.promptkit}"  # your kit directory (or promptkit/)
+cp "$KIT_DIR"/templates/design-profile-template.md ./DESIGN.md
 
 # Edit it with your brand
 vim DESIGN.md
@@ -201,7 +202,7 @@ if (Test-Path $DesignProfile) {
 
 ### Full Example (PromptKit Template)
 
-See `.promptkit/templates/design-profile-template.md` for:
+See `<kit>/templates/design-profile-template.md` for:
 - Complete color system
 - Typography tokens
 - Component patterns
@@ -327,9 +328,9 @@ export default {
 
 ## 📚 **Related Documentation**
 
-- **Template**: `.promptkit/templates/design-profile-template.md`
-- **Protocol**: `.promptkit/protocols/context-sync.md` (how it's read)
-- **Workflows**: `.promptkit/workflows/design-system.md` (how it's used)
+- **Template**: `<kit>/templates/design-profile-template.md`
+- **Protocol**: `<kit>/protocols/context-sync.md` (how it's read)
+- **Workflows**: `<kit>/workflows/design-system.md` (how it's used)
 - **Example**: `examples/saas-dashboard/` (no DESIGN.md shown, but would work)
 
 ---
@@ -342,7 +343,7 @@ export default {
 | **Have DESIGN.md** | PromptKit detects it, uses it as single source of truth, never overwrites |
 | **Create later** | Just add the file, AI picks it up automatically (no re-init) |
 | **Custom format** | PromptKit adapts to your format |
-| **Want template** | Copy from `.promptkit/templates/design-profile-template.md` |
+| **Want template** | Copy from `<kit>/templates/design-profile-template.md` |
 
 **Your DESIGN.md is completely safe and will be respected by all workflows.** 🎉
 

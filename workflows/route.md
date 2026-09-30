@@ -28,7 +28,7 @@ Eliminate decision fatigue and guesswork by mapping every software development s
 > A decision-grade summary of Levels 0–3 ships in the injected directive so agents can classify a request without loading this file. This document remains the canonical authority; where the summary and this file differ, this file wins.
 
 ### Upfront Ceremony Declaration Protocol (Turn 1 Announcement)
-In the opening turn (Turn 1) of every task or interaction, the assistant must explicitly classify the request and declare its ceremony level on the very first line of output using this exact standardized banner format:
+In the opening turn (Turn 1) of every task or interaction — except informational Level 0 fast-path requests, which emit no banner per Tier 1 below — the assistant must explicitly classify the request and declare its ceremony level on the very first line of output using this exact standardized banner format:
 
 ```text
 [PromptKit OS: Level <0-3> (<Name>) — <1-line justification>]
@@ -166,7 +166,7 @@ To optimize API cost, token consumption, and reasoning depth, match your LLM sel
 | Architecture → task source | `pk:plan` → `pk:tasks` | Carry objective, scope, non-goals, dependencies, acceptance, verification, and invariants into the canonical Task Record. |
 | Task source → implementation | `pk:tasks` → Engineer | Start only after readiness and active-task ownership are recorded; implement within scope. |
 | Implementation → review/evidence | Engineer → `pk:checkpoint` / `pk:review` | Preserve checkpoints, handoffs, changed files, acceptance, blockers, and review findings. |
-| Review → commit/PR/release | `pk:review` → `pk:commit` → `pk:pr` → `pk:ship` | Link evidence while keeping human approval for commit, push, merge, tag, release, deployment, and rollback (except an explicitly authorized `pk:auto` run; see the canonical Action Authority Model in `protocols/code-quality-gate.md`). |
+| Review → commit/PR/release | `pk:review` → `pk:commit` → `pk:pr` → `pk:ship` | Link evidence. An explicitly authorized `pk:auto` run may make its local commits, push the branch, and open draft PRs within the declared run; other remote actions require explicit human authorization. A human alone executes any merge, regardless of authorization. See the canonical Action Authority Model in `protocols/code-quality-gate.md`. |
 
 The Local Task Record remains authoritative throughout. `docs/STATE.md` is a synchronized projection, and external issues or dated breakdowns are optional references.
 
@@ -199,6 +199,7 @@ Find your current engineering context below and activate the corresponding workf
 | **Auth, Cookies & Permissions**| `pk:auth` | `docs/auth/` | HttpOnly cookies, OAuth PKCE, RBAC matrix |
 | **API Contract & Handshake** | `pk:api` | `docs/api/` | Error envelopes, cursor pagination, typed clients |
 | **Upfront Test Planning** | `pk:test` | `docs/tests/` | Pyramid seams, test data factories, mock boundaries |
+| **Empty Repo / No Test Surface** | `pk:verify-bootstrap` | `verify/` + map | Project-local verification scaffold, mechanized red/green, host-authorized generation |
 | **UI, Styling & Design System**| `pk:design` | `docs/design/` | WCAG 2.2 AA contrast, design tokens, anti-slop UI |
 | **Unproven Tech or Benchmark** | `pk:spike` | `docs/spikes/` | Sharpest-risk test, baseline comparison, ADR |
 | **Defect, Bug or Regression** | `pk:debug` | `docs/rca/` | Red loop first, tagged probes, 5-Whys post-mortem |
@@ -299,7 +300,7 @@ Use the existing [`pk:commit`](./commit.md), [`pk:checkpoint`](./checkpoint.md),
      ┌──────────────────────┴──────────────────────┐
      ▼                                             ▼
   pk:retro                                   pk:checkpoint
-(MADR & Journals)                       (Zero-Loss Chat Handover)
+(MADR & Journals)                       (Low-Loss Chat Handover)
 ```
 
 ---
@@ -362,7 +363,7 @@ If the request involves non-trivial engineering changes (new features, crashes, 
    - **Unattended execution, hands-off automation, end-to-end task runs**: Auto-route to `workflows/auto.md` (`pk:auto`). Announce the active leash on Turn 1 and halt at `review ready` (or declared boundary) with a 3-strike test circuit breaker.
 
 ### Tier 3: Subagent Delegation Guardrails
-When executing workflows in agentic multi-agent environments (Antigravity, Claude Code, Cursor background agents), follow `.promptkit/protocols/subagent-delegation.md`:
+When executing workflows in agentic multi-agent environments (Antigravity, Claude Code, Cursor background agents), follow `<kit>/protocols/subagent-delegation.md`:
 - **Delegate to Subagents**:
   - `pk:spike`: Fan out parallel subagents to benchmark competing frameworks concurrently.
   - `pk:review`: Run Spec Fidelity and Fowler Code Smells audits in concurrent subagents.

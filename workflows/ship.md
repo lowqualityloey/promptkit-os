@@ -60,18 +60,20 @@ For production systems where multiple application revisions may coexist or rollb
 
 ```
 EXPAND PHASE (Additive Changes):
-Step 1: Apply backwards-compatible database migration (new nullable columns/tables).
+Step 1: Human applies backwards-compatible database migration (new nullable columns/tables).
 Step 2: Deploy new application code (writes to both old and new columns).
 Result: Zero downtime. Both old and new application instances function concurrently.
 
 CONTRACT PHASE (Destructive Cleanups):
 Step 1: Deploy application code that completely stops reading/writing old column.
 Step 2: Verify all old containers/pods are terminated and zero traffic references old schema.
-Step 3: Apply database migration to drop deprecated column or table.
+Step 3: Human applies database migration to drop deprecated column or table.
 Result: Zero downtime. No running instance queries a deleted column.
 ```
 
 - **Hard Rule**: Never combine an additive change (Expand) and a destructive drop (Contract) in the same release or migration script when Expand-Contract applies (live or compatibility-sensitive data).
+
+> **Actor rule for the pattern above** (Planner: agent | Authorizer: Release Coordinator | Executor: human only): the Expand/Contract steps describe human execution order — the agent plans the sequence and records evidence, never executes migrations.
 
 ---
 
@@ -92,10 +94,10 @@ Before declaring a release complete, verify production behavior with active prob
    - CI pipeline passed: lint, type-check, unit tests, integration tests.
    - Build artifact size verified (check for bundle size regressions).
 2. **Automated Smoke Test Verification**:
-   - Immediately after traffic shifts to the new release, run automated synthetic probes:
+   - Immediately after traffic shifts to the new release, the authorized human executor runs the approved probes; the agent defines them and records evidence only. Read-only health checks may use approved automation. Any probe that writes production data or triggers external effects requires separate explicit human authorization and must use a synthetic identity/resource, suppress billing and customer-facing notifications, and define cleanup before execution.
      - **Health Check**: `GET /api/health` returns `200 OK` with database ping latency.
-     - **Critical Path Probe**: Synthetic test user authenticates, loads dashboard, and performs a read.
-     - **Edge Cache Invalidation**: Verify stale CDN assets are purged.
+     - **Critical Path Probe**: A synthetic test user authenticates, loads the dashboard, and performs a read. A write-path probe is included only under the side-effect safeguards above.
+     - **Edge Cache Invalidation**: Verify stale CDN assets are purged only when separately authorized; otherwise record it as a proposed action.
 
 ---
 
@@ -103,7 +105,7 @@ Before declaring a release complete, verify production behavior with active prob
 When production metrics degrade post-release, do not guess or attempt complex live debugging in production. Follow the structured rollback protocol:
 
 #### Rollback Decision Criteria
-Use release-specific rollback thresholds defined before deployment and recorded in the release record. Where the project has no established thresholds, record explicit human-approved thresholds or state that automatic thresholding is unavailable. Illustrative defaults (calibrate per project — HTTP/latency signals are meaningless for batch, mobile, or low-volume systems without adaptation): trigger an immediate rollback if within 15 minutes of deployment:
+Use release-specific rollback thresholds defined before deployment and recorded in the release record. Where the project has no established thresholds, record explicit human-approved thresholds or state that automatic thresholding is unavailable. Illustrative defaults (calibrate per project — HTTP/latency signals are meaningless for batch, mobile, or low-volume systems without adaptation): request an immediate Release Coordinator rollback decision if within 15 minutes of deployment:
 - HTTP 5xx error rate spikes above 1%.
 - P99 latency degrades by more than 50% from baseline.
 - Core checkout, authentication, or data persistence flows fail in smoke tests.
@@ -124,10 +126,10 @@ Use release-specific rollback thresholds defined before deployment and recorded 
 1. Confirm all code passed review (`pk:review`) and quality gates (`pk:test`).
 2. Verify that all required environment variables are provisioned in the production dashboard.
 
-### Step 2: Determine Migration Sequencing
-1. Check if the release contains database migrations:
-   - If Expand phase: Execute migrations *before* deploying application code.
-   - If Contract phase: Verify application code is deployed and verified *before* executing cleanup migrations.
+### Step 2: Determine Migration Sequencing (plan only — human executes)
+1. Check if the release contains database migrations and record the sequence as a proposal (Planner: agent | Authorizer: Release Coordinator | Executor: human only — never execute here):
+   - If Expand phase: Propose the human execute migrations *before* deploying application code.
+   - If Contract phase: Verify application code is deployed and verified *before* proposing the human execute cleanup migrations.
 
 ### Evidence-First CI Failure Triage and Release Linkage
 
@@ -177,7 +179,7 @@ Before Step 3, record the execution evidence needed by the release evaluation:
 - Confirm the task and milestone are in a releasable state and that no unresolved blocker, hard checkpoint, stale handoff, scope mismatch, or revision mismatch remains.
 - Link the applicable release-impact evaluation and preserve the distinction between a preliminary candidate and an Approved Release Version.
 - Record host/timer limitations and any execution-control validator result as evidence only. A passing validator or CI job cannot approve a version or authorize a tag, hosted release, publication, deployment, or rollback.
-- Release Coordinator approval remains explicit and separate. Steps 3-5 below prepare proposals, verification plans, and records; executing tag, push, deployment, or rollback commands remains human-only (see Action Authority Model in `protocols/code-quality-gate.md`).
+- Release Coordinator approval remains explicit and separate. Steps 3-5 below prepare proposals, verification plans, and records; executing tag, push, deployment, or rollback commands remains human-only (see Action Authority Model in `protocols/code-quality-gate.md`). Every approval request to the Release Coordinator renders the Decision Card per the Human Decision & Question Comprehensibility Contract in `protocols/code-quality-gate.md` (Type D — always human, card required).
 
 ### Pattern C Release Evidence Audit
 
@@ -212,11 +214,11 @@ This repository's release-candidate evaluation procedure is maintained separatel
 1. Prepare the version tag command (`git tag -a vX.Y.Z -m "Release message"`) as a proposal for the Release Coordinator — do not run it.
 2. Prepare the production deployment plan (pipeline, migration order per Step 2, verification probes per Step 4) as a proposal — do not push, deploy, or publish. Each remote action is recorded as a separate human-confirmation block per the CI-triage action-block pattern.
 
-### Step 4: Define Post-Deploy Smoke Verification (executor runs after deploy)
-Specify the probes the release executor runs immediately after traffic shifts to the new release (see Pillar 4 definitions above):
+### Step 4: Define Post-Deploy Smoke Verification (human executor runs after deploy)
+Specify the probes the authorized human release executor runs immediately after traffic shifts to the new release (see Pillar 4 definitions above); the agent prepares the plan and records results supplied by the executor. Read-only probes may use previously approved automation. A probe that writes production data or triggers external effects requires separate explicit authorization, a synthetic identity/resource, suppressed billing and customer-facing notifications, and a cleanup plan before execution.
 1. Automated health check endpoints and deployment log inspection.
-2. Manual or synthetic verification of the primary user journey in production.
-Record expected results and pass thresholds now; the human-executed deploy is what puts them into effect.
+2. Manual or synthetic verification of the primary user journey in production, using only the approved side-effect safeguards above.
+Record expected results and pass thresholds now; the human-authorized deploy and probe execution put them into effect.
 
 ### Step 5: Monitor Criteria and Release Record
 1. Record the monitoring criteria for the 15-minute post-deploy window (error tracking in Sentry / Datadog / CloudWatch; rollback decision criteria above).
@@ -230,7 +232,7 @@ Record expected results and pass thresholds now; the human-executed deploy is wh
 | :--- | :--- | :--- |
 | **Unvalidated Environment Variables** | Silent crashes hours after deploy when missing secrets are first accessed. | Validate all production configuration with the project's native mechanism at application startup. |
 | **Deploying Code and Migration Simultaneously** | Container start races against migration execution, causing broken queries during rolling update. | Follow the Golden Deployment Rule for live data (Expand before deploy; Contract after deploy); document the escape where it does not apply. |
-| **Debugging Live in Production** | Extended customer downtime while developers scramble under pressure. | Roll back immediately; debug safely in local development using `pk:debug`. |
+| **Debugging Live in Production** | Extended customer downtime while developers scramble under pressure. | If approved rollback criteria are met, prepare an action proposal for the Release Coordinator; an explicitly authorized human executor performs rollback. Debug safely in local development using `pk:debug`. |
 | **Untested Rollbacks** | Rollback fails because new schema broke backwards compatibility with old code. | Ensure every live-data schema migration is backwards-compatible with previous application version (verified precondition, not assumed). |
 | **Skipping Smoke Tests** | Broken client bundles or routing errors discovered by customers instead of engineers. | Run automated smoke tests immediately post-deployment. |
 
@@ -238,9 +240,9 @@ Record expected results and pass thresholds now; the human-executed deploy is wh
 
 ## Completion Criteria
 - Environment variables validated with startup schema checks using the project's native mechanism.
-- Migration sequencing planned and executed in correct phase order (or escape documented with rationale where Expand-Contract does not apply).
+- Migration sequencing planned in correct phase order (human executes; agent records evidence only) (or escape documented with rationale where Expand-Contract does not apply).
 - Post-deployment smoke verification defined with expected results and thresholds.
 - Release document drafted in `./docs/releases/`.
 - CI-triage linkage recorded (`linked_to_pk_ship` only after verified result, where a CI failure exists).
 - Release-impact evaluation linked; preliminary candidate distinguished from Approved Release Version.
-- Release Coordinator authorization recorded for every remote action; no tag, push, deploy, or rollback executed by the agent.
+- Release Coordinator authorization recorded for every remote action; no tag, push, deploy, rollback, production migration, remote issue creation, or side-effecting production probe is executed by the agent.

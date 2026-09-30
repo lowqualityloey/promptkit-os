@@ -9,7 +9,7 @@ Refactor a tightly-coupled, 1,200-line monolithic Express/Fastify route handler 
 
 The existing legacy handler suffers from multiple architectural smells:
 1. **Direct Database Coupling**: Raw SQL queries written directly inside HTTP controllers.
-2. **Third-Party Vendor Lock-In**: Direct invocation of external SDKs (Stripe, SendGrid) without interface abstraction, making unit testing impossible without live network mocks.
+2. **Third-Party Vendor Lock-In**: Direct invocation of external SDKs (Stripe, SendGrid) without interface abstraction, leaving tests no seam for fast hermetic doubles — coverage leans on slow network-level mocks or live calls instead of typed adapter fakes.
 3. **Implicit Side Effects**: Email dispatch and database mutations performed without transactional rollback on downstream failures.
 4. **Zero Domain Model Encapsulation**: Plain JSON objects mutated haphazardly across helper functions.
 

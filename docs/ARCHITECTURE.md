@@ -83,7 +83,7 @@ In multi-agent environments (Antigravity, Claude Code, Cursor background agents)
   📈 PRs in flight: #42 open, 0 blocked
   ```
   ````
-- **Zero Action-Blindness**: Whenever the assistant halts a turn requiring human decisions, PR review, or local actions, it terminates the message with a high-contrast `> [!IMPORTANT]` callout (`### 🛑 Action Required From You:`). If blocked, it emits `> [!WARNING]` (`### ⚠️ Blocked: Waiting on Human Input`).
+- **Zero Action-Blindness**: Whenever the assistant halts a turn requiring human decisions, PR review, or local actions, it terminates the message with a high-contrast `> [!IMPORTANT]` callout (`### 🛑ACTION REQUIRED:`). If blocked, it emits `> [!WARNING]` (`### 🚫BLOCKED:`).
 - **Opt-out**: set `status-cards: off` in `PROMPTKIT.md` to suppress the decorative card (default `on`; halts still fire).
 - **Spend field**: completions may append `> 💰 Spend: <in> / <out> (source: host usage)` when the host exposes per-turn usage (omitted when unmeasured or trivial).
 - **Quiet completion**: when `docs/STATE.md` shows nothing pending, the turn ends with `All milestones closed — nothing pending.` instead of a Next-Step recommendation — independent of the card opt-out. `COMPLETED` status seals the project with a closeout record (measured vs estimated spend, gates held) in `docs/STATE.md`.
@@ -155,6 +155,7 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:auth` | [`workflows/auth.md`](../workflows/auth.md) | Core 🧪 | `docs/auth/` | Cookie security flags, OAuth PKCE flows, and RBAC/ABAC capability matrix. |
 | `pk:api` | [`workflows/api.md`](../workflows/api.md) | Core | `docs/api/` | Contract envelopes, cursor pagination, and mutation idempotency. |
 | `pk:test` | [`workflows/test.md`](../workflows/test.md) | Core | `docs/tests/` | Testing pyramid seam allocation, data factories, and monorepo `--filter`. |
+| `pk:verify-bootstrap` | [`workflows/verify-bootstrap.md`](../workflows/verify-bootstrap.md) | New 🧪 | `verify/` + map | Project-local verification surface for empty repos: deterministic checks, mechanized red/green, host-authorized generation. |
 | `pk:design` | [`workflows/design-system.md`](../workflows/design-system.md) | Core | `docs/design/` | Anti-slop UI tokens, WCAG 2.2 AA accessibility, and mobile ergonomics. |
 | `pk:spike` | [`workflows/research.md`](../workflows/research.md) | Core | `docs/spikes/` | Technical risk spikes comparing options against a boring baseline. |
 | `pk:debug` | [`workflows/debug.md`](../workflows/debug.md) | Core 🧪 | `docs/rca/` | Scientific debugging: fast reproduction loop, tagged logs, and 5-Whys. |
@@ -171,7 +172,7 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:auto` | [`workflows/auto.md`](../workflows/auto.md) | New 🧪 | Verified diff / PR | Unattended SDLC meta-orchestration (plan→tasks→code→test→review) with circuit breakers and test immobility. |
 | `pk:retro` | [`workflows/reflect.md`](../workflows/reflect.md) | Core | `docs/adrs/` & journal | Post-feature retrospective: extracts decisions into standard MADRs. |
 
-*Status Legend: All 24 workflows pass CI structural link validation (`validate-references.sh`). Workflows marked with 🧪 also undergo automated documentation-contract testing (`run-behavioral-contract-tests.sh` — string-level prompt-contract assertions); sampled runtime compliance is measured separately by `scripts/run-behavioral-eval.sh` (see `docs/BEHAVIORAL-EVAL.md`).*
+*Status Legend: All 25 workflows pass CI structural link validation (`validate-references.sh`). Workflows marked with 🧪 also undergo automated documentation-contract testing (`run-behavioral-contract-tests.sh` — string-level prompt-contract assertions); sampled runtime compliance is measured separately by `scripts/run-behavioral-eval.sh` (see `docs/BEHAVIORAL-EVAL.md`).*
 
 ---
 
@@ -235,7 +236,7 @@ promptkit-os/
 │   ├── telemetry-cards.md       # Lazy-loaded status-card format spec & callout titles
 │   ├── code-quality-gate.md     # Non-negotiable definition-of-done & pre-commit gate
 │   └── subagent-delegation.md   # Subagent delegation, parallel execution & context preservation
-├── workflows/                   # Step-by-step engineering lifecycle procedures (24 workflows)
+├── workflows/                   # Step-by-step engineering lifecycle procedures (25 workflows)
 │   ├── route.md                 # Lifecycle decision matrix & workflow triage (pk:route)
 │   ├── tutor.md                 # Socratic mentorship & 3-tier progressive hints (pk:tutor, pk:grill)
 │   ├── plan.md                  # Spec-Driven Development & deep modular design (pk:plan)
@@ -258,6 +259,8 @@ promptkit-os/
 │   ├── research.md              # Technical spikes & sharpest-risk benchmark matrix (pk:spike)
 │   ├── design-system.md         # Anti-slop UI, Design Tokens, and WCAG 2.2 accessibility (pk:design)
 │   ├── reflect.md               # Engineering retrospectives & ADR generation (pk:retro)
+│   ├── auto.md                  # Autonomous SDLC meta-orchestration & leash control (pk:auto)
+│   ├── verify-bootstrap.md      # Project-local verification scaffolding (pk:verify-bootstrap)
 │   └── checkpoint.md            # Session state compaction & handover prompt (pk:checkpoint)
 ├── templates/                   # Structured artifact schemas saved to project docs/
 │   ├── agent-directive-template.md # Canonical directive source template rendered during initialization
@@ -333,7 +336,7 @@ promptkit-os/
     ├── 02-refactoring-clean-arch.md      # Refactoring monolith to Clean Architecture
     ├── 03-async-concurrency-debug.md     # Concurrency race conditions & memory leaks
     ├── 04-accessible-design-system.md    # Accessible, tokenized component library
-    └── create-research-workflow.md       # Create custom research workflow templates
+    └── 05-auto-orchestration.md          # Autonomous orchestration simulation kata (pk:auto)
 ```
 
 ---

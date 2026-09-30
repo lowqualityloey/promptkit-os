@@ -46,6 +46,7 @@ Context aperture is independent of task risk and may escalate to Z4 (Macro & Arc
 *   An L2 task requires Z3 (Dependency) validation before writing code touching shared components.
 *   An L3 task mandates Z4 (Macro/Architecture) validation and explicit human sign-off.
 *   Task risk does not equal context aperture: an L1 bug can occasionally require Z4 context, and an L3 release check can sometimes be validated with Z1 context.
+*   **Z1-for-L3 exception (all must hold)**: (1) no §5 Hard Escalation Trigger fires on the change; (2) the check re-verifies scope already Z4-validated with no intervening edits since that validation; (3) explicit human sign-off is still recorded. The exception narrows aperture only — never accountability.
 
 ## 5. Hard Escalation Triggers
 
@@ -92,7 +93,7 @@ When debugging failures, agents default to a compact root-cause view (e.g., the 
 
 ## 9. Context Budgets & Provenance Logging
 
-Agents must log context escalations. If an agent hits a budget threshold but requires more evidence (Anti-Starvation), it must log a `context_escalation` record detailing why the budget was exceeded (e.g., "Hit soft token limit, but required DB schema context to validate safety").
+Agents must log context escalations. If an agent hits a budget threshold but requires more evidence (Anti-Starvation), it must log a `context_escalation` record in the `docs/STATE.md` session log, detailing why the budget was exceeded (e.g., "Hit soft token limit, but required DB schema context to validate safety").
 
 ## 10. Context Provider Capability Contract
 

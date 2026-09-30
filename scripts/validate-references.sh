@@ -88,6 +88,60 @@ check_file_reference() {
     return 0
 }
 
+# Generic markdown-link resolution: a reader-facing relative link in a scanned
+# file must resolve. Historical records are exempt (same policy as the
+# canonical-count drift guard), placeholder/anchor/absolute/external targets are
+# skipped, and inline code spans are ignored so illustrative examples cannot
+# trip the gate. Without this, a root-relative link inside docs/ passes every
+# gate while 404ing for readers on the host.
+LINK_EXEMPT_DIRS="docs/releases/ docs/tasks/ docs/archive/ docs/internal/ docs/spikes/"
+
+is_link_exempt() {
+    local rel="$1"
+    local exempt
+    for exempt in $LINK_EXEMPT_DIRS; do
+        case "$rel" in
+            "$exempt"*) return 0 ;;
+        esac
+    done
+    return 1
+}
+
+check_markdown_links() {
+    local source_file="$1"
+    local rel_source="$2"
+
+    # One grep pass per file: only lines that actually carry a local .md link are
+    # examined, so the check stays cheap across the whole tree.
+    local hit lnum line_content sanitized targets
+    while IFS= read -r hit; do
+        [ -z "$hit" ] && continue
+        lnum="${hit%%:*}"
+        line_content="${hit#*:}"
+
+        # Drop inline code spans so example links written inside backticks are ignored.
+        sanitized="$(printf '%s' "$line_content" | sed 's/`[^`]*`//g')"
+        targets="$(printf '%s\n' "$sanitized" | grep -oE '\]\([^)]+\.md(#[^)]*)?\)' | sed -E 's/^\]\(//; s/\)$//; s/#.*$//')" || true
+        [ -z "$targets" ] && continue
+
+        local target candidate
+        while IFS= read -r target; do
+            [ -z "$target" ] && continue
+            case "$target" in
+                http*|/*|\#*|*"<"*|*"{"*|*'$'*|[A-Za-z]:*) continue ;;
+            esac
+            candidate="$(dirname "$source_file")/$target"
+            if [ ! -e "$candidate" ]; then
+                echo "  ❌ BROKEN LINK: $rel_source:$lnum"
+                echo "     Link: $target"
+                echo ""
+                ((ERROR_COUNT++))
+                file_has_issues=true
+            fi
+        done <<< "$targets"
+    done < <(grep -nE '\]\([^)]+\.md' "$source_file" 2>/dev/null || true)
+}
+
 # Scan each file
 for file in "${ALL_MD_FILES[@]}"; do
     rel_path="${file#$PROMPTKIT_ROOT/}"
@@ -129,6 +183,12 @@ for file in "${ALL_MD_FILES[@]}"; do
             fi
         fi
     done < "$file"
+
+    # Check generic markdown links (reader-facing 404 guard). Historical records
+    # are exempt, matching the canonical-count drift guard's exemption policy.
+    if ! is_link_exempt "$rel_path"; then
+        check_markdown_links "$file" "$rel_path"
+    fi
 
     # Check for workflow triggers without matching files
     # Capture the whole trigger token. A pattern that stops at the first hyphen

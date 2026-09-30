@@ -73,11 +73,20 @@ Run the local harness preflight first: `bash <kit>/scripts/check-harness-securit
 Immediately after staging and before commit construction, perform a mandatory scan of the staged index for accidental secrets or debug probes (Time-of-Check to Time-of-Use safety):
 
 1. **Staged Content Secret Scan** (known credential-pattern checks — advisory coverage, not proof of absence):
-   Verify no embedded private keys, tokens, or credentials are staged for commit:
+   From the project root, run the kit scanner for your shell:
    ```bash
-   git diff --cached | grep -E 'BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{82}|sk_live_[0-9a-zA-Z]{24}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|password\s*[:=]\s*["'\''][^"'\'']{8,}["'\'']' || true
+   bash <kit>/scripts/scan-staged-secrets.sh <project-root>
    ```
-   Pattern checks are advisory and do not establish absence of all secrets. If matching credential patterns are discovered in staged lines (`+`), halt immediately, alert the developer, and do not proceed with staging or committing.
+   ```powershell
+   pwsh -NoProfile -File <kit>/scripts/scan-staged-secrets.ps1 -Root <project-root>
+   ```
+   It scans added lines using NUL-safe staged paths, disables Git external diff and text-conversion filters, and reports only an escaped file path, added-line number, and detector category. Supported credential-shaped substrings in reported paths are replaced with `REDACTED`; matching content and detected credential values are never printed. Raw Git diagnostics are suppressed so repository paths or other Git error details cannot leak; failures use generic stop guidance. If Git classifies a staged change as binary, the scanner cannot inspect its added lines and fails closed with exit `2`.
+
+   - Exit `0`: no supported patterns were detected; continue.
+   - Exit `1`: potential credential patterns were detected; halt and ask the developer to inspect and remove them locally.
+   - Exit `2`: the scan could not complete; halt and resolve the scan failure before committing.
+
+   Detectors use portable regular expressions and broad credential prefixes, so false positives are possible. These checks are advisory and do not prove that staged content is free of secrets. Never copy matching content or credential values into terminal output, logs, chat, or the commit.
 
 2. **Suspicious Credential Filename Scan**:
    Verify no credential or environment files are staged or untracked (excluding safe templates like `.env.example`, `.env.template`, or `.env.dist`):
@@ -218,7 +227,7 @@ docs(adrs): record decision to adopt UUIDv7 for primary keys
     > - If ready to open a pull request for review: run **`pk:pr`**
     > - If continuing work on the next issue: run **`pk:tasks`**
 
-    Single-callout rule (`protocols/telemetry-cards.md`): pair this TIP with an action callout only when each carries information the other lacks; otherwise emit one. Close order is always card, TL;DR line, then the callout.
+    Single-callout rule (`protocols/telemetry-cards.md`): never pair this TIP with an `[!IMPORTANT]` or `[!WARNING]` halt — at most one human callout per turn. When a higher-priority halt is active, it carries the next action and no TIP is emitted. Close order is always card, TL;DR line, then the callout.
 
    *(You MUST invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`; Bounded to closed-set operational choices — for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead, see the Picker routing rule in `workflows/plan.md`)*
 

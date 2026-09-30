@@ -199,8 +199,8 @@ if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive
     -and [string]::IsNullOrEmpty($env:PROMPTKIT_NO_INTERACTIVE)) {
     Write-Host "`n💡 PromptKit OS Profile Selection (visual decision)" -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-    Write-Host "  1) Lite (Recommended for new users) — 6 utility workflows, 961 tok, 80% value, fastest onboarding" -ForegroundColor Yellow
-    Write-Host "  2) Balanced (Recommended for teams) — 24 workflows, 2,319 tok, Level 0-3 adaptive ceremony [default]" -ForegroundColor White
+    Write-Host "  1) Lite (Recommended for new users) — 6 utility workflows, 1,269 tok, 80% value, fastest onboarding" -ForegroundColor Yellow
+    Write-Host "  2) Balanced (Recommended for teams) — 25 workflows, 2,318 tok, Level 0-3 adaptive ceremony [default]" -ForegroundColor White
     Write-Host "  3) Turbo (Experimental) — Balanced + parallel waves, ~2x measured cost, still requires human L3 approval" -ForegroundColor DarkGray
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
     Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
@@ -353,19 +353,35 @@ if (-not (Test-Path $ProjectProfile)) {
     Write-Host "  [✓] PROMPTKIT.md already present" -ForegroundColor DarkGray
 }
 
+# Inject or update machine-readable fields (exactly one authoritative line each)
+function Set-MachineField {
+    param([string]$Path, [string]$Field, [string]$Value)
+    $existing = @()
+    if (Test-Path $Path) { $existing = @(Get-Content $Path -ErrorAction SilentlyContinue) }
+    $kept = @($existing | Where-Object { $_ -notmatch "^$([regex]::Escape($Field)):" })
+    $kept += "${Field}: $Value"
+    [System.IO.File]::WriteAllText($Path, (($kept -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+}
+
+$EngineDir = Split-Path $ScriptDir -Leaf
+
 # Inject or update profile field in PROMPTKIT.md (2+1 modes)
 if (Test-Path $ProjectProfile) {
     $content = Get-Content $ProjectProfile -Raw -ErrorAction SilentlyContinue
     if ($null -eq $content) { $content = "" }
-    if ($content -match "^profile:") {
-        $content = $content -replace "^profile:.*", "profile: $Profile"
-        $content = $content -replace "^- \*\*Profile\*\*:.*", "- **Profile**: $Profile"
-        [System.IO.File]::WriteAllText($ProjectProfile, $content, (New-Object System.Text.UTF8Encoding($false)))
+    if ($content -match "(?m)^profile:") {
+        Set-MachineField $ProjectProfile "profile" $Profile
+        $dcontent = Get-Content $ProjectProfile -Raw -ErrorAction SilentlyContinue
+        if ($dcontent -match "(?m)^- \*\*Profile\*\*:") {
+            $dcontent = $dcontent -replace "(?m)^- \*\*Profile\*\*:.*", "- **Profile**: $Profile"
+            [System.IO.File]::WriteAllText($ProjectProfile, $dcontent, (New-Object System.Text.UTF8Encoding($false)))
+        }
         Write-Host "  [✓] Updated PROMPTKIT.md profile: $Profile" -ForegroundColor Yellow
     } else {
         $firstLine = (Get-Content $ProjectProfile -TotalCount 1 -ErrorAction SilentlyContinue)
+        if ($null -eq $firstLine) { $firstLine = "" }
         $rest = ""
-        if ((Get-Content $ProjectProfile | Measure-Object).Count -gt 1) {
+        if (((Get-Content $ProjectProfile -ErrorAction SilentlyContinue) | Measure-Object).Count -gt 1) {
             $rest = (Get-Content $ProjectProfile | Select-Object -Skip 1 | Out-String)
         }
         $profileSection = @"
@@ -373,35 +389,27 @@ if (Test-Path $ProjectProfile) {
 ## 0. PromptKit OS Profile
 - **Profile**: $Profile
 - **Installed**: $(Get-Date -Format "yyyy-MM-dd")
-- **Engine**: .promptkit
-- **Upgrade**: Run `.promptkit/init.ps1 --balanced` for the full Balanced profile, or `--turbo --experimental` for parallel waves
+- **Engine**: $EngineDir
+- **Upgrade**: Run ``$EngineDir/init.ps1 --balanced`` for the full Balanced profile, or ``--turbo --experimental`` for parallel waves
 
 "@
-        $newContent = "$firstLine`n$profileSection`n$rest`n`nprofile: $Profile`n"
+        $newContent = "$firstLine`n$profileSection`n$rest`n`n"
         [System.IO.File]::WriteAllText($ProjectProfile, $newContent, (New-Object System.Text.UTF8Encoding($false)))
+        Set-MachineField $ProjectProfile "profile" $Profile
         Write-Host "  [+] Set PROMPTKIT.md profile: $Profile" -ForegroundColor Green
     }
-    $tcontent = Get-Content $ProjectProfile -Raw -ErrorAction SilentlyContinue
-    if ($tcontent -match "^tracking:") {
-        $tcontent = $tcontent -replace "^tracking:.*", "tracking: $Tracking"
-    } else {
-        $tcontent = "$tcontent`n`ntracking: $Tracking`n"
-    }
-    [System.IO.File]::WriteAllText($ProjectProfile, $tcontent, (New-Object System.Text.UTF8Encoding($false)))
+    Set-MachineField $ProjectProfile "tracking" $Tracking
     Write-Host "  [✓] Updated PROMPTKIT.md tracking: $Tracking" -ForegroundColor Yellow
     if (-not [string]::IsNullOrEmpty($TrackingProjection)) {
-        $pcontent = Get-Content $ProjectProfile -Raw -ErrorAction SilentlyContinue
-        if ($pcontent -match "^projection:") {
-            $pcontent = $pcontent -replace "^projection:.*", "projection: $TrackingProjection"
-        } else {
-            $pcontent = "$pcontent`n`nprojection: $TrackingProjection`n"
-        }
-        [System.IO.File]::WriteAllText($ProjectProfile, $pcontent, (New-Object System.Text.UTF8Encoding($false)))
+        Set-MachineField $ProjectProfile "projection" $TrackingProjection
         Write-Host "  [✓] Updated PROMPTKIT.md projection: $TrackingProjection" -ForegroundColor Yellow
-    } elseif ($pcontent -match "(?m)^projection:.*\r?$") {
-        $pcontent = $pcontent -replace "(?m)^projection:.*\r?$", ""
-        [System.IO.File]::WriteAllText($ProjectProfile, $pcontent, (New-Object System.Text.UTF8Encoding($false)))
-        Write-Host "  [✓] Removed stale PROMPTKIT.md projection line" -ForegroundColor Yellow
+    } else {
+        $pcontent = Get-Content $ProjectProfile -Raw -ErrorAction SilentlyContinue
+        if ($null -ne $pcontent -and $pcontent -match "(?m)^projection:") {
+            $stripped = @((Get-Content $ProjectProfile -ErrorAction SilentlyContinue) | Where-Object { $_ -notmatch "^projection:" })
+            [System.IO.File]::WriteAllText($ProjectProfile, (($stripped -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+            Write-Host "  [✓] Removed stale PROMPTKIT.md projection line" -ForegroundColor Yellow
+        }
     }
 }
 
@@ -651,7 +659,7 @@ $KitDirRel = if ($ScriptDir.StartsWith($ProjectRootPath)) {
     ".promptkit"
 }
 
-# Select template based on profile: lite uses lite template (961 tok), balanced/turbo use full (2099 tok)
+# Select template based on profile: lite uses lite template (1269 tok), balanced/turbo use full (2318 tok)
 if ($Profile -eq "lite") {
     $TemplateDirective = Join-Path $ScriptDir "templates/agent-directive-lite-template.md"
     if (-not (Test-Path $TemplateDirective)) {
@@ -753,7 +761,7 @@ if ($Profile -eq "lite") {
     Write-Host "   Lite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok" -ForegroundColor Green
     Write-Host "   Upgrade anytime: .promptkit/init.ps1 --balanced for the full Balanced profile" -ForegroundColor DarkGray
 } elseif ($Profile -eq "balanced") {
-    Write-Host "   Balanced: 24 workflows, Level 0-3 adaptive ceremony — full power" -ForegroundColor White
+    Write-Host "   Balanced: 25 workflows, Level 0-3 adaptive ceremony — full power" -ForegroundColor White
     Write-Host "   For onboarding: .promptkit/init.ps1 --lite for minimal setup" -ForegroundColor DarkGray
 } else {
     Write-Host "   Turbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost" -ForegroundColor Yellow

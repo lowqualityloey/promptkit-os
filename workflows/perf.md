@@ -40,16 +40,19 @@ Before analyzing code, establish a repeatable benchmark loop under controlled co
    - What is the acceptable target budget? (e.g., p95 `< 150ms` under 100 concurrent requests).
 
 2. **Execute Controlled Baseline Benchmark**:
-   - Run a minimal, reproducible benchmark command:
+   - Treat raw profiler output as sensitive. Redirect stdout and stderr to a private, access-restricted file outside the repository; do not display or paste raw output into shared terminals, chat, tool logs, or CI logs. Redact before displaying, sharing, or saving an excerpt, then remove the raw capture. On POSIX, create a private capture with `capture_file=$(mktemp "${TMPDIR:-/tmp}/promptkit-perf.XXXXXX")` (which creates an owner-only file); if `TMPDIR` is set, confirm that directory is outside the repository.
+   - Run a minimal, reproducible benchmark command with output redirected to that capture:
      ```bash
+     capture_file=$(mktemp "${TMPDIR:-/tmp}/promptkit-perf.XXXXXX")
      # API endpoint benchmark:
-     autocannon -c 50 -d 20s http://localhost:3000/api/v1/workspaces
-
-     # Database query plan:
-     EXPLAIN (ANALYZE, BUFFERS, TIMING, COSTS) SELECT ...;
+     autocannon -c 50 -d 20s http://localhost:3000/api/v1/workspaces >"$capture_file" 2>&1
 
      # Bundle size analysis:
-     pnpm build --analyze
+     pnpm build --analyze >"$capture_file" 2>&1
+     ```
+     For a database plan, run this query through the database client with stdout and stderr redirected to `"$capture_file"`:
+     ```sql
+     EXPLAIN (ANALYZE, BUFFERS, TIMING, COSTS) SELECT ...;
      ```
    - Record exact initial values: p50, p95, p99 latency, throughput (req/s), memory RSS, or bundle bytes.
 
@@ -129,9 +132,10 @@ Prove that the optimization succeeded and lock in the result against future regr
    - Did any secondary metric regress? (e.g., did memory usage spike after adding an in-memory cache?).
 
 3. **Compile Audit Report**:
-   - Scaffold an audit report in `docs/perf/` using `.promptkit/templates/perf-audit-template.md`:
+   - Scaffold an audit report in `docs/perf/` using `<kit>/templates/perf-audit-template.md`:
      - Path: `docs/perf/<feature-name>-perf-audit.md`
-   - Include the Before vs After delta table, verbatim `EXPLAIN ANALYZE` or flamegraph summaries, and regression prevention rules.
+   - Include the Before vs After delta table, sanitized `EXPLAIN ANALYZE` or flamegraph summaries, and regression prevention rules.
+   - Before displaying, sharing, or saving evidence, redact credentials, personal or customer identifiers, internal hostnames/IPs, and sensitive schema names. Preserve query-plan structure and relevant measurements, but never copy raw profiling output verbatim into tracked reports.
 
 4. **Lock Regression Guards**:
    - Add automated performance tests or bundle budgets to CI so future commits cannot reintroduce the latency regression.

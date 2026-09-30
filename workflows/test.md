@@ -13,7 +13,7 @@ Move away from brittle mocks and slow, flaky test suites toward disciplined seam
 ## Preconditions
 - Developer is planning test coverage for a new feature, refactor, or critical subsystem.
 - Target storage directory: `./docs/tests/` in the host project.
-- Access to `.promptkit/templates/test-plan-template.md`.
+- Access to `<kit>/templates/test-plan-template.md`.
 - Recipe: see `docs/recipes/test-isolation.md` for hermetic network mocking, fake timers, and transactional test isolation.
 
 ---
@@ -218,4 +218,4 @@ A disagreement between the test plan, Planning Record, and Task Record blocks re
 - External mock boundaries and test data factories documented.
 - **Observable Red-to-Green**: Test failure confirmed and documented prior to writing production code for Code Work under an enabled TDD Enforcement Mode (the canonical Task Record owns the mode; an absent field defaults to `disabled` — record `N/A - TDD Enforcement Mode disabled` otherwise, per Disabled Code Work).
 - **Project Database Isolation**: Test harnesses use project-scoped database containers (e.g. `./docker-compose.yml`) and never attach to foreign project instances.
-- **Dual-Compatible Telemetry Status Card**: Conclude with a 3-line telemetry status card (`> 📊 **Milestone**: ... \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: ...`) and a `> [!TIP]` callout recommending implementation of the red-to-green test suite. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; `[!IMPORTANT]` / `[!WARNING]` halts still fire. Bounded to closed-set operational choices: for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead — see the Picker routing rule in `workflows/plan.md`.
+- **Dual-Compatible Telemetry Status Card**: Conclude with a 3-line telemetry status card (`> 📊 **Milestone**: ... \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: ...`). Add a `> [!TIP]` recommending implementation of the red-to-green test suite only when no higher-priority `[!IMPORTANT]` or `[!WARNING]` halt is active. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; halts still fire. Bounded to closed-set operational choices: for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead — see the Picker routing rule in `workflows/plan.md`.

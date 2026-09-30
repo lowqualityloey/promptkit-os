@@ -227,8 +227,8 @@ The project-profile template now carries two machine-readable lines, written by 
 ### Scenario 1: You Already Have Linter/Formatter Standards
 **Problem**: PromptKit's code quality gate might conflict with ESLint/Prettier
 
-**Solution**: Customize `.promptkit/protocols/code-quality-gate.md`
-1. Copy to your project root: `cp .promptkit/protocols/code-quality-gate.md .kiro/steering/code-quality-gate.md`
+**Solution**: Customize `<kit>/protocols/code-quality-gate.md`
+1. Copy to your project root (with `<kit>` = your kit directory — `.promptkit/` or `promptkit/`): `cp <kit>/protocols/code-quality-gate.md .kiro/steering/code-quality-gate.md`
 2. Edit to reference **your** linter commands
 3. Keep PromptKit's high-level principles (type safety, security, accessibility)
 

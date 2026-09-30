@@ -4,7 +4,7 @@ Visual guide to help you quickly find the right workflow for your current task.
 
 ## Lite Map (Onboarding — 5 Nodes)
 
-New users start here. Full 24-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
+New users start here. Full 25-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
 
 ```text
 pk:route → pk:plan / pk:tasks → pk:debug → pk:commit → pk:checkpoint
@@ -236,6 +236,7 @@ graph TD
 |:---|:---|:---|
 | Break feature into tasks | `pk:tasks` | `docs/tasks/<task-id>.md` plus optional issue/index |
 | Write test strategy | `pk:test` | `docs/tests/*.md` |
+| Bootstrap verification on an empty repo | `pk:verify-bootstrap` | `verify/` + map |
 | Learn without code dumps | `pk:tutor` | Interactive learning |
 | Challenge my architecture | `pk:grill` | Socratic defense drill |
 
@@ -604,7 +605,7 @@ Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycl
      ┌──────────────────────┴──────────────────────┐
      ▼                                             ▼
    pk:retro                                   pk:checkpoint
-(MADR & Journals)                       (Zero-Loss Chat Handover)
+(MADR & Journals)                       (Low-Loss Chat Handover)
 ```
 
 > [!NOTE]

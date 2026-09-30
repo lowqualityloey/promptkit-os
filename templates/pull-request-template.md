@@ -37,7 +37,7 @@ Use this section for Controlled Work. Enter `N/A` for L0 Work or for a consumer 
 ---
 
 ## Acceptance Criteria Checklist
-<!-- List all Gherkin acceptance criteria scenarios verified in this PR. -->
+<!-- List verified acceptance criteria: Gherkin scenarios where required by the Task Record/spec (Level 2/3); observable behavior change with AC IDs otherwise. Never check a box without in-turn verification evidence cited beside it. -->
 - [ ] **AC-1**: [Scenario: Given ... When ... Then ...]
 - [ ] **AC-2**: [Scenario: Given ... When ... Then ...]
 

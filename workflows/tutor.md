@@ -173,7 +173,7 @@ Activate via `pk:grill` (or `/pk-grill`) whenever the developer wants to stress-
 
 **Standalone `pk:grill`**: Stress-test the developer's understanding through guided probing. Treat gaps as opportunities to clarify reasoning; this is not a personal evaluation.
 
-**During `pk:plan` (Pre-Implementation Grilling)**: Stress-test the proposed design and its assumptions. Focus on architectural blind spots, failure modes, and unresolved decisions — not on evaluating the developer.
+**During `pk:plan` (Pre-Implementation Grilling)**: Stress-test the proposed design and its assumptions. Focus on architectural blind spots, failure modes, and unresolved decisions — not on evaluating the developer. Explore first: if a question can be answered by reading the repository, read instead of asking.
 
 ### When to Use
 
@@ -187,6 +187,14 @@ For structured learning → `pk:tutor`
 
 Identify what is being stress-tested, then begin with the highest-risk or least-supported assumption.
 
+### Grill Completion Contract
+
+A `pk:grill` session ends when exactly one of these holds — writing code is never required to close:
+
+1. **Probes cleared**: every tier probe answered at or above the bar set by its self-sufficient model answer.
+2. **Gap logged and closed**: a probe fails two teach-backs → state the model answer, record the gap as an unresolved question in the progress journal, and close. No extended teaching inside the drill.
+3. **Developer stops**: the developer ends the session at any time.
+
 ### 6. Debug Detective Mode (Hypothesis-Driven RCA)
 
 A learning overlay for practicing root-cause skill, reached via explicit `pk:tutor` — not a claimant on the `pk:debug` trigger, which resolves to `workflows/debug.md` as primary. For live incidents, use `pk:debug`; use this mode to learn the method.
@@ -199,7 +207,7 @@ Activate during practice sessions, tricky regressions, or unexplained runtime be
    - **Phase 1: Observation**: Guide the developer to capture exact reproduction steps and error symptoms.
    - **Phase 2: Falsifiable Hypotheses**: Require the developer to state at least 2 distinct hypotheses explaining the defect.
    - **Phase 3: Instrumentation & State Delta**: Direct the developer to place targeted logs, assertions, or breakpoints to isolate the variable.
-   - **Phase 4: Root Cause Verification**: Ensure the developer conducts a 5-Why analysis and logs a blameless post-mortem in `templates/rca-postmortem-template.md` (saved to `docs/rca/`).
+   - **Phase 4: Root Cause Verification**: Ensure the developer conducts a 5-Why analysis and logs a blameless post-mortem in `<kit>/templates/rca-postmortem-template.md` (saved to host `./docs/rca/`).
 
 ---
 
@@ -207,7 +215,7 @@ Activate during practice sessions, tricky regressions, or unexplained runtime be
 
 - Developer has an active architectural question, concept, bug, or design challenge.
 - **Mode Selection**: Detect mode from explicit user trigger (`pk:tutor`, `pk:tutor beginner`, `pk:tutor architect`, `pk:grill`) or infer from context. Defaults to workspace configuration (`AGENTS.md` / `PROMPTKIT.md`).
-- `notes/learning-plan.md` and `notes/progress-journal.md` are accessible for tracking personal insights and progress.
+- The host-owned `./notes/learning-plan.md` and `./notes/progress-journal.md` are accessible for tracking personal insights and progress.
 - If no immediate question is stated, execute `protocols/context-sync.md` and review recent journal entries to suggest a high-leverage learning topic.
 
 ---
@@ -309,7 +317,9 @@ Tailor follow-up material based on the developer's confidence:
 
 ---
 
-## Completion Criteria
+## Completion Criteria (Tutoring Modes 1–4 and 6)
+
+Modes 1–4 and 6 close under this block. Mode 5 (`pk:grill`) closes only under its Grill Completion Contract above, which overrides on conflict per Mode Precedence.
 
 - Developer solved the problem by writing the code themselves.
 - Developer demonstrated understanding through a clear teach-back explanation.

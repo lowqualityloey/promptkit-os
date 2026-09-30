@@ -10,7 +10,7 @@ An ADR is a lightweight document that captures a significant architectural decis
 ---
 
 ## How to Create an ADR
-1. When a key architectural decision is reached during `pk:plan` or `pk:retro`, copy `.promptkit/templates/adr-template.md` into `./docs/adrs/` (or this directory if in standalone vault mode).
+1. When a key architectural decision is reached during `pk:plan` or `pk:retro`, copy the read-only kit source `<kit>/templates/adr-template.md` into the host-owned `./docs/adrs/` (or this directory if in standalone vault mode).
 2. Name the file using the format:
    `YYYY-MM-DD-<decision-title>.md` (e.g., `2026-08-23-adopt-trpc-for-type-safe-apis.md`).
 3. Fill in Context, Decision Drivers, Considered Options, Outcome, and Trade-Offs.
@@ -21,4 +21,4 @@ An ADR is a lightweight document that captures a significant architectural decis
 ## ADR Index Table
 | Number | Date | Title | Status |
 | :--- | :--- | :--- | :--- |
-| ADR-001 | 2026-08-23 | Example: Adopt Clean Architecture Boundaries | Accepted |
+| ADR-001 | 2026-08-23 | Example: Adopt Clean Architecture Boundaries | Example only — no decision recorded |

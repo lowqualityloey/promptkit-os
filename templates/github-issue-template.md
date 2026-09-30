@@ -6,8 +6,8 @@ labels: ["type:feature", "priority/p1"]
 ---
 
 ### Metadata
-- **Related Spec**: `docs/specs/`
-- **Architectural Decision (ADR)**: `docs/adrs/`
+- **Related Spec**: [Link to `docs/specs/<spec>.md` or `N/A - <reason>`]
+- **Architectural Decision (ADR)**: [Link to `docs/adrs/<adr>.md` or `N/A - <reason>`]
 - **Milestone**: `[M1: Data & Contracts | M2: Core Logic | M3: UI & Presentation | M4: Hardening]`
 - **Priority**: `[#priority/p0 (Blocker) | #priority/p1 (Core) | #priority/p2 (Enhancement) | #priority/p3 (Polish)]`
 - **Labels**: `[area:backend, area:frontend, area:data, area:auth, area:ui, area:perf]`

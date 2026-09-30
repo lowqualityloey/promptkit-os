@@ -55,6 +55,9 @@ bash scripts/validate-references.sh .
 bash scripts/validate-release-records.sh --root scripts/tests/fixtures/release-records/valid --strict
 bash scripts/validate-execution-control.sh --root .
 
+# Assert CHANGELOG entry for behavior-surface changes (against origin/main)
+bash scripts/check-changelog-entry.sh
+
 # Self-application: this repository's own release records (see the exemption note below)
 bash scripts/validate-release-records.sh --root . --strict
 ```
@@ -89,6 +92,9 @@ pwsh -NoProfile -File .\scripts\tests\run-ci-triage-fixtures.ps1
 pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir .
 pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root .\scripts\tests\fixtures\release-records\valid -Strict
 
+# Assert CHANGELOG entry for behavior-surface changes (against origin/main)
+pwsh -NoProfile -File .\scripts\check-changelog-entry.ps1
+
 # Self-application: this repository's own release records (see the exemption note below)
 pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root . -Strict
 ```
@@ -117,6 +123,17 @@ Every release from v1.1.0 onward must pass cleanly, including the human-readable
 `*-release-notes.md` files, which carry the same canonical field set as their
 companion `*-release-notes-record.md`.
 
+### Pre-PR Submission Checklist
+
+Mechanical gates catch most resubmission causes; the rest is judgment. Before opening a pull request:
+
+1. **CHANGELOG entry**: behavior-surface changes (`workflows/`, `templates/`, `protocols/`, `package/`, top-level `scripts/`, `init.sh`/`init.ps1`) carry an `[Unreleased]` entry. Gate: `scripts/check-changelog-entry.sh` (+ `.ps1` twin), CI-wired against `origin/main`.
+2. **No stale pending language**: "pending <authority action>" text must not survive the merge that resolves it. The countersignature-consistency scenario in the behavioral twins covers retro chains; sweep your own diff for the pattern.
+3. **Twin parity**: every behavior change ships in both `.sh` and `.ps1`; new scripts join both CI syntax lists; new fixture cases register in the shared manifests.
+4. **Encoded policy has a prose referent**: graphs, enums, and budgets enforced by scripts are also stated where users read them, with mechanical parity where it matters.
+5. **PR body**: `templates/pull-request-template.md` sections, acceptance criteria with in-turn evidence, and a top-level `Closes #N` line so the merge closes the issue.
+6. **Commit discipline** (`workflows/commit.md`): pre-commit secret/probe scans, message body with maintenance-or-impact classification, explicit confirmation before the commit exists.
+
 ---
 
 ## Workflow Ownership & Authority Matrix
@@ -134,11 +151,11 @@ companion `*-release-notes-record.md`.
 
 ## Workflow Lifecycle: Addition & Retirement Policy
 
-The surface is 24 workflows by design, not by accident. Growth is gated and retirement has a path — see [ADR 0002](./docs/adrs/0002-workflow-lifecycle-policy.md) for the full policy and the v1.8.0 `pk:auto` worked example.
+The current surface is 25 workflows by design, not by accident. Growth is gated and retirement has a path — see [ADR 0002](./docs/adrs/0002-workflow-lifecycle-policy.md) for the full policy and the v1.8.0 `pk:auto` worked example.
 
-- **Proposing the 25th workflow**: state non-overlap (which existing workflows were considered and why not), ceremony fit, all artifacts shipped in the same PR (workflow file, `setup.md` row, directive entry or recorded omission, WORKFLOW-MAP/README/FAQ updates, assertions in both test twins), and strict token-gate results.
+- **Proposing the 26th workflow**: state non-overlap (which existing workflows were considered and why not), ceremony fit, all artifacts shipped in the same PR (workflow file, `setup.md` row, directive entry or recorded omission, WORKFLOW-MAP/README/FAQ updates, assertions in both test twins), and strict token-gate results.
 - **Retiring a workflow or alias**: breaking-change path — justification plus `CHANGELOG.md` `BREAKING CHANGE` notice with migration path, count-guard updates in both twins (suite stays green), directive exception-list sync, and reference cleanup (`setup.md`, README, WORKFLOW-MAP, FAQ, QUICKSTART) with `validate-references.sh` passing.
-- **This policy retires nothing.** Count is 24; the drift guard enforces this count.
+- **This policy retires nothing.** Count is 25; the drift guard enforces this count.
 
 ## Adding a New AI Host
 

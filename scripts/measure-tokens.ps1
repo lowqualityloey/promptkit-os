@@ -4,8 +4,8 @@
 .DESCRIPTION
     Extracts the active PromptKit OS directive block from your agent
     instructions file (AGENTS.md, CLAUDE.md, etc.) and calculates the exact
-    character, word, and estimated token counts (using industry standard 4 chars/token).
-    Compares against derived monolithic baselines (core-6 subset ~19.6k; full set ~75.3k).
+    UTF-8 byte counts, character and word counts, and token estimates (bytes/4).
+    Compares against the current workflow files for live counts; historical measurements are labeled in docs/BENCHMARKS.md.
     In -Strict mode (CI gate parity with measure-tokens.sh), host detection is
     skipped and BOTH canonical directive templates are asserted against their
     profile budgets: Balanced <= 2,500 tokens and Lite <= 1,500 tokens.
@@ -40,7 +40,8 @@ if ($Strict) {
             continue
         }
         $raw = [System.IO.File]::ReadAllText($t.Path, [System.Text.Encoding]::UTF8)
-        $norm = ($raw -replace "\r\n", "`n").TrimEnd("`r", "`n")
+        # Match Bash tr -d '\r': normalize line endings without dropping the final LF.
+        $norm = $raw -replace "\r", ""
         $bytes = [System.Text.Encoding]::UTF8.GetByteCount($norm)
         $tokens = [Math]::Floor(($bytes + 2) / 4)
         if ($tokens -le $t.Budget) {
@@ -79,7 +80,7 @@ $SourceDescription = ""
 if ($TargetFile -ne "" -and (Test-Path $TargetFile)) {
     $FoundFile = Resolve-Path $TargetFile
     $Content = Get-Content $FoundFile -Raw
-    $Pattern = '(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->'
+    $Pattern = '(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->(?:\r?\n)?'
     $Match = [regex]::Match($Content, $Pattern)
     if ($Match.Success) {
         $DirectiveText = $Match.Value
@@ -89,7 +90,7 @@ if ($TargetFile -ne "" -and (Test-Path $TargetFile)) {
     foreach ($cand in $Candidates) {
         if (Test-Path $cand) {
             $Content = Get-Content $cand -Raw
-            $Pattern = '(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->'
+            $Pattern = '(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->(?:\r?\n)?'
             $Match = [regex]::Match($Content, $Pattern)
             if ($Match.Success) {
                 $DirectiveText = $Match.Value
@@ -114,11 +115,13 @@ if ([string]::IsNullOrWhiteSpace($DirectiveText)) {
     Write-Error "No PromptKit OS directive block found. Run init.ps1 first or pass a file path."
     exit 1
 }
-$NormalizedDirective = ($DirectiveText -replace "\r\n", "`n").TrimEnd("`r", "`n")
-$LineCount = ($NormalizedDirective -split "\n").Count
+$NormalizedDirective = $DirectiveText -replace "\r", ""
+$LineCount = [regex]::Matches($NormalizedDirective, "\n").Count
+if (-not $NormalizedDirective.EndsWith("`n")) { $LineCount++ }
 $CharCount = $NormalizedDirective.Length
+$ByteCount = [System.Text.Encoding]::UTF8.GetByteCount($NormalizedDirective)
 $WordCount = ($NormalizedDirective -split '\s+' | Where-Object { $_ -ne "" }).Count
-$EstimatedTokens = [Math]::Floor(($CharCount + 2) / 4)
+$EstimatedTokens = [Math]::Floor(($ByteCount + 2) / 4)
 # Monolithic baselines derived live (issue #145 audit): core-6 subset + full set.
 $KitRoot = Split-Path -Parent $PSScriptRoot
 function Measure-BytesNoCR([string]$p) {
@@ -128,24 +131,27 @@ function Measure-BytesNoCR([string]$p) {
 $subsetBytes = 0
 foreach ($s in @("route", "debug", "commit", "checkpoint", "sync", "profile")) { $subsetBytes += Measure-BytesNoCR (Join-Path $KitRoot "workflows\$s.md") }
 $MonolithicTokens = [Math]::Floor(($subsetBytes + 2) / 4)
+$workflowFiles = @(Get-ChildItem (Join-Path $KitRoot "workflows") -Filter *.md -File)
+$FullsetCount = $workflowFiles.Count
 $fullBytes = 0
-foreach ($f in (Get-ChildItem (Join-Path $KitRoot "workflows") -Filter *.md)) { $fullBytes += Measure-BytesNoCR $f.FullName }
+foreach ($f in $workflowFiles) { $fullBytes += Measure-BytesNoCR $f.FullName }
 $FullsetTokens = [Math]::Floor(($fullBytes + 2) / 4)
-$SavingsPercent = [Math]::Round((1 - ($EstimatedTokens / $MonolithicTokens)) * 100, 1)
+$SavingsPercent = [Math]::Floor(((($MonolithicTokens - $EstimatedTokens) * 100 / $MonolithicTokens) + 0.5))
 
 Write-Host "Target File: $SourceDescription" -ForegroundColor DarkGray
 Write-Host "`nMeasurement Results:" -ForegroundColor Yellow
 Write-Host "  • Lines:            $LineCount"
 Write-Host "  • Characters:       $CharCount"
+Write-Host "  • UTF-8 Bytes:      $ByteCount"
 Write-Host "  • Words:            $WordCount"
-Write-Host "  • Estimated Tokens: ~$EstimatedTokens tokens (at ~4 chars/token)" -ForegroundColor Green
+Write-Host "  • Estimated Tokens: ~$EstimatedTokens tokens (at ~4 UTF-8 bytes/token)" -ForegroundColor Green
 
 Write-Host "`nToken Economics Comparison:" -ForegroundColor Yellow
 Write-Host "  ┌─────────────────────────────────────────────────────────────┐" -ForegroundColor DarkGray
 Write-Host "  │ Model Architecture                 Static Overhead          │" -ForegroundColor DarkGray
 Write-Host "  ├─────────────────────────────────────────────────────────────┤" -ForegroundColor DarkGray
 Write-Host "  │ Monolithic (core-6 subset derived)   ~$MonolithicTokens tokens           │" -ForegroundColor Red
-Write-Host "  │ Monolithic (full 24-workflow set)    ~$FullsetTokens tokens           │" -ForegroundColor Red
+Write-Host "  │ Monolithic (full $($FullsetCount)-workflow set)    ~$FullsetTokens tokens           │" -ForegroundColor Red
 Write-Host "  │ PromptKit OS JIT Router            ~$EstimatedTokens tokens (measured)      │" -ForegroundColor Green
 Write-Host "  ├─────────────────────────────────────────────────────────────┤" -ForegroundColor DarkGray
 Write-Host "  │ Static Context Reduction:          $SavingsPercent% reduction             │" -ForegroundColor Cyan

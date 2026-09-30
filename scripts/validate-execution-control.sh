@@ -81,6 +81,15 @@ trim() {
     printf '%s' "$value"
 }
 
+strip_backticks() {
+    local value="$1"
+    if [ "${#value}" -ge 2 ] && [[ "$value" == \`*\` ]]; then
+        printf '%s' "${value:1:-1}"
+    else
+        printf '%s' "$value"
+    fi
+}
+
 field_exists() {
     local file="$1"
     local label="$2"
@@ -284,7 +293,7 @@ expected_status() {
 
 allowed_transition() {
     case "$1:$2" in
-        N/A:planned|None:planned|planned:ready|planned:aborted|ready:in_progress|ready:blocked|ready:paused|ready:aborted|in_progress:checkpoint_due|in_progress:blocked|in_progress:paused|in_progress:handoff_ready|in_progress:awaiting_review|in_progress:completed|in_progress:aborted|checkpoint_due:in_progress|checkpoint_due:blocked|checkpoint_due:paused|checkpoint_due:handoff_ready|checkpoint_due:aborted|blocked:ready|blocked:in_progress|blocked:paused|blocked:aborted|paused:ready|paused:in_progress|paused:aborted|handoff_ready:in_progress|handoff_ready:checkpoint_due|handoff_ready:blocked|handoff_ready:aborted|awaiting_review:in_progress|awaiting_review:completed|awaiting_review:blocked)
+        N/A:planned|None:planned|planned:ready|planned:in_progress|planned:aborted|ready:in_progress|ready:blocked|ready:paused|ready:aborted|in_progress:checkpoint_due|in_progress:blocked|in_progress:paused|in_progress:handoff_ready|in_progress:awaiting_review|in_progress:completed|in_progress:aborted|checkpoint_due:in_progress|checkpoint_due:blocked|checkpoint_due:paused|checkpoint_due:handoff_ready|checkpoint_due:aborted|blocked:ready|blocked:in_progress|blocked:paused|blocked:aborted|paused:ready|paused:in_progress|paused:aborted|handoff_ready:in_progress|handoff_ready:checkpoint_due|handoff_ready:blocked|handoff_ready:aborted|awaiting_review:planned|awaiting_review:in_progress|awaiting_review:completed|awaiting_review:blocked)
             return 0 ;;
         *) return 1 ;;
     esac
@@ -301,14 +310,25 @@ revision_token() {
 
 validate_transitions() {
     local file="$1" id="$2" state="$3"
-    local count=0 last_new=""
+    local count=0 last_new="" in_section=0 line heading
     while IFS= read -r line; do
+        if [[ "$line" =~ ^[[:space:]]*#{1,6}[[:space:]]+(.*)$ ]]; then
+            heading="$(trim "${BASH_REMATCH[1]}")"
+            if [ "$heading" = "Transition History" ]; then
+                in_section=1
+            else
+                in_section=0
+            fi
+            continue
+        fi
+        [ "$in_section" -eq 0 ] && continue
+        [[ "$line" =~ ^[[:space:]]*\| ]] || continue
         [ -z "$(trim "$line")" ] && continue
         [[ "$line" == *"Previous State"* ]] && continue
         [[ "$line" == *"---"* ]] && continue
         IFS='|' read -r _ previous new _rest <<< "$line"
-        previous="$(trim "$previous")"
-        new="$(trim "$new")"
+        previous="$(strip_backticks "$(trim "$previous")")"
+        new="$(strip_backticks "$(trim "$new")")"
         initial_transition=0
         if { [ "$previous" = "N/A" ] || [ "$previous" = "None" ]; } && [ "$new" = "planned" ]; then
             initial_transition=1
@@ -322,7 +342,7 @@ validate_transitions() {
             diagnostic INVALID_TRANSITION "$id" "$(relative_path "$file")" "Illegal transition: $previous -> $new" "Use the documented execution-state transition graph"
         fi
         last_new="$new"
-    done < <(grep -E '^\s*\|' "$file" || true)
+    done < "$file"
     if [ "$count" -eq 0 ]; then
         diagnostic INVALID_TRANSITION "$id" "$(relative_path "$file")" "No concrete transition history found" "Record at least the initial transition and current state"
     elif [ "$last_new" != "$state" ]; then

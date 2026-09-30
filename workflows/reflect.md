@@ -28,7 +28,7 @@ Facilitate a deep, high-impact Engineering Retrospective following a development
 
 ## Preconditions
 - Developer has completed a coding block, spike, debugging session, or architectural milestone.
-- Access to `.promptkit/notes/progress-journal.md`, `.promptkit/notes/learning-plan.md`, and `.promptkit/notes/skill-matrix.md`.
+- Access to the host-owned `./notes/progress-journal.md`, `./notes/learning-plan.md`, and `./notes/skill-matrix.md`.
 - Git repository available to analyze diffs and recent commit logs.
 
 ---
@@ -52,14 +52,14 @@ Ask exactly one round of 3-4 targeted reflective questions (no follow-up rounds 
 3. **Resilience & Edge Cases**: *"Where is the weakest point in this implementation under extreme load, network failure, or corrupted input?"*
 4. **Tooling / DX**: *"What slowed you down during this session, and how can tooling or automation eliminate that friction next time?"*
 
-If the developer does not answer (non-interactive session or no response), proceed with agent-drafted observations explicitly marked unconfirmed and continue to Step 3.
+If the developer does not answer (non-interactive session or no response), proceed with agent-drafted observations explicitly marked unconfirmed and continue to Step 3. If the developer does not review the draft, save it as a pending draft under a `## Pending Review` heading instead: do not append it to the journal table, do not advance the skill matrix, and leave the Completion Criteria below unmet until review occurs.
 
 ### Step 3: Extract Architectural Decisions (ADR Check)
 Evaluate whether significant architectural or technology choices were made:
 - Examples: Choosing an ORM, selecting a state management library, structuring server/client boundaries, defining an authentication strategy, introducing a caching layer.
 - If a significant decision occurred:
   1. Recommend drafting an ADR in the project's `./docs/adrs/` folder.
-   2. Use `templates/adr-template.md` to scaffold `./docs/adrs/YYYY-MM-DD-<decision-title>.md`.
+   2. Use `<kit>/templates/adr-template.md` to scaffold `./docs/adrs/YYYY-MM-DD-<decision-title>.md`.
   3. Assist the developer in documenting Context, Decision, Consequences, and Alternatives Considered.
 
 ### Step 4: Extract Bug Root Cause Analysis (RCA Check)
@@ -73,7 +73,7 @@ If the session involved debugging a critical defect, race condition, or producti
 - Record the preventative action item in `./docs/rca/` (e.g., new lint rule, integration test, or schema constraint).
 
 ### Step 5: Update Progress Journal
-Draft a rich, tagged entry for `.promptkit/notes/progress-journal.md`:
+Draft a rich, tagged entry for the host-owned `./notes/progress-journal.md` (never `<kit>/notes/` — kit paths are read-only sources):
 
 ```markdown
 | Date | Focus / Challenge | Key Architectural Insights & Mental Models | Trade-Offs & Decisions | Next High-Leverage Action | Tags |
@@ -81,14 +81,15 @@ Draft a rich, tagged entry for `.promptkit/notes/progress-journal.md`:
 | YYYY-MM-DD | [Component or Feature] | - [Insight 1]<br>- [Insight 2] | - [Decision and rationale] | - [Concrete next step] | `#tag1` `#tag2` |
 ```
 
-Review the draft with the developer, make adjustments, and append it to the table in `.promptkit/notes/progress-journal.md`.
+Review the draft with the developer. If reviewed, make adjustments and append it to the table in `./notes/progress-journal.md`. If not reviewed, save it as a pending draft under the `## Pending Review` heading at the top of `./notes/progress-journal.md` (outside the table), and resume later by moving it into the table once the developer reviews it.
 
 ### Step 6: Advance the Skill Competency Matrix
-1. Open `.promptkit/notes/skill-matrix.md`.
+Only for retros the developer reviewed (pending drafts advance nothing):
+1. Open `./notes/skill-matrix.md`.
 2. Check off or advance competencies demonstrated during the session (e.g., TypeScript Generics, State Machine Design, Database Indexing, WCAG 2.2 a11y, Clean Architecture).
-3. Align upcoming tasks in `.promptkit/notes/learning-plan.md` to target the next tier in the skill matrix.
+3. Align upcoming tasks in `./notes/learning-plan.md` to target the next tier in the skill matrix.
 
-> **Kit contributors**: also identify which L1→L4 skill dimension(s) in the kit's [`notes/skill-matrix.md`](../notes/skill-matrix.md) this session exercised, and prompt the developer to update the relevant matrix row so the matrix stays a living record.
+> **Kit contributors**: also identify which T1→T4 skill dimension(s) in the kit's [`notes/skill-matrix.md`](../notes/skill-matrix.md) this session exercised, and prompt the developer to update the relevant matrix row so the matrix stays a living record.
 
 ### Step 7: Close the Loop & Recommend Next Action
 Summarize next steps:
@@ -99,7 +100,8 @@ Summarize next steps:
 ---
 
 ## Completion Criteria
-- `.promptkit/notes/progress-journal.md` is updated with a high-fidelity retro entry.
+- `./notes/progress-journal.md` is updated with a high-fidelity retro entry.
 - Major architectural decisions are documented as ADRs under `./docs/adrs/`.
-- `.promptkit/notes/learning-plan.md` and `.promptkit/notes/skill-matrix.md` reflect current progress and upcoming goals.
+- `./notes/learning-plan.md` and `./notes/skill-matrix.md` reflect current progress and upcoming goals.
 - Developer has clear clarity on their next engineering spike or milestone.
+- Unreviewed retros stay `pending review`: no journal append certifies them, and no competency advancement is recorded.

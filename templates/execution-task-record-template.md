@@ -66,7 +66,7 @@
 
 - **Execution State**: `planned` <!-- planned | ready | in_progress | checkpoint_due | blocked | paused | handoff_ready | awaiting_review | completed | aborted -->
 - **Mapped `pk:tasks` Status**: `To Do` <!-- To Do | In Progress | In Review | Done -->
-- **Active Task Pointer**: `[This Task ID while in_progress, otherwise None]`
+- **Active Task Pointer**: `[This Task ID while in_progress (gated sub-task work counts), otherwise None]`
 - **Start Time**: `[YYYY-MM-DD HH:MM UTC or N/A]`
 - **Current Actor**: `[Person, role, or agent]`
 - **Next Action**: `[Exactly one prioritized action]`
@@ -76,6 +76,8 @@
 | Previous State | New State | Timestamp | Actor | Reason | Supporting Evidence |
 |---|---|---|---|---|---|
 | `[State]` | `[State]` | `[YYYY-MM-DD HH:MM UTC]` | `[Actor]` | `[Reason]` | `[Link or N/A]` |
+
+Canonical transition graph (enforced by `scripts/validate-execution-control.sh` / `.ps1`; every history row must be one of these edges): `N/A`/`None`→`planned`; `planned`→`ready`/`in_progress`/`aborted`; `ready`→`in_progress`/`blocked`/`paused`/`aborted`; `in_progress`→`checkpoint_due`/`blocked`/`paused`/`handoff_ready`/`awaiting_review`/`completed`/`aborted`; `checkpoint_due`→`in_progress`/`blocked`/`paused`/`handoff_ready`/`aborted`; `blocked`→`ready`/`in_progress`/`paused`/`aborted`; `paused`→`ready`/`in_progress`/`aborted`; `handoff_ready`→`in_progress`/`checkpoint_due`/`blocked`/`aborted`; `awaiting_review`→`planned`/`in_progress`/`completed`/`blocked`.
 
 A task cannot enter `ready` until its objective, scope, non-goals, acceptance criteria, dependencies, verification condition, owner/approval boundary, and execution policy are complete. It cannot enter `in_progress` until readiness, start time, execution scope, and active ownership are recorded. Only one task may hold the active pointer in this Execution Scope.
 

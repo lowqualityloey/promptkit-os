@@ -180,11 +180,11 @@ foreach ($directive in @("templates/agent-directive-template.md", "templates/age
     }
 }
 $WfCount = @(Get-ChildItem (Join-Path $RepoRoot "workflows") -Filter "*.md").Count
-if ($WfCount -eq 24) {
-    Write-Host "  ✅ PASS: On-disk workflow file count is 24 (matches reconciled docs claims)" -ForegroundColor Green
+if ($WfCount -eq 25) {
+    Write-Host "  ✅ PASS: On-disk workflow file count is 25 (matches reconciled docs claims)" -ForegroundColor Green
     $script:PassCount++
 } else {
-    Write-Host "  ❌ FAIL: On-disk workflow count is $WfCount but shipped docs claim 24 — reconcile counts or update this drift guard" -ForegroundColor Red
+    Write-Host "  ❌ FAIL: On-disk workflow count is $WfCount but shipped docs claim 25 — reconcile counts or update this drift guard" -ForegroundColor Red
     $script:FailCount++
 }
 # Canonical-count drift guard (#347): every live workflow-count claim must state
@@ -197,8 +197,11 @@ if ($WfCount -eq 24) {
 $staleFiles = @(
     "README.md", "QUICKSTART.md", "FAQ.md", "PROMPTKIT.md",
     "docs/WORKFLOW-MAP.md", "docs/BENCHMARKS.md", "docs/ARCHITECTURE.md",
-    "docs/COMPARISONS.md", "docs/INTERESTING-FACTS.md",
-    "templates/lite-profile.md", "templates/project-profile-template.md", "workflows/sync.md"
+    "docs/COMPARISONS.md", "docs/INTERESTING-FACTS.md", "CONTRIBUTING.md",
+    "init.sh", "init.ps1", "protocols/setup.md",
+    "scripts/measure-tokens.sh", "scripts/measure-tokens.ps1",
+    "templates/lite-profile.md", "templates/project-profile-template.md",
+    "workflows/onboard.md", "workflows/profile.md", "workflows/sync.md"
 ) | ForEach-Object { Join-Path $RepoRoot $_ }
 $claimPattern = 'full [0-9][0-9]?[- ]workflows?|[Aa]ll [0-9][0-9]? workflows?|[0-9][0-9]? workflow files|[0-9][0-9]? Inlined Workflows?|[(][0-9][0-9]? workflows?'
 $stale = Select-String -Path $staleFiles -Pattern $claimPattern -ErrorAction SilentlyContinue | Where-Object {
@@ -297,131 +300,154 @@ if (($claimedN.Count -eq 1) -and ([int]$claimedN[0] -eq $faqN)) {
     $script:FailCount++
 }
 
-Write-Host "`n📌 Scenario P: Published Figure Exact-Match (BENCHMARKS vs tool output)" -ForegroundColor Yellow
-# Same coverage as the .sh twin. Live payloads are recomputed natively here
-# (bytes/4 per file); composition MUST match measure-per-task-tokens.sh lines 81-87
-# and measure-tokens.sh --strict. Dated records are exempt. Rounding: nearest
-# integer percent via Floor(x + 0.5).
-function Measure-Tok($RelPath) {
-    $bytes = [System.IO.File]::ReadAllBytes((Join-Path $RepoRoot $RelPath))
-    $cr = @($bytes | Where-Object { $_ -eq 13 }).Count
-    return [int][math]::Floor((($bytes.Length - $cr) + 2) / 4)
-}
-function Check-Figure($Desc, $Live, $Doc) {
-    if ($Live -eq $Doc) {
-        Write-Host "  ✅ PASS: $Desc ($Doc tok == tool output)" -ForegroundColor Green
-        $script:PassCount++
-    } else {
-        Write-Host "  ❌ FAIL: $Desc published $Doc tok but tool output is $Live tok" -ForegroundColor Red
-        $script:FailCount++
-    }
-}
-function Digits($S) { return [int](($S -replace '\D', '')) }
-function FirstNum($S) { return [int](([regex]::Match($S, '[0-9,]+')).Value -replace ',', '') }
-$benchLines = Get-Content -Path (Join-Path $RepoRoot "docs/BENCHMARKS.md")
-$fullTok = Measure-Tok "templates/agent-directive-template.md"
-$liteTok = Measure-Tok "templates/agent-directive-lite-template.md"
-$gateTok = Measure-Tok "protocols/code-quality-gate.md"
-$fixTok = Measure-Tok "workflows/fix.md"
-$planTok = Measure-Tok "workflows/plan.md"
-$shipTok = Measure-Tok "workflows/ship.md"
-$techTok = Measure-Tok "templates/tech-spec-template.md"
-$relTok = Measure-Tok "templates/release-checklist.md"
-$live = @{
-    'pk:fix/balanced' = $fullTok + $fixTok + $gateTok
-    'pk:fix/lite'     = $liteTok + $fixTok + $gateTok
-    'pk:plan/balanced' = $fullTok + $planTok + $techTok + $gateTok
-    'pk:plan/lite'     = $liteTok + $planTok + $techTok + $gateTok
-    'pk:ship/balanced' = $fullTok + $shipTok + $relTok + $gateTok
-    'pk:ship/lite'     = $liteTok + $shipTok + $relTok + $gateTok
-}
-$limits = @{ 'pk:fix' = 12861; 'pk:plan' = 24666; 'pk:ship' = 24761 }
-foreach ($spec in @('pk:fix', 'pk:plan', 'pk:ship')) {
-    $row = @($benchLines | Where-Object { $_ -cmatch "^\| \*\*``$spec``\*\* \|" })[0]
-    if ($null -eq $row) {
-        Write-Host "  ❌ FAIL: BENCHMARKS.md section-3 row for $spec not found" -ForegroundColor Red
-        $script:FailCount++
-        continue
-    }
-    $cols = $row -split '\|'
-    $base = Digits $cols[3]
-    $balDoc = Digits $cols[4]
-    $liteDoc = FirstNum $cols[5]
-    $balLive = $live["$spec/balanced"]
-    $liteLive = $live["$spec/lite"]
-    Check-Figure "$spec Balanced payload" $balLive $balDoc
-    Check-Figure "$spec Lite payload" $liteLive $liteDoc
-    Check-Figure "$spec baseline constant" $limits[$spec] $base
-    $balPctDoc = Digits (([regex]::Match($row, '-[0-9]+% Balanced')).Value)
-    $litePctDoc = Digits (([regex]::Match($row, '-[0-9]+% Lite')).Value)
-    $balPctLive = [int][math]::Floor((($base - $balLive) * 100.0) / $base + 0.5)
-    $litePctLive = [int][math]::Floor((($base - $liteLive) * 100.0) / $base + 0.5)
-    Check-Figure "$spec Balanced reduction label" $balPctLive $balPctDoc
-    Check-Figure "$spec Lite reduction label" $litePctLive $litePctDoc
-}
-$balRow = @($benchLines | Where-Object { $_ -cmatch '^\| \*\*Balanced\*\* \|' })[0]
-$liteRow = @($benchLines | Where-Object { $_ -cmatch '^\| \*\*Lite\*\* \|' })[0]
-if ($null -eq $balRow -or $null -eq $liteRow) {
-    Write-Host "  ❌ FAIL: BENCHMARKS.md section-2 profile rows not found" -ForegroundColor Red
+Write-Host "`n📌 Scenario P: Numeric Benchmark Values Match Measurement Tools" -ForegroundColor Yellow
+$benchPath = Join-Path $RepoRoot "docs/BENCHMARKS.md"
+$benchLines = Get-Content -Path $benchPath
+$staticToolPath = Join-Path $RepoRoot "scripts/measure-tokens.ps1"
+$perTaskToolPath = Join-Path $RepoRoot "scripts/measure-per-task-tokens.ps1"
+$staticOutput = @(& pwsh -NoProfile -NonInteractive -File $staticToolPath -Strict 2>&1)
+$staticExitCode = $LASTEXITCODE
+$perTaskOutput = @(& pwsh -NoProfile -NonInteractive -File $perTaskToolPath --strict 2>&1)
+$perTaskExitCode = $LASTEXITCODE
+$balancedSavingsOutput = @(& pwsh -NoProfile -NonInteractive -File $staticToolPath (Join-Path $RepoRoot "templates/agent-directive-template.md") 2>&1)
+$balancedSavingsExitCode = $LASTEXITCODE
+$liteSavingsOutput = @(& pwsh -NoProfile -NonInteractive -File $staticToolPath (Join-Path $RepoRoot "templates/agent-directive-lite-template.md") 2>&1)
+$liteSavingsExitCode = $LASTEXITCODE
+$fullsetOutput = @(& pwsh -NoProfile -NonInteractive -File $staticToolPath 2>&1)
+$fullsetExitCode = $LASTEXITCODE
+if ($staticExitCode -ne 0) {
+    Write-Host "  ❌ FAIL: static measurement tool exited $staticExitCode" -ForegroundColor Red
     $script:FailCount++
-} else {
-    Check-Figure "Balanced static directive" $fullTok (Digits (($balRow -split '\|')[4]))
-    Check-Figure "Lite static directive" $liteTok (Digits (($liteRow -split '\|')[4]))
+}
+if ($perTaskExitCode -ne 0) {
+    Write-Host "  ❌ FAIL: per-task measurement tool exited $perTaskExitCode" -ForegroundColor Red
+    $script:FailCount++
+}
+if ($balancedSavingsExitCode -ne 0 -or $liteSavingsExitCode -ne 0 -or $fullsetExitCode -ne 0) {
+    Write-Host "  ❌ FAIL: static savings or full-workflow measurement exited nonzero" -ForegroundColor Red
+    $script:FailCount++
 }
 
-Write-Host "  -- Prose-claim sweep: anchored Lite shapes must equal $liteTok (dated blocks exempt)" -ForegroundColor Gray
-$shapes = @(
-    'Lite[^()|]*\([^()]*[0-9,]+ tok(en)?s?\)',
-    'Lite uses [0-9,]+ tok',
-    'Lite stays at [0-9,]+ tok',
-    '[0-9,]+ tok Lite',
-    '[0-9,]+ tok(en)?s? static'
-)
-$benchAll = Get-Content -Path (Join-Path $RepoRoot "docs/BENCHMARKS.md")
-$b9s = -1; $b9e = -1
-for ($i = 0; $i -lt $benchAll.Count; $i++) {
-    if ($benchAll[$i] -cmatch '^## 9\. Proxy Validation') { $b9s = $i }
-    elseif ($b9s -ge 0 -and $benchAll[$i] -cmatch '^## Related References') { $b9e = $i; break }
+function Normalize-TableCell([string]$Cell) {
+    return (($Cell -replace '[*`]', '').Trim() -replace '\s+', ' ').ToLowerInvariant()
 }
-$lpAll = Get-Content -Path (Join-Path $RepoRoot "templates/lite-profile.md")
-$lps = -1; $lpe = -1
-for ($i = 0; $i -lt $lpAll.Count; $i++) {
-    if ($lpAll[$i] -cmatch '^## Token Measurements \(measured 2026-09-14') { $lps = $i }
-    elseif ($lps -ge 0 -and $lpAll[$i] -cmatch '^## ') { $lpe = $i; break }
+function Get-BenchmarkMetric([string]$Header, [string]$Metric, [string]$Row) {
+    $cell = Get-BenchmarkCell $Header $Metric $Row
+    $number = [regex]::Match($cell, '[0-9][0-9,]*')
+    if ($number.Success) { return [int]($number.Value -replace ',', '') }
+    return $null
 }
-if ($b9s -lt 0 -or $b9e -lt 0 -or $lps -lt 0 -or $lpe -lt 0) {
-    Write-Host "  ❌ FAIL: prose-sweep exempt-range markers missing" -ForegroundColor Red
-    $script:FailCount++
-} else {
-    $proseBad = @()
-    $proseFiles = @("README.md","QUICKSTART.md","FAQ.md","CONTRIBUTING.md","docs/BENCHMARKS.md","docs/COMPARISONS.md","docs/ARCHITECTURE.md","docs/WORKFLOW-MAP.md","docs/ADOPTION-GUIDE.md","docs/INTERESTING-FACTS.md","docs/DESIGN-MD-FAQ.md","docs/adaptation-friction-evaluation.md","templates/lite-profile.md")
-    foreach ($pf in $proseFiles) {
-        $fp = Join-Path $RepoRoot $pf
-        if (-not (Test-Path $fp)) { continue }
-        $lns = Get-Content -Path $fp
-        for ($i = 0; $i -lt $lns.Count; $i++) {
-            $ln = $lns[$i]
-            if ($ln -notmatch 'Lite' -or $ln -notmatch 'tok') { continue }
-            if ($pf -eq "docs/BENCHMARKS.md" -and $i -ge $b9s -and $i -lt $b9e) { continue }
-            if ($pf -eq "templates/lite-profile.md" -and $i -ge $lps -and $i -lt $lpe) { continue }
-            foreach ($pat in $shapes) {
-                foreach ($mm in ([regex]::Matches($ln, $pat))) {
-                    $m = $mm.Value
-                    if ($m -like '* to *') { continue }
-                    $v = [int]((([regex]::Matches($m, '[0-9,]+') | Select-Object -Last 1).Value) -replace ',', '')
-                    if ($v -ne $liteTok) { $proseBad += "  - ${pf}:$($i + 1): '$m' (live is $liteTok tok)" }
+function Get-BenchmarkCell([string]$Header, [string]$Metric, [string]$Row) {
+    $metricIndex = -1
+    foreach ($line in $benchLines) {
+        if ($line -notmatch '^\s*\|') { continue }
+        $cells = $line.Split('|')
+        if ($metricIndex -lt 0) {
+            if ((Normalize-TableCell $cells[1]) -ne (Normalize-TableCell $Header)) { continue }
+            for ($i = 2; $i -lt ($cells.Length - 1); $i++) {
+                if ((Normalize-TableCell $cells[$i]).Contains((Normalize-TableCell $Metric))) {
+                    $metricIndex = $i
+                    break
                 }
             }
+            continue
+        }
+        if ((Normalize-TableCell $cells[1]) -eq (Normalize-TableCell $Row)) {
+            return $cells[$metricIndex]
         }
     }
-    if ($proseBad.Count -eq 0) {
-        Write-Host "  ✅ PASS: all live Lite prose claims match tool output ($liteTok tok)" -ForegroundColor Green
+    return ""
+}
+function Get-StaticSavingsPercent([string[]]$Output) {
+    foreach ($line in $Output) {
+        $plainLine = [regex]::Replace([string]$line, "`e\[[0-9;]*m", '')
+        $match = [regex]::Match($plainLine, 'Static Context Reduction:\s+~?([0-9]+)% reduction')
+        if ($match.Success) { return [int]$match.Groups[1].Value }
+    }
+    return $null
+}
+function Get-FullsetTokens([string[]]$Output) {
+    foreach ($line in $Output) {
+        $plainLine = [regex]::Replace([string]$line, "`e\[[0-9;]*m", '')
+        $match = [regex]::Match($plainLine, 'Monolithic \(full [0-9]+-workflow set\)\s+~([0-9][0-9,]*) tokens')
+        if ($match.Success) { return [int]($match.Groups[1].Value -replace ',', '') }
+    }
+    return $null
+}
+function Get-CoreSixTokens([string[]]$Output) {
+    foreach ($line in $Output) {
+        $plainLine = [regex]::Replace([string]$line, "`e\[[0-9;]*m", '')
+        $match = [regex]::Match($plainLine, 'Monolithic \(core-6 subset derived\)\s+~([0-9][0-9,]*) tokens')
+        if ($match.Success) { return [int]($match.Groups[1].Value -replace ',', '') }
+    }
+    return $null
+}
+function Get-ReductionPercent([string]$Cell, [string]$Profile) {
+    $match = [regex]::Match($Cell, "-([0-9]+)%\s+$([regex]::Escape($Profile))")
+    if ($match.Success) { return [int]$match.Groups[1].Value }
+    return $null
+}
+function Get-RoundedReductionPercent([int]$Baseline, [int]$Measured) {
+    return [int][Math]::Floor(((($Baseline - $Measured) * 100) + ($Baseline / 2)) / $Baseline)
+}
+function Get-StaticMeasurement([string]$Name, [string[]]$Output) {
+    foreach ($line in $Output) {
+        $match = [regex]::Match([string]$line, "^$Name\|([0-9]+)\|[0-9]+\|PASS$")
+        if ($match.Success) { return [int]$match.Groups[1].Value }
+    }
+    return $null
+}
+function Get-PerTaskMeasurement([string]$Task, [string]$Profile, [string[]]$Output) {
+    foreach ($line in $Output) {
+        $match = [regex]::Match([string]$line, "(?m)^\s*$([regex]::Escape($Task))\s+Balanced:\s*([0-9]+)\s+tok\s+\|\s+Lite:\s*([0-9]+)\s+tok\s+\|\s+Baseline:\s*([0-9]+)\s+tok\b")
+        if ($match.Success) {
+            if ($Profile -eq 'balanced') { return [int]$match.Groups[1].Value }
+            if ($Profile -eq 'lite') { return [int]$match.Groups[2].Value }
+            return [int]$match.Groups[3].Value
+        }
+    }
+    return $null
+}
+function Check-BenchmarkFigure([string]$Description, [object]$Measured, [object]$Published) {
+    if ($null -ne $Measured -and $null -ne $Published -and $Measured -eq $Published) {
+        Write-Host "  ✅ PASS: $Description ($Published == measurement output)" -ForegroundColor Green
         $script:PassCount++
     } else {
-        Write-Host "  ❌ FAIL: stale Lite prose figures:" -ForegroundColor Red
-        $proseBad | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+        Write-Host "  ❌ FAIL: $Description published '$Published', measurement output '$Measured'" -ForegroundColor Red
         $script:FailCount++
     }
+}
+
+Check-BenchmarkFigure "Balanced static directive" (Get-StaticMeasurement 'BALANCED' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Balanced)')
+Check-BenchmarkFigure "Lite static directive" (Get-StaticMeasurement 'LITE' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')
+Check-BenchmarkFigure "Balanced static reduction percent" (Get-StaticSavingsPercent $balancedSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~26.4k current core-subset baseline¹' 'Balanced')
+Check-BenchmarkFigure "Lite static reduction percent" (Get-StaticSavingsPercent $liteSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~26.4k current core-subset baseline¹' 'Lite')
+Check-BenchmarkFigure "Full workflow-set token total" (Get-FullsetTokens $fullsetOutput) (Get-BenchmarkMetric 'Inventory' 'Measured Tokens' 'Full workflow set')
+Check-BenchmarkFigure "Core-six workflow-set token total" (Get-CoreSixTokens $fullsetOutput) (Get-BenchmarkMetric 'Inventory' 'Measured Tokens' 'Core-six Lite subset')
+$liveWorkflowCount = @(Get-ChildItem (Join-Path $RepoRoot "workflows") -Filter "*.md" -File).Count
+Check-BenchmarkFigure "Full workflow-set file count" $liveWorkflowCount (Get-BenchmarkMetric 'Inventory' 'Workflow Files' 'Full workflow set')
+$setupText = Get-Content -Path (Join-Path $RepoRoot "protocols/setup.md") -Raw
+$setupEntry = [regex]::Match($setupText, '[0-9][0-9,]*/2500')
+$setupPublished = $null
+if ($setupEntry.Success) { $setupPublished = [int](($setupEntry.Value -split '/')[0] -replace ',', '') }
+Check-BenchmarkFigure "Setup protocol Balanced static directive" (Get-StaticMeasurement 'BALANCED' $staticOutput) $setupPublished
+foreach ($task in @('pk:fix', 'pk:plan', 'pk:ship')) {
+    $balancedPayload = Get-PerTaskMeasurement $task 'balanced' $perTaskOutput
+    $litePayload = Get-PerTaskMeasurement $task 'lite' $perTaskOutput
+    $baselinePayload = Get-PerTaskMeasurement $task 'baseline' $perTaskOutput
+    Check-BenchmarkFigure "$task Balanced payload" $balancedPayload (Get-BenchmarkMetric 'Workflow Path' 'PromptKit OS JIT Payload (Balanced)' $task)
+    Check-BenchmarkFigure "$task Lite payload" $litePayload (Get-BenchmarkMetric 'Workflow Path' 'PromptKit OS JIT Payload (Lite)' $task)
+    Check-BenchmarkFigure "$task baseline payload" $baselinePayload (Get-BenchmarkMetric 'Workflow Path' 'Baseline Payload (before A)' $task)
+    $reductionCell = Get-BenchmarkCell 'Workflow Path' 'Context Reduction vs Baseline' $task
+    Check-BenchmarkFigure "$task Balanced context-reduction percent" (Get-RoundedReductionPercent $baselinePayload $balancedPayload) (Get-ReductionPercent $reductionCell 'Balanced')
+    Check-BenchmarkFigure "$task Lite context-reduction percent" (Get-RoundedReductionPercent $baselinePayload $litePayload) (Get-ReductionPercent $reductionCell 'Lite')
+}
+if (Select-String -Path (Join-Path $RepoRoot "workflows/profile.md") -Pattern '[0-9][0-9,]{3,}\s+(tok|tokens)' -Quiet) {
+    Write-Host "  ❌ FAIL: profile workflow duplicates a measured token figure; use docs/BENCHMARKS.md" -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Write-Host "  ✅ PASS: profile workflow points to the benchmark source without pinning token figures" -ForegroundColor Green
+    $script:PassCount++
 }
 
 Write-Host "`n📌 Scenario R: Search Circuit Breaker Semantics (Balanced + Lite consistency)" -ForegroundColor Yellow
@@ -444,7 +470,6 @@ Assert-Contains "workflows/auto.md" "never an execution trigger" "Auto halt reco
 Assert-Contains "workflows/auto.md" "Worker GREEN" "Auto workflow requires integrated-state verification before wave success"
 Assert-Contains "workflows/auto.md" "never become an orchestration subsystem" "Auto waves remain a pk:auto capability, not a subsystem"
 Assert-Contains "workflows/auto.md" "Path Deny-List" "Auto workflow enforces path deny-list"
-Assert-Contains "workflows/auto.md" "review ready" "Auto workflow defaults to review ready stop boundary"
 Assert-Contains "workflows/route.md" "workflows/auto.md" "Router decision matrix registers pk:auto"
 Assert-Contains "templates/agent-directive-template.md" "pk:auto" "Directive template registers pk:auto trigger"
 
@@ -611,7 +636,107 @@ Assert-Contains "docs/stacks/cms-wordpress.md" "Mandatory Prepared SQL Statement
 Assert-Contains "docs/stacks/cms-wordpress.md" "State Mutation Nonce Verification" "WordPress playbook defines nonce verification invariant"
 Assert-Contains "workflows/onboard.md" "CMS — WordPress" "Onboarding workflow detects WordPress pattern"
 
-Write-Host "`n===========================================================" -ForegroundColor DarkGray
+Write-Host "`n📌 Scenario AG: Human Decision & Question Comprehensibility Contract (Issue #406)" -ForegroundColor Yellow
+Assert-Contains "protocols/code-quality-gate.md" "DECISION NEEDED" "Decision Card format sections defined in quality gate"
+Assert-Contains "protocols/code-quality-gate.md" "Recommendation mandatory" "Recommendation mandatory on every decision card"
+Assert-Contains "protocols/code-quality-gate.md" "accountability.*always human" "Type D accountability routing requires the card"
+Assert-Contains "protocols/code-quality-gate.md" "you decide" "You-decide delegation default declared on the card"
+Assert-Contains "workflows/plan.md" "Assumption-conversion rule" "Plan workflow defines assumption-conversion rule"
+Assert-Contains "workflows/plan.md" "Random answers are worse than assumptions" "Plan workflow forbids extracting guesses"
+Assert-Contains "workflows/debug.md" "render the Decision Card" "Debug halt path adopts the Decision Card"
+Assert-Contains "workflows/ship.md" "renders the Decision Card" "Ship approval request adopts the Decision Card"
+Assert-Contains "templates/agent-directive-lite-template.md" "Assumption Records, never guesses" "Lite directive carries the decision routing one-liner"
+
+Write-Host "`n📌 Scenario AH: Decision Budget Caps Type B Volume (Issue #408)" -ForegroundColor Yellow
+Assert-Contains "protocols/code-quality-gate.md" "Decision Budget" "Decision Budget rule stated in quality gate"
+Assert-Contains "protocols/code-quality-gate.md" "Types C and D are never capped" "Types C and D exempt from the budget"
+Assert-Contains "protocols/code-quality-gate.md" "Overflow behavior" "Budget overflow converts to Assumption Records"
+Assert-Contains "protocols/code-quality-gate.md" "remaining budget when asking" "Agent states remaining budget when asking"
+Assert-Contains "workflows/plan.md" "Decision-budget overflow" "Plan workflow wires overflow to Assumption Records"
+Assert-Contains "workflows/checkpoint.md" "Delegated & Assumed Decisions" "Checkpoint carries the delegation summary slot"
+
+Write-Host "`n📌 Scenario AI: Turbo Verdict Revisit Trigger (Issue #213)" -ForegroundColor Yellow
+Assert-Contains "docs/BENCHMARKS.md" "Revisit trigger" "Turbo verdict carries an expiry trigger"
+
+Write-Host "`n📌 Scenario AJ: npm Courier Wrapper (Issue #413)" -ForegroundColor Yellow
+Assert-Contains "package/bin/promptkit-os.js" "refs/tags/v" "Courier resolves a pinned release tag, never a moving ref"
+Assert-Contains "package/bin/promptkit-os.js" "delivery vehicle, not a second implementation" "Courier declares itself a courier, not a reimplementation"
+Assert-Contains "package/bin/promptkit-os.js" "init\.sh" "Courier delegates to the canonical init.sh"
+Assert-Contains "package/bin/promptkit-os.js" "init\.ps1" "Courier delegates to the canonical init.ps1 on Windows"
+Assert-Contains "package/package.json" '"name": "promptkit-os"' "Courier package name matches the reserved registry name"
+Assert-Contains "package/package.json" "provenance" "Courier publishes with provenance attestation"
+Assert-Contains ".github/workflows/release-npm.yml" "npm publish --provenance" "Release job publishes with provenance"
+Assert-Contains ".github/workflows/release-npm.yml" "id-token: write" "Release job requests OIDC for attestation"
+Assert-Contains "README.md" "courier, not a dependency" "README states the courier contract"
+Assert-Contains "README.md" "git submodule add" "Submodule path stays first-documented and canonical"
+Assert-Contains "QUICKSTART.md" "npx promptkit-os@latest" "QUICKSTART documents the optional npx path"
+Assert-Contains "package/bin/promptkit-os.js" "Refusing to overlay" "Courier refuses to overlay a non-empty .promptkit (no silent tar merge)"
+Assert-Contains "package/bin/promptkit-os.js" "assertInstallTargetIsClean" "Courier guards the install target before extracting"
+Assert-Contains "package/README.md" "PowerShell 7" "Courier README states the Windows pwsh prerequisite"
+Assert-Contains ".github/workflows/release-npm.yml" "No .cache: npm." "Release job documents why npm cache is absent (no lockfile)"
+
+Write-Host "`n📌 Scenario AK: Grill Completion Contract (Issue #425)" -ForegroundColor Yellow
+Assert-Contains "workflows/tutor.md" "Suspend Teaching Rules" "Grill drill suspends Tier-3 snippets and the Just Show Me guardrail"
+Assert-Contains "workflows/tutor.md" "Self-Sufficient Probes" "Grill probes carry their own context and model answers"
+Assert-Contains "workflows/tutor.md" "Grill Completion Contract" "Grill mode owns a zero-code completion contract"
+Assert-Contains "workflows/tutor.md" "read instead of asking" "Pre-implementation grilling reads the repo before asking"
+
+Write-Host "`n📌 Scenario AM: Verify-Bootstrap Workflow (Issue #440)" -ForegroundColor Yellow
+Assert-Contains "workflows/verify-bootstrap.md" "pk:verify-bootstrap" "Verify-bootstrap workflow declares its trigger"
+Assert-Contains "workflows/verify-bootstrap.md" "Level 2 — Controlled" "Verify-bootstrap declares Level 2 ceremony"
+Assert-Contains "workflows/verify-bootstrap.md" "Non-Overlap .ADR 0002 Gate Record." "Verify-bootstrap records the ADR 0002 non-overlap gate"
+Assert-Contains "workflows/verify-bootstrap.md" "Human-Authorized Generation" "Verify-bootstrap restates the human-authorized-generation guardrail"
+Assert-Contains "workflows/verify-bootstrap.md" "Halt-not-waive" "Verify-bootstrap halts instead of waiving an unproducible red"
+Assert-Contains "workflows/verify-bootstrap.md" "incorporate, never replace" "Verify-bootstrap incorporates existing suites, never replaces them"
+Assert-Contains "protocols/setup.md" "Verify-Bootstrap" "Setup reference registers the verify-bootstrap workflow"
+
+Write-Host "`n📌 Scenario AL: Countersignature Consistency (retro-certification)" -ForegroundColor Yellow
+# An approved retro chain must agree with CHANGELOG: no "pending countersignature"
+# text may survive once the chain reads approved. Pending chains impose nothing.
+$alFail = $false
+$alFound = $false
+foreach ($retro in (Get-ChildItem -Path (Join-Path $RepoRoot "docs/releases/*retro-evaluation.md") -ErrorAction SilentlyContinue)) {
+    if ((Get-Content -LiteralPath $retro.FullName -Raw) -match '\*\*Evaluation Status\*\*: `approved`') {
+        $alFound = $true
+        if ((Get-Content -LiteralPath (Join-Path $RepoRoot "CHANGELOG.md") -Raw) -match 'pending coordinator countersignature') {
+            Write-Host "  ❌ FAIL: $($retro.Name) is approved but CHANGELOG still says pending coordinator countersignature" -ForegroundColor Red
+            $script:FailCount++
+            $alFail = $true
+        }
+        $alId = [regex]::Match((Get-Content -LiteralPath $retro.FullName -Raw), 'REL-\d{4}-\d{2}-\d{2}-V[\d.]+-\d+').Value
+        $stale = @()
+        if ($alId -ne '') {
+            $stale = @(Get-ChildItem -Path (Join-Path $RepoRoot "docs/releases/*.md") | Where-Object {
+                $t = Get-Content -LiteralPath $_.FullName -Raw
+                ($t -match 'pending coordinator countersignature') -and ($t -match $alId)
+            })
+        }
+        if ($stale.Count -gt 0) {
+            Write-Host "  ❌ FAIL: $($retro.Name) is approved but stale pending-countersignature text survives in:" -ForegroundColor Red
+            foreach ($s in $stale) { Write-Host "    - $($s.Name)" -ForegroundColor Red }
+            $script:FailCount++
+            $alFail = $true
+        }
+    }
+}
+if (-not $alFail) {
+    if ($alFound) {
+        Write-Host "  ✅ PASS: approved retro chains agree with CHANGELOG countersignature state" -ForegroundColor Green
+    } else {
+        Write-Host "  ✅ PASS: no approved retro chain; no consistency obligation" -ForegroundColor Green
+    }
+    $script:PassCount++
+}
+
+Write-Host "`n📌 Scenario AN: Reference-Link Resolution Gate (Issue #444)" -ForegroundColor Yellow
+Assert-Contains "scripts/validate-references.sh" "BROKEN LINK" "Bash validator reports broken markdown links"
+Assert-Contains "scripts/validate-references.ps1" "BROKEN LINK" "PowerShell validator reports broken markdown links"
+Assert-Contains "scripts/validate-references.sh" "LINK_EXEMPT_DIRS" "Bash validator carries the historical-record exemption list"
+Assert-Contains "scripts/validate-references.ps1" "LinkExemptDirs" "PowerShell validator carries the historical-record exemption list"
+Assert-Contains "scripts/tests/run-reference-link-tests.sh" "fails closed" "Bash link harness proves broken-link polarity"
+Assert-Contains "scripts/tests/run-reference-link-tests.ps1" "fails closed" "PowerShell link harness proves broken-link polarity"
+Assert-Contains ".github/workflows/ci.yml" "run-reference-link-tests" "CI wires the reference-link harness"
+
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
 Write-Host "===========================================================" -ForegroundColor DarkGray

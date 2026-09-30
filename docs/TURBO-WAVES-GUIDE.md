@@ -28,7 +28,7 @@ How to run PromptKit OS autonomous pipelines — sequential or parallel — **wi
 2. **Declare the stop point.** Either plain words ("handle this end-to-end, stop at review") or an explicit flag (see §4).
 3. **Invoke.** Example: `pk:auto --waves 2 --until review`.
 4. **Read the Turn-1 banner.** It states the mode, stop boundary, and circuit breaker — that is your contract for the run.
-5. **Walk away.** Phase-boundary checkpoints persist to `docs/STATE.md`; Ctrl+C / Stop reclaims control anytime with zero loss.
+5. **Walk away.** Phase-boundary checkpoints persist to `docs/STATE.md`; Ctrl+C / Stop reclaims control anytime with tracked progress preserved (unrecorded in-flight work is not recovered).
 6. **Return to one of two outcomes:** a review-ready diff (or draft PR), or a halt report with reason, evidence, and resume action.
 
 ---
@@ -83,7 +83,7 @@ No. Run sequential; waves add coordination overhead that small work cannot repay
 No. The run falls back to sequential automatically with identical correctness; only the wall-clock benefit disappears.
 
 **A wave failed halfway — is progress lost?**
-No. Wave-boundary checkpoints in `docs/STATE.md` make every boundary a resume point; `git restore` / `git revert` undo unintended files or commits.
+No. Wave-boundary checkpoints in `docs/STATE.md` make every boundary a resume point. For unintended worktree edits, follow the scoped snapshot and ownership checks in `workflows/auto.md`; from the repository root, use a shell-quoted exact path with `git --literal-pathspecs restore --worktree -- "$path"` only when that tracked path has no pre-existing worktree edits. Revert an unintended commit with `git revert`. Never use a blanket reset or clean command to recover a wave.
 
 **Where do I go deeper?**
 Pre-flight ticks: `docs/recipes/auto-waves-preflight-checklist.md`. Phrase→boundary map: `docs/recipes/auto-phrase-boundary-sheet.md`. Pause/resume mechanics: `docs/recipes/auto-wave-pause-resume.md`. Normative rules: `workflows/auto.md`.

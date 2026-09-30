@@ -4,16 +4,16 @@
 
 PromptKit OS ships with 2 official profiles + 1 experimental to fix recommendability gap (5/10 → 8/10):
 
-- **Lite (official)** — 6 utility workflows, 1,146 tok static (measured), 80% value, onboarding
-- **Balanced (official, default)** — full 24 workflows, 2,477 tok static, Level 0-3 adaptive ceremony, teams/production
+- **Lite (official)** — 6 utility workflows, 1,274 tok static (measured), 80% value, onboarding
+- **Balanced (official, default)** — full 25 workflows, 2,318 tok static, Level 0-3 adaptive ceremony, teams/production
 - **Turbo (experimental)** — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval
 
 ## Profile Comparison
 
 | Dimension | Lite | Balanced | Turbo (Experimental) |
 | :--- | :--- | :--- | :--- |
-| **Workflows** | route, debug, commit, checkpoint, sync, profile | All 24 | All 24 + parallel waves |
-| **Static tokens** | 1,146 tok | 2,498 tok | 2,498 tok + subagents |
+| **Workflows** | route, debug, commit, checkpoint, sync, profile | All 25 | All 25 + parallel waves |
+| **Static tokens** | 1,274 tok | 2,318 tok | 2,318 tok + subagents |
 | **Use case** | New users, learning, tiny bug fixes, docs typos | Teams, production, full lifecycle | Greenfield, user accepts cost |
 | **Install** | `init.sh --lite` | `init.sh --balanced` or no flag (default) | `init.sh --turbo --experimental` |
 | **PROMPTKIT.md** | `profile: lite` | `profile: balanced` | `profile: turbo` |
@@ -27,7 +27,7 @@ Original proposal for Turbo: "AI does all decisions, auto-checkpoint, hallucinat
 
 Cross-exam findings:
 - auto-checkpoint detection needs `hooks/*.js` statusline hook like gsd-core has — promptkit-os has zero binaries by design (pure markdown)
-- hallucination awareness needs eval harness like superpowers-evals — we have 60 structural contract tests, not truth eval
+- hallucination awareness needs eval harness like superpowers-evals — we have structural contract tests (live count in CI), not truth eval
 - no decay = fresh-context orchestration (gsd-core's thesis) = 5x token multiplier, contradicts lightweightness goal
 - breaks Level 3 safety: `CONTRIBUTING.md` says releases/tags/deploys require explicit human approval
 
@@ -40,7 +40,7 @@ So Turbo is experimental, behind `--experimental` flag, warns about cost, still 
 ```
 > Choose profile:
 > 1) Lite (Recommended for new users) — 6 utility workflows, <1,500 tok
-> 2) Balanced (Recommended for teams) — full 24 workflows [default]
+> 2) Balanced (Recommended for teams) — full 25 workflows [default]
 > 3) Turbo (Experimental) — Balanced + parallel subagents, ~2x measured cost
 ```
 
@@ -59,24 +59,24 @@ Per-task payload after Change A (route.md no longer mandatory):
 
 ## Upgrade Path
 
-- Lite → Balanced: `.promptkit/init.sh --balanced` — upgrades directive, keeps PROMPTKIT.md profile
-- Balanced → Lite: `.promptkit/init.sh --lite` — downgrades to 6 utility workflows
-- Balanced → Turbo: `.promptkit/init.sh --turbo --experimental` — adds parallel wave capability
-- Turbo → Balanced: `.promptkit/init.sh --balanced` — removes experimental flag
+- Lite → Balanced: from your kit root, `./init.sh --balanced` — upgrades directive, keeps PROMPTKIT.md profile
+- Balanced → Lite: from your kit root, `./init.sh --lite` — downgrades to 6 utility workflows
+- Balanced → Turbo: from your kit root, `./init.sh --turbo --experimental` — adds parallel wave capability
+- Turbo → Balanced: from your kit root, `./init.sh --balanced` — removes experimental flag
 
 ## Verification
 
 ```bash
 bash init.sh --lite /tmp/test-lite && grep profile /tmp/test-lite/PROMPTKIT.md
-bash scripts/measure-tokens.sh /tmp/test-lite/AGENTS.md # expect 842 tok
+bash scripts/measure-tokens.sh /tmp/test-lite/AGENTS.md # expect the live Lite static figure (docs/BENCHMARKS.md)
 
 bash init.sh --balanced /tmp/test-balanced && grep profile /tmp/test-balanced/PROMPTKIT.md
-bash scripts/measure-tokens.sh /tmp/test-balanced/AGENTS.md # expect 2073 tok
+bash scripts/measure-tokens.sh /tmp/test-balanced/AGENTS.md # expect the live Balanced static figure (docs/BENCHMARKS.md)
 
 bash init.sh --turbo /tmp/test-turbo # should fail, requires --experimental
 bash init.sh --turbo --experimental /tmp/test-turbo && grep profile /tmp/test-turbo/PROMPTKIT.md
 
-bash scripts/tests/run-behavioral-contract-tests.sh # expect 60/0
+bash scripts/tests/run-behavioral-contract-tests.sh # expect all-pass (live count in CI)
 bash scripts/validate-references.sh . # expect 0 errors
 ```
 

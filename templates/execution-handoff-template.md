@@ -4,7 +4,7 @@
 
 - **Record Type**: `Handoff Record`
 - **Handoff ID**: `HANDOFF-[YYYY-MM-DD]-[task-id]-[sequence]`
-- **Task ID**: `TASK-[YYYY-MM-DD]-[slug]`
+- **Task ID**: `TASK-<task-slug>` (preserve `TASK-YYYY-MM-DD-<slug>` for legacy/`none`-profile records)
 - **Specification**: `docs/specs/[specification].md`
 - **Created**: `[YYYY-MM-DD HH:MM UTC]`
 - **Sender / Current Owner**: `[Person, role, agent, or session]`

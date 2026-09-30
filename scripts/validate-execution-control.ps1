@@ -237,7 +237,7 @@ function Test-AllowedTransition {
     param([string]$From, [string]$To)
     $key = "$From|$To"
     $allowed = @(
-        'N/A|planned', 'None|planned', 'planned|ready', 'planned|aborted',
+        'N/A|planned', 'None|planned', 'planned|ready', 'planned|in_progress', 'planned|aborted',
         'ready|in_progress', 'ready|blocked', 'ready|paused', 'ready|aborted',
         'in_progress|checkpoint_due', 'in_progress|blocked', 'in_progress|paused',
         'in_progress|handoff_ready', 'in_progress|awaiting_review', 'in_progress|completed', 'in_progress|aborted',
@@ -245,7 +245,7 @@ function Test-AllowedTransition {
         'blocked|ready', 'blocked|in_progress', 'blocked|paused', 'blocked|aborted',
         'paused|ready', 'paused|in_progress', 'paused|aborted',
         'handoff_ready|in_progress', 'handoff_ready|checkpoint_due', 'handoff_ready|blocked', 'handoff_ready|aborted',
-        'awaiting_review|in_progress', 'awaiting_review|completed', 'awaiting_review|blocked'
+        'awaiting_review|planned', 'awaiting_review|in_progress', 'awaiting_review|completed', 'awaiting_review|blocked'
     )
     return $allowed -contains $key
 }
@@ -259,17 +259,33 @@ function Get-RevisionToken {
     return ""
 }
 
+function Remove-BacktickWrap {
+    param([string]$Value)
+    if ($Value.Length -ge 2 -and $Value.StartsWith('`') -and $Value.EndsWith('`')) {
+        return $Value.Substring(1, $Value.Length - 2)
+    }
+    return $Value
+}
+
 function Test-Transitions {
     param([string]$FilePath, [string]$RecordId, [string]$State)
     $count = 0
     $lastNew = ""
-    foreach ($line in (Get-Content -LiteralPath $FilePath | Where-Object { $_ -match '^\s*\|' })) {
+    $inSection = $false
+    foreach ($rawLine in (Get-Content -LiteralPath $FilePath)) {
+        if ($rawLine -match '^\s*#{1,6}\s+(.*?)\s*$') {
+            $inSection = ($Matches[1] -ceq 'Transition History')
+            continue
+        }
+        if (-not $inSection) { continue }
+        if ($rawLine -notmatch '^\s*\|') { continue }
+        $line = $rawLine
         if ([string]::IsNullOrWhiteSpace((Trim-Value $line))) { continue }
         if ($line -match 'Previous State' -or $line -match '---') { continue }
         $parts = $line.Split('|')
         if ($parts.Count -lt 3) { continue }
-        $previous = Trim-Value $parts[1]
-        $new = Trim-Value $parts[2]
+        $previous = Remove-BacktickWrap (Trim-Value $parts[1])
+        $new = Remove-BacktickWrap (Trim-Value $parts[2])
         $initialTransition = ($previous -in @('N/A', 'None') -and $new -eq 'planned')
         if (((Test-Placeholder $previous) -or (Test-Placeholder $new)) -and -not $initialTransition) {
             Add-Diagnostic 'INVALID_TRANSITION' $RecordId (Get-RelativePath $FilePath) 'Transition history contains a placeholder' 'Record a concrete previous and new execution state'

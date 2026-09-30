@@ -11,7 +11,7 @@
 - **State [Required]**: `evidence_requested | evidence_sufficient | classified | remediation_planned | awaiting_confirmation | local_reproduction_or_fix | verification_pending | verified | linked_to_pk_ship | blocked`
 - **Owner [Required]**: [CI triage owner]
 - **Release Candidate [Required]**: `true | false`
-- **State History [Required]**: `evidence_requested > evidence_sufficient > classified > remediation_planned > local_reproduction_or_fix > verification_pending > verified`
+- **State History [Required]**: `evidence_requested > evidence_sufficient > classified > remediation_planned [> awaiting_confirmation] > local_reproduction_or_fix > verification_pending > verified` (append `> linked_to_pk_ship` for release candidates only; `blocked` may be entered from any state with an owner and resume condition)
 - **Blocker [Required when blocked or previously blocked]**: `N/A - not blocked`
 - **Resume Target [Required when blocked or previously blocked]**: `N/A - not blocked`
 - **Resume Condition [Required]**: [Precise condition and accountable owner for the next state]

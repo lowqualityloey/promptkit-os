@@ -96,10 +96,10 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 
 **Example (One-Command Setup — 2+1 Profiles)**:
 ```bash
-# macOS / Linux — Balanced profile (24 workflows, default)
+# macOS / Linux — Balanced profile (25 workflows, default)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
 
-# Lite profile (6 utility workflows, 1,146 tokens static overhead)
+# Lite profile (6 utility workflows, 1,274 tokens static overhead)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --lite
 
 # Windows (PowerShell)
@@ -483,7 +483,7 @@ Remember: **AI assistants aren't perfect**. PromptKit structures their reasoning
 
 | Dimension | `.cursorrules` / `CLAUDE.md` | Prompt Packs (spec-kit, BMad) | **PromptKit OS** |
 |:----------|:-----------------------------|:------------------------------|:-----------------|
-| **Scope** | Single instruction file for one tool | Workflow templates for one tool | 24 workflow files plus named aliases across all tools |
+| **Scope** | Single instruction file for one tool | Workflow templates for one tool | 25 workflow files plus named aliases across all tools |
 | **Persistence** | Dies with the chat session | Dies with the chat session | `docs/STATE.md` survives context resets |
 | **Database safety** | No schema guardrails | Varies | Expand-Contract only (phased migration) |
 | **Multi-agent** | Single agent | Single agent | Subagent delegation with compact synthesis |
@@ -499,7 +499,7 @@ Remember: **AI assistants aren't perfect**. PromptKit structures their reasoning
 **Short Answer**: No. PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture** with zero static token bloat.
 
 **How it works**:
-- **Baseline footprint**: Initialization scripts inject only a lightweight 91-line router directive (~1,928 tokens, mechanically measured) into your configuration file (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, etc.).
+- **Baseline footprint**: Initialization scripts inject only a lean router directive into your configuration file (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, etc.) — current measured footprints live in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
 - **On-demand loading**: The AI only reads specific workflow files (e.g. `workflows/debug.md`) from the local filesystem when that specific workflow is triggered or routed.
 - **Comparison to monolithic prompts**: Traditional prompt packs inline all rules, workflows, and templates directly into the prompt on every turn, consuming ~19,794 to ~75,505 tokens statically before work begins. PromptKit preserves ~90% of static context overhead compared to monolithic packs (~19.8k core-subset baseline).
 - **Subagent context preservation**: Multi-file exploration is delegated to subagents whose results are synthesized into compact findings, reducing conversational bloat by up to 98%.
@@ -576,7 +576,7 @@ For complete line-by-line token breakdowns and mathematical analysis, see [docs/
 
 **Why specialized refactoring matters**:
 - **Golden Master Pinning**: Captures a snapshot of current outputs (including quirks and legacy edge cases) before a single line of structural code is modified.
-- **The Mikado Method**: Graphs prerequisites for large refactorings. If an exploratory refactor breaks tests, changes are immediately reverted (`git reset --hard`) and the missing dependency is recorded as a leaf node.
+- **The Mikado Method**: Graphs prerequisites for large refactorings. If an exploratory refactor breaks tests, preserve existing work and use the scoped recovery rules in `workflows/refactor.md`; never run `git reset --hard` to discard the failed attempt. Record the missing dependency as a leaf node.
 - **Strangler Fig Migrations**: Replaces legacy submodules incrementally behind facade adapters, preventing high-risk "big-bang" rewrites.
 
 ---
@@ -599,7 +599,7 @@ Run `pk:onboard` first. On an empty repo it skips the brownfield scan and runs a
    - **Layer 3 (Capabilities & Skills)**: External libraries (e.g., domain helpers, CSS frameworks, specialized regex/refactoring prompts, or linters) provide specialized code generation assistance.
    - **Layer 4 (Agent Runtime)**: The host environment (Claude Code, Antigravity, Cursor, Windsurf, Copilot, etc.).
 3. **Keep External Skills Subordinate**: External helpers must never silently bypass verification gates, commit code, or alter milestone state.
-4. **Use JIT Loading**: Rather than statically loading hundreds of external skills into context at once, reference external capabilities Just-In-Time when triggered. This preserves PromptKit's lean static footprint (~1,146 tok Lite / ~2,498 tok Balanced).
+4. **Use JIT Loading**: Rather than statically loading hundreds of external skills into context at once, reference external capabilities Just-In-Time when triggered. This preserves PromptKit's lean static footprint (current measured footprints in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)).
 
 For full architectural details, see [docs/COMPARISONS.md](docs/COMPARISONS.md).
 

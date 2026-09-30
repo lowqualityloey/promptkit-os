@@ -29,8 +29,8 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
 - **Brownfield**: the repository contains existing application code, manifests, or configuration files.
 - **Greenfield**: the repository is empty or contains only documentation, licence, and git metadata — Phase 0 applies.
 - PromptKit OS is installed in `.promptkit/` or `promptkit/`.
-- Access to `.promptkit/templates/project-profile-template.md` and `.promptkit/templates/design-profile-template.md`.
-- Greenfield only: access to `.promptkit/protocols/discovery-intake.md` (the bounded interview protocol).
+- Access to `<kit>/templates/project-profile-template.md` and `<kit>/templates/design-profile-template.md`.
+- Greenfield only: access to `<kit>/protocols/discovery-intake.md` (the bounded interview protocol).
 
 ---
 
@@ -54,10 +54,10 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
 
 **Activation gate**: run this phase only when the repository has no application code, no package manifests, and no lockfiles (documentation, licence, and git metadata are acceptable). Otherwise proceed directly to Phase 1.
 
-1. **Load the bounded interview protocol**: read [`discovery-intake.md`](../protocols/discovery-intake.md) and determine the size class (`S`/`M`/`L`) from the user's first description. Never load the protocol for brownfield runs.
+1. **Load the bounded interview protocol**: read [`discovery-intake.md`](../protocols/discovery-intake.md) and propose a size class from the user's first description — then obtain explicit human confirmation before proceeding (the human states the size per §A of the protocol). Never load the protocol for brownfield runs.
 2. **Ask in the context window, never in choice menus**: every intake question is asked as plain conversation so the human can paste Figma links, screenshots, `ARCHITECTURE.md`/`STYLE.md`/`DESIGN.md` references, or Jira/GitHub board links as answers. Modal pickers are permitted only for genuinely closed-set questions (≤4 options, no attachment expected, evidence-based or explicitly marked "no recommendation").
-3. **Cover the 7 intake slots within the size-class round cap** (S ≤ 1 round / ≤ 5 questions, M ≤ 2 / ≤ 8, L ≤ 3 / ≤ 12): MVP intent, surfaces, deployment target, auth & data, constraints, design inputs, integrations. Accept "not sure" and record it as an open question.
-4. **Close the loop**: after each round ask *"Is there anything you want to add?"* and *"Is this enough for now?"* — close on explicit user signal, all slots covered, round cap reached, or no new information in a round. Record the `close_reason`.
+3. **Cover the 7 canonical intake slots within the size-class round cap** (S ≤ 1 round / ≤ 5 questions, M ≤ 2 / ≤ 8, L ≤ 3 / ≤ 12), using the protocol's slot names: outcome and MVP floor, users and success signal, surfaces in scope, deployment target, existing artifacts, design inputs, constraints. Accept "not sure" and record it as an open question.
+4. **Close the loop**: after each round ask exactly one open-ended invitation — *"Anything to add — text, links, screenshots, or files? Or say "enough for now".* — and close on explicit user signal, all slots covered, round cap reached, or no new information in a round. Record the `close_reason`.
 5. **Never propose architecture during intake**: unanswered slots become owned `ASSUMPTION-*` entries with a validation owner — never silent agent defaults. Any AI-suggested capability that lacks a user-stated requirement goes to the **Later ledger**, not the plan.
 6. **Propose tooling accept-or-change, never default it**: only after the intent slots are answered, offer at most three stack proposals (package manager, data-fetching, runner). Each names its rationale and vintage (e.g. "2026-era default: pnpm — compatible and fast"). Nothing is written, installed, or assumed until the human explicitly accepts; changing any line overturns that slot, and unanswered proposals stay open questions.
 7. **Product-shaped requests get questions, never a stack**: when slot 3 reports two or more surfaces (a SaaS-class request: accounts plus data plus auth or billing), also ask the five Product-Shape Cover Questions in [`discovery-intake.md`](../protocols/discovery-intake.md), folded into the same size-class question budget. The first response to such a request is questions, not files: never name, choose, install, or announce a stack, generator, or starter template — tooling stays accept-or-change under step 6, and an unattended build still requires `pk:plan`/`pk:tasks` plus milestone approval.
@@ -161,7 +161,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
           - label: "Lite (Recommended for new users)"
             description: "6 utility workflows (route, debug, commit, checkpoint, sync, profile), 80% of value, fastest onboarding, fits the <1,500 tok lite budget"
           - label: "Balanced (default for teams/production)"
-            description: "Full 24-workflow set, Level 0-3 adaptive ceremony, teams/production, default"
+            description: "Full 25-workflow set, Level 0-3 adaptive ceremony, teams/production, default"
          - label: "Turbo (Experimental)"
            description: "Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval, needs --experimental acknowledgement"
        multiSelect: false
@@ -182,19 +182,19 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
           - label: "Local Markdown (Recommended for solo / offline)"
             description: "Writes docs/tasks/*.md + docs/STATE.md only, offline, import to GitHub/Jira later, reversible"
           - label: "GitHub Issues"
-            description: "Publishes via gh CLI or github-mcp-server, ~2 min, needs gh auth + labels script, reversible"
+            description: "Selects GitHub as the tracker; issue creation remains proposal-only until explicit human authorization, needs gh auth + labels, reversible"
           - label: "Jira"
             description: "Formats to Jira schema, manual import / copy-paste, no auto-push, needs project key"
           - label: "Linear"
             description: "Formats to Linear schema, manual import / copy-paste, no auto-push, needs project key"
         multiSelect: false
       ```
-    - Hosts without `ask_question` support: fallback to `> [!TIP] ### 💡 Choose tracker (Type number & Enter):` with Option 1 prefixed `(Recommended)`. A single-number reply (`1`) executes that option.
+    - Hosts without `ask_question` support: fallback to `> [!TIP] ### 💡 Choose tracker (Type number & Enter):` with Option 1 prefixed `(Recommended)`. A single-number reply records the selected tracker only; it does not authorize creating remote issues or changing repository configuration.
     - Store choice as machine-readable `tracking: local|github|jira|linear` in `PROMPTKIT.md` (Section 5 + bottom machine line) so future sessions don't re-ask.
     - Non-interactive / CI: respect `--tracking=<value>` passed to `init.sh` / `init.ps1`, or existing `tracking:` line, or default to `local`. When `PROMPTKIT_NO_INTERACTIVE=1` is set, skip picker and apply flags/default only.
 
 2. **Auto-Populate `PROMPTKIT.md`**:
-   Copy `.promptkit/templates/project-profile-template.md` to `./PROMPTKIT.md` and fill out all sections using findings from Phases 1 and 2:
+   Copy `<kit>/templates/project-profile-template.md` to `./PROMPTKIT.md` and fill out all sections using findings from Phases 1 and 2:
    - Project Name inferred from directory or manifest `name`.
    - Active commands configured to the exact detected package manager and runner scripts.
    - If monorepo detected, populate Section 4 (`Monorepo & Workspace Topology`) with the mapped workspace manager, package table, filtered command conventions (`pnpm --filter <pkg>`, `turbo run <cmd> --filter=<pkg>`), and boundary guardrails. If single-package repo, set Section 4 to `N/A (Standalone Repository)`.

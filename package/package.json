@@ -1,0 +1,40 @@
+{
+  "name": "promptkit-os",
+  "version": "0.0.0",
+  "description": "Courier for PromptKit OS: fetches a pinned release tarball and runs the canonical installer. Not a runtime dependency.",
+  "keywords": [
+    "promptkit",
+    "ai",
+    "agent",
+    "workflow",
+    "markdown",
+    "governance",
+    "cli"
+  ],
+  "homepage": "https://github.com/lowqualityloey/promptkit-os#readme",
+  "bugs": {
+    "url": "https://github.com/lowqualityloey/promptkit-os/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lowqualityloey/promptkit-os.git"
+  },
+  "license": "MIT",
+  "bin": {
+    "promptkit-os": "bin/promptkit-os.js"
+  },
+  "files": [
+    "bin/promptkit-os.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "bash test/smoke.sh"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

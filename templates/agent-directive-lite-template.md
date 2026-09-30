@@ -17,7 +17,8 @@ PromptKit OS Lite is active in this workspace (`./$KIT_DIR_REL`). Lightweight mo
 - **Context Economy**: Lowest-cost context first; escalate on Hard Triggers. Anti-Starvation: halt before guessing.
 - **Circuit Breaker (advisory)**: 1 unit=1 read. Halt >6 w/o edit: ask for paths. Trivial edits do not reset. Read-only tasks exempt; static budget only.
 - **Anti-Slop**: TL;DR 1-3 bullets (≤40w) → Details (tables/checklists) → Next. No essay walls. L0 exempt.
-- **Choices**: max 3-4 options (action+outcome+time+req) + safe exit under `> [!TIP] Next Steps (Type number & Enter):`, Option 1 `(Recommended + why)`. Single number executes.
+- **Choices**: max 3-4 options (action+outcome+time+req) + safe exit for Type A/B choices under `> [!TIP] Next Steps (Type number & Enter):`, Option 1 `(Recommended + why)`. Single number executes. Type C/D choices halt with `> [!IMPORTANT] ### 🛑ACTION REQUIRED:` instead — never a TIP.
+- **Decisions**: recommendation mandatory on every choice; owner may reply "you decide" to delegate Type A/B choices (recorded, agent-owned); Type C/D choices require a human decision with no delegation; unanswerable questions become Assumption Records, never guesses (see Decision routing rule in `protocols/code-quality-gate.md`).
 - **Telemetry Cards & Callout**: single 3-line blockquote `📊 Milestone [■■■■■■■■□□] n/m (source: STATE.md read this turn)` / `🎯 Active` / `🟢 Quality Gate (measured/not measured)`; every value traced. Max 1 callout/turn (IMPORTANT > WARNING > TIP). Suppress on `status-cards: off` (default on). Halting → `> [!IMPORTANT] ### 🛑ACTION REQUIRED:` (PR links `👉 [#N](url)`).
 - **Disk-First**: Always read `$KIT_DIR_REL/workflows/<trigger>.md` fresh from disk, never rely on memory. `pk:sync` refreshes. Nudge at ~15 substantive turns, hard checkpoint ~30 turns; when `docs/STATE.md` invariants cannot be recited fresh, run `pk:checkpoint` and recommend a fresh session; unpopulated STATE.md fields report `not tracked`, never computed-looking numbers.
 - **DB Isolation**: Use project-scoped containers, never foreign DBs.
@@ -31,7 +32,7 @@ Load lazily by convention — never preload:
 - Project files: `./PROMPTKIT.md` (check `profile: lite|balanced|turbo`), `./docs/STATE.md`
 
 ### Task Ceremony Levels (Lite - same as full, but L2/L3 need balanced)
-Declare on line 1: `[PromptKit OS Lite: Level <0-3> — reason]`
+Declare on line 1 (no banner for informational L0 fast-path): `[PromptKit OS Lite: Level <0-3> — reason]`
 - **L0 Direct**: questions, lookups, doc typos, formatting, non-risky 1-line edits. `understand → change → verify`. No task record.
 - **L1 Standard**: localized bug fix, small feature, no schema/auth/breaking contract. Inline planning, no Task Record file. This is 80% of work — stays in Lite. Mixed-level requests take the higher level; downgrades need a one-line announced reason.
 - **L2 Controlled**: schema/migrations, auth, permissions, public contracts, multi-component. Requires `docs/tasks/<task-id>.md` + spec. **Recommend switching to Balanced** (`init.sh --balanced`) for L2.
@@ -46,7 +47,7 @@ Declare on line 1: `[PromptKit OS Lite: Level <0-3> — reason]`
 Lite keeps host project clean. Specialized dirs (auth/, data/, api/, etc.) created on-demand only in Balanced/Turbo.
 
 ### Upgrade Path
-- Need more workflows? Run `.promptkit/init.sh --balanced` (or `pk:profile`) to upgrade to the full Balanced profile
-- Need parallel waves? Run `.promptkit/init.sh --turbo --experimental` (warns up to ~2x measured token cost)
+- Need more workflows? From your kit root, run `./init.sh --balanced` (or `pk:profile`) to upgrade to the full Balanced profile
+- Need parallel waves? From your kit root, run `./init.sh --turbo --experimental` (warns up to ~2x measured token cost)
 - Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`
 <!-- PROMPTKIT_END -->

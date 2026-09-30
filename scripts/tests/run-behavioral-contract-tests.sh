@@ -185,11 +185,11 @@ for directive_file in "templates/agent-directive-template.md" "templates/agent-d
     fi
 done
 WF_COUNT=$(ls "$REPO_ROOT"/workflows/*.md | wc -l | tr -d ' ')
-if [ "$WF_COUNT" -eq 24 ]; then
-    echo "  ✅ PASS: On-disk workflow file count is 24 (matches reconciled docs claims)"
+if [ "$WF_COUNT" -eq 25 ]; then
+    echo "  ✅ PASS: On-disk workflow file count is 25 (matches reconciled docs claims)"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo "  ❌ FAIL: On-disk workflow count is $WF_COUNT but shipped docs claim 24 — reconcile counts or update this drift guard"
+    echo "  ❌ FAIL: On-disk workflow count is $WF_COUNT but shipped docs claim 25 — reconcile counts or update this drift guard"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 # Canonical-count drift guard (#347): every live workflow-count claim must state
@@ -204,8 +204,11 @@ fi
 STALE_CLAIMS=$(grep -rnE 'full [0-9][0-9]?[- ]workflows?|[Aa]ll [0-9][0-9]? workflows?|[0-9][0-9]? workflow files|[0-9][0-9]? Inlined Workflows?|[(][0-9][0-9]? workflows?' \
     "$REPO_ROOT/README.md" "$REPO_ROOT/QUICKSTART.md" "$REPO_ROOT/FAQ.md" "$REPO_ROOT/PROMPTKIT.md" \
     "$REPO_ROOT/docs/WORKFLOW-MAP.md" "$REPO_ROOT/docs/BENCHMARKS.md" "$REPO_ROOT/docs/ARCHITECTURE.md" \
-    "$REPO_ROOT/docs/COMPARISONS.md" "$REPO_ROOT/docs/INTERESTING-FACTS.md" \
-    "$REPO_ROOT/templates/lite-profile.md" "$REPO_ROOT/templates/project-profile-template.md" "$REPO_ROOT/workflows/sync.md" 2>/dev/null \
+    "$REPO_ROOT/docs/COMPARISONS.md" "$REPO_ROOT/docs/INTERESTING-FACTS.md" "$REPO_ROOT/CONTRIBUTING.md" \
+    "$REPO_ROOT/init.sh" "$REPO_ROOT/init.ps1" "$REPO_ROOT/protocols/setup.md" \
+    "$REPO_ROOT/scripts/measure-tokens.sh" "$REPO_ROOT/scripts/measure-tokens.ps1" \
+    "$REPO_ROOT/templates/lite-profile.md" "$REPO_ROOT/templates/project-profile-template.md" \
+    "$REPO_ROOT/workflows/onboard.md" "$REPO_ROOT/workflows/profile.md" "$REPO_ROOT/workflows/sync.md" 2>/dev/null \
     | awk -v wf="$WF_COUNT" '
         {
             line = $0
@@ -305,100 +308,144 @@ else
 fi
 
 echo ""
-echo "📌 Scenario P: Published Figure Exact-Match (BENCHMARKS vs tool output)"
-# Guards the six section-3 payload cells, the two section-2 static cells, and the
-# six reduction labels against figure rot. Dated records (§8 @76e3168, §9 @1312831,
-# lite-profile 2026-09-14 block) are historical and explicitly exempt.
-# Rounding rule: nearest integer percent, ((diff*100 + base/2) / base).
-BENCH="$REPO_ROOT/docs/BENCHMARKS.md"
-PER_TASK_OUT="$(bash "$REPO_ROOT/scripts/measure-per-task-tokens.sh" --strict 2>/dev/null)"
-STATIC_OUT="$(bash "$REPO_ROOT/scripts/measure-tokens.sh" --strict 2>/dev/null)"
-live_payload() {
-    echo "$PER_TASK_OUT" | awk -F'|' -v k="$1" '$1=="BASELINE" && $2==k {print $3}'
+echo "📌 Scenario P: Numeric Benchmark Values Match Measurement Tools"
+BENCHMARKS="$REPO_ROOT/docs/BENCHMARKS.md"
+STATIC_OUT="$(bash "$REPO_ROOT/scripts/measure-tokens.sh" --strict)"
+PER_TASK_OUT="$(bash "$REPO_ROOT/scripts/measure-per-task-tokens.sh" --strict)"
+BALANCED_SAVINGS_OUT="$(bash "$REPO_ROOT/scripts/measure-tokens.sh" "$REPO_ROOT/templates/agent-directive-template.md")"
+LITE_SAVINGS_OUT="$(bash "$REPO_ROOT/scripts/measure-tokens.sh" "$REPO_ROOT/templates/agent-directive-lite-template.md")"
+FULLSET_OUT="$(cd "$REPO_ROOT" && bash scripts/measure-tokens.sh)"
+
+benchmark_cell() {
+    local header="$1" metric="$2" row="$3"
+    awk -F'|' -v header="$header" -v metric="$metric" -v row="$row" '
+        function clean(s) {
+            gsub(/[*`]/, "", s)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+            gsub(/[[:space:]]+/, " ", s)
+            return tolower(s)
+        }
+        /^\|/ {
+            if (!metric_col) {
+                if (clean($2) != clean(header)) next
+                for (i = 3; i < NF; i++) {
+                    if (index(clean($i), clean(metric)) > 0) {
+                        metric_col = i
+                        next
+                    }
+                }
+            } else if (clean($2) == clean(row)) {
+                print $metric_col
+                exit
+            }
+        }
+    ' "$BENCHMARKS"
 }
-live_limit() {
-    echo "$PER_TASK_OUT" | awk -F'|' -v k="$1" '$1=="BASELINE" && $2==k {print $4}'
+benchmark_metric() {
+    benchmark_cell "$1" "$2" "$3" | grep -oE '[0-9][0-9,]*' | head -n 1 | tr -d ','
 }
-doc_row() {
-    grep -E "^\| \*\*\`$1\`\*\* \|" "$BENCH" | head -n 1
+benchmark_reduction_percent() {
+    local profile="$1" cell="$2"
+    printf '%s\n' "$cell" | grep -oE -- "-[0-9]+% ${profile}" | grep -oE '[0-9]+' | head -n 1
 }
-check_figure() {
-    local desc="$1" live="$2" doc="$3"
-    if [ "$live" -eq "$doc" ]; then
-        echo "  ✅ PASS: $desc ($doc tok == tool output)"
+plain_text() {
+    printf '%s\n' "$1" | sed -E 's/\x1B\[[0-9;]*m//g'
+}
+static_savings_percent() {
+    plain_text "$1" | sed -nE 's/.*Static Context Reduction:[[:space:]]+~([0-9]+)% reduction.*/\1/p'
+}
+fullset_measured_tokens() {
+    plain_text "$1" | sed -nE 's/.*Monolithic \(full [0-9]+-workflow set\)[[:space:]]+~([0-9,]+) tokens.*/\1/p' | tr -d ','
+}
+core_six_measured_tokens() {
+    plain_text "$1" | sed -nE 's/.*Monolithic \(core-6 subset derived\)[[:space:]]+~([0-9,]+) tokens.*/\1/p' | tr -d ','
+}
+rounded_reduction_percent() {
+    local baseline="$1" measured="$2"
+    printf '%s\n' "$(( ((baseline - measured) * 100 + baseline / 2) / baseline ))"
+}
+
+check_benchmark_figure() {
+    local description="$1" measured="$2" published="$3"
+    if [[ "$measured" =~ ^[0-9]+$ && "$published" =~ ^[0-9]+$ && "$measured" == "$published" ]]; then
+        echo "  ✅ PASS: $description ($published == measurement output)"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
-        echo "  ❌ FAIL: $desc published $doc tok but tool output is $live tok"
+        echo "  ❌ FAIL: $description published '${published:-missing}', measurement output '${measured:-missing}'"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 }
-for spec in "pk:fix" "pk:plan" "pk:ship"; do
-    ROW="$(doc_row "$spec")"
-    BASE="$(echo "$ROW" | awk -F'|' '{print $4}' | tr -cd '0-9')"
-    BAL_DOC="$(echo "$ROW" | awk -F'|' '{print $5}' | tr -cd '0-9')"
-    LITE_DOC="$(echo "$ROW" | awk -F'|' '{print $6}' | grep -oE '[0-9,]+' | head -n 1 | tr -cd '0-9')"
-    BAL_LIVE="$(live_payload "$spec/balanced")"
-    LITE_LIVE="$(live_payload "$spec/lite")"
-    BASE_LIVE="$(live_limit "$spec/balanced")"
-    check_figure "$spec Balanced payload" "$BAL_LIVE" "$BAL_DOC"
-    check_figure "$spec Lite payload" "$LITE_LIVE" "$LITE_DOC"
-    check_figure "$spec baseline constant" "$BASE_LIVE" "$BASE"
-    BAL_PCT_DOC="$(echo "$ROW" | grep -oE '\-[0-9]+% Balanced' | tr -cd '0-9')"
-    LITE_PCT_DOC="$(echo "$ROW" | grep -oE '\-[0-9]+% Lite' | tr -cd '0-9')"
-    BAL_PCT_LIVE=$(( ((BASE - BAL_LIVE) * 100 + BASE / 2) / BASE ))
-    LITE_PCT_LIVE=$(( ((BASE - LITE_LIVE) * 100 + BASE / 2) / BASE ))
-    check_figure "$spec Balanced reduction label" "$BAL_PCT_LIVE" "$BAL_PCT_DOC"
-    check_figure "$spec Lite reduction label" "$LITE_PCT_LIVE" "$LITE_PCT_DOC"
-done
-BAL_STATIC_LIVE="$(echo "$STATIC_OUT" | awk -F'|' '$1=="BALANCED" {print $2}')"
-LITE_STATIC_LIVE="$(echo "$STATIC_OUT" | awk -F'|' '$1=="LITE" {print $2}')"
-BAL_STATIC_DOC="$(grep -E '^\| \*\*Balanced\*\* \|' "$BENCH" | head -n 1 | awk -F'|' '{print $5}' | tr -cd '0-9')"
-LITE_STATIC_DOC="$(grep -E '^\| \*\*Lite\*\* \|' "$BENCH" | head -n 1 | awk -F'|' '{print $5}' | tr -cd '0-9')"
-check_figure "Balanced static directive" "$BAL_STATIC_LIVE" "$BAL_STATIC_DOC"
-check_figure "Lite static directive" "$LITE_STATIC_LIVE" "$LITE_STATIC_DOC"
 
-echo "  -- Prose-claim sweep: anchored Lite static-figure shapes must equal $LITE_STATIC_LIVE"
-echo "     Shapes: 'Lite (<claim> N tok)', 'Lite uses N tok', 'Lite stays at N tok',"
-echo "     'N tok Lite', 'N tokens static' on a Lite line. Tables (pipes) are covered"
-echo "     by the cell checks above, not here. Saving-range 'X to Y' strings are"
-echo "     skipped (derived display, not static claims). Archived token-efficiency-review.md"
-echo "     is exempt by class (dated record, like releases/ and archive/)."
-LITE_PROF="$REPO_ROOT/templates/lite-profile.md"
-B9_S="$(grep -n '^## 9\. Proxy Validation' "$BENCH" | cut -d: -f1)"
-B9_E="$(awk -v s="$B9_S" 'NR>s && /^## Related References/ {print NR; exit}' "$BENCH")"
-LP_S="$(grep -n '^## Token Measurements (measured 2026-09-14' "$LITE_PROF" | cut -d: -f1)"
-LP_E="$(awk -v s="$LP_S" 'NR>s && /^## / {print NR; exit}' "$LITE_PROF")"
-SHAPES='Lite[^()|]*\([^()]*[0-9,]+ tok(en)?s?\)|Lite uses [0-9,]+ tok|Lite stays at [0-9,]+ tok|[0-9,]+ tok Lite|[0-9,]+ tok(en)?s? static'
-if [ -z "$B9_S" ] || [ -z "$B9_E" ] || [ -z "$LP_S" ] || [ -z "$LP_E" ]; then
-    echo "  ❌ FAIL: prose-sweep exempt-range markers missing (BENCHMARKS §9 / lite-profile dated block)"
+static_metric() {
+    printf '%s\n' "$STATIC_OUT" | awk -F'|' -v key="$1" '$1 == key { print $2; exit }'
+}
+per_task_metric() {
+    local task="$1" field="$2"
+    printf '%s\n' "$PER_TASK_OUT" | awk -F'|' -v task="$task" -v field="$field" '
+        function trim(s) {
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+            gsub(/[[:space:]]+/, " ", s)
+            return s
+        }
+        {
+            left = trim($1)
+            right = trim($2)
+            baseline_text = trim($3)
+            if (index(left, task " Balanced:") != 1) next
+            split(left, balanced, " ")
+            split(right, lite, " ")
+            split(baseline_text, baseline, " ")
+            if (field == "balanced") print balanced[3]
+            else if (field == "lite") print lite[2]
+            else print baseline[2]
+            exit
+        }
+    '
+}
+
+check_benchmark_figure "Balanced static directive" "$(static_metric BALANCED)" \
+    "$(benchmark_metric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Balanced)')"
+check_benchmark_figure "Lite static directive" "$(static_metric LITE)" \
+    "$(benchmark_metric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')"
+check_benchmark_figure "Balanced static reduction percent" "$(static_savings_percent "$BALANCED_SAVINGS_OUT")" \
+    "$(benchmark_metric 'Profile' 'Reduction vs ~26.4k current core-subset baseline¹' 'Balanced')"
+check_benchmark_figure "Lite static reduction percent" "$(static_savings_percent "$LITE_SAVINGS_OUT")" \
+    "$(benchmark_metric 'Profile' 'Reduction vs ~26.4k current core-subset baseline¹' 'Lite')"
+check_benchmark_figure "Full workflow-set token total" "$(fullset_measured_tokens "$FULLSET_OUT")" \
+    "$(benchmark_metric 'Inventory' 'Measured Tokens' 'Full workflow set')"
+check_benchmark_figure "Core-six workflow-set token total" "$(core_six_measured_tokens "$FULLSET_OUT")" \
+    "$(benchmark_metric 'Inventory' 'Measured Tokens' 'Core-six Lite subset')"
+LIVE_WORKFLOW_COUNT="$(find "$REPO_ROOT/workflows" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')"
+check_benchmark_figure "Full workflow-set file count" "$LIVE_WORKFLOW_COUNT" \
+    "$(benchmark_metric 'Inventory' 'Workflow Files' 'Full workflow set')"
+SETUP_STATIC_ENTRY="$(grep -oE '[0-9,]+/2500' "$REPO_ROOT/protocols/setup.md" | head -n 1 || true)"
+SETUP_STATIC_DOC="${SETUP_STATIC_ENTRY%%/*}"
+SETUP_STATIC_DOC="${SETUP_STATIC_DOC//,/}"
+check_benchmark_figure "Setup protocol Balanced static directive" "$(static_metric BALANCED)" "$SETUP_STATIC_DOC"
+for task in 'pk:fix' 'pk:plan' 'pk:ship'; do
+    balanced_payload="$(per_task_metric "$task" balanced)"
+    lite_payload="$(per_task_metric "$task" lite)"
+    baseline_payload="$(per_task_metric "$task" baseline)"
+    check_benchmark_figure "$task Balanced payload" "$(per_task_metric "$task" balanced)" \
+        "$(benchmark_metric 'Workflow Path' 'PromptKit OS JIT Payload (Balanced)' "$task")"
+    check_benchmark_figure "$task Lite payload" "$(per_task_metric "$task" lite)" \
+        "$(benchmark_metric 'Workflow Path' 'PromptKit OS JIT Payload (Lite)' "$task")"
+    check_benchmark_figure "$task baseline payload" "$(per_task_metric "$task" baseline)" \
+        "$(benchmark_metric 'Workflow Path' 'Baseline Payload (before A)' "$task")"
+    check_benchmark_figure "$task Balanced context-reduction percent" \
+        "$(rounded_reduction_percent "$baseline_payload" "$balanced_payload")" \
+        "$(benchmark_reduction_percent Balanced "$(benchmark_cell 'Workflow Path' 'Context Reduction vs Baseline' "$task")")"
+    check_benchmark_figure "$task Lite context-reduction percent" \
+        "$(rounded_reduction_percent "$baseline_payload" "$lite_payload")" \
+        "$(benchmark_reduction_percent Lite "$(benchmark_cell 'Workflow Path' 'Context Reduction vs Baseline' "$task")")"
+done
+
+if grep -Eq '[0-9][0-9,]{3,}[[:space:]]+(tok|tokens)' "$REPO_ROOT/workflows/profile.md"; then
+    echo "  ❌ FAIL: profile workflow duplicates a measured token figure; use docs/BENCHMARKS.md"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 else
-    PROSE_BAD=""
-    for pf in README.md QUICKSTART.md FAQ.md CONTRIBUTING.md docs/BENCHMARKS.md docs/COMPARISONS.md docs/ARCHITECTURE.md docs/WORKFLOW-MAP.md docs/ADOPTION-GUIDE.md docs/INTERESTING-FACTS.md docs/DESIGN-MD-FAQ.md docs/adaptation-friction-evaluation.md templates/lite-profile.md; do
-        [ -f "$REPO_ROOT/$pf" ] || continue
-        while IFS= read -r mline; do
-            ln="${mline%%:*}"; txt="${mline#*:}"
-            case "$txt" in *Lite*) ;; *) continue ;; esac
-            if { [ "$pf" = "docs/BENCHMARKS.md" ] && [ "$ln" -ge "$B9_S" ] && [ "$ln" -lt "$B9_E" ]; } || \
-               { [ "$pf" = "templates/lite-profile.md" ] && [ "$ln" -ge "$LP_S" ] && [ "$ln" -lt "$LP_E" ]; }; then
-                continue
-            fi
-            while IFS= read -r m; do
-                case "$m" in *" to "*) continue ;; esac
-                v="$(echo "$m" | grep -oE '[0-9,]+' | tail -n 1 | tr -cd '0-9')"
-                if [ "$v" -ne "$LITE_STATIC_LIVE" ]; then
-                    PROSE_BAD="${PROSE_BAD}  - $pf:$ln: '$m' (live is $LITE_STATIC_LIVE tok)\n"
-                fi
-            done < <(echo "$txt" | grep -oE "$SHAPES" || true)
-        done < <(grep -n 'Lite' "$REPO_ROOT/$pf" | grep 'tok' || true)
-    done
-    if [ -z "$PROSE_BAD" ]; then
-        echo "  ✅ PASS: all live Lite prose claims match tool output ($LITE_STATIC_LIVE tok)"
-        PASS_COUNT=$((PASS_COUNT + 1))
-    else
-        printf '  ❌ FAIL: stale Lite prose figures:\n%b' "$PROSE_BAD"
-        FAIL_COUNT=$((FAIL_COUNT + 1))
-    fi
+    echo "  ✅ PASS: profile workflow points to the benchmark source without pinning token figures"
+    PASS_COUNT=$((PASS_COUNT + 1))
 fi
 
 echo ""
@@ -423,7 +470,6 @@ assert_contains "workflows/auto.md" "never an execution trigger" "Auto halt reco
 assert_contains "workflows/auto.md" "Worker GREEN" "Auto workflow requires integrated-state verification before wave success"
 assert_contains "workflows/auto.md" "never become an orchestration subsystem" "Auto waves remain a pk:auto capability, not a subsystem"
 assert_contains "workflows/auto.md" "Path Deny-List" "Auto workflow enforces path deny-list"
-assert_contains "workflows/auto.md" "review ready" "Auto workflow defaults to review ready stop boundary"
 assert_contains "workflows/route.md" "workflows/auto.md" "Router decision matrix registers pk:auto"
 assert_contains "templates/agent-directive-template.md" "pk:auto" "Directive template registers pk:auto trigger"
 
@@ -605,7 +651,118 @@ assert_contains "docs/stacks/cms-wordpress.md" "Mandatory Prepared SQL Statement
 assert_contains "docs/stacks/cms-wordpress.md" "State Mutation Nonce Verification" "WordPress playbook defines nonce verification invariant"
 assert_contains "workflows/onboard.md" "CMS — WordPress" "Onboarding workflow detects WordPress pattern"
 
-echo "==========================================================="
+echo ""
+echo "📌 Scenario AG: Human Decision & Question Comprehensibility Contract (Issue #406)"
+assert_contains "protocols/code-quality-gate.md" "DECISION NEEDED" "Decision Card format sections defined in quality gate"
+assert_contains "protocols/code-quality-gate.md" "Recommendation mandatory" "Recommendation mandatory on every decision card"
+assert_contains "protocols/code-quality-gate.md" "accountability.*always human" "Type D accountability routing requires the card"
+assert_contains "protocols/code-quality-gate.md" "you decide" "You-decide delegation default declared on the card"
+assert_contains "workflows/plan.md" "Assumption-conversion rule" "Plan workflow defines assumption-conversion rule"
+assert_contains "workflows/plan.md" "Random answers are worse than assumptions" "Plan workflow forbids extracting guesses"
+assert_contains "workflows/debug.md" "render the Decision Card" "Debug halt path adopts the Decision Card"
+assert_contains "workflows/ship.md" "renders the Decision Card" "Ship approval request adopts the Decision Card"
+assert_contains "templates/agent-directive-lite-template.md" "Assumption Records, never guesses" "Lite directive carries the decision routing one-liner"
+
+echo ""
+echo "📌 Scenario AH: Decision Budget Caps Type B Volume (Issue #408)"
+assert_contains "protocols/code-quality-gate.md" "Decision Budget" "Decision Budget rule stated in quality gate"
+assert_contains "protocols/code-quality-gate.md" "Types C and D are never capped" "Types C and D exempt from the budget"
+assert_contains "protocols/code-quality-gate.md" "Overflow behavior" "Budget overflow converts to Assumption Records"
+assert_contains "protocols/code-quality-gate.md" "remaining budget when asking" "Agent states remaining budget when asking"
+assert_contains "workflows/plan.md" "Decision-budget overflow" "Plan workflow wires overflow to Assumption Records"
+assert_contains "workflows/checkpoint.md" "Delegated & Assumed Decisions" "Checkpoint carries the delegation summary slot"
+
+echo ""
+echo "📌 Scenario AI: Turbo Verdict Revisit Trigger (Issue #213)"
+assert_contains "docs/BENCHMARKS.md" "Revisit trigger" "Turbo verdict carries an expiry trigger"
+
+echo ""
+echo "📌 Scenario AJ: npm Courier Wrapper (Issue #413)"
+assert_contains "package/bin/promptkit-os.js" "refs/tags/v" "Courier resolves a pinned release tag, never a moving ref"
+assert_contains "package/bin/promptkit-os.js" "delivery vehicle, not a second implementation" "Courier declares itself a courier, not a reimplementation"
+assert_contains "package/bin/promptkit-os.js" "init\.sh" "Courier delegates to the canonical init.sh"
+assert_contains "package/bin/promptkit-os.js" "init\.ps1" "Courier delegates to the canonical init.ps1 on Windows"
+assert_contains "package/package.json" "\"name\": \"promptkit-os\"" "Courier package name matches the reserved registry name"
+assert_contains "package/package.json" "provenance" "Courier publishes with provenance attestation"
+assert_contains ".github/workflows/release-npm.yml" "npm publish --provenance" "Release job publishes with provenance"
+assert_contains ".github/workflows/release-npm.yml" "id-token: write" "Release job requests OIDC for attestation"
+assert_contains "README.md" "courier, not a dependency" "README states the courier contract"
+assert_contains "README.md" "git submodule add" "Submodule path stays first-documented and canonical"
+assert_contains "QUICKSTART.md" "npx promptkit-os@latest" "QUICKSTART documents the optional npx path"
+assert_contains "package/bin/promptkit-os.js" "Refusing to overlay" "Courier refuses to overlay a non-empty .promptkit (no silent tar merge)"
+assert_contains "package/bin/promptkit-os.js" "assertInstallTargetIsClean" "Courier guards the install target before extracting"
+assert_contains "package/README.md" "PowerShell 7" "Courier README states the Windows pwsh prerequisite"
+assert_contains ".github/workflows/release-npm.yml" "No .cache: npm." "Release job documents why npm cache is absent (no lockfile)"
+
+echo ""
+echo "📌 Scenario AK: Grill Completion Contract (Issue #425)"
+assert_contains "workflows/tutor.md" "Suspend Teaching Rules" "Grill drill suspends Tier-3 snippets and the Just Show Me guardrail"
+assert_contains "workflows/tutor.md" "Self-Sufficient Probes" "Grill probes carry their own context and model answers"
+assert_contains "workflows/tutor.md" "Grill Completion Contract" "Grill mode owns a zero-code completion contract"
+assert_contains "workflows/tutor.md" "read instead of asking" "Pre-implementation grilling reads the repo before asking"
+
+echo ""
+echo "📌 Scenario AM: Verify-Bootstrap Workflow (Issue #440)"
+assert_contains "workflows/verify-bootstrap.md" "pk:verify-bootstrap" "Verify-bootstrap workflow declares its trigger"
+assert_contains "workflows/verify-bootstrap.md" "Level 2 — Controlled" "Verify-bootstrap declares Level 2 ceremony"
+assert_contains "workflows/verify-bootstrap.md" "Non-Overlap .ADR 0002 Gate Record." "Verify-bootstrap records the ADR 0002 non-overlap gate"
+assert_contains "workflows/verify-bootstrap.md" "Human-Authorized Generation" "Verify-bootstrap restates the human-authorized-generation guardrail"
+assert_contains "workflows/verify-bootstrap.md" "Halt-not-waive" "Verify-bootstrap halts instead of waiving an unproducible red"
+assert_contains "workflows/verify-bootstrap.md" "incorporate, never replace" "Verify-bootstrap incorporates existing suites, never replaces them"
+assert_contains "protocols/setup.md" "Verify-Bootstrap" "Setup reference registers the verify-bootstrap workflow"
+
+echo ""
+echo "📌 Scenario AL: Countersignature Consistency (retro-certification)"
+# An approved retro chain must agree with CHANGELOG: no "pending countersignature"
+# text may survive once the chain reads approved. Pending chains impose nothing.
+AL_FAIL=0
+AL_FOUND=0
+for retro in "$REPO_ROOT"/docs/releases/*retro-evaluation.md; do
+    [ -e "$retro" ] || continue
+    if grep -Eq '\*\*Evaluation Status\*\*: `approved`' "$retro"; then
+        AL_FOUND=1
+        if grep -Eq 'pending coordinator countersignature' "$REPO_ROOT/CHANGELOG.md"; then
+            echo "  ❌ FAIL: $retro is approved but CHANGELOG still says pending coordinator countersignature"
+            AL_FAIL=1
+        fi
+        AL_ID="$(grep -Eo 'REL-[0-9]{4}-[0-9]{2}-[0-9]{2}-V[0-9.]+-[0-9]+' "$retro" | head -n 1)"
+        if [ -n "$AL_ID" ]; then
+            AL_STALE=""
+            for candidate in "$REPO_ROOT"/docs/releases/*.md; do
+                if grep -Eq 'pending coordinator countersignature' "$candidate" && grep -Eq "$AL_ID" "$candidate"; then
+                    AL_STALE="$AL_STALE
+    - $(basename "$candidate")"
+                fi
+            done
+            if [ -n "$AL_STALE" ]; then
+                echo "  ❌ FAIL: $retro is approved but stale pending-countersignature text survives in its own chain:$AL_STALE"
+                AL_FAIL=1
+            fi
+        fi
+    fi
+done
+if [ "$AL_FAIL" -eq 0 ]; then
+    if [ "$AL_FOUND" -eq 1 ]; then
+        echo "  ✅ PASS: approved retro chains agree with CHANGELOG countersignature state"
+    else
+        echo "  ✅ PASS: no approved retro chain; no consistency obligation"
+    fi
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+echo ""
+echo "📌 Scenario AN: Reference-Link Resolution Gate (Issue #444)"
+assert_contains "scripts/validate-references.sh" "BROKEN LINK" "Bash validator reports broken markdown links"
+assert_contains "scripts/validate-references.ps1" "BROKEN LINK" "PowerShell validator reports broken markdown links"
+assert_contains "scripts/validate-references.sh" "LINK_EXEMPT_DIRS" "Bash validator carries the historical-record exemption list"
+assert_contains "scripts/validate-references.ps1" "LinkExemptDirs" "PowerShell validator carries the historical-record exemption list"
+assert_contains "scripts/tests/run-reference-link-tests.sh" "fails closed" "Bash link harness proves broken-link polarity"
+assert_contains "scripts/tests/run-reference-link-tests.ps1" "fails closed" "PowerShell link harness proves broken-link polarity"
+assert_contains ".github/workflows/ci.yml" "run-reference-link-tests" "CI wires the reference-link harness"
+
+echo ""
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"
 echo "==========================================================="

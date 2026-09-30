@@ -18,4 +18,4 @@ This directory stores research documents, technical spike summaries, trade-off m
 ## Spike Index Table
 | Date | Spike Topic | Primary Recommendation | Status |
 | :--- | :--- | :--- | :--- |
-| 2026-08-23 | Example: Evaluating Tailwind CSS v4 vs. CSS Modules | Adopt Tailwind v4 for modern token support | Completed |
+| 2026-08-23 | Example: Evaluating Tailwind CSS v4 vs. CSS Modules | Example recommendation — no evaluation performed | Example only — not started |

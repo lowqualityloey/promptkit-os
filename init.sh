@@ -194,8 +194,8 @@ fi
 if [[ "$PROFILE_SET" -eq 0 && "$EXPERIMENTAL" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}" ]]; then
     echo -e "\n\033[0;36m💡 PromptKit OS Profile Selection (visual decision)\033[0m"
     echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "  \033[1;33m1) Lite (Recommended for new users)\033[0m — 6 utility workflows (route, debug, commit, checkpoint, sync, profile) 961 tok, 80% value, fastest onboarding"
-    echo -e "  2) Balanced (Recommended for teams) — 24 workflows, 2,319 tok, Level 0-3 adaptive ceremony, full power [default]"
+    echo -e "  \033[1;33m1) Lite (Recommended for new users)\033[0m — 6 utility workflows (route, debug, commit, checkpoint, sync, profile) 1,269 tok, 80% value, fastest onboarding"
+    echo -e "  2) Balanced (Recommended for teams) — 25 workflows, 2,318 tok, Level 0-3 adaptive ceremony, full power [default]"
     echo -e "  3) Turbo (Experimental) — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval"
     echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
@@ -349,16 +349,25 @@ else
 fi
 
 # Inject or update profile field in PROMPTKIT.md (2+1 modes)
+# Machine-readable fields (profile/tracking/projection) are normalized: every
+# existing line for the field is removed, then exactly one authoritative value
+# is appended. This is idempotent and collapses hand-made duplicates.
+set_machine_field() {
+    local target_file="$1" field_name="$2" field_value="$3" tmp_file
+    tmp_file=$(mktemp)
+    grep -v "^${field_name}:" "$target_file" > "$tmp_file" || true
+    printf '%s: %s\n' "$field_name" "$field_value" >> "$tmp_file"
+    # Redirect (not mv) so the target keeps its inode and file mode.
+    cat "$tmp_file" > "$target_file" && rm -f "$tmp_file"
+}
+
 if [[ -f "$PROJECT_PROFILE" ]]; then
     if grep -q "^profile:" "$PROJECT_PROFILE" 2>/dev/null; then
-        if sed --version >/dev/null 2>&1; then
-            sed -i "s/^profile:.*/profile: $PROFILE/" "$PROJECT_PROFILE"
-            if grep -q '^- \*\*Profile\*\*:' "$PROJECT_PROFILE" 2>/dev/null; then
+        set_machine_field "$PROJECT_PROFILE" "profile" "$PROFILE"
+        if grep -q '^- \*\*Profile\*\*:' "$PROJECT_PROFILE" 2>/dev/null; then
+            if sed --version >/dev/null 2>&1; then
                 sed -i "s/^- \*\*Profile\*\*:.*/- **Profile**: $PROFILE/" "$PROJECT_PROFILE"
-            fi
-        else
-            sed -i.bak "s/^profile:.*/profile: $PROFILE/" "$PROJECT_PROFILE" && rm -f "$PROJECT_PROFILE.bak"
-            if grep -q '^- \*\*Profile\*\*:' "$PROJECT_PROFILE" 2>/dev/null; then
+            else
                 sed -i.bak "s/^- \*\*Profile\*\*:.*/- **Profile**: $PROFILE/" "$PROJECT_PROFILE" && rm -f "$PROJECT_PROFILE.bak"
             fi
         fi
@@ -371,46 +380,26 @@ if [[ -f "$PROJECT_PROFILE" ]]; then
             echo "## 0. PromptKit OS Profile"
             echo "- **Profile**: $PROFILE"
             echo "- **Installed**: $(date +%Y-%m-%d)"
-            echo "- **Engine**: .promptkit"
-            echo "- **Upgrade**: Run \`.promptkit/init.sh --balanced\` for the full Balanced profile, or \`--turbo --experimental\` for parallel waves"
+            echo "- **Engine**: \`$DIR_NAME\`"
+            echo "- **Upgrade**: Run \`$DIR_NAME/init.sh --balanced\` for the full Balanced profile, or \`--turbo --experimental\` for parallel waves"
             echo ""
             tail -n +2 "$PROJECT_PROFILE"
             echo ""
-            echo "profile: $PROFILE"
         } > "$TMP_FILE"
         mv "$TMP_FILE" "$PROJECT_PROFILE"
+        set_machine_field "$PROJECT_PROFILE" "profile" "$PROFILE"
         echo -e "  \033[0;32m[+]\\033[0m Set PROMPTKIT.md profile: $PROFILE"
     fi
-    if grep -q "^tracking:" "$PROJECT_PROFILE" 2>/dev/null; then
-        if sed --version >/dev/null 2>&1; then
-            sed -i "s/^tracking:.*/tracking: $TRACKING/" "$PROJECT_PROFILE"
-        else
-            sed -i.bak "s/^tracking:.*/tracking: $TRACKING/" "$PROJECT_PROFILE" && rm -f "$PROJECT_PROFILE.bak"
-        fi
-    else
-        echo "" >> "$PROJECT_PROFILE"
-        echo "tracking: $TRACKING" >> "$PROJECT_PROFILE"
-    fi
+    set_machine_field "$PROJECT_PROFILE" "tracking" "$TRACKING"
     echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md tracking: $TRACKING"
     if [ -n "$TRACKING_PROJECTION" ]; then
-        if grep -q "^projection:" "$PROJECT_PROFILE" 2>/dev/null; then
-            if sed --version >/dev/null 2>&1; then
-                sed -i "s/^projection:.*/projection: $TRACKING_PROJECTION/" "$PROJECT_PROFILE"
-            else
-                sed -i.bak "s/^projection:.*/projection: $TRACKING_PROJECTION/" "$PROJECT_PROFILE" && rm -f "$PROJECT_PROFILE.bak"
-            fi
-        else
-            echo "" >> "$PROJECT_PROFILE"
-            echo "projection: $TRACKING_PROJECTION" >> "$PROJECT_PROFILE"
-        fi
+        set_machine_field "$PROJECT_PROFILE" "projection" "$TRACKING_PROJECTION"
         echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md projection: $TRACKING_PROJECTION"
     else
         if grep -q "^projection:" "$PROJECT_PROFILE" 2>/dev/null; then
-            if sed --version >/dev/null 2>&1; then
-                sed -i "/^projection:/d" "$PROJECT_PROFILE"
-            else
-                sed -i.bak "/^projection:/d" "$PROJECT_PROFILE" && rm -f "$PROJECT_PROFILE.bak"
-            fi
+            PROJ_TMP=$(mktemp)
+            grep -v "^projection:" "$PROJECT_PROFILE" > "$PROJ_TMP" || true
+            cat "$PROJ_TMP" > "$PROJECT_PROFILE" && rm -f "$PROJ_TMP"
             echo -e "  \033[0;33m[✓]\\033[0m Removed stale PROMPTKIT.md projection line"
         fi
     fi
@@ -774,7 +763,7 @@ if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok\033[0m"
     echo -e "   Upgrade anytime: .promptkit/init.sh --balanced for the full Balanced profile"
 elif [[ "$PROFILE" == "balanced" ]]; then
-    echo -e "   Balanced: 24 workflows, Level 0-3 adaptive ceremony — full power"
+    echo -e "   Balanced: 25 workflows, Level 0-3 adaptive ceremony — full power"
     echo -e "   For onboarding: .promptkit/init.sh --lite for minimal setup"
 else
     echo -e "   \033[0;33mTurbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost\033[0m"

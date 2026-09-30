@@ -5,8 +5,8 @@
 <!-- Examples: feat(auth): add session revocation endpoint, fix(cart): prevent double submission on checkout -->
 
 ### Metadata
-- **Related Spec**: `docs/specs/`
-- **Architectural Decision (ADR)**: `docs/adrs/`
+- **Related Spec**: [Link to `docs/specs/<spec>.md` or `N/A - <reason>`]
+- **Architectural Decision (ADR)**: [Link to `docs/adrs/<adr>.md` or `N/A - <reason>`]
 - **Milestone**: `[M1: Data & Contracts | M2: Core Logic | M3: UI & Presentation | M4: Hardening]`
 - **Priority**: `[#priority/p0 (Blocker) | #priority/p1 (Core) | #priority/p2 (Enhancement) | #priority/p3 (Polish)]`
 - **Labels**: `[area:backend, area:frontend, area:data, area:auth, area:ui, area:perf]`
@@ -64,7 +64,7 @@
 > Complete this section when the request is Controlled Work (Level 2–3). L0–L1 Work may use the existing issue flow unless it expands into Controlled Work. The Local Task Record under `docs/tasks/` is authoritative; GitHub or another external tracker is an optional reference only.
 
 - **Work Classification**: `[L0 | L1 | L2 | L3]`
-- **Task ID**: `TASK-[YYYY-MM-DD]-[slug]`
+- **Task ID**: `TASK-<task-slug>` (preserve `TASK-YYYY-MM-DD-<slug>` for legacy/`none`-profile records)
 - **Local Task Record**: `docs/tasks/<task-id>.md`
 - **Specification**: `docs/specs/[specification].md`
 - **Execution Scope**: `[Repository, workspace, package, or session boundary]`
@@ -124,7 +124,7 @@ pnpm test path/to/feature.test.ts
 ---
 
 ## GitHub CLI Recipe
-<!-- Copy-pasteable command to publish this issue directly from your terminal. -->
+<!-- Proposal only: a human reviews and explicitly authorizes/executes this remote issue write. Tracker selection alone never authorizes it. -->
 ```bash
 gh issue create \
   --title "<type>(<scope>): <summary>" \
