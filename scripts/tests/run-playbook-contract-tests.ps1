@@ -20,6 +20,9 @@ $concurrencyScript = Join-Path $RepoRoot "scripts\tests\verify-auth-session-conc
 if ((Get-Command node -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath $concurrencyScript)) {
     Write-Host "[TEST] Running Recipe Concurrency Verification (Node)..." -ForegroundColor Cyan
     node $concurrencyScript
+    if ($LASTEXITCODE -ne 0) {
+        throw "Recipe Concurrency Verification failed with exit code $LASTEXITCODE"
+    }
 }
 
 Write-Host "[PASS] All Playbook Contract tests PASSED" -ForegroundColor Green

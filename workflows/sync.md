@@ -32,7 +32,7 @@ Eliminate instruction decay, stale working assumptions, and formatting divergenc
 
 ### Phase 1: Engine & Rule Audit
 
-**Read-only by default**: this workflow observes and reports; it never rewrites user-authored profile or configuration. The one-time `tracking:` backfill below is the only permitted `PROMPTKIT.md` mutation — future additions must not introduce "helpful" auto-fixes.
+**Read-only by default**: this workflow observes and reports; it never auto-rewrites user-authored profile or configuration. The one-time `tracking:` backfill below is the only permitted automatic `PROMPTKIT.md` mutation — explicitly instructed profile patches may be applied upon human direction, but inferred changes always retain human confirmation. Future additions must not introduce "helpful" auto-fixes.
 
 Before responding, the AI assistant inspects the physical workspace. If the environment grants no workspace access, skip to the fallback: report which checks could not execute and emit `Quality Gate: not measured` — never a claim of "synced" (Provenance Invariant: no executed proof → no green claim).
 

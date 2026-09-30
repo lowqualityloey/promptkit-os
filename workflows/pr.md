@@ -100,7 +100,7 @@ Structure the PR description using `templates/pull-request-template.md`:
    ```
    AC provenance by level: Level 2/3 items transcribe the Task Record / RFC `AC-*` with their recorded evidence. Level 0/1 items describe the diff's observable behavior change, and no box is checked without in-turn verification evidence (applicable verification command plus `exit code 0`, or observed artifact verification) cited beside it — never invent criteria just to check them off.
 4. **Database Checklist**: State whether migrations are present and, when applicable, verify the project's migration safety strategy (e.g. Expand-Contract for live data).
-5. **Testing Evidence**: Paste test runner pass counts and, when human interaction is required to establish acceptance evidence, provide numbered manual verification steps (otherwise `N/A — no manual verification applicable`).
+5. **Testing Evidence**: Paste test runner pass counts (when automated tests apply; for documentation or non-test changes, cite the executed validator or verification command results), and, when human interaction is required to establish acceptance evidence, provide numbered manual verification steps (otherwise `N/A — no manual verification applicable`).
 6. **Rollback Strategy**: Document whether this PR is zero-state reversible or requires step-by-step database rollbacks (when persistence exists).
 7. **Reviewer Focus**: Point reviewers to the most load-bearing lines or complex logic.
 
