@@ -344,16 +344,16 @@ Ensure all async components support the 4 fundamental UI states with meaningful 
 3. **Error State**: Actionable recovery message with a `"Retry"` trigger.
 4. **Success / Data State**: Fluid rendering with optimistic UI updates where appropriate.
 
-### Step 8: Emit Design Tokens Artifact
-Persist the decisions from Steps 1–7 using `templates/design-tokens-spec.md`, saved to `./docs/design/YYYY-MM-DD-design-<surface>.md`. A run that produces no artifact file has produced no durable output — chat-only guidance does not count as delivery.
+### Step 8: Emit Design Tokens Artifact (D2/D3 Work; D0/D1 Target/Spec Note)
+For D2 (Surface) and D3 (System) tiers, persist the decisions from Steps 1–7 using `templates/design-tokens-spec.md`, saved to `./docs/design/YYYY-MM-DD-design-<surface>.md`. For D0 (Micro) and D1 (Component) tiers, a standalone tokens artifact is not required; document decisions and token mapping directly as a note in the target file or spec. A run that produces no durable output (neither target-file or spec note for D0/D1 nor design artifact for D2/D3) has produced no durable output.
 
 ---
 
 ## Completion Criteria
-- Design tokens artifact generated in `./docs/design/` from `templates/design-tokens-spec.md`.
+- Design tokens artifact generated in `./docs/design/` for D2/D3 tiers (or target-file / spec token note for D0/D1).
 - Every interactive element meets the applicability-based state contract and practical touch-target guidance (~44×44px primary targets; 24×24px AA floor).
-- Exactly one icon family selected deliberately and applied consistently.
-- UI Delivery Gate Checklist below passes without exceptions.
+- Exactly one icon family selected deliberately and applied consistently across all icons that exist (text-only controls exempt).
+- UI Delivery Gate Checklist below passes for the applicable tier and stack (record `N/A - <reason>` for out-of-scope tier or out-of-stack items, such as React performance on non-React stacks or system-tier gates on D0/D1).
 
 ---
 
@@ -378,7 +378,7 @@ When no `DESIGN.md` exists, UI work still ships finished — restraint plus a de
 
 Before marking any UI task complete, verify all criteria pass:
 
-- [ ] **Visual Floor Enforced**: Replaced default framework tab favicon (no blank-tab or Next.js triangle default); applied a single Iconify family across all interactive controls.
+- [ ] **Visual Floor Enforced**: Replaced default framework tab favicon (no blank-tab or Next.js triangle default); applied a single Iconify family across interactive controls where icons exist (text-only controls remain complete without icons).
 - [ ] **Aesthetic Craft**: Palette is derived from brand identity; no generic blue/purple AI gradients, no decorative emoji, and glass/glow is limited to 1–2 elements.
 - [ ] **Contrast Compliance**: Normal text passes $\ge 4.5:1$ and large text/UI controls pass $\ge 3.0:1$ in both light and dark themes.
 - [ ] **Focus Replacement**: No `outline-none` without an immediate `:focus-visible:ring-2` replacement.
@@ -388,13 +388,13 @@ Before marking any UI task complete, verify all criteria pass:
 - [ ] **Touch Targets**: Primary interactive targets provide ~$44 \times 44\text{px}$ hit area where practical (AA floor $24 \times 24\text{px}$, SC 2.5.8; inline text links exempt) with adequate finger spacing.
 - [ ] **Mobile Reflow**: Zero horizontal scroll leaks (`min-w-0` on flex/grid children), viewport uses `dvh`, and bottom nav respects safe-area insets.
 - [ ] **Compositor-First Motion**: Never animate layout-affecting properties; `transform`/`opacity` preferred, `color`/`background-color`/`border-color` permitted for feedback; no `transition: all`; `prefers-reduced-motion` honored.
-- [ ] **React Performance**: Conditionals use ternary (`? : null`); derived state is computed during render; no nested inline components.
+- [ ] **React Performance (React stacks; N/A otherwise)**: Conditionals use ternary (`? : null`); derived state is computed during render; no nested inline components.
 - [ ] **Figma Blindspots Remediated**: Static pixel widths replaced with fluid reflow, ~44×44px touch targets verified, and loading skeletons / empty states implemented.
 - [ ] **Applicability-Based State Contract**: Interactive components explicitly implement all states applicable to their role (default + focus-visible universally; hover/active for pointer-interactive; disabled when disableable; loading/error/success for async/stateful controls).
 - [ ] **Honest Copy**: Copy contains zero fabricated metrics, fake customer counts, or invented social proof.
 - [ ] **5% Signal Accent**: Saturated accent is confined to $<5\%$ of viewport area; no decorative gradient floods.
 - [ ] **Typography & AI Tells**: Headings are upright (no italic titles); `tabular-nums` enabled on data/counters; no hand-drawn browser chrome.
-- [ ] **Single Icon Family**: All UI icons derive from a single cohesive set via Iconify (`simple-icons` for tech marks).
+- [ ] **Single Icon Family**: All UI icons derive from a single cohesive set via Iconify (`simple-icons` for tech marks); consistency applies to icons that exist, without requiring icons on approved text-only controls.
 - [ ] **Favicon Declared**: Every shipped page has a favicon per the stated rule; no blank-tab default.
 - [ ] **Type Pairing Resolved**: One pairing proposed-and-accepted, or explicitly waived with the system stack.
 - [ ] **Third-Party Components Vetted**: Each catalog component inherits tokens and passes a11y, single-family, and license gates with human approval evidenced.
