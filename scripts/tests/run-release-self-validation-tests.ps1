@@ -27,28 +27,30 @@ function Check([string]$Label, [int]$ExpectedExit, [int]$ActualExit, [string]$Ou
 Write-Host "=== Release Self-Validation Contract Parser Tests (PowerShell) ==="
 
 function Invoke-Checker([string[]]$Lines, [int]$ExitCode) {
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = "pwsh"
-    $psi.Arguments = "-NoProfile -File `"$Checker`" -ExitCode $ExitCode"
-    $psi.RedirectStandardInput = $true
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
-    $psi.UseShellExecute = $false
-    $psi.CreateNoWindow = $true
+    $tmpIn = [System.IO.Path]::GetTempFileName()
+    try {
+        [System.IO.File]::WriteAllLines($tmpIn, $Lines)
 
-    $p = [System.Diagnostics.Process]::Start($psi)
-    $sw = $p.StandardInput
-    foreach ($l in $Lines) {
-        $sw.WriteLine($l)
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "pwsh"
+        $psi.Arguments = "-NoProfile -File `"$Checker`" -ExitCode $ExitCode -InputPath `"$tmpIn`""
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+
+        $p = [System.Diagnostics.Process]::Start($psi)
+        $stdout = $p.StandardOutput.ReadToEnd()
+        $stderr = $p.StandardError.ReadToEnd()
+        $p.WaitForExit()
+
+        $combined = ($stdout + "`n" + $stderr).Trim()
+        return @{ ExitCode = $p.ExitCode; Output = $combined }
+    } finally {
+        if (Test-Path $tmpIn) {
+            Remove-Item $tmpIn -Force -ErrorAction SilentlyContinue
+        }
     }
-    $sw.Close()
-
-    $stdout = $p.StandardOutput.ReadToEnd()
-    $stderr = $p.StandardError.ReadToEnd()
-    $p.WaitForExit()
-
-    $combined = ($stdout + "`n" + $stderr).Trim()
-    return @{ ExitCode = $p.ExitCode; Output = $combined }
 }
 
 # Case 1: Clean VALID on exit 0

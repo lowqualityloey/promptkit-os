@@ -11,10 +11,15 @@ usage() {
 }
 
 EXIT_CODE=""
+INPUT_FILE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --exit-code)
       EXIT_CODE="$2"
+      shift 2
+      ;;
+    --input-file)
+      INPUT_FILE="$2"
       shift 2
       ;;
     *)
@@ -24,16 +29,23 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -z "$EXIT_CODE" ]; then
-  echo "Error: --exit-code <code| is required." >&2
+  echo "Error: --exit-code <code> is required." >&2
   exit 2
 fi
 
 raw_lines=()
-while IFS= read -r line || [ -n "$line" ]; do
-  # Strip trailing carriage return if present
-  line="${line%$'\r'}"
-  raw_lines+=("$line")
-done
+if [ -n "$INPUT_FILE" ] && [ -f "$INPUT_FILE" ]; then
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    raw_lines+=("$line")
+  done < "$INPUT_FILE"
+else
+  while IFS= read -r line || [ -n "$line" ]; do
+    # Strip trailing carriage return if present
+    line="${line%$'\r'}"
+    raw_lines+=("$line")
+  done
+fi
 
 # Check if empty output
 has_non_empty=0

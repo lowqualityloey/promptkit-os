@@ -4,7 +4,10 @@ param(
     [int]$ExitCode,
 
     [Parameter(ValueFromPipeline = $true)]
-    [string[]]$InputObject
+    [string[]]$InputObject,
+
+    [Parameter(Mandatory = $false)]
+    [string]$InputPath
 )
 
 begin {
@@ -25,6 +28,32 @@ process {
 }
 
 end {
+    if ($InputPath -and (Test-Path $InputPath)) {
+        $fileLines = [System.IO.File]::ReadAllLines($InputPath)
+        foreach ($fl in $fileLines) {
+            $rawLines.Add($fl)
+        }
+    }
+
+    if ($rawLines.Count -eq 0 -and $null -ne $input) {
+        foreach ($item in $input) {
+            if ($null -ne $item) {
+                $lines = "$item".Split(@("`r`n", "`n", "`r"), [System.StringSplitOptions]::None)
+                foreach ($l in $lines) {
+                    $rawLines.Add($l)
+                }
+            }
+        }
+    }
+
+    if ($rawLines.Count -eq 0) {
+        try {
+            while (($line = [System.Console]::ReadLine()) -ne $null) {
+                $rawLines.Add($line)
+            }
+        } catch {}
+    }
+
     $hasNonEmpty = $false
     foreach ($l in $rawLines) {
         if (-not [string]::IsNullOrWhiteSpace($l)) {
