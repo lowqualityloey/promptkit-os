@@ -289,6 +289,104 @@ try {
     if ($LASTEXITCODE -eq 0) {
         throw "Failed Test 15: traversal --target=../evil was accepted; expected rejection."
     }
+    # Test 16: Inline marker example in preamble survives update without deletion of intervening user prose
+    $InlineRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "inlineexample") -Force).FullName
+    $inlineAgent = Join-Path $InlineRoot "AGENTS.md"
+    $inlineInitial = "# Project Instructions`n`nNote: do not remove <!-- PROMPTKIT_START --> manually.`n`nIntervening critical user prose that must be preserved.`n`n<!-- PROMPTKIT_START -->`nold directive`n<!-- PROMPTKIT_END -->`n`nTrailing footer prose."
+    [System.IO.File]::WriteAllText($inlineAgent, $inlineInitial, $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $InlineRoot | Out-Null
+    $inlineUpdated = [System.IO.File]::ReadAllText($inlineAgent, [System.Text.Encoding]::UTF8)
+    if (-not $inlineUpdated.Contains("Note: do not remove <!-- PROMPTKIT_START --> manually.")) {
+        throw "Failed Test 16: Inline marker example in user preamble was deleted or corrupted."
+    }
+    if (-not $inlineUpdated.Contains("Intervening critical user prose that must be preserved.")) {
+        throw "Failed Test 16: Intervening user prose between inline marker example and managed block was deleted."
+    }
+    if (-not $inlineUpdated.Contains("Trailing footer prose.")) {
+        throw "Failed Test 16: Trailing footer prose was lost."
+    }
+
+    # Test 17: Directive block at the very beginning of the file (startIndex == 0)
+    $StartZeroRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "startzero") -Force).FullName
+    $startZeroAgent = Join-Path $StartZeroRoot "AGENTS.md"
+    $startZeroInitial = "<!-- PROMPTKIT_START -->`nold directive`n<!-- PROMPTKIT_END -->`n`nUser postamble content."
+    [System.IO.File]::WriteAllText($startZeroAgent, $startZeroInitial, $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $StartZeroRoot | Out-Null
+    $startZeroUpdated = [System.IO.File]::ReadAllText($startZeroAgent, [System.Text.Encoding]::UTF8)
+    if (-not $startZeroUpdated.StartsWith("<!-- PROMPTKIT_START -->")) {
+        throw "Failed Test 17: Block starting at line 0 was not placed at beginning of updated file."
+    }
+    if (-not $startZeroUpdated.Contains("User postamble content.")) {
+        throw "Failed Test 17: Postamble content lost when directive block is at line 0."
+    }
+
+    # Test 18: Directive block at the very end of the file with no trailing newline
+    $EndNoNlRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "endnonl") -Force).FullName
+    $endNoNlAgent = Join-Path $EndNoNlRoot "AGENTS.md"
+    $endNoNlInitial = "User preamble content.`n`n<!-- PROMPTKIT_START -->`nold directive`n<!-- PROMPTKIT_END -->"
+    [System.IO.File]::WriteAllText($endNoNlAgent, $endNoNlInitial, $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $EndNoNlRoot | Out-Null
+    $endNoNlUpdated = [System.IO.File]::ReadAllText($endNoNlAgent, [System.Text.Encoding]::UTF8)
+    if (-not $endNoNlUpdated.Contains("User preamble content.")) {
+        throw "Failed Test 18: Preamble content lost when directive block is at end of file."
+    }
+    if (-not $endNoNlUpdated.EndsWith("<!-- PROMPTKIT_END -->")) {
+        throw "Failed Test 18: File ending without newline gained unintended trailing characters."
+    }
+
+    # Test 19: Mixed line endings (CRLF preamble, LF footer) preserve exact original terminator bytes
+    $MixedEolRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "mixedeol") -Force).FullName
+    $mixedAgent = Join-Path $MixedEolRoot "AGENTS.md"
+    $preambleCrlf = "Header CRLF`r`nMore header`r`n"
+    $footerLf = "`nFooter with LF separator`n"
+    $mixedInitial = $preambleCrlf + "<!-- PROMPTKIT_START -->`r`nold directive`r`n<!-- PROMPTKIT_END -->" + $footerLf
+    [System.IO.File]::WriteAllText($mixedAgent, $mixedInitial, $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $MixedEolRoot | Out-Null
+    $mixedUpdated = [System.IO.File]::ReadAllText($mixedAgent, [System.Text.Encoding]::UTF8)
+    if (-not $mixedUpdated.StartsWith($preambleCrlf)) {
+        throw "Failed Test 19: CRLF preamble was altered during mixed-EOL update."
+    }
+    if (-not $mixedUpdated.EndsWith($footerLf)) {
+        throw "Failed Test 19: LF footer separator was altered (e.g. converted to CRLF) during mixed-EOL update."
+    }
+
+    # Test 20: Markers indented with Unicode whitespace (non-breaking space) are updated without creating duplicates
+    $NbspRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "nbsp") -Force).FullName
+    $nbspAgent = Join-Path $NbspRoot "AGENTS.md"
+    $nbsp = [char]0x00A0
+    $nbspInitial = "Header`n${nbsp}${nbsp}<!-- PROMPTKIT_START -->`nold directive`n${nbsp}<!-- PROMPTKIT_END -->`nFooter`n"
+    [System.IO.File]::WriteAllText($nbspAgent, $nbspInitial, $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $NbspRoot | Out-Null
+    $nbspUpdated = [System.IO.File]::ReadAllText($nbspAgent, [System.Text.Encoding]::UTF8)
+    $startCount = ([regex]::Matches($nbspUpdated, "PROMPTKIT_START")).Count
+    $endCount = ([regex]::Matches($nbspUpdated, "PROMPTKIT_END")).Count
+    if ($startCount -ne 1 -or $endCount -ne 1) {
+        throw "Failed Test 20: Unicode whitespace indented markers resulted in duplicate directive blocks (start=$startCount, end=$endCount)."
+    }
+    if (-not $nbspUpdated.Contains("Header`n") -or -not $nbspUpdated.EndsWith("Footer`n")) {
+        throw "Failed Test 20: Header or footer was corrupted during Unicode indented marker update."
+    }
+
+    # Test 21: Orphan marker with Unicode whitespace is rejected loudly and preserves file
+    $OrphanNbspRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "orphannbsp") -Force).FullName
+    $orphanNbspAgent = Join-Path $OrphanNbspRoot "AGENTS.md"
+    $orphanInitial = "Header`n${nbsp}<!-- PROMPTKIT_START -->`nOrphan body without end marker`n"
+    [System.IO.File]::WriteAllText($orphanNbspAgent, $orphanInitial, $utf8NoBom)
+    $orphanHashBefore = (Get-FileHash -Path $orphanNbspAgent -Algorithm SHA256).Hash
+    $failedOrphan = $false
+    try {
+        $p = Start-Process -FilePath "pwsh" -ArgumentList "-NoProfile", "-File", "`"$initScriptPath`"", "-ProjectRoot", "`"$OrphanNbspRoot`"" -NoNewWindow -Wait -PassThru
+        if ($p.ExitCode -ne 0) { $failedOrphan = $true }
+    } catch {
+        $failedOrphan = $true
+    }
+    if (-not $failedOrphan) {
+        throw "Failed Test 21: Expected orphan Unicode-indented marker to be rejected loudly."
+    }
+    $orphanHashAfter = (Get-FileHash -Path $orphanNbspAgent -Algorithm SHA256).Hash
+    if ($orphanHashBefore -ne $orphanHashAfter) {
+        throw "Failed Test 21: File was modified despite orphan Unicode-indented marker failure."
+    }
 
     Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, and custom-target tests passed." -ForegroundColor Green
 } finally {

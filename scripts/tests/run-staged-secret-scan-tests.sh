@@ -175,4 +175,91 @@ if command -v mawk >/dev/null 2>&1; then
     run_engine "$traditional_awk"
 fi
 
+# --- Probe Purge & Credential Filename Gate Tests ---
+hygiene_repo="$tmp/hygiene_repo"
+mkdir -p "$hygiene_repo"
+git -C "$hygiene_repo" init -q
+git -C "$hygiene_repo" config user.name "PromptKit hygiene fixture"
+git -C "$hygiene_repo" config user.email "hygiene-fixture@example.invalid"
+
+# Baseline commit with an existing debug statement and a secret
+echo 'console.log("DEBUG: existing_secret_token=abcd1234efgh");' > "$hygiene_repo/app.js"
+git -C "$hygiene_repo" add app.js
+git -C "$hygiene_repo" commit -q -m "initial commit with debug"
+
+run_probe_check() {
+    local target_repo="$1"
+    git -C "$target_repo" diff --cached -U0 --no-ext-diff --no-textconv | awk '/^@@ / { h = 1; next } h && /^\+/ { if (substr($0, 2) ~ /\[DEBUG-|console\.log\("DEBUG|dbg!\(/) p = 1 } END { if (p) exit 10 }'
+    local s=(${PIPESTATUS[@]})
+    if [ ${s[1]} -eq 10 ]; then echo "PROBES_FOUND"; elif [ ${s[0]} -ne 0 ]; then echo "DIFF_FAILED"; else echo "CLEAN"; fi
+}
+
+# Case 1: Removing the debug statement (deleted line only)
+echo 'console.log("clean app");' > "$hygiene_repo/app.js"
+git -C "$hygiene_repo" add app.js
+
+probe_res=$(run_probe_check "$hygiene_repo")
+[[ "$probe_res" == "CLEAN" ]] || fail "Deleting a debug probe must be CLEAN, got $probe_res"
+
+# Case 2: Adding a new debug statement
+echo 'console.log("DEBUG: new probe");' >> "$hygiene_repo/app.js"
+git -C "$hygiene_repo" add app.js
+
+probe_res=$(run_probe_check "$hygiene_repo")
+[[ "$probe_res" == "PROBES_FOUND" ]] || fail "Adding a debug probe must be PROBES_FOUND, got $probe_res"
+
+# Case 3: Adding a debug probe with leading plus (e.g. ++counter)
+echo '++counter; console.log("DEBUG: leading plus probe");' > "$hygiene_repo/app.js"
+git -C "$hygiene_repo" add app.js
+
+probe_res=$(run_probe_check "$hygiene_repo")
+[[ "$probe_res" == "PROBES_FOUND" ]] || fail "Adding a leading-plus debug probe must be PROBES_FOUND, got $probe_res"
+
+# Case 4: Large diff with early probe under pipefail (consumes stream without SIGPIPE)
+(
+    set -o pipefail
+    large_repo="$tmp/large_repo"
+    mkdir -p "$large_repo"
+    git -C "$large_repo" init -q
+    git -C "$large_repo" config user.name "PromptKit hygiene fixture"
+    git -C "$large_repo" config user.email "hygiene-fixture@example.invalid"
+    {
+        echo 'console.log("DEBUG: early probe");'
+        for i in $(seq 1 30000); do echo "console.log('line $i');"; done
+    } > "$large_repo/large.js"
+    git -C "$large_repo" add large.js
+    p_res=$(run_probe_check "$large_repo")
+    [[ "$p_res" == "PROBES_FOUND" ]] || fail "Large diff with early probe under pipefail must be PROBES_FOUND, got $p_res"
+)
+
+# Case 5: Failed diff inspection
+probe_res=$(run_probe_check "$tmp/nonexistent-repo" 2>/dev/null)
+[[ "$probe_res" == "DIFF_FAILED" ]] || fail "Diff failure must be DIFF_FAILED, got $probe_res"
+
+# Case 6: Credential filename gate exact template exclusions and quoted path handling
+mkdir -p "$hygiene_repo/subdir"
+touch "$hygiene_repo/.env.example" "$hygiene_repo/subdir/.env.template" "$hygiene_repo/.env.sample" "$hygiene_repo/.env.dist"
+touch "$hygiene_repo/.env.test" "$hygiene_repo/.env.example.production" "$hygiene_repo/subdir/.env.sample-secret" "$hygiene_repo/id_rsa" "$hygiene_repo/cert.pem" "$hygiene_repo/.env"
+touch "$hygiene_repo/.env.local backup" "$hygiene_repo/private key.pem"
+
+flagged_files=$(git -C "$hygiene_repo" status --porcelain -z -uall | awk -v RS='\0' 'NF { p=$0; sub(/^[MADRCU?! ][MADRCU?! ] /, "", p); n=split(p, a, "/"); f=a[n]; if (f ~ /(\.pem|\.key)$|id_rsa|credentials\.json|^\.env/) if (f !~ /^\.env\.(example|template|sample|dist)$/) print p }')
+
+[[ "$flagged_files" == *".env.test"* ]] || fail ".env.test was not flagged"
+[[ "$flagged_files" == *".env.example.production"* ]] || fail ".env.example.production was not flagged"
+[[ "$flagged_files" == *".env.sample-secret"* ]] || fail ".env.sample-secret was not flagged"
+[[ "$flagged_files" == *".env.local backup"* ]] || fail ".env.local backup was not flagged"
+[[ "$flagged_files" == *"private key.pem"* ]] || fail "private key.pem was not flagged"
+[[ "$flagged_files" == *"id_rsa"* ]] || fail "id_rsa was not flagged"
+[[ "$flagged_files" == *"cert.pem"* ]] || fail "cert.pem was not flagged"
+[[ "$flagged_files" == *".env"* ]] || fail ".env was not flagged"
+
+# Explicitly assert all 4 safe exemptions are not in flagged_files
+while IFS= read -r f; do
+    [[ "$f" != ".env.example" ]] || fail ".env.example should be exempted"
+    [[ "$f" != "subdir/.env.template" ]] || fail "subdir/.env.template should be exempted"
+    [[ "$f" != ".env.sample" ]] || fail ".env.sample should be exempted"
+    [[ "$f" != ".env.dist" ]] || fail ".env.dist should be exempted"
+done <<< "$flagged_files"
+
+printf '%s\n' 'Probe purge and credential filename gate tests passed.'
 printf '%s\n' 'Staged secret scan regression tests passed.'

@@ -693,43 +693,67 @@ foreach ($targetPath in $TargetsFound) {
         ""
     }
 
-    $hasStart = $content -match "<!-- PROMPTKIT_START -->"
-    $hasEnd = $content -match "<!-- PROMPTKIT_END -->"
+    $lines = $content -split "\r?\n"
+    $startIndex = -1
+    $endIndex = -1
+    $startCount = 0
+    $endCount = 0
 
-    if ($hasStart -or $hasEnd) {
-        $lines = $content -split "\r?\n"
-        $startIndex = -1
-        $endIndex = -1
-        $startCount = 0
-        $endCount = 0
-
-        for ($i = 0; $i -lt $lines.Length; $i++) {
-            $trimmed = $lines[$i].Trim()
-            if ($trimmed -eq "<!-- PROMPTKIT_START -->") {
-                $startCount++
-                if ($startIndex -eq -1) { $startIndex = $i }
-            }
-            if ($trimmed -eq "<!-- PROMPTKIT_END -->") {
-                $endCount++
-                if ($endIndex -eq -1) { $endIndex = $i }
-            }
+    for ($i = 0; $i -lt $lines.Length; $i++) {
+        $trimmed = $lines[$i].Trim()
+        if ($trimmed -eq "<!-- PROMPTKIT_START -->") {
+            $startCount++
+            if ($startIndex -eq -1) { $startIndex = $i }
         }
+        if ($trimmed -eq "<!-- PROMPTKIT_END -->") {
+            $endCount++
+            if ($endIndex -eq -1) { $endIndex = $i }
+        }
+    }
 
+    if ($startCount -gt 0 -or $endCount -gt 0) {
         if ($startCount -ne 1 -or $endCount -ne 1 -or $startIndex -ge $endIndex) {
             [System.Console]::Error.WriteLine("Error: Cannot safely update ${relTarget}: expected exactly one complete PromptKit directive block with START before END.")
             throw "Error: Cannot safely update ${relTarget}: expected exactly one complete PromptKit directive block with START before END."
         }
 
         $isCrlf = $content.Contains("`r`n")
-        $targetDirective = if ($isCrlf) {
-            ($Directive -split "`r?`n") -join "`r`n"
-        } else {
-            ($Directive -split "`r?`n") -join "`n"
+        $nl = if ($isCrlf) { "`r`n" } else { "`n" }
+        $targetDirective = ($Directive -split "`r?`n") -join $nl
+
+        # Calculate exact character offsets to preserve original bytes outside the managed block
+        $currentOffset = 0
+        $blockStartChar = -1
+        $blockEndChar = -1
+
+        for ($i = 0; $i -lt $lines.Length; $i++) {
+            $lineLen = $lines[$i].Length
+            if ($i -eq $startIndex) {
+                $blockStartChar = $currentOffset
+            }
+            if ($i -eq $endIndex) {
+                $blockEndChar = $currentOffset + $lineLen
+                break
+            }
+
+            $nextOffset = $currentOffset + $lineLen
+            if ($nextOffset -lt $content.Length) {
+                if ($content.Substring($nextOffset).StartsWith("`r`n")) {
+                    $currentOffset = $nextOffset + 2
+                } elseif ($content.Substring($nextOffset).StartsWith("`n")) {
+                    $currentOffset = $nextOffset + 1
+                } else {
+                    $currentOffset = $nextOffset
+                }
+            } else {
+                $currentOffset = $nextOffset
+            }
         }
 
-        $pattern = '(?s)<!-- PROMPTKIT_START -->.*?<!-- PROMPTKIT_END -->'
-        $evaluator = [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $targetDirective }
-        $updated = [regex]::Replace($content, $pattern, $evaluator)
+        $before = if ($blockStartChar -gt 0) { $content.Substring(0, $blockStartChar) } else { "" }
+        $after = if ($blockEndChar -lt $content.Length) { $content.Substring($blockEndChar) } else { "" }
+
+        $updated = $before + $targetDirective + $after
 
         [System.IO.File]::WriteAllText($targetPath, $updated, $utf8NoBom)
         Write-Host "  [✓] Updated PromptKit OS directives in: $relTarget (profile: $Profile)" -ForegroundColor Yellow
