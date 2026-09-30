@@ -10,7 +10,7 @@ Eliminate instruction decay, stale working assumptions, and formatting divergenc
 
 ## Preconditions & When to Sync
 - **PromptKit Engine Updated**: Submodule updated, `git -C .promptkit pull origin main`, or `bash .promptkit/init.sh` was just run.
-- **Instruction Drift / Formatting Divergence**: The AI is omitting visual callouts (`> [!TIP]`, `> [!IMPORTANT]`), failing to render the telemetry status card (3 mandatory lines `📊 / 🎯 / 🟢` + optional `📈`), or not prioritizing native interactive selection tools.
+- **Instruction Drift / Formatting Divergence**: The AI is omitting visual callouts (`> [!TIP]`, `> [!IMPORTANT]`), failing to render the telemetry status card when enabled (3 mandatory lines `📊 / 🎯 / 🟢` + optional `📈`; suppressed when `PROMPTKIT.md` declares `status-cards: off`, while halts still fire per `protocols/telemetry-cards.md`), or not prioritizing native interactive selection tools.
 - **Post-Compaction Re-Entry**: After a conversation summary/continuation, the first substantive action should be a disk re-read of `docs/STATE.md` and the active workflow — do not act from a summarized recollection of protocol.
 - **New Session Startup / Protocol Verification**: Starting work on a fresh branch or verifying that the active agent is fully aligned with host repository guardrails.
 
@@ -76,7 +76,7 @@ Mismatches that require judgment (framework choice, workspace layout, an intenti
 
 ### Phase 3: Telemetry Confirmation & Protocol Alignment
 
-Conclude the synchronization turn with the standard telemetry status card (3 mandatory lines + optional `📈`), with every value traced to a file read or command run **this turn**:
+Conclude the synchronization turn with the standard telemetry status card (3 mandatory lines + optional `📈`) when enabled (skip the decorative card when `PROMPTKIT.md` declares `status-cards: off`; halts still fire per `protocols/telemetry-cards.md`), with every value traced to a file read or command run **this turn**:
 
 ```text
 📊 Milestone: PromptKit OS Synced — Engine Rules Reloaded From Disk
@@ -105,7 +105,7 @@ During the Phase 2 diff, treat any new requirement, constraint, artifact, or sco
 
 | Delta type | Required handling |
 | :--- | :--- |
-| Documentation-only (doc link, README note, style preference) | Append to the intake record and `PROMPTKIT.md` signals; continue. |
+| Documentation-only (doc link, README note, style preference) | Append to the intake record and propose the `PROMPTKIT.md` signals patch; apply only when explicit user instruction authorizes the write, retaining human confirmation for inferred changes; continue. |
 | Scope or acceptance-criteria change | Create a linked Scope Change Record (`docs/tasks/<task-id>.scope-<n>.md`) before continuing; expansion requires human confirmation. |
 | Architecture, data-model, auth, or deployment-target change | Block execution (`checkpoint_due`) and re-open planning via `pk:plan`; intake status returns to `partial`. |
 | Unsolicited idea / nice-to-have | Record in the intake record's **Later ledger**; it never enters the current plan by default. |
