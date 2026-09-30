@@ -259,6 +259,8 @@ promptkit-os/
 │   ├── research.md              # Technical spikes & sharpest-risk benchmark matrix (pk:spike)
 │   ├── design-system.md         # Anti-slop UI, Design Tokens, and WCAG 2.2 accessibility (pk:design)
 │   ├── reflect.md               # Engineering retrospectives & ADR generation (pk:retro)
+│   ├── auto.md                  # Autonomous SDLC meta-orchestration & leash control (pk:auto)
+│   ├── verify-bootstrap.md      # Project-local verification scaffolding (pk:verify-bootstrap)
 │   └── checkpoint.md            # Session state compaction & handover prompt (pk:checkpoint)
 ├── templates/                   # Structured artifact schemas saved to project docs/
 │   ├── agent-directive-template.md # Canonical directive source template rendered during initialization
@@ -334,7 +336,7 @@ promptkit-os/
     ├── 02-refactoring-clean-arch.md      # Refactoring monolith to Clean Architecture
     ├── 03-async-concurrency-debug.md     # Concurrency race conditions & memory leaks
     ├── 04-accessible-design-system.md    # Accessible, tokenized component library
-    └── create-research-workflow.md       # Create custom research workflow templates
+    └── 05-auto-orchestration.md          # Autonomous orchestration simulation kata (pk:auto)
 ```
 
 ---

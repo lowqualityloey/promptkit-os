@@ -300,7 +300,7 @@ Use the existing [`pk:commit`](./commit.md), [`pk:checkpoint`](./checkpoint.md),
      ┌──────────────────────┴──────────────────────┐
      ▼                                             ▼
   pk:retro                                   pk:checkpoint
-(MADR & Journals)                       (Zero-Loss Chat Handover)
+(MADR & Journals)                       (Low-Loss Chat Handover)
 ```
 
 ---

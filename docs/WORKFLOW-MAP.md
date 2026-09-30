@@ -605,7 +605,7 @@ Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycl
      ┌──────────────────────┴──────────────────────┐
      ▼                                             ▼
    pk:retro                                   pk:checkpoint
-(MADR & Journals)                       (Zero-Loss Chat Handover)
+(MADR & Journals)                       (Low-Loss Chat Handover)
 ```
 
 > [!NOTE]

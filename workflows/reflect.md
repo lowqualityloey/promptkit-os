@@ -89,7 +89,7 @@ Only for retros the developer reviewed (pending drafts advance nothing):
 2. Check off or advance competencies demonstrated during the session (e.g., TypeScript Generics, State Machine Design, Database Indexing, WCAG 2.2 a11y, Clean Architecture).
 3. Align upcoming tasks in `./notes/learning-plan.md` to target the next tier in the skill matrix.
 
-> **Kit contributors**: also identify which L1→L4 skill dimension(s) in the kit's [`notes/skill-matrix.md`](../notes/skill-matrix.md) this session exercised, and prompt the developer to update the relevant matrix row so the matrix stays a living record.
+> **Kit contributors**: also identify which T1→T4 skill dimension(s) in the kit's [`notes/skill-matrix.md`](../notes/skill-matrix.md) this session exercised, and prompt the developer to update the relevant matrix row so the matrix stays a living record.
 
 ### Step 7: Close the Loop & Recommend Next Action
 Summarize next steps:

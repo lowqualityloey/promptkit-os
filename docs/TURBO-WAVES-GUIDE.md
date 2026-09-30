@@ -28,7 +28,7 @@ How to run PromptKit OS autonomous pipelines — sequential or parallel — **wi
 2. **Declare the stop point.** Either plain words ("handle this end-to-end, stop at review") or an explicit flag (see §4).
 3. **Invoke.** Example: `pk:auto --waves 2 --until review`.
 4. **Read the Turn-1 banner.** It states the mode, stop boundary, and circuit breaker — that is your contract for the run.
-5. **Walk away.** Phase-boundary checkpoints persist to `docs/STATE.md`; Ctrl+C / Stop reclaims control anytime with zero loss.
+5. **Walk away.** Phase-boundary checkpoints persist to `docs/STATE.md`; Ctrl+C / Stop reclaims control anytime with tracked progress preserved (unrecorded in-flight work is not recovered).
 6. **Return to one of two outcomes:** a review-ready diff (or draft PR), or a halt report with reason, evidence, and resume action.
 
 ---

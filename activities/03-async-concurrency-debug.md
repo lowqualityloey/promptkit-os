@@ -26,17 +26,20 @@ Investigate and resolve a critical, intermittent bug in a real-time collaborativ
    - Trace unresolved promises when tab IDs change before completion.
 2. Confirm the root cause using the 5 Whys.
 
-### Step 3: Implement Surgical Remediation
+### Step 3: Write the Failing Regression Test (red)
+1. Convert the Step 1 reproduction script into a permanent Vitest/Jest unit test that triggers 50 simulated concurrent aborts and verifies:
+    - Only the latest promise updates the final state.
+    - Event listener count remains exactly zero after teardown.
+2. Run it against the unfixed code and confirm it FAILS — a regression test that passes before the fix proves nothing.
+
+### Step 4: Implement Surgical Remediation (green)
+Apply only the single remedy matching the root cause confirmed in Step 2 — verify each fix in isolation, never bundle remedies blindly:
 1. Introduce cancellation tokens (`AbortController`) to automatically cancel in-flight network promises when a new request is dispatched or the component unmounts.
 2. Ensure event emitter subscriptions are cleanly deregistered in the teardown/cleanup phase.
 3. Replace mutable shared closures with scoped, immutable state transitions.
+4. Re-run the Step 3 test and confirm green.
 
-### Step 4: Write Automated Regression Test
-1. Write a Vitest/Jest unit test that triggers 50 simulated concurrent aborts and verifies:
-   - Only the latest promise updates the final state.
-   - Event listener count remains exactly zero after teardown.
-
-### Step 5: Post-Mortem Documentation (`.promptkit/templates/rca-postmortem-template.md`)
+### Step 5: Post-Mortem Documentation (`<kit>/templates/rca-postmortem-template.md`)
 1. Fill out a Root Cause Analysis post-mortem capturing the timeline, 5 Whys, and preventative measures.
 
 ---
