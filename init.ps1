@@ -51,6 +51,72 @@ function Get-HostFile($Name) {
 }
 $KnownHostsList = @("claude","opencode","cursor","gemini","windsurf","copilot","cline","trae","aider")
 
+# Canonical path resolution and containment verification (F04 - P2)
+function Resolve-CanonicalPath {
+    param([string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path)) { return "" }
+    $p = [System.IO.Path]::GetFullPath($Path)
+    $root = [System.IO.Path]::GetPathRoot($p)
+    $remainder = $p.Substring($root.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    $parts = $remainder.Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+
+    $current = $root
+    foreach ($part in $parts) {
+        if ([string]::IsNullOrEmpty($part)) { continue }
+        $current = [System.IO.Path]::Combine($current, $part)
+        if (Test-Path -LiteralPath $current) {
+            $item = Get-Item -LiteralPath $current -Force
+            $hops = 0
+            while ($null -ne $item -and ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -and $hops -lt 25) {
+                $hops++
+                $target = $null
+                if ($item.PSObject.Properties['Target'] -and $item.Target) {
+                    $target = if ($item.Target -is [array]) { $item.Target[0] } else { $item.Target }
+                } elseif ($item.PSObject.Properties['LinkTarget'] -and $item.LinkTarget) {
+                    $target = $item.LinkTarget
+                }
+                if (-not [string]::IsNullOrEmpty($target)) {
+                    if (-not [System.IO.Path]::IsPathRooted($target)) {
+                        $parentDir = [System.IO.Path]::GetDirectoryName($item.FullName)
+                        $target = [System.IO.Path]::Combine($parentDir, $target)
+                    }
+                    $target = [System.IO.Path]::GetFullPath($target)
+                    if (Test-Path -LiteralPath $target) {
+                        $item = Get-Item -LiteralPath $target -Force
+                        $current = $item.FullName
+                    } else {
+                        $current = $target
+                        break
+                    }
+                } else {
+                    break
+                }
+            }
+        }
+    }
+    return [System.IO.Path]::GetFullPath($current)
+}
+
+function Test-PathContained {
+    param(
+        [string]$ProjectRootPath,
+        [string]$TargetPath
+    )
+    $canonicalRoot = Resolve-CanonicalPath $ProjectRootPath
+    $canonicalTarget = Resolve-CanonicalPath $TargetPath
+    $canonicalRoot = $canonicalRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+
+    if ($canonicalTarget -eq $canonicalRoot) {
+        return $true
+    }
+    $sep = [System.IO.Path]::DirectorySeparatorChar
+    $prefix = $canonicalRoot + $sep
+    if ($canonicalTarget.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $true
+    }
+    return $false
+}
+
 if ($Help) {
     Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
     Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
@@ -91,7 +157,9 @@ if ($AddHost -ne "") {
     $HostSet = $true
 }
 $ExtraTargets = @() + $Target
+if ($PSBoundParameters.ContainsKey("Profile")) { $ProfileSet = $true }
 if ($PSBoundParameters.ContainsKey("Tracking")) { $TrackingSet = $true }
+if ($PSBoundParameters.ContainsKey("Hosts")) { $HostSet = $true }
 if ($Lite) { $Profile = "lite"; $ProfileSet = $true }
 if ($Balanced) { $Profile = "balanced"; $ProfileSet = $true }
 if ($Turbo) { $Profile = "turbo"; $ProfileSet = $true }
@@ -324,7 +392,6 @@ if ($env:PROMPTKIT_NO_PREFLIGHT -eq '1') {
     }
 }
 
-# 1. Ensure Core Documentation Directories Exist in Host Project
 $DocDirs = @(
     "docs/tasks",
     "docs/specs",
@@ -332,146 +399,23 @@ $DocDirs = @(
     "docs/tests"
 )
 
-foreach ($dir in $DocDirs) {
-    $fullPath = Join-Path $ProjectRoot $dir
-    if (-not (Test-Path $fullPath)) {
-        New-Item -ItemType Directory -Path $fullPath -Force | Out-Null
-        Write-Host "  [+] Created directory: $dir" -ForegroundColor Green
-    }
-}
-
-# 2. Scaffold PROMPTKIT.md if missing + inject profile
 $ProjectProfile = Join-Path $ProjectRoot "PROMPTKIT.md"
 $TemplateProfile = Join-Path $ScriptDir "templates/project-profile-template.md"
-
-if (-not (Test-Path $ProjectProfile)) {
-    if (Test-Path $TemplateProfile) {
-        Copy-Item -Path $TemplateProfile -Destination $ProjectProfile
-        Write-Host "  [+] Created: PROMPTKIT.md (project profile & guardrails)" -ForegroundColor Green
-    }
-} else {
-    Write-Host "  [✓] PROMPTKIT.md already present" -ForegroundColor DarkGray
-}
-
-# Inject or update machine-readable fields (exactly one authoritative line each)
-function Set-MachineField {
-    param([string]$Path, [string]$Field, [string]$Value)
-    $existing = @()
-    if (Test-Path $Path) { $existing = @(Get-Content $Path -ErrorAction SilentlyContinue) }
-    $kept = @($existing | Where-Object { $_ -notmatch "^$([regex]::Escape($Field)):" })
-    $kept += "${Field}: $Value"
-    [System.IO.File]::WriteAllText($Path, (($kept -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
-}
-
-$EngineDir = Split-Path $ScriptDir -Leaf
-
-# Inject or update profile field in PROMPTKIT.md (2+1 modes)
-if (Test-Path $ProjectProfile) {
-    $content = Get-Content $ProjectProfile -Raw -ErrorAction SilentlyContinue
-    if ($null -eq $content) { $content = "" }
-    if ($content -match "(?m)^profile:") {
-        Set-MachineField $ProjectProfile "profile" $Profile
-        $dcontent = Get-Content $ProjectProfile -Raw -ErrorAction SilentlyContinue
-        if ($dcontent -match "(?m)^- \*\*Profile\*\*:") {
-            $dcontent = $dcontent -replace "(?m)^- \*\*Profile\*\*:.*", "- **Profile**: $Profile"
-            [System.IO.File]::WriteAllText($ProjectProfile, $dcontent, (New-Object System.Text.UTF8Encoding($false)))
-        }
-        Write-Host "  [✓] Updated PROMPTKIT.md profile: $Profile" -ForegroundColor Yellow
-    } else {
-        $firstLine = (Get-Content $ProjectProfile -TotalCount 1 -ErrorAction SilentlyContinue)
-        if ($null -eq $firstLine) { $firstLine = "" }
-        $rest = ""
-        if (((Get-Content $ProjectProfile -ErrorAction SilentlyContinue) | Measure-Object).Count -gt 1) {
-            $rest = (Get-Content $ProjectProfile | Select-Object -Skip 1 | Out-String)
-        }
-        $profileSection = @"
-
-## 0. PromptKit OS Profile
-- **Profile**: $Profile
-- **Installed**: $(Get-Date -Format "yyyy-MM-dd")
-- **Engine**: $EngineDir
-- **Upgrade**: Run ``$EngineDir/init.ps1 --balanced`` for the full Balanced profile, or ``--turbo --experimental`` for parallel waves
-
-"@
-        $newContent = "$firstLine`n$profileSection`n$rest`n`n"
-        [System.IO.File]::WriteAllText($ProjectProfile, $newContent, (New-Object System.Text.UTF8Encoding($false)))
-        Set-MachineField $ProjectProfile "profile" $Profile
-        Write-Host "  [+] Set PROMPTKIT.md profile: $Profile" -ForegroundColor Green
-    }
-    Set-MachineField $ProjectProfile "tracking" $Tracking
-    Write-Host "  [✓] Updated PROMPTKIT.md tracking: $Tracking" -ForegroundColor Yellow
-    if (-not [string]::IsNullOrEmpty($TrackingProjection)) {
-        Set-MachineField $ProjectProfile "projection" $TrackingProjection
-        Write-Host "  [✓] Updated PROMPTKIT.md projection: $TrackingProjection" -ForegroundColor Yellow
-    } else {
-        $pcontent = Get-Content $ProjectProfile -Raw -ErrorAction SilentlyContinue
-        if ($null -ne $pcontent -and $pcontent -match "(?m)^projection:") {
-            $stripped = @((Get-Content $ProjectProfile -ErrorAction SilentlyContinue) | Where-Object { $_ -notmatch "^projection:" })
-            [System.IO.File]::WriteAllText($ProjectProfile, (($stripped -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
-            Write-Host "  [✓] Removed stale PROMPTKIT.md projection line" -ForegroundColor Yellow
-        }
-    }
-}
-
 $DesignProfile = Join-Path $ProjectRoot "DESIGN.md"
-if (Test-Path $DesignProfile) {
-    Write-Host "  [✓] DESIGN.md detected (brand identity & anti-slop rules)" -ForegroundColor DarkGray
-}
-
-# Scaffold docs/STATE.md if missing
 $DocsDir = Join-Path $ProjectRoot "docs"
 $StateTracker = Join-Path $DocsDir "STATE.md"
 $TemplateState = Join-Path $ScriptDir "templates/state-tracker-template.md"
-
-if (-not (Test-Path $StateTracker)) {
-    if (Test-Path $TemplateState) {
-        if (-not (Test-Path $DocsDir)) {
-            New-Item -ItemType Directory -Path $DocsDir -Force | Out-Null
-        }
-        Copy-Item -Path $TemplateState -Destination $StateTracker
-        Write-Host "  [+] Created: docs/STATE.md (living project & state tracker)" -ForegroundColor Green
-    }
-} else {
-    Write-Host "  [✓] docs/STATE.md already present" -ForegroundColor DarkGray
-}
-
-# Scaffold .github/pull_request_template.md if missing
 $GitHubDir = Join-Path $ProjectRoot ".github"
 $PrTemplateTarget = Join-Path $GitHubDir "pull_request_template.md"
 $TemplatePr = Join-Path $ScriptDir "templates/pull-request-template.md"
-
-if (-not (Test-Path $PrTemplateTarget)) {
-    if (Test-Path $TemplatePr) {
-        if (-not (Test-Path $GitHubDir)) {
-            New-Item -ItemType Directory -Path $GitHubDir -Force | Out-Null
-        }
-        Copy-Item -Path $TemplatePr -Destination $PrTemplateTarget
-        Write-Host "  [+] Created: .github/pull_request_template.md (staff-level PR specification)" -ForegroundColor Green
-    }
-} else {
-    Write-Host "  [✓] .github/pull_request_template.md already present" -ForegroundColor DarkGray
-}
-
-# Scaffold .github/ISSUE_TEMPLATE/task.md if missing
 $IssueTemplateDir = Join-Path $GitHubDir "ISSUE_TEMPLATE"
 $TaskTemplateTarget = Join-Path $IssueTemplateDir "task.md"
 $TemplateTask = Join-Path $ScriptDir "templates/github-issue-template.md"
+$EngineDir = Split-Path $ScriptDir -Leaf
 
-if (-not (Test-Path $TaskTemplateTarget)) {
-    if (Test-Path $TemplateTask) {
-        if (-not (Test-Path $IssueTemplateDir)) {
-            New-Item -ItemType Directory -Path $IssueTemplateDir -Force | Out-Null
-        }
-        Copy-Item -Path $TemplateTask -Destination $TaskTemplateTarget
-        Write-Host "  [+] Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)" -ForegroundColor Green
-    }
-} else {
-    Write-Host "  [✓] .github/ISSUE_TEMPLATE/task.md already present" -ForegroundColor DarkGray
-}
-
-
-
-# 2b. Host probing + selection (which AI assistants get directive files)
+if (Test-Path -LiteralPath $DesignProfile) {
+    Write-Host "  [✓] DESIGN.md detected (brand identity & anti-slop rules)" -ForegroundColor DarkGray
+}# 2b. Host probing + selection (which AI assistants get directive files)
 # Probes are best-effort suggestions only; the TTY menu (or --host=) is authoritative.
 # AGENTS.md is always created fresh as the universal fallback standard.
 if ($HostSet) {
@@ -569,13 +513,10 @@ $AgentFileCandidates = @(
 $TargetsFound = @()
 foreach ($file in $AgentFileCandidates) {
     $path = Join-Path $ProjectRoot $file
-    if (Test-Path $path) {
-        if (Test-Path $path -PathType Container) {
+    if (Test-Path -LiteralPath $path) {
+        if (Test-Path -LiteralPath $path -PathType Container) {
             if ($file -eq ".clinerules") {
                 $dirTarget = Join-Path $path "promptkit.md"
-                if (-not (Test-Path $dirTarget)) {
-                    New-Item -ItemType File -Path $dirTarget -Force | Out-Null
-                }
                 $TargetsFound += $dirTarget
             }
         } else {
@@ -584,67 +525,52 @@ foreach ($file in $AgentFileCandidates) {
     }
 }
 
-# Custom --target paths ride the same create/inject machinery as host files
+# Custom --target paths (F06 - P2)
 foreach ($xp in $ExtraTargets) {
     $xfull = Join-Path $ProjectRoot $xp
     if ($TargetsFound -notcontains $xfull) {
-        $xparent = Split-Path -Parent $xfull
-        if ($xparent -ne "" -and -not (Test-Path $xparent)) {
-            New-Item -ItemType Directory -Path $xparent -Force | Out-Null
-        }
-        if (-not (Test-Path $xfull)) { New-Item -ItemType File -Path $xfull -Force | Out-Null }
         $TargetsFound += $xfull
         Write-Host "  [+] Added custom target: $xp" -ForegroundColor Green
     }
 }
-function New-TargetFile($Rel) {
+
+function Register-TargetFile($Rel) {
+    $want = Join-Path $ProjectRoot $Rel
     if ($Rel -eq ".clinerules") {
-        $dir = Join-Path $ProjectRoot ".clinerules"
-        if (Test-Path $dir -PathType Leaf) {
-            $script:TargetsFound += $dir
-            return
+        if (Test-Path -LiteralPath $want -PathType Leaf) {
+            # Existing file layout
+        } elseif (Test-Path -LiteralPath $want -PathType Container) {
+            $want = Join-Path $want "promptkit.md"
+        } else {
+            $want = Join-Path $want "promptkit.md"
         }
-        if (-not (Test-Path $dir)) {
-            New-Item -ItemType Directory -Path $dir -Force | Out-Null
-        }
-        $inner = Join-Path $dir "promptkit.md"
-        if (-not (Test-Path $inner)) { New-Item -ItemType File -Path $inner -Force | Out-Null }
-        $script:TargetsFound += $inner
-        return
     }
-    $p = Join-Path $ProjectRoot $Rel
-    $parent = Split-Path -Parent $p
-    if ($parent -ne "" -and -not (Test-Path $parent)) {
-        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    if ($script:TargetsFound -notcontains $want) {
+        $script:TargetsFound += $want
+        return $true
     }
-    if (-not (Test-Path $p)) { New-Item -ItemType File -Path $p -Force | Out-Null }
-    $script:TargetsFound += $p
+    return $false
 }
+
 $Fresh = ($TargetsFound.Count -eq 0)
-# Add selected-host files missing from the detected set (new hosts on existing installs)
 if ($HostSet -and $Hosts -ne "") {
     foreach ($h in ($Hosts -split ',')) {
         $rel = Get-HostFile $h.Trim()
-        $want = Join-Path $ProjectRoot $rel
-        if ($rel -eq ".clinerules") { $want = Join-Path $want "promptkit.md" }
-        if ($TargetsFound -notcontains $want) {
-            New-TargetFile $rel
+        if (Register-TargetFile $rel) {
             Write-Host "  [+] Added host configuration: $rel" -ForegroundColor Green
         }
     }
 }
 if ($Fresh) {
-    New-TargetFile "AGENTS.md"
+    Register-TargetFile "AGENTS.md" | Out-Null
     if ($HostSet -and $Hosts -ne "") {
         foreach ($h in ($Hosts -split ',')) {
             $rel = Get-HostFile $h.Trim()
             if ($rel -eq "AGENTS.md") { continue }
-            $want = Join-Path $ProjectRoot $rel
-            if ($rel -eq ".clinerules") { $want = Join-Path $want "promptkit.md" }
-            if ($TargetsFound -notcontains $want) { New-TargetFile $rel }
+            Register-TargetFile $rel | Out-Null
         }
     } else {
-        New-TargetFile "CLAUDE.md"
+        Register-TargetFile "CLAUDE.md" | Out-Null
     }
     $created = @($TargetsFound | ForEach-Object {
         $_.Substring($ProjectRootPath.Length).TrimStart("\", "/") -replace "\\", "/"
@@ -652,17 +578,30 @@ if ($Fresh) {
     Write-Host "  [+] Created default agent configurations: $created" -ForegroundColor Green
 }
 
-# 4. Directive Block (Loaded from Canonical Template based on profile)
+# 4. Containment Verification (F04 - P2)
+$AllDestinations = @($ProjectProfile, $StateTracker, $PrTemplateTarget, $TaskTemplateTarget) + $TargetsFound
+foreach ($dest in $AllDestinations) {
+    if (-not (Test-PathContained $ProjectRoot $dest)) {
+        $relDest = if ($dest.StartsWith($ProjectRootPath)) {
+            $dest.Substring($ProjectRootPath.Length).TrimStart("\", "/") -replace "\\", "/"
+        } else {
+            $dest -replace "\\", "/"
+        }
+        [System.Console]::Error.WriteLine("Error: Target destination escapes project root: $relDest")
+        throw "Error: Target destination escapes project root: $relDest"
+    }
+}
+
+# 5. Directive Block (Loaded from Canonical Template based on profile)
 $KitDirRel = if ($ScriptDir.StartsWith($ProjectRootPath)) {
     $ScriptDir.Substring($ProjectRootPath.Length).TrimStart("\", "/") -replace "\\", "/"
 } else {
     ".promptkit"
 }
 
-# Select template based on profile: lite uses lite template (1269 tok), balanced/turbo use full (2318 tok)
 if ($Profile -eq "lite") {
     $TemplateDirective = Join-Path $ScriptDir "templates/agent-directive-lite-template.md"
-    if (-not (Test-Path $TemplateDirective)) {
+    if (-not (Test-Path -LiteralPath $TemplateDirective)) {
         Write-Host "Warning: Lite template not found, falling back to full template" -ForegroundColor Yellow
         $TemplateDirective = Join-Path $ScriptDir "templates/agent-directive-template.md"
     }
@@ -670,14 +609,15 @@ if ($Profile -eq "lite") {
     $TemplateDirective = Join-Path $ScriptDir "templates/agent-directive-template.md"
 }
 
-if (Test-Path $TemplateDirective) {
+if (Test-Path -LiteralPath $TemplateDirective) {
     $RawTemplate = [System.IO.File]::ReadAllText($TemplateDirective, [System.Text.Encoding]::UTF8)
     $Directive = ($RawTemplate -replace '\$KIT_DIR_REL', $KitDirRel).TrimEnd("`r", "`n")
 } else {
     throw "Error: Canonical directive template not found at $TemplateDirective"
 }
 
-# 5. Inject or Replace Directives (Idempotent)
+# 6. Pre-validation and Transformation Staging (F07 - P2)
+$StagedTargetUpdates = [System.Collections.Generic.List[PSObject]]::new()
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 foreach ($targetPath in $TargetsFound) {
@@ -687,7 +627,7 @@ foreach ($targetPath in $TargetsFound) {
         $targetPath -replace "\\", "/"
     }
 
-    $content = if (Test-Path $targetPath) {
+    $content = if (Test-Path -LiteralPath $targetPath) {
         [System.IO.File]::ReadAllText($targetPath, [System.Text.Encoding]::UTF8)
     } else {
         ""
@@ -754,10 +694,13 @@ foreach ($targetPath in $TargetsFound) {
         $after = if ($blockEndChar -lt $content.Length) { $content.Substring($blockEndChar) } else { "" }
 
         $updated = $before + $targetDirective + $after
-
-        [System.IO.File]::WriteAllText($targetPath, $updated, $utf8NoBom)
-        Write-Host "  [✓] Updated PromptKit OS directives in: $relTarget (profile: $Profile)" -ForegroundColor Yellow
-    } else {
+        $StagedTargetUpdates.Add([PSCustomObject]@{
+            TargetPath = $targetPath
+            Content    = $updated
+            Mode       = "update"
+            RelTarget  = $relTarget
+        })
+    } elseif (Test-Path -LiteralPath $targetPath) {
         $isCrlf = $content.Contains("`r`n")
         $targetDirective = if ($isCrlf) {
             ($Directive -split "`r?`n") -join "`r`n"
@@ -775,8 +718,187 @@ foreach ($targetPath in $TargetsFound) {
             }
         }
         $updated = $content + $prefix + $targetDirective
-        [System.IO.File]::WriteAllText($targetPath, $updated, $utf8NoBom)
-        Write-Host "  [+] Injected PromptKit OS directives into: $relTarget (profile: $Profile)" -ForegroundColor Green
+        $StagedTargetUpdates.Add([PSCustomObject]@{
+            TargetPath = $targetPath
+            Content    = $updated
+            Mode       = "inject"
+            RelTarget  = $relTarget
+        })
+    } else {
+        $isCrlf = $Directive.Contains("`r`n")
+        $targetDirective = ($Directive -split "`r?`n") -join (if ($isCrlf) { "`r`n" } else { "`n" })
+        $StagedTargetUpdates.Add([PSCustomObject]@{
+            TargetPath = $targetPath
+            Content    = $targetDirective + (if ($isCrlf) { "`r`n" } else { "`n" })
+            Mode       = "create"
+            RelTarget  = $relTarget
+        })
+    }
+}
+
+# Pre-calculate PROMPTKIT.md content
+function Get-UpdatedProfileContent {
+    param(
+        [string]$CurrentContent,
+        [string]$Profile,
+        [string]$Tracking,
+        [string]$TrackingProjection,
+        [string]$EngineDir
+    )
+    $text = $CurrentContent
+    if ($text -match "(?m)^profile:") {
+        $lines = @($text -split "`r?\n" | Where-Object { $_ -notmatch "^profile:" })
+        $lines += "profile: $Profile"
+        $text = ($lines -join "`n") + "`n"
+        if ($text -match "(?m)^- \*\*Profile\*\*:") {
+            $text = $text -replace "(?m)^- \*\*Profile\*\*:.*", "- **Profile**: $Profile"
+        }
+    } else {
+        $firstLine = ""
+        $rest = ""
+        $allLines = $text -split "`r?\n"
+        if ($allLines.Length -gt 0) { $firstLine = $allLines[0] }
+        if ($allLines.Length -gt 1) { $rest = ($allLines[1..($allLines.Length - 1)] -join "`n") }
+        $profileSection = @"
+
+## 0. PromptKit OS Profile
+- **Profile**: $Profile
+- **Installed**: $(Get-Date -Format "yyyy-MM-dd")
+- **Engine**: $EngineDir
+- **Upgrade**: Run ``$EngineDir/init.ps1 --balanced`` for the full Balanced profile, or ``--turbo --experimental`` for parallel waves
+
+"@
+        $text = "$firstLine`n$profileSection`n$rest`n`n"
+        $lines = @($text -split "`r?\n" | Where-Object { $_ -notmatch "^profile:" })
+        $lines += "profile: $Profile"
+        $text = ($lines -join "`n") + "`n"
+    }
+
+    $lines = @($text -split "`r?\n" | Where-Object { $_ -notmatch "^tracking:" })
+    $lines += "tracking: $Tracking"
+    $text = ($lines -join "`n") + "`n"
+
+    $lines = @($text -split "`r?\n" | Where-Object { $_ -notmatch "^projection:" })
+    if (-not [string]::IsNullOrEmpty($TrackingProjection)) {
+        $lines += "projection: $TrackingProjection"
+    }
+    $text = ($lines -join "`n") + "`n"
+    return $text
+}
+
+# 7. Transactional Commit with Rollback (F07 - P2)
+$backupDir = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString())
+New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
+
+$createdFiles = New-Object System.Collections.Generic.List[string]
+$backedUpFiles = New-Object System.Collections.Generic.List[string]
+$backupSources = New-Object System.Collections.Generic.List[string]
+
+try {
+    # Ensure doc directories
+    foreach ($dir in $DocDirs) {
+        $fullPath = Join-Path $ProjectRoot $dir
+        if (-not (Test-Path -LiteralPath $fullPath)) {
+            New-Item -ItemType Directory -Path $fullPath -Force | Out-Null
+            Write-Host "  [+] Created directory: $dir" -ForegroundColor Green
+        }
+    }
+
+    # Commit PROMPTKIT.md
+    $profileInitialContent = if (Test-Path -LiteralPath $ProjectProfile) {
+        [System.IO.File]::ReadAllText($ProjectProfile, [System.Text.Encoding]::UTF8)
+    } elseif (Test-Path -LiteralPath $TemplateProfile) {
+        [System.IO.File]::ReadAllText($TemplateProfile, [System.Text.Encoding]::UTF8)
+    } else {
+        ""
+    }
+    $stagedProfile = Get-UpdatedProfileContent -CurrentContent $profileInitialContent -Profile $Profile -Tracking $Tracking -TrackingProjection $TrackingProjection -EngineDir $EngineDir
+
+    if (Test-Path -LiteralPath $ProjectProfile) {
+        $bkp = Join-Path $backupDir "PROMPTKIT.md"
+        Copy-Item -LiteralPath $ProjectProfile -Destination $bkp -Force
+        $backedUpFiles.Add($ProjectProfile)
+        $backupSources.Add($bkp)
+    } else {
+        $createdFiles.Add($ProjectProfile)
+    }
+    [System.IO.File]::WriteAllText($ProjectProfile, $stagedProfile, $utf8NoBom)
+    if ($backedUpFiles.Contains($ProjectProfile)) {
+        Write-Host "  [✓] Updated PROMPTKIT.md profile: $Profile" -ForegroundColor Yellow
+        Write-Host "  [✓] Updated PROMPTKIT.md tracking: $Tracking" -ForegroundColor Yellow
+        if (-not [string]::IsNullOrEmpty($TrackingProjection)) {
+            Write-Host "  [✓] Updated PROMPTKIT.md projection: $TrackingProjection" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "  [+] Created: PROMPTKIT.md (project profile & guardrails)" -ForegroundColor Green
+        Write-Host "  [+] Set PROMPTKIT.md profile: $Profile" -ForegroundColor Green
+        Write-Host "  [✓] Updated PROMPTKIT.md tracking: $Tracking" -ForegroundColor Yellow
+    }
+
+    # Commit scaffolds
+    if (-not (Test-Path -LiteralPath $StateTracker) -and (Test-Path -LiteralPath $TemplateState)) {
+        $docsParent = Split-Path -Parent $StateTracker
+        if (-not (Test-Path -LiteralPath $docsParent)) { New-Item -ItemType Directory -Path $docsParent -Force | Out-Null }
+        Copy-Item -LiteralPath $TemplateState -Destination $StateTracker -Force
+        $createdFiles.Add($StateTracker)
+        Write-Host "  [+] Created: docs/STATE.md (living project & state tracker)" -ForegroundColor Green
+    }
+    if (-not (Test-Path -LiteralPath $PrTemplateTarget) -and (Test-Path -LiteralPath $TemplatePr)) {
+        $ghParent = Split-Path -Parent $PrTemplateTarget
+        if (-not (Test-Path -LiteralPath $ghParent)) { New-Item -ItemType Directory -Path $ghParent -Force | Out-Null }
+        Copy-Item -LiteralPath $TemplatePr -Destination $PrTemplateTarget -Force
+        $createdFiles.Add($PrTemplateTarget)
+        Write-Host "  [+] Created: .github/pull_request_template.md (staff-level PR specification)" -ForegroundColor Green
+    }
+    if (-not (Test-Path -LiteralPath $TaskTemplateTarget) -and (Test-Path -LiteralPath $TemplateTask)) {
+        $taskParent = Split-Path -Parent $TaskTemplateTarget
+        if (-not (Test-Path -LiteralPath $taskParent)) { New-Item -ItemType Directory -Path $taskParent -Force | Out-Null }
+        Copy-Item -LiteralPath $TemplateTask -Destination $TaskTemplateTarget -Force
+        $createdFiles.Add($TaskTemplateTarget)
+        Write-Host "  [+] Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)" -ForegroundColor Green
+    }
+
+    # Commit targets
+    $idx = 0
+    foreach ($item in $StagedTargetUpdates) {
+        $tPath = $item.TargetPath
+        $pDir = Split-Path -Parent $tPath
+        if ($pDir -ne "" -and -not (Test-Path -LiteralPath $pDir)) {
+            New-Item -ItemType Directory -Path $pDir -Force | Out-Null
+        }
+        if (Test-Path -LiteralPath $tPath) {
+            $bkp = Join-Path $backupDir ("target_" + $idx)
+            Copy-Item -LiteralPath $tPath -Destination $bkp -Force
+            $backedUpFiles.Add($tPath)
+            $backupSources.Add($bkp)
+        } else {
+            $createdFiles.Add($tPath)
+        }
+        [System.IO.File]::WriteAllText($tPath, $item.Content, $utf8NoBom)
+        if ($item.Mode -eq "update") {
+            Write-Host "  [✓] Updated PromptKit OS directives in: $($item.RelTarget) (profile: $Profile)" -ForegroundColor Yellow
+        } else {
+            Write-Host "  [+] Injected PromptKit OS directives into: $($item.RelTarget) (profile: $Profile)" -ForegroundColor Green
+        }
+        $idx++
+    }
+} catch {
+    # Rollback!
+    for ($i = $createdFiles.Count - 1; $i -ge 0; $i--) {
+        $f = $createdFiles[$i]
+        if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue }
+    }
+    for ($i = 0; $i -lt $backedUpFiles.Count; $i++) {
+        $dest = $backedUpFiles[$i]
+        $bkp = $backupSources[$i]
+        if (Test-Path -LiteralPath $bkp) {
+            Copy-Item -LiteralPath $bkp -Destination $dest -Force -ErrorAction SilentlyContinue
+        }
+    }
+    throw
+} finally {
+    if (Test-Path -LiteralPath $backupDir) {
+        Remove-Item -LiteralPath $backupDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 

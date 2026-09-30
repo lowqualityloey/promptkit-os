@@ -388,7 +388,112 @@ try {
         throw "Failed Test 21: File was modified despite orphan Unicode-indented marker failure."
     }
 
-    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, and custom-target tests passed." -ForegroundColor Green
+    # Test 22: Destination escape containment (F04 - P2)
+    $EscapeRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "escape_project") -Force).FullName
+    $OutsideDir = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "outside") -Force).FullName
+    $secretFile = Join-Path $OutsideDir "secret.md"
+    [System.IO.File]::WriteAllText($secretFile, "sensitive external content", $utf8NoBom)
+    $escapeFailed = $false
+    try {
+        $p = Start-Process -FilePath "pwsh" -ArgumentList "-NoProfile", "-File", "`"$initScriptPath`"", "-Target", "`"../outside/secret.md`"", "-ProjectRoot", "`"$EscapeRoot`"" -NoNewWindow -Wait -PassThru
+        if ($p.ExitCode -ne 0) { $escapeFailed = $true }
+    } catch {
+        $escapeFailed = $true
+    }
+    if (-not $escapeFailed) {
+        throw "Failed Test 22: Escaping target was accepted; expected rejection."
+    }
+    if ([System.IO.File]::ReadAllText($secretFile, [System.Text.Encoding]::UTF8) -ne "sensitive external content") {
+        throw "Failed Test 22: External file was modified despite escape rejection."
+    }
+
+    # Test 23: Multiple custom targets with spaces and glob characters (F06 - P2)
+    $SpacesRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "spaces_and_globs") -Force).FullName
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $SpacesRoot -Target "docs/path with spaces/custom instructions.md","docs/[special-rules]/ai.md" | Out-Null
+    $spacedTarget = Join-Path $SpacesRoot "docs/path with spaces/custom instructions.md"
+    $globTarget = Join-Path $SpacesRoot "docs/[special-rules]/ai.md"
+    if (-not (Test-Path -LiteralPath $spacedTarget)) {
+        throw "Failed Test 23: Target with spaces was not created."
+    }
+    if (-not (Test-Path -LiteralPath $globTarget)) {
+        throw "Failed Test 23: Target with glob characters [special-rules] was not created."
+    }
+    $spacedContent = [System.IO.File]::ReadAllText($spacedTarget, [System.Text.Encoding]::UTF8)
+    if (-not $spacedContent.Contains("<!-- PROMPTKIT_START -->")) {
+        throw "Failed Test 23: Target with spaces missing directive."
+    }
+
+    # Test 24: Cline existing file layout, update, and -AddHost cline rerun (F05 - P2)
+    $ClineRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "cline_file_layout") -Force).FullName
+    $clineFile = Join-Path $ClineRoot ".clinerules"
+    $clineInitial = "# Cline instructions`n<!-- PROMPTKIT_START -->`nold directive`n<!-- PROMPTKIT_END -->`n"
+    [System.IO.File]::WriteAllText($clineFile, $clineInitial, $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $ClineRoot -AddHost "cline" | Out-Null
+    if (-not (Test-Path -LiteralPath $clineFile -PathType Leaf)) {
+        throw "Failed Test 24: .clinerules should remain a leaf file."
+    }
+    $clineUpdated = [System.IO.File]::ReadAllText($clineFile, [System.Text.Encoding]::UTF8)
+    if (-not $clineUpdated.Contains("# Cline instructions") -or -not $clineUpdated.Contains("## PromptKit OS: Engineering Operating System")) {
+        throw "Failed Test 24: .clinerules was not safely updated."
+    }
+
+    # Test 25: Transactional atomicity: failed later target preserves all files and PROMPTKIT.md (F07 - P2)
+    $TxRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "transactional_preservation") -Force).FullName
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $TxRoot -Profile "lite" | Out-Null
+    $txProfile = Join-Path $TxRoot "PROMPTKIT.md"
+    $txAgents = Join-Path $TxRoot "AGENTS.md"
+    $txClaude = Join-Path $TxRoot "CLAUDE.md"
+    $claudeReversed = "# Claude instructions`n<!-- PROMPTKIT_END -->`nreversed body`n<!-- PROMPTKIT_START -->`n"
+    [System.IO.File]::WriteAllText($txClaude, $claudeReversed, $utf8NoBom)
+
+    $profileHashBefore = (Get-FileHash -Path $txProfile -Algorithm SHA256).Hash
+    $agentsHashBefore = (Get-FileHash -Path $txAgents -Algorithm SHA256).Hash
+    $claudeHashBefore = (Get-FileHash -Path $txClaude -Algorithm SHA256).Hash
+
+    $txFailed = $false
+    try {
+        $p = Start-Process -FilePath "pwsh" -ArgumentList "-NoProfile", "-File", "`"$initScriptPath`"", "-ProjectRoot", "`"$TxRoot`"", "-Profile", "balanced" -NoNewWindow -Wait -PassThru
+        if ($p.ExitCode -ne 0) { $txFailed = $true }
+    } catch {
+        $txFailed = $true
+    }
+    if (-not $txFailed) {
+        throw "Failed Test 25: Expected update with malformed target to fail."
+    }
+
+    $profileHashAfter = (Get-FileHash -Path $txProfile -Algorithm SHA256).Hash
+    $agentsHashAfter = (Get-FileHash -Path $txAgents -Algorithm SHA256).Hash
+    $claudeHashAfter = (Get-FileHash -Path $txClaude -Algorithm SHA256).Hash
+
+    if ($profileHashBefore -ne $profileHashAfter) {
+        throw "Failed Test 25: PROMPTKIT.md was modified despite transaction failure."
+    }
+    if ($agentsHashBefore -ne $agentsHashAfter) {
+        throw "Failed Test 25: AGENTS.md was modified despite transaction failure."
+    }
+    if ($claudeHashBefore -ne $claudeHashAfter) {
+        throw "Failed Test 25: CLAUDE.md was modified despite transaction failure."
+    }
+    $txProfContent = [System.IO.File]::ReadAllText($txProfile, [System.Text.Encoding]::UTF8)
+    if (-not $txProfContent.Contains("profile: lite")) {
+        throw "Failed Test 25: PROMPTKIT.md profile changed from lite."
+    }
+
+    # Test 26: Explicit -Profile balanced parameter overrides installed profile: lite in PROMPTKIT.md (F08 - P2)
+    $OverrideRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "override_profile") -Force).FullName
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $OverrideRoot -Profile "lite" | Out-Null
+    $overrideProfile = Join-Path $OverrideRoot "PROMPTKIT.md"
+    $prof1 = [System.IO.File]::ReadAllText($overrideProfile, [System.Text.Encoding]::UTF8)
+    if (-not $prof1.Contains("profile: lite")) {
+        throw "Failed Test 26: Initial profile was not lite."
+    }
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $OverrideRoot -Profile "balanced" | Out-Null
+    $prof2 = [System.IO.File]::ReadAllText($overrideProfile, [System.Text.Encoding]::UTF8)
+    if (-not $prof2.Contains("profile: balanced")) {
+        throw "Failed Test 26: Explicit -Profile balanced failed to override installed profile: lite."
+    }
+
+    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, and transaction rollback tests passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

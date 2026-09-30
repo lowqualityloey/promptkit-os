@@ -302,4 +302,101 @@ HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" "$ENDNONL_ROOT"
 grep -q '^User preamble content\.$' "$ENDNONL_ROOT/AGENTS.md"
 [[ "$(tail -n 1 "$ENDNONL_ROOT/AGENTS.md")" == "<!-- PROMPTKIT_END -->" ]]
 
+# Test 22: Destination escape containment (F04 - P2)
+ESCAPE_ROOT="$TEST_ROOT/escape_project"
+OUTSIDE_DIR="$TEST_ROOT/outside"
+mkdir -p "$ESCAPE_ROOT" "$OUTSIDE_DIR"
+echo "sensitive external file" > "$OUTSIDE_DIR/secret.md"
+ln -s "$OUTSIDE_DIR/secret.md" "$ESCAPE_ROOT/AGENTS.md"
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" "$ESCAPE_ROOT" >/dev/null 2>&1; then
+    echo "Expected external symlink destination to be rejected; was accepted." >&2
+    exit 1
+fi
+[[ "$(cat "$OUTSIDE_DIR/secret.md")" == "sensitive external file" ]]
+
+# Test 22b: Linked parent directory with target escaping containment
+mkdir -p "$ESCAPE_ROOT/real_docs"
+ln -s "$OUTSIDE_DIR" "$ESCAPE_ROOT/linked_docs"
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --target=linked_docs/AI.md "$ESCAPE_ROOT" >/dev/null 2>&1; then
+    echo "Expected target in linked external parent directory to be rejected; was accepted." >&2
+    exit 1
+fi
+[[ ! -f "$OUTSIDE_DIR/AI.md" ]]
+
+# Test 23: Multiple custom targets with spaces and glob characters (F06 - P2)
+SPACES_ROOT="$TEST_ROOT/spaces_and_globs"
+mkdir -p "$SPACES_ROOT"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" \
+    --target="docs/path with spaces/custom instructions.md" \
+    --target="docs/[special-rules]/ai.md" \
+    "$SPACES_ROOT" >/dev/null
+
+[[ -f "$SPACES_ROOT/docs/path with spaces/custom instructions.md" ]]
+[[ -f "$SPACES_ROOT/docs/[special-rules]/ai.md" ]]
+grep -q '^<!-- PROMPTKIT_START -->$' "$SPACES_ROOT/docs/path with spaces/custom instructions.md"
+grep -q '^<!-- PROMPTKIT_START -->$' "$SPACES_ROOT/docs/[special-rules]/ai.md"
+
+# Test 24: Cline existing file layout, update, and --add-host=cline rerun (F05 - P2)
+CLINE_ROOT="$TEST_ROOT/cline_file_layout"
+mkdir -p "$CLINE_ROOT"
+cat > "$CLINE_ROOT/.clinerules" <<'EOF'
+# Cline instructions
+<!-- PROMPTKIT_START -->
+old directive
+<!-- PROMPTKIT_END -->
+EOF
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --add-host=cline "$CLINE_ROOT" >/dev/null
+[[ -f "$CLINE_ROOT/.clinerules" ]]
+[[ ! -d "$CLINE_ROOT/.clinerules" ]]
+grep -q '^# Cline instructions$' "$CLINE_ROOT/.clinerules"
+grep -q '## PromptKit OS: Engineering Operating System' "$CLINE_ROOT/.clinerules"
+
+# Test 25: Transactional atomicity: failed later target preserves all files and PROMPTKIT.md (F07 - P2)
+TX_ROOT="$TEST_ROOT/transactional_preservation"
+mkdir -p "$TX_ROOT"
+# Initially install Lite profile
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --lite "$TX_ROOT" >/dev/null
+grep -q '^profile: lite$' "$TX_ROOT/PROMPTKIT.md"
+
+# Create a second target with reversed markers (malformed)
+cat > "$TX_ROOT/CLAUDE.md" <<'EOF'
+# Claude instructions
+<!-- PROMPTKIT_END -->
+reversed body
+<!-- PROMPTKIT_START -->
+EOF
+
+agents_before_hash="$(sha256sum "$TX_ROOT/AGENTS.md" | cut -d' ' -f1)"
+claude_before_hash="$(sha256sum "$TX_ROOT/CLAUDE.md" | cut -d' ' -f1)"
+profile_before_hash="$(sha256sum "$TX_ROOT/PROMPTKIT.md" | cut -d' ' -f1)"
+
+# Attempt update to Balanced profile; must fail because CLAUDE.md is malformed
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --balanced "$TX_ROOT" >/dev/null 2>&1; then
+    echo "Expected transactional update to fail on malformed second target; succeeded." >&2
+    exit 1
+fi
+
+agents_after_hash="$(sha256sum "$TX_ROOT/AGENTS.md" | cut -d' ' -f1)"
+claude_after_hash="$(sha256sum "$TX_ROOT/CLAUDE.md" | cut -d' ' -f1)"
+profile_after_hash="$(sha256sum "$TX_ROOT/PROMPTKIT.md" | cut -d' ' -f1)"
+
+[[ "$agents_before_hash" == "$agents_after_hash" ]]
+[[ "$claude_before_hash" == "$claude_after_hash" ]]
+[[ "$profile_before_hash" == "$profile_after_hash" ]]
+grep -q '^profile: lite$' "$TX_ROOT/PROMPTKIT.md"
+
+# Test 26: 0600 permissions survive update under portable stat mode query (F10 - P2)
+PERM_ROOT="$TEST_ROOT/perm_test"
+mkdir -p "$PERM_ROOT"
+cat > "$PERM_ROOT/AGENTS.md" <<'EOF'
+# Private instructions
+<!-- PROMPTKIT_START -->
+old directive
+<!-- PROMPTKIT_END -->
+EOF
+chmod 600 "$PERM_ROOT/AGENTS.md"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" "$PERM_ROOT" >/dev/null
+perm_after="$(stat -c '%a' "$PERM_ROOT/AGENTS.md" 2>/dev/null || stat -f '%Lp' "$PERM_ROOT/AGENTS.md" 2>/dev/null)"
+[[ "$perm_after" == "600" ]]
+
 echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, and byte-idempotency tests passed."
