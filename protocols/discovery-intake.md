@@ -22,7 +22,7 @@ Run this protocol when **any** of the following is true:
 - The task is Level 0 (Direct) or Level 1 (Standard) work on an existing project.
 - The human explicitly declines and accepts the recorded assumptions path (see §C).
 
-Brownfield repositories with an existing filled profile and git history are **not** greenfield. A missing `Intake Status:` line alone never triggers a full interview; it resolves to `partial (legacy)`.
+Brownfield repositories with an existing filled profile and git history are **not** greenfield. A missing `Intake Status:` line alone never triggers a full interview; it resolves to `legacy-partial`.
 
 ---
 
