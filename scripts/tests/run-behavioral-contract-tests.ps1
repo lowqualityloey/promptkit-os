@@ -737,6 +737,26 @@ Assert-Contains "scripts/tests/run-reference-link-tests.sh" "fails closed" "Bash
 Assert-Contains "scripts/tests/run-reference-link-tests.ps1" "fails closed" "PowerShell link harness proves broken-link polarity"
 Assert-Contains ".github/workflows/ci.yml" "run-reference-link-tests" "CI wires the reference-link harness"
 
+Write-Host "`n📌 Scenario AO: PR Base Branch, Review Modes & Worktree Merge Safety (Issue #479)" -ForegroundColor Yellow
+Assert-Contains "workflows/pr.md" "TARGET_BASE" "PR workflow parameterizes target base branch"
+Assert-Contains "workflows/pr.md" 'HEAD\.\.\$\{BASE_REF\}' "PR workflow checks conflicts against resolved target base ref"
+Assert-Contains "workflows/pr.md" "gh pr create --base <target-base>" "PR workflow specifies explicit base in gh pr create"
+Assert-Contains "workflows/pr.md" "Never omit.*--base" "PR workflow forbids omitting explicit base flag"
+Assert-Contains "workflows/pr.md" "merging into.*<target-base>" "PR workflow specifies human merge boundary for target base"
+Assert-Contains "protocols/subagent-delegation.md" "isolate-worktree\.sh merge <task-id>" "Subagent delegation uses positional syntax for bash worktree merge"
+Assert-Contains "protocols/subagent-delegation.md" "isolate-worktree\.ps1 merge <task-id>" "Subagent delegation uses positional syntax for powershell worktree merge"
+Assert-Contains "protocols/subagent-delegation.md" "Execution of the merge helper is strictly reserved for the human operator" "Subagent delegation explicitly reserves merge execution for human"
+Assert-Contains "workflows/review.md" "Branch / PR Review Mode" "Review workflow defines Branch / PR Review Mode"
+Assert-Contains "workflows/review.md" "Staged Changes Review Mode" "Review workflow defines Staged Changes Review Mode"
+Assert-Contains "workflows/review.md" "Working Tree / Uncommitted Review Mode" "Review workflow defines Working Tree / Uncommitted Review Mode"
+Assert-Contains "workflows/review.md" "strictly excludes unstaged edits" "Review workflow defines staged mode index isolation"
+Assert-Contains "workflows/review.md" "all uncommitted.*staged.*unstaged" "Review workflow defines working tree mode scope"
+Assert-Contains "workflows/review.md" "REVIEW_FILES.*matching the selected review mode" "Review workflow filters diagnostics using mode-appropriate review diff"
+Assert-Contains "workflows/review.md" "mode-appropriate review diff" "Review workflow passes mode-appropriate review diff to verifier"
+Assert-Contains "scripts/isolate-worktree.ps1" "LASTEXITCODE" "PowerShell worktree isolation utility checks LASTEXITCODE on git mutations"
+Assert-Contains "scripts/isolate-worktree.sh" "Failed to create worktree" "Bash worktree isolation utility checks worktree add exit code"
+Assert-Contains "scripts/isolate-worktree.sh" "Failed to merge branch" "Bash worktree isolation utility checks merge exit code"
+
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
 Write-Host "===========================================================" -ForegroundColor DarkGray

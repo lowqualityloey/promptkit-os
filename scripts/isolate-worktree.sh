@@ -57,7 +57,10 @@ case "$ACTION" in
 
         mkdir -p "$WORKTREE_BASE"
         echo -e "\033[0;36m🌿 Creating isolated worktree at $TARGET_PATH on branch '$BRANCH_NAME'...\033[0m"
-        git worktree add -b "$BRANCH_NAME" "$TARGET_PATH"
+        if ! git worktree add -b "$BRANCH_NAME" "$TARGET_PATH"; then
+            echo "Error: Failed to create worktree at $TARGET_PATH." >&2
+            exit 1
+        fi
         echo -e "\033[0;32m  ✅ Worktree created successfully.\033[0m"
         echo "  To enter worktree: cd $TARGET_PATH"
         ;;
@@ -74,7 +77,10 @@ case "$ACTION" in
         fi
         BRANCH_NAME="worktree/$TASK_ID"
         echo -e "\033[0;36m🔀 Merging branch '$BRANCH_NAME' into current branch...\033[0m"
-        git merge "$BRANCH_NAME"
+        if ! git merge "$BRANCH_NAME"; then
+            echo "Error: Failed to merge branch '$BRANCH_NAME'." >&2
+            exit 1
+        fi
         echo -e "\033[0;32m  ✅ Merge completed. Remember to remove the worktree with 'remove $TASK_ID' when finished.\033[0m"
         ;;
 
@@ -89,7 +95,10 @@ case "$ACTION" in
         echo -e "\033[0;36m🧹 Removing worktree at $TARGET_PATH...\033[0m"
         if [[ -d "$TARGET_PATH" ]]; then
             if [[ "$FORCE" -eq 1 ]]; then
-                git worktree remove "$TARGET_PATH" --force
+                if ! git worktree remove "$TARGET_PATH" --force; then
+                    echo "Error: Failed to forcefully remove worktree at $TARGET_PATH." >&2
+                    exit 1
+                fi
             else
                 if ! git worktree remove "$TARGET_PATH"; then
                     echo -e "\033[0;31mError: Worktree has uncommitted changes or unmerged branches.\033[0m" >&2
@@ -98,12 +107,18 @@ case "$ACTION" in
                 fi
             fi
         else
-            git worktree prune
+            if ! git worktree prune; then
+                echo "Error: Failed to prune git worktree." >&2
+                exit 1
+            fi
         fi
 
         if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
             if [[ "$FORCE" -eq 1 ]]; then
-                git branch -D "$BRANCH_NAME"
+                if ! git branch -D "$BRANCH_NAME"; then
+                    echo "Error: Failed to forcefully delete branch $BRANCH_NAME." >&2
+                    exit 1
+                fi
                 echo "  [-] Force deleted branch $BRANCH_NAME"
             else
                 if ! git branch -d "$BRANCH_NAME"; then

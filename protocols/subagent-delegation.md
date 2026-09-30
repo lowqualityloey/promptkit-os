@@ -123,8 +123,13 @@ When a task involves high-risk multi-file refactoring, dependency upgrades, or p
    - The subagent or developer operates entirely inside `.worktrees/<task-id>`, backed by a dedicated branch (`worktree/<task-id>`).
    - Run tests, compile artifacts, and verify criteria in isolation.
 3. **Reconciliation & Cleanup**:
-   - Once verification passes: `isolate-worktree.ps1 merge <task-id>`
-   - Clean up the scratch worktree: `isolate-worktree.ps1 remove <task-id>`
+   - Once verification passes, prepare verification results and the reconciliation command for the human operator:
+     - Linux/macOS: `<kit>/scripts/isolate-worktree.sh merge <task-id>`
+     - Windows: `<kit>/scripts/isolate-worktree.ps1 merge <task-id>`
+   - Execution of the merge helper is strictly reserved for the human operator per `protocols/code-quality-gate.md` (the AI assistant must never execute a merge).
+   - Once the human merges or completes review, clean up the scratch worktree:
+     - Linux/macOS: `<kit>/scripts/isolate-worktree.sh remove <task-id>`
+     - Windows: `<kit>/scripts/isolate-worktree.ps1 remove <task-id>`
    - The parent project `.gitignore` automatically excludes `.worktrees/` to prevent untracked leakage.
 
 ---

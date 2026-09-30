@@ -41,27 +41,41 @@ Reporting them separately ensures neither axis masks the other.
 
 ## Mandatory Pre-Flight Guardrails
 
-### 1. Diff Baseline Pinning
-Establish and validate the appropriate diff comparison baseline before reviewing:
+### 1. Diff Baseline & Review Mode Pinning
+Explicitly select and document one of three distinct review modes before reviewing. The resolved review diff and changed-file list must be carried through all downstream diagnostics filtering and verifier inputs without altering index state:
 
-- **Branch / PR Review (Committed feature branch against base)**:
-  ```bash
-  git rev-parse <fixed-point>                    # Confirm reference exists (e.g. main, origin/main, HEAD~3)
-  git diff <fixed-point>...HEAD                  # Extract three-dot comparison against merge-base
-  git log <fixed-point>..HEAD --oneline          # Inspect commit history
-  ```
-- **Staged Changes Review (Index before commit)**:
-  ```bash
-  git diff --cached                              # Extract staged changes ready for commit
-  ```
-- **Working Tree / Uncommitted Review (Working directory edits)**:
-  ```bash
-  git diff HEAD                                  # Extract all uncommitted (staged + unstaged) changes
-  git status -s                                  # Inspect untracked files to avoid missing new files
-  ```
+- **Branch / PR Review Mode (Committed feature branch against base)**:
+  - **Scope**: Committed branch commits against the merge-base.
+  - **Inspection**:
+    ```bash
+    git rev-parse <fixed-point>                    # Confirm reference exists (e.g. main, origin/main, HEAD~3)
+    git diff <fixed-point>...HEAD                  # Extract three-dot comparison against merge-base
+    git log <fixed-point>..HEAD --oneline          # Inspect commit history
+    ```
+  - **Resolved Diff**: `git diff <fixed-point>...HEAD`
+  - **Resolved Files**: `git diff <fixed-point>...HEAD --name-only`
+
+- **Staged Changes Review Mode (Index before commit)**:
+  - **Scope**: Index contents only; strictly excludes unstaged edits and unselected or untracked files.
+  - **Inspection**:
+    ```bash
+    git diff --cached                              # Extract staged changes ready for commit
+    ```
+  - **Resolved Diff**: `git diff --cached`
+  - **Resolved Files**: `git diff --cached --name-only`
+
+- **Working Tree / Uncommitted Review Mode (Working directory edits)**:
+  - **Scope**: Staged plus unstaged tracked contents, plus explicitly scoped untracked files.
+  - **Inspection**:
+    ```bash
+    git diff HEAD                                  # Extract all uncommitted (staged + unstaged) tracked changes
+    git status -s                                  # Inspect untracked files to identify explicitly scoped additions
+    ```
+  - **Resolved Diff**: `git diff HEAD` (supplemented with diffs of explicitly scoped untracked files)
+  - **Resolved Files**: `git diff HEAD --name-only` plus explicitly scoped untracked files
 
 > [!NOTE]
-> When reviewing uncommitted changes directly on `main`, running `git diff main...HEAD` produces an empty diff. Select the matching baseline mode (`git diff HEAD` or `git diff --cached`) rather than stalling. If the selected baseline produces an empty diff and no untracked files exist, halt and clarify the target revision before continuing.
+> When reviewing uncommitted changes directly on `main` or an active working tree, running `git diff main...HEAD` produces an empty diff. Explicitly select `staged` or `working-tree` mode and carry its resolved diff and file list into downstream diagnostics and verifier stages. Never alter or reset the git index during review. If the selected baseline produces an empty diff and no untracked files exist, halt and clarify the target revision before continuing.
 
 ### 2. Accidental Data Loss Audit (STOP AND VERIFY)
 > [!CAUTION]
@@ -81,7 +95,10 @@ Establish and validate the appropriate diff comparison baseline before reviewing
    pnpm tsc --noEmit --pretty false          # or: npx tsc --noEmit --pretty false
    biome check --json .                      # or: eslint --format json .
    ```
-2. Keep only diagnostics whose `file:line:col` falls inside the resolved fixed-point diff (`git diff <fixed-point>...HEAD` file list). Out-of-diff diagnostics belong to other changes — never cite them.
+   > [!NOTE]
+   > In **Staged Changes Review Mode**, CLI diagnostics execute against live filesystem contents rather than the index snapshot. If unstaged modifications exist (`git diff --name-only` is non-empty), live CLI diagnostics must not be attributed to staged changes unless run against an isolated index snapshot (e.g. temporary worktree or checkout) without altering the user's index. When an isolated staged snapshot is unavailable and unstaged modifications exist, skip CLI diagnostics and record them as `not measured`, relying on the Axis 2 standards audit.
+
+2. Keep only diagnostics whose `file:line:col` falls inside the resolved review diff files (`$REVIEW_FILES` matching the selected review mode: `git diff <fixed-point>...HEAD --name-only` for branch, `git diff --cached --name-only` for staged, or `git diff HEAD --name-only` plus explicitly scoped untracked files for working-tree). In staged review mode, confirm cited diagnostics reflect the staged snapshot rather than live unstaged edits. Out-of-diff diagnostics belong to other changes — never cite them.
 3. Map severity: `error` → `🚨 [BLOCKING]`, `warning` → `⚠️ [IMPORTANT]`, `info`/`hint` → `💡 [SUGGEST]`.
 4. Cap injected evidence at 2 compact code blocks (<150 lines total); when the CLI emits only single-line output, cite the single line.
 5. Diagnostics are read-only evidence: never auto-fix. Values not produced this turn are recorded as `not measured`.
@@ -298,7 +315,7 @@ For **Level 2 (Controlled)** and **Level 3 (Release-Critical)** Work, the lead a
 2. **Verifier Briefing Inputs**:
    - The verifier subagent receives *only*:
      - The target Gherkin Acceptance Criteria (`AC-*`) from `docs/tasks/<task-id>.md` or RFC spec.
-     - The fixed-point git diff (`git diff <baseline>...HEAD`).
+     - The resolved mode-appropriate review diff (`$REVIEW_DIFF` matching `$REVIEW_MODE`: branch `git diff <baseline>...HEAD`, staged `git diff --cached`, or working-tree `git diff HEAD` plus scoped untracked files).
      - The automated test runner commands and recorded execution evidence (exit codes, pass counts).
      - Bounded claim excerpts from the Task Record or draft PR body to be verified.
 3. **Claims-Audit Duty**:
@@ -306,7 +323,7 @@ For **Level 2 (Controlled)** and **Level 3 (Release-Critical)** Work, the lead a
 4. **Strict Bounds & Token Caps**:
    - **Single-Pass Contract**: Perform a single-pass audit; child-agent delegation and background iteration loops are strictly forbidden. Hosts capable of enforcing tool/turn budgets should apply them.
    - **15-Line Synthesis**: Output is capped at a 15-line Pass/Fail matrix with file/line references for missing edge cases.
-   - **Targeted Verifier Scope**: Input is strictly bounded to the target Acceptance Criteria, fixed-point diff, test commands with recorded execution evidence, and bounded claim excerpts; returns a concise synthesis, preventing expensive multi-turn downstream debugging.
+   - **Targeted Verifier Scope**: Input is strictly bounded to the target Acceptance Criteria, mode-appropriate review diff, test commands with recorded execution evidence, and bounded claim excerpts; returns a concise synthesis, preventing expensive multi-turn downstream debugging.
 
 ---
 

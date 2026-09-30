@@ -44,6 +44,8 @@ jobs:
           bash -n scripts/tests/run-staged-secret-scan-tests.sh
           bash -n scripts/run-behavioral-eval.sh
           bash -n scripts/tests/run-init-safety-tests.sh
+          bash -n scripts/isolate-worktree.sh
+          bash -n scripts/tests/run-worktree-isolation-tests.sh
           bash -n scripts/tests/run-profile-matrix.sh
           bash -n scripts/tests/release-records.examples.sh
           echo "Bash scripts parsed with 0 syntax errors."
@@ -65,6 +67,9 @@ jobs:
 
       - name: Run init.sh Safety Regression Tests (Bash)
         run: bash scripts/tests/run-init-safety-tests.sh
+
+      - name: Run Worktree Isolation Regression Tests (Bash)
+        run: bash scripts/tests/run-worktree-isolation-tests.sh
 
       - name: Run init Profile Matrix Tests (Bash)
         run: bash scripts/tests/run-profile-matrix.sh
@@ -207,6 +212,8 @@ jobs:
             "scripts/tests/run-staged-secret-scan-tests.ps1",
             "scripts/run-behavioral-eval.ps1",
             "scripts/tests/run-init-safety-tests.ps1",
+            "scripts/isolate-worktree.ps1",
+            "scripts/tests/run-worktree-isolation-tests.ps1",
             "scripts/tests/run-profile-matrix.ps1",
             "scripts/tests/release-records.examples.ps1"
           )
@@ -243,6 +250,10 @@ jobs:
       - name: Run init.ps1 Safety Regression Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-init-safety-tests.ps1
+
+      - name: Run Worktree Isolation Regression Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-worktree-isolation-tests.ps1
 
       - name: Run init Profile Matrix Tests (PowerShell)
         shell: pwsh
