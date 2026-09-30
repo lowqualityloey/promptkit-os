@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Wrapper smoke test — network-dependent, so it runs in CI (release-npm job), NOT in the
 # offline contract suites. Verifies the AC-1 equivalence claim: the npx courier produces a
-# .promptkit/ tree whose generated artifacts match the canonical installer path, and re-running
-# is idempotent (directive count stays 1).
+# .promptkit/ tree whose generated artifacts match the canonical installer path, exercises
+# the packaged courier binary directly, and verifies idempotency (directive count stays 1).
 #
 # Usage: PROMPTKIT_VERSION=1.9.0 bash test/smoke.sh   (a leading "v" is also accepted)
 set -euo pipefail
@@ -20,15 +20,43 @@ VERSION="${VERSION#v}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$HERE/../.." && pwd)"
 WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
 
-echo "== 1. courier install (simulated: extract release tarball, then run canonical installer) =="
+# If package.json is at 0.0.0 (e.g. running smoke test outside of the release job),
+# temporarily set it to $VERSION so npm pack and promptkit-os.js accept it, then restore on exit.
+RESTORE_PKG=0
+if grep -q '"version": "0.0.0"' "$REPO_ROOT/package/package.json"; then
+    (cd "$REPO_ROOT/package" && npm version "$VERSION" --no-git-tag-version >/dev/null)
+    RESTORE_PKG=1
+fi
+
+cleanup() {
+    if [ "$RESTORE_PKG" -eq 1 ]; then
+        (cd "$REPO_ROOT/package" && git checkout -- package.json 2>/dev/null || true)
+    fi
+    rm -rf "$WORK"
+}
+trap cleanup EXIT
+
+echo "== 1. courier install (exercise packaged courier binary) =="
+PACK_DIR="$WORK/pack"
+mkdir -p "$PACK_DIR"
+(cd "$REPO_ROOT/package" && npm pack --pack-destination "$PACK_DIR" >/dev/null)
+TARBALL=$(find "$PACK_DIR" -name "promptkit-os-*.tgz" | head -1)
+[ -n "$TARBALL" ] || { echo "FAIL: npm pack failed to produce tarball"; exit 1; }
+tar -xzf "$TARBALL" -C "$PACK_DIR"
+COURIER_BIN="$PACK_DIR/package/bin/promptkit-os.js"
+chmod +x "$COURIER_BIN"
+
 COURIER_DIR="$WORK/courier"
-mkdir -p "$COURIER_DIR/.promptkit"
-curl -fsSL "https://github.com/lowqualityloey/promptkit-os/archive/refs/tags/v${VERSION}.tar.gz" \
-    | tar -xz -C "$COURIER_DIR/.promptkit" --strip-components=1
-chmod +x "$COURIER_DIR/.promptkit/init.sh"
-(cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 bash .promptkit/init.sh --balanced "$COURIER_DIR")
+mkdir -p "$COURIER_DIR"
+(cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 node "$COURIER_BIN" --balanced "$COURIER_DIR")
+
+echo "== 1b. courier guard: refuse silent overlay of existing .promptkit without --force =="
+if (cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 node "$COURIER_BIN" --balanced "$COURIER_DIR") 2>/dev/null; then
+    echo "FAIL: courier should refuse to overlay an existing non-empty .promptkit without --force"
+    exit 1
+fi
+echo "  ok: courier cleanly refuses to overlay non-empty directory"
 
 echo "== 2. canonical submodule-path install (git materialization of the same tag) =="
 CANON_DIR="$WORK/canonical"
@@ -58,7 +86,7 @@ for d in tasks specs adrs tests; do
 done
 
 echo "== 4. idempotency (directive count must remain 1) =="
-(cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 bash .promptkit/init.sh --balanced "$COURIER_DIR")
+(cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 node "$COURIER_BIN" --force --balanced "$COURIER_DIR")
 COUNT="$(grep -c '<!-- PROMPTKIT_START -->' "$COURIER_DIR/AGENTS.md")"
 [ "$COUNT" -eq 1 ] || { echo "FAIL: directive count = $COUNT (expected 1)"; exit 1; }
 echo "  ok: directive count = 1"
