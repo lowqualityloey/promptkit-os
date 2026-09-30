@@ -31,9 +31,9 @@
 ## 2. Prior Baseline and Bounded Release Range
 
 - **Latest Approved Release Record**: `[record path or N/A]`
-- **Version Source of Truth**: `[approved version and candidate commit from the latest approved record, or N/A for First Release]`
+- **Version Source of Truth**: `[approved version and Approved Release Candidate Commit from the latest complete approved record, or N/A for First Release]`
 - **Prior Approved Release Version**: `[version or N/A]`
-- **Prior Approved Release Commit**: `[exclusive baseline commit or N/A for First Release]`
+- **Prior Approved Release Commit**: `[predecessor's Approved Release Candidate Commit as exclusive baseline commit, or N/A for First Release]`
 - **First Release**: `[Yes | No]`
 - **Release Range Start**: `[exclusive prior approved commit, recorded all-history start, or N/A]`
 - **Release Range End**: `[inclusive Release Candidate Commit]`

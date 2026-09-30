@@ -14,9 +14,9 @@ Create one stable **Evaluation ID** for every release evaluation and use that ex
 
 Select the prior approved baseline before inspecting impact:
 
-- The **Version Source of Truth** is the latest complete Approved Release Record. Use its approved version and `Prior Approved Release Commit` as the baseline for the next evaluation.
+- The **Version Source of Truth** is the latest complete Approved Release Record. Read its **Approved Release Version** and **Approved Release Candidate Commit**, and record that candidate commit as the new evaluation's **Prior Approved Release Commit** to serve as the exclusive baseline for the next evaluation.
 - Never use a preliminary candidate, checkpoint handoff, unapproved tag, or draft changelog as the Version Source of Truth.
-- Record the prior approved version, prior approved release commit, and the source record path or identifier. If there is no prior Approved Release Record, mark the evaluation `First Release: true` and record the all-history starting point used for review.
+- Record the prior approved version, prior approved release commit (sourced from the predecessor's Approved Release Candidate Commit), and the source record path or identifier. If there is no prior Approved Release Record, mark the evaluation `First Release: true` and record the all-history starting point used for review.
 - The baseline is immutable evidence for this evaluation. Do not rewrite it to make a range or candidate appear consistent.
 
 #### 2. Define the Candidate-Inclusive Release Range
@@ -36,7 +36,7 @@ Run a candidate-membership consistency check before deriving a version:
 
 1. Confirm the Release Candidate Commit is present exactly once in the ordered range.
 2. Confirm it is the inclusive end of the range and is reachable from the selected Better-PromptKit history.
-3. Confirm the recorded prior boundary, when present, is the same commit and version supplied by the latest Approved Release Record.
+3. Confirm the recorded prior boundary, when present, matches the Approved Release Version and Approved Release Candidate Commit supplied by the latest complete Approved Release Record.
 4. Mark the evaluation blocked if the candidate is absent, duplicated, outside the boundaries, or associated with a different Evaluation ID. A failed check never substitutes a different commit automatically.
 
 #### 3. Normalize the Effective Change Set
