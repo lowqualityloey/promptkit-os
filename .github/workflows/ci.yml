@@ -103,6 +103,9 @@ jobs:
       - name: Run Release-Record Documentation Examples (Bash)
         run: bash scripts/tests/release-records.examples.sh
 
+      - name: Run Release-Record Self-Validation Wrapper Harness (Bash)
+        run: bash scripts/tests/run-release-self-validation-tests.sh
+
       - name: Assert Directive Token Budget (Bash)
         run: bash scripts/measure-tokens.sh --strict
 
@@ -121,31 +124,7 @@ jobs:
           output=$(bash scripts/validate-release-records.sh --root . --strict 2>&1)
           exit_code=$?
           set -e
-          if [ $exit_code -eq 0 ]; then
-            if ! echo "$output" | grep -q '^VALID|'; then
-              echo "Validation exited 0 but missing VALID summary marker. Output:"
-              echo "$output"
-              exit 1
-            fi
-            echo "All release records passed validation (clean valid)."
-          elif [ $exit_code -eq 1 ]; then
-            if ! echo "$output" | grep -q '^FAILED|'; then
-              echo "Validation exited 1 but missing FAILED summary marker. Output:"
-              echo "$output"
-              exit 1
-            fi
-            errors=$(echo "$output" | grep -E '^[A-Z_]+\|' | grep -v '^FAILED|' | grep -v '2026-09-08-v1\.0\.0-' || true)
-            if [ -n "$errors" ]; then
-              echo "Release record validation errors found in non-grandfathered records:"
-              echo "$errors"
-              exit 1
-            fi
-            echo "All non-grandfathered release records passed validation (all diagnostics grandfathered)."
-          else
-            echo "Release record validation crashed with exit code $exit_code. Output:"
-            echo "$output"
-            exit "$exit_code"
-          fi
+          printf '%s\n' "$output" | bash scripts/check-release-validation-output.sh --exit-code "$exit_code"
 
       - name: Test init.sh Dry-Run & Idempotency
         run: |
@@ -318,6 +297,10 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\release-records.examples.ps1
 
+      - name: Run Release-Record Self-Validation Wrapper Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-release-self-validation-tests.ps1
+
       - name: Assert Directive Token Budget (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict
@@ -327,25 +310,7 @@ jobs:
         run: |
           $res = & pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root . -Strict *>&1
           $exitCode = $LASTEXITCODE
-          if ($exitCode -eq 0) {
-            if (-not ($res | Where-Object { $_ -match '^VALID\|' })) {
-              throw "Validation exited 0 but missing VALID summary marker. Output:`n$($res | Out-String)"
-            }
-            Write-Host "All release records passed validation (clean valid)."
-          } elseif ($exitCode -eq 1) {
-            if (-not ($res | Where-Object { $_ -match '^FAILED\|' })) {
-              throw "Validation exited 1 but missing FAILED summary marker. Output:`n$($res | Out-String)"
-            }
-            $nonGrandfathered = @($res | Where-Object { $_ -match '^[A-Z_]+\|' -and $_ -notmatch '^FAILED\|' -and $_ -notmatch '2026-09-08-v1\.0\.0-' })
-            if ($nonGrandfathered.Count -gt 0) {
-              $nonGrandfathered | ForEach-Object { Write-Error $_ }
-              throw "Release record validation errors found in $($nonGrandfathered.Count) non-grandfathered check(s)."
-            }
-            $LASTEXITCODE = 0
-            Write-Host "All non-grandfathered release records passed validation (all diagnostics grandfathered)."
-          } else {
-            throw "Release record validation crashed with exit code $exitCode. Output:`n$($res | Out-String)"
-          }
+          $res | pwsh -NoProfile -File .\scripts\check-release-validation-output.ps1 -ExitCode $exitCode
 
       - name: Run Reference and Structural Validator (PowerShell)
         shell: pwsh
