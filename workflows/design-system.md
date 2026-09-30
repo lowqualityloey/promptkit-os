@@ -344,13 +344,13 @@ Ensure all async components support the 4 fundamental UI states with meaningful 
 3. **Error State**: Actionable recovery message with a `"Retry"` trigger.
 4. **Success / Data State**: Fluid rendering with optimistic UI updates where appropriate.
 
-### Step 8: Emit Design Tokens Artifact (D2/D3 Work; D0/D1 Target Note)
-For D2 (Surface) and D3 (System) tiers, persist the decisions from Steps 1–7 using `templates/design-tokens-spec.md`, saved to `./docs/design/YYYY-MM-DD-design-<surface>.md`. For D0 (Micro) and D1 (Component) tiers, a standalone tokens artifact is not required; document decisions and token mapping directly as a note in the target file or spec. A run that produces no durable output (neither target-file note for D0/D1 nor design artifact for D2/D3) has produced no durable output.
+### Step 8: Emit Design Tokens Artifact (D2/D3 Work; D0/D1 Target/Spec Note)
+For D2 (Surface) and D3 (System) tiers, persist the decisions from Steps 1–7 using `templates/design-tokens-spec.md`, saved to `./docs/design/YYYY-MM-DD-design-<surface>.md`. For D0 (Micro) and D1 (Component) tiers, a standalone tokens artifact is not required; document decisions and token mapping directly as a note in the target file or spec. A run that produces no durable output (neither target-file or spec note for D0/D1 nor design artifact for D2/D3) has produced no durable output.
 
 ---
 
 ## Completion Criteria
-- Design tokens artifact generated in `./docs/design/` for D2/D3 tiers (or target-file token note for D0/D1).
+- Design tokens artifact generated in `./docs/design/` for D2/D3 tiers (or target-file / spec token note for D0/D1).
 - Every interactive element meets the applicability-based state contract and practical touch-target guidance (~44×44px primary targets; 24×24px AA floor).
 - Exactly one icon family selected deliberately and applied consistently across all icons that exist (text-only controls exempt).
 - UI Delivery Gate Checklist below passes for the applicable tier and stack (record `N/A - <reason>` for out-of-scope tier or out-of-stack items, such as React performance on non-React stacks or system-tier gates on D0/D1).

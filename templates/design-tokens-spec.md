@@ -91,17 +91,17 @@
   
   --border: var(--color-slate-800);
   --input: var(--color-slate-800);
-  --ring: var(--color-brand-600);
+  --ring: var(--color-brand-500);
   
   --destructive: var(--color-danger-600);
   --destructive-foreground: #ffffff;
 }
 ```
 
-### WCAG 2.2 AA Contrast Verification (Normal Text ≥ 4.5:1, No Rounding)
-| Context | Foreground | Background | Computed Ratio | AA Result |
+### WCAG 2.2 AA Contrast Verification (Normal Text ≥ 4.5:1, UI Indicators ≥ 3.0:1)
+| Context | Foreground / Element | Background | Computed Ratio | AA Result |
 | :--- | :--- | :--- | :---: | :---: |
-| Light Surface Text | `--foreground` (`#0f172a`) | `--background` (`#f8fafc`) | 16.93:1 | Pass |
+| Light Surface Text | `--foreground` (`#0f172a`) | `--background` (`#f8fafc`) | 17.06:1 | Pass |
 | Light Primary Action | `--primary-foreground` (`#ffffff`) | `--primary` (`#4f46e5`) | 6.29:1 | Pass |
 | Light Destructive | `--destructive-foreground` (`#ffffff`) | `--destructive` (`#e11d48`) | 4.70:1 | Pass |
 | Light Muted Text | `--muted-foreground` (`#475569`) | `--muted` (`#f1f5f9`) | 6.92:1 | Pass |
@@ -109,6 +109,7 @@
 | Dark Primary Action | `--primary-foreground` (`#ffffff`) | `--primary` (`#4f46e5`) | 6.29:1 | Pass |
 | Dark Destructive | `--destructive-foreground` (`#ffffff`) | `--destructive` (`#e11d48`) | 4.70:1 | Pass |
 | Dark Muted Text | `--muted-foreground` (`#94a3b8`) | `--muted` (`#1e293b`) | 5.71:1 | Pass |
+| Dark Focus Ring (Non-Text) | `--ring` (`#6366f1`) | `--card`/`--popover` (`#0f172a`) | 3.77:1 | Pass (≥ 3:1) |
 
 ### Tactile Dual-Mode Presets (Chromatically Tinted Neutrals)
 
@@ -314,9 +315,9 @@ export const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      'fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-200',
+      'fixed inset-0 z-50 bg-black/60 backdrop-blur-sm motion-safe:transition-opacity motion-safe:duration-200',
       'motion-reduce:transition-none motion-reduce:animate-none',
-      'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+      'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=open]:fade-in-0',
       className
     )}
     {...props}
