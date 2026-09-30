@@ -693,28 +693,25 @@ foreach ($targetPath in $TargetsFound) {
         ""
     }
 
-    $hasStart = $content -match "(?m)^[ \t]*<!-- PROMPTKIT_START -->[ \t]*\r?$"
-    $hasEnd = $content -match "(?m)^[ \t]*<!-- PROMPTKIT_END -->[ \t]*\r?$"
+    $lines = $content -split "\r?\n"
+    $startIndex = -1
+    $endIndex = -1
+    $startCount = 0
+    $endCount = 0
 
-    if ($hasStart -or $hasEnd) {
-        $lines = $content -split "\r?\n"
-        $startIndex = -1
-        $endIndex = -1
-        $startCount = 0
-        $endCount = 0
-
-        for ($i = 0; $i -lt $lines.Length; $i++) {
-            $trimmed = $lines[$i].Trim()
-            if ($trimmed -eq "<!-- PROMPTKIT_START -->") {
-                $startCount++
-                if ($startIndex -eq -1) { $startIndex = $i }
-            }
-            if ($trimmed -eq "<!-- PROMPTKIT_END -->") {
-                $endCount++
-                if ($endIndex -eq -1) { $endIndex = $i }
-            }
+    for ($i = 0; $i -lt $lines.Length; $i++) {
+        $trimmed = $lines[$i].Trim()
+        if ($trimmed -eq "<!-- PROMPTKIT_START -->") {
+            $startCount++
+            if ($startIndex -eq -1) { $startIndex = $i }
         }
+        if ($trimmed -eq "<!-- PROMPTKIT_END -->") {
+            $endCount++
+            if ($endIndex -eq -1) { $endIndex = $i }
+        }
+    }
 
+    if ($startCount -gt 0 -or $endCount -gt 0) {
         if ($startCount -ne 1 -or $endCount -ne 1 -or $startIndex -ge $endIndex) {
             [System.Console]::Error.WriteLine("Error: Cannot safely update ${relTarget}: expected exactly one complete PromptKit directive block with START before END.")
             throw "Error: Cannot safely update ${relTarget}: expected exactly one complete PromptKit directive block with START before END."
@@ -728,7 +725,6 @@ foreach ($targetPath in $TargetsFound) {
         $currentOffset = 0
         $blockStartChar = -1
         $blockEndChar = -1
-        $hadEndNl = $false
 
         for ($i = 0; $i -lt $lines.Length; $i++) {
             $lineLen = $lines[$i].Length
@@ -736,20 +732,7 @@ foreach ($targetPath in $TargetsFound) {
                 $blockStartChar = $currentOffset
             }
             if ($i -eq $endIndex) {
-                $lineEndOffset = $currentOffset + $lineLen
-                if ($lineEndOffset -lt $content.Length) {
-                    if ($content.Substring($lineEndOffset).StartsWith("`r`n")) {
-                        $blockEndChar = $lineEndOffset + 2
-                        $hadEndNl = $true
-                    } elseif ($content.Substring($lineEndOffset).StartsWith("`n")) {
-                        $blockEndChar = $lineEndOffset + 1
-                        $hadEndNl = $true
-                    } else {
-                        $blockEndChar = $lineEndOffset
-                    }
-                } else {
-                    $blockEndChar = $lineEndOffset
-                }
+                $blockEndChar = $currentOffset + $lineLen
                 break
             }
 
@@ -770,12 +753,7 @@ foreach ($targetPath in $TargetsFound) {
         $before = if ($blockStartChar -gt 0) { $content.Substring(0, $blockStartChar) } else { "" }
         $after = if ($blockEndChar -lt $content.Length) { $content.Substring($blockEndChar) } else { "" }
 
-        $mid = $targetDirective
-        if ($hadEndNl -or $after.Length -gt 0) {
-            $mid = $mid + $nl
-        }
-
-        $updated = $before + $mid + $after
+        $updated = $before + $targetDirective + $after
 
         [System.IO.File]::WriteAllText($targetPath, $updated, $utf8NoBom)
         Write-Host "  [✓] Updated PromptKit OS directives in: $relTarget (profile: $Profile)" -ForegroundColor Yellow

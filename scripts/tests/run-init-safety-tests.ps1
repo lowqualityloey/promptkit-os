@@ -334,6 +334,60 @@ try {
         throw "Failed Test 18: File ending without newline gained unintended trailing characters."
     }
 
+    # Test 19: Mixed line endings (CRLF preamble, LF footer) preserve exact original terminator bytes
+    $MixedEolRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "mixedeol") -Force).FullName
+    $mixedAgent = Join-Path $MixedEolRoot "AGENTS.md"
+    $preambleCrlf = "Header CRLF`r`nMore header`r`n"
+    $footerLf = "`nFooter with LF separator`n"
+    $mixedInitial = $preambleCrlf + "<!-- PROMPTKIT_START -->`r`nold directive`r`n<!-- PROMPTKIT_END -->" + $footerLf
+    [System.IO.File]::WriteAllText($mixedAgent, $mixedInitial, $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $MixedEolRoot | Out-Null
+    $mixedUpdated = [System.IO.File]::ReadAllText($mixedAgent, [System.Text.Encoding]::UTF8)
+    if (-not $mixedUpdated.StartsWith($preambleCrlf)) {
+        throw "Failed Test 19: CRLF preamble was altered during mixed-EOL update."
+    }
+    if (-not $mixedUpdated.EndsWith($footerLf)) {
+        throw "Failed Test 19: LF footer separator was altered (e.g. converted to CRLF) during mixed-EOL update."
+    }
+
+    # Test 20: Markers indented with Unicode whitespace (non-breaking space) are updated without creating duplicates
+    $NbspRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "nbsp") -Force).FullName
+    $nbspAgent = Join-Path $NbspRoot "AGENTS.md"
+    $nbsp = [char]0x00A0
+    $nbspInitial = "Header`n${nbsp}${nbsp}<!-- PROMPTKIT_START -->`nold directive`n${nbsp}<!-- PROMPTKIT_END -->`nFooter`n"
+    [System.IO.File]::WriteAllText($nbspAgent, $nbspInitial, $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $NbspRoot | Out-Null
+    $nbspUpdated = [System.IO.File]::ReadAllText($nbspAgent, [System.Text.Encoding]::UTF8)
+    $startCount = ([regex]::Matches($nbspUpdated, "PROMPTKIT_START")).Count
+    $endCount = ([regex]::Matches($nbspUpdated, "PROMPTKIT_END")).Count
+    if ($startCount -ne 1 -or $endCount -ne 1) {
+        throw "Failed Test 20: Unicode whitespace indented markers resulted in duplicate directive blocks (start=$startCount, end=$endCount)."
+    }
+    if (-not $nbspUpdated.Contains("Header`n") -or -not $nbspUpdated.EndsWith("Footer`n")) {
+        throw "Failed Test 20: Header or footer was corrupted during Unicode indented marker update."
+    }
+
+    # Test 21: Orphan marker with Unicode whitespace is rejected loudly and preserves file
+    $OrphanNbspRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "orphannbsp") -Force).FullName
+    $orphanNbspAgent = Join-Path $OrphanNbspRoot "AGENTS.md"
+    $orphanInitial = "Header`n${nbsp}<!-- PROMPTKIT_START -->`nOrphan body without end marker`n"
+    [System.IO.File]::WriteAllText($orphanNbspAgent, $orphanInitial, $utf8NoBom)
+    $orphanHashBefore = (Get-FileHash -Path $orphanNbspAgent -Algorithm SHA256).Hash
+    $failedOrphan = $false
+    try {
+        $p = Start-Process -FilePath "pwsh" -ArgumentList "-NoProfile", "-File", "`"$initScriptPath`"", "-ProjectRoot", "`"$OrphanNbspRoot`"" -NoNewWindow -Wait -PassThru
+        if ($p.ExitCode -ne 0) { $failedOrphan = $true }
+    } catch {
+        $failedOrphan = $true
+    }
+    if (-not $failedOrphan) {
+        throw "Failed Test 21: Expected orphan Unicode-indented marker to be rejected loudly."
+    }
+    $orphanHashAfter = (Get-FileHash -Path $orphanNbspAgent -Algorithm SHA256).Hash
+    if ($orphanHashBefore -ne $orphanHashAfter) {
+        throw "Failed Test 21: File was modified despite orphan Unicode-indented marker failure."
+    }
+
     Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, and custom-target tests passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
