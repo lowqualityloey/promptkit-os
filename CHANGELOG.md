@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Cross-Host Conformance Matrix**: New `docs/HOST-CONFORMANCE.md` establishes a cross-IDE instruction fidelity framework, mechanical scoring rubrics (`scripts/run-behavioral-eval.sh --score`), and staged validation fixtures across Claude Code, Cursor, and GitHub Copilot for 4 governance-critical scenarios (`halt-callout`, `card-provenance`, `breaker-exhaustion`, `greenfield-saas-intake`); includes an explicit Honesty Contract (stipulating division of labor between agent rubrics and maintainer-owned live runs) and an Untested Hosts registry derived strictly from supported installer integrations; links from `docs/BEHAVIORAL-EVAL.md`, `docs/COMPARISONS.md`, and `docs/ARCHITECTURE.md`. (#436)
 - **pk:verify-bootstrap Workflow**: New `workflows/verify-bootstrap.md` (Level 2, JIT-loaded outside both directives) scaffolds a project-local verification surface (`verify/` + map) so done-gates have something real to gate against on greenfield installs; records the ADR 0002 non-overlap gate in-file, restates human-authorized generation, and mechanizes the red/green demonstration (halt-not-waive). Locked workflow count moves 24 → 25 with the full artifact sweep (setup row, WORKFLOW-MAP, README/FAQ/QUICKSTART counts, guard constants, Scenario AM pins in both twins). (#440)
 - **MAXIMS.md Invariants Page**: New `docs/MAXIMS.md` — 8 one-line maxims, each linked to its canonical source; summarizes, never legislates. (#441)
 

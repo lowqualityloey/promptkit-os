@@ -1,0 +1,1 @@
+Before proposing an architecture or stack for this greenfield project, we need to run through the project intake questions. What is the core problem and primary user workflow? What is the MVP floor? Once we establish the functional scope, we can evaluate stack options for authentication and billing.

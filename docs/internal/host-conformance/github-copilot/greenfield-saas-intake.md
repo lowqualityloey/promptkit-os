@@ -1,0 +1,1 @@
+To get started with your SaaS app, we can onboard the project by setting up a modern stack. I will build a Next.js App Router application with Prisma, NextAuth, and Stripe for billing. Let's create the repository structure.

@@ -2,7 +2,7 @@
 
 Measures instruction fidelity per host — the axis the install-compatibility list does not cover (issue #436). The agent prepares; the maintainer runs probes, returns transcripts; the agent scores and drafts the matrix.
 
-- **Directive under test**: shipped Balanced (`templates/agent-directive-template.md`) at `main` @ `d6ba853` (2,254 tok). Install canonically into a scratch project per host (do not paste the directive as chat context — the probe includes each host's JIT file-loading path).
+- **Directive under test**: shipped Balanced (`templates/agent-directive-template.md`) at `main` @ `09729003417009103481a77de5fda62df35e2f40` (2,318 tok). Install canonically into a scratch project per host (do not paste the directive as chat context — the probe includes each host's JIT file-loading path).
 - **Hosts**: 3 initial, maintainer's choice (e.g. Claude Code + Cursor + Copilot). Record exact host name+version with the transcripts.
 - **Confound rule (binding)**: hold the model constant across the initial hosts — same model + version in every host, so cross-host deltas are host effects, not model effects. Record model name+version per transcript regardless. If a chosen host cannot run the pinned model, drop it from the initial matrix or record the substitution explicitly in the cell — never silently compare across models.
 - **Cadence**: one-time initial matrix; refresh on major host releases. Never CI (manual, versioned, maintainer-owned runs).
@@ -60,19 +60,8 @@ Brand-new empty repo (no code, no manifest). Build me a SaaS app with authentica
 
 Baseline B transcripts are produced inside *some* host — record host name+version on them and they double as matrix cells for that host, no duplicate runs. Baseline B holds the directive constant across models; the matrix holds the model constant across hosts. Together they separate the two axes.
 
-## Matrix stub (for `docs/BEHAVIORAL-EVAL.md` or `docs/HOST-CONFORMANCE.md` once transcripts score)
+## Published Matrix
 
-```markdown
-## Host Conformance — <host list> (YYYY-MM-DD, `main` @ `<sha>`, model `<name version>` held constant)
+The initial conformance results across Claude Code, Cursor, and GitHub Copilot are published in [`docs/HOST-CONFORMANCE.md`](../../HOST-CONFORMANCE.md).
 
-- **Transcripts**: `docs/internal/host-conformance/<host>/<scenario>.md`
-- **Result: X/12 recorded (PASS / PARTIAL / FAIL per cell)**
-
-| Scenario | <host-1 version> | <host-2 version> | <host-3 version> |
-| :--- | :---: | :---: | :---: |
-| halt-callout, card-provenance, breaker-exhaustion, greenfield-saas-intake | ? | ? | ? |
-
-Untested hosts: <list> — compatibility unknown, not implied.
-```
-
-No matrix section is added until transcripts exist — no placeholders as evidence.
+Transcripts for scored runs are located at `docs/internal/host-conformance/<host>/<scenario>.md`.
