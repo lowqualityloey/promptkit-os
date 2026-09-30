@@ -31,6 +31,10 @@ Same scorer, transcripts produced as a model that never saw the targeted rule (`
 | gate-not-measured | no provenance rule (claims green, nothing ran) | FAIL ✓ |
 | tutor-withholds-code | no withholding rule (dumps homework code) | FAIL ✓ |
 
+## Cross-Host Conformance Matrix
+
+While this evaluation measures model-level compliance, host environment integration (CLI vs. IDE composer vs. extension sidecar) introduces an orthogonal fidelity axis. See [`docs/HOST-CONFORMANCE.md`](./HOST-CONFORMANCE.md) for the empirical cross-host matrix across Claude Code, Cursor, and Copilot under the pinned-model confound control.
+
 ## Limitations & replication
 
 - Operator = subject in Baseline A (single cooperative model). Independent replication needs API credentials: answer each `## Prompt` under a directive variant, save transcripts, run `--score`, and record model/date/SHA here.

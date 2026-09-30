@@ -218,6 +218,7 @@ promptkit-os/
 ├── docs/
 │   ├── ARCHITECTURE.md          # Operating model, enforcement, command reference & layout (this file)
 │   ├── BEHAVIORAL-EVAL.md       # Sampled prompt-compliance results & methodology
+│   ├── HOST-CONFORMANCE.md      # Cross-IDE markdown instruction fidelity matrix
 │   ├── BENCHMARKS.md            # Factual token economics, JIT benchmarks & model tiering
 │   ├── BENCHMARK-METHODOLOGY.md # Cost Per Accepted Change (CPAC) empirical benchmark framework
 │   ├── COMPARISONS.md           # Host support matrix & competitor comparison

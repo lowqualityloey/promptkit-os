@@ -60,19 +60,8 @@ Brand-new empty repo (no code, no manifest). Build me a SaaS app with authentica
 
 Baseline B transcripts are produced inside *some* host — record host name+version on them and they double as matrix cells for that host, no duplicate runs. Baseline B holds the directive constant across models; the matrix holds the model constant across hosts. Together they separate the two axes.
 
-## Matrix stub (for `docs/BEHAVIORAL-EVAL.md` or `docs/HOST-CONFORMANCE.md` once transcripts score)
+## Published Matrix
 
-```markdown
-## Host Conformance — <host list> (YYYY-MM-DD, `main` @ `<sha>`, model `<name version>` held constant)
+The initial conformance results across Claude Code, Cursor, and GitHub Copilot are published in [`docs/HOST-CONFORMANCE.md`](../../HOST-CONFORMANCE.md).
 
-- **Transcripts**: `docs/internal/host-conformance/<host>/<scenario>.md`
-- **Result: X/12 recorded (PASS / PARTIAL / FAIL per cell)**
-
-| Scenario | <host-1 version> | <host-2 version> | <host-3 version> |
-| :--- | :---: | :---: | :---: |
-| halt-callout, card-provenance, breaker-exhaustion, greenfield-saas-intake | ? | ? | ? |
-
-Untested hosts: <list> — compatibility unknown, not implied.
-```
-
-No matrix section is added until transcripts exist — no placeholders as evidence.
+Transcripts for scored runs are located at `docs/internal/host-conformance/<host>/<scenario>.md`.
