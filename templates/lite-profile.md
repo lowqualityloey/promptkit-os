@@ -27,7 +27,7 @@ Original proposal for Turbo: "AI does all decisions, auto-checkpoint, hallucinat
 
 Cross-exam findings:
 - auto-checkpoint detection needs `hooks/*.js` statusline hook like gsd-core has — promptkit-os has zero binaries by design (pure markdown)
-- hallucination awareness needs eval harness like superpowers-evals — we have 60 structural contract tests, not truth eval
+- hallucination awareness needs eval harness like superpowers-evals — we have structural contract tests (live count in CI), not truth eval
 - no decay = fresh-context orchestration (gsd-core's thesis) = 5x token multiplier, contradicts lightweightness goal
 - breaks Level 3 safety: `CONTRIBUTING.md` says releases/tags/deploys require explicit human approval
 
@@ -68,15 +68,15 @@ Per-task payload after Change A (route.md no longer mandatory):
 
 ```bash
 bash init.sh --lite /tmp/test-lite && grep profile /tmp/test-lite/PROMPTKIT.md
-bash scripts/measure-tokens.sh /tmp/test-lite/AGENTS.md # expect 842 tok
+bash scripts/measure-tokens.sh /tmp/test-lite/AGENTS.md # expect the live Lite static figure (docs/BENCHMARKS.md)
 
 bash init.sh --balanced /tmp/test-balanced && grep profile /tmp/test-balanced/PROMPTKIT.md
-bash scripts/measure-tokens.sh /tmp/test-balanced/AGENTS.md # expect 2073 tok
+bash scripts/measure-tokens.sh /tmp/test-balanced/AGENTS.md # expect the live Balanced static figure (docs/BENCHMARKS.md)
 
 bash init.sh --turbo /tmp/test-turbo # should fail, requires --experimental
 bash init.sh --turbo --experimental /tmp/test-turbo && grep profile /tmp/test-turbo/PROMPTKIT.md
 
-bash scripts/tests/run-behavioral-contract-tests.sh # expect 60/0
+bash scripts/tests/run-behavioral-contract-tests.sh # expect all-pass (live count in CI)
 bash scripts/validate-references.sh . # expect 0 errors
 ```
 

@@ -11,7 +11,7 @@ Run a safe, self-contained simulation of `pk:auto` — autonomous SDLC meta-orch
 
 You are supervising an autonomous agent implementing this bounded task:
 
-> **Task**: Add email-format validation to the signup form in `src/signup.ts`, with unit tests covering valid, invalid, and empty inputs. The existing suite has 12 passing tests, including `signup.test.ts` with an assertion that empty email must be rejected.
+> **Task**: Add email-format validation to the signup form in `src/signup.ts`, with unit tests covering valid, invalid, and empty inputs. The existing suite has 12 passing tests, including `signup.test.ts` with an assertion that empty email must be rejected. (The agent will add 1 new test file (`src/signup-validation.test.ts`) for the validator; the 12 pre-existing assertions stay untouched.)
 
 Declared boundary: **`review ready`** (default). The agent must halt with green tests and a clean diff — no commit, PR, or push.
 
@@ -50,7 +50,7 @@ FAIL signup.test.ts — "rejects empty email" (expected rejection, got acceptanc
 
 The agent proposes: *"The assertion seems too strict — let me relax it so the suite passes."*
 
-**Expected behavior**: **Refuse.** The agent must never edit, relax, or delete an existing test assertion to force green ([Test Immobility Invariant](../workflows/auto.md)). Only source files may change. After 3 failed remediation attempts it halts, checkpoints `docs/STATE.md`, and yields with diagnostics.
+**Expected behavior**: **Refuse.** The agent must never edit, relax, or delete an existing test assertion to force green ([Test Immobility Invariant](../workflows/auto.md)). Only source files may change, and new test files may be added — existing test files must never be edited. After the initial failure plus 2 failed remediation attempts (3-strike budget exhausted) it halts, checkpoints `docs/STATE.md`, and yields with diagnostics.
 
 Discuss: *what is the correct remediation?* (Example: fix the validator in `src/signup.ts` so empty input is rejected — the test was right.)
 
@@ -58,7 +58,7 @@ Discuss: *what is the correct remediation?* (Example: fix the validator in `src/
 Tests pass. The agent presents:
 
 ```text
-✅ 13/13 tests green. Diff: src/signup.ts (+18 lines) + signup.test.ts is untouched.
+✅ 13/13 tests green — the 12 pre-existing assertions untouched, plus 1 added test file. Diff: src/signup.ts (+18 lines) + new src/signup-validation.test.ts; signup.test.ts itself is untouched.
 🏁 HALT at 'review ready' — clean diff below for your review. No commit, PR, or push performed.
 ```
 
@@ -86,7 +86,7 @@ Without re-reading the scenario, state from memory:
 - Step 3: participant refuses the test edit, directs the fix at source, and names the 3-strike limit.
 - Step 4: participant confirms the halt, reviews the diff, and describes the human re-entry (`pk:review` → `pk:commit`).
 
-**Reference**: [`workflows/auto.md`](../workflows/auto.md) — the 5 hard rails, stop boundaries, and lifecycle diagram.
+**Reference**: [`workflows/auto.md`](../workflows/auto.md) — test immobility, 3-strike budget, and stop boundaries. The search circuit-breaker limits live in the injected directive templates (`Search Circuit Breaker (advisory)` in `templates/agent-directive-template.md`; `Circuit Breaker (advisory)` in `agent-directive-lite-template.md`).
 
 ---
 

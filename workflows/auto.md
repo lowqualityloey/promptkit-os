@@ -203,7 +203,7 @@ Developers may reclaim manual control at any instant:
 * **CLI (Terminal)**: Press `Ctrl+C` or `ESC` to abort the active tool execution.
 * **IDE (GUI)**: Click the **Stop** button or send an interrupting steering prompt.
 
-Because `workflows/auto.md` commits **phase-boundary micro-checkpoints** to `docs/STATE.md` after planning, coding, and testing, **zero context or progress is lost** upon interruption.
+Because `workflows/auto.md` commits **phase-boundary micro-checkpoints** to `docs/STATE.md` after planning, coding, and testing, **tracked context and checkpointed progress are preserved** upon interruption. Unrecorded in-flight reasoning is not recovered — record decisions at each boundary.
 
 ### Scoped Reversion
 If the assistant modifies an unintended file during autonomous execution:

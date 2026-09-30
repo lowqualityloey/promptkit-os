@@ -93,7 +93,7 @@ When debugging failures, agents default to a compact root-cause view (e.g., the 
 
 ## 9. Context Budgets & Provenance Logging
 
-Agents must log context escalations. If an agent hits a budget threshold but requires more evidence (Anti-Starvation), it must log a `context_escalation` record detailing why the budget was exceeded (e.g., "Hit soft token limit, but required DB schema context to validate safety").
+Agents must log context escalations. If an agent hits a budget threshold but requires more evidence (Anti-Starvation), it must log a `context_escalation` record in the `docs/STATE.md` session log, detailing why the budget was exceeded (e.g., "Hit soft token limit, but required DB schema context to validate safety").
 
 ## 10. Context Provider Capability Contract
 

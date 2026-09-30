@@ -5,7 +5,7 @@ Define the non-negotiable definition-of-done (DoD) and engineering quality bar f
 
 ---
 
-## The 6 Pillars of Senior Code Quality
+## The 8 Pillars of Senior Code Quality
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -144,7 +144,7 @@ Before completing any coding task or finishing a PromptKit OS session:
 1b. Run mandatory static verification (blocking): `tsc --noEmit`, `eslint`, `biome check`, or commands in `./PROMPTKIT.md`. The task is not done until these pass.
 2. Run test suites (`npm test`, `pytest`, `cargo test`, or commands in `./PROMPTKIT.md`).
 3. Verify all scenario acceptance criteria (`AC-*`) are completely met with concrete test evidence.
-4. Audit against the 6 pillars checklist above.
+4. Audit against the 8 pillars checklist above.
 5. **Bounded Oracle Verification (Machine-Verified Quality Gate)**:
    - You **MUST NOT** emit a green telemetry card (`> 🟢 Quality Gate: passed`) unless a verification command (tests, build, or typecheck) physically executed and returned `exit code 0` in this active turn. Passing this gate proves technical verification; full task completion additionally requires satisfying all acceptance criteria (`AC-*`) and human intent.
    - **Oracle Test Integrity Guard**: You are strictly forbidden from modifying, disabling, commenting out, or deleting pre-existing tests, or authoring vacuous/tautological assertions (e.g. `expect(true).toBe(true)`), to bypass failures or manufacture a green `exit code 0`. If a test suite legitimately requires updating due to an approved requirement change or contract migration, the modification must be explicitly documented with rationale in the task evidence and commit description.

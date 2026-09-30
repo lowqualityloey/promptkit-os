@@ -1,7 +1,7 @@
 # Activity 04: Engineering an Accessible, Tokenized Design System
 
 ## Overview
-Design and implement a production-grade, accessible UI component primitive library featuring dark/light tokenized themes, headless accessibility (Radix UI / React Aria), Class Variance Authority (CVA), responsive container queries, and full WCAG 2.2 Level AA compliance.
+Design and implement a production-grade, accessible UI component primitive library featuring dark/light tokenized themes, headless accessibility (Radix UI / React Aria), Class Variance Authority (CVA), responsive container queries, and a working path toward WCAG 2.2 Level AA (automated checks plus a scoped human conformance evaluation before claiming compliance — automated tools alone cannot certify conformance).
 
 ---
 
@@ -49,6 +49,7 @@ Build a core set of compound, polymorphic UI components:
 
 ## Success Criteria
 - [ ] Zero automated axe-core accessibility violations.
+- [ ] Scoped human conformance evaluation completed for the component set (automation alone cannot certify WCAG conformance).
 - [ ] 100% keyboard navigable with visible, high-contrast focus rings.
 - [ ] Fully responsive with container queries and fluid typography.
 - [ ] Dark and Light theme tokens switch seamlessly with zero layout shift.
