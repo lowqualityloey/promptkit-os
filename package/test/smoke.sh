@@ -18,29 +18,28 @@ fi
 VERSION="${VERSION#v}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$HERE/../.." && pwd)"
+REPO_ROOT="${PROMPTKIT_REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || (cd "$HERE/../.." && pwd))}"
 WORK="$(mktemp -d)"
 
-# If package.json is at 0.0.0 (e.g. running smoke test outside of the release job),
-# temporarily set it to $VERSION so npm pack and promptkit-os.js accept it, then restore on exit.
-RESTORE_PKG=0
-if grep -q '"version": "0.0.0"' "$REPO_ROOT/package/package.json"; then
-    (cd "$REPO_ROOT/package" && npm version "$VERSION" --no-git-tag-version >/dev/null)
-    RESTORE_PKG=1
-fi
-
 cleanup() {
-    if [ "$RESTORE_PKG" -eq 1 ]; then
-        (cd "$REPO_ROOT/package" && git checkout -- package.json 2>/dev/null || true)
-    fi
     rm -rf "$WORK"
 }
 trap cleanup EXIT
 
 echo "== 1. courier install (exercise packaged courier binary) =="
+# Stage a copy of the courier package in a temporary directory before packing.
+# This prevents modifying the working tree's package/package.json, preserving any
+# unstaged local edits across smoke test execution (R1).
+STAGE_PKG_DIR="$WORK/pkg-stage"
+mkdir -p "$STAGE_PKG_DIR"
+cp -R "$REPO_ROOT/package/." "$STAGE_PKG_DIR/"
+
+# Sync version in the staged copy
+(cd "$STAGE_PKG_DIR" && npm version "$VERSION" --no-git-tag-version >/dev/null)
+
 PACK_DIR="$WORK/pack"
 mkdir -p "$PACK_DIR"
-(cd "$REPO_ROOT/package" && npm pack --pack-destination "$PACK_DIR" >/dev/null)
+(cd "$STAGE_PKG_DIR" && npm pack --pack-destination "$PACK_DIR" >/dev/null)
 TARBALL=$(find "$PACK_DIR" -name "promptkit-os-*.tgz" | head -1)
 [ -n "$TARBALL" ] || { echo "FAIL: npm pack failed to produce tarball"; exit 1; }
 tar -xzf "$TARBALL" -C "$PACK_DIR"
@@ -52,8 +51,19 @@ mkdir -p "$COURIER_DIR"
 (cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 node "$COURIER_BIN" --balanced "$COURIER_DIR")
 
 echo "== 1b. courier guard: refuse silent overlay of existing .promptkit without --force =="
-if (cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 node "$COURIER_BIN" --balanced "$COURIER_DIR") 2>/dev/null; then
+set +e
+refusal_out=$( (cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 node "$COURIER_BIN" --balanced "$COURIER_DIR") 2>&1 )
+refusal_code=$?
+set -e
+
+if [ "$refusal_code" -eq 0 ]; then
     echo "FAIL: courier should refuse to overlay an existing non-empty .promptkit without --force"
+    exit 1
+fi
+
+if ! echo "$refusal_out" | grep -q "Refusing to overlay"; then
+    echo "FAIL: courier failed but not with expected overlay refusal diagnostic. Output:"
+    echo "$refusal_out"
     exit 1
 fi
 echo "  ok: courier cleanly refuses to overlay non-empty directory"

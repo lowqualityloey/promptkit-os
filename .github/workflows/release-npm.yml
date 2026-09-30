@@ -56,13 +56,29 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
         run: git ls-remote --exit-code --tags "origin" "refs/tags/$TAG"
 
+      - name: Preserve Hardened Smoke Harness
+        run: |
+          mkdir -p "$RUNNER_TEMP/hardened-smoke"
+          cp package/test/smoke.sh "$RUNNER_TEMP/hardened-smoke/smoke.sh"
+          chmod +x "$RUNNER_TEMP/hardened-smoke/smoke.sh"
+
       - name: Checkout Resolved Release Tag
         env:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           git fetch origin tag "$TAG" --no-tags
-          git checkout "tags/$TAG"
-          echo "Checked out commit $(git rev-parse HEAD) for tag $TAG"
+          TAG_COMMIT=$(git rev-parse --verify -q "refs/tags/${TAG}^{commit}")
+          if [ -z "$TAG_COMMIT" ]; then
+            echo "::error::Could not resolve tag refs/tags/$TAG to a commit"
+            exit 1
+          fi
+          git checkout --detach "$TAG_COMMIT"
+          CURRENT_HEAD=$(git rev-parse HEAD)
+          if [ "$CURRENT_HEAD" != "$TAG_COMMIT" ]; then
+            echo "::error::HEAD ($CURRENT_HEAD) does not match resolved tag commit ($TAG_COMMIT)"
+            exit 1
+          fi
+          echo "Successfully checked out detached commit $TAG_COMMIT for tag $TAG"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -156,7 +172,8 @@ jobs:
       - name: Smoke Test Courier Against This Release
         env:
           PROMPTKIT_VERSION: ${{ steps.tag.outputs.version }}
-        run: bash package/test/smoke.sh
+          PROMPTKIT_REPO_ROOT: ${{ github.workspace }}
+        run: bash "$RUNNER_TEMP/hardened-smoke/smoke.sh"
 
       - name: Publish to npm with Provenance
         working-directory: package
