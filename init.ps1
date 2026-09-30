@@ -726,10 +726,11 @@ foreach ($targetPath in $TargetsFound) {
         })
     } else {
         $isCrlf = $Directive.Contains("`r`n")
-        $targetDirective = ($Directive -split "`r?`n") -join (if ($isCrlf) { "`r`n" } else { "`n" })
+        $targetNl = if ($isCrlf) { "`r`n" } else { "`n" }
+        $targetDirective = ($Directive -split "`r?`n") -join $targetNl
         $StagedTargetUpdates.Add([PSCustomObject]@{
             TargetPath = $targetPath
-            Content    = $targetDirective + (if ($isCrlf) { "`r`n" } else { "`n" })
+            Content    = $targetDirective + $targetNl
             Mode       = "create"
             RelTarget  = $relTarget
         })
@@ -805,12 +806,11 @@ try {
     }
 
     # Commit PROMPTKIT.md
-    $profileInitialContent = if (Test-Path -LiteralPath $ProjectProfile) {
-        [System.IO.File]::ReadAllText($ProjectProfile, [System.Text.Encoding]::UTF8)
+    $profileInitialContent = ""
+    if (Test-Path -LiteralPath $ProjectProfile) {
+        $profileInitialContent = [System.IO.File]::ReadAllText($ProjectProfile, [System.Text.Encoding]::UTF8)
     } elseif (Test-Path -LiteralPath $TemplateProfile) {
-        [System.IO.File]::ReadAllText($TemplateProfile, [System.Text.Encoding]::UTF8)
-    } else {
-        ""
+        $profileInitialContent = [System.IO.File]::ReadAllText($TemplateProfile, [System.Text.Encoding]::UTF8)
     }
     $stagedProfile = Get-UpdatedProfileContent -CurrentContent $profileInitialContent -Profile $Profile -Tracking $Tracking -TrackingProjection $TrackingProjection -EngineDir $EngineDir
 
