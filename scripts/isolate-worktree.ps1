@@ -70,6 +70,10 @@ switch ($Action) {
 
         Write-Host "🌿 Creating isolated worktree at $TargetPath on branch '$BranchName'..." -ForegroundColor Cyan
         git worktree add -b $BranchName $TargetPath
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to create worktree at $TargetPath."
+            exit $LASTEXITCODE
+        }
         Write-Host "  ✅ Worktree created successfully." -ForegroundColor Green
         Write-Host "  To enter worktree: cd $TargetPath" -ForegroundColor DarkGray
     }
@@ -87,6 +91,10 @@ switch ($Action) {
         $BranchName = "worktree/$TaskId"
         Write-Host "🔀 Merging branch '$BranchName' into current branch..." -ForegroundColor Cyan
         git merge $BranchName
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to merge branch '$BranchName'."
+            exit $LASTEXITCODE
+        }
         Write-Host "  ✅ Merge completed. Remember to remove the worktree with 'remove $TaskId' when finished." -ForegroundColor Green
     }
 
@@ -102,6 +110,10 @@ switch ($Action) {
         if (Test-Path $TargetPath) {
             if ($Force) {
                 git worktree remove $TargetPath --force
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "Failed to forcefully remove worktree at $TargetPath."
+                    exit $LASTEXITCODE
+                }
             } else {
                 try {
                     $originalEAP = $ErrorActionPreference
@@ -117,6 +129,10 @@ switch ($Action) {
             }
         } else {
             git worktree prune
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to prune git worktree."
+                exit $LASTEXITCODE
+            }
         }
 
         # Optional branch deletion
@@ -124,6 +140,10 @@ switch ($Action) {
         if ($branchExists) {
             if ($Force) {
                 git branch -D $BranchName
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Error "Failed to forcefully delete branch $BranchName."
+                    exit $LASTEXITCODE
+                }
                 Write-Host "  [-] Force deleted branch $BranchName" -ForegroundColor DarkGray
             } else {
                 try {
