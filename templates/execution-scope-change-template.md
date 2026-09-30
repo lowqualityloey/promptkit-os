@@ -4,7 +4,7 @@
 
 - **Record Type**: `Scope Change Record`
 - **Scope Change ID**: `SCOPE-[YYYY-MM-DD]-[task-id]-[sequence]`
-- **Task ID**: `TASK-[YYYY-MM-DD]-[slug]`
+- **Task ID**: `TASK-<task-slug>` (preserve `TASK-YYYY-MM-DD-<slug>` for legacy/`none`-profile records)
 - **Specification**: `docs/specs/[specification].md`
 - **Proposer / Actor**: `[Person, role, or agent]`
 - **Created**: `[YYYY-MM-DD HH:MM UTC]`
