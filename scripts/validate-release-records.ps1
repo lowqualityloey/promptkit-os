@@ -458,8 +458,19 @@ function Validate-CrossRecordConsistency {
     $evaluationIds = @($evaluationRecords | Where-Object { $_.EvaluationId -ne 'UNKNOWN' } | Select-Object -ExpandProperty EvaluationId -Unique)
 
     foreach ($record in $Items) {
-        if ($record.CanonicalType -ne 'Release Evaluation' -and $evaluationIds.Count -gt 0 -and $record.EvaluationId -notin $evaluationIds) {
+        if ($record.CanonicalType -ne 'Release Evaluation' -and $record.EvaluationId -notin $evaluationIds) {
             Add-Diagnostic 'EVALUATION_ID_MISMATCH' $record.EvaluationId $record.RelativePath "Evaluation ID does not match a Release Evaluation record: $($record.EvaluationId)" 'Use one shared Evaluation ID across linked evaluation artifacts'
+
+            if ($record.CanonicalType -eq 'Approved Release Record' -and (Get-FieldValue $record 'Approval Decision').ToLowerInvariant() -eq 'approved') {
+                $qa = @(Get-RecordsOfType $Items 'QA Review Record' | Where-Object { $_.EvaluationId -eq $record.EvaluationId })
+                $candidate = @(Get-RecordsOfType $Items 'SemVer Candidate Record' | Where-Object { $_.EvaluationId -eq $record.EvaluationId })
+                if ($qa.Count -eq 0) {
+                    Add-Diagnostic 'APPROVAL_REQUIRED' $record.EvaluationId $record.RelativePath 'Approved Release Record has no linked QA Review Record' 'Link a completed QA review under the same Evaluation ID'
+                }
+                if ($candidate.Count -eq 0) {
+                    Add-Diagnostic 'CANDIDATE_PROVENANCE' $record.EvaluationId $record.RelativePath 'Approved Release Record has no linked preliminary candidate' 'Link the preliminary candidate and retain its provenance'
+                }
+            }
         }
     }
 

@@ -58,9 +58,10 @@ foreach ($line in (Get-Content -LiteralPath $DiffFile)) {
     if ($line -match '^\+\+\+ b/(.+)$') { $file = $Matches[1]; continue }
     if ($file -and $line -match '^@@ .* \+(\d+)(?:,(\d+))? @@') {
         $start = [int]$Matches[1]
-        $count = if ($Matches[2]) { [int]$Matches[2] } else { 1 }
-        if ($count -lt 1) { $count = 1 }
-        $ranges += [pscustomobject]@{ File = $file; Start = $start; End = $start + $count - 1 }
+        $count = if ($Matches[2] -ne $null -and $Matches[2] -ne '') { [int]$Matches[2] } else { 1 }
+        if ($count -gt 0) {
+            $ranges += [pscustomobject]@{ File = $file; Start = $start; End = $start + $count - 1 }
+        }
     }
 }
 

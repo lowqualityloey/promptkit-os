@@ -17,3 +17,15 @@ index 3333333..4444444 100644
 +let a = 1;
 +let b = 2;
 +export { a, b };
+diff --git a/src/del.ts b/src/del.ts
+index 5555555..6666666 100644
+--- a/src/del.ts
++++ b/src/del.ts
+@@ -10 +9,0 @@
+-const deleted = true;
+diff --git a/src/single.ts b/src/single.ts
+index 7777777..8888888 100644
+--- a/src/single.ts
++++ b/src/single.ts
+@@ -5 +5 @@
++const single = 1;
