@@ -289,6 +289,50 @@ try {
     if ($LASTEXITCODE -eq 0) {
         throw "Failed Test 15: traversal --target=../evil was accepted; expected rejection."
     }
+    # Test 16: Inline marker example in preamble survives update without deletion of intervening user prose
+    $InlineRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "inlineexample") -Force).FullName
+    $inlineAgent = Join-Path $InlineRoot "AGENTS.md"
+    $inlineInitial = "# Project Instructions`n`nNote: do not remove <!-- PROMPTKIT_START --> manually.`n`nIntervening critical user prose that must be preserved.`n`n<!-- PROMPTKIT_START -->`nold directive`n<!-- PROMPTKIT_END -->`n`nTrailing footer prose."
+    [System.IO.File]::WriteAllText($inlineAgent, $inlineInitial, $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $InlineRoot | Out-Null
+    $inlineUpdated = [System.IO.File]::ReadAllText($inlineAgent, [System.Text.Encoding]::UTF8)
+    if (-not $inlineUpdated.Contains("Note: do not remove <!-- PROMPTKIT_START --> manually.")) {
+        throw "Failed Test 16: Inline marker example in user preamble was deleted or corrupted."
+    }
+    if (-not $inlineUpdated.Contains("Intervening critical user prose that must be preserved.")) {
+        throw "Failed Test 16: Intervening user prose between inline marker example and managed block was deleted."
+    }
+    if (-not $inlineUpdated.Contains("Trailing footer prose.")) {
+        throw "Failed Test 16: Trailing footer prose was lost."
+    }
+
+    # Test 17: Directive block at the very beginning of the file (startIndex == 0)
+    $StartZeroRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "startzero") -Force).FullName
+    $startZeroAgent = Join-Path $StartZeroRoot "AGENTS.md"
+    $startZeroInitial = "<!-- PROMPTKIT_START -->`nold directive`n<!-- PROMPTKIT_END -->`n`nUser postamble content."
+    [System.IO.File]::WriteAllText($startZeroAgent, $startZeroInitial, $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $StartZeroRoot | Out-Null
+    $startZeroUpdated = [System.IO.File]::ReadAllText($startZeroAgent, [System.Text.Encoding]::UTF8)
+    if (-not $startZeroUpdated.StartsWith("<!-- PROMPTKIT_START -->")) {
+        throw "Failed Test 17: Block starting at line 0 was not placed at beginning of updated file."
+    }
+    if (-not $startZeroUpdated.Contains("User postamble content.")) {
+        throw "Failed Test 17: Postamble content lost when directive block is at line 0."
+    }
+
+    # Test 18: Directive block at the very end of the file with no trailing newline
+    $EndNoNlRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "endnonl") -Force).FullName
+    $endNoNlAgent = Join-Path $EndNoNlRoot "AGENTS.md"
+    $endNoNlInitial = "User preamble content.`n`n<!-- PROMPTKIT_START -->`nold directive`n<!-- PROMPTKIT_END -->"
+    [System.IO.File]::WriteAllText($endNoNlAgent, $endNoNlInitial, $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $EndNoNlRoot | Out-Null
+    $endNoNlUpdated = [System.IO.File]::ReadAllText($endNoNlAgent, [System.Text.Encoding]::UTF8)
+    if (-not $endNoNlUpdated.Contains("User preamble content.")) {
+        throw "Failed Test 18: Preamble content lost when directive block is at end of file."
+    }
+    if (-not $endNoNlUpdated.EndsWith("<!-- PROMPTKIT_END -->")) {
+        throw "Failed Test 18: File ending without newline gained unintended trailing characters."
+    }
 
     Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, and custom-target tests passed." -ForegroundColor Green
 } finally {

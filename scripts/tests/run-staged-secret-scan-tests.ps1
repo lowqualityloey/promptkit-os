@@ -192,6 +192,67 @@ try {
         }
     }
 
+    # --- Probe Purge & Credential Filename Gate Tests ---
+    $hygieneRepo = Join-Path $tempRoot "hygiene_repo"
+    New-Item -ItemType Directory -Path $hygieneRepo -Force | Out-Null
+    & git -C $hygieneRepo init -q
+    & git -C $hygieneRepo config user.name "PromptKit hygiene fixture"
+    & git -C $hygieneRepo config user.email "hygiene-fixture@example.invalid"
+
+    # Baseline commit with an existing debug statement and a secret
+    [System.IO.File]::WriteAllText((Join-Path $hygieneRepo "app.js"), "console.log(`"DEBUG: existing_secret_token=abcd1234efgh`");`n", $utf8NoBom)
+    & git -C $hygieneRepo add app.js
+    & git -C $hygieneRepo commit -q -m "initial commit with debug"
+
+    # Case 1: Removing the debug statement (deleted line only)
+    [System.IO.File]::WriteAllText((Join-Path $hygieneRepo "app.js"), "console.log(`"clean app`");`n", $utf8NoBom)
+    & git -C $hygieneRepo add app.js
+
+    $diffOutput = & git -C $hygieneRepo diff --cached -U0 --no-ext-diff --no-textconv
+    $addedProbe = @($diffOutput | Where-Object { $_ -match '^\+[^+]' -and $_ -match '\[DEBUG-|console\.log\("DEBUG|dbg!\(' })
+    if ($addedProbe.Count -ne 0) {
+        Fail "Deleting a debug probe must not trigger probe addition detection."
+    }
+
+    # Case 2: Adding a new debug statement
+    [System.IO.File]::AppendAllText((Join-Path $hygieneRepo "app.js"), "console.log(`"DEBUG: new probe`");`n", $utf8NoBom)
+    & git -C $hygieneRepo add app.js
+
+    $diffOutput = & git -C $hygieneRepo diff --cached -U0 --no-ext-diff --no-textconv
+    $addedProbe = @($diffOutput | Where-Object { $_ -match '^\+[^+]' -and $_ -match '\[DEBUG-|console\.log\("DEBUG|dbg!\(' })
+    if ($addedProbe.Count -eq 0) {
+        Fail "Adding a debug probe must be detected in added lines."
+    }
+
+    # Case 4: Credential filename gate exact template exclusions
+    $hygieneSubdir = Join-Path $hygieneRepo "subdir"
+    New-Item -ItemType Directory -Path $hygieneSubdir -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $hygieneRepo ".env.example") -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $hygieneSubdir ".env.template") -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $hygieneRepo ".env.sample") -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $hygieneRepo ".env.dist") -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $hygieneRepo ".env.test") -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $hygieneRepo ".env.example.production") -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $hygieneSubdir ".env.sample-secret") -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $hygieneRepo "id_rsa") -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $hygieneRepo "cert.pem") -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $hygieneRepo ".env") -Force | Out-Null
+
+    $statusOutput = & git -C $hygieneRepo status --porcelain -uall
+    $flagged = @($statusOutput | Where-Object {
+        ($_ -match '(\.pem|\.key)$|id_rsa|credentials\.json|(^|[ /])\.env') -and
+        (-not ($_ -match '(^|[ /])\.env\.(example|template|sample|dist)$'))
+    })
+
+    if (-not ($flagged -match '\.env\.test')) { Fail ".env.test was not flagged" }
+    if (-not ($flagged -match '\.env\.example\.production')) { Fail ".env.example.production was not flagged" }
+    if (-not ($flagged -match '\.env\.sample-secret')) { Fail ".env.sample-secret was not flagged" }
+    if (-not ($flagged -match 'id_rsa')) { Fail "id_rsa was not flagged" }
+    if (-not ($flagged -match 'cert\.pem')) { Fail "cert.pem was not flagged" }
+    if (-not ($flagged -match '\.env$')) { Fail ".env was not flagged" }
+    if ($flagged -match '\.env\.template$') { Fail ".env.template should be exempted" }
+    if ($flagged -match '\.env\.dist$') { Fail ".env.dist should be exempted" }
+
     Write-Host "PASS: PowerShell scanner detected thirteen redacted matches, ignored textconv, handled NUL-delimited/tricky paths and line numbers, passed clean input, and failed closed on scan errors and binary-classified diffs."
 }
 finally {

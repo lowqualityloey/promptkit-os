@@ -89,18 +89,18 @@ Immediately after staging and before commit construction, perform a mandatory sc
    Detectors use portable regular expressions and broad credential prefixes, so false positives are possible. These checks are advisory and do not prove that staged content is free of secrets. Never copy matching content or credential values into terminal output, logs, chat, or the commit.
 
 2. **Suspicious Credential Filename Scan**:
-   Verify no credential or environment files are staged or untracked (excluding safe templates like `.env.example`, `.env.template`, or `.env.dist`):
+   Verify no credential or environment files are staged or untracked (excluding exact approved public templates like `.env.example`, `.env.template`, `.env.sample`, or `.env.dist`):
    ```bash
-   git status -s | grep -vE '\.env\.(example|template|sample|dist|test)' | grep -E '\.env|\.pem$|\.key$|id_rsa|credentials\.json' || true
+   git status --porcelain -uall | grep -E '(\.pem|\.key)$|id_rsa|credentials\.json|(^|[ /])\.env' | grep -vE '(^|[ /])\.env\.(example|template|sample|dist)$' || true
    ```
    If any secret files are modified, staged, or untracked, halt immediately and alert the developer to add them to `.gitignore`.
 
 3. **Temporary Probe Purge**:
-   Verify that temporary debug logs or probes (`[DEBUG-xxxx]`) from `pk:debug` are removed:
+   Verify that temporary debug logs or probes (`[DEBUG-xxxx]`) from `pk:debug` are removed from staged additions without emitting raw line contents or matching on deleted lines:
    ```bash
-   git diff --cached | grep -E '\[DEBUG-|console\.log\("DEBUG|dbg!\(' || true
+   git diff --cached -U0 --no-ext-diff --no-textconv | grep '^\+[^+]' | grep -qE '\[DEBUG-|console\.log\("DEBUG|dbg!\(' && echo "PROBES_FOUND" || { [ ${PIPESTATUS[0]} -eq 0 ] && echo "CLEAN" || echo "DIFF_FAILED"; }
    ```
-   If temporary probes remain in staged content, remove them before committing.
+   If temporary probes are detected in staged additions (`PROBES_FOUND`), halt and remove them before committing. Never copy matching content or credential values into terminal output, logs, or chat. If the diff inspection fails (`DIFF_FAILED`), halt and resolve the Git failure before proceeding.
 
 ---
 

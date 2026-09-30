@@ -175,4 +175,51 @@ if command -v mawk >/dev/null 2>&1; then
     run_engine "$traditional_awk"
 fi
 
+# --- Probe Purge & Credential Filename Gate Tests ---
+hygiene_repo="$tmp/hygiene_repo"
+mkdir -p "$hygiene_repo"
+git -C "$hygiene_repo" init -q
+git -C "$hygiene_repo" config user.name "PromptKit hygiene fixture"
+git -C "$hygiene_repo" config user.email "hygiene-fixture@example.invalid"
+
+# Baseline commit with an existing debug statement and a secret
+echo 'console.log("DEBUG: existing_secret_token=abcd1234efgh");' > "$hygiene_repo/app.js"
+git -C "$hygiene_repo" add app.js
+git -C "$hygiene_repo" commit -q -m "initial commit with debug"
+
+# Case 1: Removing the debug statement (deleted line only)
+echo 'console.log("clean app");' > "$hygiene_repo/app.js"
+git -C "$hygiene_repo" add app.js
+
+probe_res=$(git -C "$hygiene_repo" diff --cached -U0 --no-ext-diff --no-textconv | grep '^\+[^+]' | grep -qE '\[DEBUG-|console\.log\("DEBUG|dbg!\(' && echo "PROBES_FOUND" || { [ ${PIPESTATUS[0]} -eq 0 ] && echo "CLEAN" || echo "DIFF_FAILED"; })
+[[ "$probe_res" == "CLEAN" ]] || fail "Deleting a debug probe must be CLEAN, got $probe_res"
+
+# Case 2: Adding a new debug statement
+echo 'console.log("DEBUG: new probe");' >> "$hygiene_repo/app.js"
+git -C "$hygiene_repo" add app.js
+
+probe_res=$(git -C "$hygiene_repo" diff --cached -U0 --no-ext-diff --no-textconv | grep '^\+[^+]' | grep -qE '\[DEBUG-|console\.log\("DEBUG|dbg!\(' && echo "PROBES_FOUND" || { [ ${PIPESTATUS[0]} -eq 0 ] && echo "CLEAN" || echo "DIFF_FAILED"; })
+[[ "$probe_res" == "PROBES_FOUND" ]] || fail "Adding a debug probe must be PROBES_FOUND, got $probe_res"
+
+# Case 3: Failed diff inspection
+probe_res=$(git -C "$tmp/nonexistent-repo" diff --cached -U0 --no-ext-diff --no-textconv 2>/dev/null | grep '^\+[^+]' | grep -qE '\[DEBUG-|console\.log\("DEBUG|dbg!\(' && echo "PROBES_FOUND" || { [ ${PIPESTATUS[0]} -eq 0 ] && echo "CLEAN" || echo "DIFF_FAILED"; })
+[[ "$probe_res" == "DIFF_FAILED" ]] || fail "Diff failure must be DIFF_FAILED, got $probe_res"
+
+# Case 4: Credential filename gate exact template exclusions
+mkdir -p "$hygiene_repo/subdir"
+touch "$hygiene_repo/.env.example" "$hygiene_repo/subdir/.env.template" "$hygiene_repo/.env.sample" "$hygiene_repo/.env.dist"
+touch "$hygiene_repo/.env.test" "$hygiene_repo/.env.example.production" "$hygiene_repo/subdir/.env.sample-secret" "$hygiene_repo/id_rsa" "$hygiene_repo/cert.pem" "$hygiene_repo/.env"
+
+flagged_files=$(git -C "$hygiene_repo" status --porcelain -uall | grep -E '(\.pem|\.key)$|id_rsa|credentials\.json|(^|[ /])\.env' | grep -vE '(^|[ /])\.env\.(example|template|sample|dist)$' || true)
+
+[[ "$flagged_files" == *".env.test"* ]] || fail ".env.test was not flagged"
+[[ "$flagged_files" == *".env.example.production"* ]] || fail ".env.example.production was not flagged"
+[[ "$flagged_files" == *".env.sample-secret"* ]] || fail ".env.sample-secret was not flagged"
+[[ "$flagged_files" == *"id_rsa"* ]] || fail "id_rsa was not flagged"
+[[ "$flagged_files" == *"cert.pem"* ]] || fail "cert.pem was not flagged"
+[[ "$flagged_files" == *".env"* ]] || fail ".env was not flagged"
+[[ "$flagged_files" != *".env.template"* ]] || fail ".env.template should be exempted"
+[[ "$flagged_files" != *".env.dist"* ]] || fail ".env.dist should be exempted"
+
+printf '%s\n' 'Probe purge and credential filename gate tests passed.'
 printf '%s\n' 'Staged secret scan regression tests passed.'

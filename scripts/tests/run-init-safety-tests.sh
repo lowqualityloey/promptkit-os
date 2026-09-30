@@ -259,4 +259,47 @@ if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=bogus
     exit 1
 fi
 
+# Test: Inline marker example in preamble survives without deleting intervening user prose
+INLINE_ROOT="$TEST_ROOT/inlineexample"
+mkdir -p "$INLINE_ROOT"
+cat > "$INLINE_ROOT/AGENTS.md" <<'EOF'
+# Project Instructions
+
+Note: do not remove <!-- PROMPTKIT_START --> manually.
+
+Intervening critical user prose that must be preserved.
+
+<!-- PROMPTKIT_START -->
+old directive
+<!-- PROMPTKIT_END -->
+
+Trailing footer prose.
+EOF
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" "$INLINE_ROOT" >/dev/null
+grep -q 'Note: do not remove <!-- PROMPTKIT_START --> manually\.' "$INLINE_ROOT/AGENTS.md"
+grep -q '^Intervening critical user prose that must be preserved\.$' "$INLINE_ROOT/AGENTS.md"
+grep -q '^Trailing footer prose\.$' "$INLINE_ROOT/AGENTS.md"
+
+# Test: Directive block at the very beginning of the file (line 0)
+STARTZERO_ROOT="$TEST_ROOT/startzero"
+mkdir -p "$STARTZERO_ROOT"
+cat > "$STARTZERO_ROOT/AGENTS.md" <<'EOF'
+<!-- PROMPTKIT_START -->
+old directive
+<!-- PROMPTKIT_END -->
+
+User postamble content.
+EOF
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" "$STARTZERO_ROOT" >/dev/null
+[[ "$(head -n 1 "$STARTZERO_ROOT/AGENTS.md")" == "<!-- PROMPTKIT_START -->" ]]
+grep -q '^User postamble content\.$' "$STARTZERO_ROOT/AGENTS.md"
+
+# Test: Directive block at the very end of the file with no trailing newline
+ENDNONL_ROOT="$TEST_ROOT/endnonl"
+mkdir -p "$ENDNONL_ROOT"
+printf 'User preamble content.\n\n<!-- PROMPTKIT_START -->\nold directive\n<!-- PROMPTKIT_END -->' > "$ENDNONL_ROOT/AGENTS.md"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" "$ENDNONL_ROOT" >/dev/null
+grep -q '^User preamble content\.$' "$ENDNONL_ROOT/AGENTS.md"
+[[ "$(tail -n 1 "$ENDNONL_ROOT/AGENTS.md")" == "<!-- PROMPTKIT_END -->" ]]
+
 echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, and byte-idempotency tests passed."
