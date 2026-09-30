@@ -17,8 +17,84 @@ TRACKING_PROJECTION=""
 HOSTS=""
 HOST_SET=0
 RECONFIGURE=0
-EXTRA_TARGETS=""
+EXTRA_TARGETS=()
 PROJECT_ROOT=""
+
+# Canonical path resolution and containment verification (F04 - P2)
+resolve_canonical_path() {
+    local target="$1"
+    if command -v realpath >/dev/null 2>&1; then
+        local rp
+        rp=$(realpath -m "$target" 2>/dev/null) && [[ -n "$rp" ]] && { echo "$rp"; return 0; }
+    fi
+    local p="$target"
+    [[ "$p" != /* ]] && p="$PWD/$p"
+
+    local hops=0
+    while [[ $hops -lt 25 ]]; do
+        hops=$((hops + 1))
+        if [[ -L "$p" ]]; then
+            local link parent
+            link=$(readlink "$p") || break
+            parent=$(dirname "$p")
+            case "$link" in
+                /*) p="$link" ;;
+                *) p="$parent/$link" ;;
+            esac
+        else
+            local parent base phys_parent
+            parent=$(dirname "$p")
+            base=$(basename "$p")
+            if [[ -d "$parent" ]]; then
+                phys_parent=$(builtin cd "$parent" 2>/dev/null && pwd -P)
+                if [[ -n "$phys_parent" ]]; then
+                    p="$phys_parent/$base"
+                    [[ -L "$p" ]] && continue
+                fi
+            fi
+            break
+        fi
+    done
+
+    local IFS="/"
+    read -r -a raw_parts <<< "$p"
+    local norm_parts=()
+    for part in "${raw_parts[@]}"; do
+        if [[ -z "$part" || "$part" == "." ]]; then
+            continue
+        elif [[ "$part" == ".." ]]; then
+            if [[ ${#norm_parts[@]} -gt 0 ]]; then
+                unset 'norm_parts[${#norm_parts[@]}-1]'
+                norm_parts=("${norm_parts[@]}")
+            fi
+        else
+            norm_parts+=("$part")
+        fi
+    done
+    local result=""
+    for part in "${norm_parts[@]}"; do
+        result="$result/$part"
+    done
+    echo "${result:-/}"
+}
+
+is_path_contained() {
+    local root="$1"
+    local target="$2"
+    local canon_root canon_target
+    canon_root=$(resolve_canonical_path "$root")
+    canon_target=$(resolve_canonical_path "$target")
+    canon_root="${canon_root%/}"
+    if [[ "$canon_target" == "$canon_root" || "$canon_target" == "$canon_root"/* ]]; then
+        return 0
+    fi
+    return 1
+}
+
+get_file_mode() {
+    stat -L -c '%a' "$1" 2>/dev/null || stat -L -f '%Lp' "$1" 2>/dev/null || true
+}
+
 # Known host -> directive file map (defined early: arg parsing validates against it).
 # Probes are best-effort suggestions only; the TTY menu (or --host=) is authoritative.
 host_file() {
@@ -78,11 +154,11 @@ for arg in "$@"; do
         --target=*)
             TARGET_PATH="${arg#--target=}"
             case "$TARGET_PATH" in
-                /*|*../*)
+                /*|*../*|*..\\*)
                     echo -e "\033[0;31m[!] --target must be a project-relative path without '..': $TARGET_PATH\033[0m" >&2; exit 1
                     ;;
             esac
-            EXTRA_TARGETS="$EXTRA_TARGETS $TARGET_PATH"
+            EXTRA_TARGETS+=("$TARGET_PATH")
             ;;
         --reconfigure)
             RECONFIGURE=1
@@ -119,7 +195,7 @@ for arg in "$@"; do
         *)
             if [[ -z "$PROJECT_ROOT" ]]; then
                 if [[ -d "$arg" ]]; then
-                    PROJECT_ROOT="$(cd "$arg" && pwd)"
+                    PROJECT_ROOT="$(cd "$arg" && pwd -P)"
                 else
                     echo -e "\033[0;31m[!] Project root not found: $arg\033[0m" >&2
                     exit 1
@@ -135,9 +211,9 @@ done
 # Resolve PROJECT_ROOT if not provided via positional arg
 if [[ -z "$PROJECT_ROOT" ]]; then
     if [[ "$DIR_NAME" == ".promptkit" || "$DIR_NAME" == "promptkit" ]]; then
-        PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+        PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
     else
-        PROJECT_ROOT="$(pwd)"
+        PROJECT_ROOT="$(pwd -P)"
     fi
 fi
 
@@ -321,146 +397,31 @@ else
     fi
 fi
 
-# 1. Ensure Core Documentation Directories Exist in Host Project
 DOC_DIRS=(
     "docs/tasks"
     "docs/specs"
     "docs/adrs"
     "docs/tests"
 )
-for dir in "${DOC_DIRS[@]}"; do
-    if [[ ! -d "$PROJECT_ROOT/$dir" ]]; then
-        mkdir -p "$PROJECT_ROOT/$dir"
-        echo -e "  \033[0;32m[+]\\033[0m Created directory: $dir"
-    fi
-done
 
-# 2. Scaffold PROMPTKIT.md if missing + inject profile
 PROJECT_PROFILE="$PROJECT_ROOT/PROMPTKIT.md"
 TEMPLATE_PROFILE="$SCRIPT_DIR/templates/project-profile-template.md"
-
-if [[ ! -f "$PROJECT_PROFILE" ]]; then
-    if [[ -f "$TEMPLATE_PROFILE" ]]; then
-        cp "$TEMPLATE_PROFILE" "$PROJECT_PROFILE"
-        echo -e "  \033[0;32m[+]\\033[0m Created: PROMPTKIT.md (project profile & guardrails)"
-    fi
-else
-    echo -e "  \033[0;90m[✓] PROMPTKIT.md already present\\033[0m"
-fi
-
-# Inject or update profile field in PROMPTKIT.md (2+1 modes)
-# Machine-readable fields (profile/tracking/projection) are normalized: every
-# existing line for the field is removed, then exactly one authoritative value
-# is appended. This is idempotent and collapses hand-made duplicates.
-set_machine_field() {
-    local target_file="$1" field_name="$2" field_value="$3" tmp_file
-    tmp_file=$(mktemp)
-    grep -v "^${field_name}:" "$target_file" > "$tmp_file" || true
-    printf '%s: %s\n' "$field_name" "$field_value" >> "$tmp_file"
-    # Redirect (not mv) so the target keeps its inode and file mode.
-    cat "$tmp_file" > "$target_file" && rm -f "$tmp_file"
-}
-
-if [[ -f "$PROJECT_PROFILE" ]]; then
-    if grep -q "^profile:" "$PROJECT_PROFILE" 2>/dev/null; then
-        set_machine_field "$PROJECT_PROFILE" "profile" "$PROFILE"
-        if grep -q '^- \*\*Profile\*\*:' "$PROJECT_PROFILE" 2>/dev/null; then
-            if sed --version >/dev/null 2>&1; then
-                sed -i "s/^- \*\*Profile\*\*:.*/- **Profile**: $PROFILE/" "$PROJECT_PROFILE"
-            else
-                sed -i.bak "s/^- \*\*Profile\*\*:.*/- **Profile**: $PROFILE/" "$PROJECT_PROFILE" && rm -f "$PROJECT_PROFILE.bak"
-            fi
-        fi
-        echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md profile: $PROFILE"
-    else
-        TMP_FILE=$(mktemp)
-        {
-            head -n 1 "$PROJECT_PROFILE"
-            echo ""
-            echo "## 0. PromptKit OS Profile"
-            echo "- **Profile**: $PROFILE"
-            echo "- **Installed**: $(date +%Y-%m-%d)"
-            echo "- **Engine**: \`$DIR_NAME\`"
-            echo "- **Upgrade**: Run \`$DIR_NAME/init.sh --balanced\` for the full Balanced profile, or \`--turbo --experimental\` for parallel waves"
-            echo ""
-            tail -n +2 "$PROJECT_PROFILE"
-            echo ""
-        } > "$TMP_FILE"
-        mv "$TMP_FILE" "$PROJECT_PROFILE"
-        set_machine_field "$PROJECT_PROFILE" "profile" "$PROFILE"
-        echo -e "  \033[0;32m[+]\\033[0m Set PROMPTKIT.md profile: $PROFILE"
-    fi
-    set_machine_field "$PROJECT_PROFILE" "tracking" "$TRACKING"
-    echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md tracking: $TRACKING"
-    if [ -n "$TRACKING_PROJECTION" ]; then
-        set_machine_field "$PROJECT_PROFILE" "projection" "$TRACKING_PROJECTION"
-        echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md projection: $TRACKING_PROJECTION"
-    else
-        if grep -q "^projection:" "$PROJECT_PROFILE" 2>/dev/null; then
-            PROJ_TMP=$(mktemp)
-            grep -v "^projection:" "$PROJECT_PROFILE" > "$PROJ_TMP" || true
-            cat "$PROJ_TMP" > "$PROJECT_PROFILE" && rm -f "$PROJ_TMP"
-            echo -e "  \033[0;33m[✓]\\033[0m Removed stale PROMPTKIT.md projection line"
-        fi
-    fi
-fi
-
 DESIGN_PROFILE="$PROJECT_ROOT/DESIGN.md"
-if [[ -f "$DESIGN_PROFILE" ]]; then
-    echo -e "  \033[0;90m[✓] DESIGN.md detected (brand identity & anti-slop rules)\\033[0m"
-fi
-
-# Scaffold docs/STATE.md if missing
 DOCS_DIR="$PROJECT_ROOT/docs"
 STATE_TRACKER="$DOCS_DIR/STATE.md"
 TEMPLATE_STATE="$SCRIPT_DIR/templates/state-tracker-template.md"
-
-if [[ ! -f "$STATE_TRACKER" ]]; then
-    if [[ -f "$TEMPLATE_STATE" ]]; then
-        mkdir -p "$DOCS_DIR"
-        cp "$TEMPLATE_STATE" "$STATE_TRACKER"
-        echo -e "  \033[0;32m[+]\\033[0m Created: docs/STATE.md (living project & state tracker)"
-    fi
-else
-    echo -e "  \033[0;90m[✓] docs/STATE.md already present\\033[0m"
-fi
-
-# Scaffold .github/pull_request_template.md if missing
 GITHUB_DIR="$PROJECT_ROOT/.github"
 PR_TEMPLATE_TARGET="$GITHUB_DIR/pull_request_template.md"
 TEMPLATE_PR="$SCRIPT_DIR/templates/pull-request-template.md"
-
-if [[ ! -f "$PR_TEMPLATE_TARGET" ]]; then
-    if [[ -f "$TEMPLATE_PR" ]]; then
-        mkdir -p "$GITHUB_DIR"
-        cp "$TEMPLATE_PR" "$PR_TEMPLATE_TARGET"
-        echo -e "  \033[0;32m[+]\\033[0m Created: .github/pull_request_template.md (staff-level PR specification)"
-    fi
-else
-    echo -e "  \033[0;90m[✓] .github/pull_request_template.md already present\\033[0m"
-fi
-
-# Scaffold .github/ISSUE_TEMPLATE/task.md if missing
 ISSUE_TEMPLATE_DIR="$GITHUB_DIR/ISSUE_TEMPLATE"
 TASK_TEMPLATE_TARGET="$ISSUE_TEMPLATE_DIR/task.md"
 TEMPLATE_TASK="$SCRIPT_DIR/templates/github-issue-template.md"
 
-if [[ ! -f "$TASK_TEMPLATE_TARGET" ]]; then
-    if [[ -f "$TEMPLATE_TASK" ]]; then
-        mkdir -p "$ISSUE_TEMPLATE_DIR"
-        cp "$TEMPLATE_TASK" "$TASK_TEMPLATE_TARGET"
-        echo -e "  \\033[0;32m[+]\\033[0m Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)"
-    fi
-else
-    echo -e "  \033[0;90m[✓] .github/ISSUE_TEMPLATE/task.md already present\\033[0m"
+if [[ -f "$DESIGN_PROFILE" ]]; then
+    echo -e "  \033[0;90m[✓] DESIGN.md detected (brand identity & anti-slop rules)\\033[0m"
 fi
 
-
-
-# 2b. Host probing + selection (which AI assistants get directive files)
-# AGENTS.md is always created fresh as the universal fallback standard
-# (see protocols/setup.md); host_file()/KNOWN_HOSTS live near the top
-# because arg parsing validates --host=/--add-host against them.
+# 2. Host probing + selection (which AI assistants get directive files)
 if [[ "$HOST_SET" -eq 1 ]]; then
     for h in ${HOSTS//,/ }; do
         if [[ -z "$(host_file "$h")" ]]; then
@@ -502,8 +463,6 @@ if [[ "$HOST_SET" -eq 0 ]]; then
     DETECTED_HOSTS="${DETECTED_HOSTS# }"
 fi
 if [[ "$HOST_SET" -eq 0 && (! -t 0 || ! -t 1 || -n "${PROMPTKIT_NO_INTERACTIVE:-}") ]]; then
-    # Non-interactive: a single unambiguous probe hit wins; zero or many
-    # fall back to the deterministic legacy pair (never guess among several).
     if [[ "$(echo "$DETECTED_HOSTS" | wc -w)" -eq 1 ]]; then
         HOSTS="$DETECTED_HOSTS"
         HOST_SET=1
@@ -571,72 +530,81 @@ AGENT_FILES=(
     ".clinerules/promptkit.md"
     ".traerules"
     ".opencode/rules.md"
-    "CONVENTIONS.md"   # Aider conventions file
+    "CONVENTIONS.md"
 )
+
+is_managed_destination() {
+    local candidate="$1"
+    local canon_cand canon_m m
+    canon_cand=$(resolve_canonical_path "$candidate")
+    for m in "$PROJECT_PROFILE" "$STATE_TRACKER" "$PR_TEMPLATE_TARGET" "$TASK_TEMPLATE_TARGET"; do
+        canon_m=$(resolve_canonical_path "$m")
+        if [[ "$canon_cand" == "$canon_m" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+add_target_unique() {
+    local want="$1"
+    local canon_want canon_t t
+    canon_want=$(resolve_canonical_path "$want")
+    for t in "${TARGETS_FOUND[@]}"; do
+        canon_t=$(resolve_canonical_path "$t")
+        if [[ "$canon_t" == "$canon_want" ]]; then
+            return 1
+        fi
+    done
+    TARGETS_FOUND+=("$want")
+    return 0
+}
 
 TARGETS_FOUND=()
 for file in "${AGENT_FILES[@]}"; do
     target_path="$PROJECT_ROOT/$file"
     if [[ -d "$target_path" ]]; then
         if [[ "$file" == ".clinerules" ]]; then
-            dir_target="$target_path/promptkit.md"
-            if [[ ! -f "$dir_target" ]]; then
-                touch "$dir_target"
-            fi
-            TARGETS_FOUND+=("$dir_target")
+            add_target_unique "$target_path/promptkit.md" || true
         fi
     elif [[ -f "$target_path" ]]; then
-        TARGETS_FOUND+=("$target_path")
+        add_target_unique "$target_path" || true
     fi
 done
 
-# Custom --target paths ride the same create/inject machinery as host files
-if [[ -n "$EXTRA_TARGETS" ]]; then
-    for xp in $EXTRA_TARGETS; do
+# Custom --target paths (F06 - P2)
+if [[ ${#EXTRA_TARGETS[@]} -gt 0 ]]; then
+    for xp in "${EXTRA_TARGETS[@]}"; do
         xfull="$PROJECT_ROOT/$xp"
-        already=0
-        for t in "${TARGETS_FOUND[@]}"; do
-            [[ "$t" == "$xfull" ]] && already=1
-        done
-        if [[ "$already" -eq 0 ]]; then
-            mkdir -p "$(dirname "$xfull")"
-            [[ -f "$xfull" ]] || touch "$xfull"
-            TARGETS_FOUND+=("$xfull")
+        if is_managed_destination "$xfull"; then
+            echo "Error: Custom target cannot be a managed PromptKit OS file: $xp" >&2
+            exit 1
+        fi
+        if [[ -d "$xfull" ]]; then
+            echo "Error: Target destination cannot be a directory: $xp" >&2
+            exit 1
+        fi
+        if add_target_unique "$xfull"; then
             echo -e "  \033[0;32m[+]\\033[0m Added custom target: $xp"
         fi
     done
 fi
-# Create a directive target: parent dirs first, never overwrite, .clinerules stays a dir
-create_target() {
-    local rel="$1"
-    local p="$PROJECT_ROOT/$rel"
-    if [[ "$rel" == ".clinerules" ]]; then
-        mkdir -p "$p"
-        [[ -f "$p/promptkit.md" ]] || touch "$p/promptkit.md"
-        TARGETS_FOUND+=("$p/promptkit.md")
-        return 0
-    fi
-    mkdir -p "$(dirname "$p")"
-    [[ -f "$p" ]] || touch "$p"
-    TARGETS_FOUND+=("$p")
-}
-# Ensure a host file is registered (and created): newest hosts on existing
-# installs, or fresh defaults. Never duplicates, never overwrites.
+
 ensure_target() {
     local rel="$1"
     local want="$PROJECT_ROOT/$rel"
-    [[ "$rel" == ".clinerules" ]] && want="$want/promptkit.md"
-    local t
-    local already=0
-    for t in "${TARGETS_FOUND[@]}"; do
-        [[ "$t" == "$want" ]] && already=1
-    done
-    if [[ "$already" -eq 0 ]]; then
-        create_target "$rel"
-        return 0
+    if [[ "$rel" == ".clinerules" ]]; then
+        if [[ -f "$want" ]]; then
+            :
+        elif [[ -d "$want" ]]; then
+            want="$want/promptkit.md"
+        else
+            want="$want/promptkit.md"
+        fi
     fi
-    return 1
+    add_target_unique "$want"
 }
+
 FRESH=0
 if [[ ${#TARGETS_FOUND[@]} -eq 0 ]]; then
     FRESH=1
@@ -666,7 +634,17 @@ if [[ "$FRESH" -eq 1 ]]; then
     echo -e "  \033[0;32m[+]\\033[0m Created default agent configurations:$created"
 fi
 
-# 4. Directive Block (Loaded from Canonical Template based on profile)
+# 4. Containment Verification (F04 - P2)
+ALL_DESTINATIONS=("$PROJECT_PROFILE" "$STATE_TRACKER" "$PR_TEMPLATE_TARGET" "$TASK_TEMPLATE_TARGET" "${TARGETS_FOUND[@]}")
+for dest in "${ALL_DESTINATIONS[@]}"; do
+    if ! is_path_contained "$PROJECT_ROOT" "$dest"; then
+        rel_dest="${dest#$PROJECT_ROOT/}"
+        echo "Error: Target destination escapes project root: $rel_dest" >&2
+        exit 1
+    fi
+done
+
+# 5. Directive Block Template Preparation
 KIT_DIR_REL=".promptkit"
 if [[ "$SCRIPT_DIR" == "$PROJECT_ROOT"* ]]; then
     KIT_DIR_REL="${SCRIPT_DIR#$PROJECT_ROOT/}"
@@ -689,32 +667,47 @@ else
     exit 1
 fi
 
-# 5. Inject or Replace Directives (Idempotent)
+# 6. Pre-validation and Transformation Staging (F07 - P2)
+STAGING_DIR="$(mktemp -d)"
+cleanup_staging_only() {
+    rm -rf "$STAGING_DIR"
+}
+trap cleanup_staging_only EXIT
+
+declare -a STAGED_TARGET_PATHS=()
+declare -a STAGED_TARGET_MODES=()
+
+target_idx=0
 for target in "${TARGETS_FOUND[@]}"; do
     REL_TARGET="${target#$PROJECT_ROOT/}"
     CR=$'\r'
     has_start=0
     has_end=0
-    if grep -qE "^<!-- PROMPTKIT_START -->${CR}?$" "$target" 2>/dev/null; then has_start=1; fi
-    if grep -qE "^<!-- PROMPTKIT_END -->${CR}?$" "$target" 2>/dev/null; then has_end=1; fi
+    if [[ -f "$target" ]]; then
+        if grep -qE "^[[:space:]]*<!-- PROMPTKIT_START -->[[:space:]]*${CR}?$" "$target" 2>/dev/null; then has_start=1; fi
+        if grep -qE "^[[:space:]]*<!-- PROMPTKIT_END -->[[:space:]]*${CR}?$" "$target" 2>/dev/null; then has_end=1; fi
+    fi
+
+    staged_target="$STAGING_DIR/target_$target_idx"
+    target_idx=$((target_idx + 1))
 
     if [[ "$has_start" -eq 1 || "$has_end" -eq 1 ]]; then
-        start_count="$(grep -E -c "^<!-- PROMPTKIT_START -->${CR}?$" "$target" 2>/dev/null || true)"
-        end_count="$(grep -E -c "^<!-- PROMPTKIT_END -->${CR}?$" "$target" 2>/dev/null || true)"
+        start_count="$(grep -E -c "^[[:space:]]*<!-- PROMPTKIT_START -->[[:space:]]*${CR}?$" "$target" 2>/dev/null || true)"
+        end_count="$(grep -E -c "^[[:space:]]*<!-- PROMPTKIT_END -->[[:space:]]*${CR}?$" "$target" 2>/dev/null || true)"
         if [[ "$start_count" -ne 1 || "$end_count" -ne 1 ]]; then
-            echo "Error: Cannot safely update $REL_TARGET: expected exactly one complete PromptKit directive block." >&2
+            echo "Error: Cannot safely update $REL_TARGET: expected exactly one complete PromptKit directive block with START before END." >&2
+            exit 1
+        fi
+        first_start="$(grep -n -E "^[[:space:]]*<!-- PROMPTKIT_START -->[[:space:]]*${CR}?$" "$target" | head -n 1 | cut -d: -f1)"
+        first_end="$(grep -n -E "^[[:space:]]*<!-- PROMPTKIT_END -->[[:space:]]*${CR}?$" "$target" | head -n 1 | cut -d: -f1)"
+        if [[ "$first_start" -ge "$first_end" ]]; then
+            echo "Error: Cannot safely update $REL_TARGET: expected exactly one complete PromptKit directive block with START before END." >&2
             exit 1
         fi
 
-        directive_file="$(mktemp "${target}.directive.XXXXXX")"
-        updated_file="$(mktemp "${target}.updated.XXXXXX")"
-        cleanup_update_files() {
-            rm -f "$directive_file" "$updated_file" "${updated_file}.content"
-        }
-        trap cleanup_update_files EXIT
+        directive_file="$(mktemp "$STAGING_DIR/directive.XXXXXX")"
         printf '%s\n' "$DIRECTIVE" > "$directive_file"
 
-        cp -p "$target" "$updated_file"
         if ! awk -v directive_file="$directive_file" '
             BEGIN {
                 first = 1
@@ -728,12 +721,12 @@ for target in "${TARGETS_FOUND[@]}"; do
                 }
                 close(directive_file)
             }
-            /^<!-- PROMPTKIT_START -->\r?$/ {
+            /^[[:space:]]*<!-- PROMPTKIT_START -->[[:space:]]*\r?$/ {
                 print directive
                 inside = 1
                 next
             }
-            /^<!-- PROMPTKIT_END -->\r?$/ && inside {
+            /^[[:space:]]*<!-- PROMPTKIT_END -->[[:space:]]*\r?$/ && inside {
                 inside = 0
                 next
             }
@@ -741,22 +734,208 @@ for target in "${TARGETS_FOUND[@]}"; do
             END {
                 if (inside) exit 1
             }
-        ' "$target" > "${updated_file}.content"; then
-            rm -f "${updated_file}.content"
+        ' "$target" > "$staged_target"; then
+            rm -f "$staged_target" "$directive_file"
             echo "Error: Unable to safely update $REL_TARGET; the original file was preserved. Update it manually." >&2
             exit 1
         fi
-        chmod --reference="$target" "${updated_file}.content" 2>/dev/null || true
-        mv "${updated_file}.content" "$updated_file"
-        mv "$updated_file" "$target"
-        trap - EXIT
         rm -f "$directive_file"
+        STAGED_TARGET_PATHS+=("$staged_target")
+        STAGED_TARGET_MODES+=("update")
+    elif [[ -f "$target" ]]; then
+        cp "$target" "$staged_target"
+        if [[ -s "$staged_target" ]]; then
+            printf "\n\n%s\n" "$DIRECTIVE" >> "$staged_target"
+        else
+            printf "%s\n" "$DIRECTIVE" > "$staged_target"
+        fi
+        STAGED_TARGET_PATHS+=("$staged_target")
+        STAGED_TARGET_MODES+=("inject")
+    else
+        printf "%s\n" "$DIRECTIVE" > "$staged_target"
+        STAGED_TARGET_PATHS+=("$staged_target")
+        STAGED_TARGET_MODES+=("create")
+    fi
+done
+
+# Stage PROMPTKIT.md
+STAGED_PROFILE="$STAGING_DIR/PROMPTKIT.md"
+if [[ -f "$PROJECT_PROFILE" ]]; then
+    cp "$PROJECT_PROFILE" "$STAGED_PROFILE"
+elif [[ -f "$TEMPLATE_PROFILE" ]]; then
+    cp "$TEMPLATE_PROFILE" "$STAGED_PROFILE"
+else
+    touch "$STAGED_PROFILE"
+fi
+
+set_staged_machine_field() {
+    local target_file="$1" field_name="$2" field_value="$3" tmp_file
+    tmp_file=$(mktemp "$STAGING_DIR/tmp_field.XXXXXX")
+    grep -v "^${field_name}:" "$target_file" > "$tmp_file" || true
+    printf '%s: %s\n' "$field_name" "$field_value" >> "$tmp_file"
+    cat "$tmp_file" > "$target_file" && rm -f "$tmp_file"
+}
+
+if grep -q "^profile:" "$STAGED_PROFILE" 2>/dev/null; then
+    set_staged_machine_field "$STAGED_PROFILE" "profile" "$PROFILE"
+    if grep -q '^- \*\*Profile\*\*:' "$STAGED_PROFILE" 2>/dev/null; then
+        if sed --version >/dev/null 2>&1; then
+            sed -i "s/^- \*\*Profile\*\*:.*/- **Profile**: $PROFILE/" "$STAGED_PROFILE"
+        else
+            sed -i.bak "s/^- \*\*Profile\*\*:.*/- **Profile**: $PROFILE/" "$STAGED_PROFILE" && rm -f "$STAGED_PROFILE.bak"
+        fi
+    fi
+else
+    TMP_P=$(mktemp "$STAGING_DIR/prof_sec.XXXXXX")
+    {
+        head -n 1 "$STAGED_PROFILE"
+        echo ""
+        echo "## 0. PromptKit OS Profile"
+        echo "- **Profile**: $PROFILE"
+        echo "- **Installed**: $(date +%Y-%m-%d)"
+        echo "- **Engine**: \`$DIR_NAME\`"
+        echo "- **Upgrade**: Run \`$DIR_NAME/init.sh --balanced\` for the full Balanced profile, or \`--turbo --experimental\` for parallel waves"
+        echo ""
+        tail -n +2 "$STAGED_PROFILE"
+        echo ""
+    } > "$TMP_P"
+    mv "$TMP_P" "$STAGED_PROFILE"
+    set_staged_machine_field "$STAGED_PROFILE" "profile" "$PROFILE"
+fi
+set_staged_machine_field "$STAGED_PROFILE" "tracking" "$TRACKING"
+if [ -n "$TRACKING_PROJECTION" ]; then
+    set_staged_machine_field "$STAGED_PROFILE" "projection" "$TRACKING_PROJECTION"
+else
+    if grep -q "^projection:" "$STAGED_PROFILE" 2>/dev/null; then
+        PROJ_TMP=$(mktemp "$STAGING_DIR/proj.XXXXXX")
+        grep -v "^projection:" "$STAGED_PROFILE" > "$PROJ_TMP" || true
+        cat "$PROJ_TMP" > "$STAGED_PROFILE" && rm -f "$PROJ_TMP"
+    fi
+fi
+
+# 7. Transactional Commit with Rollback (F07 - P2, F10 - P2, R5 - P2)
+BACKUP_DIR="$(mktemp -d)"
+declare -a CREATED_FILES=()
+declare -a BACKED_UP_FILES=()
+declare -a BACKUP_SOURCES=()
+
+rollback() {
+    local i
+    for (( i=${#CREATED_FILES[@]}-1; i>=0; i-- )); do
+        rm -f "${CREATED_FILES[i]}"
+    done
+    for (( i=0; i<${#BACKED_UP_FILES[@]}; i++ )); do
+        local orig="${BACKED_UP_FILES[i]}"
+        local bkp="${BACKUP_SOURCES[i]}"
+        if [[ -f "$bkp" ]]; then
+            cp -p "$bkp" "$orig"
+        fi
+    done
+    rm -rf "$BACKUP_DIR" "$STAGING_DIR"
+}
+
+COMMIT_SUCCESS=0
+trap 'if [[ "$COMMIT_SUCCESS" -eq 0 ]]; then rollback; else rm -rf "$BACKUP_DIR" "$STAGING_DIR"; fi' EXIT
+
+# Snapshot all existing destinations ONCE before ANY disk mutation begins (R5 - P2)
+if [[ -f "$PROJECT_PROFILE" ]]; then
+    bkp="$BACKUP_DIR/PROMPTKIT.md"
+    cp -p "$PROJECT_PROFILE" "$bkp"
+    BACKED_UP_FILES+=("$PROJECT_PROFILE")
+    BACKUP_SOURCES+=("$bkp")
+fi
+
+for (( i=0; i<${#TARGETS_FOUND[@]}; i++ )); do
+    target="${TARGETS_FOUND[i]}"
+    if [[ -f "$target" || -L "$target" ]]; then
+        canon_t=$(resolve_canonical_path "$target")
+        already_snapshotted=0
+        for (( j=0; j<${#BACKED_UP_FILES[@]}; j++ )); do
+            if [[ "$(resolve_canonical_path "${BACKED_UP_FILES[j]}")" == "$canon_t" ]]; then
+                already_snapshotted=1
+                break
+            fi
+        done
+        if [[ "$already_snapshotted" -eq 0 ]]; then
+            bkp="$BACKUP_DIR/target_$i"
+            cp -p "$target" "$bkp"
+            BACKED_UP_FILES+=("$target")
+            BACKUP_SOURCES+=("$bkp")
+        fi
+    fi
+done
+
+# Ensure doc directories exist
+for dir in "${DOC_DIRS[@]}"; do
+    if [[ ! -d "$PROJECT_ROOT/$dir" ]]; then
+        mkdir -p "$PROJECT_ROOT/$dir"
+        echo -e "  \033[0;32m[+]\\033[0m Created directory: $dir"
+    fi
+done
+
+# Commit PROMPTKIT.md
+if [[ -f "$PROJECT_PROFILE" ]]; then
+    prof_mode="$(get_file_mode "$PROJECT_PROFILE")"
+    cp "$STAGED_PROFILE" "$PROJECT_PROFILE"
+    if [[ -n "$prof_mode" ]]; then chmod "$prof_mode" "$PROJECT_PROFILE" 2>/dev/null || true; fi
+    echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md profile: $PROFILE"
+    echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md tracking: $TRACKING"
+    if [ -n "$TRACKING_PROJECTION" ]; then
+        echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md projection: $TRACKING_PROJECTION"
+    fi
+else
+    CREATED_FILES+=("$PROJECT_PROFILE")
+    cp "$STAGED_PROFILE" "$PROJECT_PROFILE"
+    echo -e "  \033[0;32m[+]\\033[0m Created: PROMPTKIT.md (project profile & guardrails)"
+    echo -e "  \033[0;32m[+]\\033[0m Set PROMPTKIT.md profile: $PROFILE"
+    echo -e "  \033[0;33m[✓]\\033[0m Updated PROMPTKIT.md tracking: $TRACKING"
+fi
+
+# Commit scaffolds
+if [[ ! -f "$STATE_TRACKER" && -f "$TEMPLATE_STATE" ]]; then
+    mkdir -p "$DOCS_DIR"
+    CREATED_FILES+=("$STATE_TRACKER")
+    cp "$TEMPLATE_STATE" "$STATE_TRACKER"
+    echo -e "  \033[0;32m[+]\\033[0m Created: docs/STATE.md (living project & state tracker)"
+fi
+if [[ ! -f "$PR_TEMPLATE_TARGET" && -f "$TEMPLATE_PR" ]]; then
+    mkdir -p "$GITHUB_DIR"
+    CREATED_FILES+=("$PR_TEMPLATE_TARGET")
+    cp "$TEMPLATE_PR" "$PR_TEMPLATE_TARGET"
+    echo -e "  \033[0;32m[+]\\033[0m Created: .github/pull_request_template.md (staff-level PR specification)"
+fi
+if [[ ! -f "$TASK_TEMPLATE_TARGET" && -f "$TEMPLATE_TASK" ]]; then
+    mkdir -p "$ISSUE_TEMPLATE_DIR"
+    CREATED_FILES+=("$TASK_TEMPLATE_TARGET")
+    cp "$TEMPLATE_TASK" "$TASK_TEMPLATE_TARGET"
+    echo -e "  \033[0;32m[+]\\033[0m Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)"
+fi
+
+# Commit targets
+for (( i=0; i<${#TARGETS_FOUND[@]}; i++ )); do
+    target="${TARGETS_FOUND[i]}"
+    staged_file="${STAGED_TARGET_PATHS[i]}"
+    mode="${STAGED_TARGET_MODES[i]}"
+    REL_TARGET="${target#$PROJECT_ROOT/}"
+
+    mkdir -p "$(dirname "$target")"
+    if [[ -f "$target" || -L "$target" ]]; then
+        t_mode="$(get_file_mode "$target")"
+        cp "$staged_file" "$target"
+        if [[ -n "$t_mode" ]]; then chmod "$t_mode" "$target" 2>/dev/null || true; fi
+    else
+        CREATED_FILES+=("$target")
+        cp "$staged_file" "$target"
+    fi
+
+    if [[ "$mode" == "update" ]]; then
         echo -e "  \033[0;33m[✓]\\033[0m Updated PromptKit OS directives in: $REL_TARGET (profile: $PROFILE)"
     else
-        printf "\n\n%s\n" "$DIRECTIVE" >> "$target"
         echo -e "  \033[0;32m[+]\\033[0m Injected PromptKit OS directives into: $REL_TARGET (profile: $PROFILE)"
     fi
 done
+
+COMMIT_SUCCESS=1
 
 echo -e "\n\033[0;36m✨ PromptKit OS successfully configured for $PROJECT_ROOT! ($PROFILE profile)\033[0m"
 if [[ "$PROFILE" == "lite" ]]; then
