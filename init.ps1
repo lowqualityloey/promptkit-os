@@ -156,7 +156,16 @@ if ($AddHost -ne "") {
     $Hosts = "agents,$AddHost"
     $HostSet = $true
 }
-$ExtraTargets = @() + $Target
+$ExtraTargets = @()
+if ($Target) {
+    foreach ($t in $Target) {
+        if ($t -is [string] -and $t.Contains(",")) {
+            $ExtraTargets += ($t -split ",")
+        } else {
+            $ExtraTargets += $t
+        }
+    }
+}
 if ($PSBoundParameters.ContainsKey("Profile")) { $ProfileSet = $true }
 if ($PSBoundParameters.ContainsKey("Tracking")) { $TrackingSet = $true }
 if ($PSBoundParameters.ContainsKey("Hosts")) { $HostSet = $true }
@@ -845,14 +854,14 @@ try {
     }
     if (-not (Test-Path -LiteralPath $PrTemplateTarget) -and (Test-Path -LiteralPath $TemplatePr)) {
         $ghParent = Split-Path -Parent $PrTemplateTarget
-        if (-not (Test-Path -LiteralPath $ghParent)) { New-Item -ItemType Directory -Path $ghParent -Force | Out-Null }
+        if (-not (Test-Path -LiteralPath $ghParent)) { [System.IO.Directory]::CreateDirectory($ghParent) | Out-Null }
         Copy-Item -LiteralPath $TemplatePr -Destination $PrTemplateTarget -Force
         $createdFiles.Add($PrTemplateTarget)
         Write-Host "  [+] Created: .github/pull_request_template.md (staff-level PR specification)" -ForegroundColor Green
     }
     if (-not (Test-Path -LiteralPath $TaskTemplateTarget) -and (Test-Path -LiteralPath $TemplateTask)) {
         $taskParent = Split-Path -Parent $TaskTemplateTarget
-        if (-not (Test-Path -LiteralPath $taskParent)) { New-Item -ItemType Directory -Path $taskParent -Force | Out-Null }
+        if (-not (Test-Path -LiteralPath $taskParent)) { [System.IO.Directory]::CreateDirectory($taskParent) | Out-Null }
         Copy-Item -LiteralPath $TemplateTask -Destination $TaskTemplateTarget -Force
         $createdFiles.Add($TaskTemplateTarget)
         Write-Host "  [+] Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)" -ForegroundColor Green
@@ -864,7 +873,7 @@ try {
         $tPath = $item.TargetPath
         $pDir = Split-Path -Parent $tPath
         if ($pDir -ne "" -and -not (Test-Path -LiteralPath $pDir)) {
-            New-Item -ItemType Directory -Path $pDir -Force | Out-Null
+            [System.IO.Directory]::CreateDirectory($pDir) | Out-Null
         }
         if (Test-Path -LiteralPath $tPath) {
             $bkp = Join-Path $backupDir ("target_" + $idx)

@@ -409,7 +409,7 @@ try {
 
     # Test 23: Multiple custom targets with spaces and glob characters (F06 - P2)
     $SpacesRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "spaces_and_globs") -Force).FullName
-    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $SpacesRoot -Target "docs/path with spaces/custom instructions.md","docs/[special-rules]/ai.md" | Out-Null
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $SpacesRoot --target="docs/path with spaces/custom instructions.md" --target="docs/[special-rules]/ai.md" | Out-Null
     $spacedTarget = Join-Path $SpacesRoot "docs/path with spaces/custom instructions.md"
     $globTarget = Join-Path $SpacesRoot "docs/[special-rules]/ai.md"
     if (-not (Test-Path -LiteralPath $spacedTarget)) {
@@ -421,6 +421,22 @@ try {
     $spacedContent = [System.IO.File]::ReadAllText($spacedTarget, [System.Text.Encoding]::UTF8)
     if (-not $spacedContent.Contains("<!-- PROMPTKIT_START -->")) {
         throw "Failed Test 23: Target with spaces missing directive."
+    }
+    $globContent = [System.IO.File]::ReadAllText($globTarget, [System.Text.Encoding]::UTF8)
+    if (-not $globContent.Contains("<!-- PROMPTKIT_START -->")) {
+        throw "Failed Test 23: Target with glob characters missing directive."
+    }
+
+    # Also verify direct script invocation with -Target parameter array
+    $DirectRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "direct_targets") -Force).FullName
+    & $initScriptPath -ProjectRoot $DirectRoot -Target "docs/path with spaces/custom2.md","docs/[bracket-dir]/ai2.md" | Out-Null
+    $directSpaced = Join-Path $DirectRoot "docs/path with spaces/custom2.md"
+    $directGlob = Join-Path $DirectRoot "docs/[bracket-dir]/ai2.md"
+    if (-not (Test-Path -LiteralPath $directSpaced)) {
+        throw "Failed Test 23: Direct -Target with spaces was not created."
+    }
+    if (-not (Test-Path -LiteralPath $directGlob)) {
+        throw "Failed Test 23: Direct -Target with glob characters was not created."
     }
 
     # Test 24: Cline existing file layout, update, and -AddHost cline rerun (F05 - P2)
