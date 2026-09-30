@@ -314,27 +314,69 @@ if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" "$ESCAPE_ROO
 fi
 [[ "$(cat "$OUTSIDE_DIR/secret.md")" == "sensitive external file" ]]
 
-# Test 22b: Linked parent directory with target escaping containment
-mkdir -p "$ESCAPE_ROOT/real_docs"
-ln -s "$OUTSIDE_DIR" "$ESCAPE_ROOT/linked_docs"
-if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --target=linked_docs/AI.md "$ESCAPE_ROOT" >/dev/null 2>&1; then
+# Test 22b: Linked parent directory with target escaping containment (independent root)
+ESCAPE_ROOT_2="$TEST_ROOT/escape_project_2"
+OUTSIDE_DIR_2="$TEST_ROOT/outside_2"
+mkdir -p "$ESCAPE_ROOT_2/real_docs" "$OUTSIDE_DIR_2"
+ln -s "$OUTSIDE_DIR_2" "$ESCAPE_ROOT_2/linked_docs"
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --target=linked_docs/AI.md "$ESCAPE_ROOT_2" >/dev/null 2>&1; then
     echo "Expected target in linked external parent directory to be rejected; was accepted." >&2
     exit 1
 fi
-[[ ! -f "$OUTSIDE_DIR/AI.md" ]]
+[[ ! -f "$OUTSIDE_DIR_2/AI.md" ]]
 
-# Test 23: Multiple custom targets with spaces and glob characters (F06 - P2)
+# Test 22c: Canonicalization fallback without realpath (R2 - P2)
+NO_REALPATH_DIR="$TEST_ROOT/bin_no_realpath"
+mkdir -p "$NO_REALPATH_DIR"
+for cmd in awk sed grep cat cp mv rm touch mkdir chmod date sha256sum cut head tail printf; do
+    cmd_path="$(command -v "$cmd" || true)"
+    [[ -n "$cmd_path" ]] && ln -s "$cmd_path" "$NO_REALPATH_DIR/$cmd"
+done
+ESCAPE_ROOT_3="$TEST_ROOT/escape_project_3"
+OUTSIDE_DIR_3="$TEST_ROOT/outside_3"
+mkdir -p "$ESCAPE_ROOT_3" "$OUTSIDE_DIR_3"
+echo "secret" > "$OUTSIDE_DIR_3/secret.md"
+ln -s "$OUTSIDE_DIR_3/secret.md" "$ESCAPE_ROOT_3/AGENTS.md"
+if HOME="$FAKE_HOME" PATH="$NO_REALPATH_DIR" bash "$REPO_ROOT/init.sh" "$ESCAPE_ROOT_3" >/dev/null 2>&1; then
+    echo "Expected escape to be rejected even without realpath command; was accepted." >&2
+    exit 1
+fi
+[[ "$(cat "$OUTSIDE_DIR_3/secret.md")" == "secret" ]]
+
+# Test 23: Multiple custom targets with spaces, brackets, commas, and rejected overlaps (F06, R6, R7, R8, R9)
 SPACES_ROOT="$TEST_ROOT/spaces_and_globs"
-mkdir -p "$SPACES_ROOT"
+mkdir -p "$SPACES_ROOT/docs"
+# Unmarked file with 3 trailing newlines to verify byte-preservation (R9 - P2)
+printf "Header line\n\n\n" > "$SPACES_ROOT/docs/unmarked.md"
+
 HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" \
     --target="docs/path with spaces/custom instructions.md" \
     --target="docs/[special-rules]/ai.md" \
+    --target="docs/AI,Rules.md" \
+    --target="docs/unmarked.md" \
     "$SPACES_ROOT" >/dev/null
 
 [[ -f "$SPACES_ROOT/docs/path with spaces/custom instructions.md" ]]
 [[ -f "$SPACES_ROOT/docs/[special-rules]/ai.md" ]]
+[[ -f "$SPACES_ROOT/docs/AI,Rules.md" ]]
 grep -q '^<!-- PROMPTKIT_START -->$' "$SPACES_ROOT/docs/path with spaces/custom instructions.md"
 grep -q '^<!-- PROMPTKIT_START -->$' "$SPACES_ROOT/docs/[special-rules]/ai.md"
+grep -q '^<!-- PROMPTKIT_START -->$' "$SPACES_ROOT/docs/AI,Rules.md"
+
+# Verify unmarked.md preserved its original blank lines (R9 - P2)
+head -n 3 "$SPACES_ROOT/docs/unmarked.md" | grep -q '^Header line$'
+
+# Verify managed destination overlap rejection (R6 - P2)
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --target=PROMPTKIT.md "$SPACES_ROOT" >/dev/null 2>&1; then
+    echo "Expected --target=PROMPTKIT.md to be rejected; was accepted." >&2
+    exit 1
+fi
+
+# Verify directory target rejection (R7 - P2)
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --target=docs "$SPACES_ROOT" >/dev/null 2>&1; then
+    echo "Expected --target=docs (directory) to be rejected; was accepted." >&2
+    exit 1
+fi
 
 # Test 24: Cline existing file layout, update, and --add-host=cline rerun (F05 - P2)
 CLINE_ROOT="$TEST_ROOT/cline_file_layout"
@@ -351,14 +393,13 @@ HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --add-host=clin
 grep -q '^# Cline instructions$' "$CLINE_ROOT/.clinerules"
 grep -q '## PromptKit OS: Engineering Operating System' "$CLINE_ROOT/.clinerules"
 
-# Test 25: Transactional atomicity: failed later target preserves all files and PROMPTKIT.md (F07 - P2)
+# Test 25: Transactional atomicity: pre-validation failure and commit-time write failure rollback (F07 - P2, R5 - P2)
 TX_ROOT="$TEST_ROOT/transactional_preservation"
 mkdir -p "$TX_ROOT"
-# Initially install Lite profile
 HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --lite "$TX_ROOT" >/dev/null
 grep -q '^profile: lite$' "$TX_ROOT/PROMPTKIT.md"
 
-# Create a second target with reversed markers (malformed)
+# Part A: Pre-validation failure (reversed markers)
 cat > "$TX_ROOT/CLAUDE.md" <<'EOF'
 # Claude instructions
 <!-- PROMPTKIT_END -->
@@ -370,33 +411,56 @@ agents_before_hash="$(sha256sum "$TX_ROOT/AGENTS.md" | cut -d' ' -f1)"
 claude_before_hash="$(sha256sum "$TX_ROOT/CLAUDE.md" | cut -d' ' -f1)"
 profile_before_hash="$(sha256sum "$TX_ROOT/PROMPTKIT.md" | cut -d' ' -f1)"
 
-# Attempt update to Balanced profile; must fail because CLAUDE.md is malformed
 if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --balanced "$TX_ROOT" >/dev/null 2>&1; then
     echo "Expected transactional update to fail on malformed second target; succeeded." >&2
     exit 1
 fi
 
-agents_after_hash="$(sha256sum "$TX_ROOT/AGENTS.md" | cut -d' ' -f1)"
-claude_after_hash="$(sha256sum "$TX_ROOT/CLAUDE.md" | cut -d' ' -f1)"
-profile_after_hash="$(sha256sum "$TX_ROOT/PROMPTKIT.md" | cut -d' ' -f1)"
-
-[[ "$agents_before_hash" == "$agents_after_hash" ]]
-[[ "$claude_before_hash" == "$claude_after_hash" ]]
-[[ "$profile_before_hash" == "$profile_after_hash" ]]
+[[ "$agents_before_hash" == "$(sha256sum "$TX_ROOT/AGENTS.md" | cut -d' ' -f1)" ]]
+[[ "$claude_before_hash" == "$(sha256sum "$TX_ROOT/CLAUDE.md" | cut -d' ' -f1)" ]]
+[[ "$profile_before_hash" == "$(sha256sum "$TX_ROOT/PROMPTKIT.md" | cut -d' ' -f1)" ]]
 grep -q '^profile: lite$' "$TX_ROOT/PROMPTKIT.md"
 
-# Test 26: 0600 permissions survive update under portable stat mode query (F10 - P2)
+# Part B: Commit-time write failure rollback (R5 - P2)
+# Remove the malformed CLAUDE.md and install valid CLAUDE.md
+rm -f "$TX_ROOT/CLAUDE.md"
+mkdir -p "$TX_ROOT/readonly_dir"
+touch "$TX_ROOT/readonly_dir/locked.md"
+chmod 555 "$TX_ROOT/readonly_dir" # makes locked.md unwritable / uncreatable on write
+
+agents_pre_hash="$(sha256sum "$TX_ROOT/AGENTS.md" | cut -d' ' -f1)"
+profile_pre_hash="$(sha256sum "$TX_ROOT/PROMPTKIT.md" | cut -d' ' -f1)"
+
+# Update with a valid target and a target inside the unwritable directory
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --balanced --target=readonly_dir/new_target.md "$TX_ROOT" >/dev/null 2>&1; then
+    echo "Expected commit-time write failure on unwritable directory; succeeded." >&2
+    chmod 755 "$TX_ROOT/readonly_dir"
+    exit 1
+fi
+chmod 755 "$TX_ROOT/readonly_dir"
+
+# Verify rollback restored PROMPTKIT.md and AGENTS.md
+[[ "$agents_pre_hash" == "$(sha256sum "$TX_ROOT/AGENTS.md" | cut -d' ' -f1)" ]]
+[[ "$profile_pre_hash" == "$(sha256sum "$TX_ROOT/PROMPTKIT.md" | cut -d' ' -f1)" ]]
+grep -q '^profile: lite$' "$TX_ROOT/PROMPTKIT.md"
+
+# Test 26: 0600 permissions survive update, including internal symlinks (F10 - P2, R1 - P1)
 PERM_ROOT="$TEST_ROOT/perm_test"
 mkdir -p "$PERM_ROOT"
-cat > "$PERM_ROOT/AGENTS.md" <<'EOF'
+cat > "$PERM_ROOT/private_target.md" <<'EOF'
 # Private instructions
 <!-- PROMPTKIT_START -->
 old directive
 <!-- PROMPTKIT_END -->
 EOF
-chmod 600 "$PERM_ROOT/AGENTS.md"
+chmod 600 "$PERM_ROOT/private_target.md"
+ln -s "private_target.md" "$PERM_ROOT/AGENTS.md"
+
 HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" "$PERM_ROOT" >/dev/null
-perm_after="$(stat -c '%a' "$PERM_ROOT/AGENTS.md" 2>/dev/null || stat -f '%Lp' "$PERM_ROOT/AGENTS.md" 2>/dev/null)"
+perm_after="$(stat -L -c '%a' "$PERM_ROOT/AGENTS.md" 2>/dev/null || stat -L -f '%Lp' "$PERM_ROOT/AGENTS.md" 2>/dev/null)"
+target_perm_after="$(stat -c '%a' "$PERM_ROOT/private_target.md" 2>/dev/null || stat -f '%Lp' "$PERM_ROOT/private_target.md" 2>/dev/null)"
+
 [[ "$perm_after" == "600" ]]
+[[ "$target_perm_after" == "600" ]]
 
 echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, and byte-idempotency tests passed."

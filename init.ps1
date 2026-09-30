@@ -51,24 +51,30 @@ function Get-HostFile($Name) {
 }
 $KnownHostsList = @("claude","opencode","cursor","gemini","windsurf","copilot","cline","trae","aider")
 
-# Canonical path resolution and containment verification (F04 - P2)
+# Canonical path resolution and containment verification (F04 - P2, R3 - P2, R4 - P2)
 function Resolve-CanonicalPath {
-    param([string]$Path)
+    param(
+        [string]$Path,
+        [int]$HopCount = 0
+    )
     if ([string]::IsNullOrWhiteSpace($Path)) { return "" }
+    if ($HopCount -ge 25) { return [System.IO.Path]::GetFullPath($Path) }
+
     $p = [System.IO.Path]::GetFullPath($Path)
     $root = [System.IO.Path]::GetPathRoot($p)
     $remainder = $p.Substring($root.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
     $parts = $remainder.Split([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
 
     $current = $root
-    foreach ($part in $parts) {
+    $i = 0
+    while ($i -lt $parts.Length) {
+        $part = $parts[$i]
+        $i++
         if ([string]::IsNullOrEmpty($part)) { continue }
         $current = [System.IO.Path]::Combine($current, $part)
         if (Test-Path -LiteralPath $current) {
             $item = Get-Item -LiteralPath $current -Force
-            $hops = 0
-            while ($null -ne $item -and ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -and $hops -lt 25) {
-                $hops++
+            if ($null -ne $item -and ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
                 $target = $null
                 if ($item.PSObject.Properties['Target'] -and $item.Target) {
                     $target = if ($item.Target -is [array]) { $item.Target[0] } else { $item.Target }
@@ -80,16 +86,11 @@ function Resolve-CanonicalPath {
                         $parentDir = [System.IO.Path]::GetDirectoryName($item.FullName)
                         $target = [System.IO.Path]::Combine($parentDir, $target)
                     }
-                    $target = [System.IO.Path]::GetFullPath($target)
-                    if (Test-Path -LiteralPath $target) {
-                        $item = Get-Item -LiteralPath $target -Force
-                        $current = $item.FullName
-                    } else {
-                        $current = $target
-                        break
+                    if ($i -lt $parts.Length) {
+                        $remParts = $parts[$i..($parts.Length - 1)]
+                        $target = [System.IO.Path]::Combine(@($target) + @($remParts))
                     }
-                } else {
-                    break
+                    return Resolve-CanonicalPath -Path $target -HopCount ($HopCount + 1)
                 }
             }
         }
@@ -106,12 +107,18 @@ function Test-PathContained {
     $canonicalTarget = Resolve-CanonicalPath $TargetPath
     $canonicalRoot = $canonicalRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
 
-    if ($canonicalTarget -eq $canonicalRoot) {
+    $comparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') {
+        [System.StringComparison]::OrdinalIgnoreCase
+    } else {
+        [System.StringComparison]::Ordinal
+    }
+
+    if ($canonicalTarget.Equals($canonicalRoot, $comparison)) {
         return $true
     }
     $sep = [System.IO.Path]::DirectorySeparatorChar
     $prefix = $canonicalRoot + $sep
-    if ($canonicalTarget.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    if ($canonicalTarget.StartsWith($prefix, $comparison)) {
         return $true
     }
     return $false
@@ -159,9 +166,7 @@ if ($AddHost -ne "") {
 $ExtraTargets = @()
 if ($Target) {
     foreach ($t in $Target) {
-        if ($t -is [string] -and $t.Contains(",")) {
-            $ExtraTargets += ($t -split ",")
-        } else {
+        if (-not [string]::IsNullOrWhiteSpace($t)) {
             $ExtraTargets += $t
         }
     }
@@ -519,26 +524,66 @@ $AgentFileCandidates = @(
     "CONVENTIONS.md"   # Aider conventions file
 )
 
+function Test-IsManagedDestination {
+    param([string]$CandidatePath)
+    $canonCand = Resolve-CanonicalPath $CandidatePath
+    $managed = @($ProjectProfile, $StateTracker, $PrTemplateTarget, $TaskTemplateTarget)
+    $comparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') {
+        [System.StringComparison]::OrdinalIgnoreCase
+    } else {
+        [System.StringComparison]::Ordinal
+    }
+    foreach ($m in $managed) {
+        $canonM = Resolve-CanonicalPath $m
+        if ($canonCand.Equals($canonM, $comparison)) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Add-TargetUnique {
+    param([string]$TargetPath)
+    $canonWant = Resolve-CanonicalPath $TargetPath
+    $comparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') {
+        [System.StringComparison]::OrdinalIgnoreCase
+    } else {
+        [System.StringComparison]::Ordinal
+    }
+    foreach ($existing in $script:TargetsFound) {
+        $canonExist = Resolve-CanonicalPath $existing
+        if ($canonWant.Equals($canonExist, $comparison)) {
+            return $false
+        }
+    }
+    $script:TargetsFound += $TargetPath
+    return $true
+}
+
 $TargetsFound = @()
 foreach ($file in $AgentFileCandidates) {
     $path = Join-Path $ProjectRoot $file
     if (Test-Path -LiteralPath $path) {
         if (Test-Path -LiteralPath $path -PathType Container) {
             if ($file -eq ".clinerules") {
-                $dirTarget = Join-Path $path "promptkit.md"
-                $TargetsFound += $dirTarget
+                Add-TargetUnique (Join-Path $path "promptkit.md") | Out-Null
             }
         } else {
-            $TargetsFound += $path
+            Add-TargetUnique $path | Out-Null
         }
     }
 }
 
-# Custom --target paths (F06 - P2)
+# Custom --target paths (F06 - P2, R6 - P2, R7 - P2)
 foreach ($xp in $ExtraTargets) {
     $xfull = Join-Path $ProjectRoot $xp
-    if ($TargetsFound -notcontains $xfull) {
-        $TargetsFound += $xfull
+    if (Test-IsManagedDestination $xfull) {
+        throw "Error: Custom target cannot be a managed PromptKit OS file: $xp"
+    }
+    if (Test-Path -LiteralPath $xfull -PathType Container) {
+        throw "Error: Target destination cannot be a directory: $xp"
+    }
+    if (Add-TargetUnique $xfull) {
         Write-Host "  [+] Added custom target: $xp" -ForegroundColor Green
     }
 }
@@ -554,11 +599,7 @@ function Register-TargetFile($Rel) {
             $want = Join-Path $want "promptkit.md"
         }
     }
-    if ($script:TargetsFound -notcontains $want) {
-        $script:TargetsFound += $want
-        return $true
-    }
-    return $false
+    return (Add-TargetUnique $want)
 }
 
 $Fresh = ($TargetsFound.Count -eq 0)
@@ -634,6 +675,10 @@ foreach ($targetPath in $TargetsFound) {
         $targetPath.Substring($ProjectRootPath.Length).TrimStart("\", "/") -replace "\\", "/"
     } else {
         $targetPath -replace "\\", "/"
+    }
+
+    if (Test-Path -LiteralPath $targetPath -PathType Container) {
+        throw "Error: Target destination cannot be a directory: $relTarget"
     }
 
     $content = if (Test-Path -LiteralPath $targetPath) {
@@ -804,12 +849,49 @@ $createdFiles = New-Object System.Collections.Generic.List[string]
 $backedUpFiles = New-Object System.Collections.Generic.List[string]
 $backupSources = New-Object System.Collections.Generic.List[string]
 
+$comparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') {
+    [System.StringComparison]::OrdinalIgnoreCase
+} else {
+    [System.StringComparison]::Ordinal
+}
+
 try {
+    # Snapshot all existing destinations ONCE before ANY disk mutation begins (R5 - P2)
+    if (Test-Path -LiteralPath $ProjectProfile) {
+        $bkp = Join-Path $backupDir "PROMPTKIT.md"
+        Copy-Item -LiteralPath $ProjectProfile -Destination $bkp -Force
+        $backedUpFiles.Add($ProjectProfile)
+        $backupSources.Add($bkp)
+    }
+
+    $bIdx = 0
+    foreach ($item in $StagedTargetUpdates) {
+        $tPath = $item.TargetPath
+        if (Test-Path -LiteralPath $tPath) {
+            $canonT = Resolve-CanonicalPath $tPath
+            $alreadySnapshotted = $false
+            foreach ($existingBkp in $backedUpFiles) {
+                $canonExist = Resolve-CanonicalPath $existingBkp
+                if ($canonT.Equals($canonExist, $comparison)) {
+                    $alreadySnapshotted = $true
+                    break
+                }
+            }
+            if (-not $alreadySnapshotted) {
+                $bkp = Join-Path $backupDir ("target_" + $bIdx)
+                Copy-Item -LiteralPath $tPath -Destination $bkp -Force
+                $backedUpFiles.Add($tPath)
+                $backupSources.Add($bkp)
+            }
+        }
+        $bIdx++
+    }
+
     # Ensure doc directories
     foreach ($dir in $DocDirs) {
         $fullPath = Join-Path $ProjectRoot $dir
         if (-not (Test-Path -LiteralPath $fullPath)) {
-            New-Item -ItemType Directory -Path $fullPath -Force | Out-Null
+            [System.IO.Directory]::CreateDirectory($fullPath) | Out-Null
             Write-Host "  [+] Created directory: $dir" -ForegroundColor Green
         }
     }
@@ -823,12 +905,7 @@ try {
     }
     $stagedProfile = Get-UpdatedProfileContent -CurrentContent $profileInitialContent -Profile $Profile -Tracking $Tracking -TrackingProjection $TrackingProjection -EngineDir $EngineDir
 
-    if (Test-Path -LiteralPath $ProjectProfile) {
-        $bkp = Join-Path $backupDir "PROMPTKIT.md"
-        Copy-Item -LiteralPath $ProjectProfile -Destination $bkp -Force
-        $backedUpFiles.Add($ProjectProfile)
-        $backupSources.Add($bkp)
-    } else {
+    if (-not (Test-Path -LiteralPath $ProjectProfile)) {
         $createdFiles.Add($ProjectProfile)
     }
     [System.IO.File]::WriteAllText($ProjectProfile, $stagedProfile, $utf8NoBom)
@@ -847,7 +924,7 @@ try {
     # Commit scaffolds
     if (-not (Test-Path -LiteralPath $StateTracker) -and (Test-Path -LiteralPath $TemplateState)) {
         $docsParent = Split-Path -Parent $StateTracker
-        if (-not (Test-Path -LiteralPath $docsParent)) { New-Item -ItemType Directory -Path $docsParent -Force | Out-Null }
+        if (-not (Test-Path -LiteralPath $docsParent)) { [System.IO.Directory]::CreateDirectory($docsParent) | Out-Null }
         Copy-Item -LiteralPath $TemplateState -Destination $StateTracker -Force
         $createdFiles.Add($StateTracker)
         Write-Host "  [+] Created: docs/STATE.md (living project & state tracker)" -ForegroundColor Green
@@ -868,19 +945,13 @@ try {
     }
 
     # Commit targets
-    $idx = 0
     foreach ($item in $StagedTargetUpdates) {
         $tPath = $item.TargetPath
         $pDir = Split-Path -Parent $tPath
         if ($pDir -ne "" -and -not (Test-Path -LiteralPath $pDir)) {
             [System.IO.Directory]::CreateDirectory($pDir) | Out-Null
         }
-        if (Test-Path -LiteralPath $tPath) {
-            $bkp = Join-Path $backupDir ("target_" + $idx)
-            Copy-Item -LiteralPath $tPath -Destination $bkp -Force
-            $backedUpFiles.Add($tPath)
-            $backupSources.Add($bkp)
-        } else {
+        if (-not (Test-Path -LiteralPath $tPath)) {
             $createdFiles.Add($tPath)
         }
         [System.IO.File]::WriteAllText($tPath, $item.Content, $utf8NoBom)
@@ -889,7 +960,6 @@ try {
         } else {
             Write-Host "  [+] Injected PromptKit OS directives into: $($item.RelTarget) (profile: $Profile)" -ForegroundColor Green
         }
-        $idx++
     }
 } catch {
     # Rollback!

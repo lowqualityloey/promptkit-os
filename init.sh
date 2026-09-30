@@ -24,34 +24,58 @@ PROJECT_ROOT=""
 resolve_canonical_path() {
     local target="$1"
     if command -v realpath >/dev/null 2>&1; then
-        realpath -m "$target" 2>/dev/null && return 0
+        local rp
+        rp=$(realpath -m "$target" 2>/dev/null) && [[ -n "$rp" ]] && { echo "$rp"; return 0; }
     fi
-    local p
-    case "$target" in
-        /*) p="$target" ;;
-        *) p="$PWD/$target" ;;
-    esac
-    local IFS='/'
-    read -r -a parts <<< "$p"
-    local current=""
-    for part in "${parts[@]}"; do
-        [[ -z "$part" ]] && continue
-        current="$current/$part"
-        local hops=0
-        while [[ -L "$current" && $hops -lt 25 ]]; do
-            hops=$((hops + 1))
-            local link
-            link=$(readlink "$current") || break
+    local p="$target"
+    [[ "$p" != /* ]] && p="$PWD/$p"
+
+    local hops=0
+    while [[ $hops -lt 25 ]]; do
+        hops=$((hops + 1))
+        if [[ -L "$p" ]]; then
+            local link parent
+            link=$(readlink "$p") || break
+            parent=$(dirname "$p")
             case "$link" in
-                /*) current="$link" ;;
-                *) current="$(dirname "$current")/$link" ;;
+                /*) p="$link" ;;
+                *) p="$parent/$link" ;;
             esac
-        done
-        if [[ -d "$current" ]]; then
-            current=$(builtin cd "$current" 2>/dev/null && pwd -P)
+        else
+            local parent base phys_parent
+            parent=$(dirname "$p")
+            base=$(basename "$p")
+            if [[ -d "$parent" ]]; then
+                phys_parent=$(builtin cd "$parent" 2>/dev/null && pwd -P)
+                if [[ -n "$phys_parent" ]]; then
+                    p="$phys_parent/$base"
+                    [[ -L "$p" ]] && continue
+                fi
+            fi
+            break
         fi
     done
-    echo "$current"
+
+    local IFS="/"
+    read -r -a raw_parts <<< "$p"
+    local norm_parts=()
+    for part in "${raw_parts[@]}"; do
+        if [[ -z "$part" || "$part" == "." ]]; then
+            continue
+        elif [[ "$part" == ".." ]]; then
+            if [[ ${#norm_parts[@]} -gt 0 ]]; then
+                unset 'norm_parts[${#norm_parts[@]}-1]'
+                norm_parts=("${norm_parts[@]}")
+            fi
+        else
+            norm_parts+=("$part")
+        fi
+    done
+    local result=""
+    for part in "${norm_parts[@]}"; do
+        result="$result/$part"
+    done
+    echo "${result:-/}"
 }
 
 is_path_contained() {
@@ -68,7 +92,7 @@ is_path_contained() {
 }
 
 get_file_mode() {
-    stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null || true
+    stat -L -c '%a' "$1" 2>/dev/null || stat -L -f '%Lp' "$1" 2>/dev/null || true
 }
 
 # Known host -> directive file map (defined early: arg parsing validates against it).
@@ -509,15 +533,42 @@ AGENT_FILES=(
     "CONVENTIONS.md"
 )
 
+is_managed_destination() {
+    local candidate="$1"
+    local canon_cand canon_m m
+    canon_cand=$(resolve_canonical_path "$candidate")
+    for m in "$PROJECT_PROFILE" "$STATE_TRACKER" "$PR_TEMPLATE_TARGET" "$TASK_TEMPLATE_TARGET"; do
+        canon_m=$(resolve_canonical_path "$m")
+        if [[ "$canon_cand" == "$canon_m" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+add_target_unique() {
+    local want="$1"
+    local canon_want canon_t t
+    canon_want=$(resolve_canonical_path "$want")
+    for t in "${TARGETS_FOUND[@]}"; do
+        canon_t=$(resolve_canonical_path "$t")
+        if [[ "$canon_t" == "$canon_want" ]]; then
+            return 1
+        fi
+    done
+    TARGETS_FOUND+=("$want")
+    return 0
+}
+
 TARGETS_FOUND=()
 for file in "${AGENT_FILES[@]}"; do
     target_path="$PROJECT_ROOT/$file"
     if [[ -d "$target_path" ]]; then
         if [[ "$file" == ".clinerules" ]]; then
-            TARGETS_FOUND+=("$target_path/promptkit.md")
+            add_target_unique "$target_path/promptkit.md" || true
         fi
     elif [[ -f "$target_path" ]]; then
-        TARGETS_FOUND+=("$target_path")
+        add_target_unique "$target_path" || true
     fi
 done
 
@@ -525,12 +576,15 @@ done
 if [[ ${#EXTRA_TARGETS[@]} -gt 0 ]]; then
     for xp in "${EXTRA_TARGETS[@]}"; do
         xfull="$PROJECT_ROOT/$xp"
-        already=0
-        for t in "${TARGETS_FOUND[@]}"; do
-            [[ "$t" == "$xfull" ]] && already=1
-        done
-        if [[ "$already" -eq 0 ]]; then
-            TARGETS_FOUND+=("$xfull")
+        if is_managed_destination "$xfull"; then
+            echo "Error: Custom target cannot be a managed PromptKit OS file: $xp" >&2
+            exit 1
+        fi
+        if [[ -d "$xfull" ]]; then
+            echo "Error: Target destination cannot be a directory: $xp" >&2
+            exit 1
+        fi
+        if add_target_unique "$xfull"; then
             echo -e "  \033[0;32m[+]\\033[0m Added custom target: $xp"
         fi
     done
@@ -548,16 +602,7 @@ ensure_target() {
             want="$want/promptkit.md"
         fi
     fi
-    local t
-    local already=0
-    for t in "${TARGETS_FOUND[@]}"; do
-        [[ "$t" == "$want" ]] && already=1
-    done
-    if [[ "$already" -eq 0 ]]; then
-        TARGETS_FOUND+=("$want")
-        return 0
-    fi
-    return 1
+    add_target_unique "$want"
 }
 
 FRESH=0
@@ -698,15 +743,9 @@ for target in "${TARGETS_FOUND[@]}"; do
         STAGED_TARGET_PATHS+=("$staged_target")
         STAGED_TARGET_MODES+=("update")
     elif [[ -f "$target" ]]; then
-        content="$(cat "$target")"
-        if [[ -n "$content" ]]; then
-            if [[ "$content" == *$'\r\n' ]]; then
-                printf "%s\r\n%s\r\n" "$content" "$DIRECTIVE" > "$staged_target"
-            elif [[ "$content" == *$'\n' ]]; then
-                printf "%s\n%s\n" "$content" "$DIRECTIVE" > "$staged_target"
-            else
-                printf "%s\n\n%s\n" "$content" "$DIRECTIVE" > "$staged_target"
-            fi
+        cp "$target" "$staged_target"
+        if [[ -s "$staged_target" ]]; then
+            printf "\n\n%s\n" "$DIRECTIVE" >> "$staged_target"
         else
             printf "%s\n" "$DIRECTIVE" > "$staged_target"
         fi
@@ -774,7 +813,7 @@ else
     fi
 fi
 
-# 7. Transactional Commit with Rollback (F07 - P2, F10 - P2)
+# 7. Transactional Commit with Rollback (F07 - P2, F10 - P2, R5 - P2)
 BACKUP_DIR="$(mktemp -d)"
 declare -a CREATED_FILES=()
 declare -a BACKED_UP_FILES=()
@@ -798,6 +837,34 @@ rollback() {
 COMMIT_SUCCESS=0
 trap 'if [[ "$COMMIT_SUCCESS" -eq 0 ]]; then rollback; else rm -rf "$BACKUP_DIR" "$STAGING_DIR"; fi' EXIT
 
+# Snapshot all existing destinations ONCE before ANY disk mutation begins (R5 - P2)
+if [[ -f "$PROJECT_PROFILE" ]]; then
+    bkp="$BACKUP_DIR/PROMPTKIT.md"
+    cp -p "$PROJECT_PROFILE" "$bkp"
+    BACKED_UP_FILES+=("$PROJECT_PROFILE")
+    BACKUP_SOURCES+=("$bkp")
+fi
+
+for (( i=0; i<${#TARGETS_FOUND[@]}; i++ )); do
+    target="${TARGETS_FOUND[i]}"
+    if [[ -f "$target" || -L "$target" ]]; then
+        canon_t=$(resolve_canonical_path "$target")
+        already_snapshotted=0
+        for (( j=0; j<${#BACKED_UP_FILES[@]}; j++ )); do
+            if [[ "$(resolve_canonical_path "${BACKED_UP_FILES[j]}")" == "$canon_t" ]]; then
+                already_snapshotted=1
+                break
+            fi
+        done
+        if [[ "$already_snapshotted" -eq 0 ]]; then
+            bkp="$BACKUP_DIR/target_$i"
+            cp -p "$target" "$bkp"
+            BACKED_UP_FILES+=("$target")
+            BACKUP_SOURCES+=("$bkp")
+        fi
+    fi
+done
+
 # Ensure doc directories exist
 for dir in "${DOC_DIRS[@]}"; do
     if [[ ! -d "$PROJECT_ROOT/$dir" ]]; then
@@ -808,10 +875,6 @@ done
 
 # Commit PROMPTKIT.md
 if [[ -f "$PROJECT_PROFILE" ]]; then
-    bkp="$BACKUP_DIR/PROMPTKIT.md"
-    cp -p "$PROJECT_PROFILE" "$bkp"
-    BACKED_UP_FILES+=("$PROJECT_PROFILE")
-    BACKUP_SOURCES+=("$bkp")
     prof_mode="$(get_file_mode "$PROJECT_PROFILE")"
     cp "$STAGED_PROFILE" "$PROJECT_PROFILE"
     if [[ -n "$prof_mode" ]]; then chmod "$prof_mode" "$PROJECT_PROFILE" 2>/dev/null || true; fi
@@ -856,11 +919,7 @@ for (( i=0; i<${#TARGETS_FOUND[@]}; i++ )); do
     REL_TARGET="${target#$PROJECT_ROOT/}"
 
     mkdir -p "$(dirname "$target")"
-    if [[ -f "$target" ]]; then
-        bkp="$BACKUP_DIR/target_$i"
-        cp -p "$target" "$bkp"
-        BACKED_UP_FILES+=("$target")
-        BACKUP_SOURCES+=("$bkp")
+    if [[ -f "$target" || -L "$target" ]]; then
         t_mode="$(get_file_mode "$target")"
         cp "$staged_file" "$target"
         if [[ -n "$t_mode" ]]; then chmod "$t_mode" "$target" 2>/dev/null || true; fi
