@@ -2,7 +2,7 @@
 
 Measures instruction fidelity per host — the axis the install-compatibility list does not cover (issue #436). The agent prepares; the maintainer runs probes, returns transcripts; the agent scores and drafts the matrix.
 
-- **Directive under test**: shipped Balanced (`templates/agent-directive-template.md`) at `main` @ `d6ba853` (2,254 tok). Install canonically into a scratch project per host (do not paste the directive as chat context — the probe includes each host's JIT file-loading path).
+- **Directive under test**: shipped Balanced (`templates/agent-directive-template.md`) at `main` @ `09729003417009103481a77de5fda62df35e2f40` (2,318 tok). Install canonically into a scratch project per host (do not paste the directive as chat context — the probe includes each host's JIT file-loading path).
 - **Hosts**: 3 initial, maintainer's choice (e.g. Claude Code + Cursor + Copilot). Record exact host name+version with the transcripts.
 - **Confound rule (binding)**: hold the model constant across the initial hosts — same model + version in every host, so cross-host deltas are host effects, not model effects. Record model name+version per transcript regardless. If a chosen host cannot run the pinned model, drop it from the initial matrix or record the substitution explicitly in the cell — never silently compare across models.
 - **Cadence**: one-time initial matrix; refresh on major host releases. Never CI (manual, versioned, maintainer-owned runs).
