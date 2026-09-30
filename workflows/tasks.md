@@ -119,7 +119,7 @@ The Task Record, not a conversational completion claim or board status alone, co
 
 ### Phase 3: Acceptance Criteria & Invariant Formulation
 
-For each decomposed task, fill out `.promptkit/templates/issue-task-template.md`:
+For each decomposed task, fill out `<kit>/templates/issue-task-template.md`:
 
 1. **User Story / Intent**:
    - State the actor, capability, and value: `As a <user>, I want <action> so that <value>`.
@@ -139,13 +139,13 @@ For each decomposed task, fill out `.promptkit/templates/issue-task-template.md`
 ### Phase 4: Local Storage & Tracker Sync (GitHub steps below are the GitHub adapter)
 
 1. **Persist the Canonical Local Source of Truth**:
-   - For each Controlled Work unit, create one canonical Task Record at `docs/tasks/<task-id>.md` from `.promptkit/templates/execution-task-record-template.md`.
+   - For each Controlled Work unit, create one canonical Task Record at `docs/tasks/<task-id>.md` from `<kit>/templates/execution-task-record-template.md`.
    - A dated breakdown document may index the per-task records, but it cannot replace them or become a second lifecycle authority.
    - This provides offline resilience and protects against agent context compaction (`pk:checkpoint`).
 2. **Provision Standard GitHub Labels & Issue Template** (remote repo-config writes — prepare only, execute with explicit human authorization per the Action Authority Model in `protocols/code-quality-gate.md`):
    - Repositories can provision the standardized labels (`priority/p0-p3`, `type:*`, `area:*`) with zero token overhead by running the local provisioning script:
-     - PowerShell: `pwsh -NoProfile -File .promptkit/scripts/setup-github-labels.ps1`
-     - Bash: `bash .promptkit/scripts/setup-github-labels.sh`
+     - PowerShell: `pwsh -NoProfile -File <kit>/scripts/setup-github-labels.ps1` (resolve `<kit>` to your install dir)
+     - Bash: `bash <kit>/scripts/setup-github-labels.sh` (resolve `<kit>` to your install dir)
    - PromptKit OS automatically scaffolds `.github/ISSUE_TEMPLATE/task.md` during `init.ps1` / `init.sh` so human contributors and agents have a consistent Gherkin structure when opening issues directly on GitHub.
 3. **Generate GitHub CLI (`gh issue create`) Commands or Invoke MCP Tools**:
     - When `Task Tracking System` in `PROMPTKIT.md` is set to `GitHub Issues` (or if requested by the user), prepare issue proposals via native MCP (`github-mcp-server`) drafts or ready-to-run CLI commands appended at the bottom of an index or issue document — create or send them only with explicit human authorization per the Action Authority Model in `protocols/code-quality-gate.md`. External issues may coordinate work but must link to the canonical Task Record and never replace it:

@@ -21,7 +21,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                   PROMPTKIT OS JIT FILESYSTEM MODEL                     │
-│ Baseline Static Injection: Router Directive (1,269 tok Lite / 2,318 Bal)  │
+│ Baseline Static Injection: Router Directive (1,274 tok Lite / 2,318 Bal)  │
 │ On-Demand Loading: Tool loads only target workflow file (e.g. pk:debug) │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -32,7 +32,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Profile | Template | UTF-8 Bytes | Est. Tokens (bytes/4) | Reduction vs ~26.4k current core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
-| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 5,075 | **1,269 tok** | **95% static** | Onboarding, new users, tiny fixes |
+| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 5,097 | **1,274 tok** | **95% static** | Onboarding, new users, tiny fixes |
 | **Balanced** | `agent-directive-template.md` (25 workflows) | 9,273 | **2,318 tok** | **91% static** | Teams, production, default |
 | **Turbo** | same as Balanced + parallel waves | 9,273 | 2,318 tok + subagents (~2x measured total (bounds model, see section 8)) | 91% static, higher total | Experimental, greenfield, accepts cost |
 
@@ -40,8 +40,8 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **26,417 tok** |
-| Full workflow set | 25 | **102,423 tok** |
+| Core-six Lite subset | 6 | **26,443 tok** |
+| Full workflow set | 25 | **102,449 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -55,8 +55,8 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | **Task Ceremony Levels & Output** | ~25 | ~397 tokens | Composable 4-level task ceremony engine & output protocol |
 | **Standard Output Directories** | ~17 | ~226 tokens | Canonical locations for generated specs, ADRs, and plans |
 | **Total Baseline Static Overhead (Balanced)** | **68 lines** | **~2,318 tokens** | **Permanent footprint in system prompt (~91% static saving vs. current ~26.4k core-subset (~98% vs. current full 25-file set))** |
-| **Total Baseline Static Overhead (Lite)** | **53 lines** | **~1,269 tokens** | **95% static saving, ~55% of Balanced** |
-| **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,269 tok — skipped silently) |
+| **Total Baseline Static Overhead (Lite)** | **53 lines** | **~1,274 tokens** | **95% static saving, ~55% of Balanced** |
+| **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,274 tok — skipped silently) |
 
 By contrast, the measured cost of inlining the complete workflow set is listed in the Current Workflow Inventory above; it would be paid on turn 1 before any user request is processed.
 
@@ -81,7 +81,7 @@ Gate coverage: the static dual-profile budget runs in **both** Linux and Windows
 
 ## 3. Dynamic Per-Task Context Economics & Runtime Benchmarks
 
-PromptKit OS benchmarks both the **static footprint** (1,269 tok Lite, 2,318 tok Balanced) and the **dynamic per-task runtime context**.
+PromptKit OS benchmarks both the **static footprint** (1,274 tok Lite, 2,318 tok Balanced) and the **dynamic per-task runtime context**.
 
 By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without a mandatory preload of `workflows/route.md` (6,962 tokens at the historical `fc98f2f` benchmark; 9,241 tokens at the current measurement). At the historical revision, Change A's modeled saving was 6,915 tokens (6,962 route tokens less 47 tokens of directive growth); current end-to-end payloads are measured below and do not reuse that historical estimate.
 
@@ -89,16 +89,16 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 - Historical comparison anchors: `fc98f2f` (after 2+1 profiles) and `c34be80` (before profiles, Balanced only). These SHAs identify historical inputs; they are not the source of the refreshed current values.
 - Current measurement input: source revision `916951878c8e3f32801995518e5e4d213167f031` on 2026-09-30. Reproduce with `bash scripts/measure-per-task-tokens.sh`; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
 - Historical baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A), plus the same task template where applicable.
-- Current JIT payload = directive 1,269-2,318 + workflow + gate + relevant task template (route.md is not loaded by default).
-- Current Lite vs Balanced static directive sizes: 1,269 vs 2,318 tokens.
+- Current JIT payload = directive 1,274-2,318 + workflow + gate + relevant task template (route.md is not loaded by default).
+- Current Lite vs Balanced static directive sizes: 1,274 vs 2,318 tokens.
 
 ### Measured Per-Task Context Breakdown (bytes / 4 convention, after Change A + B):
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,026 tok** | **7,977 tok** | **-30% Balanced, -38% Lite (-3,835 to -4,884 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,100 tok** | **18,051 tok** | **-23% Balanced, -27% Lite (-5,566 to -6,615 tok)** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,464 tok** | **14,415 tok** | **-38% Balanced, -42% Lite (-9,297 to -10,346 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,026 tok** | **7,982 tok** | **-30% Balanced, -38% Lite (-3,835 to -4,879 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,099 tok** | **18,055 tok** | **-23% Balanced, -27% Lite (-5,567 to -6,611 tok)** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,464 tok** | **14,420 tok** | **-38% Balanced, -42% Lite (-9,297 to -10,341 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 

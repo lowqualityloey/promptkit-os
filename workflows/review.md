@@ -311,7 +311,7 @@ For **Level 2 (Controlled)** and **Level 3 (Release-Critical)** Work, the lead a
 
 ## Socratic Debrief & Next Steps
 1. Guide the author on resolving `🚨 [BLOCKING]` items first.
-2. Confirm all fixes pass the Quality Gate in `.promptkit/protocols/code-quality-gate.md`.
+2. Confirm all fixes pass the Quality Gate in `<kit>/protocols/code-quality-gate.md`.
 
 ---
 
@@ -320,7 +320,7 @@ For **Level 2 (Controlled)** and **Level 3 (Release-Critical)** Work, the lead a
 - Durable report saved to `docs/reviews/<review-slug>.md` with a `REVIEW-<review-slug>` anchor.
 - Zero unaddressed `🚨 [BLOCKING]` data loss or security issues.
 - All code smells linked to actionable refactoring remedies.
-- Verification tests pass against `.promptkit/protocols/code-quality-gate.md`.
+- Verification tests pass against `<kit>/protocols/code-quality-gate.md`.
 
 
 ---

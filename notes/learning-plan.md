@@ -1,6 +1,6 @@
 # Engineering Learning Plan & Roadmap
 
-Use this document to direct your technical growth, focus areas, and deliberate practice. Align your weekly goals with `.promptkit/notes/skill-matrix.md` to intentionally advance toward Senior/Staff engineering competencies.
+Use this document to direct your technical growth, focus areas, and deliberate practice. Align your weekly goals with `./notes/skill-matrix.md` to intentionally advance toward Senior/Staff engineering competencies.
 
 > 💡 **Tip**: See [`examples/sample-learning-plan.md`](../examples/sample-learning-plan.md) for a completed real-world roadmap.
 

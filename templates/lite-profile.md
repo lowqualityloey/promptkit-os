@@ -4,7 +4,7 @@
 
 PromptKit OS ships with 2 official profiles + 1 experimental to fix recommendability gap (5/10 → 8/10):
 
-- **Lite (official)** — 6 utility workflows, 1,269 tok static (measured), 80% value, onboarding
+- **Lite (official)** — 6 utility workflows, 1,274 tok static (measured), 80% value, onboarding
 - **Balanced (official, default)** — full 25 workflows, 2,318 tok static, Level 0-3 adaptive ceremony, teams/production
 - **Turbo (experimental)** — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval
 
@@ -13,7 +13,7 @@ PromptKit OS ships with 2 official profiles + 1 experimental to fix recommendabi
 | Dimension | Lite | Balanced | Turbo (Experimental) |
 | :--- | :--- | :--- | :--- |
 | **Workflows** | route, debug, commit, checkpoint, sync, profile | All 25 | All 25 + parallel waves |
-| **Static tokens** | 1,269 tok | 2,318 tok | 2,318 tok + subagents |
+| **Static tokens** | 1,274 tok | 2,318 tok | 2,318 tok + subagents |
 | **Use case** | New users, learning, tiny bug fixes, docs typos | Teams, production, full lifecycle | Greenfield, user accepts cost |
 | **Install** | `init.sh --lite` | `init.sh --balanced` or no flag (default) | `init.sh --turbo --experimental` |
 | **PROMPTKIT.md** | `profile: lite` | `profile: balanced` | `profile: turbo` |
@@ -59,10 +59,10 @@ Per-task payload after Change A (route.md no longer mandatory):
 
 ## Upgrade Path
 
-- Lite → Balanced: `.promptkit/init.sh --balanced` — upgrades directive, keeps PROMPTKIT.md profile
-- Balanced → Lite: `.promptkit/init.sh --lite` — downgrades to 6 utility workflows
-- Balanced → Turbo: `.promptkit/init.sh --turbo --experimental` — adds parallel wave capability
-- Turbo → Balanced: `.promptkit/init.sh --balanced` — removes experimental flag
+- Lite → Balanced: from your kit root, `./init.sh --balanced` — upgrades directive, keeps PROMPTKIT.md profile
+- Balanced → Lite: from your kit root, `./init.sh --lite` — downgrades to 6 utility workflows
+- Balanced → Turbo: from your kit root, `./init.sh --turbo --experimental` — adds parallel wave capability
+- Turbo → Balanced: from your kit root, `./init.sh --balanced` — removes experimental flag
 
 ## Verification
 

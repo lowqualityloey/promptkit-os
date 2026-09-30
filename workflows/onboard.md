@@ -29,8 +29,8 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
 - **Brownfield**: the repository contains existing application code, manifests, or configuration files.
 - **Greenfield**: the repository is empty or contains only documentation, licence, and git metadata — Phase 0 applies.
 - PromptKit OS is installed in `.promptkit/` or `promptkit/`.
-- Access to `.promptkit/templates/project-profile-template.md` and `.promptkit/templates/design-profile-template.md`.
-- Greenfield only: access to `.promptkit/protocols/discovery-intake.md` (the bounded interview protocol).
+- Access to `<kit>/templates/project-profile-template.md` and `<kit>/templates/design-profile-template.md`.
+- Greenfield only: access to `<kit>/protocols/discovery-intake.md` (the bounded interview protocol).
 
 ---
 
@@ -194,7 +194,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
     - Non-interactive / CI: respect `--tracking=<value>` passed to `init.sh` / `init.ps1`, or existing `tracking:` line, or default to `local`. When `PROMPTKIT_NO_INTERACTIVE=1` is set, skip picker and apply flags/default only.
 
 2. **Auto-Populate `PROMPTKIT.md`**:
-   Copy `.promptkit/templates/project-profile-template.md` to `./PROMPTKIT.md` and fill out all sections using findings from Phases 1 and 2:
+   Copy `<kit>/templates/project-profile-template.md` to `./PROMPTKIT.md` and fill out all sections using findings from Phases 1 and 2:
    - Project Name inferred from directory or manifest `name`.
    - Active commands configured to the exact detected package manager and runner scripts.
    - If monorepo detected, populate Section 4 (`Monorepo & Workspace Topology`) with the mapped workspace manager, package table, filtered command conventions (`pnpm --filter <pkg>`, `turbo run <cmd> --filter=<pkg>`), and boundary guardrails. If single-package repo, set Section 4 to `N/A (Standalone Repository)`.

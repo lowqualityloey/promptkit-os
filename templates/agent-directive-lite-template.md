@@ -47,7 +47,7 @@ Declare on line 1 (no banner for informational L0 fast-path): `[PromptKit OS Lit
 Lite keeps host project clean. Specialized dirs (auth/, data/, api/, etc.) created on-demand only in Balanced/Turbo.
 
 ### Upgrade Path
-- Need more workflows? Run `.promptkit/init.sh --balanced` (or `pk:profile`) to upgrade to the full Balanced profile
-- Need parallel waves? Run `.promptkit/init.sh --turbo --experimental` (warns up to ~2x measured token cost)
+- Need more workflows? From your kit root, run `./init.sh --balanced` (or `pk:profile`) to upgrade to the full Balanced profile
+- Need parallel waves? From your kit root, run `./init.sh --turbo --experimental` (warns up to ~2x measured token cost)
 - Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`
 <!-- PROMPTKIT_END -->

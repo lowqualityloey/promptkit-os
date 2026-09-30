@@ -13,7 +13,7 @@ Move away from brittle mocks and slow, flaky test suites toward disciplined seam
 ## Preconditions
 - Developer is planning test coverage for a new feature, refactor, or critical subsystem.
 - Target storage directory: `./docs/tests/` in the host project.
-- Access to `.promptkit/templates/test-plan-template.md`.
+- Access to `<kit>/templates/test-plan-template.md`.
 - Recipe: see `docs/recipes/test-isolation.md` for hermetic network mocking, fake timers, and transactional test isolation.
 
 ---

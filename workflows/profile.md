@@ -49,17 +49,17 @@ Profile economics and token budgets are maintained in [`docs/BENCHMARKS.md`](../
 4. **Non-interactive / CI** (`PROMPTKIT_NO_INTERACTIVE=1` or no interactive host): never prompt — apply the flag if given, otherwise default to **Balanced**; state this in the reply.
 
 ### Phase 3: Apply (delegate — do not hand-edit directive blocks)
-1. Run the platform installer with the chosen flag from the host project root:
-   - Linux/macOS: `./.promptkit/init.sh --<profile>` (Turbo: `--turbo --experimental`)
-   - Windows: `.\.promptkit\init.ps1 --<profile>` (Turbo adds `--experimental`)
+1. Run the platform installer with the chosen flag from your resolved kit root:
+   - Linux/macOS: `./init.sh --<profile>` (Turbo: `--turbo --experimental`)
+   - Windows: `.\init.ps1 --<profile>` (Turbo adds `--experimental`)
 2. The installer idempotently replaces ONLY the `<!-- PROMPTKIT_START -->`-bounded directive block and updates `PROMPTKIT.md` (bottom `profile:` line and `## 0.` body). User-authored content outside the markers is never rewritten.
 3. If the installer reports a malformed/orphaned marker error, STOP and surface it (run `pk:sync` after fixing markers manually) — do not append a second block.
 
 ### Phase 4: Verify & Close
-1. Confirm mechanically:
+1. Return to the host project root first (the installer ran inside the kit directory; the checks below read host files). Confirm mechanically:
    - `grep '^profile:' PROMPTKIT.md` shows the new profile;
-   - `## 0. PromptKit OS Profile` body matches;
-   - directive token size moved in the expected direction: `bash .promptkit/scripts/measure-tokens.sh`; consult `docs/BENCHMARKS.md` for current measured values.
+   - `## 0.` body matches;
+   - directive token size moved in the expected direction: `bash <kit>/scripts/measure-tokens.sh` (resolve `<kit>` to your install dir); consult `docs/BENCHMARKS.md` for current measured values.
 2. Display the Dual-Compatible Telemetry Status Card (`📊 / 🎯 / 🟢`) with the new profile, then recommend `pk:sync` so the session hot-reloads the new ruleset from disk.
 3. Switching to a lower ceremony profile is a **preference change, not a scope downgrade**: any task already at Level 2/3 keeps its Task Record and evidence gates.
 

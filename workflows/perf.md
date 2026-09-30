@@ -132,7 +132,7 @@ Prove that the optimization succeeded and lock in the result against future regr
    - Did any secondary metric regress? (e.g., did memory usage spike after adding an in-memory cache?).
 
 3. **Compile Audit Report**:
-   - Scaffold an audit report in `docs/perf/` using `.promptkit/templates/perf-audit-template.md`:
+   - Scaffold an audit report in `docs/perf/` using `<kit>/templates/perf-audit-template.md`:
      - Path: `docs/perf/<feature-name>-perf-audit.md`
    - Include the Before vs After delta table, sanitized `EXPLAIN ANALYZE` or flamegraph summaries, and regression prevention rules.
    - Before displaying, sharing, or saving evidence, redact credentials, personal or customer identifiers, internal hostnames/IPs, and sensitive schema names. Preserve query-plan structure and relevant measurements, but never copy raw profiling output verbatim into tracked reports.
