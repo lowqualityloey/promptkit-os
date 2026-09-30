@@ -30,7 +30,7 @@ const recipePath = path.resolve(__dirname, "../../docs/recipes/auth-session.md")
 
 // 1. Parity validation & dynamic extraction from docs/recipes/auth-session.md
 assert(fs.existsSync(recipePath), `Recipe file missing: ${recipePath}`);
-const recipeContent = fs.readFileSync(recipePath, "utf8");
+const recipeContent = fs.readFileSync(recipePath, "utf8").replace(/\r\n/g, "\n");
 
 // Assert recipe publishes discriminated union requiring familyId on reuse_detected
 assert(

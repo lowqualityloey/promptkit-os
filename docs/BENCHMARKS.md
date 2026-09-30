@@ -40,8 +40,8 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **26,443 tok** |
-| Full workflow set | 25 | **102,672 tok** |
+| Core-six Lite subset | 6 | **26,751 tok** |
+| Full workflow set | 25 | **103,132 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -96,9 +96,9 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,026 tok** | **7,982 tok** | **-30% Balanced, -38% Lite (-3,835 to -4,879 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,099 tok** | **18,055 tok** | **-23% Balanced, -27% Lite (-5,567 to -6,611 tok)** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,464 tok** | **14,420 tok** | **-38% Balanced, -42% Lite (-9,297 to -10,341 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,045 tok** | **8,001 tok** | **-30% Balanced, -38% Lite (-3,816 to -4,860 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,118 tok** | **18,074 tok** | **-22% Balanced, -27% Lite (-5,548 to -6,592 tok)** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,483 tok** | **14,439 tok** | **-37% Balanced, -42% Lite (-9,278 to -10,322 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 

@@ -202,7 +202,7 @@ A disagreement between the test plan, Planning Record, and Task Record blocks re
 
 | Anti-Pattern | Consequence | Remedy |
 | :--- | :--- | :--- |
-| **Post-Hoc Tests (Code First)** | Tests mirror the bugs and assumptions of the implementation, producing false-positive passes. | Always write tests first and observe them fail (`RED`) before implementing code. |
+| **Post-Hoc Tests (Code First)** | Tests mirror the bugs and assumptions of the implementation, producing false-positive passes. | When TDD mode is enabled in the Task Record, write tests first and observe them fail (`RED`) before implementing code; when disabled, preserve normal test strategy and post-implementation verification without RED-first sequencing. |
 | **Mocking the Database** | Tests pass while queries fail on syntax, nullability, or foreign keys in production. | Run integration tests against real PostgreSQL via Docker or Testcontainers. |
 | **Monolithic Shared Seeds** | Modifying seed data to fix one test breaks dozens of unrelated tests. | Use modular factory functions (`buildUser()`) with per-test overrides. |
 | **E2E Over-Testing** | 45-minute CI runs, frequent flaky timeouts, and developer frustration. | Restrict E2E tests to the top 5-10 golden user flows; test edge cases in integration suites. |

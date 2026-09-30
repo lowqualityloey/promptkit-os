@@ -244,20 +244,24 @@ Please inspect the files listed above and confirm you are ready to proceed with 
 
 When the human informs the assistant that a pull request has been merged into `main`, execute the post-merge synchronization procedure:
 
-1. **Switch to Main & Pull Latest**:
+1. **Verify Workspace State**:
+   Inspect the working tree (`git status -s`). If uncommitted changes exist for another active task in the current workspace, stash or preserve them before switching branches.
+2. **Switch to Main & Pull Latest**:
    ```bash
    git checkout main && git pull origin main
    ```
-2. **Prune Merged Local Branch**:
+3. **Prune Merged Local Branch**:
    Safely delete the merged local feature branch:
    ```bash
    git branch -d <feature-branch>
    ```
-3. **Synchronize `docs/STATE.md`**:
-   - Mark the completed task (`- [x] TASK-XX: ...`) in the active milestone.
-   - Reset Section 3 (`Active Working Set`) for the next task.
+4. **Synchronize Task & `docs/STATE.md` (Scope-Matching)**:
+   - Identify the specific merged task (e.g. `TASK-XX` / `<task-id>`) associated with the merged PR.
+   - Reconcile canonical completion evidence in its Task Record (`docs/tasks/<task-id>.md`) if controlled work (L2/L3).
+   - Mark the completed task (`- [x] TASK-XX: ...`) in the active milestone in `docs/STATE.md`.
+   - Update Section 3 (`Active Working Set`): if the merged task owns the current active working set, reset Section 3 for the next task; if an unrelated task occupies the working set, preserve its entries and update only the projection for the merged task.
    - Append a completion record to Section 8 (`Session Continuity Log`):
-     `| YYYY-MM-DD | Assistant (pk:checkpoint) | Post-Merge Sync | PR merged into main; pulled latest and pruned local branch |`
+     `| YYYY-MM-DD | Assistant (pk:checkpoint) | Post-Merge Sync | PR for <task-id> merged into main; pulled latest and pruned local branch |`
 
 ---
 

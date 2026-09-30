@@ -107,11 +107,11 @@ When running `pk:review` on a substantial pull request:
 ### Pattern C: Independent Fresh-Context Verification (Level 2/3 Controlled Work)
 When an agent writes a complex feature (relational schema changes, authentication rewiring, breaking public APIs, or release candidates), reviewing its own implementation in the same thread introduces author confirmation bias.
 1. **Scope Exclusions**: Level 0 and Level 1 tasks bypass this pattern completely (0 token impact; standard single-agent review).
-2. **Execution Contract**: The parent agent spawns a single fresh-context verifier subagent with *only* the Gherkin Acceptance Criteria, the fixed-point git diff, and the runnable test commands.
-3. **Claims-Audit Duty**: The verifier enumerates every verifiable claim in the Task Record, PR body, or release checklist, re-verifying each claim against the diff and recorded exit codes before synthesizing a verdict.
+2. **Execution Contract**: The parent agent spawns a single fresh-context verifier subagent with *only* the Gherkin Acceptance Criteria, the fixed-point git diff, the runnable test commands with recorded exit codes and pass counts, and bounded claim excerpts from the Task Record or PR body.
+3. **Claims-Audit Duty**: The verifier enumerates the provided verifiable claim excerpts from the Task Record, PR body, or release checklist, re-verifying each claim against the diff and recorded exit codes before synthesizing a verdict.
 4. **Strict Bounded Caps**:
    - **Single-Pass Contract**: Verifier performs a single-pass evaluation; child-agent delegation and recursive loops are strictly forbidden. Hosts with tool/turn budgets may enforce this ceiling.
-   - **Targeted Verifier Scope**: Keep context strictly bounded to Acceptance Criteria, the resolved diff, and test commands to minimize token consumption.
+   - **Targeted Verifier Scope**: Keep context strictly bounded to Acceptance Criteria, the resolved diff, test commands with recorded evidence, and bounded claim excerpts to minimize token consumption.
    - **Concise Output Ceiling**: Max 15-line response with a concise Pass/Fail matrix and exact line references.
 
 ### Pattern D: Isolated Worktree Execution (Level 2/3 Risky Multi-File Tasks)

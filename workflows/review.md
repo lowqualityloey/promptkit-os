@@ -299,13 +299,14 @@ For **Level 2 (Controlled)** and **Level 3 (Release-Critical)** Work, the lead a
    - The verifier subagent receives *only*:
      - The target Gherkin Acceptance Criteria (`AC-*`) from `docs/tasks/<task-id>.md` or RFC spec.
      - The fixed-point git diff (`git diff <baseline>...HEAD`).
-     - The automated test runner commands.
+     - The automated test runner commands and recorded execution evidence (exit codes, pass counts).
+     - Bounded claim excerpts from the Task Record or draft PR body to be verified.
 3. **Claims-Audit Duty**:
-   - Re-verify every verifiable claim in the Task Record and PR body directly against the resolved diff and recorded test exit codes before synthesizing findings.
+   - Re-verify the provided claim excerpts against the resolved diff and recorded test exit codes before synthesizing findings.
 4. **Strict Bounds & Token Caps**:
    - **Single-Pass Contract**: Perform a single-pass audit; child-agent delegation and background iteration loops are strictly forbidden. Hosts capable of enforcing tool/turn budgets should apply them.
    - **15-Line Synthesis**: Output is capped at a 15-line Pass/Fail matrix with file/line references for missing edge cases.
-   - **Targeted Verifier Scope**: Input is strictly bounded to the target Acceptance Criteria, fixed-point diff, and test commands; returns a concise synthesis, preventing expensive multi-turn downstream debugging.
+   - **Targeted Verifier Scope**: Input is strictly bounded to the target Acceptance Criteria, fixed-point diff, test commands with recorded execution evidence, and bounded claim excerpts; returns a concise synthesis, preventing expensive multi-turn downstream debugging.
 
 ---
 

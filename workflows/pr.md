@@ -44,7 +44,7 @@ Transform a series of local commits into a high-signal, staff-level Pull Request
     ```
     - If the tree is dirty with this task's uncommitted changes, stop: stage via `pk:commit` first (milestone git boundary).
     - If the resolved base remote's `main` advanced (log shows commits), rebase or merge before opening the PR; never push a known-conflicted branch.
-    - Require `Quality Gate: measured this turn` (tests/typecheck actually run) before `gh pr create`. Otherwise record `not measured` and do not open the PR.
+    - Require `Quality Gate: measured this turn` (applicable verification command actually run per the task's ceremony and project quality contract, e.g. tests, typecheck, or artifact-appropriate documentation validator) before `gh pr create`. Otherwise record `not measured` and do not open the PR.
     - On conflict or dirty tree, emit `> [!WARNING]` titled `### 🚫BLOCKED:` with exact resolve commands. In the ordinary flow, do not commit, push, or create a PR without explicit human authorization. An explicitly authorized `pk:auto` run (`--until pr` / `--full`) supplies standing authorization only for its local commits, branch push, and draft-PR creation within that run (see Action Authority Model in `protocols/code-quality-gate.md`). A human alone executes a merge, even after explicit authorization.
 2. **Review Commit History**:
    Ensure commits on the branch follow Conventional Commits format (`feat:`, `fix:`, `refactor:`, `test:`). If commits are messy, suggest cleaning them up via `pk:commit` before opening the PR.
@@ -98,9 +98,9 @@ Structure the PR description using `templates/pull-request-template.md`:
    - [x] **AC-1**: [Given / When / Then scenario]
    - [x] **AC-2**: [Given / When / Then scenario]
    ```
-   AC provenance by level: Level 2/3 items transcribe the Task Record / RFC `AC-*` with their recorded evidence. Level 0/1 items describe the diff's observable behavior change, and no box is checked without in-turn verification evidence (test command plus `exit code 0`) cited beside it — never invent criteria just to check them off.
+   AC provenance by level: Level 2/3 items transcribe the Task Record / RFC `AC-*` with their recorded evidence. Level 0/1 items describe the diff's observable behavior change, and no box is checked without in-turn verification evidence (applicable verification command plus `exit code 0`, or observed artifact verification) cited beside it — never invent criteria just to check them off.
 4. **Database Checklist**: State whether migrations are present and, when applicable, verify the project's migration safety strategy (e.g. Expand-Contract for live data).
-5. **Testing Evidence**: Paste test runner pass counts and, when human interaction is required to establish acceptance evidence, provide numbered manual verification steps (otherwise `N/A — no manual verification applicable`).
+5. **Testing Evidence**: Paste test runner pass counts (when automated tests apply; for documentation or non-test changes, cite the executed validator or verification command results), and, when human interaction is required to establish acceptance evidence, provide numbered manual verification steps (otherwise `N/A — no manual verification applicable`).
 6. **Rollback Strategy**: Document whether this PR is zero-state reversible or requires step-by-step database rollbacks (when persistence exists).
 7. **Reviewer Focus**: Point reviewers to the most load-bearing lines or complex logic.
 
@@ -114,14 +114,14 @@ Provide the generated PR description to the developer in two formats:
 2. **GitHub CLI Command (`gh pr create`)**:
     For an explicitly authorized `pk:auto` run, offer only the draft form:
     ```bash
-    gh pr create --draft --title "<type>(<scope>): <summary>" --body-file pr-body.md --json url --jq .url
+    gh pr create --draft --title "<type>(<scope>): <summary>" --body-file pr-body.md
     ```
     In the ordinary flow, offer the ready-PR command only after explicit human authorization:
     ```bash
-    gh pr create --title "<type>(<scope>): <summary>" --body-file pr-body.md --json url --jq .url
+    gh pr create --title "<type>(<scope>): <summary>" --body-file pr-body.md
     ```
     `gh pr create --web` is an ordinary-flow interactive alternative only after that same authorization. Do not use an unqualified ready-PR command or `--web` fallback inside `pk:auto`.
-    Capture the returned URL (or `gh pr view --json url --jq .url` for MCP-created PRs). If no URL is available, write `PR URL: not measured — paste link from browser`. Never invent a URL.
+    Capture the command's URL output (or query afterward with `gh pr view --json url --jq .url`). If no URL is available, write `PR URL: not measured — paste link from browser`. Never invent a URL.
 
 ### PR Link Callout (Dual-Compatible)
 
