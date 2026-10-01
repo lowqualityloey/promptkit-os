@@ -46,16 +46,26 @@ const clientSchema = z.object({
   NEXT_PUBLIC_STRIPE_KEY: z.string().startsWith("pk_"),
 });
 
+// Fail fast with an actionable list instead of a raw ZodError.
+function parseOrExit<T>(schema: z.ZodType<T>, input: unknown): T {
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
+    throw new Error(`❌ FATAL: Environment validation failed on startup:\n${issues}`);
+  }
+  return parsed.data;
+}
+
 // env.client.ts — client-safe accessor: literal NEXT_PUBLIC_* reads only.
 export function clientEnv() {
-  return clientSchema.parse({
+  return parseOrExit(clientSchema, {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_STRIPE_KEY: process.env.NEXT_PUBLIC_STRIPE_KEY,
   });
 }
 
 // env.server.ts — server-only accessor: validates the full server schema.
-export const env = { ...clientEnv(), ...serverSchema.parse(process.env) };
+export const env = { ...clientEnv(), ...parseOrExit(serverSchema, process.env) };
 ```
 
 ### Pattern B: Build-Time Server Module Isolation Guard
