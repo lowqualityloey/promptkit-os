@@ -20,14 +20,16 @@ Operational invariants and canonical implementation patterns for fail-fast envir
   - Sensitive secrets (database credentials, private keys, webhook secrets) must never enter public client bundles. Enforce mandatory public prefixes (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`) for client constants; non-prefixed variables are strictly server-only.
 - **Explicit Type Coercion**:
   - Raw `process.env` values are strings. Numbers (ports, timeouts) and booleans must be explicitly coerced through schema parsers (`"false"` is truthy in raw JavaScript).
-- **Centralized Typed Accessor**:
-  - Domain code must import a centralized typed `env` singleton rather than querying `process.env` ad-hoc across files.
+- **Centralized Typed Accessors**:
+  - Domain code must import a centralized typed accessor rather than querying `process.env` ad-hoc across files. Keep the client (`clientEnv()`) and server (`env`) accessors in separate modules so a client import never pulls in server secrets or server-only validation dependencies.
 
 ---
 
 ## 2. Canonical Implementation Patterns
 
-### Pattern A: Schema-Based Preflight Validator
+### Pattern A: Split Client and Server Validators (Static Bindings)
+
+Client-boundary values must be **literal** `process.env.NEXT_PUBLIC_*` reads — the bundler only inlines statically analyzable member expressions, so a dynamic lookup (`process.env[key]`) or a whole-`process.env` object leaves them `undefined` in the browser.
 
 ```typescript
 import { z } from "zod";
@@ -44,18 +46,16 @@ const clientSchema = z.object({
   NEXT_PUBLIC_STRIPE_KEY: z.string().startsWith("pk_"),
 });
 
-export function createEnv(isServer: boolean = typeof window === "undefined") {
-  const merged = isServer ? serverSchema.merge(clientSchema) : clientSchema;
-  const parsed = merged.safeParse(process.env);
-
-  if (!parsed.success) {
-    const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
-    throw new Error(`❌ FATAL: Environment validation failed on startup:\n${issues}`);
-  }
-  return parsed.data;
+// env.client.ts — client-safe accessor: literal NEXT_PUBLIC_* reads only.
+export function clientEnv() {
+  return clientSchema.parse({
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_STRIPE_KEY: process.env.NEXT_PUBLIC_STRIPE_KEY,
+  });
 }
 
-export const env = createEnv();
+// env.server.ts — server-only accessor: validates the full server schema.
+export const env = { ...clientEnv(), ...serverSchema.parse(process.env) };
 ```
 
 ### Pattern B: Build-Time Server Module Isolation Guard
@@ -93,4 +93,5 @@ if (typeof window !== "undefined") {
 - [ ] Missing variables cause immediate process exit with clear error logs.
 - [ ] No server secrets have client-accessible prefixes.
 - [ ] Integers and booleans are coerced to native primitives.
-- [ ] Codebase imports the centralized `env` singleton.
+- [ ] Client accessor binds literal `NEXT_PUBLIC_*` values and builds without importing server-only modules.
+- [ ] Codebase imports the centralized accessors (`clientEnv()` / `env`).
