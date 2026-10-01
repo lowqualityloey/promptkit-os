@@ -98,7 +98,7 @@
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
 - **Verification Evidence**: `Bash behavioral contract tests 387/387 PASS; strict token budget PASS (Balanced 2318/2500, Lite 1274/1500); strict per-task measurements PASS (fix 9094/12861, plan 19296/24666, ship 15555/24761); reference validation PASS across 316 Markdown files; execution control validation VALID across 47 records; staged secret scan PASS.`
-- **CI Evidence**: `Pending branch push and PR creation.`
+- **CI Evidence**: `GitHub Actions run 36880513757 on PR #496: Lint & Validate (Linux) PASS in 3m17s; Lint & Validate (Windows) PASS in 4m10s.`
 - **Review Evidence**: `Addresses P2 finding in ChatGPT review of greenfield planning handoffs by tightening pk:grill to pk:plan contract.`
 - **Commit Evidence**: `Pending commit.`
 - **Pull Request Evidence**: `Pull Request #496 (https://github.com/lowqualityloey/promptkit-os/pull/496) created targeting main; CI running.`
