@@ -680,6 +680,8 @@ Assert-Contains "workflows/tutor.md" "Suspend Teaching Rules" "Grill drill suspe
 Assert-Contains "workflows/tutor.md" "Self-Sufficient Probes" "Grill probes carry their own context and model answers"
 Assert-Contains "workflows/tutor.md" "Grill Completion Contract" "Grill mode owns a zero-code completion contract"
 Assert-Contains "workflows/tutor.md" "read instead of asking" "Pre-implementation grilling reads the repo before asking"
+Assert-Contains "templates/tech-spec-template.md" "Architecture challenged via.*pk:grill.*material design gaps" "Tech spec sign-off requires material grill gaps to have explicit disposition"
+Assert-Contains "workflows/plan.md" "material design gaps discovered must be reconciled" "Plan workflow requires pre-implementation grill gaps reconciled before sign-off"
 
 Write-Host "`n📌 Scenario AM: Verify-Bootstrap Workflow (Issue #440)" -ForegroundColor Yellow
 Assert-Contains "workflows/verify-bootstrap.md" "pk:verify-bootstrap" "Verify-bootstrap workflow declares its trigger"

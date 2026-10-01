@@ -220,11 +220,13 @@ The Planner / Architect hands the objective, bounded files or behaviors, accepta
 2. Save to `./docs/specs/YYYY-MM-DD-spec-<feature-name>.md` (or directory configured in `PROMPTKIT.md`).
 3. **Pre-Implementation Grilling**:
    - Before writing code, challenge the design using `pk:grill` to stress-test failure edge cases, scaling limits, and architectural assumptions.
+   - Any material design gaps discovered must be reconciled in the specification with an explicit disposition (resolved in spec, logged as an approved non-goal, or recorded as a bounded assumption) before planning sign-off.
 
 ---
 
 ## Completion Criteria
 - Technical specification documented and approved in `./docs/specs/`.
+- Pre-implementation grilling (`pk:grill`) completed with all material design gaps assigned an explicit disposition in the specification.
 - Deep module boundaries and test surfaces clearly mapped.
 - Zero-downtime Expand-Contract migration plan detailed for all live or compatibility-sensitive database changes (disposable/pre-deployment escapes documented with rationale).
 - FMEA failure modes and mitigation fallbacks documented at a depth proportionate to the change's risk.

@@ -41,7 +41,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
 | Core-six Lite subset | 6 | **26,927 tok** |
-| Full workflow set | 25 | **104,341 tok** |
+| Full workflow set | 25 | **104,531 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -87,7 +87,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 **Methodology for per-task table:**
 - Historical comparison anchors: `fc98f2f` (after 2+1 profiles) and `c34be80` (before profiles, Balanced only). These SHAs identify historical inputs; they are not the source of the refreshed current values.
-- Refreshed measurement input: base revision `fea046afecdebd0f54d47cc7078019a9b23298f0` plus measured-input diff SHA-256 `b38297dc679ba27c73392a9b2c3c3fd95d45220ea92ce94f58f2a66d48f8663c`, measured on 2026-10-01. The digest is reproducible with `git diff --binary fea046afecdebd0f54d47cc7078019a9b23298f0 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`. Re-run `bash scripts/measure-per-task-tokens.sh` after applying that input diff; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
+- Refreshed measurement input: base revision `b8e8b92cd0ad533047e5b84fb945f75157b64c42` plus measured-input diff SHA-256 `841e1042adb58c0502f1933dd187d2e8d3727cad576684744e7e39b746347eb9`, measured on 2026-10-02. The digest is reproducible with `git diff --binary b8e8b92cd0ad533047e5b84fb945f75157b64c42 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`. Re-run `bash scripts/measure-per-task-tokens.sh` after applying that input diff; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
 - Historical baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A), plus the same task template where applicable.
 - Current JIT payload = directive 1,274-2,318 + workflow + gate + relevant task template (route.md is not loaded by default).
 - Current Lite vs Balanced static directive sizes: 1,274 vs 2,318 tokens.
@@ -97,7 +97,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,094 tok** | **8,050 tok** | **-29% Balanced, -37% Lite (-3,767 to -4,811 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,167 tok** | **18,123 tok** | **-22% Balanced, -27% Lite (-5,499 to -6,543 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,296 tok** | **18,252 tok** | **-22% Balanced, -26% Lite (-5,370 to -6,414 tok)** |
 | **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,555 tok** | **14,511 tok** | **-37% Balanced, -41% Lite (-9,206 to -10,250 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State

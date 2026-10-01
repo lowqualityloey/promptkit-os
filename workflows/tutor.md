@@ -192,7 +192,7 @@ Identify what is being stress-tested, then begin with the highest-risk or least-
 A `pk:grill` session ends when exactly one of these holds — writing code is never required to close:
 
 1. **Probes cleared**: every tier probe answered at or above the bar set by its self-sufficient model answer.
-2. **Gap logged and closed**: a probe fails two teach-backs → state the model answer, record the gap as an unresolved question in the progress journal, and close. No extended teaching inside the drill.
+2. **Gap logged and closed**: a probe fails two teach-backs → state the model answer and close the drill. No extended teaching inside the drill. In skill-building drills, record the gap as an unresolved question in the progress journal. In pre-implementation grilling during `pk:plan`, record every material architectural gap directly in the technical specification (`docs/specs/`) with an explicit disposition (resolved in spec, logged as an approved non-goal, or recorded as a bounded assumption) before planning sign-off; never leave material architectural gaps stranded in an auxiliary journal.
 3. **Developer stops**: the developer ends the session at any time.
 
 ### 6. Debug Detective Mode (Hypothesis-Driven RCA)
