@@ -8,20 +8,20 @@ description: Raw body preservation, timing-safe HMAC verification, and idempoten
 
 # Webhook Ingestion & Idempotency Recipe
 
-Operational security invariants and canonical implementation patterns for reliable webhook ingestion and signature validation.
+Security invariants and canonical patterns for reliable webhook ingestion and signature validation.
 
 ---
 
 ## 1. Non-Negotiable Invariants
 
 - **Raw Byte Preservation Before Parsing**:
-  - HMAC webhook signatures must be computed on the raw incoming byte stream. Never re-serialize parsed JSON (`JSON.stringify(req.body)`) to verify signatures; property ordering, whitespace, and numerical precision changes will corrupt the digest.
+  - Compute HMAC signatures on the raw byte stream. Never re-serialize parsed JSON (`JSON.stringify(req.body)`) to verify; ordering, whitespace, and precision changes corrupt the digest.
 - **Constant-Time Signature Comparison**:
-  - Signature digests must be compared using constant-time equality (`crypto.timingSafeEqual` in Node.js, `hmac.Equal` in Go, `secrets.compare_digest` in Python). String equality (`===`) is vulnerable to timing attacks.
+  - Compare digests with constant-time equality (`crypto.timingSafeEqual`, Go `hmac.Equal`, Python `secrets.compare_digest`). `===` leaks timing.
 - **Idempotency Ledger & Duplicate Suppression**:
-  - Webhook providers guarantee at-least-once delivery; duplicates are expected. Handlers must record event IDs in an idempotency table with a unique constraint. Duplicate deliveries must return HTTP 200 immediately without executing side effects again.
+  - Providers deliver at least once; duplicates are expected. Record event IDs in a table with a unique constraint and return HTTP 200 for duplicates without re-running side effects.
 - **Fast ACK & Asynchronous Offloading**:
-  - Webhook HTTP handlers must acknowledge receipt within the provider's timeout window (3–5s). Lengthy tasks must be offloaded to background job queues.
+  - Acknowledge within the provider's timeout window (3–5s); offload lengthy work to background queues.
 
 ---
 
@@ -32,6 +32,8 @@ Operational security invariants and canonical implementation patterns for reliab
 ```typescript
 import crypto from "node:crypto";
 
+// Bare scheme only: a single "<prefix><hex>" digest over rawBody (e.g. GitHub "sha256=").
+// Stripe uses a different scheme — see section 3.
 export function verifyHmacSignature(opts: {
   rawBody: Buffer | string;
   signature: string;
@@ -60,37 +62,37 @@ export interface WebhookLedger {
   markFailed: (eventId: string, reason: string) => Promise<void>;
 }
 
+// Shared core: runs only AFTER the raw body has been verified.
+export async function processVerifiedEvent(
+  eventId: string, payload: unknown, ledger: WebhookLedger,
+  enqueue: (event: unknown) => Promise<void>,
+): Promise<{ status: number; message: string }> {
+  // Invariant: atomic duplicate detection before any side effect
+  if ((await ledger.claim(eventId)) === "DUPLICATE") {
+    return { status: 200, message: "Duplicate event acknowledged" };
+  }
+  try {
+    // Invariant: offload work asynchronously
+    await enqueue(payload);
+    await ledger.markDone(eventId);
+    return { status: 200, message: "Accepted" };
+  } catch (err) {
+    await ledger.markFailed(eventId, err instanceof Error ? err.message : "Error");
+    return { status: 500, message: "Queue failure" };
+  }
+}
+
+// Bare-HMAC entrypoint: verify, parse, then hand a verified event to the core.
 export async function handleWebhook(opts: {
-  rawBody: string;
-  signature: string;
-  secret: string;
-  ledger: WebhookLedger;
-  enqueue: (event: unknown) => Promise<void>;
+  rawBody: string; signature: string; secret: string;
+  ledger: WebhookLedger; enqueue: (event: unknown) => Promise<void>;
 }): Promise<{ status: number; message: string }> {
-  // 1. Invariant: Verify raw body before parsing
   if (!verifyHmacSignature({ rawBody: opts.rawBody, signature: opts.signature, secret: opts.secret })) {
     return { status: 401, message: "Invalid signature" };
   }
-
   const payload = JSON.parse(opts.rawBody);
-  const eventId = payload.id;
-  if (!eventId) return { status: 400, message: "Missing event ID" };
-
-  // 2. Invariant: Atomic duplicate detection
-  const state = await opts.ledger.claim(eventId);
-  if (state === "DUPLICATE") {
-    return { status: 200, message: "Duplicate event acknowledged" };
-  }
-
-  try {
-    // 3. Offload work asynchronously
-    await opts.enqueue(payload);
-    await opts.ledger.markDone(eventId);
-    return { status: 200, message: "Accepted" };
-  } catch (err) {
-    await opts.ledger.markFailed(eventId, err instanceof Error ? err.message : "Error");
-    return { status: 500, message: "Queue failure" };
-  }
+  if (!payload?.id) return { status: 400, message: "Missing event ID" };
+  return processVerifiedEvent(payload.id, payload, opts.ledger, opts.enqueue);
 }
 ```
 
@@ -98,26 +100,36 @@ export async function handleWebhook(opts: {
 
 ## 3. Framework Adaptations
 
-- **Next.js Route Handler**:
+- **Next.js (Stripe)**: Stripe signs `"<timestamp>.<rawBody>"` with a `t=,v1=` header, so never pass it to `verifyHmacSignature`. Verify and parse with `constructEvent`, then route the event to the shared core:
   ```typescript
+  import Stripe from "stripe";
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
   export async function POST(req: Request) {
-    const rawBody = await req.text(); // Reads raw body stream directly
-    const signature = req.headers.get("stripe-signature") || "";
-    // ...verify and dispatch
+    const rawBody = await req.text();
+    const signature = req.headers.get("stripe-signature") ?? "";
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET!);
+    } catch {
+      return Response.json({ error: "Invalid signature" }, { status: 400 }); // no side effects
+    }
+    const result = await processVerifiedEvent(event.id, event, ledger, enqueue);
+    return Response.json({ message: result.message }, { status: result.status });
   }
   ```
 - **Express**: Use `express.raw({ type: "application/json" })` on webhook routes prior to `express.json()`.
 - **Fastify**: Register `fastify-raw-body` with `{ runFirst: true }`.
-- **Go / Python**: Read raw bytes via `io.ReadAll(r.Body)` or `await request.body()` before JSON unmarshaling.
+- **Go / Python**: Read raw bytes (`io.ReadAll(r.Body)` / `await request.body()`) before unmarshaling, then verify with the provider SDK helper (e.g. Go `webhook.ConstructEvent`).
 
 ---
 
 ## 4. Anti-Patterns & Failure Modes
 
-- **Re-serializing Parsed JSON**: Running `JSON.stringify()` on `req.body` alters formatting, breaking valid webhook signatures.
+- **Re-serializing Parsed JSON**: `JSON.stringify(req.body)` alters formatting and breaks valid signatures.
 - **Using `===` for Digests**: Leaks byte-matching timing information.
-- **Synchronous Heavy Operations**: Running emails, file generation, or migrations inside the HTTP webhook handler triggers provider timeout retries.
-- **Returning 500 on Duplicates**: Returning 500 when catching duplicate key errors tells the provider to retry continuously. Always return 200.
+- **Synchronous Heavy Operations**: Long tasks inside the handler trigger provider timeout retries.
+- **Returning 500 on Duplicates**: Signals the provider to retry forever; always return 200.
 
 ---
 
@@ -125,6 +137,8 @@ export async function handleWebhook(opts: {
 
 - [ ] HMAC verification consumes raw body stream before JSON parsing.
 - [ ] Digest comparison uses `crypto.timingSafeEqual` or equivalent.
+- [ ] Stripe deliveries are verified with `webhooks.constructEvent`, never the bare-HMAC helper.
+- [ ] Rejected, tampered, or duplicate deliveries produce no ledger or queue side effects.
 - [ ] Unique constraints on event IDs prevent duplicate side effects.
 - [ ] Duplicate event deliveries acknowledge with HTTP 200.
 - [ ] Heavy workloads are queued to background tasks.

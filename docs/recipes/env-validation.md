@@ -20,17 +20,50 @@ Operational invariants and canonical implementation patterns for fail-fast envir
   - Sensitive secrets (database credentials, private keys, webhook secrets) must never enter public client bundles. Enforce mandatory public prefixes (`NEXT_PUBLIC_`, `VITE_`, `PUBLIC_`) for client constants; non-prefixed variables are strictly server-only.
 - **Explicit Type Coercion**:
   - Raw `process.env` values are strings. Numbers (ports, timeouts) and booleans must be explicitly coerced through schema parsers (`"false"` is truthy in raw JavaScript).
-- **Centralized Typed Accessor**:
-  - Domain code must import a centralized typed `env` singleton rather than querying `process.env` ad-hoc across files.
+- **Centralized Typed Accessors**:
+  - Domain code must import a centralized typed accessor rather than querying `process.env` ad-hoc across files. Keep the client (`clientEnv()`) and server (`env`) accessors in separate modules so a client import never pulls in server secrets or server-only validation dependencies.
 
 ---
 
 ## 2. Canonical Implementation Patterns
 
-### Pattern A: Schema-Based Preflight Validator
+### Pattern A: Split Client and Server Validators (Static Bindings)
+
+Client-boundary values must be **literal** `process.env.NEXT_PUBLIC_*` reads — the bundler only inlines statically analyzable member expressions, so a dynamic lookup (`process.env[key]`) or a whole-`process.env` object leaves them `undefined` in the browser. Keep the two accessors in **separate modules** so a client import never pulls the server schema into the browser graph.
+
+**`src/env.client.ts`** — client-safe; importable from components, no server secrets:
 
 ```typescript
 import { z } from "zod";
+
+const clientSchema = z.object({
+  NEXT_PUBLIC_APP_URL: z.string().url(),
+  NEXT_PUBLIC_STRIPE_KEY: z.string().startsWith("pk_"),
+});
+
+// Shared fail-fast helper (kept here so both modules share it with no server dependency).
+export function parseOrExit<T>(schema: z.ZodType<T>, input: unknown): T {
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
+    throw new Error(`❌ FATAL: Environment validation failed on startup:\n${issues}`);
+  }
+  return parsed.data;
+}
+
+// Literal NEXT_PUBLIC_* reads only — the bundler inlines these for the browser.
+export const clientEnv = () =>
+  parseOrExit(clientSchema, {
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_STRIPE_KEY: process.env.NEXT_PUBLIC_STRIPE_KEY,
+  });
+```
+
+**`src/env.server.ts`** — server-only; never import from a client component:
+
+```typescript
+import { z } from "zod";
+import { clientEnv, parseOrExit } from "./env.client";
 
 const serverSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -39,23 +72,8 @@ const serverSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
 });
 
-const clientSchema = z.object({
-  NEXT_PUBLIC_APP_URL: z.string().url(),
-  NEXT_PUBLIC_STRIPE_KEY: z.string().startsWith("pk_"),
-});
-
-export function createEnv(isServer: boolean = typeof window === "undefined") {
-  const merged = isServer ? serverSchema.merge(clientSchema) : clientSchema;
-  const parsed = merged.safeParse(process.env);
-
-  if (!parsed.success) {
-    const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
-    throw new Error(`❌ FATAL: Environment validation failed on startup:\n${issues}`);
-  }
-  return parsed.data;
-}
-
-export const env = createEnv();
+// Eager validation is safe here because this module is server-only.
+export const env = { ...clientEnv(), ...parseOrExit(serverSchema, process.env) };
 ```
 
 ### Pattern B: Build-Time Server Module Isolation Guard
@@ -71,9 +89,9 @@ if (typeof window !== "undefined") {
 
 ## 3. Framework Adaptations
 
-- **Next.js App Router**: Use `@t3-oss/env-nextjs` or import `src/env.ts` inside `next.config.mjs` to validate during `next build`.
+- **Next.js App Router**: Use `@t3-oss/env-nextjs` or import `src/env.server.ts` inside `next.config.mjs` to validate during `next build`.
 - **Vite**: Use `import.meta.env` with `VITE_` prefix; validate configs in `vite.config.ts`.
-- **Express / Fastify**: Import `src/env.ts` at the top of `src/index.ts` before starting listeners.
+- **Express / Fastify**: Import `src/env.server.ts` at the top of `src/index.ts` before starting listeners.
 - **Go / Python**: In Go, use `caarlos0/env` with struct tags. In Python, use `pydantic-settings` `BaseSettings`.
 
 ---
@@ -93,4 +111,5 @@ if (typeof window !== "undefined") {
 - [ ] Missing variables cause immediate process exit with clear error logs.
 - [ ] No server secrets have client-accessible prefixes.
 - [ ] Integers and booleans are coerced to native primitives.
-- [ ] Codebase imports the centralized `env` singleton.
+- [ ] Client accessor binds literal `NEXT_PUBLIC_*` values and builds without importing server-only modules.
+- [ ] Codebase imports the centralized accessors (`clientEnv()` / `env`).

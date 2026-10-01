@@ -110,6 +110,12 @@
 | Dark Destructive | `--destructive-foreground` (`#ffffff`) | `--destructive` (`#e11d48`) | 4.70:1 | Pass |
 | Dark Muted Text | `--muted-foreground` (`#94a3b8`) | `--muted` (`#1e293b`) | 5.71:1 | Pass |
 | Dark Focus Ring (Non-Text) | `--ring` (`#6366f1`) | `--card`/`--popover` (`#0f172a`) | 3.77:1 | Pass (≥ 3:1) |
+| Light Focus Ring (Cobalt Preset) | `--ring` (`oklch(52% 0.22 250)`) | `--surface-card` (`oklch(100% 0 0)`) | 5.33:1 | Pass (≥ 3:1) |
+| Dark Focus Ring (Cobalt Preset) | `--ring` (`oklch(64% 0.21 248)`) | `--surface-card` (`oklch(18% 0.018 245)`) | 5.72:1 | Pass (≥ 3:1) |
+| Light Focus Ring (Hum Preset) | `--ring` (`oklch(50% 0.16 42)`) | `--surface-card` (`oklch(99% 0.006 75)`) | 6.26:1 | Pass (≥ 3:1) |
+| Dark Focus Ring (Hum Preset) | `--ring` (`oklch(68% 0.15 45)`) | `--surface-card` (`oklch(19% 0.02 60)`) | 6.07:1 | Pass (≥ 3:1) |
+
+> Preset focus rings are authored **opaque**. A semi-transparent ring composites well below 3:1 on these surfaces — the former 35 %-opaque Cobalt ring measured ≈ 1.71:1 on white — so de-alpha the token rather than adding a translucent overlay.
 
 ### Tactile Dual-Mode Presets (Chromatically Tinted Neutrals)
 
@@ -126,7 +132,7 @@
   --border-subtle: oklch(94% 0.008 240);
   --primary: oklch(52% 0.22 250);       /* Electric cobalt signal (max 5% viewport area) */
   --primary-foreground: oklch(99% 0 0);
-  --ring: oklch(52% 0.22 250 / 0.35);
+  --ring: oklch(52% 0.22 250);
 }
 
 /* Dark Mode - Graphite Monolith (Not Naive Inversion) */
@@ -141,7 +147,7 @@
   --border-subtle: oklch(20% 0.015 245);
   --primary: oklch(64% 0.21 248);       /* Vibrant cobalt interactive cue */
   --primary-foreground: oklch(14% 0.015 245);
-  --ring: oklch(64% 0.21 248 / 0.4);
+  --ring: oklch(64% 0.21 248);
 }
 ```
 
@@ -158,7 +164,7 @@
   --border-subtle: oklch(93% 0.012 75);
   --primary: oklch(50% 0.16 42);        /* Terracotta / burnt amber signal (5% rule) */
   --primary-foreground: oklch(99% 0.005 75);
-  --ring: oklch(50% 0.16 42 / 0.35);
+  --ring: oklch(50% 0.16 42);
 }
 
 /* Dark Mode - Obsidian Ink & Smoked Ochre */
@@ -173,7 +179,7 @@
   --border-subtle: oklch(21% 0.018 60);
   --primary: oklch(68% 0.15 45);        /* Warm amber signal */
   --primary-foreground: oklch(15% 0.018 60);
-  --ring: oklch(68% 0.15 45 / 0.4);
+  --ring: oklch(68% 0.15 45);
 }
 ```
 
