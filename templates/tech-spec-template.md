@@ -283,7 +283,7 @@ The selected milestone branch, Task Record link, test-plan reference, acceptance
 ---
 
 ## 7. Sign-off & Grilling Checklist
-- [ ] Architecture challenged via `pk:grill`.
+- [ ] Architecture challenged via `pk:grill`; all material design gaps recorded with an explicit disposition (resolved in spec, logged as an approved non-goal, or recorded as a bounded assumption).
 - [ ] Zero-downtime database evolution verified.
 - [ ] Non-goals agreed upon with stakeholders.
 - [ ] Ready for the selected Task Record milestone path: enabled TDD, disabled Code Work, or an exception verification path.
