@@ -5,14 +5,35 @@
 [![npm version](https://img.shields.io/npm/v/promptkit-os.svg)](https://www.npmjs.com/package/promptkit-os)
 [![npm provenance](https://img.shields.io/badge/provenance-attested-brightgreen.svg)](https://search.sigstore.dev/?logIndex=3029590466)
 [![GitHub](https://img.shields.io/badge/GitHub-lowqualityloey%2Fpromptkit--os-black.svg)](https://github.com/lowqualityloey/promptkit-os)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-orange?style=flat&logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/itsjonellmb)
 
 The open-source engineering control plane for AI coding agents.  
 A lightweight, repository-native system for risk, context, state, autonomy, and verification.
 
 No runtime. No daemon. No model lock-in. No required API.
 
-Works with Claude Code, Gemini CLI, Cursor, Windsurf, GitHub Copilot, Cline, Roo Code, Trae, OpenCode, Aider, and Antigravity.
+Generates native instructions and directives for Claude Code, Gemini CLI, Cursor, Windsurf, GitHub Copilot, Cline, Roo Code, Trae, OpenCode, Aider, and Antigravity (see [docs/HOST-CONFORMANCE.md](./docs/HOST-CONFORMANCE.md)).
+
+---
+
+## ⚡ Quick Start (10 Seconds)
+
+Add PromptKit OS to any new or existing repository:
+
+```bash
+# Recommended (zero prerequisite setup):
+npx promptkit-os
+
+# Or via Git submodule:
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh
+# (Windows PowerShell: .\.promptkit\init.ps1)
+```
+
+The installer launches an **interactive terminal menu** that guides you through:
+1. **Profile**: `1) Lite` (fastest onboarding, 6 workflows) or `2) Balanced` (default, full 25-workflow suite).
+2. **AI Assistant**: Automatically configures `.cursorrules`, `CLAUDE.md`, `.windsurfrules`, `.clinerules`, or `.github/copilot-instructions.md`.
+3. **Tracker**: Local Markdown (`docs/tasks/`) or GitHub Issues.
+
+*(For CI pipelines or headless scripts, pass flags directly: `--balanced`, `--lite`, `--host=<name>`.)*
 
 ---
 
@@ -73,7 +94,31 @@ It provides the engineering rules around them.
 You do not need to learn all 25 workflows. Most everyday engineering tasks — bug fixes, small features, isolated component changes — are **Level 1 (Standard)** and need only `pk:route` or `pk:debug` to get started. Heavier ceremony kicks in only when the task warrants it.
 
 > [!TIP]
-> Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia). You do not need to learn all 25 before getting value.
+> Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (preserves project state and active tasks across context compaction and resets). You do not need to learn all 25 before getting value.
+
+### Everyday Triggers Cheat-Sheet
+
+Prompt your assistant naturally or invoke fast shorthand triggers:
+
+| Command | Purpose | When to Use |
+|:---|:---|:---|
+| `pk:route` | **Task Intake** | Classifies incoming tasks into Ceremony Levels 0–3 and routes to the right workflow |
+| `pk:onboard` | **Project Discovery** | First install on greenfield or brownfield codebases; detects stack & sets rules |
+| `pk:plan` | **Feature RFC** | Designing architectural changes, data contracts, and schema boundaries |
+| `pk:test` | **Test Strategy & TDD** | Allocating seams, mocking boundaries, and writing tests before code |
+| `pk:debug` | **Root-Cause Analysis** | Systematic 5-step falsifiable debugging (stops infinite hallucinated edits) |
+| `pk:commit` | **Pre-Commit Gate** | Secret scanning, running test suites, and authoring atomic conventional commits |
+| `pk:checkpoint` | **Session Handover** | Saving active tasks and state to Git before ending your chat session |
+
+### What PromptKit Looks Like in Chat
+
+PromptKit standardizes agent telemetry into clean 3-line status cards without verbose conversational fluff:
+
+```text
+> 📊 **Milestone**: 02-user-auth [■■■■□□] 4/6 — source: STATE.md read this turn
+> 🎯 **Active**: Task 2.3 — Implement JWT refresh token rotation
+> 🟢 **Quality Gate**: measured this turn (flutter test: 14 passed, exit 0)
+```
 
 ---
 
@@ -96,7 +141,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 
 The core instruction layer stays small. Workflows, stack playbooks, and boundary recipes are loaded only when the task requires them.
 
-- **Balanced** profile: ~2,318 tok static footprint (~91% static saving vs. ~26.4k current core-subset baseline; 2,500 tok budget cap)
+- **Balanced** profile: ~2,318 tok static footprint (~91% static saving vs. ~26.9k current core-subset baseline; 2,500 tok budget cap)
 - **Lite** profile: ~1,274 tok static footprint (~95% static saving vs. the current baseline; 1,500 tok budget cap)
 
 PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), enforcing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 task risk ceremony). Retrieval confidence is treated as evidence rather than authority, ensuring high-risk boundaries trigger mandatory zoom-outs.
@@ -117,7 +162,7 @@ PromptKit introduces explicit limits around investigation loops, repeated repair
 
 An agent saying *"the implementation is complete"* is not evidence.
 
-PromptKit requires a verification command to execute and return `exit code 0` before a quality gate is marked passed. Bounded repair is capped at 2 automatic attempts before requiring human intervention. The human remains the authority for acceptance and release decisions.
+PromptKit's quality gate protocols instruct the agent to execute real verification commands (`exit code 0` required) before marking tasks complete. Bounded repair is capped at 2 automated attempts before escalating to the developer. The human remains the sole authority for acceptance, commit approval, and release decisions.
 
 ---
 
@@ -144,23 +189,37 @@ The architectural boundary: **PromptKit owns engineering policy and control. The
 
 ### 1. Install
 
+Run in your project root:
+
 ```bash
-# macOS / Linux — Balanced profile (default)
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
+# Recommended (zero prerequisite setup):
+npx promptkit-os
 
-# Lite profile (smallest footprint, 80% value — good for onboarding)
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --lite
-
-# Windows (PowerShell)
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --balanced
+# Or via Git submodule:
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh
+# (Windows PowerShell: .\.promptkit\init.ps1)
 ```
 
-Optional convenience path (needs Node 18+, no git):
+The installer launches an interactive visual menu to configure your profile (Lite vs Balanced), your AI assistant (Cursor, Claude, Copilot, Windsurf, etc.), and your task tracker.
+
+<details>
+<summary>Non-Interactive / CI Flags</summary>
+
+Pass flags directly to bypass the interactive prompts in automated environments:
 
 ```bash
+# Balanced profile (full 25 workflows)
+./.promptkit/init.sh --balanced
+# Lite profile (smallest footprint, 6 workflows)
+./.promptkit/init.sh --lite
+# Specify assistant directly
+./.promptkit/init.sh --balanced --host=cursor
+# Or via npx
 npx promptkit-os@latest --balanced
 npx promptkit-os@latest --lite
 ```
+
+</details>
 
 > [!NOTE]
 > The git submodule flow above is canonical. The npm package is a **courier, not a dependency** — it fetches the release tarball matching its version into `.promptkit/` and runs the same installer, producing an identical tree. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`. It requires Node 18+ (and PowerShell 7 on Windows), and it refuses to overlay a non-empty `.promptkit/`, printing the update command that matches how the existing install was made. Removal: delete `.promptkit/` (plus generated `PROMPTKIT.md` / `docs/STATE.md` if unwanted) — no daemon, nothing left behind.
@@ -205,7 +264,7 @@ PromptKit's own CI validates on every PR across Linux and Windows:
 
 - Workflow and documentation reference integrity (`validate-references.sh`)
 - Static token budget gates — Balanced ≤ 2,500 tok, Lite ≤ 1,500 tok (`measure-tokens.sh --strict`)
-- Behavioral contract compliance — 385/385 tests (`run-behavioral-contract-tests.sh`)
+- Behavioral contract compliance — all behavioral contract tests pass (live count in CI) (`run-behavioral-contract-tests.sh`)
 - Playbook & recipe contracts — 24/24 (16 stack playbooks + 8 boundary recipes) (`run-playbook-contract-tests.sh`)
 
 PromptKit applies its own engineering principles to itself.
@@ -224,6 +283,14 @@ That is why workflows, stack knowledge, and recipes are separate and loaded just
 
 ---
 
+## Support
+
+If you find PromptKit OS valuable for your engineering workflow, consider supporting its open-source development:
+
+<a href="https://buymeacoffee.com/itsjonellmb" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50"></a>
+
+---
+
 ## License
 
-Released under the [MIT License](./LICENSE). Created by [Jonel (lowqualityloey)](https://github.com/lowqualityloey).
+Released under the [MIT License](./LICENSE). Created by [Jonell (lowqualityloey)](https://github.com/lowqualityloey).
