@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Courier Package Overview**: Added PromptKit OS control-plane summary and courier role note to `package/README.md` header for direct npmjs registry readers.
+
 ## [1.10.0] - 2026-10-01
 
 Release evidence chain: `docs/releases/2026-10-01-v1.10.0-*.md` (`REL-2026-10-01-V1.10.0-001`) · Tag: `v1.10.0` at `b34322e` — published to npm via trusted publishing (OIDC), provenance attestation verified.

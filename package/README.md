@@ -1,6 +1,8 @@
 # `promptkit-os` (npm)
 
-The **courier**, not the product. PromptKit OS itself is pure markdown with no runtime, no daemon, and no model lock-in — it lives at [lowqualityloey/promptkit-os](https://github.com/lowqualityloey/promptkit-os).
+The open-source engineering control plane for AI coding agents (Claude Code, Cursor, Copilot, Antigravity, Gemini CLI) — managing task ceremony levels (L0–L3), context economy, JIT stack playbooks, and evidence-gated verification.
+
+> **Note**: This npm package is the **courier**, not the product. PromptKit OS itself is pure repository-native markdown with no runtime, no daemon, and no model lock-in — it lives at [lowqualityloey/promptkit-os](https://github.com/lowqualityloey/promptkit-os).
 
 This package does one thing: fetch the GitHub release tarball that matches its own version, extract it into `./.promptkit/`, and run the canonical `init.sh` (POSIX) or `init.ps1` (Windows). All installation logic stays in the fetched repository; nothing is reimplemented here.
 
