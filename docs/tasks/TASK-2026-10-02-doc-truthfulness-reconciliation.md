@@ -27,6 +27,7 @@
   - `docs/WORKFLOW-MAP.md` (reorder lifecycle diagram to begin at pk:onboard, position pk:spike/ship/checkpoint accurately, label duration figures as illustrative estimates, and refresh release baseline reference)
   - `docs/DESIGN-MD-FAQ.md` (clarify installer detection guarantees vs UI workflow referencing)
   - `workflows/api.md` (generalize Zod mentions to stack-neutral validation schemas)
+  - `docs/reviews/2026-10-02-doc-truthfulness-audit.md` (land cited audit record in repository)
   - `docs/BENCHMARKS.md` (re-measured token payloads and reproducible diff hash)
   - `CHANGELOG.md` (record [Unreleased] entry)
 - **Explicit Non-Goals**:
@@ -94,6 +95,7 @@
   - `docs/WORKFLOW-MAP.md`
   - `docs/DESIGN-MD-FAQ.md`
   - `workflows/api.md`
+  - `docs/reviews/2026-10-02-doc-truthfulness-audit.md`
   - `docs/BENCHMARKS.md`
   - `CHANGELOG.md`
 - **Scope Change Records**: `None`
