@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Rendered UI Browser Evidence Protocol**: New `protocols/rendered-ui-evidence.md` defines a tool-independent, scope-proportionate browser evidence requirement for UI completion, wired into `workflows/design-system.md` and `protocols/code-quality-gate.md`; covers proportionate routes and viewports (375, 768, and 1280 CSS px starting points), nested clipping inspection (`scrollWidth` alone is insufficient), interactive states, rendered contrast, keyboard focus, safe non-production fixtures, and honest `Not verified` reporting when browser tooling is unavailable. (#494)
+
 ### Changed
 - **Courier Package Overview**: Added PromptKit OS control-plane summary and courier role note to `package/README.md` header for direct npmjs registry readers.
 
