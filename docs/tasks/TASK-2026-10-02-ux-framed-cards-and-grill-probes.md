@@ -29,6 +29,10 @@
   - `workflows/onboard.md` (picker fallback reply hints)
   - `workflows/test.md` (telemetry card and TIP reply hints)
   - `workflows/fix.md` (telemetry card and TIP reply hints)
+  - `protocols/setup.md` (Balanced directive token budget alignment)
+  - `workflows/pr.md` (PR link callout reply hint contract)
+  - `templates/agent-directive-template.md` (card-style configuration alignment in prompt directive)
+  - `templates/agent-directive-lite-template.md` (card-style configuration alignment in prompt directive)
   - `templates/project-profile-template.md` (card-style configuration documentation)
   - `docs/tasks/TASK-2026-10-02-ux-framed-cards-and-grill-probes.md` (this task record)
   - `docs/BENCHMARKS.md` (refreshed per-task measurements and SHA)
@@ -95,13 +99,17 @@
 - **Changed Files**:
   - `protocols/telemetry-cards.md`
   - `protocols/code-quality-gate.md`
+  - `protocols/setup.md`
   - `workflows/tutor.md`
   - `workflows/plan.md`
   - `workflows/tasks.md`
   - `workflows/onboard.md`
   - `workflows/test.md`
   - `workflows/fix.md`
+  - `workflows/pr.md`
   - `templates/project-profile-template.md`
+  - `templates/agent-directive-template.md`
+  - `templates/agent-directive-lite-template.md`
   - `docs/tasks/TASK-2026-10-02-ux-framed-cards-and-grill-probes.md`
   - `docs/BENCHMARKS.md`
   - `CHANGELOG.md`
@@ -112,12 +120,12 @@
   - `bash scripts/tests/run-behavioral-contract-tests.sh` passed (394/394 passed).
   - `bash scripts/validate-references.sh .` passed (0 broken links).
   - `bash scripts/validate-execution-control.sh --root . --strict` passed.
-  - `bash scripts/measure-tokens.sh --strict` passed (BALANCED 2318/2500, LITE 1274/1500).
+  - `bash scripts/measure-tokens.sh --strict` passed (BALANCED 2350/2500, LITE 1286/1500).
   - `bash scripts/measure-per-task-tokens.sh --strict` passed (all baselines passed).
   - `bash scripts/check-changelog-entry.sh` passed.
-- **CI Evidence**: `PR #503 (run 36914619782 passed Linux & Windows).`
-- **Review Evidence**: `Addresses Issue #502 and Arena review findings (exact base SHA-256 reproducibility, Session Decision Budget alignment in tutor.md, framed-default wording clarity).`
-- **Commit Evidence**: `Commits 1a1bf32, 68a84eb, and review resolution commit.`
+- **CI Evidence**: `PR #503 runs passed (Linux & Windows).`
+- **Review Evidence**: `Addresses Issue #502, arena.ai review findings (base SHA-256 reproducibility, Session Decision Budget alignment in tutor.md, framed-default wording clarity), and ChatGPT review findings (card-style honoring in directive templates, onboard profile fallback option alignment, non-waivable blocked skip restriction, universal reply hints in onboard and pr workflows, and tutor 2-4 options constraint).`
+- **Commit Evidence**: `Commits 1a1bf32, 68a84eb, 7e3ffda, and review resolution commit.`
 - **Pull Request Evidence**: `PR #503 (https://github.com/lowqualityloey/promptkit-os/pull/503).`
 - **Release Evidence**: `N/A - no release action in scope.`
 - **Blocker and Resume Condition**: `None.`

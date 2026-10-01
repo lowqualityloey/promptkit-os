@@ -39,7 +39,8 @@ Every human callout block (`NEXT STEPS`, `ACTION REQUIRED`, `BLOCKED`, `DECISION
 The developer must never wonder what to type or whether they have to write an essay:
 - **Numbered choices**: `👉 Reply: Type '1' (or press Enter) for recommended.`
 - **Action / Review ready**: `👉 Reply: Type 'merged' or 'done' after merging to continue.`
-- **Blocked repair**: `👉 Reply: Type 'retry' once freed, or 'skip' to bypass.`
+- **Blocked (mandatory stops / verification / security)**: `👉 Reply: Type 'retry' once resolved, or describe instructions.` (Skip is strictly forbidden on mandatory verification or security stops).
+- **Blocked (waivable external prerequisites only)**: `👉 Reply: Type 'retry' once freed, or 'skip' to bypass if non-blocking.`
 - **Decision cards**: `👉 Reply: Type 'A' for recommended, or 'you decide' to delegate.`
 
 ---
@@ -75,9 +76,9 @@ Provides dual-mode rendering: **Framed Mode** (ceiling-and-floor boxes, default)
   > [!IMPORTANT]
   > ### 🛑ACTION REQUIRED:
   > Pull Request is **Review Ready** and CI checks are green (Linux & Windows).
-  > 
+  >
   > 👉 **[Review and Merge PR #284](https://github.com/lowqualityloey/promptkit-os/pull/284)** to close this milestone.
-  > 
+  >
   > 👉 **Reply**: Type `merged` or `done` after merging to continue.
   ```
 
@@ -88,8 +89,8 @@ Provides dual-mode rendering: **Framed Mode** (ceiling-and-floor boxes, default)
   > Two automated repair attempts failed on `tests/auth.test.ts`.
   > - **Error**: `ERR_DATABASE_CONNECTION_REFUSED` on port 5432
   > - **Action needed**: Start local Postgres container via `docker compose up -d`.
-  > 
-  > 👉 **Reply**: Type `retry` once freed, or `skip` to bypass.
+  >
+  > 👉 **Reply**: Type `retry` once freed (or `skip` only if this dependency is explicitly waivable).
   ```
 
 - **Next Steps (`[!TIP]`)**:
@@ -100,7 +101,7 @@ Provides dual-mode rendering: **Framed Mode** (ceiling-and-floor boxes, default)
   > 1. **(Recommended)** Proceed to M3: Implement Stripe webhook receiver.
   > 2. Run stress/concurrency benchmark on new connection pool.
   > 3. Stop here — create session checkpoint (`pk:checkpoint`) to resume in a fresh chat.
-  > 
+  >
   > 👉 **Reply**: Type `1` (or press Enter) for recommended.
   ```
 
@@ -159,7 +160,7 @@ To prevent line wrapping and jagged border breakage on long words or narrow term
     - Bounded Repair: 2 automatic attempts failed
     - Action: Start local Postgres container (`docker compose up -d`)
 
-    👉 Reply: Type 'retry' once freed, or 'skip' to bypass.
+    👉 Reply: Type 'retry' once freed (or 'skip' only if explicitly waivable).
   ╚══════════════════════════════════════════════════════════════╝
   ```
 

@@ -68,7 +68,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
 ### Phase 1: Manifest & Tooling Discovery
 
 > [!IMPORTANT]
-> **Passive Inspection Directive**: Phases 1 & 2 are strictly read-only scanning operations. The AI assistant must not create, edit, or delete any host application source files. After scanning manifests and architecture, the assistant presents its findings summary / scorecard and halts to request human confirmation before proceeding to file generation.
+> **Passive Inspection Directive**: Phases 1 & 2 are strictly read-only scanning operations. The AI assistant must not create, edit, or delete any host application source files. After scanning manifests and architecture, the assistant presents its findings summary / scorecard and halts to request human confirmation before proceeding to file generation: `👉 Reply: Type 'proceed' or 'yes' to continue, or describe adjustments.`
 
 1. **Package Manager & Ecosystem Detection**:
    Inspect the repository root for lockfiles and manifests:
@@ -167,7 +167,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
            description: "Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval, needs --experimental acknowledgement"
        multiSelect: false
      ```
-   - Hosts without `ask_question` support: fallback to `> [!TIP] ### 💡 Choose profile (Type number & Enter):` with Option 1 prefixed `(Recommended)` and Option 2 as default. Include explicit hint: `👉 Reply: Type '1' for Balanced (Recommended) or '2' for Lite`.
+   - Hosts without `ask_question` support: fallback to `> [!TIP] ### 💡 Choose profile (Type number & Enter):` with Option 1 prefixed `(Recommended)` and Option 2 as default. Include explicit hint: `👉 Reply: Type '1' for Lite (Recommended for new users), '2' for Balanced (default), or '3' for Turbo`.
    - If developer chooses Turbo, run the advisory suitability check first (sequential or dependency-ordered work pays the experimental cost with **zero benefit on sequential work** — evidence source: `docs/recipes/auto-waves-preflight-checklist.md`), then require explicit experimental acknowledgement: second confirmation `Acknowledge Turbo experimental cost (up to ~2x measured tokens) and that human approval still required for L3? [y/N]`. The suitability answer is advisory and never blocks an explicit Turbo choice.
    - Store choice as machine-readable `profile: lite|balanced|turbo` in `PROMPTKIT.md` (both human section `## 0. PromptKit OS Profile` and bottom `profile:` line) so future sessions don't re-ask.
     - Non-interactive / CI: respect flags `--lite`, `--balanced`, `--turbo --experimental` passed to `init.sh` / `init.ps1`, or `PROMPTKIT.md` existing profile, or default to `balanced`. When `PROMPTKIT_NO_INTERACTIVE=1` is set, skip any picker (this agent-level prompt and the shell-level TTY picker in `init.sh` / `init.ps1`) and apply flags/default only.
