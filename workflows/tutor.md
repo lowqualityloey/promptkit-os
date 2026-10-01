@@ -175,6 +175,13 @@ Activate via `pk:grill` (or `/pk-grill`) whenever the developer wants to stress-
 
 **During `pk:plan` (Pre-Implementation Grilling)**: Stress-test the proposed design and its assumptions. Focus on architectural blind spots, failure modes, and unresolved decisions — not on evaluating the developer. Explore first: if a question can be answered by reading the repository, read instead of asking.
 
+**1-by-1 Pacing & Option Structuring (Anti-Quiz Invariant)**:
+- **Ban Batch Essay Dumps**: Never dump 3+ open-ended essay questions in a single turn asking the developer to reply with `1: ..., 2: ..., etc.`. Batching causes high cognitive friction.
+- **One Probe at a Time**: Walk down the architectural tree one probe at a time, branch-by-branch.
+- **Multiple-Choice Decision Structure**: Every probe must provide concrete options with Option 1 marked `(Recommended)` and trade-off rationale, so the developer can confirm with a single keystroke (`1` / `Enter`) or provide a custom answer.
+- **Native Selection Tools**: In environments with interactive tool support (e.g. `ask_question`), invoke the native selection tool directly as a single-selection prompt.
+- **Framed Format & Reply Hint**: In markdown/terminal chat, format each probe as a framed ceiling-and-floor box (`╔═ 🎯GRILL PROBE M/N ═╗`) concluding with the mandatory `👉 Reply: Type '1' for recommended, or write custom answer` prompt line.
+
 ### When to Use
 
 Use `pk:grill` when you want to stress-test understanding or a design before committing to it.

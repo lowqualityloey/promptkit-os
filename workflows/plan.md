@@ -218,8 +218,9 @@ The Planner / Architect hands the objective, bounded files or behaviors, accepta
 ### Step 6: Generate Technical Specification & Grilling Pre-Flight
 1. Scaffold the RFC document using `<kit>/templates/tech-spec-template.md`.
 2. Save to `./docs/specs/YYYY-MM-DD-spec-<feature-name>.md` (or directory configured in `PROMPTKIT.md`).
-3. **Pre-Implementation Grilling**:
+3. **Pre-Implementation Grilling (1-by-1 Decision Probes)**:
    - Before writing code, challenge the design using `pk:grill` to stress-test failure edge cases, scaling limits, and architectural assumptions.
+   - **1-by-1 Pacing & Option Structuring (Anti-Quiz Invariant)**: Deliver grilling probes one at a time, branch-by-branch. Banned: dumping a batch of 3+ open-ended essay questions in a single turn. Every probe must provide concrete options with Option 1 marked `(Recommended)` and trade-off rationale, so the developer can confirm with a single keystroke (`1` / `Enter`) or write a custom answer. If the host supports native interactive tools (e.g. `ask_question`), invoke it directly as a single-selection prompt. Include the mandatory `👉 Reply: Type '1' for recommended, or write custom answer` prompt line.
    - Any material design gaps discovered must be reconciled in the specification with an explicit disposition (resolved in spec, logged as an approved non-goal, or recorded as a bounded assumption) before planning sign-off.
 
 ---
@@ -232,7 +233,7 @@ The Planner / Architect hands the objective, bounded files or behaviors, accepta
 - FMEA failure modes and mitigation fallbacks documented at a depth proportionate to the change's risk.
 - Implementation milestones follow the Task Record's TDD Enforcement Mode: enabled Code Work has Red -> Green -> Refactor evidence; disabled Code Work has complete dependency-ordered milestones without mandatory TDD.
 - Documentation, Configuration, and Research Work use an explicit exception verification path, and ambiguous work remains on the Code Work path until clarified.
-- **Dual-Compatible Telemetry Status Card**: Conclude with the single 3-line blockquote spec (`> 📊 **Milestone**: <name> [■■■■□□] n/m (pct%) — source: STATE.md read this turn \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: measured this turn / not measured`). Add a `> [!TIP]` recommending `pk:grill` or `pk:tasks` only when no higher-priority `[!IMPORTANT]` or `[!WARNING]` halt is active. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended + why)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; halts still fire.
+- **Dual-Compatible Telemetry Status Card**: Conclude with the status card (`card-style: framed` default or markdown per `protocols/telemetry-cards.md`). Add an advisory callout recommending `pk:grill` or `pk:tasks` with an explicit `👉 Reply: Type '1' ...` hint, only when no higher-priority `[!IMPORTANT]` or `[!WARNING]` halt is active. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended + why)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; halts still fire.
 
 
 ---

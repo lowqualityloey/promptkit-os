@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Structured 1-by-1 Pre-Implementation Grill Probes**: Refactored `workflows/tutor.md` (Grill Mode) and `workflows/plan.md` (Step 6) to eliminate developer cognitive fatigue. Replaced batch multi-question essay dumps with a 1-by-1 decision probe sequence. Every probe presents 2–4 concrete trade-off options with Option 1 marked `(Recommended)`, supporting single-keystroke replies (`1` or `Enter`) and native selection tools (`ask_question`). (#502)
+- **Standardized Framed Callout Box Contract**: Standardized ceiling-and-floor framed boxes (`╔═ ... ╚═`) without fragile side-walls across interactive terminal and IDE hosts in `protocols/telemetry-cards.md`. Added the `GRILL PROBE` card format and introduced configurable `card-style: framed` (default) | `markdown` | `off` in `templates/project-profile-template.md`. (#502)
+- **Mandatory Reply Hint Contract**: Mandated explicit reply guidance hints (`👉 Reply: Type '...'` or `👉 Action: Press Enter to accept Option 1 ...`) on every human callout block across `protocols/telemetry-cards.md`, `protocols/code-quality-gate.md`, `workflows/tasks.md`, `workflows/onboard.md`, `workflows/test.md`, and `workflows/fix.md` so developers never have to guess valid input syntax. (#502)
+
 ## [1.10.1] - 2026-10-02
 
 Release evidence chain: `docs/releases/2026-10-02-v1.10.1-*.md` (`REL-2026-10-02-V1.10.1-001`) · Candidate commit `0c819f5` — patch release delivering brownfield onboarding safety, UI browser evidence protocol, planning handoff contracts, and documentation/UX reconciliation.
