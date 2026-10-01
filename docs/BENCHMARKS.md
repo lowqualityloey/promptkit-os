@@ -41,7 +41,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
 | Core-six Lite subset | 6 | **26,927 tok** |
-| Full workflow set | 25 | **104,534 tok** |
+| Full workflow set | 25 | **104,824 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -83,11 +83,11 @@ Gate coverage: the static dual-profile budget runs in **both** Linux and Windows
 
 PromptKit OS benchmarks both the **static footprint** (1,274 tok Lite, 2,318 tok Balanced) and the **dynamic per-task runtime context**.
 
-By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without a mandatory preload of `workflows/route.md` (6,962 tokens at the historical `fc98f2f` benchmark; 9,241 tokens at the current measurement). At the historical revision, Change A's modeled saving was 6,915 tokens (6,962 route tokens less 47 tokens of directive growth); current end-to-end payloads are measured below and do not reuse that historical estimate.
+By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without a mandatory preload of `workflows/route.md` (6,962 tokens at the historical `fc98f2f` benchmark; 9,263 tokens at the current measurement). At the historical revision, Change A's modeled saving was 6,915 tokens (6,962 route tokens less 47 tokens of directive growth); current end-to-end payloads are measured below and do not reuse that historical estimate.
 
 **Methodology for per-task table:**
 - Historical comparison anchors: `fc98f2f` (after 2+1 profiles) and `c34be80` (before profiles, Balanced only). These SHAs identify historical inputs; they are not the source of the refreshed current values.
-- Refreshed measurement input: base revision `b8e8b92cd0ad533047e5b84fb945f75157b64c42` plus measured-input diff SHA-256 `e0ae860eb1508a43bd13f06d063711f39a597f2fa250202eb2047d4be20dcc0e`, measured on 2026-10-02. The digest is reproducible with `git diff --binary b8e8b92cd0ad533047e5b84fb945f75157b64c42 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`. Re-run `bash scripts/measure-per-task-tokens.sh` after applying that input diff; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
+- Refreshed measurement input: base revision `800bb88f2ea1a5c7766b97bc5f33290c21615a11` plus measured-input diff SHA-256 `a41ff3da4a411d67f8388d265588c1f05698608197825d56b1b0871673017ff1`, measured on 2026-10-02. The digest is reproducible with `git diff --binary 800bb88f2ea1a5c7766b97bc5f33290c21615a11 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`. Re-run `bash scripts/measure-per-task-tokens.sh` after applying that input diff; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
 - Historical baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A), plus the same task template where applicable.
 - Current JIT payload = directive 1,274-2,318 + workflow + gate + relevant task template (route.md is not loaded by default).
 - Current Lite vs Balanced static directive sizes: 1,274 vs 2,318 tokens.

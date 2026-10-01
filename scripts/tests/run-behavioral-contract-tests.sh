@@ -254,6 +254,8 @@ assert_contains "workflows/onboard.md" "size: small\\|medium\\|large" "Onboard w
 assert_contains "workflows/onboard.md" "accept-or-change" "Onboard offers tooling proposals accept-or-change, never silent defaults"
 assert_contains "workflows/onboard.md" "questions, not files" "Onboard answers product-shaped requests with intake questions, not a scaffold"
 assert_contains "workflows/onboard.md" "Never propose switching" "Onboard treats brownfield toolchain as ground truth"
+assert_contains "workflows/onboard.md" "strictly preserving all existing user-written rules" "Onboard preserves existing user-written rules on brownfield installs"
+assert_contains "workflows/onboard.md" "unverified until executed" "Onboard labels discovered commands as unverified until executed"
 assert_contains "protocols/discovery-intake.md" "close_reason" "Intake protocol records why the interview closed"
 assert_contains "protocols/discovery-intake.md" "Later ledger" "Intake protocol routes AI-suggested scope to the Later ledger"
 assert_contains "protocols/discovery-intake.md" "Product-Shape Cover Questions" "Intake asks product-shape (SaaS-class) decision questions before any stack is named"
