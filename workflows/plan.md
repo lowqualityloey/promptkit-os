@@ -226,7 +226,7 @@ The Planner / Architect hands the objective, bounded files or behaviors, accepta
 
 ## Completion Criteria
 - Technical specification documented and approved in `./docs/specs/`.
-- Pre-implementation grilling (`pk:grill`) completed with all material design gaps assigned an explicit disposition in the specification.
+- Full Planning: pre-implementation grilling (`pk:grill`) completed with all material design gaps assigned an explicit disposition in the specification.
 - Deep module boundaries and test surfaces clearly mapped.
 - Zero-downtime Expand-Contract migration plan detailed for all live or compatibility-sensitive database changes (disposable/pre-deployment escapes documented with rationale).
 - FMEA failure modes and mitigation fallbacks documented at a depth proportionate to the change's risk.

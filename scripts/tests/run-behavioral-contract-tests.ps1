@@ -680,6 +680,8 @@ Assert-Contains "workflows/tutor.md" "Suspend Teaching Rules" "Grill drill suspe
 Assert-Contains "workflows/tutor.md" "Self-Sufficient Probes" "Grill probes carry their own context and model answers"
 Assert-Contains "workflows/tutor.md" "Grill Completion Contract" "Grill mode owns a zero-code completion contract"
 Assert-Contains "workflows/tutor.md" "read instead of asking" "Pre-implementation grilling reads the repo before asking"
+Assert-Contains "workflows/tutor.md" "pre-implementation grilling during.*pk:plan.*technical specification.*explicit disposition" "Tutor grill contract directs planning-time gaps to technical specification with explicit disposition"
+Assert-Contains "workflows/tutor.md" "never leave material architectural gaps stranded in an auxiliary journal" "Tutor grill contract forbids leaving planning-time gaps in an auxiliary journal"
 Assert-Contains "templates/tech-spec-template.md" "Architecture challenged via.*pk:grill.*material design gaps" "Tech spec sign-off requires material grill gaps to have explicit disposition"
 Assert-Contains "workflows/plan.md" "material design gaps discovered must be reconciled" "Plan workflow requires pre-implementation grill gaps reconciled before sign-off"
 

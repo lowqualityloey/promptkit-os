@@ -73,7 +73,7 @@
 - **Start Time**: `2026-10-02`
 - **Current Actor**: `PromptKit maintainer (review/approval) + Antigravity (handoff)`
 - **Branch / Revision**: `feat/tighten-grill-plan-handoff`
-- **Next Action**: `Push branch and create Pull Request.`
+- **Next Action**: `Maintainer review and squash-merge of PR #496 into main.`
 
 ### Transition History
 
@@ -81,7 +81,7 @@
 |---|---|---|---|---|---|
 | N/A | planned | 2026-10-02 | Antigravity | Task initialized upon user approval of ChatGPT review finding. | User prompt |
 | planned | in_progress | 2026-10-02 | Antigravity | Starting implementation of handoff contract in templates and workflows. | Branch feat/tighten-grill-plan-handoff |
-| in_progress | awaiting_review | 2026-10-02 | Antigravity | All changes implemented, contract tests passing (387/387), token benchmarks updated and verified, ready for review. | Verification evidence in Section 6 |
+| in_progress | awaiting_review | 2026-10-02 | Antigravity | All changes implemented, contract tests passing (389/389), tutor gap assertions added, token benchmarks updated, CI verified, ready for review. | Verification evidence in Section 6 |
 
 ## 6. Evidence and Completion Gate
 
@@ -97,15 +97,15 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `Bash behavioral contract tests 387/387 PASS; strict token budget PASS (Balanced 2318/2500, Lite 1274/1500); strict per-task measurements PASS (fix 9094/12861, plan 19296/24666, ship 15555/24761); reference validation PASS across 316 Markdown files; execution control validation VALID across 47 records; staged secret scan PASS.`
-- **CI Evidence**: `GitHub Actions run 36880513757 on PR #496: Lint & Validate (Linux) PASS in 3m17s; Lint & Validate (Windows) PASS in 4m10s.`
-- **Review Evidence**: `Addresses P2 finding in ChatGPT review of greenfield planning handoffs by tightening pk:grill to pk:plan contract.`
-- **Commit Evidence**: `Pending commit.`
-- **Pull Request Evidence**: `Pull Request #496 (https://github.com/lowqualityloey/promptkit-os/pull/496) created targeting main; CI running.`
+- **Verification Evidence**: `Bash behavioral contract tests 389/389 PASS; strict token budget PASS (Balanced 2318/2500, Lite 1274/1500); strict per-task measurements PASS (fix 9094/12861, plan 19299/24666, ship 15555/24761); reference validation PASS across 316 Markdown files; execution control validation VALID across 47 records; staged secret scan PASS.`
+- **CI Evidence**: `GitHub Actions run 36881178780 on PR #496: Lint & Validate (Linux) PASS in 3m43s; Lint & Validate (Windows) PASS in 4m56s at commit a1a08fc202bcc2540adacb8482454a2fcc6bc509.`
+- **Review Evidence**: `Addresses P2 findings in docs/reviews/pr-496.md: added explicit tutor contract assertions guarding planning-time gap routing, and reconciled task record commits, next action, and CI run evidence.`
+- **Commit Evidence**: `Branch commits 68907fb, 50f63a4, a1a08fc, plus P2 reconciliation follow-up commit.`
+- **Pull Request Evidence**: `Pull Request #496 (https://github.com/lowqualityloey/promptkit-os/pull/496) created targeting main; all CI checks passing.`
 - **Release Evidence**: `N/A - no release action in scope.`
-- **Blocker and Resume Condition**: `No implementation blocker. Ready for branch push and PR creation.`
+- **Blocker and Resume Condition**: `No implementation blocker. Awaiting maintainer review and squash-merge.`
 - **Completion State**: `awaiting_review`
 - **Acceptance Results**: `AC-1 Pass; AC-2 Pass; AC-3 Pass; AC-4 Pass; AC-5 Pass.`
-- **Changed-File Summary**: `Tighten pk:grill to pk:plan handoff across template, tutor, plan workflows, contract tests, benchmarks, and changelog.`
+- **Changed-File Summary**: `Tighten pk:grill to pk:plan handoff across template, tutor, plan workflows, contract tests, benchmarks, and changelog; reconcile task record and tutor contract test assertions.`
 - **Completion Exception**: `None.`
-- **Completion Decision and Timestamp**: `All implementation criteria satisfied on 2026-10-02; ready for PR creation.`
+- **Completion Decision and Timestamp**: `All implementation criteria satisfied on 2026-10-02; PR #496 passing all checks; ready for maintainer squash-merge.`
