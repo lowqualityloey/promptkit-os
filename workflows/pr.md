@@ -136,6 +136,8 @@ Upon presenting or opening the PR, close with an attention callout (not TIP — 
 > **PR:** [#<number> — <title>](<url>)
 > - Files: <url>/files · Checks: <url>/checks
 > - Human merge command (after review and green checks): `gh pr merge <number> --squash --delete-branch`
+>
+> 👉 **Reply**: Type 'merged' or 'done' after merging, or request revisions.
 ```
 
 ### Human Authority & Merge Boundary

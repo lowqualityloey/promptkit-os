@@ -1,7 +1,7 @@
 # Telemetry Status Cards & Visual Formatting Protocol
 
 ## Purpose
-Canonical visual formatting specification for telemetry cards, human-action callouts, and turn structures. Provides dual-mode rendering: **Markdown Mode** (for rich Web/IDE renderers like Cursor, VS Code, and Antigravity) and **CLI / Terminal Mode** (for non-markdown terminals like Cline, OpenCode, Aider, and shell CLIs).
+Canonical visual formatting specification for telemetry cards, human-action callouts, and turn structures. Provides dual-mode rendering: **Framed Mode** (tactile ceiling-and-floor Unicode boxes, default) and **Markdown Mode** (for GitHub-style blockquote alerts), plus CLI/Terminal support across Cline, OpenCode, Aider, Cursor, VS Code, and Antigravity.
 
 ---
 
@@ -32,11 +32,26 @@ Progress bars across all environments must use square geometric Unicode characte
 
 ---
 
+## Mandatory Reply Hint Contract (`👉 Reply: Type '...'`)
+
+Every human callout block (`NEXT STEPS`, `ACTION REQUIRED`, `BLOCKED`, `DECISION NEEDED`, `GRILL PROBE`) across all modes must conclude with an unambiguous, single-keystroke or single-word **Reply Hint** line.
+
+The developer must never wonder what to type or whether they have to write an essay:
+- **Numbered choices**: `👉 Reply: Type '1' (or press Enter) for recommended.`
+- **Action / Review ready**: `👉 Reply: Type 'merged' or 'done' after merging to continue.`
+- **Blocked (mandatory stops / verification / security)**: `👉 Reply: Type 'retry' once resolved, or describe instructions.` (Skip is strictly forbidden on mandatory verification or security stops).
+- **Blocked (waivable external prerequisites only)**: `👉 Reply: Type 'retry' once freed, or 'skip' to bypass if non-blocking.`
+- **Decision cards**: `👉 Reply: Type 'A' for recommended, or 'you decide' to delegate.`
+
+---
+
 ## Dual-Compatible Telemetry Status Cards
 
-Provides dual-mode rendering: **Markdown Mode** (for rich Web/IDE renderers like Cursor, VS Code, and Antigravity) and **CLI / Terminal Mode** (for non-markdown terminals like Cline, OpenCode, Aider, and shell CLIs).
+Provides dual-mode rendering: **Framed Mode** (ceiling-and-floor boxes, default) and **Markdown Mode** (for GitHub-style blockquote alerts in rich renderers).
 
-### 1. Opening: TL;DR & Two-Column Table
+### Mode 1: Markdown Mode (Rich Web & IDE Renderers)
+
+#### 1. Opening: TL;DR & Two-Column Table
 ```markdown
 > **📌 TL;DR:** Landed M2 persistence layer behind TDD contract (`TDD-EXEC-004`). All 32 tests pass; ready for M3.
 
@@ -46,7 +61,7 @@ Provides dual-mode rendering: **Markdown Mode** (for rich Web/IDE renderers like
 | `src/db/repo.ts` (Tenant-isolated repository) | `pnpm tsc --noEmit` → **exit code 0** (clean) |
 ```
 
-### 2. Telemetry Card (Single 3-Line Blockquote)
+#### 2. Telemetry Card (Single 3-Line Blockquote)
 ```markdown
 > 📊 Milestone: M2: Core Database `[■■■■■■■■□□]` 8/10 (80%) — source: `docs/STATE.md`  
 > 🎯 Active: TASK-2026-09-18-persistence (In Progress)  
@@ -54,15 +69,17 @@ Provides dual-mode rendering: **Markdown Mode** (for rich Web/IDE renderers like
 ```
 *(Append a 4th line `> 💰 Spend: <in> / <out> (source: host usage)` only when host exposes per-turn token usage).*
 
-### 3. Human Action Callouts (Tight Headers & Descriptive Links)
+#### 3. Human Action Callouts (Tight Headers & Descriptive Links)
 
 - **Hard Stop / Review Ready (`[!IMPORTANT]`)**:
   ```markdown
   > [!IMPORTANT]
   > ### 🛑ACTION REQUIRED:
   > Pull Request is **Review Ready** and CI checks are green (Linux & Windows).
-  > 
+  >
   > 👉 **[Review and Merge PR #284](https://github.com/lowqualityloey/promptkit-os/pull/284)** to close this milestone.
+  >
+  > 👉 **Reply**: Type `merged` or `done` after merging to continue.
   ```
 
 - **Blocked State (`[!WARNING]`)**:
@@ -72,23 +89,27 @@ Provides dual-mode rendering: **Markdown Mode** (for rich Web/IDE renderers like
   > Two automated repair attempts failed on `tests/auth.test.ts`.
   > - **Error**: `ERR_DATABASE_CONNECTION_REFUSED` on port 5432
   > - **Action needed**: Start local Postgres container via `docker compose up -d`.
+  >
+  > 👉 **Reply**: Type `retry` once freed (or `skip` only if this dependency is explicitly waivable).
   ```
 
 - **Next Steps (`[!TIP]`)**:
   Advisory next step only, with nothing required, uses `> [!TIP]` titled `### 💡 Next Recommended Step:` or `### 💡NEXT STEPS (Type number & Enter):`.
   ```markdown
   > [!TIP]
-  > ### 💡NEXT STEPS (Type number & Enter):
+  > ### 💡 Next Recommended Step:
   > 1. **(Recommended)** Proceed to M3: Implement Stripe webhook receiver.
   > 2. Run stress/concurrency benchmark on new connection pool.
   > 3. Stop here — create session checkpoint (`pk:checkpoint`) to resume in a fresh chat.
+  >
+  > 👉 **Reply**: Type `1` (or press Enter) for recommended.
   ```
 
 ---
 
-## Mode 2: CLI / Terminal Mode (Non-Markdown & Terminal Hosts)
+## Mode 2: CLI / Terminal Mode & Framed Mode (Ceiling & Floor Boxes)
 
-For Cline, OpenCode, Aider, Windows Terminal, PowerShell, and Bash environments:
+Default across all hosts when `card-style: framed` is active in `PROMPTKIT.md` (the shipped default), and standard for terminal tools (Cline, OpenCode, Aider, Windows Terminal, PowerShell, Bash). In rich markdown/web IDE chats (e.g. Antigravity, Cursor, Copilot), Mode 1 GFM alerts (`card-style: markdown`) can alternatively be selected for native styled UI cards. When rendering Mode 2 in chat interfaces, wrap in code blocks (````text ... ````) or keep widths bounded (≤60 chars) so variable-width fonts do not wrap ceiling and floor borders.
 
 ### 1. Opening: Clean TL;DR, Changes & Evidence
 ```text
@@ -126,6 +147,8 @@ To prevent line wrapping and jagged border breakage on long words or narrow term
     👉 [Review and Merge PR #284](https://github.com/lowqualityloey/promptkit-os/pull/284)
 
     Action: Review diff and merge PR to main to close milestone.
+
+    👉 Reply: Type 'merged' or 'done' after merging to continue.
   ╚══════════════════════════════════════════════════════════════╝
   ```
 
@@ -136,6 +159,8 @@ To prevent line wrapping and jagged border breakage on long words or narrow term
     - Error: ERR_DATABASE_CONNECTION_REFUSED on port 5432
     - Bounded Repair: 2 automatic attempts failed
     - Action: Start local Postgres container (`docker compose up -d`)
+
+    👉 Reply: Type 'retry' once freed (or 'skip' only if explicitly waivable).
   ╚══════════════════════════════════════════════════════════════╝
   ```
 
@@ -145,6 +170,21 @@ To prevent line wrapping and jagged border breakage on long words or narrow term
     [1] (Recommended) Proceed to M3: Implement Stripe webhook
     [2] Run stress/concurrency benchmark on connection pool
     [3] Stop here — create session checkpoint (pk:checkpoint)
+
+    👉 Reply: Type '1' (or press Enter) for recommended.
+  ╚══════════════════════════════════════════════════════════════╝
+  ```
+
+- **Pre-Implementation Grilling (1-by-1 Decision Probes)**:
+  ```text
+  ╔═ 🎯GRILL PROBE M/N: <Title> ═════════════════════════════════╗
+    <1-2 line context on why this design decision matters>
+
+    [1] (Recommended) <First-choice option with trade-off rationale>
+    [2] <Viable alternative option>
+    [3] <Alternative option or explicit non-goal>
+
+    👉 Reply: Type '1' for recommended, or write custom answer.
   ╚══════════════════════════════════════════════════════════════╝
   ```
 
@@ -157,9 +197,12 @@ Raw unformatted URLs (e.g. `https://github.com/...`) are prohibited in turn comp
 
 ---
 
-## Opt-Out & Quiet Completion
+## Opt-Out & Configuration
 
-- **`status-cards: off` in `PROMPTKIT.md`**: Suppresses the decorative telemetry card only. It never suppresses genuine halts (`🛑ACTION REQUIRED` or `🚫BLOCKED`).
+- **`card-style` in `PROMPTKIT.md`**: Controls the visual style of cards and callouts:
+  - `card-style: framed` (default) — Uses ceiling-and-floor Unicode boxes (`╔═ ... ╚═`) with indented body lines and explicit reply hints.
+  - `card-style: markdown` — Uses GitHub-style markdown blockquotes and alerts (`> [!TIP]`, `> [!IMPORTANT]`) with explicit reply hints.
+  - `card-style: off` (or `status-cards: off`) — Suppresses decorative telemetry and advisory framing. Genuine halts (`🛑ACTION REQUIRED` or `🚫BLOCKED`) still fire.
 - **Quiet Completion**: When `docs/STATE.md` shows no open milestones, tasks, or blockers, end the turn with a quiet completion statement instead of an advisory next-step callout:
   - Markdown: `> ✅ **All milestones closed · Worktree clean · Zero open tasks.**`
   - CLI: `[COMPLETE] ✅ All milestones closed · Worktree clean · Zero open tasks.`

@@ -98,10 +98,12 @@ Every human decision halt (blocker callouts, L-level gates, escalation points) r
 >   B) ...
 > RECOMMENDATION: <letter> — <one-sentence why>
 > DEFAULT (Type A/B only): Reply "you decide" to execute <letter>; rationale recorded in the Task Record. Omit on Type C/D — human decision required, no delegation.
+> 👉 Reply: Type 'A', 'B', or 'you decide' (or invoke native picker tool)
 ```
 
-- **Recommendation mandatory** — never present unfenced options.
+- **Recommendation mandatory** — never present unfenced options. Option A / 1 must be marked `(Recommended)`.
 - **"You decide" default conditional** — declared only on Type A/B cards as a recorded delegated decision owned by the agent with rationale logged; strictly forbidden on Type C/D cards.
+- **Reply hint mandatory** — conclude with `👉 Reply: Type '...'` so the human is never left guessing valid input strings. When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call.
 
 ### Decision routing (presentation follows decision type)
 
