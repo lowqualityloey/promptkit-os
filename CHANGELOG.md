@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-10-02
+
+Release evidence chain: `docs/releases/2026-10-02-v1.10.1-*.md` (`REL-2026-10-02-V1.10.1-001`) · Candidate commit `0c819f5` — patch release delivering brownfield onboarding safety, UI browser evidence protocol, planning handoff contracts, and documentation/UX reconciliation.
+
 ### Added
 - **Rendered UI Browser Evidence Protocol**: New `protocols/rendered-ui-evidence.md` defines a tool-independent, scope-proportionate browser evidence requirement for UI completion, wired into `workflows/design-system.md` and `protocols/code-quality-gate.md`; covers proportionate routes and viewports (375, 768, and 1280 CSS px starting points), nested clipping inspection (`scrollWidth` alone is insufficient), interactive states, rendered contrast, keyboard focus, safe non-production fixtures, and honest `Not verified` reporting when browser tooling is unavailable. (#494)
 
