@@ -29,25 +29,20 @@ Operational invariants and canonical implementation patterns for fail-fast envir
 
 ### Pattern A: Split Client and Server Validators (Static Bindings)
 
-Client-boundary values must be **literal** `process.env.NEXT_PUBLIC_*` reads — the bundler only inlines statically analyzable member expressions, so a dynamic lookup (`process.env[key]`) or a whole-`process.env` object leaves them `undefined` in the browser.
+Client-boundary values must be **literal** `process.env.NEXT_PUBLIC_*` reads — the bundler only inlines statically analyzable member expressions, so a dynamic lookup (`process.env[key]`) or a whole-`process.env` object leaves them `undefined` in the browser. Keep the two accessors in **separate modules** so a client import never pulls the server schema into the browser graph.
+
+**`src/env.client.ts`** — client-safe; importable from components, no server secrets:
 
 ```typescript
 import { z } from "zod";
-
-const serverSchema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  DATABASE_URL: z.string().url(),
-  SESSION_SECRET: z.string().min(32),
-  PORT: z.coerce.number().int().positive().default(3000),
-});
 
 const clientSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url(),
   NEXT_PUBLIC_STRIPE_KEY: z.string().startsWith("pk_"),
 });
 
-// Fail fast with an actionable list instead of a raw ZodError.
-function parseOrExit<T>(schema: z.ZodType<T>, input: unknown): T {
+// Shared fail-fast helper (kept here so both modules share it with no server dependency).
+export function parseOrExit<T>(schema: z.ZodType<T>, input: unknown): T {
   const parsed = schema.safeParse(input);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
@@ -56,15 +51,28 @@ function parseOrExit<T>(schema: z.ZodType<T>, input: unknown): T {
   return parsed.data;
 }
 
-// env.client.ts — client-safe accessor: literal NEXT_PUBLIC_* reads only.
-export function clientEnv() {
-  return parseOrExit(clientSchema, {
+// Literal NEXT_PUBLIC_* reads only — the bundler inlines these for the browser.
+export const clientEnv = () =>
+  parseOrExit(clientSchema, {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_STRIPE_KEY: process.env.NEXT_PUBLIC_STRIPE_KEY,
   });
-}
+```
 
-// env.server.ts — server-only accessor: validates the full server schema.
+**`src/env.server.ts`** — server-only; never import from a client component:
+
+```typescript
+import { z } from "zod";
+import { clientEnv, parseOrExit } from "./env.client";
+
+const serverSchema = z.object({
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  DATABASE_URL: z.string().url(),
+  SESSION_SECRET: z.string().min(32),
+  PORT: z.coerce.number().int().positive().default(3000),
+});
+
+// Eager validation is safe here because this module is server-only.
 export const env = { ...clientEnv(), ...parseOrExit(serverSchema, process.env) };
 ```
 
@@ -81,9 +89,9 @@ if (typeof window !== "undefined") {
 
 ## 3. Framework Adaptations
 
-- **Next.js App Router**: Use `@t3-oss/env-nextjs` or import `src/env.ts` inside `next.config.mjs` to validate during `next build`.
+- **Next.js App Router**: Use `@t3-oss/env-nextjs` or import `src/env.server.ts` inside `next.config.mjs` to validate during `next build`.
 - **Vite**: Use `import.meta.env` with `VITE_` prefix; validate configs in `vite.config.ts`.
-- **Express / Fastify**: Import `src/env.ts` at the top of `src/index.ts` before starting listeners.
+- **Express / Fastify**: Import `src/env.server.ts` at the top of `src/index.ts` before starting listeners.
 - **Go / Python**: In Go, use `caarlos0/env` with struct tags. In Python, use `pydantic-settings` `BaseSettings`.
 
 ---
