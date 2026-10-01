@@ -378,6 +378,12 @@ When no `DESIGN.md` exists, UI work still ships finished — restraint plus a de
 
 Before marking any UI task complete, verify all criteria pass:
 
+For browser-rendered UI, follow `protocols/rendered-ui-evidence.md` for the
+proportionate browser check and evidence record. Apply it to the routes and
+states affected by the change; shared shell, navigation, typography, or token
+changes may affect every route. Static checks and source review do not replace
+observing the rendered result.
+
 - [ ] **Visual Floor Enforced**: Replaced default framework tab favicon (no blank-tab or Next.js triangle default); applied a single Iconify family across interactive controls where icons exist (text-only controls remain complete without icons).
 - [ ] **Aesthetic Craft**: Palette is derived from brand identity; no generic blue/purple AI gradients, no decorative emoji, and glass/glow is limited to 1–2 elements.
 - [ ] **Contrast Compliance**: Normal text passes $\ge 4.5:1$ and large text/UI controls pass $\ge 3.0:1$ in both light and dark themes.
@@ -398,3 +404,4 @@ Before marking any UI task complete, verify all criteria pass:
 - [ ] **Favicon Declared**: Every shipped page has a favicon per the stated rule; no blank-tab default.
 - [ ] **Type Pairing Resolved**: One pairing proposed-and-accepted, or explicitly waived with the system stack.
 - [ ] **Third-Party Components Vetted**: Each catalog component inherits tokens and passes a11y, single-family, and license gates with human approval evidenced.
+- [ ] **Rendered UI Evidence**: Complete the scoped browser check and evidence record in `protocols/rendered-ui-evidence.md` for affected routes, viewport sizes, and interaction states.
