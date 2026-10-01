@@ -152,7 +152,7 @@ jobs:
           VERSION: ${{ steps.tag.outputs.version }}
         run: |
           cd package
-          npm version "$VERSION" --no-git-tag-version
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
           # Refuse to ship a wrapper whose version drifted from the tag it claims to mirror.
           node -e "const p=require('./package.json'); if(p.version!==process.env.VERSION){console.error('version mismatch');process.exit(1)}"
           echo "Courier version: $(node -p "require('./package.json').version")"

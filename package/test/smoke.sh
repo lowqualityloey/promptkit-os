@@ -35,7 +35,7 @@ mkdir -p "$STAGE_PKG_DIR"
 cp -R "$REPO_ROOT/package/." "$STAGE_PKG_DIR/"
 
 # Sync version in the staged copy
-(cd "$STAGE_PKG_DIR" && npm version "$VERSION" --no-git-tag-version >/dev/null)
+(cd "$STAGE_PKG_DIR" && npm version "$VERSION" --no-git-tag-version --allow-same-version >/dev/null)
 
 PACK_DIR="$WORK/pack"
 mkdir -p "$PACK_DIR"
