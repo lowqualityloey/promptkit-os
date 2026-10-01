@@ -75,7 +75,7 @@
 - **Start Time**: `2026-10-02`
 - **Current Actor**: `Antigravity (executor)`
 - **Branch / Revision**: `docs/reconcile-truthfulness-and-claim-integrity`
-- **Next Action**: `Push branch docs/reconcile-truthfulness-and-claim-integrity, open PR, and await human review.`
+- **Next Action**: `Await PR #498 CI results and human review/merge.`
 
 ### Transition History
 
@@ -106,10 +106,10 @@
   - `bash scripts/measure-tokens.sh --strict` passed (BALANCED 2318/2500, LITE 1274/1500).
   - `bash scripts/measure-per-task-tokens.sh --strict` passed (all baselines passed).
   - `bash scripts/check-changelog-entry.sh` passed.
-- **CI Evidence**: `Pending branch push and PR creation.`
+- **CI Evidence**: `Pending run on PR #498 (https://github.com/lowqualityloey/promptkit-os/pull/498).`
 - **Review Evidence**: `Addresses docs/reviews/2026-10-02-doc-truthfulness-audit.md.`
-- **Commit Evidence**: `Pending commit.`
-- **Pull Request Evidence**: `Pending branch push.`
+- **Commit Evidence**: `Commit 4872a8f (and follow-up task record sync commit).`
+- **Pull Request Evidence**: `PR #498 (https://github.com/lowqualityloey/promptkit-os/pull/498).`
 - **Release Evidence**: `N/A - no release action in scope.`
 - **Blocker and Resume Condition**: `None.`
 - **Completion State**: `awaiting_review`
