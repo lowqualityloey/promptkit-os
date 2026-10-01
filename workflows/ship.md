@@ -191,7 +191,7 @@ Before Release Coordinator review, a Pattern C **evidence audit** verifies check
 
 ### Release Evidence Template Cross-Reference
 
-Use the optional **Execution-Control Evidence** section in `templates/release-checklist.md` for the Task Record path and ID, specification, state, owner/approval boundary, acceptance and changed-file evidence, candidate revision, verification/CI/review/commit/PR links, checkpoint/handoff, scope or exception records, blockers, host/timer limitation, and release-impact evaluation. `N/A` is valid for Level 0 Work or consumers that do not adopt the optional protocol. This evidence evaluates a candidate against the approved immutable `v1.0.0` baseline; it does not rewrite that baseline or authorize tag, push, publication, deployment, or rollback.
+Use the optional **Execution-Control Evidence** section in `templates/release-checklist.md` for the Task Record path and ID, specification, state, owner/approval boundary, acceptance and changed-file evidence, candidate revision, verification/CI/review/commit/PR links, checkpoint/handoff, scope or exception records, blockers, host/timer limitation, and release-impact evaluation. `N/A` is valid for Level 0 Work or consumers that do not adopt the optional protocol. This evidence evaluates a candidate against the latest approved predecessor release baseline (or the recorded all-history starting point for a First Release); it does not rewrite historical approved baselines or authorize tag, push, publication, deployment, or rollback.
 
 ### Canonical Artifact Linkage
 

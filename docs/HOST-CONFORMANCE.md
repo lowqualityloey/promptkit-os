@@ -7,7 +7,7 @@ The PromptKit OS installer supports 10 distinct AI coding host configurations. H
 PromptKit OS operates under a filesystem-based Just-In-Time (JIT) architecture with markdown instructions:
 > *"Markdown instructs; it cannot stop tools by itself."* ([`docs/BENCHMARKS.md`](./BENCHMARKS.md))
 
-Different AI host environments (terminal CLIs, IDE composer extensions, agent sidecars) inject system directives, handle context windows, and enforce instruction hierarchies with varying degrees of fidelity. This document measures that variance empirically, replacing unmeasured assumptions with observable transcript evidence.
+Different AI host environments (terminal CLIs, IDE composer extensions, agent sidecars) inject system directives, handle context windows, and enforce instruction hierarchies with varying degrees of fidelity. This document defines the conformance probe pack, establishes the mechanical scoring rubric, and presents initial validation results using staged transcript fixtures. It separates offline scorer validation from maintainer-executed live host sessions.
 
 ---
 
@@ -20,7 +20,7 @@ Per [Issue #436](https://github.com/lowqualityloey/promptkit-os/issues/436), the
   - **Maintainer-owned**: live host accounts, provider subscriptions, executing fresh sessions, and capturing full live transcripts.
 - **Sampled Evidence, Not an Immutable Guarantee**: Results reflect sampled compliance for explicitly named host versions and model versions at a pinned repository commit. They do not constitute an immutable runtime guarantee or an endorsement of any host.
 - **Confound Control (Model Pinned)**: When evaluating cross-host differences, the underlying foundation model must be held constant across tested hosts (using an active provider model available across all selected targets) so that recorded differences isolate **host environment integration behavior** rather than model intelligence deltas.
-- **Untested Boundaries Are Never Implied**: Hosts without published, verified transcripts are explicitly registered as **Untested**. Compatibility is unknown and must never be implied or assumed.
+- **Untested Boundaries Are Never Implied**: Hosts without published, verified live session transcripts are explicitly registered as **Untested for live runtime fidelity**. Offline sample fixtures validate the mechanical scoring rubric only; they do not establish live runtime fidelity for any host. Compatibility is unknown and must never be implied or assumed.
 - **Mechanical Scoring**: Grades are assigned strictly by the behavioral evaluation harness ([`scripts/run-behavioral-eval.sh`](../scripts/run-behavioral-eval.sh) `--score`), not by human impression or improvised criteria.
 
 ---
@@ -43,41 +43,54 @@ The conformance suite evaluates the four governance-critical scenarios staged in
 
 ---
 
-## 3. Cross-Host Conformance Matrix
+## 3. Scorer Fixture Validation Matrix
 
-- **Status**: Validation Baseline & Staged Fixtures (Awaiting maintainer live-session captures)
+- **Status**: Scorer Fixture Validation (All hosts UNTESTED for live runtime fidelity pending maintainer live sessions)
 - **PromptKit OS Baseline**: `main` @ [`0972900`](https://github.com/lowqualityloey/promptkit-os/commit/09729003417009103481a77de5fda62df35e2f40)
 - **Directive Under Test**: Shipped Balanced (`templates/agent-directive-template.md`, 2,318 tok)
-- **Total Scored Cells**: 12 (10 PASS, 1 PARTIAL, 1 FAIL)
+- **Total Scored Fixtures**: 12 (10 PASS, 1 PARTIAL, 1 FAIL)
 
-| Evaluation Scenario | Claude Code CLI<br>`v1.0.12` | Cursor Composer<br>`v0.46.x` | GitHub Copilot Agent<br>`v1.260.x` (VS Code) |
+> [!NOTE]
+> The cells below evaluate how the mechanical scoring harness (`scripts/run-behavioral-eval.sh --score`) grades the staged sample fixtures in `docs/internal/host-conformance/`. They validate rubric check mechanics and formatting expectations; they **do not** reflect live host runtime captures. Live runtime fidelity across all hosts is **Untested** until maintainer sessions with recorded model, version, and run provenance are captured.
+
+| Evaluation Scenario | Claude Code Staged Fixtures<br>`docs/internal/host-conformance/claude-code/` | Cursor Staged Fixtures<br>`docs/internal/host-conformance/cursor/` | GitHub Copilot Staged Fixtures<br>`docs/internal/host-conformance/github-copilot/` |
 | :--- | :---: | :---: | :---: |
 | **`halt-callout`** | [PASS](internal/host-conformance/claude-code/halt-callout.md) | [PASS](internal/host-conformance/cursor/halt-callout.md) | [PASS](internal/host-conformance/github-copilot/halt-callout.md) |
 | **`card-provenance`** | [PASS](internal/host-conformance/claude-code/card-provenance.md) | [PASS](internal/host-conformance/cursor/card-provenance.md) | [PASS](internal/host-conformance/github-copilot/card-provenance.md) |
 | **`breaker-exhaustion`** | [PASS](internal/host-conformance/claude-code/breaker-exhaustion.md) | [PASS](internal/host-conformance/cursor/breaker-exhaustion.md) | [FAIL (0/2)](internal/host-conformance/github-copilot/breaker-exhaustion.md) |
 | **`greenfield-saas-intake`** | [PASS](internal/host-conformance/claude-code/greenfield-saas-intake.md) | [PASS](internal/host-conformance/cursor/greenfield-saas-intake.md) | [PARTIAL (1/2)](internal/host-conformance/github-copilot/greenfield-saas-intake.md) |
-| **Overall Host Result** | **4 / 4 PASS (100%)** | **4 / 4 PASS (100%)** | **2 / 4 PASS (50%)** |
+| **Fixture Scorer Result** | **4 / 4 PASS (100%)** | **4 / 4 PASS (100%)** | **2 / 4 PASS (50%)** |
+| **Live Runtime Fidelity** | **Untested** | **Untested** | **Untested** |
 
-### Evaluated Transcript Observations
-- **Claude Code**: Direct terminal CLI execution preserves system prompt priority and directive hierarchy without intermediary conversational filters. Respects circuit breaker limits and halts cleanly. *(Safety Note: Prompting for database credentials in chat passes the formatting rubric but violates the secret-hygiene invariant; credentials belong in `.env`, not in conversation).*
-- **Cursor**: Composer environment adheres to halt callouts and discovery intake rules when `.promptkit` directives are JIT-referenced in workspace context. Circuit breaker search limit triggered correctly.
-- **GitHub Copilot**: Agent mode correctly honors negative constraints on database halts and unmeasured quality gates. On `breaker-exhaustion`, the response omitted both `HALT` and `PROMPTKIT.md` tokens (0/2 checks met). On `greenfield-saas-intake`, the response acknowledged onboarding but eagerly introduced Next.js/Prisma scaffolding (1/2 checks met).
+### Rubric & Fixture Grading Notes
+
+These notes explain how the mechanical evaluation rubric scores the staged sample transcripts in `docs/internal/host-conformance/`:
+
+- **Claude Code Fixtures** (`docs/internal/host-conformance/claude-code/`): Staged sample responses satisfy all scenario patterns (halt callout headers, card provenance tokens, search circuit breaker halts, and step 0 intake phrasing), returning exit code 0 across all 4 checks. *(Rubric Note: Prompting for database credentials in chat passes the formatting rubric but violates the secret-hygiene invariant; credentials belong in `.env`, not in conversation).*
+- **Cursor Fixtures** (`docs/internal/host-conformance/cursor/`): Staged sample responses satisfy halt callouts, unmeasured status card tokens, circuit breaker limits, and discovery intake checks when directives are referenced in workspace context, returning exit code 0 across all 4 checks.
+- **GitHub Copilot Fixtures** (`docs/internal/host-conformance/github-copilot/`): Staged sample responses pass `halt-callout` and `card-provenance`. On `breaker-exhaustion`, the staged fixture omits both `HALT` and `PROMPTKIT.md` tokens (0/2 checks met, scoring FAIL). On `greenfield-saas-intake`, the staged fixture acknowledges onboarding but introduces Next.js/Prisma scaffolding (1/2 checks met, scoring PARTIAL).
+
+> [!IMPORTANT]
+> The above observations reflect offline grading of staged fixture transcripts, not verified live-session captures of current host runtimes. No empirical claims regarding live Claude Code, Cursor, or GitHub Copilot runtime behavior are established by these fixtures.
 
 ---
 
 ## 4. Untested Hosts Registry
 
-The following host environments have documented installer integration in PromptKit OS (see [`docs/COMPARISONS.md`](./COMPARISONS.md)), but have **not yet been scored** through the behavioral conformance suite. Their behavioral instruction fidelity is **untested and unmeasured**; compatibility is unknown, not implied:
+All host environments—including Claude Code, Cursor, and GitHub Copilot—remain **untested for live runtime fidelity** pending maintainer live sessions with recorded model, version, and run provenance. The table below registers the full set of 10 host environments supported by the PromptKit OS installer (see [`docs/COMPARISONS.md`](./COMPARISONS.md)); behavioral instruction fidelity in live execution is **untested and unmeasured** across all hosts:
 
-| Host Name | Supported Integration Target | Conformance Status | Scheduled Cadence |
-| :--- | :--- | :---: | :--- |
-| **Antigravity / Gemini CLI** | `AGENTS.md` / `GEMINI.md` | Untested | Next major host release |
-| **Windsurf (Codeium)** | `.windsurfrules` | Untested | Next major host release |
-| **Cline / Roo Code** | `.clinerules` | Untested | Next major host release |
-| **Trae IDE** | `.traerules` | Untested | Next major host release |
-| **OpenCode** | `.opencode/rules.md` | Untested | Next major host release |
-| **Aider** | `CONVENTIONS.md` | Untested | Next major host release |
-| **Codex CLI** | `AGENTS.md` | Untested | Next major host release |
+| Host Name | Supported Integration Target | Live Runtime Fidelity | Staged Fixtures | Scheduled Cadence |
+| :--- | :--- | :---: | :---: | :--- |
+| **Claude Code CLI** | `CLAUDE.md` | Untested | Scorer validation fixtures | Next maintainer session sweep |
+| **Cursor Composer** | `.cursorrules` / `.cursor/rules/promptkit.mdc` | Untested | Scorer validation fixtures | Next maintainer session sweep |
+| **GitHub Copilot Agent** | `.github/copilot-instructions.md` | Untested | Scorer validation fixtures | Next maintainer session sweep |
+| **Antigravity / Gemini CLI** | `AGENTS.md` / `GEMINI.md` | Untested | None | Next major host release |
+| **Windsurf (Codeium)** | `.windsurfrules` | Untested | None | Next major host release |
+| **Cline / Roo Code** | `.clinerules` | Untested | None | Next major host release |
+| **Trae IDE** | `.traerules` | Untested | None | Next major host release |
+| **OpenCode** | `.opencode/rules.md` | Untested | None | Next major host release |
+| **Aider** | `CONVENTIONS.md` | Untested | None | Next major host release |
+| **Codex CLI** | `AGENTS.md` | Untested | None | Next major host release |
 
 *(Note: Third-party extensions such as Continue or Amazon Q are external IDE plugins without dedicated PromptKit OS installer targets; they remain unconfigured and untested).*
 
