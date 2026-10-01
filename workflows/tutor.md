@@ -179,6 +179,7 @@ Activate via `pk:grill` (or `/pk-grill`) whenever the developer wants to stress-
 - **Ban Batch Essay Dumps**: Never dump 3+ open-ended essay questions in a single turn asking the developer to reply with `1: ..., 2: ..., etc.`. Batching causes high cognitive friction.
 - **One Probe at a Time**: Walk down the architectural tree one probe at a time, branch-by-branch.
 - **Multiple-Choice Decision Structure**: Every probe must provide concrete options with Option 1 marked `(Recommended)` and trade-off rationale, so the developer can confirm with a single keystroke (`1` / `Enter`) or provide a custom answer.
+- **Session Decision Budget Alignment**: Interactive Type B probes respect the session decision budget (default: 3 per `protocols/code-quality-gate.md`). When the budget is exhausted, remaining probes convert to bounded assumptions with the recommended disposition logged directly in the technical specification, preventing fatigue-driven stalls.
 - **Native Selection Tools**: In environments with interactive tool support (e.g. `ask_question`), invoke the native selection tool directly as a single-selection prompt.
 - **Framed Format & Reply Hint**: In markdown/terminal chat, format each probe as a framed ceiling-and-floor box (`╔═ 🎯GRILL PROBE M/N ═╗`) concluding with the mandatory `👉 Reply: Type '1' for recommended, or write custom answer` prompt line.
 

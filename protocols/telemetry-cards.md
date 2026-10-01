@@ -108,7 +108,7 @@ Provides dual-mode rendering: **Framed Mode** (ceiling-and-floor boxes, default)
 
 ## Mode 2: CLI / Terminal Mode & Framed Mode (Ceiling & Floor Boxes)
 
-Default for terminal tools (Cline, OpenCode, Aider, Windows Terminal, PowerShell, Bash) and available across all IDEs when `card-style: framed` is configured in `PROMPTKIT.md`:
+Default across all hosts when `card-style: framed` is active in `PROMPTKIT.md` (the shipped default), and standard for terminal tools (Cline, OpenCode, Aider, Windows Terminal, PowerShell, Bash). In rich markdown/web IDE chats (e.g. Antigravity, Cursor, Copilot), Mode 1 GFM alerts (`card-style: markdown`) can alternatively be selected for native styled UI cards. When rendering Mode 2 in chat interfaces, wrap in code blocks (````text ... ````) or keep widths bounded (≤60 chars) so variable-width fonts do not wrap ceiling and floor borders.
 
 ### 1. Opening: Clean TL;DR, Changes & Evidence
 ```text

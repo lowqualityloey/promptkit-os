@@ -115,9 +115,9 @@
   - `bash scripts/measure-tokens.sh --strict` passed (BALANCED 2318/2500, LITE 1274/1500).
   - `bash scripts/measure-per-task-tokens.sh --strict` passed (all baselines passed).
   - `bash scripts/check-changelog-entry.sh` passed.
-- **CI Evidence**: `Pending run on PR #503 (https://github.com/lowqualityloey/promptkit-os/pull/503).`
-- **Review Evidence**: `Addresses Issue #502.`
-- **Commit Evidence**: `Commit 1a1bf32 (and follow-up task record sync commit).`
+- **CI Evidence**: `PR #503 (run 36914619782 passed Linux & Windows).`
+- **Review Evidence**: `Addresses Issue #502 and Arena review findings (exact base SHA-256 reproducibility, Session Decision Budget alignment in tutor.md, framed-default wording clarity).`
+- **Commit Evidence**: `Commits 1a1bf32, 68a84eb, and review resolution commit.`
 - **Pull Request Evidence**: `PR #503 (https://github.com/lowqualityloey/promptkit-os/pull/503).`
 - **Release Evidence**: `N/A - no release action in scope.`
 - **Blocker and Resume Condition**: `None.`
