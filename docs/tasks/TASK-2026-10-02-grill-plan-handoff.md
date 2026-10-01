@@ -101,7 +101,7 @@
 - **CI Evidence**: `Pending branch push and PR creation.`
 - **Review Evidence**: `Addresses P2 finding in ChatGPT review of greenfield planning handoffs by tightening pk:grill to pk:plan contract.`
 - **Commit Evidence**: `Pending commit.`
-- **Pull Request Evidence**: `Branch feat/tighten-grill-plan-handoff ready for push and PR creation targeting main.`
+- **Pull Request Evidence**: `Pull Request #496 (https://github.com/lowqualityloey/promptkit-os/pull/496) created targeting main; CI running.`
 - **Release Evidence**: `N/A - no release action in scope.`
 - **Blocker and Resume Condition**: `No implementation blocker. Ready for branch push and PR creation.`
 - **Completion State**: `awaiting_review`
