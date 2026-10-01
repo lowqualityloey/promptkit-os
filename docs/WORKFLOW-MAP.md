@@ -4,7 +4,7 @@ Visual guide to help you quickly find the right workflow for your current task.
 
 ## Lite Map (Onboarding — 5 Nodes)
 
-New users start here. Full 25-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
+New users start here with an introductory 5-node mental model of the development lifecycle (distinct from the Lite installer profile subset: `pk:route`, `pk:debug`, `pk:test`, `pk:commit`, `pk:checkpoint`). Full 25-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
 
 ```text
 pk:route → pk:plan / pk:tasks → pk:debug → pk:commit → pk:checkpoint
@@ -51,7 +51,7 @@ The Adaptation adds evidence and planning guidance without creating a competing 
 | Release readiness and evaluation | `pk:ship` | Evaluates release readiness and preserves the existing release record and rollback boundaries. |
 | External-action approval | Human Release Coordinator | Separately decides tag, publication, remote operation, deployment, and rollback; no workflow or validator authorizes these automatically. |
 
-This matrix is the shared authority reference for `pk:route`, `pk:plan`, and later Adaptation overlays. It records ownership without requiring the later artifact schemas or validator profile. This follow-up is additive to the immutable published `v1.0.0` baseline and is not an approved `v1.1.0` release.
+This matrix is the shared authority reference for `pk:route`, `pk:plan`, and Adaptation workflows across current PromptKit OS releases (v1.10.0). It records ownership without requiring later artifact schemas or external tooling.
 
 <a id="canonical-artifact-contract"></a>
 ## Canonical Artifact Contract
@@ -449,9 +449,12 @@ search → search → search → search → …      (halt and reassess)
 
 ## Workflow Complexity Matrix
 
-Visual guide to workflow depth and time investment:
+Visual guide to workflow depth and operational investment.
 
-| Workflow | Typical Duration | Complexity | Frequency |
+> [!NOTE]
+> Durations are illustrative planning estimates based on interactive turn depth, not empirical measurements. Actual duration varies widely with model capability, network latency, repository scale, and human review turnaround.
+
+| Workflow | Typical Duration (Illustrative Estimate) | Complexity | Frequency |
 |:---|:---|:---|:---|
 | `pk:route` | 10 sec | ⚪ Low | Every session |
 | `pk:sync` | 1-3 min | ⚪ Low | Milestone / session start |
@@ -548,68 +551,68 @@ How workflows feed into each other:
 Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycle without guessing:
 
 ```text
-               [ Inception & Intake ]
-                             │
-            ┌────────────────┴────────────────┐
-            ▼                                 ▼
-         pk:plan                           pk:onboard
-    (Greenfield Intake → RFC)                  (Brownfield Intake)
-            │                                 │
-            └────────────────┬────────────────┘
-                             │
-                             ▼
-                          pk:tasks
-          (Atomic Issues, Gherkin AC & Kanban Sync)
-                             │
-     ┌──────────────────────┼──────────────────────┐
-     ▼                      ▼                      ▼
-  pk:data                pk:auth                 pk:api
-(Relational Schema)    (Session & RBAC)    (Endpoints & Types)
-     │                      │                      │
-     └──────────────────────┼──────────────────────┘
-                            │
-                     [ Implementation ]
-                            │
-     ┌──────────────────────┼──────────────────────┐
-     ▼                      ▼                      ▼
-  pk:test               pk:design               pk:spike
-(Pyramid & Mocks)     (Tokens & A11y)      (Risk Spikes)
-     │                      │                      │
-     └──────────────────────┼──────────────────────┘
-                            │
+                       [ Inception & Intake ]
+                                 │
+                                 ▼
+                             pk:onboard
+                 (Greenfield Intake & Brownfield Scan)
+                                 │
+                                 ▼
+                              pk:plan
+                   (Feature RFC & Design Options)
+                                 │  ◄──────── pk:spike (Resolve Technical Spikes)
+                                 ▼
+                              pk:tasks
+              (Atomic Issues, Gherkin AC & Kanban Sync)
+                                 │
+         ┌───────────────────────┼───────────────────────┐
+         ▼                       ▼                       ▼
+      pk:data                 pk:auth                 pk:api
+   (Relational Schema)     (Session & RBAC)     (Endpoints & Types)
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                         [ Implementation ]
+                                 │
+                 ┌───────────────┴───────────────┐
+                 ▼                               ▼
+              pk:test                        pk:design
+         (Pyramid & Mocks)               (Tokens & A11y)
+                 │                               │
+                 └───────────────┬───────────────┘
+                                 │
                    [ Quality, Debt & Remediation ]
-                             │
-      ┌──────────────┬───────┴───────┬──────────────┐
-      ▼              ▼               ▼              ▼
-   pk:debug       pk:fix        pk:refactor      pk:perf
-(Root Cause)   (Remediation)   (Modernization)  (Profiling)
-      │              │               │              │
-      └──────────────┴───────┬───────┴───────┴──────┘
-                             │
-                         pk:review
-                   (Two-Axis Code Audit)
-                             │
-                         pk:commit
-             (Atomic Conventional Commits)
-                            │
-                         pk:pr
-             (High-Signal PR Descriptions)
-                            │
-                     [ Release & Ops ]
-                            │
-                         pk:ship
-             (Zero-Downtime Deploy & Rollback)
-                            │
-                     [ Knowledge Capture & Handover ]
-                            │
-     ┌──────────────────────┴──────────────────────┐
-     ▼                                             ▼
-   pk:retro                                   pk:checkpoint
-(MADR & Journals)                       (Low-Loss Chat Handover)
+                                 │
+          ┌──────────────┬───────┴───────┬──────────────┐
+          ▼              ▼               ▼              ▼
+       pk:debug       pk:fix        pk:refactor      pk:perf
+    (Root Cause)   (Remediation)   (Modernization)  (Profiling)
+          │              │               │              │
+          └──────────────┴───────┬───────┴──────────────┘
+                                 │
+                             pk:review
+                       (Two-Axis Code Audit)
+                                 │
+                             pk:commit
+                 (Atomic Conventional Commits)
+                                │
+                             pk:pr
+                 (High-Signal PR Descriptions)
+                                │
+                 ┌──────────────┴──────────────┐
+                 ▼                             ▼
+             pk:ship                       pk:retro
+     (Optional L3 Release Eval)       (Milestone Learnings)
 ```
 
 > [!NOTE]
-> **Cross-Cutting Utilities & Meta-Orchestration**: `pk:auto` orchestrates unattended sequential lifecycle chaining (`plan` → `tasks` → code → `test` → `review`) with built-in circuit breakers, test immobility, and a default stop at review-ready. `pk:tutor` (Socratic mentorship & 3-tier progressive hints) and `pk:grill` (Staff Engineer architecture defense drills) operate perpendicularly across all lifecycle phases whenever conceptual guidance or invariant stress-testing is needed. `pk:sync` (hot-reload) and `pk:profile` (runtime Lite/Balanced/Turbo switching) are cross-cutting session utilities outside the lifecycle flow.
+> **Cross-Cutting Utilities, Session Boundaries & Meta-Orchestration**:
+> - `pk:checkpoint` (Low-Loss Chat Handover): Operates across **any** session boundary or context-reset threshold throughout the lifecycle—not just after release.
+> - `pk:spike`: Explores feasibility and resolves high-uncertainty technical risks during design (`pk:plan`) or implementation.
+> - `pk:ship`: Level 3 Release-Critical workflow invoked exclusively when evaluating production releases, tagged distributions, or deployment cutovers under human authorization.
+> - `pk:auto`: Orchestrates unattended sequential lifecycle chaining (`plan` → `tasks` → code → `test` → `review`) with built-in circuit breakers, test immobility, and a default stop at review-ready.
+> - `pk:tutor` (Socratic mentorship & 3-tier progressive hints) and `pk:grill` (Staff Engineer architecture defense drills) operate perpendicularly across all lifecycle phases whenever conceptual guidance or invariant stress-testing is needed.
+> - `pk:sync` (hot-reload) and `pk:profile` (runtime Lite/Balanced/Turbo switching) are cross-cutting session utilities outside the lifecycle flow.
 
 ---
 

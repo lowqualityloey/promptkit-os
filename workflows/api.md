@@ -132,7 +132,7 @@ Avoid writing separate, unlinked TypeScript interfaces on the frontend and backe
 
 ### Step 1: Define API Objectives and Endpoint Contracts
 1. Determine HTTP method, URL pattern, and authentication requirement.
-2. Draft request parameters (Path, Query, and Body) with strict Zod schemas.
+2. Draft request parameters (Path, Query, and Body) with strict validation schemas (e.g. Zod, Pydantic, ArkType, or OpenAPI/JSON Schema).
 
 ### Step 2: Define Success Responses and Pagination
 1. Formulate the success payload structure.
@@ -160,12 +160,12 @@ Avoid writing separate, unlinked TypeScript interfaces on the frontend and backe
 | **200 OK for Errors** | Bypasses HTTP caching, load balancer monitoring, and client error interceptors. | Return accurate 4xx and 5xx status codes. |
 | **Naive Offset Pagination** | Data drift and skipped rows during dynamic collection updates. | Use cursor-based pagination for high-velocity collections. |
 | **Missing Mutation Idempotency** | Double charges or duplicate emails during network retries. | Require and enforce `Idempotency-Key` headers on mutations. |
-| **Hand-Maintained Client Types** | Frontend and backend types drift out of sync silently. | Generate types automatically from Zod schemas or OpenAPI specs. |
+| **Hand-Maintained Client Types** | Frontend and backend types drift out of sync silently. | Generate types automatically from validation schemas or OpenAPI specs. |
 
 ---
 
 ## Completion Criteria
 - Comprehensive API contract generated in `./docs/api/`.
-- Strict request and response Zod schemas documented.
+- Strict request and response validation schemas documented.
 - Complete machine-readable error dictionary established.
 - Pagination model, idempotency rules, and rate limits defined.
