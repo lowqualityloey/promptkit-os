@@ -221,24 +221,24 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
 
 The figures in this section use the `bytes/4` proxy. Issue #194 validated that convention against real tokenizers without replacing it; `bytes/4` remained the gated convention and the validation did not change the published figures at that time.
 
-**Historical snapshot:** The tokenizer comparison below records the 2026-09-28 artifact inputs at `b7e9c8c`; its BYTES4 values are not the current inventory reported above. At the time of issue #194, this validation did not change published figures. Retain this table as historical tokenizer evidence, not as current directive sizes.
+**Current measurement:** The tokenizer comparison below was re-measured 2026-10-01 at `main` @ `e159c70`, superseding the 2026-09-28 `b7e9c8c` snapshot and the earlier 2026-09-16 `1312831` one. Validation only — `bytes/4` remains the gated convention and no published budget figure changed.
 
-**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-09-28 at `main` @ `b7e9c8c` (prior: 2026-09-16 at `1312831`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4.
+**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-10-01 at `main` @ `e159c70` (prior: 2026-09-28 at `b7e9c8c`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4.
 
 | File | BYTES4 | CL100K | O200K | RATIO |
 | :--- | ---: | ---: | ---: | ---: |
-| `templates/agent-directive-template.md` | 2,254 | 2,266 | 2,258 | 1.005 |
-| `templates/agent-directive-lite-template.md` | 1,210 | 1,277 | 1,271 | 1.055 |
-| `workflows/plan.md` | 7,335 | 5,951 | 5,936 | 0.811 |
-| `workflows/route.md` | 9,172 | 7,963 | 7,937 | 0.868 |
-| `workflows/fix.md` | 2,710 | 2,313 | 2,301 | 0.854 |
-| `workflows/ship.md` | 5,493 | 4,355 | 4,359 | 0.793 |
-| `protocols/discovery-intake.md` | 3,939 | 3,459 | 3,447 | 0.878 |
+| `templates/agent-directive-template.md` | 2,318 | 2,328 | 2,318 | 1.004 |
+| `templates/agent-directive-lite-template.md` | 1,274 | 1,341 | 1,334 | 1.053 |
+| `workflows/plan.md` | 7,365 | 5,978 | 5,963 | 0.812 |
+| `workflows/route.md` | 9,263 | 8,039 | 8,013 | 0.868 |
+| `workflows/fix.md` | 2,734 | 2,337 | 2,324 | 0.855 |
+| `workflows/ship.md` | 5,947 | 4,653 | 4,654 | 0.782 |
+| `protocols/discovery-intake.md` | 3,938 | 3,458 | 3,446 | 0.878 |
 
 **Verdict (published as measured):**
 
-- **Gated artifacts are sound.** The Balanced directive matches real tokenizers within 0.5%; Lite understates by ~6% (proxy reads low). The 2500/1500 budget gates therefore guard real cost, not just the proxy.
-- **Workflow/protocol figures are conservative.** The proxy overstates real counts by 12–21% (whitespace, table padding, comments). Published per-task payloads are upper bounds — real costs are lower.
+- **Gated artifacts are sound.** The Balanced directive matches real tokenizers within 0.5%; Lite understates by ~5% (proxy reads low). The 2500/1500 budget gates therefore guard real cost, not just the proxy.
+- **Workflow/protocol figures are conservative.** The proxy overstates real counts by ~14–28% (whitespace, table padding, comments). Published per-task payloads are upper bounds — real costs are lower.
 - **Relative savings hold approximately.** Both sides of each reduction ratio were measured in the same convention, so the overstatement largely cancels; absolute tok figures should be read as conservative estimates.
 - **Encodings agree.** `cl100k_base` vs `o200k_base` differ by ≤1% on every file — no per-host restatement is warranted from this data.
 
