@@ -72,7 +72,7 @@
 - **Start Time**: `2026-10-02`
 - **Current Actor**: `PromptKit maintainer (review/approval) + Antigravity (handoff)`
 - **Branch / Revision**: `feat/brownfield-onboard-preservation-and-truthfulness`
-- **Next Action**: `Commit staged changes, push branch, open pull request, and await maintainer squash-merge.`
+- **Next Action**: `Maintainer review and squash-merge of PR #497 into main.`
 
 ### Transition History
 
@@ -81,6 +81,8 @@
 | N/A | planned | 2026-10-02 | Antigravity | Task initialized upon user approval of ChatGPT review finding. | User prompt |
 | planned | in_progress | 2026-10-02 | Antigravity | Starting implementation of brownfield preservation and truthfulness rules. | Branch feat/brownfield-onboard-preservation-and-truthfulness |
 | in_progress | awaiting_review | 2026-10-02 | Antigravity | Implementation complete, contract tests passing (391/391), token benchmarks updated, all gates passing. | Verification evidence in Section 6 |
+| awaiting_review | in_progress | 2026-10-02 | Antigravity | Addressing PR #497 review findings: intake preservation conflict, DESIGN.md contract assertions, task record reconciliation. | docs/reviews/pr-497.md |
+| in_progress | awaiting_review | 2026-10-02 | Antigravity | Reconciled onboarding contract, added contract assertions, updated task record and benchmarks, ready for maintainer squash-merge. | Verification evidence in Section 6 |
 
 ## 6. Evidence and Completion Gate
 
@@ -94,15 +96,15 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `Bash behavioral contract tests 391/391 PASS; strict token budget PASS (Balanced 2318/2500, Lite 1274/1500); strict per-task measurements PASS (fix 9094/12861, plan 19299/24666, ship 15555/24761); reference validation PASS across 316 Markdown files; execution control validation VALID across 48 records; staged secret scan PASS.`
-- **CI Evidence**: `Pending branch push and PR creation.`
-- **Review Evidence**: `Addresses ChatGPT review findings on brownfield profile preservation and command truthfulness.`
-- **Commit Evidence**: `Pending commit on feat/brownfield-onboard-preservation-and-truthfulness.`
-- **Pull Request Evidence**: `Branch push and PR creation authorized upon clean verification.`
+- **Verification Evidence**: `Bash behavioral contract tests 394/394 PASS; strict token budget PASS (Balanced 2318/2500, Lite 1274/1500); strict per-task measurements PASS (fix 9094/12861, plan 19299/24666, ship 15555/24761); reference validation PASS across 316 Markdown files; execution control validation VALID across 48 records; staged secret scan PASS.`
+- **CI Evidence**: `GitHub Actions run 36885299400 on PR #497: Lint & Validate (Linux) PASS in 3m37s; Lint & Validate (Windows) PASS in 4m48s at commit feea276; follow-up verification pending.`
+- **Review Evidence**: `Addresses ChatGPT review findings in docs/reviews/pr-497.md: eliminated brownfield intake overwrite conflict by preserving confirmed size/intake-status and giving human overrides precedence; added DESIGN.md and confirmed-intake contract test assertions; reconciled task record commit, PR, and CI evidence.`
+- **Commit Evidence**: `Branch commit feea276, plus follow-up review-reconciliation commit on feat/brownfield-onboard-preservation-and-truthfulness.`
+- **Pull Request Evidence**: `Pull Request #497 (https://github.com/lowqualityloey/promptkit-os/pull/497) targeting main; initial CI checks passed.`
 - **Release Evidence**: `N/A - no release action in scope.`
-- **Blocker and Resume Condition**: `No implementation blocker. Awaiting branch push, PR creation, and maintainer squash-merge.`
+- **Blocker and Resume Condition**: `No implementation blocker. Awaiting maintainer review and squash-merge.`
 - **Completion State**: `awaiting_review`
 - **Acceptance Results**: `AC-1 Pass; AC-2 Pass; AC-3 Pass; AC-4 Pass; AC-5 Pass; AC-6 Pass.`
-- **Changed-File Summary**: `Tighten brownfield onboarding preservation and command truthfulness across onboard workflow, contract tests, benchmarks, and changelog.`
+- **Changed-File Summary**: `Tighten brownfield onboarding preservation and command truthfulness across onboard workflow, contract tests, benchmarks, and changelog; reconcile task record and intake preservation instructions.`
 - **Completion Exception**: `None.`
-- **Completion Decision and Timestamp**: `All implementation criteria satisfied on 2026-10-02; ready for commit, branch push, PR creation, and maintainer squash-merge.`
+- **Completion Decision and Timestamp**: `All implementation criteria and review findings satisfied on 2026-10-02; ready for maintainer squash-merge.`

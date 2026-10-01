@@ -196,7 +196,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
 
 2. **Auto-Populate or Update `PROMPTKIT.md`**:
    - **When `./PROMPTKIT.md` does not exist**: Copy `<kit>/templates/project-profile-template.md` to `./PROMPTKIT.md` and populate all sections using findings from Phases 1 and 2.
-   - **When `./PROMPTKIT.md` already exists (Brownfield)**: Update detected fields (toolchain commands, monorepo topology, machine-readable `tracking:`, `size:`, and `intake-status: legacy-partial` lines) while **strictly preserving all existing user-written rules, architectural invariants, custom notes, and overrides**. Never overwrite an existing `PROMPTKIT.md` with a blank template.
+   - **When `./PROMPTKIT.md` already exists (Brownfield)**: Update detected fields (toolchain commands, monorepo topology, missing machine-readable `tracking:`, `size:`, or `intake-status:` lines) while **strictly preserving all existing user-written rules, architectural invariants, custom notes, and human overrides**. If detected commands or topology conflict with explicit human overrides, **human overrides take precedence**. If `size:` or `intake-status:` are already set to confirmed values, **strictly preserves existing confirmed values**; only fill missing or placeholder fields. Never overwrite an existing `PROMPTKIT.md` with a blank template.
    - Project Name inferred from directory or manifest `name`.
    - Active commands configured to the exact detected package manager and runner scripts (labeled as discovered/unverified until executed under a quality gate).
    - If monorepo detected, populate Section 4 (`Monorepo & Workspace Topology`) with the mapped workspace manager, package table, filtered command conventions (`pnpm --filter <pkg>`, `turbo run <cmd> --filter=<pkg>`), and boundary guardrails. If single-package repo, set Section 4 to `N/A (Standalone Repository)`.
@@ -204,11 +204,11 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    - Task tracking system recorded in Section 5 from Step 1b picker (`Local Markdown (docs/tasks/)` default, or `GitHub Issues` / `Jira` / `Linear`). Jira/Linear are manual import / copy-paste with no auto-push; Local Task Record at `docs/tasks/<task-id>.md` remains authoritative and board status is a projection only.
    - Tailored architectural invariants added (e.g. strict TypeScript, zero loose casting, database check constraints, RLS enforcement), preserving existing custom invariants.
    - Ensure `## 0. PromptKit OS Profile` section exists with chosen profile (`lite|balanced|turbo`), machine-readable `profile:` line, and machine-readable `tracking: local|github|jira|linear` line at bottom for agent parsing (from Steps 1 and 1b).
-   - Write the machine-readable `size: small|medium|large` and `intake-status: unanswered|partial|complete` lines below `profile:`: greenfield copies them from the Phase 0 Intake Record (`complete` when closed); brownfield writes best-effort `size:` and `intake-status: legacy-partial` (never `complete` — the scan cannot answer intent slots).
+   - Write the machine-readable `size: small|medium|large` and `intake-status: unanswered|partial|complete` lines below `profile:`: greenfield copies them from the Phase 0 Intake Record (`complete` when closed); brownfield **strictly preserves existing confirmed values** (never overwriting a human-confirmed `size:` or completed `intake-status:`). If `size:` or `intake-status:` is absent or unset, write best-effort estimated `size:` and initialize `intake-status: legacy-partial` (never `complete` — an initial passive scan cannot answer intent slots).
 
 3. **Auto-Populate or Preserve `DESIGN.md` (If Frontend Surfaces Exist)**:
    If UI components are detected (`.tsx`, `.jsx`, `.vue`, `.svelte`):
-   - **When `./DESIGN.md` already exists**: Strictly preserve existing design tokens, themes, brand assets, and custom styling rules; do not overwrite an existing design profile without human confirmation.
+   - **When `./DESIGN.md` already exists**: Strictly preserve existing design tokens, themes, brand assets, and custom styling rules; **never overwrite an existing `DESIGN.md` without explicit human confirmation**.
    - **When `./DESIGN.md` does not exist**:
      - Inspect styling configurations: `tailwind.config.*`, `globals.css`, `components.json` (Shadcn UI).
      - Extract primary brand colors, font families, base radius (`rounded-md`), and typography tokens.
