@@ -8,8 +8,8 @@ Common questions about how DESIGN.md works in PromptKit OS and what happens if y
 
 If you already have a `DESIGN.md` file in your project root:
 - ✅ **It will NOT be overwritten** by init scripts
-- ✅ **It WILL be detected and used** by all workflows
-- ✅ **It becomes the "single source of truth"** for UI/design workflows
+- ✅ **It WILL be detected and referenced** by relevant UI workflows (e.g. `workflows/design-system.md`, `workflows/plan.md`)
+- ✅ **It serves as the reference profile** for styling, brand tokens, and design invariants
 - ✅ **You can customize it however you want**
 
 ---
@@ -345,7 +345,7 @@ export default {
 | **Custom format** | PromptKit adapts to your format |
 | **Want template** | Copy from `<kit>/templates/design-profile-template.md` |
 
-**Your DESIGN.md is completely safe and will be respected by all workflows.** 🎉
+**Your DESIGN.md is preserved during installation and referenced across relevant UI workflows.** 🎉
 
 ---
 

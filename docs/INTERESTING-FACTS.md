@@ -51,17 +51,17 @@ class UserRepository {
 
 ---
 
-### 2. **UUIDv7 as Default (Not UUIDv4)**
-From `examples/saas-dashboard/docs/STATE.md`:
+### 2. **UUIDv7 Recommendation for High-Write Tables**
+From `examples/saas-dashboard/docs/STATE.md` and `workflows/data.md`:
 > "All primary keys use UUIDv7 (not UUIDv4) for time-ordered distributed IDs"
 
 **Why This Matters**:
-- UUIDv4: Random, causes B-tree index fragmentation
-- UUIDv7: Time-ordered, maintains database index locality
-- **Performance impact**: Hypothetically faster inserts at scale due to reduced index fragmentation
+- UUIDv4: Random, causes B-tree index fragmentation under heavy insert volume
+- UUIDv7 (or CUID2): Time-ordered, maintains database index locality (`workflows/data.md:25`)
+- **Performance impact**: Reduces B-tree index fragmentation on append-heavy collections
 - **Bonus**: Sortable by creation time without separate `created_at` column
 
-**Rarely Mentioned**: This is a 2024+ best practice that most tutorials still miss.
+**Design Choice**: While the `saas-dashboard` example sets UUIDv7 as its default, PromptKit OS recommends time-ordered distributed IDs for high-write collections while keeping standard integer/UUID keys project-configurable.
 
 ---
 
@@ -247,12 +247,12 @@ From `workflows/debug.md`:
 ---
 
 ### 13. **"Artifacts Over Conversation"**
-> "Generate `docs/specs/*.md` once. Reference it forever (0 additional tokens)."
+> "Generate `docs/specs/*.md` once. Reference it across sessions with compact pointers."
 
 **The Insight**:
-- Conversations are ephemeral (lost in context window)
+- Conversations are ephemeral (lost in context compaction)
 - Artifacts are permanent (git-tracked)
-- Write once, reference forever
+- Referencing a stable specification avoids re-deriving architecture on every turn (though reading an artifact still consumes tokens for the bytes loaded)
 
 ---
 
@@ -269,42 +269,42 @@ From `workflows/tutor.md`:
 
 ## 🔬 Hidden Technical Details
 
-### 15. **Row-Level Security (RLS) is Non-Negotiable**
+### 15. **Row-Level Security (RLS) for Multi-Tenant Isolation**
 From multiple workflows:
 
 **What is RLS?**:
-- PostgreSQL feature: enforce multi-tenant isolation at DB layer
-- Prevents "WHERE tenant_id = ?" bugs (developer forgets it)
-- Database enforces it automatically
+- PostgreSQL feature: enforce multi-tenant isolation at the database layer
+- Mitigates accidental leaks when a developer omits `WHERE tenant_id = ?`
+- Enforces isolation rules directly at the query execution level
 
-**Why PromptKit Mandates It**:
-- Most SaaS apps have tenant isolation bugs
-- RLS makes it **impossible** to query wrong tenant's data
-- "Defense in depth" at the lowest layer
+**Why PromptKit Mandates It for Multi-Tenant SaaS**:
+- Most SaaS apps have tenant isolation bugs when relying solely on app-layer filtering
+- RLS provides **defense in depth** at the data layer
+- *Caveat*: Superusers, `BYPASSRLS` roles, and table owners can bypass RLS ([PostgreSQL RLS docs](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)); least-privilege connection pooling remains strictly required (`workflows/data.md`)
 
 ---
 
-### 16. **HttpOnly Cookies (Not localStorage)**
+### 16. **HttpOnly Cookies with Multi-Layer CSRF Defense**
 From `workflows/auth.md` and examples:
 
 **Why localStorage is Dangerous**:
-- Vulnerable to XSS attacks
-- JavaScript can read it
+- Vulnerable to XSS token theft
+- JavaScript can read it directly
 - No secure/httpOnly flags
 
-**Why HttpOnly Cookies**:
-- Browser sends automatically
-- JavaScript **cannot** read (Mitigates XSS token theft)
-- SameSite=Lax prevents CSRF
+**Why HttpOnly Cookies + Defense in Depth**:
+- Browser attaches cookies automatically
+- JavaScript **cannot** read them (mitigating XSS token theft)
+- `SameSite=Lax` mitigates standard cross-site request forgery, but is **incomplete on its own** (`workflows/auth.md:41-43`); state-mutating requests require anti-CSRF tokens or custom headers (`X-Requested-With`) per MDN CSRF guidance
 
-**PromptKit's Stance**: This is non-negotiable in `PROMPTKIT.md` examples.
+**PromptKit's Stance**: This multi-layer defense is required in `PROMPTKIT.md` examples.
 
 ---
 
-### 17. **Cursor Pagination (Not Offset)**
+### 17. **Cursor Pagination for High-Velocity Collections**
 From `workflows/api.md`:
 
-**Why Offset Pagination Breaks**:
+**Why Offset Pagination Breaks on Dynamic Data**:
 ```sql
 -- Page 2: OFFSET 20 LIMIT 10
 -- If item deleted, results shift, duplicates appear
@@ -317,7 +317,7 @@ ORDER BY created_at
 LIMIT 10
 ```
 
-**PromptKit Recommends**: Cursor-based for all list endpoints
+**PromptKit Guidance**: Cursor-based pagination is recommended for high-velocity collections, feeds, and append-heavy logs (`workflows/api.md:161`); simple offset pagination remains permissible for small, static administrative listings.
 
 ---
 
@@ -345,14 +345,14 @@ switch (state.status) {
 
 ---
 
-### 19. **Zod for Runtime Validation (Not Just TypeScript)**
-From `examples/saas-dashboard`:
+### 19. **Runtime Schema Validation (Not Just Compile-Time Types)**
+From `examples/saas-dashboard` and `templates/api-contract-spec.md`:
 
 **Why Both?**:
 - TypeScript: Compile-time safety
-- Zod: Runtime validation (external inputs)
+- Runtime validation (Zod, Pydantic, ArkType): Validates untrusted external inputs at runtime
 
-**The Pattern**:
+**The Pattern (TypeScript + Zod Example)**:
 ```typescript
 const UserSchema = z.object({
   email: z.string().email(),
@@ -362,7 +362,7 @@ const UserSchema = z.object({
 type User = z.infer<typeof UserSchema>; // TypeScript type from Zod
 ```
 
-**PromptKit Insight**: All external boundaries (API, forms) must validate with Zod.
+**PromptKit Insight**: All external boundaries (API endpoints, webhook payloads, forms) must validate with strict runtime schemas (Zod in TypeScript, Pydantic in Python, or your project's native schema validator).
 
 ---
 
@@ -494,9 +494,9 @@ Main Agent: Synthesize comparison
 ```
 
 **Why This is Advanced**:
-- Parallel execution (3× faster)
-- Isolated contexts (no pollution)
-- Most AI tools don't support this
+- Parallel exploration across isolated context windows
+- Main context stays lean and focused (synthesized findings only)
+- Supported by subagent-capable hosts via `protocols/subagent-delegation.md`
 
 ---
 
@@ -529,27 +529,27 @@ These are example figures from a fictional project used to show what a PromptKit
 ---
 
 ### 32. **Zero Lock-In (Pure Markdown)**
-- No binary to install
-- No npm dependency
-- No VS Code extension required
-- Just markdown files
+- No mandatory background daemon
+- No vendor lock-in or proprietary schema
+- Plain Git-tracked Markdown and shell/PowerShell helpers
 
-**Rollback**: Delete `.promptkit/` directory (done)
+**Rollback**: Remove `.promptkit/` and configuration file pointers per `docs/ADOPTION-GUIDE.md` Rollback Plan.
 
 ---
 
-### 33. **Works Across ALL AI Assistants**
-- Claude Code ✅
-- Cursor ✅
-- Windsurf ✅
-- GitHub Copilot ✅
-- Cline / Roo Code ✅
-- Trae IDE ✅
-- OpenCode ✅
-- Gemini CLI ✅
-- Aider ✅
+### 33. **Installer Support Across Leading AI Assistants**
+PromptKit OS ships tested automated installers (`init.sh` and `init.ps1`) targeting the configuration surfaces of leading AI assistants:
+- Claude Code (`CLAUDE.md`)
+- Cursor (`.cursorrules` / `.cursor/rules/promptkit.mdc`)
+- Windsurf (`.windsurfrules`)
+- GitHub Copilot (`.github/copilot-instructions.md`)
+- Cline / Roo Code (`.clinerules`)
+- Trae IDE (`.traerules`)
+- OpenCode (`.opencode/rules.md`)
+- Gemini CLI / Antigravity (`GEMINI.md` / `AGENTS.md`)
+- Aider (`CONVENTIONS.md`)
 
-**Why**: It's just markdown instructions, not proprietary format.
+*Note*: Installer configuration support provisions directive blocks on disk; live model runtime instruction fidelity is evaluated separately through offline scorer fixtures (see `docs/HOST-CONFORMANCE.md`).
 
 ---
 

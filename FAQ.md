@@ -44,10 +44,10 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 
 ## 2. Will this actually save me time or add overhead?
 
-**Short Answer**: It speeds you up after the first week. Setup takes 10 minutes, payback period is 36 minutes.
+**Short Answer**: Setup takes ~10 minutes, and structured workflows reduce trial-and-error debugging and rework.
 
 **Time Investment**:
-- Setup: 10 minutes (run init script)
+- Setup: ~10 minutes (run init script)
 - Learning curve: 2-3 hours (first week)
 
 **What feels slower initially**:
@@ -58,8 +58,8 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 **What's actually faster long-term**:
 - Fewer debugging cycles (systematic hypothesis testing vs trial-and-error)
 - Higher first-attempt success (spec-first planning reduces rework)
-- **Zero context loss** (pk:checkpoint preserves state)
-- **No more "what was I doing?"** (STATE.md tracks everything)
+- **Durable context preservation** (pk:checkpoint persists state in `docs/STATE.md`; unrecorded in-flight chat reasoning remains ephemeral per `protocols/context-sync.md:123`)
+- **No more "what was I doing?"** (STATE.md tracks active working sets and tasks)
 
 **Why the tradeoff pays off**:
 
@@ -75,22 +75,22 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 
 ## 3. Does this work with my AI assistant?
 
-**Short Answer**: Yes, works with all major AI assistants.
+**Short Answer**: Yes, PromptKit OS ships automated installers for configuration surfaces across leading AI assistants.
 
-| AI Assistant | Compatibility | Configuration File |
-|:-------------|:--------------|:-------------------|
-| **Claude Code** | ✅ Native | `CLAUDE.md` |
-| **Cursor** | ✅ Native | `.cursor/rules/promptkit.mdc` or `.cursorrules` |
-| **Cline / Roo Code** | ✅ Native | `.clinerules` |
-| **Windsurf** | ✅ Native | `.windsurfrules` |
-| **Trae IDE** | ✅ Native | `.traerules` |
-| **OpenCode** | ✅ Native | `.opencode/rules.md` |
-| **GitHub Copilot** | ✅ Native | `.github/copilot-instructions.md` |
-| **Gemini CLI / Antigravity** | ✅ Native | `GEMINI.md` or `AGENTS.md` |
-| **Aider** | ✅ Compatible | `CONVENTIONS.md` or manual read |
-| **Any AI chat** | ✅ Copy-paste | Manual workflow reference |
+| AI Assistant | Installer Configuration | Configuration Target |
+|:-------------|:------------------------|:---------------------|
+| **Claude Code** | ✅ Automated | `CLAUDE.md` |
+| **Cursor** | ✅ Automated | `.cursor/rules/promptkit.mdc` or `.cursorrules` |
+| **Cline / Roo Code** | ✅ Automated | `.clinerules` |
+| **Windsurf** | ✅ Automated | `.windsurfrules` |
+| **Trae IDE** | ✅ Automated | `.traerules` |
+| **OpenCode** | ✅ Automated | `.opencode/rules.md` |
+| **GitHub Copilot** | ✅ Automated | `.github/copilot-instructions.md` |
+| **Gemini CLI / Antigravity** | ✅ Automated | `GEMINI.md` or `AGENTS.md` |
+| **Aider** | ✅ Automated | `CONVENTIONS.md` or manual read |
+| **Any AI chat** | ✅ Manual | Manual workflow reference |
 
-**Why it's universal**: PromptKit is pure markdown instructions, not proprietary tool-specific formats.
+**Architecture**: PromptKit instructions are plain Markdown files with shell/PowerShell helpers, avoiding proprietary formats. Note: automated installers configure files on disk; live model runtime instruction fidelity is evaluated separately through offline scorer fixtures (see [`docs/HOST-CONFORMANCE.md`](docs/HOST-CONFORMANCE.md)).
 
 **Setup**: Init script detects your assistant and configures automatically.
 
@@ -202,9 +202,9 @@ Team of 8:
 
 ## 6. Do I really need to write all this documentation?
 
-**Short Answer**: No. Documentation is **optional** and **generated** for you. Minimum usage requires zero documentation.
+**Short Answer**: No. You do not need to manually author specs or ADRs. Minimum usage requires zero manual documentation authoring; workflows like `pk:checkpoint` persist state to `docs/STATE.md` automatically.
 
-**Minimum PromptKit** (zero documentation):
+**Minimum PromptKit** (zero manual documentation authoring):
 ```bash
 # Just use workflows:
 pk:debug - Fix this race condition
@@ -248,64 +248,28 @@ You: [Reviews, edits, commits]
 
 ---
 
-## 7. Is 60-70% token savings realistic or marketing?
+## 7. How do token economics and benchmarks work in PromptKit OS?
 
-**Short Answer**: These are modeled scenario estimates, not telemetry from a production dashboard. The methodology and assumptions are transparent and verifiable.
+**Short Answer**: PromptKit OS measures static directive payloads and per-task payload savings mechanically in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md). Conversational scenario estimates and dollar examples are illustrative models based on workflow design assumptions, not production telemetry.
 
-**How the numbers are derived**: These are modeled scenario estimates that compare typical developer-AI interaction patterns (guess-and-patch debugging loops, scattered planning conversations, repeated context re-explanations) against the structured workflow equivalents. They are not telemetry from a production dashboard.
+**Mechanically Measured Benchmarks** (from `docs/BENCHMARKS.md`):
+- **Static Directives**: ~1,274 tokens (Lite) and ~2,318 tokens (Balanced) at bytes/4 convention, saving 91–95% vs inlining workflows statically.
+- **Dynamic Per-Task Payloads**: JIT loading saves 22% to 37% (Balanced) and 26% to 41% (Lite) vs historical monolithic pre-load baselines across `pk:fix`, `pk:plan`, and `pk:ship`.
 
-**Modeled Token Reduction** (scenario estimates, not measured telemetry):
+**Illustrative Scenario Models** (modeled assumptions, not production telemetry):
+The table below illustrates potential token reduction when structured workflows eliminate multi-turn guess-and-patch loops or repetitive context re-explanations:
 
-| Scenario | Without PromptKit | With PromptKit | Modeled Savings |
-|:---------|:------------------|:---------------|:----------------|
-| **Bug fix** | 8,000 tokens | 1,200 tokens | **85%** |
-| **Feature planning** | 12,000 tokens | 2,500 tokens | **79%** |
-| **Code review** | 4,500 tokens | 1,300 tokens | **71%** |
-| **Context handover** | 3,000 tokens | 600 tokens | **80%** |
-| **Learning session** | 3,000 tokens | 300 tokens | **90%** |
-| **Average** | - | - | **60-70%** |
+| Scenario | Without PromptKit (Hypothetical) | With PromptKit (Modeled) | Modeled Savings |
+|:---------|:---------------------------------|:-------------------------|:----------------|
+| **Bug fix** | ~8,000 tokens | ~1,200 tokens | **~85%** |
+| **Feature planning** | ~12,000 tokens | ~2,500 tokens | **~79%** |
+| **Code review** | ~4,500 tokens | ~1,300 tokens | **~71%** |
+| **Context handover** | ~3,000 tokens | ~600 tokens | **~80%** |
+| **Learning session** | ~3,000 tokens | ~300 tokens | **~90%** |
 
-**Why it works**:
+*Note*: The figures above are scenario-based illustrations comparing unstructured conversational churn with structured JIT artifacts. Actual session token usage depends on model host, task scope, prompt length, and tool calls. Dollar cost projections are illustrative assumptions based on hypothetical API token rates.
 
-1. **Eliminates guess-and-patch loops** (85% savings)
-   - No more "try this... that didn't work... try this..."
-   - Systematic debugging finds root cause on first attempt
-
-2. **Subagent delegation** (up to ~98% context preservation)
-   - Heavy exploration happens in subagents
-   - Main context stays lean and focused
-
-3. **Artifacts over conversation** (80% savings)
-   - Write spec once → reference forever
-   - No re-explaining project context in future sessions
-
-4. **Socratic teaching** (90% savings)
-   - 3-tier progressive hints (300 tokens)
-   - Not complete solutions (1,500 tokens)
-
-**Cost impact**:
-
-```text
-Monthly cost (typical developer):
-- Without PromptKit: $12.00/month
-- With PromptKit: $3.60/month
-- Savings: $8.40/month = $100.80/year per developer
-
-For 10-person team: $1,008/year saved
-For 50-person team: $5,040/year saved
-```
-
-**How to verify yourself**:
-```bash
-# Before PromptKit (1 week baseline):
-# Track your AI assistant usage/tokens
-
-# After PromptKit (2 weeks later):
-# Compare same metrics
-# Expected: 50-70% reduction
-```
-
-**Not marketing. Modeled estimates based on workflow design principles.**
+For verifiable, reproducible measurements, see [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
 
 ---
 
@@ -329,10 +293,10 @@ pk:checkpoint
 ```
 
 **This alone gets you**:
-- ✅ 85% token reduction on debugging
-- ✅ Context preservation across sessions
-- ✅ No documentation burden
-- ✅ Immediate measurable value
+- ✅ Systematic hypothesis-driven debugging (eliminating guess-and-patch loops)
+- ✅ State persistence across sessions via `docs/STATE.md`
+- ✅ No manual documentation burden
+- ✅ Immediate structured workflow discipline
 
 **Optional additions** (add gradually):
 - Week 2: Add `pk:commit` (clean git history)
@@ -405,7 +369,7 @@ cp .promptkit/workflows/debug.md ~/my-notes/debugging-method.md
 
 ## 10. What if something breaks or doesn't work?
 
-**Short Answer**: PromptKit is markdown files, not code: very little can break. Here's how to troubleshoot.
+**Short Answer**: PromptKit OS workflows are plain Markdown files with shell and PowerShell setup helpers: very little can break. Here's how to troubleshoot.
 
 **Common scenarios**:
 
@@ -496,7 +460,7 @@ Remember: **AI assistants aren't perfect**. PromptKit structures their reasoning
 
 ## 12. Does PromptKit OS waste tokens by loading all workflows into every prompt?
 
-**Short Answer**: No. PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture** with zero static token bloat.
+**Short Answer**: No. PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture** with a measured lean static directive footprint rather than inlining entire workflow suites into every prompt.
 
 **How it works**:
 - **Baseline footprint**: Initialization scripts inject only a lean router directive into your configuration file (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, etc.) — current measured footprints live in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
@@ -540,7 +504,7 @@ For complete line-by-line token breakdowns and mathematical analysis, see [docs/
 **How isolation is enforced**:
 - **Project-Scoped Containers**: Database operations (`pk:data`), schema migrations, seeders, and integration test runners (`pk:test`) are strictly prohibited from attaching to shared or foreign host containers (e.g. `api-db-1` or sibling project instances like `jobtracker`).
 - **Explicit Harness Targets**: Test and migration commands must target project-scoped instances (such as `./docker-compose.yml` or dedicated `project-db` containers defined in `PROMPTKIT.md` / `.env.test`).
-- **Zero Accidental Contamination**: Prevents test suites or destructive migration scripts from truncating tables, applying schema changes, or dropping databases in neighboring projects.
+- **Accidental Contamination Guardrails**: Establishes instruction-level and harness-target guardrails preventing test suites or destructive migration scripts from truncating tables, applying schema changes, or dropping databases in neighboring projects (note: live isolation ultimately relies on project-scoped Docker/env configuration and host network boundaries).
 
 ---
 
@@ -639,6 +603,6 @@ For full playbook details, see [docs/stacks/](docs/stacks/) and [docs/recipes/](
 
 ---
 
-**Last Updated**: 2026-09-18  
-**Version**: 1.7.0  
+**Last Updated**: 2026-10-02  
+**Version**: 1.10.0  
 **Maintainer**: [@lowqualityloey](https://github.com/lowqualityloey)
