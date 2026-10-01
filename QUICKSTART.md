@@ -4,7 +4,7 @@ Welcome! This guide gets you productive with PromptKit OS in 5 minutes using the
 
 ---
 
-## Step 1: Installation (30 seconds)
+## Step 1: Installation (10 seconds)
 
 ### One-Command Setup (Recommended)
 

@@ -102,6 +102,7 @@ Prompt your assistant naturally or invoke fast shorthand triggers:
 
 | Command | Purpose | When to Use |
 |:---|:---|:---|
+| `pk:route` | **Task Intake** | Classifies incoming tasks into Ceremony Levels 0–3 and routes to the right workflow |
 | `pk:onboard` | **Project Discovery** | First install on greenfield or brownfield codebases; detects stack & sets rules |
 | `pk:plan` | **Feature RFC** | Designing architectural changes, data contracts, and schema boundaries |
 | `pk:test` | **Test Strategy & TDD** | Allocating seams, mocking boundaries, and writing tests before code |
@@ -114,9 +115,9 @@ Prompt your assistant naturally or invoke fast shorthand triggers:
 PromptKit standardizes agent telemetry into clean 3-line status cards without verbose conversational fluff:
 
 ```text
-> 📊 Milestone: 02-user-auth [■■■■□□] 66%
-> 🎯 Active: Task 2.3 — Implement JWT refresh token rotation
-> 🟢 Quality Gate: PASS (flutter test: 14 passed, exit 0)
+> 📊 **Milestone**: 02-user-auth [■■■■□□] 4/6 — source: STATE.md read this turn
+> 🎯 **Active**: Task 2.3 — Implement JWT refresh token rotation
+> 🟢 **Quality Gate**: measured this turn (flutter test: 14 passed, exit 0)
 ```
 
 ---
@@ -263,7 +264,7 @@ PromptKit's own CI validates on every PR across Linux and Windows:
 
 - Workflow and documentation reference integrity (`validate-references.sh`)
 - Static token budget gates — Balanced ≤ 2,500 tok, Lite ≤ 1,500 tok (`measure-tokens.sh --strict`)
-- Behavioral contract compliance — 394/394 tests (`run-behavioral-contract-tests.sh`)
+- Behavioral contract compliance — all behavioral contract tests pass (live count in CI) (`run-behavioral-contract-tests.sh`)
 - Playbook & recipe contracts — 24/24 (16 stack playbooks + 8 boundary recipes) (`run-playbook-contract-tests.sh`)
 
 PromptKit applies its own engineering principles to itself.
