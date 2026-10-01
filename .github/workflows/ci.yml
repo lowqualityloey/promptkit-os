@@ -47,6 +47,7 @@ jobs:
           bash -n scripts/isolate-worktree.sh
           bash -n scripts/tests/run-worktree-isolation-tests.sh
           bash -n scripts/tests/run-profile-matrix.sh
+          bash -n scripts/tests/run-terminal-picker-tests.sh
           bash -n scripts/tests/release-records.examples.sh
           echo "Bash scripts parsed with 0 syntax errors."
 
@@ -73,6 +74,9 @@ jobs:
 
       - name: Run init Profile Matrix Tests (Bash)
         run: bash scripts/tests/run-profile-matrix.sh
+
+      - name: Run Installer Terminal Picker Tests (Bash)
+        run: bash scripts/tests/run-terminal-picker-tests.sh
 
       - name: Run Agent Execution Control Fixture Harness (Bash)
         run: bash scripts/tests/run-execution-control-fixtures.sh
@@ -192,6 +196,7 @@ jobs:
         run: |
           $syntaxFiles = @(
             "init.ps1",
+            "scripts/terminal-picker.ps1",
             "scripts/measure-tokens.ps1",
             "scripts/measure-tokenizer-delta.ps1",
             "scripts/validate-execution-control.ps1",
@@ -216,6 +221,7 @@ jobs:
             "scripts/isolate-worktree.ps1",
             "scripts/tests/run-worktree-isolation-tests.ps1",
             "scripts/tests/run-profile-matrix.ps1",
+            "scripts/tests/run-terminal-picker-tests.ps1",
             "scripts/tests/release-records.examples.ps1"
           )
           foreach ($file in $syntaxFiles) {
@@ -259,6 +265,10 @@ jobs:
       - name: Run init Profile Matrix Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-profile-matrix.ps1
+
+      - name: Run Installer Terminal Picker Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-terminal-picker-tests.ps1
 
       - name: Run Agent Execution Control Fixture Harness (PowerShell)
         shell: pwsh

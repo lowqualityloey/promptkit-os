@@ -28,10 +28,7 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit 
 # (Windows PowerShell: .\.promptkit\init.ps1)
 ```
 
-The installer launches an **interactive terminal menu** that guides you through:
-1. **Profile**: `1) Lite` (fastest onboarding, 6 workflows) or `2) Balanced` (default, full 25-workflow suite).
-2. **AI Assistant**: Automatically configures `.cursorrules`, `CLAUDE.md`, `.windsurfrules`, `.clinerules`, or `.github/copilot-instructions.md`.
-3. **Tracker**: Local Markdown (`docs/tasks/`) or GitHub Issues.
+In an interactive terminal, the wizard uses arrow keys and Enter for profile and task-tracker choices, then Space and Enter to choose AI-host files. A final review lets you edit a choice, install, or cancel. Existing settings are kept on reruns; command-line flags remain available for automated installs.
 
 *(For CI pipelines or headless scripts, pass flags directly: `--balanced`, `--lite`, `--host=<name>`.)*
 
@@ -200,7 +197,7 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit 
 # (Windows PowerShell: .\.promptkit\init.ps1)
 ```
 
-The installer launches an interactive visual menu to configure your profile (Lite vs Balanced), your AI assistant (Cursor, Claude, Copilot, Windsurf, etc.), and your task tracker.
+In an interactive terminal, use ↑/↓ and Enter for profile and task-tracker choices, then Space and Enter to toggle AI-host files. The final review lets you edit a choice, install, or cancel. Existing settings are kept on reruns.
 
 <details>
 <summary>Non-Interactive / CI Flags</summary>

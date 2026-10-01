@@ -6,6 +6,196 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIR_NAME="$(basename "$SCRIPT_DIR")"
+source "$SCRIPT_DIR/scripts/terminal-picker.sh"
+
+show_setup_banner() {
+    [[ "$PICKER_TTY" -eq 1 ]] || return 0
+    PK_PICKER_BANNER_PATH="$SCRIPT_DIR/templates/terminal-banner.txt"
+    PK_PICKER_BANNER_ACTIVE=1
+}
+
+PICKER_TTY=0
+if [[ -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}" && "${TERM:-}" != "dumb" ]]; then
+    PICKER_TTY=1
+fi
+PROFILE_INTERACTIVE=0
+TRACKING_INTERACTIVE=0
+HOST_INTERACTIVE=0
+
+cancel_setup() {
+    printf '\nSetup cancelled before any project files were changed.\n'
+    exit 130
+}
+
+choose_profile() {
+    local choice attempts=0 default_index=0
+    case "$PROFILE" in lite) default_index=1 ;; turbo) default_index=2 ;; esac
+    if [[ "$PICKER_TTY" -eq 1 ]]; then
+        pk_picker_single "Choose your profile" "Balanced is the recommended default. Turbo needs a second confirmation." "$default_index" \
+            "Balanced — Recommended default; full workflow set" \
+            "Lite — Six core workflows for a lighter setup" \
+            "Turbo — Experimental parallel workflows; higher token cost"
+        [[ "$PK_PICKER_ACTION" == cancel ]] && cancel_setup
+        case "$PK_PICKER_RESULT" in
+            0) PROFILE="balanced" ;;
+            1) PROFILE="lite" ;;
+            2)
+                printf '\nTurbo is experimental and can use up to ~2x measured token cost.\n'
+                read -r -p "Acknowledge this and enable Turbo? [y/N]: " choice
+                [[ "$choice" =~ ^[Yy]$ ]] || { PROFILE="balanced"; PROFILE_SET=1; PROFILE_INTERACTIVE=1; return 0; }
+                PROFILE="turbo"; EXPERIMENTAL=1 ;;
+        esac
+    else
+        while true; do
+            printf '\n◉ Profile\n  1) Balanced — Recommended default; full workflow set\n  2) Lite — Six core workflows\n  3) Turbo — Experimental; higher token cost\n'
+            read -r -p "Choose 1-3 (Enter for Balanced, q to cancel): " choice
+            [[ "$choice" =~ ^[Qq]$ ]] && cancel_setup
+            case "$choice" in
+                ""|1) PROFILE="balanced"; break ;;
+                2) PROFILE="lite"; break ;;
+                3)
+                    read -r -p "Turbo is experimental and costs more. Continue? [y/N]: " choice
+                    if [[ "$choice" =~ ^[Yy]$ ]]; then PROFILE="turbo"; EXPERIMENTAL=1; else PROFILE="balanced"; fi
+                    break ;;
+                *) attempts=$((attempts + 1)); printf 'Please enter 1, 2, or 3.\n'; [[ "$attempts" -lt 3 ]] || cancel_setup ;;
+            esac
+        done
+    fi
+    PROFILE_SET=1
+    PROFILE_INTERACTIVE=1
+}
+
+choose_tracking() {
+    local choice attempts=0 default_index=0
+    case "$TRACKING" in github) default_index=1 ;; jira) default_index=2 ;; linear) default_index=3 ;; esac
+    if [[ "$PICKER_TTY" -eq 1 ]]; then
+        pk_picker_single "Choose task tracking" "Local works offline. GitHub can mirror local task records." "$default_index" \
+            "Local Markdown — Recommended; stored in docs/tasks/" \
+            "GitHub Issues — Requires GitHub setup" \
+            "Jira — Manual import; no automatic push" \
+            "Linear — Manual import; no automatic push"
+        [[ "$PK_PICKER_ACTION" == cancel ]] && cancel_setup
+        case "$PK_PICKER_RESULT" in
+            0) TRACKING="local" ;;
+            1) TRACKING="github" ;;
+            2) TRACKING="jira" ;;
+            3) TRACKING="linear" ;;
+        esac
+        if [[ "$TRACKING" == "local" ]]; then
+            local defaults=""
+            [[ "$TRACKING_PROJECTION" == "github" ]] && defaults=github
+            pk_picker_multi "Local task projection" "Optional checkbox. Space toggles it; Enter keeps the setting." "$defaults" \
+                github "Also project local tasks to GitHub Issues"
+            [[ "$PK_PICKER_ACTION" == cancel ]] && cancel_setup
+            TRACKING_PROJECTION="$PK_PICKER_RESULT"
+        else
+            TRACKING_PROJECTION=""
+        fi
+    else
+        while true; do
+            printf '\n▣ Task tracking\n  1) Local Markdown — Recommended; docs/tasks/\n  2) GitHub Issues\n  3) Jira — manual import\n  4) Linear — manual import\n  1,2) Local Markdown + GitHub projection\n'
+            read -r -p "Choose 1-4 or 1,2 (Enter for Local, q to cancel): " choice
+            [[ "$choice" =~ ^[Qq]$ ]] && cancel_setup
+            case "$choice" in
+                ""|1) TRACKING=local; TRACKING_PROJECTION=""; break ;;
+                1,2|2,1) TRACKING=local; TRACKING_PROJECTION=github; break ;;
+                2) TRACKING=github; TRACKING_PROJECTION=""; break ;;
+                3) TRACKING=jira; TRACKING_PROJECTION=""; break ;;
+                4) TRACKING=linear; TRACKING_PROJECTION=""; break ;;
+                *) attempts=$((attempts + 1)); printf 'Please enter one of the listed choices exactly.\n'; [[ "$attempts" -lt 3 ]] || cancel_setup ;;
+            esac
+        done
+    fi
+    TRACKING_SET=1
+    TRACKING_INTERACTIVE=1
+}
+
+choose_hosts() {
+    local choice attempts=0 token invalid
+    local -a ids=(claude opencode cursor gemini windsurf copilot cline trae aider)
+    local -a labels=("Claude Code" "OpenCode" "Cursor" "Gemini CLI" "Windsurf" "GitHub Copilot" "Cline" "Trae" "Aider")
+    if [[ "$PICKER_TTY" -eq 1 ]]; then
+        local defaults
+        if [[ "$HOST_INTERACTIVE" -eq 1 ]]; then
+            defaults="$HOSTS"
+            [[ "$defaults" == agents ]] && defaults=""
+        else
+            defaults="${DETECTED_HOSTS// /,}"
+            [[ -n "$defaults" ]] || defaults=claude
+        fi
+        local picker_args=() i
+        for i in "${!ids[@]}"; do picker_args+=("${ids[$i]}" "${labels[$i]}"); done
+        pk_picker_multi "Choose AI hosts" "Space toggles host-specific files. Select none for universal AGENTS.md only." "$defaults" "${picker_args[@]}"
+        [[ "$PK_PICKER_ACTION" == cancel ]] && cancel_setup
+        HOSTS="$PK_PICKER_RESULT"
+        [[ -n "$HOSTS" ]] || HOSTS=agents
+    else
+        while true; do
+            printf '\n◆ AI hosts (comma-separated numbers; 0 = universal AGENTS.md only)\n'
+            local i=0
+            for token in "${ids[@]}"; do i=$((i + 1)); printf '  %s) %s\n' "$i" "${labels[$((i - 1))]}"; done
+            printf '  Enter keeps detected hosts; if none are detected, Claude Code is the default.\n'
+            read -r -p "Choose hosts (q to cancel): " choice
+            [[ "$choice" =~ ^[Qq]$ ]] && cancel_setup
+            if [[ -z "$choice" ]]; then HOSTS="${DETECTED_HOSTS// /,}"; [[ -n "$HOSTS" ]] || HOSTS=claude; break; fi
+            if [[ "$choice" == 0 ]]; then HOSTS=agents; break; fi
+            invalid=0; HOSTS=""
+            IFS=',' read -r -a selected_numbers <<< "$choice"
+            for token in "${selected_numbers[@]}"; do
+                token="${token//[[:space:]]/}"
+                if [[ ! "$token" =~ ^[1-9]$ ]] || [[ "$token" -gt "${#ids[@]}" ]]; then invalid=1; break; fi
+                local host="${ids[$((token - 1))]}"
+                [[ ",$HOSTS," == *",$host,"* ]] || HOSTS="${HOSTS:+$HOSTS,}$host"
+            done
+            [[ "$invalid" -eq 0 ]] && break
+            attempts=$((attempts + 1)); printf 'Invalid choice. Enter only host numbers from 1 to %s.\n' "${#ids[@]}"
+            [[ "$attempts" -lt 3 ]] || cancel_setup
+        done
+    fi
+    HOST_SET=1
+    HOST_INTERACTIVE=1
+}
+
+review_setup() {
+    local selection selected_profile selected_tracking selected_hosts
+    local -a items=() actions=()
+    [[ "$PROFILE_INTERACTIVE" -eq 1 ]] && { items+=("Edit profile"); actions+=(profile); }
+    [[ "$TRACKING_INTERACTIVE" -eq 1 ]] && { items+=("Edit task tracking"); actions+=(tracking); }
+    [[ "$HOST_INTERACTIVE" -eq 1 ]] && { items+=("Edit AI hosts"); actions+=(hosts); }
+    items+=("Install with these settings" "Cancel setup")
+    actions+=(install cancel)
+    while true; do
+        selected_profile="$PROFILE"
+        selected_tracking="$TRACKING${TRACKING_PROJECTION:+ + GitHub projection}"
+        selected_hosts="${HOSTS//,/ · }"
+        [[ "$HOSTS" == agents ]] && selected_hosts="Universal AGENTS.md only"
+        if [[ "$PICKER_TTY" -eq 1 ]]; then
+            local subtitle
+            printf -v subtitle 'Profile: %s\nTask tracking: %s\nAI hosts: %s\n\nChoose a setting to edit, install, or cancel.' \
+                "$selected_profile" "$selected_tracking" "$selected_hosts"
+            pk_picker_single "Review setup" "$subtitle" "$((${#items[@]} - 2))" "${items[@]}"
+            [[ "$PK_PICKER_ACTION" == cancel ]] && cancel_setup
+            selection="${actions[$PK_PICKER_RESULT]}"
+        else
+            printf '\n◇ Review setup\n  Profile: %s\n  Task tracking: %s\n  AI hosts: %s\n' "$selected_profile" "$selected_tracking" "$selected_hosts"
+            for selection in "${!items[@]}"; do printf '  %s) %s\n' "$((selection + 1))" "${items[$selection]}"; done
+            read -r -p "Choose an option, or q to cancel: " selection
+            [[ "$selection" =~ ^[Qq]$ ]] && cancel_setup
+            if [[ ! "$selection" =~ ^[0-9]+$ ]] || [[ "$selection" -lt 1 ]] || [[ "$selection" -gt "${#items[@]}" ]]; then
+                printf 'Please choose one of the listed options.\n'
+                continue
+            fi
+            selection="${actions[$((selection - 1))]}"
+        fi
+        case "$selection" in
+            profile) PROFILE_SET=0; choose_profile ;;
+            tracking) TRACKING_SET=0; choose_tracking ;;
+            hosts) HOST_SET=0; choose_hosts ;;
+            install) return 0 ;;
+            cancel) cancel_setup ;;
+        esac
+    done
+}
 
 # Default profile
 PROFILE="balanced"
@@ -178,7 +368,7 @@ for arg in "$@"; do
             echo -e "  --target=rel/path  Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
             echo -e "  -h, --help          Show this help\n"
             echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
-            echo -e "Interactive: When no flag provided and running in TTY, shows visual picker (1) Lite (Recommended) 2) Balanced 3) Turbo Experimental"
+            echo -e "Interactive: Arrow keys move, Enter selects, Space toggles checkboxes, q cancels; final review lets you edit choices."
             echo -e "Preflight opt-out: PROMPTKIT_NO_PREFLIGHT=1 skips advisory local security inspection (independent of picker)"
             echo -e "Env escape hatch: PROMPTKIT_NO_INTERACTIVE=1 skips the picker even in a TTY (use flags or Balanced default)"
             echo -e "Examples:"
@@ -262,107 +452,16 @@ if [[ "$HOST_SET" -eq 0 && "$RECONFIGURE" -eq 0 && -f "$PROJECT_ROOT/PROMPTKIT.m
 fi
 
 # Interactive TTY picker when no profile flag provided (visual decision for onboarding)
-# This is the shell-level equivalent of native interactive selection tools (ask_question)
-# Agent-level picker is in workflows/onboard.md which uses ask_question for same choice
-# Non-interactive safety (#144): require BOTH stdin and stdout to be TTYs (so piped or
-# log-redirected invocations can never block on a blind prompt), and honor the documented
-# PROMPTKIT_NO_INTERACTIVE escape hatch to force the flag/default (non-interactive) path.
-if [[ "$PROFILE_SET" -eq 0 && "$EXPERIMENTAL" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}" ]]; then
-    echo -e "\n\033[0;36m💡 PromptKit OS Profile Selection (visual decision)\033[0m"
-    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "  \033[1;33m1) Lite (Recommended for new users)\033[0m — 6 utility workflows (route, debug, commit, checkpoint, sync, profile) 1,269 tok, 80% value, fastest onboarding"
-    echo -e "  2) Balanced (Recommended for teams) — 25 workflows, 2,318 tok, Level 0-3 adaptive ceremony, full power [default]"
-    echo -e "  3) Turbo (Experimental) — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval"
-    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
-    echo -e "For CI/non-interactive, use flags: --lite, --balanced, --turbo --experimental"
-    echo ""
-    read -p "Choose profile [1-3, default 2]: " choice
-    case "$choice" in
-        1)
-            PROFILE="lite"
-            PROFILE_SET=1
-            ;;
-        3)
-            echo -e "\n\033[0;33m⚠️  Turbo requires --experimental flag\033[0m"
-            echo -e "   Turbo uses parallel subagent waves (up to ~2x measured token cost) and is experimental."
-            echo -e "   Run: ./init.sh --turbo --experimental"
-            read -p "Acknowledge experimental cost and proceed with Turbo? [y/N]: " confirm
-            if [[ "$confirm" =~ ^[Yy]$ ]]; then
-                PROFILE="turbo"
-                EXPERIMENTAL=1
-                PROFILE_SET=1
-            else
-                echo "Defaulting to Balanced"
-                PROFILE="balanced"
-                PROFILE_SET=1
-            fi
-            ;;
-        *)
-            PROFILE="balanced"
-            PROFILE_SET=1
-            ;;
-    esac
-    echo ""
+if [[ "$PROFILE_SET" -eq 0 && "$EXPERIMENTAL" -eq 0 || "$TRACKING_SET" -eq 0 ]]; then
+    show_setup_banner
+fi
+if [[ "$PROFILE_SET" -eq 0 && "$EXPERIMENTAL" -eq 0 && "$PICKER_TTY" -eq 1 ]]; then
+    choose_profile
 fi
 
 # Interactive tracker picker (visual decision for onboarding, step 2)
-if [[ "$TRACKING_SET" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}" ]]; then
-    echo -e "\033[0;36m💡 Task Tracker Selection (visual decision)\033[0m"
-    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "  \033[1;33m1) Local Markdown (Recommended for solo / offline)\033[0m — docs/tasks/ + STATE.md only, import later"
-    echo -e "  2) GitHub Issues — via gh CLI or MCP, needs gh auth + labels script"
-    echo -e "  3) Jira — manual import / copy-paste, no auto-push, needs project key"
-    echo -e "  4) Linear — manual import / copy-paste, no auto-push, needs project key"
-    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo ""
-    echo -e "  Tip: combine local with GitHub projection, e.g. '1,2' or '1 and 2'."
-    echo ""
-    TRACKING_PROJECTION=""
-    tracker_attempts=0
-    while true; do
-        read -p "Choose tracker [1-4, combos like 1,2 allowed, default 1]: " tchoice
-        if [ -z "$tchoice" ]; then
-            TRACKING="local"
-            break
-        fi
-        norm="$(printf '%s' "$tchoice" | tr '[:upper:]' '[:lower:]' | sed -e 's/[,&+]/ /g' -e 's/[^0-9 ]//g' -e 's/  */ /g' -e 's/^ //;s/ $//')"
-        has1=0; has2=0; has3=0; has4=0; bad=0
-        [ -z "$norm" ] && bad=1
-        for tok in $norm; do
-            case "$tok" in
-                1) has1=1 ;;
-                2) has2=1 ;;
-                3) has3=1 ;;
-                4) has4=1 ;;
-                *) bad=1 ;;
-            esac
-        done
-        if [ "$bad" -eq 0 ] && { [ "$has3" -eq 0 ] || { [ "$has1" -eq 0 ] && [ "$has2" -eq 0 ] && [ "$has4" -eq 0 ]; }; } && { [ "$has4" -eq 0 ] || { [ "$has1" -eq 0 ] && [ "$has2" -eq 0 ] && [ "$has3" -eq 0 ]; }; }; then
-            TRACKING_PROJECTION=""
-            if [ "$has1" -eq 1 ] || { [ "$has2" -eq 0 ] && [ "$has3" -eq 0 ] && [ "$has4" -eq 0 ]; }; then
-                TRACKING="local"
-                [ "$has2" -eq 1 ] && TRACKING_PROJECTION="github"
-            elif [ "$has2" -eq 1 ]; then
-                TRACKING="github"
-            elif [ "$has3" -eq 1 ]; then
-                TRACKING="jira"
-            else
-                TRACKING="linear"
-            fi
-            break
-        fi
-        tracker_attempts=$((tracker_attempts + 1))
-        if [ "$tracker_attempts" -ge 3 ]; then
-            echo -e "\033[0;33m[!] Unrecognized tracker selection after 3 attempts — defaulting to Local Markdown.\033[0m"
-            TRACKING="local"
-            TRACKING_PROJECTION=""
-            break
-        fi
-        echo -e "\033[0;33m[!] Could not parse '$tchoice'. Use numbers 1-4 (e.g. 1, 2, or 1,2 for local + GitHub projection).\033[0m"
-    done
-    TRACKING_SET=1
-    echo ""
+if [[ "$TRACKING_SET" -eq 0 && "$PICKER_TTY" -eq 1 ]]; then
+    choose_tracking
 fi
 
 # Validate turbo requires experimental
@@ -372,29 +471,6 @@ if [[ "$PROFILE" == "turbo" && "$EXPERIMENTAL" -eq 0 ]]; then
     echo -e "   It still requires human approval for Level 3 (releases/tags/deploys)." >&2
     echo -e "   Run: ./init.sh --turbo --experimental [project-root]\n" >&2
     exit 1
-fi
-
-echo -e "\n\033[0;36m🚀 Initializing PromptKit OS ($PROFILE profile)...\033[0m"
-echo -e "   Host Project: $PROJECT_ROOT"
-echo -e "   Engine Path:  $SCRIPT_DIR"
-echo -e "   Profile:      $PROFILE"
-echo -e "   Tracking:     $TRACKING"
-if [[ "$PROFILE" == "turbo" ]]; then
-    echo -e "   \033[0;33m⚠️  Turbo: up to ~2x measured token cost, experimental, parallel waves. Human approval still required for L3.\033[0m"
-fi
-if [[ "$PROFILE" == "lite" ]]; then
-    echo -e "   \033[0;32m✨ Lite: 6 utility workflows, <1,500 tok, 80% value — perfect for onboarding\033[0m"
-fi
-echo ""
-
-if [[ "${PROMPTKIT_NO_PREFLIGHT:-}" == "1" ]]; then
-    printf '%s\n' 'PREFLIGHT|SKIPPED|USER_OPT_OUT'
-else
-    if bash "$SCRIPT_DIR/scripts/check-harness-security.sh" "$PROJECT_ROOT"; then
-        :
-    else
-        printf '%s\n' 'PREFLIGHT|ADVISORY|Review findings or incomplete checks; installation continues'
-    fi
 fi
 
 DOC_DIRS=(
@@ -462,59 +538,41 @@ if [[ "$HOST_SET" -eq 0 ]]; then
     done
     DETECTED_HOSTS="${DETECTED_HOSTS# }"
 fi
-if [[ "$HOST_SET" -eq 0 && (! -t 0 || ! -t 1 || -n "${PROMPTKIT_NO_INTERACTIVE:-}") ]]; then
+if [[ "$HOST_SET" -eq 0 && "$PICKER_TTY" -eq 0 ]]; then
     if [[ "$(echo "$DETECTED_HOSTS" | wc -w)" -eq 1 ]]; then
         HOSTS="$DETECTED_HOSTS"
         HOST_SET=1
     fi
 fi
-if [[ "$HOST_SET" -eq 0 && -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}" ]]; then
-    echo -e "\033[0;36m💡 AI Host Selection (visual decision)\033[0m"
-    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    idx=0
-    HOST_COUNT=0
-    for h in $KNOWN_HOSTS; do HOST_COUNT=$((HOST_COUNT + 1)); done
-    for h in $KNOWN_HOSTS; do
-        idx=$((idx + 1))
-        marker=""
-        if [[ " $DETECTED_HOSTS " == *" $h "* ]]; then
-            marker=" \033[0;32m[detected]\033[0;90m"
-        fi
-        echo -e "  $idx) $h$(echo -e "$marker") — $(host_file "$h")"
-    done
-    echo -e "\033[0;90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    if [[ -n "$DETECTED_HOSTS" ]]; then
-        echo -e "Comma-separated numbers, Enter = detected ($(echo "$DETECTED_HOSTS" | tr ' ' ',')) + AGENTS.md"
+if [[ "$HOST_SET" -eq 0 && "$PICKER_TTY" -eq 1 ]]; then
+    choose_hosts
+fi
+
+if [[ "$PROFILE_INTERACTIVE" -eq 1 || "$TRACKING_INTERACTIVE" -eq 1 || "$HOST_INTERACTIVE" -eq 1 ]]; then
+    review_setup
+fi
+
+echo -e "\n\033[0;36m🚀 Initializing PromptKit OS ($PROFILE profile)...\033[0m"
+echo -e "   Host Project: $PROJECT_ROOT"
+echo -e "   Engine Path:  $SCRIPT_DIR"
+echo -e "   Profile:      $PROFILE"
+echo -e "   Tracking:     $TRACKING"
+if [[ "$PROFILE" == "turbo" ]]; then
+    echo -e "   \033[0;33m⚠️  Turbo: up to ~2x measured token cost, experimental, parallel waves. Human approval still required for L3.\033[0m"
+fi
+if [[ "$PROFILE" == "lite" ]]; then
+    echo -e "   \033[0;32m✨ Lite: 6 utility workflows, <1,500 tok, 80% value — perfect for onboarding\033[0m"
+fi
+echo ""
+
+if [[ "${PROMPTKIT_NO_PREFLIGHT:-}" == "1" ]]; then
+    printf '%s\n' 'PREFLIGHT|SKIPPED|USER_OPT_OUT'
+else
+    if bash "$SCRIPT_DIR/scripts/check-harness-security.sh" "$PROJECT_ROOT"; then
+        :
     else
-        echo -e "Comma-separated numbers, Enter = AGENTS.md + CLAUDE.md (default)"
+        printf '%s\n' 'PREFLIGHT|ADVISORY|Review findings or incomplete checks; installation continues'
     fi
-    echo ""
-    read -p "Choose hosts: " hchoice || true
-    if [[ -n "$hchoice" ]]; then
-        HOSTS=""
-        for n in ${hchoice//,/ }; do
-            if [[ "$n" =~ ^[0-9]+$ ]] && [[ "$n" -ge 1 ]] && [[ "$n" -le "$HOST_COUNT" ]]; then
-                idx=0
-                for h in $KNOWN_HOSTS; do
-                    idx=$((idx + 1))
-                    if [[ "$idx" -eq "$n" ]]; then
-                        HOSTS="$HOSTS,$h"
-                    fi
-                done
-            fi
-        done
-        HOSTS="${HOSTS#,}"
-        if [[ -n "$HOSTS" ]]; then
-            HOST_SET=1
-        else
-            echo -e "  No valid hosts selected; using default."
-        fi
-    fi
-    if [[ "$HOST_SET" -eq 0 && -n "$DETECTED_HOSTS" ]]; then
-        HOSTS="$(echo "$DETECTED_HOSTS" | tr ' ' ',')"
-        HOST_SET=1
-    fi
-    echo ""
 fi
 
 # 3. Detect Agent Files or Default to AGENTS.md
