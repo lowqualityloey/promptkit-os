@@ -6,50 +6,48 @@ Welcome! This guide gets you productive with PromptKit OS in 5 minutes using the
 
 ## Step 1: Installation (30 seconds)
 
-### One-Command Setup (Recommended) — 2+1 Profiles
+### One-Command Setup (Recommended)
 
-**Balanced is default (25 workflows, Level 0-3 adaptive ceremony):**
-
-```bash
-# macOS / Linux (Bash / Zsh) — Balanced default
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
-
-# Windows (PowerShell)
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --balanced
-```
-
-**Lite profile — 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value — onboarding:**
+Run in your project root:
 
 ```bash
-# macOS / Linux
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --lite
+# Recommended (zero prerequisite setup):
+npx promptkit-os@latest
 
-# Windows
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --lite
+# Or via Git submodule:
+# macOS / Linux (Bash / Zsh):
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh
+
+# Windows (PowerShell):
+git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1
 ```
 
-**Turbo experimental — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval:**
+When run in an interactive terminal, `init.sh` / `init.ps1` presents an **interactive visual menu** to guide your setup:
+1. **Profile**: `1) Lite` (fastest onboarding, 6 utility workflows, <1,500 tok) or `2) Balanced` (default, full 25 workflows, Level 0–3 adaptive ceremony).
+2. **AI Assistant**: Automatically configures `.cursorrules`, `CLAUDE.md`, `.windsurfrules`, `.clinerules`, or `.github/copilot-instructions.md`.
+3. **Tracker**: Local Markdown (`docs/tasks/`) or GitHub Issues.
 
-```bash
-# macOS / Linux
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --turbo --experimental
+Profile is stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Switch anytime: `.promptkit/init.sh --balanced` or `--lite`.
 
-# Windows
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1 --turbo --experimental
-```
-
-Profile stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Upgrade anytime: `.promptkit/init.sh --balanced` or `--lite`.
-**Fresh project (no code yet)?** Run `pk:onboard` before `pk:plan` — the bounded discovery interview captures MVP intent, surfaces, deployment target, auth & data needs, and design references (Figma, screenshots, docs), then writes `size:` / `intake-status:` into `PROMPTKIT.md`.
+**Fresh project (no code yet)?** Run `pk:onboard` before `pk:plan` — the bounded discovery interview captures MVP intent, surfaces, deployment target, auth & data needs, and design references (Figma, screenshots, docs), then writes `size:` / `intake-status:` into `PROMPTKIT.md`.  
 **Prefer quiet completions?** Set `status-cards: off` in `PROMPTKIT.md` to suppress the decorative status card (default `on`; `> [!IMPORTANT]` / `> [!WARNING]` halts still fire). Separately, recommendations go quiet on their own when nothing is pending — and a finished project seals with a closeout record (see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)).
 
-When run in an interactive terminal without flags, `init.sh` / `init.ps1` presents an interactive visual menu to select your profile. In CI or non-interactive environments, pass a profile flag or set `PROMPTKIT_NO_INTERACTIVE=1`.
-
 <details>
-<summary>Or install with npx (optional convenience path)</summary>
+<summary>Non-Interactive / CI Flags & Turbo</summary>
+
+In CI or non-interactive environments, pass a profile flag or set `PROMPTKIT_NO_INTERACTIVE=1`:
 
 ```bash
-# macOS / Linux / Windows — one command, no submodule ceremony
-# (requires Node 18+; Windows also requires PowerShell 7 / pwsh)
+# Balanced profile (full 25 workflows)
+./.promptkit/init.sh --balanced
+
+# Lite profile (smallest footprint, 6 workflows)
+./.promptkit/init.sh --lite
+
+# Turbo experimental (parallel subagent waves, requires --experimental)
+./.promptkit/init.sh --turbo --experimental
+
+# Or via npx
 npx promptkit-os@latest --balanced
 npx promptkit-os@latest --lite
 ```
