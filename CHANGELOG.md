@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-10-01
+
+Release evidence chain: `docs/releases/2026-10-01-v1.10.0-*.md` (`REL-2026-10-01-V1.10.0-001`) · Tag: `v1.10.0` at `b34322e` — published to npm via trusted publishing (OIDC), provenance attestation verified.
+
 ### Added
 - **Cross-Host Conformance Matrix**: New `docs/HOST-CONFORMANCE.md` establishes a cross-IDE instruction fidelity framework, mechanical scoring rubrics (`scripts/run-behavioral-eval.sh --score`), and staged validation fixtures across Claude Code, Cursor, and GitHub Copilot for 4 governance-critical scenarios (`halt-callout`, `card-provenance`, `breaker-exhaustion`, `greenfield-saas-intake`); includes an explicit Honesty Contract (stipulating division of labor between agent rubrics and maintainer-owned live runs) and an Untested Hosts registry derived strictly from supported installer integrations; links from `docs/BEHAVIORAL-EVAL.md`, `docs/COMPARISONS.md`, and `docs/ARCHITECTURE.md`. (#436)
 - **pk:verify-bootstrap Workflow**: New `workflows/verify-bootstrap.md` (Level 2, JIT-loaded outside both directives) scaffolds a project-local verification surface (`verify/` + map) so done-gates have something real to gate against on greenfield installs; records the ADR 0002 non-overlap gate in-file, restates human-authorized generation, and mechanizes the red/green demonstration (halt-not-waive). Locked workflow count moves 24 → 25 with the full artifact sweep (setup row, WORKFLOW-MAP, README/FAQ/QUICKSTART counts, guard constants, Scenario AM pins in both twins). (#440)

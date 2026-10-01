@@ -2,6 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![CI](https://github.com/lowqualityloey/promptkit-os/actions/workflows/ci.yml/badge.svg)](https://github.com/lowqualityloey/promptkit-os/actions)
+[![npm version](https://img.shields.io/npm/v/promptkit-os.svg)](https://www.npmjs.com/package/promptkit-os)
+[![npm provenance](https://img.shields.io/badge/provenance-attested-brightgreen.svg)](https://search.sigstore.dev/?logIndex=3029590466)
 [![GitHub](https://img.shields.io/badge/GitHub-lowqualityloey%2Fpromptkit--os-black.svg)](https://github.com/lowqualityloey/promptkit-os)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-orange?style=flat&logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/itsjonellmb)
 
@@ -163,9 +165,6 @@ npx promptkit-os@latest --lite
 > [!NOTE]
 > The git submodule flow above is canonical. The npm package is a **courier, not a dependency** — it fetches the release tarball matching its version into `.promptkit/` and runs the same installer, producing an identical tree. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`. It requires Node 18+ (and PowerShell 7 on Windows), and it refuses to overlay a non-empty `.promptkit/`, printing the update command that matches how the existing install was made. Removal: delete `.promptkit/` (plus generated `PROMPTKIT.md` / `docs/STATE.md` if unwanted) — no daemon, nothing left behind.
 
-> [!TIP]
-> Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (eliminates session amnesia). You do not need to learn all 25 before getting value.
-
 Already installed? To pull updates, see [Updating PromptKit](./QUICKSTART.md#updating-promptkit).
 
 ### 2. Configure
@@ -192,7 +191,7 @@ PromptKit routes the task to the appropriate ceremony level and workflow. Explic
 | **[docs/BENCHMARKS.md](./docs/BENCHMARKS.md)** | I want static token budget evidence |
 | **[docs/BENCHMARK-METHODOLOGY.md](./docs/BENCHMARK-METHODOLOGY.md)** | I want the CPAC engineering benchmark methodology |
 | **[docs/COMPARISONS.md](./docs/COMPARISONS.md)** | I want to compare it with other tools |
-| **[docs/stacks/](./docs/stacks/)** | I want JIT stack playbooks (11 — Web, DB, Cloud, Mobile, Systems) |
+| **[docs/stacks/](./docs/stacks/)** | I want JIT stack playbooks (16 — Web, DB, Cloud, Mobile, Systems, CLI) |
 | **[docs/recipes/](./docs/recipes/)** | I want reusable boundary contracts (8 — Auth, Forms, Webhooks, Env, Testing + 3 pk:auto utilities) |
 | **[docs/ADOPTION-GUIDE.md](./docs/ADOPTION-GUIDE.md)** | I want to add it to an existing project gradually |
 | **[docs/MAXIMS.md](./docs/MAXIMS.md)** | I want the quotable invariants — 8 one-line maxims with canonical links |
@@ -206,8 +205,8 @@ PromptKit's own CI validates on every PR across Linux and Windows:
 
 - Workflow and documentation reference integrity (`validate-references.sh`)
 - Static token budget gates — Balanced ≤ 2,500 tok, Lite ≤ 1,500 tok (`measure-tokens.sh --strict`)
-- Behavioral contract compliance — 348/348 tests (`run-behavioral-contract-tests.sh`)
-- Playbook contracts — 11/11 (`run-playbook-contract-tests.sh`)
+- Behavioral contract compliance — 385/385 tests (`run-behavioral-contract-tests.sh`)
+- Playbook & recipe contracts — 24/24 (16 stack playbooks + 8 boundary recipes) (`run-playbook-contract-tests.sh`)
 
 PromptKit applies its own engineering principles to itself.
 
