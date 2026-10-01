@@ -13,6 +13,8 @@ Desktop.ini
 
 # Local runtime & scratch files
 scratch/
+.qa-evidence/
+.omo/
 *.tmp
 *.log
 npm-debug.log*
