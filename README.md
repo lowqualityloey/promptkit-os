@@ -286,7 +286,7 @@ That is why workflows, stack knowledge, and recipes are separate and loaded just
 
 If you find PromptKit OS valuable for your engineering workflow, consider supporting its open-source development:
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-orange?style=for-the-badge&logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/itsjonellmb)
+<a href="https://buymeacoffee.com/itsjonellmb" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50"></a>
 
 ---
 
