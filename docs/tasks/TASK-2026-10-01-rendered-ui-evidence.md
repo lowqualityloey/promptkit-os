@@ -12,7 +12,7 @@
 - **External Reference (Optional)**: `https://github.com/lowqualityloey/promptkit-os/issues/494`
 - **Owner / Actor**: `PromptKit maintainer (approver) + Codex (executor)`
 - **Execution Scope**: `promptkit-os repository; documentation and workflow contract only`
-- **Approval Boundary**: `Human confirmation required for the final local commit. Push, PR creation, merge, and release actions require separate authorization; merge remains human-only.`
+- **Approval Boundary**: `The user confirmed the implementation commit and clarified that they expect a GitHub PR request, authorizing the branch push and ready-PR creation for this scope. Merge remains human-only.`
 - **Created**: `2026-10-01`
 
 > This Local Task Source is authoritative for this Controlled Work.
@@ -70,9 +70,9 @@
 - **Mapped `pk:tasks` Status**: `In Progress`
 - **Active Task Pointer**: `TASK-2026-10-01-rendered-ui-evidence`
 - **Start Time**: `2026-10-01`
-- **Current Actor**: `Codex; implementation and review preparation complete, updated commit confirmation pending.`
-- **Branch / Revision**: `codex/issue-494-rendered-ui-evidence at base fea046afecdebd0f54d47cc7078019a9b23298f0; changes staged.`
-- **Next Action**: `Present the updated staged file list and full commit message; create the local commit only after the user's confirmation.`
+- **Current Actor**: `Codex; implementation commit created, exact-SHA review pending.`
+- **Branch / Revision**: `codex/issue-494-rendered-ui-evidence; implementation commit e35a43351a74ea2efe7cf745f979ae3688c0b820, recorded by this follow-up.`
+- **Next Action**: `Run exact-SHA review and complete the PR gate on the resulting branch head.`
 
 ### Process note
 
@@ -98,14 +98,14 @@ The Level 2 classification was identified during final commit preparation, after
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
 - **Verification Evidence**: `Bash behavioral contracts 385/385 PASS; strict token budget PASS (Balanced 2318/2500, Lite 1274/1500); strict per-task measurements PASS (fix 9094/8050, plan 19167/18123, ship 15555/14511); reference validation PASS across 316 Markdown files; Bash syntax, PowerShell parser, diff check, benchmark digest, staged secret scan, and staged debug-probe scan PASS. PowerShell full contract twin: 363 passed / 25 environment-driven failures because Windows PowerShell cannot resolve nested bash/pwsh from the WSL UNC path; native Windows verification remains follow-up.`
-- **CI Evidence**: `Pending PR; no commit or remote run exists.`
-- **Review Evidence**: `The implementation diff before this Task Record was added received PASS from goal, code, security, context, and QA review lanes. The Task Record is commit-gate bookkeeping and was not part of those reviews. Exact-commit-SHA review evidence remains pending until a commit exists.`
-- **Commit Evidence**: `Pending updated human confirmation; proposed message and staged file list are presented for approval.`
-- **Pull Request Evidence**: `N/A - no PR created; separate remote-write authorization remains required.`
+- **CI Evidence**: `No CI run yet; no PR exists.`
+- **Review Evidence**: `The implementation diff before this Task Record was added received PASS from goal, code, security, context, and QA review lanes. This Task Record is commit-gate bookkeeping and was not part of those reviews. Exact-SHA review of the final branch head will be recorded in the task evidence ledger before PR creation.`
+- **Commit Evidence**: `Implementation commit e35a43351a74ea2efe7cf745f979ae3688c0b820 created on 2026-10-01 with the user-confirmed message; this Task Record follow-up records that revision as required by workflows/commit.md.`
+- **Pull Request Evidence**: `Pending; user clarified on 2026-10-01 that they expect a PR request for this change.`
 - **Release Evidence**: `N/A - no release action in scope.`
-- **Blocker and Resume Condition**: `Await the user's decision on the updated commit message, which now includes this required Task Record. Push or PR creation remains outside the current authorization.`
+- **Blocker and Resume Condition**: `No implementation blocker. Exact-SHA review and native Windows PowerShell verification remain follow-up; user-authorized push and PR creation proceed after the review gate.`
 - **Completion State**: `in_progress`
 - **Acceptance Results**: `AC-1 Pass; AC-2 Pass; AC-3 Pass; AC-4 Pass; AC-5 Pass with the full PowerShell execution limitation disclosed.`
 - **Changed-File Summary**: `Add rendered browser evidence contract and wire it into UI completion; refresh benchmark provenance; record Level 2 scope and evidence.`
 - **Completion Exception**: `Full PowerShell behavioral twin was not verified because the WSL/Windows UNC host cannot resolve nested bash/pwsh commands; native Windows execution is follow-up.`
-- **Completion Decision and Timestamp**: `Pending local commit and PR review.`
+- **Completion Decision and Timestamp**: `Local implementation commit e35a43351a74ea2efe7cf745f979ae3688c0b820 created 2026-10-01; exact-SHA review and PR handoff remain pending.`
