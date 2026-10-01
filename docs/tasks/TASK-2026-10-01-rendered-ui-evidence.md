@@ -31,7 +31,7 @@
 - **Explicit Non-Goals**:
   - `No changes to a consumer application's UI, runtime code, or native mobile behavior.`
   - `No test-harness prose assertions; the browser-observation cases are reviewed manually as protocol scenarios.`
-  - `No push, PR creation, merge, tag, or release action in this task.`
+  - `No merge, tag, or release action in this task (merge remains strictly human-only per protocols/code-quality-gate.md; branch push and PR creation were explicitly authorized by user confirmation).`
 - **Dependencies**: `Issue #494 and the user's request to prepare the change for review.`
 - **Risk**: `Low-medium — additive public workflow contract across the design workflow and completion gate.`
 - **Verification Condition**: `Bash behavioral contracts, strict token and per-task measurements, reference validation, syntax/whitespace checks, and staged-content hygiene pass; PowerShell parser passes, with the full PowerShell harness limitation recorded.`
@@ -73,7 +73,7 @@
 - **Start Time**: `2026-10-01`
 - **Current Actor**: `PromptKit maintainer (review/approval) + Antigravity (handoff)`
 - **Branch / Revision**: `codex/issue-494-rendered-ui-evidence; implementation commit e35a43351a74ea2efe7cf745f979ae3688c0b820, recorded by this follow-up.`
-- **Next Action**: `Push branch and open ready pull request for Issue #494.`
+- **Next Action**: `Maintainer review and squash-merge of PR #495 into main.`
 
 ### Process note
 
@@ -101,14 +101,14 @@ The Level 2 classification was identified during final commit preparation, after
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
 - **Verification Evidence**: `Bash behavioral contracts 385/385 PASS; strict token budget PASS (Balanced 2318/2500, Lite 1274/1500); strict per-task measurements PASS (fix 9094/8050, plan 19167/18123, ship 15555/14511); reference validation PASS across 316 Markdown files; Bash syntax, PowerShell parser, diff check, benchmark digest, staged secret scan, and staged debug-probe scan PASS. PowerShell full contract twin: 363 passed / 25 environment-driven failures because Windows PowerShell cannot resolve nested bash/pwsh from the WSL UNC path; native Windows verification remains follow-up.`
-- **CI Evidence**: `No CI run yet; no PR exists.`
-- **Review Evidence**: `The implementation diff before this Task Record was added received PASS from goal, code, security, context, and QA review lanes. Rendered UI protocol covers all ACs (proportionate coverage, reachability, nested clipping, relevant states, rendered contrast, Not verified reporting, and four manual regression scenarios).`
-- **Commit Evidence**: `Implementation commit e35a43351a74ea2efe7cf745f979ae3688c0b820 created on 2026-10-01; task evidence commit c5c55985452a2298e073f750802e904e60695d76; follow-up commits capture changelog and final handoff.`
-- **Pull Request Evidence**: `Branch codex/issue-494-rendered-ui-evidence ready for push and PR creation targeting main.`
+- **CI Evidence**: `GitHub Actions run 36849233360 on PR #495: Lint & Validate (Linux) PASS in 3m14s; Lint & Validate (Windows) PASS in 5m13s.`
+- **Review Evidence**: `The implementation diff received PASS from goal, security adjudication, context, and QA lanes in docs/reviews/pr-495.md. Code quality P2 finding regarding task record remote-action scope reconciled.`
+- **Commit Evidence**: `Implementation commit e35a43351a74ea2efe7cf745f979ae3688c0b820 created on 2026-10-01; task evidence commit c5c55985452a2298e073f750802e904e60695d76; changelog commit 5a6e57f76fc7bc6053987987e3a7b8773b2779b2; P2 task reconciliation follow-up.`
+- **Pull Request Evidence**: `Pull Request #495 (https://github.com/lowqualityloey/promptkit-os/pull/495) opened and all CI checks passing.`
 - **Release Evidence**: `N/A - no release action in scope.`
-- **Blocker and Resume Condition**: `No implementation blocker. User-authorized push and PR creation proceed.`
+- **Blocker and Resume Condition**: `No implementation blocker. Awaiting maintainer review and squash-merge.`
 - **Completion State**: `awaiting_review`
 - **Acceptance Results**: `AC-1 Pass; AC-2 Pass; AC-3 Pass; AC-4 Pass; AC-5 Pass with the full PowerShell execution limitation disclosed.`
-- **Changed-File Summary**: `Add rendered browser evidence contract and wire it into UI completion; refresh benchmark provenance; record Level 2 scope and evidence; add changelog entry.`
+- **Changed-File Summary**: `Add rendered browser evidence contract and wire it into UI completion; refresh benchmark provenance; record Level 2 scope and evidence; add changelog entry; reconcile task record non-goals and evidence.`
 - **Completion Exception**: `Full PowerShell behavioral twin was not verified because the WSL/Windows UNC host cannot resolve nested bash/pwsh commands; native Windows execution is follow-up.`
-- **Completion Decision and Timestamp**: `Local implementation commit e35a43351a74ea2efe7cf745f979ae3688c0b820 created 2026-10-01; changelog and task record finalized; ready for PR creation.`
+- **Completion Decision and Timestamp**: `Local implementation commit e35a43351a74ea2efe7cf745f979ae3688c0b820 created 2026-10-01; PR #495 opened and CI passed; task record reconciled for maintainer merge.`
