@@ -116,6 +116,23 @@ else
     notok "CONVENTIONS.md injection (markers=$(grep -c '^<!-- PROMPTKIT_START -->$' "$D/CONVENTIONS.md" 2>/dev/null))"
 fi
 
+D="$TEST_ROOT/t10"; mkdir -p "$D"
+if PROMPTKIT_NO_PREFLIGHT=1 bash "$REPO_ROOT/init.sh" --balanced --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1; then
+    out=$(PROMPTKIT_NO_PREFLIGHT=1 bash "$REPO_ROOT/init.sh" "$D" </dev/null 2>&1); rc=$?
+    if [[ $rc -eq 0 && "$out" == *"Keeping installed hosts: agents"* ]] \
+       && [[ -f "$D/AGENTS.md" ]] \
+       && [[ ! -e "$D/CLAUDE.md" && ! -e "$D/.opencode/rules.md" && ! -e "$D/.cursorrules" \
+          && ! -e "$D/GEMINI.md" && ! -e "$D/.windsurfrules" \
+          && ! -e "$D/.github/copilot-instructions.md" && ! -e "$D/.clinerules" \
+          && ! -e "$D/.traerules" && ! -e "$D/CONVENTIONS.md" ]]; then
+        ok "AGENTS.md-only install preserves universal hosts on rerun"
+    else
+        notok "AGENTS.md-only rerun did not preserve universal host choice (rc=$rc)"
+    fi
+else
+    notok "AGENTS.md-only initial install"
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Passed: $PASS | Failed: $FAIL"

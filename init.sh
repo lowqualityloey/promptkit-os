@@ -444,6 +444,9 @@ if [[ "$HOST_SET" -eq 0 && "$RECONFIGURE" -eq 0 && -f "$PROJECT_ROOT/PROMPTKIT.m
         fi
     done
     installed_hosts="${installed_hosts# }"
+    if [[ -z "$installed_hosts" && -f "$PROJECT_ROOT/AGENTS.md" ]]; then
+        installed_hosts="agents"
+    fi
     if [[ -n "$installed_hosts" ]]; then
         HOSTS="$(echo "$installed_hosts" | tr ' ' ',')"
         HOST_SET=1

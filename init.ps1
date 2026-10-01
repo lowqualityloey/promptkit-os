@@ -458,6 +458,9 @@ if (-not $HostSet -and -not $Reconfigure -and (Test-Path $probeProfile)) {
             $installedHosts += $h
         }
     }
+    if ($installedHosts.Count -eq 0 -and (Test-Path (Join-Path $probeRoot "AGENTS.md"))) {
+        $installedHosts += "agents"
+    }
     if ($installedHosts.Count -gt 0) {
         $Hosts = ($installedHosts | Select-Object -Unique) -join ','
         $HostSet = $true

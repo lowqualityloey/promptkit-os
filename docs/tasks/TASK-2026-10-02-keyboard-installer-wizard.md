@@ -24,6 +24,7 @@
   - `init.sh` and `init.ps1` interactive flow and non-interactive compatibility
   - `scripts/terminal-picker.sh` and `scripts/terminal-picker.ps1`
   - `scripts/tests/run-terminal-picker-tests.sh` and `scripts/tests/run-terminal-picker-tests.ps1`
+  - `scripts/tests/run-profile-matrix.sh` and `scripts/tests/run-profile-matrix.ps1` regression coverage for rerun preservation
   - `.github/workflows/ci.yml` picker syntax/test coverage for Linux and Windows
   - `templates/terminal-banner.txt` responsive PromptKit terminal art
   - `README.md`, `QUICKSTART.md`, and `CHANGELOG.md`
@@ -53,7 +54,7 @@
 - [x] **AC-1**: `In an interactive TTY, profile and task-tracker questions use Up/Down and Enter; hosts and the optional GitHub projection use Up/Down, Space, and Enter.`
 - [x] **AC-2**: `A final review screen summarizes the selections and lets users edit a choice, install, or cancel. Cancellation exits before installer project writes.`
 - [x] **AC-3**: `A responsive text banner shows the full supplied art in wide terminals and a compact title in narrower terminals; headings use readable symbols.`
-- [x] **AC-4**: `Existing installer settings remain selected on reruns, while explicit flags and non-interactive behavior continue to work.`
+- [x] **AC-4**: `Existing installer settings remain selected on reruns, including universal-only AGENTS.md installs, while explicit flags and non-interactive behavior continue to work.`
 - [x] **AC-5**: `Both picker helper suites pass single-select movement, checkbox toggling, and cancellation; Bash PTY runs pass at 80 and 120 columns.`
 - [x] **AC-6**: `README, QUICKSTART, changelog, and Linux/Windows CI describe or verify the delivered picker behavior.`
 
@@ -72,7 +73,7 @@
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-10-02`
 - **Current Actor**: `PromptKit maintainer (review) + Codex (handoff)`
-- **Next Action**: `Review PR after creation; maintainer decides whether to merge.`
+- **Next Action**: `Complete fresh exact-head review gates, create the PR, and hand off for maintainer review; merge remains human-only.`
 
 ### Transition History
 
@@ -81,6 +82,8 @@
 | N/A | planned | 2026-10-02 | Codex | Task initialized from user request to make the keyboard picker and banner plan PR-ready. | User request |
 | planned | in_progress | 2026-10-02 | Codex | Implementing the Bash and PowerShell wizard, tests, and documentation. | Branch `codex/installer-keyboard-picker` |
 | in_progress | awaiting_review | 2026-10-02 | Codex | Implementation and local verification complete; preparing exact-commit review and PR handoff. | Section 6 |
+| awaiting_review | in_progress | 2026-10-02 | Codex | Goal review reproduced loss of the universal-only host choice on rerun; fixed both installers and added matrix regression coverage. | `.omo/evidence/installer-keyboard-picker/review-ledger.md`; Bash profile matrix and 80-column PTY rerun |
+| in_progress | awaiting_review | 2026-10-02 | Codex | Universal-only rerun fix and regression tests pass; fresh exact-head review and PR CI remain. | Section 6; `.omo/evidence/installer-keyboard-picker/final-refresh/` |
 
 ## 6. Evidence and Completion Gate
 
@@ -95,20 +98,22 @@
   - `scripts/terminal-picker.sh`
   - `scripts/tests/run-terminal-picker-tests.ps1`
   - `scripts/tests/run-terminal-picker-tests.sh`
+  - `scripts/tests/run-profile-matrix.ps1`
+  - `scripts/tests/run-profile-matrix.sh`
   - `templates/terminal-banner.txt`
   - `docs/tasks/TASK-2026-10-02-keyboard-installer-wizard.md`
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `Bash picker PASS; PowerShell picker PASS; Bash syntax PASS; PowerShell init.ps1 -Help PASS; Bash init safety PASS; Bash profile matrix 9/9 PASS; Bash behavioral contracts 394/394 PASS; Bash execution-control fixture/property suites and strict validator PASS; Bash staged-secret and reference-link tests PASS; Bash strict token budget PASS (Balanced 2350/2500, Lite 1286/1500); git diff --check PASS. Harness preflight PASS from the primary checkout; the linked-worktree checkout reports the documented GIT_LAYOUT limitation. Bash PTY install/edit/cancel evidence and 80/120-column checks are under .omo/evidence/installer-keyboard-picker/.`
+- **Verification Evidence**: `Bash picker PASS; PowerShell picker PASS; Bash syntax PASS; PowerShell init.ps1 -Help PASS; Bash init safety PASS; Bash profile matrix 10/10 PASS including universal-only AGENTS.md rerun; Bash behavioral contracts 394/394 PASS; Bash execution-control fixture/property suites and strict validator PASS; Bash staged-secret and reference-link tests PASS; Bash strict token budget PASS (Balanced 2350/2500, Lite 1286/1500); git diff --check PASS. Harness preflight PASS from the primary checkout; the linked-worktree checkout reports the documented GIT_LAYOUT limitation. Bash installer PTY install/edit/cancel plus AGENTS-only rerun evidence and fresh 80/120-column xterm.js screens and width checks are under .omo/evidence/installer-keyboard-picker/.`
 - **CI Evidence**: `Pending PR CI.`
-- **Review Evidence**: `Pending exact-commit review lanes.`
-- **Commit Evidence**: `Pending.`
+- **Review Evidence**: `Pending fresh exact-head review lanes after the agents-only rerun fix.`
+- **Commit Evidence**: `Feature commit b84a81737831d2e0c23d6bae87e30fe387a8e911; the universal-only rerun fix and this task-record update are included in the current commit.`
 - **Pull Request Evidence**: `Pending.`
 - **Release Evidence**: `N/A — no release action in scope.`
 - **Blocker and Resume Condition**: `None.`
 - **Completion State**: `awaiting_review`
-- **Acceptance Results**: `AC-1 Pass; AC-2 Pass; AC-3 Pass; AC-4 Pass; AC-5 Pass; AC-6 Pass locally; PR CI pending.`
-- **Changed-File Summary**: `Add keyboard-driven setup and review screens to both installer twins, responsive terminal branding, focused tests, CI wiring, and updated installation guidance.`
-- **Completion Exception**: `Native interactive PowerShell wizard not manually exercised in a Windows terminal. Focused PowerShell picker tests and init.ps1 -Help pass. Broader PowerShell harnesses cannot fully run from this WSL-backed Windows process because child command names pwsh, git, and python3 are unavailable to it; the Windows PR job is the cross-platform authority and remains pending.`
-- **Completion Decision and Timestamp**: `Implementation criteria satisfied locally on 2026-10-02; awaiting exact-commit review and PR CI.`
+- **Acceptance Results**: `AC-1 Pass; AC-2 Pass; AC-3 Pass; AC-4 Pass with AGENTS-only regression fixed and verified; AC-5 Pass; AC-6 Pass locally; PR CI pending.`
+- **Changed-File Summary**: `Add keyboard-driven setup and review screens to both installers, responsive terminal branding, focused tests and CI wiring; preserve universal-only host selection across reruns.`
+- **Completion Exception**: `Native interactive PowerShell wizard not manually exercised in a Windows terminal. Focused PowerShell picker tests and init.ps1 -Help pass. The PowerShell profile matrix cannot run from this WSL-backed Windows process because its nested child command pwsh is unavailable; direct installer execution also hits the WSL provider-path boundary. The Windows PR job is the cross-platform authority and remains pending.`
+- **Completion Decision and Timestamp**: `Review-discovered AGENTS-only rerun behavior fixed and locally verified on 2026-10-02; fresh exact-head review and PR CI pending.`
