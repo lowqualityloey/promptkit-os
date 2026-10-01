@@ -31,7 +31,7 @@ Installers run bounded advisory inspection before project writes; `PROMPTKIT_NO_
 
 ### Behavioral Eval Harness (prompt compliance, not prose)
 
-`scripts/run-behavioral-eval.sh` (+ `.ps1` twin) scores transcripts against the 16 rubrics in `scripts/tests/eval-scenarios/` (methodology and baseline: [`docs/BEHAVIORAL-EVAL.md`](./docs/BEHAVIORAL-EVAL.md)). Run `bash scripts/run-behavioral-eval.sh --self-test` (offline, CI-wired in both jobs); score a live transcript with `--score <scenario> <file>`. To extend: add a scenario file (Prompt, Checks, Threshold, embedded PASS/FAIL fixtures) — the self-test picks it up automatically. Never edit a shipped workflow to make a scenario pass.
+`scripts/run-behavioral-eval.sh` (+ `.ps1` twin) scores transcripts against the 18 rubrics in `scripts/tests/eval-scenarios/` (methodology and baseline: [`docs/BEHAVIORAL-EVAL.md`](./docs/BEHAVIORAL-EVAL.md)). Run `bash scripts/run-behavioral-eval.sh --self-test` (offline, CI-wired in both jobs); score a live transcript with `--score <scenario> <file>`. To extend: add a scenario file (Prompt, Checks, Threshold, embedded PASS/FAIL fixtures) — the self-test picks it up automatically. Never edit a shipped workflow to make a scenario pass.
 
 ### Bash (macOS / Linux / WSL)
 
