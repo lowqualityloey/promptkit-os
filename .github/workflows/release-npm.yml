@@ -66,7 +66,11 @@ jobs:
         env:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          git fetch origin tag "$TAG" --no-tags
+          # --force is required, not lazy: actions/checkout already fetched this tag
+          # (fetch-depth: 0 pulls tags), so a plain fetch aborts with
+          # "would clobber existing tag" under `bash -e` before the checkouts run.
+          # The explicit refspec also makes the intent unambiguous.
+          git fetch --force --prune origin "refs/tags/$TAG:refs/tags/$TAG"
           TAG_COMMIT=$(git rev-parse --verify -q "refs/tags/${TAG}^{commit}")
           if [ -z "$TAG_COMMIT" ]; then
             echo "::error::Could not resolve tag refs/tags/$TAG to a commit"
