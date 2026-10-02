@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-None yet — next changes accumulate here.
+### Fixed
+- **Courier Integrity Pin for v1.11.0**: Minted the `1.11.0` release-tarball digest (`sha256 6503fdfc…`, reproducible by double download and verified end-to-end against the published tarball), so `npx promptkit-os@1.11.0` verifies its download instead of warning and proceeding unverified. A pin can only be minted after the tag exists, so this necessarily follows the tagged release; until it is published the `1.11.0` courier still warns. (#514)
 
 ## [1.11.0] - 2026-10-02
 
