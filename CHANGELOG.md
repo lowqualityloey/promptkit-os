@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Entries below landed **after** tag `v1.10.1` (PRs #506, #508, #509). No release tag exists for them yet: they are candidates for the next patch release, and cutting that release — version bump, release date, release evidence records, npm publish — is a human-authorized act. Do not retag or re-date history to make this section look released.
+None yet — next changes accumulate here.
+
+## [1.11.0] - 2026-10-02
+
+Release candidate — pending human approval, tag creation, and npm publish. Evidence chain: `docs/releases/2026-10-02-v1.11.0-*.md` (`REL-2026-10-02-V1.11.0-001`) · Candidate commit `956acac` — minor release delivering the standardized verification-evidence contract, 3-layer Policy/Harness/Execution positioning, tiered cognition guidance, fail-closed validation gates, courier tarball integrity verification, and a CI hardening pass.
 
 ### Added
 - **Standardized Verification Evidence Contract**: Defined the canonical machine-verifiable `evidence:verification` block schema in `protocols/code-quality-gate.md`, `templates/execution-task-record-template.md`, and `templates/issue-task-template.md`. Enables external harnesses (Sureflow, OmO, CI, pre-commit hooks) to emit tamper-evident proof (`status: PASS`, `exit_code: 0`, `checks_passed`, `checks_failed`, `diff_digest`), mechanically validated by `scripts/validate-execution-control.sh` and `validate-execution-control.ps1`. (#505)
