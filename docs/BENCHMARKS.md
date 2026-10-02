@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [25 Inlined Workflows + Templates + Protocols (~101.5k tok)] │
+│ Every Turn: [25 Inlined Workflows (105,691 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -75,7 +75,7 @@ pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict   # PowerShell parity
 bash scripts/measure-per-task-tokens.sh --strict
 ```
 
-Gate coverage: the static dual-profile budget runs in **both** Linux and Windows CI jobs; the per-task baseline gate runs in the Linux job (PowerShell mirror tracked as a follow-up). Negative-path behavior is covered by `scripts/tests/run-token-budget-tests.sh`. Budget constants are defined once per script; this document is the human reference. If a deliberate contract expansion requires raising a budget, update the constant in `scripts/measure-tokens.sh`, `scripts/measure-tokens.ps1`, and this document in the same change.
+Gate coverage: the static dual-profile budget **and** the per-task baseline gate (PowerShell mirror included) run in **both** Linux and Windows CI jobs; the Turbo overhead claim window runs in both jobs as well. Negative-path behavior is covered by `scripts/tests/run-token-budget-tests.sh`. Budget constants are defined once per script; this document is the human reference. If a deliberate contract expansion requires raising a budget, update the constant in `scripts/measure-tokens.sh`, `scripts/measure-tokens.ps1`, and this document in the same change.
 
 ---
 
@@ -87,7 +87,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 **Methodology for per-task table:**
 - Historical comparison anchors: `fc98f2f` (after 2+1 profiles) and `c34be80` (before profiles, Balanced only). These SHAs identify historical inputs; they are not the source of the refreshed current values.
-- Refreshed measurement input: base revision `2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40` plus measured-input diff SHA-256 `fd6e347326f71b4e4566bbb25be47e1bd5a1789f1f4761fe8a6e577e8457d398`, measured on 2026-10-02. The digest is reproducible with `git diff --binary 2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`. Re-run `bash scripts/measure-per-task-tokens.sh` after applying that input diff; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
+- Refreshed measurement input: base revision `2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40` plus measured-input diff SHA-256 `fbcc3447a749f9cc68a0efd79355aeaa52742479787264fd48976fa0fe923856`, measured on 2026-10-02. The digest is reproducible with `git diff --binary 2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`. Re-run `bash scripts/measure-per-task-tokens.sh` after applying that input diff; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
 - Historical baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A), plus the same task template where applicable.
 - Current JIT payload = directive 1,286-2,350 + workflow + gate + relevant task template (route.md is not loaded by default).
 - Current Lite vs Balanced static directive sizes: 1,286 vs 2,350 tokens.

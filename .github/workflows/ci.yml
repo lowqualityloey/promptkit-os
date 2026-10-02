@@ -403,14 +403,14 @@ jobs:
       - name: Scan The Pull Request Diff For Credential Patterns
         run: |
           git fetch origin main
-          if git rev-parse --verify --quiet origin/main >/dev/null; then
-            git read-tree origin/main
-            git add -A -- .
-            if git diff --cached --quiet; then
-              echo "No diff against origin/main to scan."
-              exit 0
-            fi
-            bash scripts/scan-staged-secrets.sh .
-          else
-            echo "origin/main unavailable; skipping PR diff secret scan."
+          if ! git rev-parse --verify --quiet origin/main >/dev/null; then
+            echo "::error::origin/main unavailable; cannot scan the pull-request diff. Fetch the base ref (fetch-depth: 0) and re-run."
+            exit 1
           fi
+          git read-tree origin/main
+          git add -A -- .
+          if git diff --cached --quiet; then
+            echo "No diff against origin/main to scan."
+            exit 0
+          fi
+          bash scripts/scan-staged-secrets.sh .
