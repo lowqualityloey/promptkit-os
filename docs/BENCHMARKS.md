@@ -21,7 +21,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                   PROMPTKIT OS JIT FILESYSTEM MODEL                     │
-│ Baseline Static Injection: Router Directive (1,274 tok Lite / 2,318 Bal)  │
+│ Baseline Static Injection: Router Directive (1,286 tok Lite / 2,350 Bal)  │
 │ On-Demand Loading: Tool loads only target workflow file (e.g. pk:debug) │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -87,7 +87,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 **Methodology for per-task table:**
 - Historical comparison anchors: `fc98f2f` (after 2+1 profiles) and `c34be80` (before profiles, Balanced only). These SHAs identify historical inputs; they are not the source of the refreshed current values.
-- Refreshed measurement input: base revision `b31c1f3365a7069e75576925a16ff8273a67caf8` plus measured-input diff SHA-256 `57a0b4f7c0bc8f9d5eaa424c28d6ca5b6e428e27c78915d118dcc607d1dfae53`, measured on 2026-10-02. The digest is reproducible with `git diff --binary b31c1f3365a7069e75576925a16ff8273a67caf8 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`. Re-run `bash scripts/measure-per-task-tokens.sh` after applying that input diff; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
+- Refreshed measurement input: base revision `2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40` plus measured-input diff SHA-256 `fd6e347326f71b4e4566bbb25be47e1bd5a1789f1f4761fe8a6e577e8457d398`, measured on 2026-10-02. The digest is reproducible with `git diff --binary 2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`. Re-run `bash scripts/measure-per-task-tokens.sh` after applying that input diff; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
 - Historical baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A), plus the same task template where applicable.
 - Current JIT payload = directive 1,286-2,350 + workflow + gate + relevant task template (route.md is not loaded by default).
 - Current Lite vs Balanced static directive sizes: 1,286 vs 2,350 tokens.
@@ -96,9 +96,9 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,254 tok** | **8,190 tok** | **-28% Balanced, -36% Lite (-3,607 to -4,671 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,566 tok** | **18,502 tok** | **-21% Balanced, -25% Lite (-5,100 to -6,164 tok)** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,679 tok** | **14,615 tok** | **-37% Balanced, -41% Lite (-9,082 to -10,146 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,395 tok** | **8,331 tok** | **-27% Balanced, -35% Lite (-3,466 to -4,530 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,707 tok** | **18,643 tok** | **-20% Balanced, -24% Lite (-4,959 to -6,023 tok)** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,820 tok** | **14,756 tok** | **-36% Balanced, -40% Lite (-8,941 to -10,005 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 
@@ -221,17 +221,17 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
 
 The figures in this section use the `bytes/4` proxy. Issue #194 validated that convention against real tokenizers without replacing it; `bytes/4` remained the gated convention and the validation did not change the published figures at that time.
 
-**Current measurement:** The tokenizer comparison below was re-measured 2026-10-01 at `main` @ `e159c70`, superseding the 2026-09-28 `b7e9c8c` snapshot and the earlier 2026-09-16 `1312831` one. Validation only — `bytes/4` remains the gated convention and no published budget figure changed.
+**Current measurement:** The tokenizer comparison below was re-measured 2026-10-02 at `main` @ `2b6c9e9`, superseding the 2026-10-01 `e159c70` snapshot and the earlier 2026-09-28 `b7e9c8c` one. Validation only — `bytes/4` remains the gated convention and no published budget figure changed.
 
-**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-10-01 at `main` @ `e159c70` (prior: 2026-09-28 at `b7e9c8c`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4.
+**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-10-02 at `main` @ `2b6c9e9` (prior: 2026-10-01 at `e159c70`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4.
 
 | File | BYTES4 | CL100K | O200K | RATIO |
 | :--- | ---: | ---: | ---: | ---: |
-| `templates/agent-directive-template.md` | 2,318 | 2,328 | 2,318 | 1.004 |
-| `templates/agent-directive-lite-template.md` | 1,274 | 1,341 | 1,334 | 1.053 |
-| `workflows/plan.md` | 7,365 | 5,978 | 5,963 | 0.812 |
+| `templates/agent-directive-template.md` | 2,350 | 2,356 | 2,346 | 1.003 |
+| `templates/agent-directive-lite-template.md` | 1,286 | 1,342 | 1,337 | 1.044 |
+| `workflows/plan.md` | 7,602 | 6,165 | 6,153 | 0.811 |
 | `workflows/route.md` | 9,263 | 8,039 | 8,013 | 0.868 |
-| `workflows/fix.md` | 2,734 | 2,337 | 2,324 | 0.855 |
+| `workflows/fix.md` | 2,770 | 2,374 | 2,357 | 0.857 |
 | `workflows/ship.md` | 5,947 | 4,653 | 4,654 | 0.782 |
 | `protocols/discovery-intake.md` | 3,938 | 3,458 | 3,446 | 0.878 |
 

@@ -158,6 +158,18 @@ Before completing any coding task or finishing a PromptKit OS session:
    - **Oracle Test Integrity Guard**: You are strictly forbidden from modifying, disabling, commenting out, or deleting pre-existing tests, or authoring vacuous/tautological assertions (e.g. `expect(true).toBe(true)`), to bypass failures or manufacture a green `exit code 0`. If a test suite legitimately requires updating due to an approved requirement change or contract migration, the modification must be explicitly documented with rationale in the task evidence and commit description.
    - **Bounded Repair Rule**: If the verification command fails (`exit code != 0`), you are allowed a maximum of **2 automated self-repair attempts**.
     - If the 3rd consecutive verification attempt fails, you MUST halt execution, print the failure output, and emit the canonical Blocked callout per `protocols/telemetry-cards.md` (`> [!WARNING]` titled `### 🚫BLOCKED:` with waiting-on-human input details) to prevent infinite token-burning loops.
+   - **Structured Verification Evidence Contract (`evidence:verification`)**:
+     Task Records and automated harnesses (CI, pre-commit, Sureflow, OmO) emit machine-verifiable proof:
+     ```evidence:verification
+     status: PASS
+     exit_code: 0
+     checks_passed: <N>
+     checks_failed: 0
+     suite: <command>
+     diff_digest: <sha256>
+     timestamp: <iso8601>
+     ```
+     `status: PASS` and `exit_code: 0` are mandatory to complete work; `diff_digest` records verified tree SHA-256. Legacy freeform text remains supported for backward compatibility.
 6. When ready to stage and commit, invoke `workflows/commit.md` (`pk:commit`) to ensure atomic single-concern staging, Conventional Commit formatting, and secret leak prevention.
 7. Prepare the pull request with `workflows/pr.md` (`pk:pr`), compiling the verified AC checklist for human review and merge. Before creating it, require `git status -s` clean for this task, `git fetch origin` plus a rebase check against base, and `Quality Gate: measured this turn`. In the ordinary flow, do not auto-push; an explicitly authorized `pk:auto` run may push only its branch and create draft PRs within that run's boundary. A human alone executes a merge.
 8. **Milestone Git Boundary & Working Tree Verification**: A **milestone boundary** is the turn after a `pk:plan`/`pk:tasks` milestone or a Task Record closes. At milestone conclusion, verify working tree status with `git status`: all changes produced **by the current task** must be cleanly committed via `pk:commit` and synchronized to `docs/STATE.md` before beginning the next milestone. Files that were already untracked/dirty **before the task started** (including fresh `init.sh` scaffold output) are a documented exception: surface them to the developer and recommend `pk:commit` or ignores — do not stall the session on dirt you did not create.

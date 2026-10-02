@@ -350,6 +350,28 @@ validate_transitions() {
     fi
 }
 
+check_structured_evidence() {
+    local file="$1" id="$2" path="$3"
+    if grep -q '```evidence:verification' "$file"; then
+        local block
+        block="$(awk '/```evidence:verification/{flag=1; next} flag && /```/{exit} flag{print}' "$file")"
+        local status exit_code failed_count
+        status="$(printf '%s\n' "$block" | awk -F':' '/^[[:space:]]*status[[:space:]]*:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}')"
+        exit_code="$(printf '%s\n' "$block" | awk -F':' '/^[[:space:]]*exit_code[[:space:]]*:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}')"
+        failed_count="$(printf '%s\n' "$block" | awk -F':' '/^[[:space:]]*checks_failed[[:space:]]*:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}')"
+
+        if [ -n "$status" ] && [ "$status" != "PASS" ]; then
+            diagnostic "EVIDENCE_VERIFICATION_FAILED" "$id" "$path" "Structured verification evidence records status: $status" "Resolve verification failures before completing work"
+        fi
+        if [ -n "$exit_code" ] && [ "$exit_code" != "0" ]; then
+            diagnostic "EVIDENCE_VERIFICATION_FAILED" "$id" "$path" "Structured verification evidence records non-zero exit_code: $exit_code" "All verification checks must exit with 0"
+        fi
+        if [ -n "$failed_count" ] && [ "$failed_count" != "0" ]; then
+            diagnostic "EVIDENCE_VERIFICATION_FAILED" "$id" "$path" "Structured verification evidence records failed checks: $failed_count" "All verification checks must pass"
+        fi
+    fi
+}
+
 validate_task() {
     local file="$1" id="$(field_value "$1" "Task ID")" path profile id_profile="legacy" profile_remediation
     path="$(relative_path "$file")"
@@ -496,6 +518,8 @@ validate_task() {
             fi
         done <<< "$changed_items"
     fi
+
+    check_structured_evidence "$file" "$id" "$path"
 }
 
 validate_scope_change() {

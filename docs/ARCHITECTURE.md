@@ -58,6 +58,60 @@ How the assistant operates, how enforcement works, the full command reference, a
 
 PromptKit owns engineering policy and control; the host agent owns capability and execution. Verification gates require executed evidence (`exit code 0`), never claims — and the human remains the terminal authority for acceptance, merge, and release.
 
+### The 3-Layer Model: Policy, Harness, and Execution
+
+To understand PromptKit OS's place in modern AI-assisted engineering, distinguish between three fundamentally different architectural layers:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                       1. POLICY LAYER                       │
+│                        PROMPTKIT OS                         │
+│  - Task Ceremony Levels (L0–L3) & Autonomy Envelopes        │
+│  - Minimum Sufficient Context & JIT Knowledge Loading       │
+│  - Senior Engineering Quality Gates & Definition-of-Done    │
+│  - Machine-Verifiable Evidence (evidence:verification)      │
+│  - Human Acceptance, Merge, and Release Boundaries         │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                 portable governance contract
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      2. HARNESS LAYER                       │
+│             AGENT RUNTIME / IDE / ORCHESTRATOR              │
+│       (e.g., OmO, Cursor, Claude Code, Sureflow, Codex)     │
+│  - Model Routing & LLM Provider API Calls                   │
+│  - Agent Lifecycles & Multi-Agent DAG Graphs                │
+│  - Process Management, Tmux Runners, & Tool Execution       │
+│  - Persistent Memory, Cross-Session Cache, & Kibitzers      │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                 deterministic tool invocation
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     3. EXECUTION LAYER                      │
+│                  REPOSITORY & ENVIRONMENT                   │
+│  - Compilers, Typecheckers (tsc, mypy, cargo)               │
+│  - Test Runners (pytest, vitest, go test)                   │
+│  - Git Repository, Branch Worktrees, & Working Tree         │
+│  - Linters, Formatters, & Secret Scanners                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Why PromptKit OS Deliberately Avoids Becoming an Agent Runtime
+Many tools attempt to combine the Policy and Harness layers into a monolithic runtime executable (managing tmux sessions, model fallback graphs, daemon workers, and local vector databases). While powerful, embedding runtime mechanics introduces:
+1. **Host Lock-In**: It restricts teams to one specific CLI or IDE environment.
+2. **Context Bloat & Token Inefficiency**: Heavy multi-agent graphs spend massive context and budget without proportional quality gains on everyday tasks.
+3. **Fragile Dependencies**: Local daemons, process managers, and language-specific runtimes break across different developer OSes (Windows, macOS, Linux).
+
+PromptKit OS deliberately chooses **zero runtime dependencies, repository-contained Markdown directives, and universal portability**. Any agent or harness—from a lightweight terminal CLI to a massive multi-agent graph—can enter a repository initialized with PromptKit OS and be governed by the exact same quality and safety standards.
+
+#### The Runtime Harness Adapter Pattern
+Runtimes (such as OmO, Sureflow, or bespoke team orchestrators) integrate with PromptKit OS through a clean two-way interface:
+1. **Input Interface (Policy Ingestion)**: The harness reads `PROMPTKIT.md` and `$KIT_DIR_REL/templates/agent-directive-template.md` (or the Lite variant) into the agent's system prompt or project instruction slot. The agent inherits L0–L3 task ceremony, JIT routing conventions, and human halt rules.
+2. **Output Interface (Evidence Production)**: When running tests and verification commands, the harness emits PromptKit's canonical `evidence:verification` block directly into the Local Task Record (`docs/tasks/TASK-*.md`). CI gates and `scripts/validate-execution-control.sh` mechanically verify this proof before changes can merge.
+
 ### Subagent Delegation & Sandboxed Worktree Isolation
 
 In multi-agent environments (Antigravity, Claude Code, Cursor background agents), the assistant follows [`protocols/subagent-delegation.md`](../protocols/subagent-delegation.md):

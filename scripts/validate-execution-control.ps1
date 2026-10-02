@@ -304,6 +304,31 @@ function Test-Transitions {
     }
 }
 
+function Test-StructuredEvidence {
+    param([string]$FilePath, [string]$Id, [string]$Path)
+    $content = Get-Content -LiteralPath $FilePath -Raw
+    if ($content -match '(?s)```evidence:verification\r?\n(.*?)\r?\n```') {
+        $block = $Matches[1]
+        $status = ''
+        $exitCode = ''
+        $failedCount = ''
+        foreach ($line in ($block -split '\r?\n')) {
+            if ($line -match '^\s*status\s*:\s*(.*)$') { $status = $Matches[1].Trim() }
+            if ($line -match '^\s*exit_code\s*:\s*(.*)$') { $exitCode = $Matches[1].Trim() }
+            if ($line -match '^\s*checks_failed\s*:\s*(.*)$') { $failedCount = $Matches[1].Trim() }
+        }
+        if (-not [string]::IsNullOrEmpty($status) -and $status -ne 'PASS') {
+            Add-Diagnostic 'EVIDENCE_VERIFICATION_FAILED' $Id $Path "Structured verification evidence records status: $status" 'Resolve verification failures before completing work'
+        }
+        if (-not [string]::IsNullOrEmpty($exitCode) -and $exitCode -ne '0') {
+            Add-Diagnostic 'EVIDENCE_VERIFICATION_FAILED' $Id $Path "Structured verification evidence records non-zero exit_code: $exitCode" 'All verification checks must exit with 0'
+        }
+        if (-not [string]::IsNullOrEmpty($failedCount) -and $failedCount -ne '0') {
+            Add-Diagnostic 'EVIDENCE_VERIFICATION_FAILED' $Id $Path "Structured verification evidence records failed checks: $failedCount" 'All verification checks must pass'
+        }
+    }
+}
+
 function Test-Task {
     param([string]$FilePath)
     $id = Get-FieldValue $FilePath 'Task ID'
@@ -407,6 +432,7 @@ function Test-Task {
             }
         }
     }
+    Test-StructuredEvidence $FilePath $id $path
 }
 
 function Test-ScopeChange {
