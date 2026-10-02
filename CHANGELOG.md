@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Entries below landed **after** tag `v1.10.1` (PRs #506, #508, #509). No release tag exists for them yet: they are candidates for the next patch release, and cutting that release — version bump, release date, release evidence records, npm publish — is a human-authorized act. Do not retag or re-date history to make this section look released.
+
 ### Added
 - **Standardized Verification Evidence Contract**: Defined the canonical machine-verifiable `evidence:verification` block schema in `protocols/code-quality-gate.md`, `templates/execution-task-record-template.md`, and `templates/issue-task-template.md`. Enables external harnesses (Sureflow, OmO, CI, pre-commit hooks) to emit tamper-evident proof (`status: PASS`, `exit_code: 0`, `checks_passed`, `checks_failed`, `diff_digest`), mechanically validated by `scripts/validate-execution-control.sh` and `validate-execution-control.ps1`. (#505)
 - **3-Layer Architecture & Runtime Harness Adapter Positioning**: Documented the 3-Layer Model (Policy, Harness, Execution) in `docs/ARCHITECTURE.md`, crystalizing PromptKit OS as the universal, zero-runtime policy plane and defining the two-way adapter contract for agent runtimes and orchestrators (OmO, Cursor, Claude Code, Sureflow). (#505)
