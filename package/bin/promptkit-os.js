@@ -9,6 +9,7 @@
 "use strict";
 
 const { spawnSync } = require("node:child_process");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
@@ -16,6 +17,25 @@ const os = require("node:os");
 const PKG = require("../package.json");
 const REPO = "lowqualityloey/promptkit-os";
 const KIT_DIR = ".promptkit";
+
+// Pinned SHA-256 (hex) of the GitHub release tarball per courier version.
+// This lives here — not in a sidecar file — because release-npm.yml enforces an
+// npm-pack allowlist of exactly { package.json, README.md, bin/promptkit-os.js };
+// a sidecar would either be excluded from the published package (useless) or
+// require a workflow change to allowlist.
+//
+// UPDATE INSTRUCTION FOR RELEASES: after pushing tag vX.Y.Z (and before the npm
+// publish), download the immutable release tarball, hash it, and add the entry:
+//   curl -sL "https://github.com/lowqualityloey/promptkit-os/archive/refs/tags/vX.Y.Z.tar.gz" -o /tmp/release.tar.gz
+//   sha256sum /tmp/release.tar.gz
+// then add `"X.Y.Z": "<64-hex-chars>",` below so the courier verifies that exact
+// tarball before extracting or executing anything from it. If no pin exists for
+// the running version the courier warns loudly and continues (pins can only be
+// minted after the tag exists); set PROMPTKIT_REQUIRE_INTEGRITY_PIN=1 to fail
+// closed instead. PROMPTKIT_TARBALL_SHA256 overrides the map (testing / rotation).
+const TARBALL_SHA256_BY_VERSION = {
+  // "1.10.1": "<paste sha256sum of v1.10.1 release tarball here>",
+};
 
 function die(msg) {
   process.stderr.write(`[promptkit-os] ${msg}\n`);
@@ -76,6 +96,30 @@ function assertInstallTargetIsClean(kitDir, force) {
 function projectRootFrom(args) {
   const positional = args.filter((a) => !a.startsWith("-"));
   return path.resolve(positional[0] || process.cwd());
+}
+
+function expectedTarballDigest(version) {
+  const override = process.env.PROMPTKIT_TARBALL_SHA256;
+  if (override !== undefined && override !== "") return override;
+  return TARBALL_SHA256_BY_VERSION[version];
+}
+
+// Aborts (non-zero exit, no extract, no exec) unless `tarball` hashes to
+// `expectedHex`. Comparison is constant-time so a MITM learns nothing about the
+// pin from timing. Must be called after download() and before extract().
+function verifyTarballIntegrity(tarball, expectedHex, version) {
+  const actual = crypto.createHash("sha256").update(tarball).digest();
+  const expected = Buffer.from(String(expectedHex), "hex");
+  // Buffer.from(hex) never throws on bad input — it truncates — so the length
+  // check below is what turns a malformed pin into a mismatch (fail closed).
+  if (expected.length !== actual.length || !crypto.timingSafeEqual(actual, expected)) {
+    die(
+      `tarball integrity mismatch for v${version} ` +
+        `(expected sha256 ${expectedHex}, got ${actual.toString("hex")}): ` +
+        "refusing to extract or execute — the download may have been tampered with. " +
+        "If this version was just released, the pin in TARBALL_SHA256_BY_VERSION needs updating (see above)."
+    );
+  }
 }
 
 async function download(url) {
@@ -150,10 +194,29 @@ async function main() {
   fs.mkdirSync(kitDir, { recursive: true });
 
   const tarball = await download(url);
+  const expectedDigest = expectedTarballDigest(version);
+  if (expectedDigest) {
+    verifyTarballIntegrity(tarball, expectedDigest, version);
+    process.stderr.write(`[promptkit-os] verified release tarball integrity (sha256) for v${version}\n`);
+  } else if (process.env.PROMPTKIT_REQUIRE_INTEGRITY_PIN === "1") {
+    die(
+      `no integrity pin for v${version} — refusing to extract or execute. ` +
+        "Add the sha256 of the release tarball to TARBALL_SHA256_BY_VERSION (see above)."
+    );
+  } else {
+    process.stderr.write(
+      `[promptkit-os] warning: no integrity pin for v${version}; ` +
+        "proceeding unverified — set PROMPTKIT_REQUIRE_INTEGRITY_PIN=1 to fail closed.\n"
+    );
+  }
   await extract(tarball, kitDir);
   process.stderr.write(`[promptkit-os] extracted release v${version} into ${KIT_DIR}/\n`);
 
   runInstaller(kitDir, args);
 }
 
-main().catch((err) => die(err && err.message ? err.message : String(err)));
+if (require.main === module) {
+  main().catch((err) => die(err && err.message ? err.message : String(err)));
+} else {
+  module.exports = { verifyTarballIntegrity, expectedTarballDigest, TARBALL_SHA256_BY_VERSION };
+}
