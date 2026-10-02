@@ -73,7 +73,7 @@
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-10-02`
 - **Current Actor**: `PromptKit maintainer (review) + Codex (handoff)`
-- **Next Action**: `Complete fresh exact-head review gates, create the PR, and hand off for maintainer review; merge remains human-only.`
+- **Next Action**: `Run the final exact-head review after this evidence-record correction, then push and open the PR for maintainer review; PR CI will run after creation, and merge remains human-only.`
 
 ### Transition History
 
@@ -107,7 +107,7 @@
 - **Handoff Records**: `None`
 - **Verification Evidence**: `Bash picker PASS; PowerShell picker PASS; Bash syntax PASS; PowerShell init.ps1 -Help PASS; Bash init safety PASS; Bash profile matrix 10/10 PASS including universal-only AGENTS.md rerun; Bash behavioral contracts 394/394 PASS; Bash execution-control fixture/property suites and strict validator PASS; Bash staged-secret and reference-link tests PASS; Bash strict token budget PASS (Balanced 2350/2500, Lite 1286/1500); git diff --check PASS. Harness preflight PASS from the primary checkout; the linked-worktree checkout reports the documented GIT_LAYOUT limitation. Bash installer PTY install/edit/cancel plus AGENTS-only rerun evidence and fresh 80/120-column xterm.js screens and width checks are under .omo/evidence/installer-keyboard-picker/.`
 - **CI Evidence**: `Pending PR CI.`
-- **Review Evidence**: `Pending fresh exact-head review lanes after the agents-only rerun fix.`
+- **Review Evidence**: `At the implementation revision 630bfd2d5957700b7f9a9e659101c95b0f891f13, goal, code, security, context, native QA, and both visual review lanes passed; the only remaining review at this task-record revision is the exact-head final gate after this evidence correction. The local review ledger and reports are under .omo/evidence/installer-keyboard-picker/.`
 - **Commit Evidence**: `Feature commit b84a81737831d2e0c23d6bae87e30fe387a8e911; the universal-only rerun fix and this task-record update are included in the current commit.`
 - **Pull Request Evidence**: `Pending.`
 - **Release Evidence**: `N/A — no release action in scope.`
@@ -115,5 +115,5 @@
 - **Completion State**: `awaiting_review`
 - **Acceptance Results**: `AC-1 Pass; AC-2 Pass; AC-3 Pass; AC-4 Pass with AGENTS-only regression fixed and verified; AC-5 Pass; AC-6 Pass locally; PR CI pending.`
 - **Changed-File Summary**: `Add keyboard-driven setup and review screens to both installers, responsive terminal branding, focused tests and CI wiring; preserve universal-only host selection across reruns.`
-- **Completion Exception**: `Native interactive PowerShell wizard not manually exercised in a Windows terminal. Focused PowerShell picker tests and init.ps1 -Help pass. The PowerShell profile matrix cannot run from this WSL-backed Windows process because its nested child command pwsh is unavailable; direct installer execution also hits the WSL provider-path boundary. The Windows PR job is the cross-platform authority and remains pending.`
-- **Completion Decision and Timestamp**: `Review-discovered AGENTS-only rerun behavior fixed and locally verified on 2026-10-02; fresh exact-head review and PR CI pending.`
+- **Completion Exception**: `The full PowerShell profile matrix cannot run from the WSL-backed shell because its nested child command pwsh is unavailable; direct WSL-hosted installer runs also hit the Windows provider-path boundary. The interactive wizard itself was exercised in a native Windows Console at 80 and 120 columns, including install/edit/cancel, rerun preservation, and universal-only AGENTS.md rerun. Windows PR CI remains pending.`
+- **Completion Decision and Timestamp**: `Acceptance criteria and native Windows interaction pass. This task-record correction reconciles the latest QA and review evidence; rerun the final exact-head gate on the resulting commit before PR creation. PR CI remains pending — 2026-10-02.`
