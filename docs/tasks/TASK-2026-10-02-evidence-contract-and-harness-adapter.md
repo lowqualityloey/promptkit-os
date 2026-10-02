@@ -28,7 +28,10 @@
   - `scripts/validate-execution-control.ps1` (PowerShell parity for structured evidence block validation)
   - `docs/ARCHITECTURE.md` (3-Layer Model and Runtime Harness Adapter specification)
   - `protocols/subagent-delegation.md` (Tiered Model Specialization & Lightweight Cognition section)
-  - `docs/BENCHMARKS.md` (refreshed per-task measurements and digest)
+  - `docs/BENCHMARKS.md` (refreshed per-task measurements, digest, and section 9 tokenizer table)
+  - `README.md` (reconciled static token footprint)
+  - `FAQ.md` (reconciled static token footprint)
+  - `templates/lite-profile.md` (reconciled static token footprint)
   - `docs/tasks/TASK-2026-10-02-evidence-contract-and-harness-adapter.md` (this task record)
   - `CHANGELOG.md` (record entry under [Unreleased])
 - **Explicit Non-Goals**:
@@ -99,6 +102,9 @@
   - `docs/ARCHITECTURE.md`
   - `protocols/subagent-delegation.md`
   - `docs/BENCHMARKS.md`
+  - `README.md`
+  - `FAQ.md`
+  - `templates/lite-profile.md`
   - `docs/tasks/TASK-2026-10-02-evidence-contract-and-harness-adapter.md`
   - `CHANGELOG.md`
 - **Scope Change Records**: `None`
@@ -121,13 +127,13 @@
   - `bash scripts/tests/run-execution-control-fixtures.sh` passed (24/24 contracts).
   - `bash scripts/check-changelog-entry.sh` passed.
 - **CI Evidence**: `PR #506 GitHub Actions runs passed (Linux 3m59s & Windows 5m29s green).`
-- **Review Evidence**: `Addresses Issue #505: standardized evidence block, 3-layer architecture, runtime harness adapter, and tiered cognition.`
-- **Commit Evidence**: `Commit 47dcc89.`
+- **Review Evidence**: `Addresses Issue #505 and Mode B review conditions (ten-site figure propagation sweep, illustrative model class clarification, ASCII diagram wall alignment).`
+- **Commit Evidence**: `Commit 47dcc89, 5107825, and figure reconciliation follow-up.`
 - **Pull Request Evidence**: `PR #506 (https://github.com/lowqualityloey/promptkit-os/pull/506).`
 - **Release Evidence**: `N/A - no release action in scope.`
 - **Blocker and Resume Condition**: `None.`
 - **Completion State**: `awaiting_review`
 - **Acceptance Results**: `All acceptance criteria AC-1 through AC-6 verified.`
-- **Changed-File Summary**: `Standardize Verification Evidence Block schema in quality gate and templates, add parser validation in execution-control scripts, define 3-Layer Architecture in docs/ARCHITECTURE.md, and document Tiered Model Specialization in protocols/subagent-delegation.md.`
+- **Changed-File Summary**: `Standardize Verification Evidence Block schema in quality gate and templates, add parser validation in execution-control scripts, define 3-Layer Architecture in docs/ARCHITECTURE.md, document Tiered Model Specialization in protocols/subagent-delegation.md, and reconcile repo-wide static token figures and tokenizer-delta measurements.`
 - **Completion Exception**: `None.`
 - **Completion Decision and Timestamp**: `2026-10-02T17:15:00+13:00`

@@ -146,7 +146,7 @@ PromptKit OS structures multi-agent work into two distinct cognitive tiers:
 | **Tier 2: Frontier / High-Reasoning** | Frontier reasoning models (`pro`, Claude Sonnet/Opus, GPT-4o/o1) | Architectural planning (`pk:plan`), delicate invariant-preserving refactoring (`pk:fix`), cryptographic/security reviews, and multi-file code synthesis | **Reserve for synthesis and code changes.** The parent agent retains Tier 2 context exclusively for high-altitude reasoning and user alignment. |
 
 ### Architectural Boundary: No Embedded Model Routing
-While PromptKit OS strongly prescribes **tiered cognition as an engineering discipline**, it deliberately **does not hardcode model provider names or APIs into repository files**.
+While PromptKit OS strongly prescribes **tiered cognition as an engineering discipline**, it deliberately **does not hardcode model provider names or routing APIs into its contracts** (names in the table above appear solely as illustrative examples of cognitive capability classes).
 - Model selection and routing are owned by the **host runtime** (e.g. IDE model pickers, harness config, or subagent tool arguments like `Model: 'flash'`).
 - PromptKit OS provides the **role contracts, file boundaries, and token budgets** that make tiered delegation safe and effective across any host.
 

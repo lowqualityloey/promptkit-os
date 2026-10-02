@@ -69,7 +69,7 @@ To understand PromptKit OS's place in modern AI-assisted engineering, distinguis
 │  - Task Ceremony Levels (L0–L3) & Autonomy Envelopes        │
 │  - Minimum Sufficient Context & JIT Knowledge Loading       │
 │  - Senior Engineering Quality Gates & Definition-of-Done    │
-│  - Machine-Verifiable Evidence Schema (evidence:verification)│
+│  - Machine-Verifiable Evidence (evidence:verification)      │
 │  - Human Acceptance, Merge, and Release Boundaries         │
 └──────────────────────────────┬──────────────────────────────┘
                                │
