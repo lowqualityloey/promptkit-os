@@ -37,6 +37,17 @@ jwt+='uvwxyzABCD'
 password_name=$(printf 'pass%s' 'word')
 password_value='synthetic-value-only'
 password_assignment="$password_name=\"$password_value\""
+# New-prefix fixtures are built by concatenation (like the classics above) so
+# this file itself never contains a literal matchable secret.
+unquoted_assignment="$password_name=$(printf 's3%s' 'cret')"
+oauth_token="gho_$(printf '%036d' 2)"
+user_token="ghu_$(printf '%036d' 3)"
+server_token="ghs_$(printf '%036d' 4)"
+refresh_token="ghr_$(printf '%036d' 5)"
+slack_token="xoxb-$(printf '%012d' 6)-$(printf '%020d' 7)"
+google_key="AIza$(printf '%035d' 8)"
+entropy_value='dGhpcyBpcyBhIHN5bnRoZXRpYyB0b2tlbg=='
+entropy_assignment="deploy_token = \"$entropy_value\""
 aws_key_on_later_line="AKIA$(printf '%016d' 1)"
 printf '%s\n' one two three four "$aws_key_on_later_line" six seven >"$positive/context.txt"
 printf '%s\n' \
@@ -46,7 +57,15 @@ printf '%s\n' \
     "$fine_token" \
     "$stripe_key" \
     "$jwt" \
-    "$password_assignment" >"$positive/ordinary.txt"
+    "$password_assignment" \
+    "$unquoted_assignment" \
+    "$oauth_token" \
+    "$user_token" \
+    "$server_token" \
+    "$refresh_token" \
+    "$slack_token" \
+    "$google_key" \
+    "$entropy_assignment" >"$positive/ordinary.txt"
 
 newline_path=$(printf 'staged\ncredential.txt')
 printf '%s\n' "$classic_token" >"$positive/$newline_path"
@@ -69,6 +88,8 @@ git -C "$clean" init -q
 git -C "$clean" config user.name "PromptKit scanner fixture"
 git -C "$clean" config user.email "scanner-fixture@example.invalid"
 printf '%s\n' 'ordinary staged content' >"$clean/README.md"
+# Bracketed placeholders must stay silent (template-marker exemption).
+printf '%s\n' 'password: [ask-your-admin]' 'token: <rotate-me>' >>"$clean/README.md"
 git -C "$clean" add -- README.md
 
 invalid_root="$tmp/not-a-git-repository-$aws_key"
@@ -104,9 +125,16 @@ run_engine() {
         'AWS access-key pattern' \
         'GitHub token pattern' \
         'GitHub fine-grained token pattern' \
+        'GitHub OAuth token pattern' \
+        'GitHub user token pattern' \
+        'GitHub server token pattern' \
+        'GitHub refresh token pattern' \
+        'Slack token pattern' \
+        'Google API key pattern' \
         'Stripe live-key pattern' \
         'JWT-like token pattern' \
-        'password-assignment pattern'; do
+        'password-assignment pattern' \
+        'high-entropy secret-assignment pattern'; do
         [[ "$output" == *"$category"* ]] || fail "$awk_bin missed the $category detector"
     done
 
@@ -125,17 +153,19 @@ run_engine() {
     [[ "$output" == *"credential-REDACTED:1"* && "$output" != *'synthetic-value'* ]] ||
         fail "$awk_bin exposed a password-shaped value in a staged filename"
 
-    for expected in 1 2 3 4 5 6 7; do
+    for expected in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
         [[ "$output" == *"ordinary.txt:$expected"* ]] ||
             fail "$awk_bin reported an incorrect line number for ordinary.txt"
     done
 
-    [[ $(grep -c '^Potential ' <<< "$output") -eq 13 ]] ||
+    [[ $(grep -c '^Potential ' <<< "$output") -eq 21 ]] ||
         fail "$awk_bin returned an unexpected detection count"
 
     for escaped_value in \
         "$private_marker" "$aws_key" "$classic_token" "$fine_token" \
-        "$stripe_key" "$jwt" "$password_assignment" "$aws_key_on_later_line"; do
+        "$stripe_key" "$jwt" "$password_assignment" "$aws_key_on_later_line" \
+        "$unquoted_assignment" "$oauth_token" "$user_token" "$server_token" \
+        "$refresh_token" "$slack_token" "$google_key" "$entropy_assignment"; do
         [[ "$output" != *"$escaped_value"* ]] || fail "$awk_bin leaked a matching value"
     done
 
@@ -162,7 +192,7 @@ run_engine() {
             fail "$awk_bin did not fail closed without exposing binary staged content from $path"
     done
 
-    printf 'PASS: %s detected thirteen redacted matches, ignored textconv, handled tricky paths and modified-file lines; clean input passed and scan errors and binary-classified diffs failed closed.\n' "$awk_bin"
+    printf 'PASS: %s detected twenty-one redacted matches, ignored textconv, handled tricky paths and modified-file lines; clean input passed and scan errors and binary-classified diffs failed closed.\n' "$awk_bin"
 }
 
 run_engine awk

@@ -307,23 +307,38 @@ function Test-Transitions {
 function Test-StructuredEvidence {
     param([string]$FilePath, [string]$Id, [string]$Path)
     $content = Get-Content -LiteralPath $FilePath -Raw
-    if ($content -match '(?s)```evidence:verification\r?\n(.*?)\r?\n```') {
-        $block = $Matches[1]
+    # Validate EVERY evidence block (not just the first); a trailing block
+    # without a closing fence is still checked. Values split on the FIRST
+    # colon only, with trailing `#` comments and CR stripped. Comparisons are
+    # case-sensitive (-cne) to match the sh twin and the canonical PASS/0 form.
+    # Fences may be indented (task records nest the block inside list items),
+    # so both opener and closer allow leading/trailing whitespace — but must
+    # be fence-only lines, otherwise an inline ``` in prose would open/close
+    # a phantom block (or swallow the real closer).
+    $blockMatches = [regex]::Matches($content, '(?sm)^[ \t]*```evidence:verification[ \t]*\r?\n(.*?)(?:\r?\n[ \t]*```[ \t]*(?=\r?\n|\z)|\z)')
+    foreach ($blockMatch in $blockMatches) {
+        $block = $blockMatch.Groups[1].Value
         $status = ''
         $exitCode = ''
         $failedCount = ''
         foreach ($line in ($block -split '\r?\n')) {
-            if ($line -match '^\s*status\s*:\s*(.*)$') { $status = $Matches[1].Trim() }
-            if ($line -match '^\s*exit_code\s*:\s*(.*)$') { $exitCode = $Matches[1].Trim() }
-            if ($line -match '^\s*checks_failed\s*:\s*(.*)$') { $failedCount = $Matches[1].Trim() }
+            $line = $line -replace '\r$', ''
+            $pos = $line.IndexOf(':')
+            if ($pos -ge 0) {
+                $key = $line.Substring(0, $pos).Trim()
+                $val = $line.Substring($pos + 1)
+                if ($key -ceq 'status' -and $status -eq '') { $status = ($val -replace '\s*#.*$', '').Trim() }
+                elseif ($key -ceq 'exit_code' -and $exitCode -eq '') { $exitCode = ($val -replace '\s*#.*$', '').Trim() }
+                elseif ($key -ceq 'checks_failed' -and $failedCount -eq '') { $failedCount = ($val -replace '\s*#.*$', '').Trim() }
+            }
         }
-        if (-not [string]::IsNullOrEmpty($status) -and $status -ne 'PASS') {
+        if (-not [string]::IsNullOrEmpty($status) -and $status -cne 'PASS') {
             Add-Diagnostic 'EVIDENCE_VERIFICATION_FAILED' $Id $Path "Structured verification evidence records status: $status" 'Resolve verification failures before completing work'
         }
-        if (-not [string]::IsNullOrEmpty($exitCode) -and $exitCode -ne '0') {
+        if (-not [string]::IsNullOrEmpty($exitCode) -and $exitCode -cne '0') {
             Add-Diagnostic 'EVIDENCE_VERIFICATION_FAILED' $Id $Path "Structured verification evidence records non-zero exit_code: $exitCode" 'All verification checks must exit with 0'
         }
-        if (-not [string]::IsNullOrEmpty($failedCount) -and $failedCount -ne '0') {
+        if (-not [string]::IsNullOrEmpty($failedCount) -and $failedCount -cne '0') {
             Add-Diagnostic 'EVIDENCE_VERIFICATION_FAILED' $Id $Path "Structured verification evidence records failed checks: $failedCount" 'All verification checks must pass'
         }
     }
@@ -493,7 +508,11 @@ function Test-Handoff {
 }
 
 try {
-    $RootPath = (Resolve-Path -LiteralPath $Root -ErrorAction Stop).Path.TrimEnd('\', '/')
+    # ProviderPath (not .Path): .Path can carry the provider qualifier prefix
+    # (e.g. Microsoft.PowerShell.Core\FileSystem::\\wsl.localhost\...) while
+    # Get-ChildItem .FullName does not, which would misalign Substring() in
+    # Get-RelativePath and truncate every diagnostic path.
+    $RootPath = (Resolve-Path -LiteralPath $Root -ErrorAction Stop).ProviderPath.TrimEnd('\', '/')
 } catch {
     Write-Output 'MISSING_FIELD|REPOSITORY|.|Repository root does not exist|Provide a valid -Root path'
     exit 1

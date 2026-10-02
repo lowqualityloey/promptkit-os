@@ -352,14 +352,34 @@ validate_transitions() {
 
 check_structured_evidence() {
     local file="$1" id="$2" path="$3"
-    if grep -q '```evidence:verification' "$file"; then
-        local block
-        block="$(awk '/```evidence:verification/{flag=1; next} flag && /```/{exit} flag{print}' "$file")"
-        local status exit_code failed_count
-        status="$(printf '%s\n' "$block" | awk -F':' '/^[[:space:]]*status[[:space:]]*:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}')"
-        exit_code="$(printf '%s\n' "$block" | awk -F':' '/^[[:space:]]*exit_code[[:space:]]*:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}')"
-        failed_count="$(printf '%s\n' "$block" | awk -F':' '/^[[:space:]]*checks_failed[[:space:]]*:/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}')"
-
+    grep -q '```evidence:verification' "$file" || return 0
+    # Validate EVERY evidence block (not just the first): awk emits one
+    # \x1f-separated status/exit_code/checks_failed line per block. Values are
+    # split on the FIRST colon only, with trailing `#` comments and CR stripped.
+    # The while loop below uses a here-string (not a pipeline) so diagnostic()
+    # increments ERROR_COUNT in the current shell.
+    local parsed status exit_code failed_count
+    parsed="$(awk '
+        /^[ \t]*```evidence:verification[ \t]*$/ { inblock=1; status=""; code=""; failed=""; next }
+        inblock && /^[ \t]*```[ \t]*$/ { printf "%s\037%s\037%s\n", status, code, failed; inblock=0; next }
+        inblock {
+            line=$0
+            sub(/\r$/, "", line)
+            pos=index(line, ":")
+            if (pos > 0) {
+                key=substr(line, 1, pos-1); val=substr(line, pos+1)
+                gsub(/^[ \t]+|[ \t]+$/, "", key)
+                if (key == "status" && status == "") { status=cleanval(val) }
+                else if (key == "exit_code" && code == "") { code=cleanval(val) }
+                else if (key == "checks_failed" && failed == "") { failed=cleanval(val) }
+            }
+            next
+        }
+        function cleanval(v) { sub(/[ \t]*#[ \t]*.*$/, "", v); gsub(/^[ \t]+|[ \t]+$/, "", v); return v }
+        END { if (inblock) printf "%s\037%s\037%s\n", status, code, failed }
+    ' "$file")"
+    [ -z "$parsed" ] && return 0
+    while IFS="$(printf '\037')" read -r status exit_code failed_count; do
         if [ -n "$status" ] && [ "$status" != "PASS" ]; then
             diagnostic "EVIDENCE_VERIFICATION_FAILED" "$id" "$path" "Structured verification evidence records status: $status" "Resolve verification failures before completing work"
         fi
@@ -369,7 +389,7 @@ check_structured_evidence() {
         if [ -n "$failed_count" ] && [ "$failed_count" != "0" ]; then
             diagnostic "EVIDENCE_VERIFICATION_FAILED" "$id" "$path" "Structured verification evidence records failed checks: $failed_count" "All verification checks must pass"
         fi
-    fi
+    done <<< "$parsed"
 }
 
 validate_task() {
