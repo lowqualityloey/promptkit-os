@@ -120,10 +120,10 @@
   - `bash scripts/measure-per-task-tokens.sh --strict` passed (all baselines passed).
   - `bash scripts/tests/run-execution-control-fixtures.sh` passed (24/24 contracts).
   - `bash scripts/check-changelog-entry.sh` passed.
-- **CI Evidence**: `Pending PR creation and GitHub Actions run.`
+- **CI Evidence**: `PR #506 GitHub Actions runs passed (Linux 3m59s & Windows 5m29s green).`
 - **Review Evidence**: `Addresses Issue #505: standardized evidence block, 3-layer architecture, runtime harness adapter, and tiered cognition.`
-- **Commit Evidence**: `Pending commit.`
-- **Pull Request Evidence**: `Pending PR creation.`
+- **Commit Evidence**: `Commit 47dcc89.`
+- **Pull Request Evidence**: `PR #506 (https://github.com/lowqualityloey/promptkit-os/pull/506).`
 - **Release Evidence**: `N/A - no release action in scope.`
 - **Blocker and Resume Condition**: `None.`
 - **Completion State**: `awaiting_review`
