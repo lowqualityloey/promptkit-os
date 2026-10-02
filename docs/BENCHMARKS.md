@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Historical baseline:** 2026-09-14 on `main` (v1.6.0 with 2+1 profiles) · **Current measurements:** 2026-10-01, regenerated from the source tree (per-task input fingerprint in §3; rerun the commands below after input changes) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 lifecycle subset 19,794 tok / full 25-workflow set 75,505 tok.
+**Historical baseline:** 2026-09-14 on `main` (v1.6.0 with 2+1 profiles) · **Current measurements:** 2026-10-02, regenerated from the source tree (per-task input fingerprint in §3; rerun the commands below after input changes) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 lifecycle subset 19,794 tok / full 25-workflow set 75,505 tok.
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [25 Inlined Workflows + Templates + Protocols (~101.5k tok)] │
+│ Every Turn: [25 Inlined Workflows (105,691 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -30,7 +30,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 ## 2. Static Injection Footprint (Measured Tokens)
 
-| Profile | Template | UTF-8 Bytes | Est. Tokens (bytes/4) | Reduction vs ~26.4k current core-subset baseline¹ | Use |
+| Profile | Template | UTF-8 Bytes | Est. Tokens (bytes/4) | Reduction vs ~26.9k current core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
 | **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 5,144 | **1,286 tok** | **95% static** | Onboarding, new users, tiny fixes |
 | **Balanced** | `agent-directive-template.md` (25 workflows) | 9,398 | **2,350 tok** | **91% static** | Teams, production, default |
@@ -40,8 +40,8 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **26,927 tok** |
-| Full workflow set | 25 | **105,675 tok** |
+| Core-six Lite subset | 6 | **26,944 tok** |
+| Full workflow set | 25 | **105,691 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -54,7 +54,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | **Engineering Quality Gates** | ~36 | ~642 tokens | Secret hygiene, timeout budgets, and anti-hallucination rules |
 | **Task Ceremony Levels & Output** | ~25 | ~397 tokens | Composable 4-level task ceremony engine & output protocol |
 | **Standard Output Directories** | ~17 | ~226 tokens | Canonical locations for generated specs, ADRs, and plans |
-| **Total Baseline Static Overhead (Balanced)** | **68 lines** | **~2,350 tokens** | **Permanent footprint in system prompt (~91% static saving vs. current ~26.4k core-subset (~98% vs. current full 25-file set))** |
+| **Total Baseline Static Overhead (Balanced)** | **68 lines** | **~2,350 tokens** | **Permanent footprint in system prompt (~91% static saving vs. current ~26.9k core-subset (~98% vs. current full 25-file set))** |
 | **Total Baseline Static Overhead (Lite)** | **53 lines** | **~1,286 tokens** | **95% static saving, ~55% of Balanced** |
 | **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,286 tok — skipped silently) |
 
@@ -75,7 +75,7 @@ pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict   # PowerShell parity
 bash scripts/measure-per-task-tokens.sh --strict
 ```
 
-Gate coverage: the static dual-profile budget runs in **both** Linux and Windows CI jobs; the per-task baseline gate runs in the Linux job (PowerShell mirror tracked as a follow-up). Negative-path behavior is covered by `scripts/tests/run-token-budget-tests.sh`. Budget constants are defined once per script; this document is the human reference. If a deliberate contract expansion requires raising a budget, update the constant in `scripts/measure-tokens.sh`, `scripts/measure-tokens.ps1`, and this document in the same change.
+Gate coverage: the static dual-profile budget **and** the per-task baseline gate (PowerShell mirror included) run in **both** Linux and Windows CI jobs; the Turbo overhead claim window runs in both jobs as well. Negative-path behavior is covered by `scripts/tests/run-token-budget-tests.sh`. Budget constants are defined once per script; this document is the human reference. If a deliberate contract expansion requires raising a budget, update the constant in `scripts/measure-tokens.sh`, `scripts/measure-tokens.ps1`, and this document in the same change.
 
 ---
 
@@ -87,7 +87,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 **Methodology for per-task table:**
 - Historical comparison anchors: `fc98f2f` (after 2+1 profiles) and `c34be80` (before profiles, Balanced only). These SHAs identify historical inputs; they are not the source of the refreshed current values.
-- Refreshed measurement input: base revision `2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40` plus measured-input diff SHA-256 `fd6e347326f71b4e4566bbb25be47e1bd5a1789f1f4761fe8a6e577e8457d398`, measured on 2026-10-02. The digest is reproducible with `git diff --binary 2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`. Re-run `bash scripts/measure-per-task-tokens.sh` after applying that input diff; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
+- Refreshed measurement input: base revision `2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40` plus measured-input diff SHA-256 `fbcc3447a749f9cc68a0efd79355aeaa52742479787264fd48976fa0fe923856`, measured on 2026-10-02. The digest is reproducible with `git diff --binary 2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`. Re-run `bash scripts/measure-per-task-tokens.sh` after applying that input diff; the script sums the current directive, workflow, `code-quality-gate.md`, and relevant task template.
 - Historical baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A), plus the same task template where applicable.
 - Current JIT payload = directive 1,286-2,350 + workflow + gate + relevant task template (route.md is not loaded by default).
 - Current Lite vs Balanced static directive sizes: 1,286 vs 2,350 tokens.
@@ -212,6 +212,8 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
 **Decision (per #145 threshold rule):** **KEEP Turbo experimental — do not promote, do not remove.** Measured overhead tops out near **2x**, materially below the "3-5x" band previously advertised, and the structural time benefit caps at ~50% of only the parallelizable segment. Promotion would require real multi-host wall-clock evidence that a documentation protocol cannot produce; removal would discard a genuinely useful (≤2x) pattern for greenfield spikes. All shipped "3-5x" claims were corrected in this change to "up to ~2x measured" and the claim window is now CI-gated (`--strict`, 1.00–2.60x): widening fan-out without re-baselining this section fails the build.
 
 **Revisit trigger (per #213):** this verdict expires on the earlier of (a) multi-host wall-clock evidence for promotion being presented, or (b) the next minor version release. On expiry, record a new dated verdict entry (promote / keep / remove with rationale and disconfirming evidence) and re-arm this trigger — experimental status never persists by silence.
+
+**2026-10-02 re-confirmation (v1.10.1):** KEEP Turbo experimental. The previous trigger window closed with no multi-host evidence presented; trigger re-armed to the next minor release.
 
 **Safety invariant (AC-3, grep-asserted by the script):** Turbo never removes the human Level-3 approval requirement for releases, tags, deployments, or rollback, in any shipped surface.
 

@@ -211,4 +211,4 @@ Raw unformatted URLs (e.g. `https://github.com/...`) are prohibited in turn comp
 
 ## Provenance Invariant
 
-Every number in a status card must trace to a command executed or file read in this turn (exit code 0 or STATE.md read); otherwise emit `not measured`. Never claim a green Quality Gate without executed proof in the active turn.
+Every *measured* number in a status card must trace to a command executed or file read in this turn (exit code 0 or STATE.md read); otherwise emit `not measured`. Never claim a green Quality Gate without executed proof in the active turn. Estimated columns (e.g. context-payload ranges in the state tracker) are explicitly heuristic per `workflows/checkpoint.md` — never blend them into measured claims.
