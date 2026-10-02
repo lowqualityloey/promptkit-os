@@ -134,7 +134,7 @@ Record the complete workspace state before switching sessions, including intenti
       `| YYYY-MM-DD (focus) | [turns] | [measured in/out or host telemetry unavailable] | [estimated context-payload range] | duration=[value]; repairs=[count or not tracked]; interventions=[count or not tracked]; verification=[result or not tracked]; outcome=[accepted/rejected/incomplete/blocked/not tracked] |`
       and refresh its Running-total line.
     - **Table Integrity Invariant**: Keep table rows strictly contiguous (zero blank lines between rows); escape literal pipes as `\|` (even in inline code or markers); format each row on a single physical line (use `<br>` for multi-line cells).
-      - **Fallback Estimation Heuristic**: If the host runtime does not expose live per-turn token metering (e.g. OpenCode, Cursor, Windsurf, Copilot, or Neovim), do **NOT** emit `not measured` for Estimated context payload. Compute the engineering range using the standard session formula:
+      - **Fallback Estimation Heuristic** (estimated column only — never substitute for measured evidence): If the host runtime does not expose live per-turn token metering (e.g. OpenCode, Cursor, Windsurf, Copilot, or Neovim), do **NOT** emit `not measured` for Estimated context payload. Compute the engineering range using the standard session formula:
         - Average cumulative turn context: `~8k–15k tok/turn` (prompt directives + conversation history + tool reads).
         - `Estimated context payload`: calculate the lower and upper bounds independently as `[turns × 8k]–[turns × 15k] tok`. For example, 15 turns yields `120k–225k heuristic context payload`. Do not collapse the range into a midpoint estimate.
         - In `Measured in/out`: write `host telemetry unavailable`.

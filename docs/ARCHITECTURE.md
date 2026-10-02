@@ -264,7 +264,7 @@ promptkit-os/
 │   └── workflows/
 │       └── ci.yml               # Maintainer CI (script syntax, initialization dry-run/idempotency, workflow structure, reference validation, fixture harnesses, and behavioral-contract tests)
 ├── CHANGELOG.md                 # Official release provenance adhering to Keep a Changelog
-├── FAQ.md                       # The 19 questions every developer asks before adopting
+├── FAQ.md                       # The 20 questions every developer asks before adopting
 ├── QUICKSTART.md                # 5-minute introduction with core workflows & 1-line setup
 ├── init.ps1                     # Setup script for Windows (PowerShell)
 ├── init.sh                      # Setup script for Linux/macOS (Bash)
@@ -373,7 +373,7 @@ promptkit-os/
 │   ├── measure-tokenizer-delta.ps1     # PowerShell: bytes/4 vs real-tokenizer validation
 │   ├── run-behavioral-eval.sh          # Bash: Prompt-compliance eval harness + offline self-test
 │   ├── run-behavioral-eval.ps1         # PowerShell: Prompt-compliance eval harness + offline self-test
-│   ├── tests/eval-scenarios/           # Eval rubric scenarios with embedded fixtures (15)
+│   ├── tests/eval-scenarios/           # Eval rubric scenarios with embedded fixtures (18)
 │   ├── setup-github-labels.sh          # Bash: Provision standardized GitHub labels (priority, type, area)
 │   ├── setup-github-labels.ps1         # PowerShell: Provision standardized GitHub labels (priority, type, area)
 │   ├── validate-references.sh          # Bash: Check all workflow→template references
