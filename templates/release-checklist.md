@@ -32,6 +32,7 @@
 - [ ] Build succeeds with zero bundle size alerts per the project's build (e.g. `pnpm build`).
 - [ ] Release tag proposal drafted for the Release Coordinator: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z` (Do not execute without explicit human authorization).
 - [ ] Published benchmark figures re-validated where payloads moved: `bash scripts/measure-tokenizer-delta.sh` re-run and `docs/BENCHMARKS.md` §9 provenance current when directive/workflow content drifted since the last measurement (`bytes/4` stays the gated convention; §9 is validation only).
+- [ ] Courier integrity pin minted for the npm courier (repository maintainers only): after the tag exists, hash the release tarball and add the entry to `TARBALL_SHA256_BY_VERSION` in `package/bin/promptkit-os.js`, then verify — `curl -sL "https://github.com/lowqualityloey/promptkit-os/archive/refs/tags/vX.Y.Z.tar.gz" -o /tmp/release.tar.gz && sha256sum /tmp/release.tar.gz`. Without the pin, `npx promptkit-os@X.Y.Z` installs warn and run unverified (or fail closed when `PROMPTKIT_REQUIRE_INTEGRITY_PIN=1`).
 
 ## Execution-Control Evidence (Optional)
 
