@@ -30,7 +30,8 @@ $TemplateLite = Join-Path $KitDir "templates/agent-directive-lite-template.md"
 function Measure-File {
     param([string]$File)
     if (-not (Test-Path $File -PathType Leaf)) {
-        return 0
+        Write-Error "MEASURE_ERROR|MISSING|$File"
+        exit 2
     }
     $bytes = [System.IO.File]::ReadAllBytes($File)
     $cleanBytes = $bytes | Where-Object { $_ -ne 13 }

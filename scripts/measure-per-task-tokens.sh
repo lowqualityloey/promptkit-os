@@ -28,8 +28,8 @@ TEMPLATE_LITE="$KIT_DIR/templates/agent-directive-lite-template.md"
 measure_file() {
     local file="$1"
     if [[ ! -f "$file" ]]; then
-        echo "0"
-        return
+        echo "MEASURE_ERROR|MISSING|$file" >&2
+        exit 2
     fi
     local bytes
     bytes=$(tr -d '\r' < "$file" | wc -c | tr -d ' ')
