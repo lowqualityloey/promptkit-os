@@ -336,10 +336,12 @@ jobs:
         run: pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir .
 
       - name: Assert Per-Task Token Baselines (PowerShell)
-        run: pwsh -NoProfile -File .\scripts\measure-per-task-tokens.ps1 -Strict
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\measure-per-task-tokens.ps1 --strict
 
       - name: Assert Turbo Protocol Overhead Claim Window (PowerShell)
-        run: pwsh -NoProfile -File .\scripts\measure-turbo-overhead.ps1 -Strict
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\measure-turbo-overhead.ps1 --strict
 
       - name: Assert No Fragile Math Labels (PowerShell)
         shell: pwsh
