@@ -122,9 +122,11 @@ foreach ($path in $stagedPaths) {
         }
 
         $content = $diffLine.Substring(1)
+        $passwordHit = $false
         foreach ($detector in $detectors) {
             if ($content -cmatch $detector.Pattern) {
                 $scanFound = $true
+                if ($detector.Category -eq 'password-assignment pattern') { $passwordHit = $true }
                 [Console]::Out.WriteLine(('Potential {0} in staged additions: {1}:{2} (matching content suppressed).' -f $detector.Category, $escapedPath, $lineNumber))
             }
         }
@@ -133,10 +135,13 @@ foreach ($path in $stagedPaths) {
         if ($content -cmatch 'password\s*[:=]\s*([^\s''""/\\]+)') {
             if ($Matches[1] -notmatch '^[<\[]') {
                 $scanFound = $true
+                $passwordHit = $true
                 [Console]::Out.WriteLine(('Potential {0} in staged additions: {1}:{2} (matching content suppressed).' -f 'password-assignment pattern', $escapedPath, $lineNumber))
             }
         }
-        if ($content -cmatch '(api[_-]?key|secret|token|password)\s*[:=]\s*["'']?([A-Za-z0-9_/+=\.-]+)') {
+        # A line already reported as a password assignment is not also
+        # reported as entropy — one leak, one diagnostic.
+        if (-not $passwordHit -and $content -cmatch '(api[_-]?key|secret|token|password)\s*[:=]\s*["'']?([A-Za-z0-9_/+=\.-]+)') {
             $entropyVal = $Matches[2]
             if ($entropyVal.Length -ge 20 -and $entropyVal -notmatch '^[<\[]') {
                 $scanFound = $true

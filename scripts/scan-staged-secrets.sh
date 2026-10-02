@@ -118,24 +118,28 @@ while IFS= read -r -d '' path; do
                     if (content ~ /AIza[0-9A-Za-z_-]+/) {
                         printf "%d|Google API key pattern\n", next_line
                     }
+                    # Bare assignments with no quotes are just as exfiltrating;
+                    # bracketed placeholders (e.g. <change-me>) stay silent.
+                    password_hit = 0
                     password_pattern = "password[[:space:]]*[:=][[:space:]]*[\"" q "][^\"" q "]+[\"" q "]"
                     if (content ~ password_pattern) {
                         printf "%d|password-assignment pattern\n", next_line
+                        password_hit = 1
                     }
-                    # Bare assignments with no quotes are just as exfiltrating;
-                    # bracketed placeholders (e.g. <change-me>) stay silent.
                     password_bare = "password[[:space:]]*[:=][[:space:]]*[^[:space:]/\\\\\\042" q "\\042][^[:space:]]*"
                     if (match(content, password_bare)) {
                         password_val = substr(content, RSTART, RLENGTH)
                         sub(/^[^:=]*[:=][[:space:]]*/, "", password_val)
                         if (password_val !~ /^[<\[]/) {
                             printf "%d|password-assignment pattern\n", next_line
+                            password_hit = 1
                         }
                     }
-                    # Long opaque values beside a credential keyword. Length is
-                    # checked in code (not {20,}) so mawk -W traditional parses it.
+                    # Long opaque values beside a credential keyword. A line
+                    # already reported as a password assignment is not also
+                    # reported as entropy — one leak, one diagnostic.
                     entropy_pat = "(api[_-]?key|secret|token|password)[[:space:]]*[:=][[:space:]]*[\\042" q "\\042]?[-A-Za-z0-9_/+=.]+"
-                    if (match(content, entropy_pat)) {
+                    if (!password_hit && match(content, entropy_pat)) {
                         entropy_val = substr(content, RSTART, RLENGTH)
                         sub(/^[^:=]*[:=][[:space:]\042\047]*/, "", entropy_val)
                         if (length(entropy_val) >= 20 && entropy_val !~ /^[<\[]/) {

@@ -158,7 +158,7 @@ run_engine() {
             fail "$awk_bin reported an incorrect line number for ordinary.txt"
     done
 
-    [[ $(grep -c '^Potential ' <<< "$output") -eq 22 ]] ||
+    [[ $(grep -c '^Potential ' <<< "$output") -eq 21 ]] ||
         fail "$awk_bin returned an unexpected detection count"
 
     for escaped_value in \
@@ -192,7 +192,7 @@ run_engine() {
             fail "$awk_bin did not fail closed without exposing binary staged content from $path"
     done
 
-    printf 'PASS: %s detected twenty-two redacted matches, ignored textconv, handled tricky paths and modified-file lines; clean input passed and scan errors and binary-classified diffs failed closed.\n' "$awk_bin"
+    printf 'PASS: %s detected twenty-one redacted matches, ignored textconv, handled tricky paths and modified-file lines; clean input passed and scan errors and binary-classified diffs failed closed.\n' "$awk_bin"
 }
 
 run_engine awk
