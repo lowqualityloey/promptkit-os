@@ -33,8 +33,15 @@ const KIT_DIR = ".promptkit";
 // the running version the courier warns loudly and continues (pins can only be
 // minted after the tag exists); set PROMPTKIT_REQUIRE_INTEGRITY_PIN=1 to fail
 // closed instead. PROMPTKIT_TARBALL_SHA256 overrides the map (testing / rotation).
+//
+// CAVEAT: these digests pin GitHub's *generated* archive for a tag. That archive
+// is reproducible today (verified by double download when each pin was minted)
+// but is not contractually immutable — a future GitHub-side change to archive
+// generation would change the bytes and make this pin reject an untampered
+// download. On mismatch, confirm the release tag and the release evidence
+// record before treating it as tampering; rotate with PROMPTKIT_TARBALL_SHA256.
 const TARBALL_SHA256_BY_VERSION = {
-  // "1.10.1": "<paste sha256sum of v1.10.1 release tarball here>",
+  "1.10.1": "1e55459914a1c46aa71df8f9cb8ce4c9ff37d1c02d67f70e5607b3bfd4f48d4b",
 };
 
 function die(msg) {
