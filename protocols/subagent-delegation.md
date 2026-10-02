@@ -134,7 +134,25 @@ When a task involves high-risk multi-file refactoring, dependency upgrades, or p
 
 ---
 
-## 5. Failure Recovery & Timeout Handling
+## 5. Tiered Model Specialization & Lightweight Cognition
+
+Frontier reasoning models are computationally expensive and context-sensitive. Burning frontier reasoning context on trivial classification, file scraping, or git diff parsing accelerates token exhaustion and causes instruction drift.
+
+PromptKit OS structures multi-agent work into two distinct cognitive tiers:
+
+| Cognitive Tier | Target Model Class | Workloads | Guiding Rule |
+| :--- | :--- | :--- | :--- |
+| **Tier 1: Fast / Cheap / Non-Autoregressive** | Lightweight models (`flash`, `flash_lite`, Haiku, 4o-mini) or single-pass classification tools (e.g., Laya System 1) | Intent classification, initial intake triage, broad repository scraping, git diff inspection, test failure log triage, and pre-grill question structuring | **Offload early, offload cheaply.** Never use frontier tokens to parse raw terminal scrollback or classify routine user intent. |
+| **Tier 2: Frontier / High-Reasoning** | Frontier reasoning models (`pro`, Claude Sonnet/Opus, GPT-4o/o1) | Architectural planning (`pk:plan`), delicate invariant-preserving refactoring (`pk:fix`), cryptographic/security reviews, and multi-file code synthesis | **Reserve for synthesis and code changes.** The parent agent retains Tier 2 context exclusively for high-altitude reasoning and user alignment. |
+
+### Architectural Boundary: No Embedded Model Routing
+While PromptKit OS strongly prescribes **tiered cognition as an engineering discipline**, it deliberately **does not hardcode model provider names or APIs into repository files**.
+- Model selection and routing are owned by the **host runtime** (e.g. IDE model pickers, harness config, or subagent tool arguments like `Model: 'flash'`).
+- PromptKit OS provides the **role contracts, file boundaries, and token budgets** that make tiered delegation safe and effective across any host.
+
+---
+
+## 6. Failure Recovery & Timeout Handling
 
 - If a subagent returns incomplete information or encounters a tool error, do not spawn another subagent blindly.
 - Inspect the subagent's returned error message.

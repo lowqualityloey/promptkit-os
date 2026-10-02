@@ -114,11 +114,21 @@ Acceptance Criteria in this issue should use stable IDs such as `AC-1` and link 
 
 ---
 
-## Automated Verification Command
-<!-- Paste the exact CLI command used to prove this issue meets acceptance criteria. -->
+## Automated Verification Command & Evidence
+<!-- Paste the exact CLI command used to prove this issue meets acceptance criteria, followed by the structured verification evidence block when recording completion. -->
 ```bash
 # Run the specific test suite covering this issue
 pnpm test path/to/feature.test.ts
+```
+
+```evidence:verification
+status: PASS
+exit_code: 0
+checks_passed: 1
+checks_failed: 0
+suite: pnpm test path/to/feature.test.ts
+diff_digest: <sha256>
+timestamp: YYYY-MM-DDTHH:MM:SSZ
 ```
 
 ---

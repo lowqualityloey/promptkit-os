@@ -88,7 +88,7 @@ A task cannot enter `ready` until its objective, scope, non-goals, acceptance cr
 - **Scope Change Records**: `[docs/tasks/[task-id].scope-[sequence].md or None]`
 - **Checkpoint Records**: `[docs/tasks/[task-id].checkpoint-[sequence].md or None]`
 - **Handoff Records**: `[docs/tasks/[task-id].handoff-[sequence].md or None]`
-- **Verification Evidence**: `[Commands and results]`
+- **Verification Evidence**: `[Commands and results, or structured evidence:verification block per protocols/code-quality-gate.md]`
 - **Behavior IDs [Required when enabled]**: `[BEHAVIOR-<task-slug>-<nnn> links]`, `N/A - TDD Enforcement Mode disabled` for disabled Code Work, or `N/A - exception work type` for Documentation, Configuration, or Research Work
 - **TDD Intent Register [Required when enabled]**: `[TDD-INTENT-<task-slug>-<nnn>](../tests/<test-plan>.md#TDD-INTENT-<task-slug>-<nnn>)`, `N/A - TDD Enforcement Mode disabled` for disabled Code Work, or `N/A - exception work type` for Documentation, Configuration, or Research Work
 - **TDD Execution Evidence [Required when enabled]**: `[TDD-EXEC-<task-slug>-<behavior-seq> entries]`, `N/A - TDD Enforcement Mode disabled` for disabled Code Work, or `N/A - exception work type` for Documentation, Configuration, or Research Work
