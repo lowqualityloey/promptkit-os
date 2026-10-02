@@ -22,10 +22,7 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit 
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit; .\.promptkit\init.ps1
 ```
 
-When run in an interactive terminal, `init.sh` / `init.ps1` presents an **interactive visual menu** to guide your setup:
-1. **Profile**: `1) Lite` (fastest onboarding, 6 utility workflows, <1,500 tok) or `2) Balanced` (default, full 25 workflows, Level 0–3 adaptive ceremony).
-2. **AI Assistant**: Automatically configures `.cursorrules`, `CLAUDE.md`, `.windsurfrules`, `.clinerules`, or `.github/copilot-instructions.md`.
-3. **Tracker**: Local Markdown (`docs/tasks/`) or GitHub Issues.
+When run in an interactive terminal, `init.sh` / `init.ps1` opens a keyboard-driven setup wizard. Use ↑/↓ and Enter for profile and task-tracker choices, then Space and Enter to toggle AI-host files. The optional GitHub projection is a checkbox under local tracking. A final review lets you edit a choice, install, or cancel. Existing settings are kept on reruns.
 
 Profile is stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Switch anytime: `.promptkit/init.sh --balanced` or `--lite`.
 
@@ -35,7 +32,7 @@ Profile is stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Switch an
 <details>
 <summary>Non-Interactive / CI Flags & Turbo</summary>
 
-In CI or non-interactive environments, pass a profile flag or set `PROMPTKIT_NO_INTERACTIVE=1`:
+In CI or non-interactive environments, pass flags; the wizard does not block on redirected input. Set `PROMPTKIT_NO_INTERACTIVE=1` to skip it even in a terminal:
 
 ```bash
 # Balanced profile (full 25 workflows)

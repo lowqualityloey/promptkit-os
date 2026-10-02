@@ -102,6 +102,21 @@ $cm = ([regex]::Matches($c, "(?m)^<!-- PROMPTKIT_START -->$")).Count
 if ($cm -eq 1 -and $c -match "(?m)^# My aider notes$") { Ok "existing CONVENTIONS.md injected idempotently with user content preserved" }
 else { NotOk "CONVENTIONS.md injection (markers=$cm)" }
 
+$d = NewDir "t9-agents-only"
+$env:PROMPTKIT_NO_PREFLIGHT = "1"
+& pwsh -NoProfile -File $Init --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+$initialExitCode = $LASTEXITCODE
+if ($initialExitCode -eq 0) {
+    $out = & pwsh -NoProfile -File $Init $d 2>&1 | Out-String
+    $rerunExitCode = $LASTEXITCODE
+    $hostFiles = @("CLAUDE.md", ".opencode/rules.md", ".cursorrules", "GEMINI.md", ".windsurfrules", ".github/copilot-instructions.md", ".clinerules", ".traerules", "CONVENTIONS.md")
+    $unexpectedHostFiles = @($hostFiles | Where-Object { Test-Path (Join-Path $d $_) })
+    if ($rerunExitCode -eq 0 -and $out -match "Keeping installed hosts: agents" -and (Test-Path (Join-Path $d "AGENTS.md")) -and $unexpectedHostFiles.Count -eq 0) {
+        Ok "AGENTS.md-only install preserves universal hosts on rerun"
+    } else { NotOk "AGENTS.md-only rerun did not preserve universal host choice (rc=$rerunExitCode)" }
+} else { NotOk "AGENTS.md-only initial install (rc=$initialExitCode)" }
+Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+
 Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 Write-Host "Passed: $script:Pass | Failed: $script:Fail"
 

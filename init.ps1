@@ -32,6 +32,18 @@ param (
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "scripts/terminal-picker.ps1")
+$UsePicker = [Environment]::UserInteractive -and -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected -and $env:TERM -ne "dumb" -and [string]::IsNullOrEmpty($env:PROMPTKIT_NO_INTERACTIVE)
+$ProfileInteractive = $false
+$TrackingInteractive = $false
+$HostInteractive = $false
+
+function Show-SetupBanner {
+    if (-not $UsePicker) { return }
+    $script:PkPickerBannerPath = Join-Path $PSScriptRoot "templates/terminal-banner.txt"
+    $script:PkPickerBannerFull = ([Console]::WindowWidth -ge 120)
+    $script:PkPickerBannerActive = $true
+}
 
 # Host map + probes (defined up front: param handling below calls Get-HostFile).
 function Get-HostFile($Name) {
@@ -50,6 +62,190 @@ function Get-HostFile($Name) {
     }
 }
 $KnownHostsList = @("claude","opencode","cursor","gemini","windsurf","copilot","cline","trae","aider")
+$HostPickerLabels = @("Claude Code", "OpenCode", "Cursor", "Gemini CLI", "Windsurf", "GitHub Copilot", "Cline", "Trae", "Aider")
+
+function Stop-PromptKitSetup {
+    Write-Host "`nSetup cancelled before any project files were changed."
+    exit 130
+}
+
+function Select-PromptKitProfile {
+    $attempts = 0
+    if ($UsePicker) {
+        $defaultIndex = switch ($Profile) { "lite" { 1 } "turbo" { 2 } default { 0 } }
+        $choice = Invoke-PkSinglePicker -Title "Choose your profile" -Subtitle "Balanced is recommended. Turbo needs a second confirmation." -Items @(
+            "Balanced — Recommended default; full workflow set",
+            "Lite — Six core workflows for a lighter setup",
+            "Turbo — Experimental parallel workflows; higher token cost"
+        ) -DefaultIndex $defaultIndex
+        if ($choice -lt 0) { Stop-PromptKitSetup }
+        switch ($choice) {
+            0 { $script:Profile = "balanced" }
+            1 { $script:Profile = "lite" }
+            2 {
+                Write-Host "`nTurbo is experimental and can use up to ~2x measured token cost."
+                $confirm = Read-Host "Acknowledge this and enable Turbo? [y/N]"
+                if ($confirm -match "^[Yy]$") { $script:Profile = "turbo"; $script:Experimental = $true }
+                else { $script:Profile = "balanced" }
+            }
+        }
+    } else {
+        while ($true) {
+            Write-Host "`n◉ Profile`n  1) Balanced — Recommended default; full workflow set`n  2) Lite — Six core workflows`n  3) Turbo — Experimental; higher token cost"
+            $choice = Read-Host "Choose 1-3 (Enter for Balanced, q to cancel)"
+            if ($choice -match "^[Qq]$") { Stop-PromptKitSetup }
+            switch ($choice) {
+                { $_ -eq "" -or $_ -eq "1" } { $script:Profile = "balanced"; break }
+                "2" { $script:Profile = "lite"; break }
+                "3" {
+                    $confirm = Read-Host "Turbo is experimental and costs more. Continue? [y/N]"
+                    if ($confirm -match "^[Yy]$") { $script:Profile = "turbo"; $script:Experimental = $true }
+                    else { $script:Profile = "balanced" }
+                    break
+                }
+                default {
+                    $attempts++
+                    Write-Host "Please enter 1, 2, or 3." -ForegroundColor Yellow
+                    if ($attempts -ge 3) { Stop-PromptKitSetup }
+                    continue
+                }
+            }
+            break
+        }
+    }
+    $script:ProfileSet = $true
+    $script:ProfileInteractive = $true
+}
+
+function Select-PromptKitTracking {
+    $attempts = 0
+    if ($UsePicker) {
+        $defaultIndex = switch ($Tracking) { "github" { 1 } "jira" { 2 } "linear" { 3 } default { 0 } }
+        $choice = Invoke-PkSinglePicker -Title "Choose task tracking" -Subtitle "Local works offline. GitHub can mirror local task records." -Items @(
+            "Local Markdown — Recommended; stored in docs/tasks/",
+            "GitHub Issues — Requires GitHub setup",
+            "Jira — Manual import; no automatic push",
+            "Linear — Manual import; no automatic push"
+        ) -DefaultIndex $defaultIndex
+        if ($choice -lt 0) { Stop-PromptKitSetup }
+        switch ($choice) {
+            0 { $script:Tracking = "local" }
+            1 { $script:Tracking = "github" }
+            2 { $script:Tracking = "jira" }
+            3 { $script:Tracking = "linear" }
+        }
+        if ($Tracking -eq "local") {
+            $defaults = if ($TrackingProjection -eq "github") { "github" } else { "" }
+            $projection = Invoke-PkMultiPicker -Title "Local task projection" -Subtitle "Optional checkbox. Space toggles it; Enter keeps the setting." -Ids @("github") -Labels @("Also project local tasks to GitHub Issues") -Defaults $defaults
+            if ($null -eq $projection) { Stop-PromptKitSetup }
+            $script:TrackingProjection = $projection
+        } else { $script:TrackingProjection = "" }
+    } else {
+        while ($true) {
+            Write-Host "`n▣ Task tracking`n  1) Local Markdown — Recommended; docs/tasks/`n  2) GitHub Issues`n  3) Jira — manual import`n  4) Linear — manual import`n  1,2) Local Markdown + GitHub projection"
+            $choice = Read-Host "Choose 1-4 or 1,2 (Enter for Local, q to cancel)"
+            if ($choice -match "^[Qq]$") { Stop-PromptKitSetup }
+            switch ($choice) {
+                { $_ -eq "" -or $_ -eq "1" } { $script:Tracking = "local"; $script:TrackingProjection = ""; break }
+                { $_ -eq "1,2" -or $_ -eq "2,1" } { $script:Tracking = "local"; $script:TrackingProjection = "github"; break }
+                "2" { $script:Tracking = "github"; $script:TrackingProjection = ""; break }
+                "3" { $script:Tracking = "jira"; $script:TrackingProjection = ""; break }
+                "4" { $script:Tracking = "linear"; $script:TrackingProjection = ""; break }
+                default {
+                    $attempts++
+                    Write-Host "Please enter one of the listed choices exactly." -ForegroundColor Yellow
+                    if ($attempts -ge 3) { Stop-PromptKitSetup }
+                    continue
+                }
+            }
+            break
+        }
+    }
+    $script:TrackingSet = $true
+    $script:TrackingInteractive = $true
+}
+
+function Select-PromptKitHosts {
+    $attempts = 0
+    if ($UsePicker) {
+        if ($HostInteractive) {
+            $defaults = if ($Hosts -eq "agents") { "" } else { $Hosts }
+        } else {
+            $defaults = if ($DetectedHosts.Count -gt 0) { $DetectedHosts -join "," } else { "claude" }
+        }
+        $picked = Invoke-PkMultiPicker -Title "Choose AI hosts" -Subtitle "Space toggles host-specific files. Select none for universal AGENTS.md only." -Ids $KnownHostsList -Labels $HostPickerLabels -Defaults $defaults
+        if ($null -eq $picked) { Stop-PromptKitSetup }
+        $script:Hosts = if ([string]::IsNullOrWhiteSpace($picked)) { "agents" } else { $picked }
+    } else {
+        while ($true) {
+            Write-Host "`n◆ AI hosts (comma-separated numbers; 0 = universal AGENTS.md only)"
+            for ($i = 0; $i -lt $KnownHostsList.Count; $i++) {
+                $marker = if ($DetectedHosts -contains $KnownHostsList[$i]) { " [detected]" } else { "" }
+                Write-Host ("  {0}) {1}{2}" -f ($i + 1), $HostPickerLabels[$i], $marker)
+            }
+            Write-Host "  Enter keeps detected hosts; if none are detected, Claude Code is the default."
+            $choice = Read-Host "Choose hosts (q to cancel)"
+            if ($choice -match "^[Qq]$") { Stop-PromptKitSetup }
+            if ([string]::IsNullOrWhiteSpace($choice)) {
+                $script:Hosts = if ($DetectedHosts.Count -gt 0) { $DetectedHosts -join "," } else { "claude" }
+                break
+            }
+            if ($choice -eq "0") { $script:Hosts = "agents"; break }
+            $picked = [System.Collections.Generic.List[string]]::new()
+            $valid = $true
+            foreach ($token in ($choice -split ',')) {
+                $number = 0
+                if (-not [int]::TryParse($token.Trim(), [ref]$number) -or $number -lt 1 -or $number -gt $KnownHostsList.Count) { $valid = $false; break }
+                $id = $KnownHostsList[$number - 1]
+                if (-not $picked.Contains($id)) { $picked.Add($id) }
+            }
+            if ($valid) { $script:Hosts = $picked -join ","; break }
+            $attempts++
+            Write-Host "Invalid choice. Enter only host numbers from 1 to $($KnownHostsList.Count)." -ForegroundColor Yellow
+            if ($attempts -ge 3) { Stop-PromptKitSetup }
+        }
+    }
+    $script:HostSet = $true
+    $script:HostInteractive = $true
+}
+
+function Review-PromptKitSetup {
+    $items = [System.Collections.Generic.List[string]]::new()
+    $actions = [System.Collections.Generic.List[string]]::new()
+    if ($ProfileInteractive) { $items.Add("Edit profile"); $actions.Add("profile") }
+    if ($TrackingInteractive) { $items.Add("Edit task tracking"); $actions.Add("tracking") }
+    if ($HostInteractive) { $items.Add("Edit AI hosts"); $actions.Add("hosts") }
+    $items.Add("Install with these settings"); $actions.Add("install")
+    $items.Add("Cancel setup"); $actions.Add("cancel")
+    while ($true) {
+        $hostSummary = if ($Hosts -eq "agents") { "Universal AGENTS.md only" } else { $Hosts -replace ',', ' · ' }
+        $trackerSummary = if ($TrackingProjection) { "$Tracking + GitHub projection" } else { $Tracking }
+        $subtitle = "Profile: $Profile`nTask tracking: $trackerSummary`nAI hosts: $hostSummary`n`nChoose a setting to edit, install, or cancel."
+        if ($UsePicker) {
+            $choice = Invoke-PkSinglePicker -Title "Review setup" -Subtitle $subtitle -Items $items.ToArray() -DefaultIndex ($items.Count - 2)
+            if ($choice -lt 0) { Stop-PromptKitSetup }
+            $action = $actions[$choice]
+        } else {
+            Write-Host "`n◇ Review setup`n  Profile: $Profile`n  Task tracking: $trackerSummary`n  AI hosts: $hostSummary"
+            for ($i = 0; $i -lt $items.Count; $i++) { Write-Host ("  {0}) {1}" -f ($i + 1), $items[$i]) }
+            $choice = Read-Host "Choose an option, or q to cancel"
+            if ($choice -match "^[Qq]$") { Stop-PromptKitSetup }
+            $number = 0
+            if (-not [int]::TryParse($choice, [ref]$number) -or $number -lt 1 -or $number -gt $items.Count) {
+                Write-Host "Please choose one of the listed options." -ForegroundColor Yellow
+                continue
+            }
+            $action = $actions[$number - 1]
+        }
+        switch ($action) {
+            "profile" { $script:ProfileSet = $false; Select-PromptKitProfile }
+            "tracking" { $script:TrackingSet = $false; Select-PromptKitTracking }
+            "hosts" { $script:HostSet = $false; Select-PromptKitHosts }
+            "install" { return }
+            "cancel" { Stop-PromptKitSetup }
+        }
+    }
+}
 
 # Canonical path resolution and containment verification (F04 - P2, R3 - P2, R4 - P2)
 function Resolve-CanonicalPath {
@@ -138,9 +334,8 @@ if ($Help) {
     Write-Host "  --reconfigure       Force interactive host re-selection on existing installations"
     Write-Host "  --target=rel/path   Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
     Write-Host "  -Help               Show this help`n"
-    Write-Host "Interactive (TTY): If no profile flag is given and running in interactive host,"
-    Write-Host "  prompts visually: 1) Lite (Recommended) 2) Balanced (default) 3) Turbo (Experimental)"
-    Write-Host "  Env escape hatch: PROMPTKIT_NO_INTERACTIVE=1 skips the picker even in a TTY`n"
+    Write-Host "Interactive (TTY): Arrow keys move, Enter selects, Space toggles checkboxes, q cancels."
+    Write-Host "  A final review lets you edit choices before installation. PROMPTKIT_NO_INTERACTIVE=1 skips the wizard.`n"
     Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
     Write-Host "Examples:"
     Write-Host "  .\init.ps1 --lite"
@@ -263,6 +458,9 @@ if (-not $HostSet -and -not $Reconfigure -and (Test-Path $probeProfile)) {
             $installedHosts += $h
         }
     }
+    if ($installedHosts.Count -eq 0 -and (Test-Path (Join-Path $probeRoot "AGENTS.md"))) {
+        $installedHosts += "agents"
+    }
     if ($installedHosts.Count -gt 0) {
         $Hosts = ($installedHosts | Select-Object -Unique) -join ','
         $HostSet = $true
@@ -270,91 +468,10 @@ if (-not $HostSet -and -not $Reconfigure -and (Test-Path $probeProfile)) {
     }
 }
 
-# Interactive TTY picker when no profile flag provided (visual decision for onboarding)
-# Shell-level equivalent of native interactive selection tools (ask_question)
-# Agent-level picker is in workflows/onboard.md
-# Non-interactive safety (#144): VS Code integrated terminals can report UserInteractive with
-# redirected streams, so also require stdout not redirected, and honor the documented
-# PROMPTKIT_NO_INTERACTIVE escape hatch to force the flag/default (non-interactive) path.
-if (-not $ProfileSet -and -not $Experimental -and [Environment]::UserInteractive `
-    -and -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected `
-    -and [string]::IsNullOrEmpty($env:PROMPTKIT_NO_INTERACTIVE)) {
-    Write-Host "`n💡 PromptKit OS Profile Selection (visual decision)" -ForegroundColor Cyan
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-    Write-Host "  1) Lite (Recommended for new users) — 6 utility workflows, 1,269 tok, 80% value, fastest onboarding" -ForegroundColor Yellow
-    Write-Host "  2) Balanced (Recommended for teams) — 25 workflows, 2,318 tok, Level 0-3 adaptive ceremony [default]" -ForegroundColor White
-    Write-Host "  3) Turbo (Experimental) — Balanced + parallel waves, ~2x measured cost, still requires human L3 approval" -ForegroundColor DarkGray
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-    Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
-    Write-Host "For CI/non-interactive, use flags: --lite, --balanced, --turbo --experimental`n" -ForegroundColor DarkGray
-    $choice = Read-Host "Choose profile [1-3, default 2]"
-    switch ($choice) {
-        "1" { $Profile = "lite"; $ProfileSet = $true }
-        "3" { 
-            Write-Host "`n⚠️  Turbo requires --experimental flag" -ForegroundColor Yellow
-            Write-Host "   Turbo uses parallel subagent waves (up to ~2x measured token cost) and is experimental." -ForegroundColor DarkGray
-            $confirm = Read-Host "Acknowledge experimental cost and proceed with Turbo? [y/N]"
-            if ($confirm -match "^[Yy]$") {
-                $Profile = "turbo"
-                $Experimental = $true
-                $ProfileSet = $true
-            } else {
-                Write-Host "Defaulting to Balanced" -ForegroundColor DarkGray
-                $Profile = "balanced"
-                $ProfileSet = $true
-            }
-        }
-        default { $Profile = "balanced"; $ProfileSet = $true }
-    }
-    Write-Host ""
-}
-
-if (-not $TrackingSet -and [Environment]::UserInteractive `
-    -and -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected `
-    -and [string]::IsNullOrEmpty($env:PROMPTKIT_NO_INTERACTIVE)) {
-    Write-Host "`n💡 Task Tracker Selection (visual decision)" -ForegroundColor Cyan
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-    Write-Host "  1) Local Markdown (Recommended for solo / offline) — docs/tasks/ only" -ForegroundColor Yellow
-    Write-Host "  2) GitHub Issues — via gh CLI or MCP, needs gh auth" -ForegroundColor White
-    Write-Host "  3) Jira — manual import, no auto-push" -ForegroundColor DarkGray
-    Write-Host "  4) Linear — manual import, no auto-push" -ForegroundColor DarkGray
-    Write-Host "  Tip: combine local with GitHub projection, e.g. '1,2' or '1 and 2'."
-    Write-Host ""
-    $TrackingProjection = ""
-    $trackerAttempts = 0
-    while ($true) {
-        $tchoice = Read-Host "Choose tracker [1-4, combos like 1,2 allowed, default 1]"
-        if ([string]::IsNullOrWhiteSpace($tchoice)) { $Tracking = "local"; break }
-        $norm = $tchoice.ToLower() -replace '\band\b',' ' -replace '[,&+]',' ' -replace '[^0-9 ]',''
-        $norm = ($norm -split '\s+' | Where-Object { $_ -ne '' }) -join ' '
-        $toks = @($norm -split ' ' | Where-Object { $_ -ne '' })
-        $bad = @($toks | Where-Object { $_ -notin @('1','2','3','4') }).Count -gt 0
-        if ($toks.Count -eq 0) { $bad = $true }
-        $has1 = $toks -contains '1'; $has2 = $toks -contains '2'
-        $has3 = $toks -contains '3'; $has4 = $toks -contains '4'
-        $comboOk = -not $bad -and (($has3 -eq $false) -or (-not $has1 -and -not $has2 -and -not $has4)) -and (($has4 -eq $false) -or (-not $has1 -and -not $has2 -and -not $has3))
-        if ($comboOk) {
-            $TrackingProjection = ""
-            if ($has1 -or (-not $has2 -and -not $has3 -and -not $has4)) {
-                $Tracking = "local"
-                if ($has2) { $TrackingProjection = "github" }
-            } elseif ($has2) { $Tracking = "github" }
-            elseif ($has3) { $Tracking = "jira" }
-            else { $Tracking = "linear" }
-            break
-        }
-        $trackerAttempts++
-        if ($trackerAttempts -ge 3) {
-            Write-Host "[!] Unrecognized tracker selection after 3 attempts — defaulting to Local Markdown." -ForegroundColor Yellow
-            $Tracking = "local"
-            $TrackingProjection = ""
-            break
-        }
-        Write-Host "[!] Could not parse '$tchoice'. Use numbers 1-4 (e.g. 1, 2, or 1,2 for local + GitHub projection)." -ForegroundColor Yellow
-    }
-    $TrackingSet = $true
-    Write-Host ""
-}
+# Show the banner and collect profile/tracker choices only for an interactive first-time setup.
+if ((-not $ProfileSet -and -not $Experimental) -or -not $TrackingSet) { Show-SetupBanner }
+if (-not $ProfileSet -and -not $Experimental -and $UsePicker) { Select-PromptKitProfile }
+if (-not $TrackingSet -and $UsePicker) { Select-PromptKitTracking }
 
 if ($Profile -eq "turbo" -and -not $Experimental) {
     Write-Host "`n[!] --turbo requires --experimental flag" -ForegroundColor Red
@@ -376,35 +493,6 @@ if ($TargetDir -ne "") {
 }
 
 $ProjectRootPath = if ($ProjectRoot.Path) { $ProjectRoot.Path } else { $ProjectRoot.ToString() }
-
-Write-Host "`n🚀 Initializing PromptKit OS ($Profile profile)..." -ForegroundColor Cyan
-Write-Host "   Host Project: $ProjectRoot" -ForegroundColor DarkGray
-Write-Host "   Engine Path:  $ScriptDir" -ForegroundColor DarkGray
-Write-Host "   Profile:      $Profile" -ForegroundColor DarkGray
-Write-Host "   Tracking:     $Tracking" -ForegroundColor DarkGray
-if ($Profile -eq "turbo") {
-    Write-Host "   ⚠️  Turbo: up to ~2x measured token cost, experimental, parallel waves. Human approval still required for L3." -ForegroundColor Yellow
-}
-if ($Profile -eq "lite") {
-    Write-Host "   ✨ Lite: 6 utility workflows, <1,500 tok, 80% value — perfect for onboarding" -ForegroundColor Green
-}
-Write-Host ""
-
-if ($env:PROMPTKIT_NO_PREFLIGHT -eq '1') {
-    Write-Output 'PREFLIGHT|SKIPPED|USER_OPT_OUT'
-} else {
-    $savedExitCode = $global:LASTEXITCODE
-    try {
-        & (Join-Path $ScriptDir 'scripts/check-harness-security.ps1') -Root $ProjectRootPath
-        if ($LASTEXITCODE -ne 0) {
-            Write-Output 'PREFLIGHT|ADVISORY|Review findings or incomplete checks; installation continues'
-        }
-    } catch {
-        Write-Output 'PREFLIGHT|INCOMPLETE|SCANNER_UNAVAILABLE'
-    } finally {
-        $global:LASTEXITCODE = $savedExitCode
-    }
-}
 
 $DocDirs = @(
     "docs/tasks",
@@ -464,49 +552,47 @@ if (-not $HostSet) {
         if (Test-HostDetected $h) { $DetectedHosts += $h }
     }
 }
-$IsTTY = [Environment]::UserInteractive -and -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected -and [string]::IsNullOrEmpty($env:PROMPTKIT_NO_INTERACTIVE)
+$IsTTY = $UsePicker
 if (-not $HostSet -and -not $IsTTY) {
     # Non-interactive: a single unambiguous probe hit wins; zero or many
-    # fall back to the deterministic legacy pair (never guess among several).
+    # fall back to the deterministic default pair (never guess among several).
     if ($DetectedHosts.Count -eq 1) {
         $Hosts = $DetectedHosts[0]
         $HostSet = $true
     }
 }
-if (-not $HostSet -and $IsTTY) {
-    Write-Host "`n💡 AI Host Selection (visual decision)" -ForegroundColor Cyan
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-    $idx = 0
-    foreach ($h in $KnownHostsList) {
-        $idx++
-        $marker = ""
-        if ($DetectedHosts -contains $h) { $marker = " [detected]" }
-        Write-Host "  $idx) $h$marker — $(Get-HostFile $h)"
-    }
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-    if ($DetectedHosts.Count -gt 0) {
-        Write-Host "Comma-separated numbers, Enter = detected ($($DetectedHosts -join ',')) + AGENTS.md" -ForegroundColor DarkGray
-    } else {
-        Write-Host "Comma-separated numbers, Enter = AGENTS.md + CLAUDE.md (default)" -ForegroundColor DarkGray
-    }
-    Write-Host ""
-    $hchoice = Read-Host "Choose hosts"
-    if ($hchoice -ne "") {
-        $picked = @()
-        foreach ($n in ($hchoice -split ',')) {
-            $nn = 0
-            if ([int]::TryParse($n.Trim(), [ref]$nn) -and $nn -ge 1 -and $nn -le $KnownHostsList.Count) {
-                $picked += $KnownHostsList[$nn - 1]
-            }
-        }
-        $Hosts = ($picked | Select-Object -Unique) -join ','
-        $HostSet = $true
-    } elseif ($DetectedHosts.Count -gt 0) {
-        $Hosts = ($DetectedHosts -join ',')
-        $HostSet = $true
-    }
-    Write-Host ""
+if (-not $HostSet -and $IsTTY) { Select-PromptKitHosts }
+if ($ProfileInteractive -or $TrackingInteractive -or $HostInteractive) { Review-PromptKitSetup }
+
+Write-Host "`n🚀 Initializing PromptKit OS ($Profile profile)..." -ForegroundColor Cyan
+Write-Host "   Host Project: $ProjectRoot" -ForegroundColor DarkGray
+Write-Host "   Engine Path:  $ScriptDir" -ForegroundColor DarkGray
+Write-Host "   Profile:      $Profile" -ForegroundColor DarkGray
+Write-Host "   Tracking:     $Tracking" -ForegroundColor DarkGray
+if ($Profile -eq "turbo") {
+    Write-Host "   ⚠️  Turbo: up to ~2x measured token cost, experimental, parallel waves. Human approval still required for L3." -ForegroundColor Yellow
 }
+if ($Profile -eq "lite") {
+    Write-Host "   ✨ Lite: 6 utility workflows, <1,500 tok, 80% value — perfect for onboarding" -ForegroundColor Green
+}
+Write-Host ""
+
+if ($env:PROMPTKIT_NO_PREFLIGHT -eq '1') {
+    Write-Output 'PREFLIGHT|SKIPPED|USER_OPT_OUT'
+} else {
+    $savedExitCode = $global:LASTEXITCODE
+    try {
+        & (Join-Path $ScriptDir 'scripts/check-harness-security.ps1') -Root $ProjectRootPath
+        if ($LASTEXITCODE -ne 0) {
+            Write-Output 'PREFLIGHT|ADVISORY|Review findings or incomplete checks; installation continues'
+        }
+    } catch {
+        Write-Output 'PREFLIGHT|INCOMPLETE|SCANNER_UNAVAILABLE'
+    } finally {
+        $global:LASTEXITCODE = $savedExitCode
+    }
+}
+
 
 # 3. Detect Agent Files or Default to AGENTS.md
 $AgentFileCandidates = @(
