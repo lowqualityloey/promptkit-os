@@ -10,6 +10,10 @@ param(
 
 git rev-parse --verify $Base 2>$null | Out-Null
 if ($LASTEXITCODE -ne 0) {
+    if ($env:GITHUB_EVENT_NAME -eq 'pull_request') {
+        Write-Host "CHANGELOG_GATE|MISSING-BASE|base ref '$Base' unavailable on a pull_request event|Ensure the base ref was fetched (fetch-depth) and the range is valid"
+        exit 1
+    }
     Write-Host "::warning::CHANGELOG gate skipped (no base ref '$Base')"
     Write-Host "CHANGELOG_GATE|SKIP|base ref '$Base' unavailable (shallow or offline checkout)|Fetch it or pass -Base"
     exit 0

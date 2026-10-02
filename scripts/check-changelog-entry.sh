@@ -25,6 +25,10 @@ while [ "$#" -gt 0 ]; do
 done
 
 if ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
+    if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
+        echo "CHANGELOG_GATE|MISSING-BASE|base ref '$BASE' unavailable on a pull_request event|Ensure the base ref was fetched (fetch-depth) and the range is valid"
+        exit 1
+    fi
     echo "::warning::CHANGELOG gate skipped (no base ref '$BASE')"
     echo "CHANGELOG_GATE|SKIP|base ref '$BASE' unavailable (shallow or offline checkout)|Fetch it or pass --base"
     exit 0
