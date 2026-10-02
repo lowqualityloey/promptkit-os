@@ -50,7 +50,10 @@ function Stop-Scan {
 }
 
 try {
-    $resolvedRoot = (Resolve-Path -LiteralPath $Root -ErrorAction Stop).Path
+    # ProviderPath (not .Path): .Path can carry the provider qualifier prefix
+    # (e.g. Microsoft.PowerShell.Core\FileSystem::\\wsl.localhost\...), which
+    # git cannot resolve - every scan would fail closed with no diagnostics.
+    $resolvedRoot = (Resolve-Path -LiteralPath $Root -ErrorAction Stop).ProviderPath
     $pathResult = Invoke-GitCapture @("--literal-pathspecs", "-C", $resolvedRoot, "diff", "--cached", "--name-only", "--diff-filter=ACMRT", "-z")
     if ($pathResult.ExitCode -ne 0) {
         Stop-Scan "Staged secret scan could not enumerate staged paths; stop before committing."
@@ -70,6 +73,12 @@ $detectors = @(
     [pscustomobject]@{ Pattern = 'github_pat_[A-Za-z0-9_]+'; Category = 'GitHub fine-grained token pattern' },
     [pscustomobject]@{ Pattern = 'sk_live_[0-9a-zA-Z]+'; Category = 'Stripe live-key pattern' },
     [pscustomobject]@{ Pattern = 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'; Category = 'JWT-like token pattern' },
+    [pscustomobject]@{ Pattern = 'gho_[A-Za-z0-9]+'; Category = 'GitHub OAuth token pattern' },
+    [pscustomobject]@{ Pattern = 'ghu_[A-Za-z0-9]+'; Category = 'GitHub user token pattern' },
+    [pscustomobject]@{ Pattern = 'ghs_[A-Za-z0-9]+'; Category = 'GitHub server token pattern' },
+    [pscustomobject]@{ Pattern = 'ghr_[A-Za-z0-9]+'; Category = 'GitHub refresh token pattern' },
+    [pscustomobject]@{ Pattern = 'xox[baprs]-[A-Za-z0-9-]+'; Category = 'Slack token pattern' },
+    [pscustomobject]@{ Pattern = 'AIza[0-9A-Za-z_-]+'; Category = 'Google API key pattern' },
     [pscustomobject]@{ Pattern = 'password\s*[:=]\s*["''][^"'']+["'']'; Category = 'password-assignment pattern' }
 )
 
@@ -117,6 +126,21 @@ foreach ($path in $stagedPaths) {
             if ($content -cmatch $detector.Pattern) {
                 $scanFound = $true
                 [Console]::Out.WriteLine(('Potential {0} in staged additions: {1}:{2} (matching content suppressed).' -f $detector.Category, $escapedPath, $lineNumber))
+            }
+        }
+        # Bare assignments with no quotes are just as exfiltrating; bracketed
+        # placeholders (e.g. <change-me>) stay silent.
+        if ($content -cmatch 'password\s*[:=]\s*([^\s''""/\\]+)') {
+            if ($Matches[1] -notmatch '^[<\[]') {
+                $scanFound = $true
+                [Console]::Out.WriteLine(('Potential {0} in staged additions: {1}:{2} (matching content suppressed).' -f 'password-assignment pattern', $escapedPath, $lineNumber))
+            }
+        }
+        if ($content -cmatch '(api[_-]?key|secret|token|password)\s*[:=]\s*["'']?([A-Za-z0-9_/+=\.-]+)') {
+            $entropyVal = $Matches[2]
+            if ($entropyVal.Length -ge 20 -and $entropyVal -notmatch '^[<\[]') {
+                $scanFound = $true
+                [Console]::Out.WriteLine(('Potential {0} in staged additions: {1}:{2} (matching content suppressed).' -f 'high-entropy secret-assignment pattern', $escapedPath, $lineNumber))
             }
         }
         $lineNumber++

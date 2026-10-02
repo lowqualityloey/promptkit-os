@@ -28,6 +28,15 @@ escape_redacted_path() {
         'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'
     )
     sensitive_patterns+=("$password_pattern" "$password_unquoted_pattern")
+    # Extended issuer prefixes (kept in detection parity with the awk block).
+    sensitive_patterns+=(
+        'gho_[A-Za-z0-9]+'
+        'ghu_[A-Za-z0-9]+'
+        'ghs_[A-Za-z0-9]+'
+        'ghr_[A-Za-z0-9]+'
+        'xox[baprs]-[A-Za-z0-9-]+'
+        'AIza[0-9A-Za-z_-]+'
+    )
 
     for pattern in "${sensitive_patterns[@]}"; do
         while [[ $safe_path =~ $pattern ]]; do
@@ -91,9 +100,47 @@ while IFS= read -r -d '' path; do
                     if (content ~ /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/) {
                         printf "%d|JWT-like token pattern\n", next_line
                     }
+                    if (content ~ /gho_[A-Za-z0-9]+/) {
+                        printf "%d|GitHub OAuth token pattern\n", next_line
+                    }
+                    if (content ~ /ghu_[A-Za-z0-9]+/) {
+                        printf "%d|GitHub user token pattern\n", next_line
+                    }
+                    if (content ~ /ghs_[A-Za-z0-9]+/) {
+                        printf "%d|GitHub server token pattern\n", next_line
+                    }
+                    if (content ~ /ghr_[A-Za-z0-9]+/) {
+                        printf "%d|GitHub refresh token pattern\n", next_line
+                    }
+                    if (content ~ /xox[baprs]-[A-Za-z0-9-]+/) {
+                        printf "%d|Slack token pattern\n", next_line
+                    }
+                    if (content ~ /AIza[0-9A-Za-z_-]+/) {
+                        printf "%d|Google API key pattern\n", next_line
+                    }
                     password_pattern = "password[[:space:]]*[:=][[:space:]]*[\"" q "][^\"" q "]+[\"" q "]"
                     if (content ~ password_pattern) {
                         printf "%d|password-assignment pattern\n", next_line
+                    }
+                    # Bare assignments with no quotes are just as exfiltrating;
+                    # bracketed placeholders (e.g. <change-me>) stay silent.
+                    password_bare = "password[[:space:]]*[:=][[:space:]]*[^[:space:]/\\\\\\042" q "\\042][^[:space:]]*"
+                    if (match(content, password_bare)) {
+                        password_val = substr(content, RSTART, RLENGTH)
+                        sub(/^[^:=]*[:=][[:space:]]*/, "", password_val)
+                        if (password_val !~ /^[<\[]/) {
+                            printf "%d|password-assignment pattern\n", next_line
+                        }
+                    }
+                    # Long opaque values beside a credential keyword. Length is
+                    # checked in code (not {20,}) so mawk -W traditional parses it.
+                    entropy_pat = "(api[_-]?key|secret|token|password)[[:space:]]*[:=][[:space:]]*[\\042" q "\\042]?[-A-Za-z0-9_/+=.]+"
+                    if (match(content, entropy_pat)) {
+                        entropy_val = substr(content, RSTART, RLENGTH)
+                        sub(/^[^:=]*[:=][[:space:]\042\047]*/, "", entropy_val)
+                        if (length(entropy_val) >= 20 && entropy_val !~ /^[<\[]/) {
+                            printf "%d|high-entropy secret-assignment pattern\n", next_line
+                        }
                     }
                     next_line++
                 }
