@@ -28,8 +28,8 @@ jobs:
     permissions:
       contents: read
     outputs:
-      tarball: ${{ steps.pack.outputs.tarball }}
-      sha256: ${{ steps.pack.outputs.sha256 }}
+      tag: ${{ steps.tag.outputs.tag }}
+      tag_commit: ${{ steps.release_source.outputs.tag_commit }}
       version: ${{ steps.tag.outputs.version }}
     steps:
       - name: Checkout Repository
@@ -100,73 +100,6 @@ jobs:
           echo "tag_commit=$TAG_COMMIT" >> "$GITHUB_OUTPUT"
           echo "Successfully checked out detached commit $TAG_COMMIT for tag $TAG"
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          # No `registry-url` here, deliberately. Passing it makes setup-node write a
-          # userconfig .npmrc containing `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`.
-          # That makes npm take the TOKEN auth path even when the variable is empty, so it
-          # never attempts the OIDC trusted-publishing exchange at all. The v1.9.1 release
-          # failed with E404 for exactly this reason: the OIDC token was minted and the
-          # provenance statement was signed, but the publish still went out as a token
-          # publish. Trusted publishing needs no registry config, so we simply omit it.
-          # No `cache: npm` — this package is intentionally zero-dependency, so no
-          # lockfile exists to key a cache on. setup-node fails hard on a missing
-          # cache-dependency-path, which would break the first release at this step.
-
-      # npm trusted publishing (OIDC) requires npm CLI >= 11.5.1 and Node >= 22.14.0.
-      # The feature gate lives on the npm CLI, not on Node: npm 10 does not attempt the
-      # OIDC exchange at all, so with no NODE_AUTH_TOKEN present it fails to
-      # authenticate. Bumping `node-version` alone is not reliable either (Node 22 can
-      # bundle npm 10, and early Node 24 bundled npm 11.4.x), so pin the CLI explicitly.
-      - name: Ensure npm Supports Trusted Publishing
-        run: npm install -g npm@^11.5.1
-
-      - name: Validate Runtime and CLI Versions for Trusted Publishing
-        run: |
-          node -e '
-            const [major, minor] = process.versions.node.split(".").map(Number);
-            if (major < 22 || (major === 22 && minor < 14)) {
-              console.error(`Node >= 22.14.0 required for trusted publishing, got ${process.version}`);
-              process.exit(1);
-            }
-            console.log(`Node version validated: ${process.version}`);
-          '
-          node -e '
-            const { execSync } = require("child_process");
-            const v = execSync("npm --version").toString().trim();
-            const [major, minor, patch] = v.split(".").map(Number);
-            if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) {
-              console.error(`npm >= 11.5.1 required for trusted publishing, got ${v}`);
-              process.exit(1);
-            }
-            console.log(`npm CLI version validated: ${v}`);
-          '
-
-      # Fail loudly and early if anything would silently divert the publish off OIDC.
-      # A token present here is the exact condition that broke v1.9.1, and it fails at the
-      # last step of a release rather than at a point anyone is watching.
-      - name: Assert No Token Auth Will Be Used
-        run: |
-          set -euo pipefail
-          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "::error::NODE_AUTH_TOKEN is set in the job environment; npm would bypass trusted publishing and attempt a token publish. Remove it."
-            exit 1
-          fi
-          if [ -n "${NPM_TOKEN:-}" ]; then
-            echo "::error::NPM_TOKEN is set in the job environment; npm would bypass trusted publishing and attempt a token publish. Remove it."
-            exit 1
-          fi
-          for rc in "${NPM_CONFIG_USERCONFIG:-}"; do
-            [ -z "$rc" ] && continue
-            if [ -f "$rc" ] && grep -qiE '_authToken|_auth[[:space:]]*=' "$rc"; then
-              echo "::error::$rc contains an auth token entry; npm would bypass trusted publishing. Remove the registry-url input from Setup Node."
-              exit 1
-            fi
-          done
-          echo "No token auth present — publish will use npm trusted publishing (OIDC)."
-
       - name: Sync Courier Version to Release Tag
         env:
           VERSION: ${{ steps.tag.outputs.version }}
@@ -210,18 +143,6 @@ jobs:
           console.log(`Verified courier integrity pin ${version}: ${process.env.DIGEST}`);
           NODE
 
-      - name: Verify Courier Contents Are Minimal
-        run: |
-          cd package
-          npm pack --dry-run --json > pack.json
-          node -e "
-            const files = require('./pack.json')[0].files.map(f => f.path);
-            const allowed = new Set(['package.json','README.md','bin/promptkit-os.js']);
-            const extra = files.filter(f => !allowed.has(f));
-            if (extra.length) { console.error('unexpected files in tarball:', extra); process.exit(1); }
-            console.log('tarball contents verified:', files.join(', '));
-          "
-
       - name: Smoke Test Courier Against This Release
         env:
           PROMPTKIT_VERSION: ${{ steps.tag.outputs.version }}
@@ -245,18 +166,108 @@ jobs:
           echo "::error::manual publication must use the protected main workflow ref"
           exit 1
 
-      - name: Pack Verified Courier
-        id: pack
-        working-directory: package
+      - name: Report Dry Run
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          TAG_COMMIT: ${{ steps.release_source.outputs.tag_commit }}
+        run: echo "Dry run complete for $TAG at $TAG_COMMIT; npm publish was skipped."
+
+  pack-release:
+    name: Build Verified npm Courier Artifact
+    needs: validate-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tarball: ${{ steps.pack.outputs.tarball }}
+      sha256: ${{ steps.pack.outputs.sha256 }}
+      version: ${{ needs.validate-release.outputs.version }}
+    steps:
+      - name: Checkout Trusted Repository Tooling
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Confirm Release Tag Still Targets Valid Mainline Commit
+        env:
+          TAG: ${{ needs.validate-release.outputs.tag }}
+          TAG_COMMIT: ${{ needs.validate-release.outputs.tag_commit }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
-          tarball="$(npm pack --silent --pack-destination "$RUNNER_TEMP")"
+          refs="$(git ls-remote --tags origin "refs/tags/$TAG" "refs/tags/$TAG^{}")"
+          current="$(printf '%s\n' "$refs" | awk -v tag="refs/tags/$TAG" '$2 == tag { direct=$1 } $2 == tag "^{}" { peeled=$1 } END { if (peeled != "") print peeled; else print direct }')"
+          [[ "$current" == "$TAG_COMMIT" ]] || { echo "::error::release tag $TAG moved after validation"; exit 1; }
+          git merge-base --is-ancestor "$TAG_COMMIT" "origin/$DEFAULT_BRANCH" || { echo "::error::release tag $TAG is not reachable from $DEFAULT_BRANCH"; exit 1; }
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Assemble Courier from Release Commit Data
+        env:
+          TAG: ${{ needs.validate-release.outputs.tag }}
+          TAG_COMMIT: ${{ needs.validate-release.outputs.tag_commit }}
+          VERSION: ${{ needs.validate-release.outputs.version }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          source_dir="$RUNNER_TEMP/courier-source"
+          mkdir -p "$source_dir/bin"
+          git show "$TAG_COMMIT:package/package.json" > "$source_dir/package.json"
+          git show "$TAG_COMMIT:package/README.md" > "$source_dir/README.md"
+          git show "$TAG_COMMIT:package/bin/promptkit-os.js" > "$source_dir/bin/promptkit-os.js"
+          node -e '
+            const fs = require("fs");
+            const path = process.argv[1];
+            const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
+            if (pkg.name !== "promptkit-os") throw new Error("unexpected courier package name");
+            pkg.version = process.env.VERSION;
+            fs.writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`);
+          ' "$source_dir/package.json"
+          archive="https://github.com/$REPOSITORY/archive/refs/tags/$TAG.tar.gz"
+          curl --fail --silent --show-error --location "$archive" --output "$RUNNER_TEMP/release.tar.gz"
+          python3 scripts/verify-release-archive.py --archive "$RUNNER_TEMP/release.tar.gz" --commit "$TAG_COMMIT"
+          digest="$(sha256sum "$RUNNER_TEMP/release.tar.gz" | cut -d' ' -f1)"
+          bash scripts/mint-courier-integrity-pin.sh "$source_dir/bin/promptkit-os.js" "$VERSION" "$digest"
+
+      - name: Pack and Verify Exact Courier Artifact
+        id: pack
+        env:
+          VERSION: ${{ needs.validate-release.outputs.version }}
+        run: |
+          set -euo pipefail
+          tarball="$(npm pack --ignore-scripts --silent --pack-destination "$RUNNER_TEMP" "$RUNNER_TEMP/courier-source")"
           path="$RUNNER_TEMP/$tarball"
           [[ -f "$path" ]] || { echo "::error::npm pack did not produce $tarball"; exit 1; }
+          python3 - "$path" "$VERSION" <<'PY'
+          import json
+          import sys
+          import tarfile
+
+          path, expected_version = sys.argv[1:]
+          expected = {"package/package.json", "package/README.md", "package/bin/promptkit-os.js"}
+          with tarfile.open(path, "r:gz") as archive:
+              members = archive.getmembers()
+              files = [member for member in members if member.isfile()]
+              names = [member.name for member in files]
+              directories = {member.name.rstrip("/") for member in members if member.isdir()}
+              if set(names) != expected or len(names) != len(expected) or directories - {"package", "package/bin"}:
+                  raise SystemExit(f"unexpected courier tarball entries: {sorted(member.name for member in members)}")
+              if any(not (member.isfile() or member.isdir()) for member in members):
+                  raise SystemExit("courier tarball contains a link or unsupported entry")
+              manifest = json.load(archive.extractfile("package/package.json"))
+              if manifest.get("name") != "promptkit-os" or manifest.get("version") != expected_version:
+                  raise SystemExit("courier tarball manifest does not match the release name and version")
+          PY
           digest="$(sha256sum "$path" | cut -d' ' -f1)"
           echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
           echo "sha256=$digest" >> "$GITHUB_OUTPUT"
-          echo "Packed $tarball ($digest)"
+          echo "Verified exact courier artifact $tarball ($digest)"
 
       - name: Upload Verified Courier Artifact
         uses: actions/upload-artifact@v4
@@ -266,16 +277,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Report Dry Run
-        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
-        env:
-          TAG: ${{ steps.tag.outputs.tag }}
-          TAG_COMMIT: ${{ steps.release_source.outputs.tag_commit }}
-        run: echo "Dry run complete for $TAG at $TAG_COMMIT; npm publish was skipped."
-
   publish-npm-courier:
     name: Publish npm Courier
-    needs: validate-release
+    needs: pack-release
     if: github.event_name == 'release' || (inputs.dry_run == false && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     permissions:
@@ -289,15 +293,15 @@ jobs:
 
       - name: Verify Courier Artifact
         env:
-          TARBALL: ${{ needs.validate-release.outputs.tarball }}
-          EXPECTED_SHA256: ${{ needs.validate-release.outputs.sha256 }}
+          TARBALL_NAME: ${{ needs.pack-release.outputs.tarball }}
+          EXPECTED_SHA256: ${{ needs.pack-release.outputs.sha256 }}
         run: |
           set -euo pipefail
-          path="$RUNNER_TEMP/courier/$TARBALL"
+          path="$RUNNER_TEMP/courier/$TARBALL_NAME"
           [[ -f "$path" ]] || { echo "::error::verified courier artifact is missing"; exit 1; }
           actual="$(sha256sum "$path" | cut -d' ' -f1)"
           [[ "$actual" == "$EXPECTED_SHA256" ]] || { echo "::error::courier artifact digest mismatch"; exit 1; }
-          echo "tarball=$path" >> "$GITHUB_ENV"
+          echo "TARBALL=$path" >> "$GITHUB_ENV"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -306,6 +310,17 @@ jobs:
 
       - name: Ensure npm Supports Trusted Publishing
         run: npm install -g npm@^11.5.1
+
+      - name: Validate Runtime and CLI Versions for Trusted Publishing
+        run: |
+          node -e '
+            const [major, minor] = process.versions.node.split(".").map(Number);
+            if (major < 22 || (major === 22 && minor < 14)) throw new Error(`Node >= 22.14.0 required, got ${process.version}`);
+          '
+          node -e '
+            const [major, minor, patch] = require("child_process").execSync("npm --version").toString().trim().split(".").map(Number);
+            if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) throw new Error(`npm >= 11.5.1 required, got ${major}.${minor}.${patch}`);
+          '
 
       - name: Assert No Token Auth Will Be Used
         run: |
@@ -323,4 +338,4 @@ jobs:
       - name: Report
         if: success()
         run: |
-          echo "::notice::published promptkit-os@${{ needs.validate-release.outputs.version }} with provenance"
+          echo "::notice::published promptkit-os@${{ needs.pack-release.outputs.version }} with provenance"

@@ -694,12 +694,14 @@ Assert-Contains "package/bin/promptkit-os.js" "init\.ps1" "Courier delegates to 
 Assert-Contains "package/package.json" '"name": "promptkit-os"' "Courier package name matches the reserved registry name"
 Assert-Contains "package/package.json" "provenance" "Courier publishes with provenance attestation"
 Assert-Contains ".github/workflows/release-npm.yml" "npm publish.*--provenance" "Release job publishes with provenance"
-Assert-Contains ".github/workflows/release-npm.yml" "^  validate-release:" "Release validation has an unprivileged job"
-Assert-Contains ".github/workflows/release-npm.yml" "^  publish-npm-courier:" "Release publishing has a separate job"
-Assert-Contains ".github/workflows/release-npm.yml" "^      id-token: write" "Only the isolated publish job requests OIDC"
+Assert-Contains ".github/workflows/release-npm.yml" "(?m)^  validate-release:" "Release validation has an unprivileged job"
+Assert-Contains ".github/workflows/release-npm.yml" "git merge-base --is-ancestor" "Release tags must point into default-branch history"
+Assert-Contains ".github/workflows/release-npm.yml" "(?m)^  publish-npm-courier:" "Release publishing has a separate job"
+Assert-Contains ".github/workflows/release-npm.yml" "(?m)^      id-token: write" "Only the isolated publish job requests OIDC"
 Assert-Contains ".github/workflows/release-npm.yml" "npm publish.*--ignore-scripts" "Privileged publishing skips package lifecycle scripts"
 $releaseWorkflow = (Get-Content -Path (Join-Path $RepoRoot '.github/workflows/release-npm.yml') -Raw) -replace '\r', ''
-$releaseValidateJob = [regex]::Match($releaseWorkflow, '(?ms)^  validate-release:\n.*?(?=^  publish-npm-courier:)').Value
+$releaseValidateJob = [regex]::Match($releaseWorkflow, '(?ms)^  validate-release:\n.*?(?=^  pack-release:)').Value
+$releasePackJob = [regex]::Match($releaseWorkflow, '(?ms)^  pack-release:\n.*?(?=^  publish-npm-courier:)').Value
 $releasePublishJob = [regex]::Match($releaseWorkflow, '(?ms)^  publish-npm-courier:\n.*').Value
 $releaseGlobalPermissions = [regex]::Match($releaseWorkflow, '(?ms)^permissions:\n.*?(?=^jobs:)').Value
 if ($releaseGlobalPermissions -match 'id-token:\s*write' -or $releaseValidateJob -match 'id-token:\s*write' -or $releaseValidateJob -notmatch 'actions/checkout') {
@@ -709,7 +711,14 @@ if ($releaseGlobalPermissions -match 'id-token:\s*write' -or $releaseValidateJob
     Write-Host '  ✅ PASS: release validation checks tag code without OIDC' -ForegroundColor Green
     $script:PassCount++
 }
-if ($releasePublishJob -match 'actions/checkout|npm pack|npm version|bash .*scripts/|node .*package/' -or $releasePublishJob -notmatch 'npm publish .*--ignore-scripts') {
+if ($releasePackJob -match 'id-token:\s*write' -or $releasePackJob -notmatch 'git show' -or $releasePackJob -notmatch 'npm pack --ignore-scripts') {
+    Write-Host '  ❌ FAIL: clean package job must assemble commit data without OIDC or lifecycle scripts' -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Write-Host '  ✅ PASS: release artifact is built from commit data in an unprivileged job' -ForegroundColor Green
+    $script:PassCount++
+}
+if ($releasePublishJob -match 'actions/checkout|npm pack|npm version|bash .*scripts/|node .*package/' -or $releasePublishJob -notmatch 'npm publish .*--ignore-scripts' -or $releasePublishJob -notmatch 'TARBALL=\$path') {
     Write-Host '  ❌ FAIL: OIDC publish job must publish the verified tarball without running repository code' -ForegroundColor Red
     $script:FailCount++
 } else {
@@ -722,7 +731,6 @@ Assert-Contains "QUICKSTART.md" "npx promptkit-os@latest" "QUICKSTART documents 
 Assert-Contains "package/bin/promptkit-os.js" "Refusing to overlay" "Courier refuses to overlay a non-empty .promptkit (no silent tar merge)"
 Assert-Contains "package/bin/promptkit-os.js" "assertInstallTargetIsClean" "Courier guards the install target before extracting"
 Assert-Contains "package/README.md" "PowerShell 7" "Courier README states the Windows pwsh prerequisite"
-Assert-Contains ".github/workflows/release-npm.yml" "No .cache: npm." "Release job documents why npm cache is absent (no lockfile)"
 
 Write-Host "`n📌 Scenario AK: Grill Completion Contract (Issue #425)" -ForegroundColor Yellow
 Assert-Contains "workflows/tutor.md" "Suspend Teaching Rules" "Grill drill suspends Tier-3 snippets and the Just Show Me guardrail"

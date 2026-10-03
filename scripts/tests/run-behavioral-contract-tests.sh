@@ -705,10 +705,12 @@ assert_contains "package/package.json" "\"name\": \"promptkit-os\"" "Courier pac
 assert_contains "package/package.json" "provenance" "Courier publishes with provenance attestation"
 assert_contains ".github/workflows/release-npm.yml" "npm publish.*--provenance" "Release job publishes with provenance"
 assert_contains ".github/workflows/release-npm.yml" "^  validate-release:" "Release validation has an unprivileged job"
+assert_contains ".github/workflows/release-npm.yml" "git merge-base --is-ancestor" "Release tags must point into default-branch history"
 assert_contains ".github/workflows/release-npm.yml" "^  publish-npm-courier:" "Release publishing has a separate job"
 assert_contains ".github/workflows/release-npm.yml" "^      id-token: write" "Only the isolated publish job requests OIDC"
 assert_contains ".github/workflows/release-npm.yml" "npm publish.*--ignore-scripts" "Privileged publishing skips package lifecycle scripts"
-release_validate_job="$(awk '/^  validate-release:/{inside=1} inside && /^  publish-npm-courier:/{exit} inside{print}' .github/workflows/release-npm.yml)"
+release_validate_job="$(awk '/^  validate-release:/{inside=1} inside && /^  pack-release:/{exit} inside{print}' .github/workflows/release-npm.yml)"
+release_pack_job="$(awk '/^  pack-release:/{inside=1} inside && /^  publish-npm-courier:/{exit} inside{print}' .github/workflows/release-npm.yml)"
 release_publish_job="$(awk '/^  publish-npm-courier:/{inside=1} inside{print}' .github/workflows/release-npm.yml)"
 release_global_permissions="$(awk '/^permissions:/{inside=1} inside && /^jobs:/{exit} inside{print}' .github/workflows/release-npm.yml)"
 if grep -q 'id-token: write' <<< "$release_global_permissions" || grep -q 'id-token: write' <<< "$release_validate_job" || ! grep -q 'actions/checkout' <<< "$release_validate_job"; then
@@ -718,7 +720,14 @@ else
     echo "  ✅ PASS: release validation checks tag code without OIDC"
     PASS_COUNT=$((PASS_COUNT + 1))
 fi
-if grep -Eq 'actions/checkout|npm pack|npm version|bash .*scripts/|node .*package/' <<< "$release_publish_job" || ! grep -q 'npm publish .*--ignore-scripts' <<< "$release_publish_job"; then
+if grep -q 'id-token: write' <<< "$release_pack_job" || ! grep -q 'git show' <<< "$release_pack_job" || ! grep -q 'npm pack --ignore-scripts' <<< "$release_pack_job"; then
+    echo "  ❌ FAIL: clean package job must assemble commit data without OIDC or lifecycle scripts"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+    echo "  ✅ PASS: release artifact is built from commit data in an unprivileged job"
+    PASS_COUNT=$((PASS_COUNT + 1))
+fi
+if grep -Eq 'actions/checkout|npm pack|npm version|bash .*scripts/|node .*package/' <<< "$release_publish_job" || ! grep -q 'npm publish .*--ignore-scripts' <<< "$release_publish_job" || ! grep -q 'TARBALL=\$path' <<< "$release_publish_job"; then
     echo "  ❌ FAIL: OIDC publish job must publish the verified tarball without running repository code"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 else
@@ -731,7 +740,6 @@ assert_contains "QUICKSTART.md" "npx promptkit-os@latest" "QUICKSTART documents 
 assert_contains "package/bin/promptkit-os.js" "Refusing to overlay" "Courier refuses to overlay a non-empty .promptkit (no silent tar merge)"
 assert_contains "package/bin/promptkit-os.js" "assertInstallTargetIsClean" "Courier guards the install target before extracting"
 assert_contains "package/README.md" "PowerShell 7" "Courier README states the Windows pwsh prerequisite"
-assert_contains ".github/workflows/release-npm.yml" "No .cache: npm." "Release job documents why npm cache is absent (no lockfile)"
 
 echo ""
 echo "📌 Scenario AK: Grill Completion Contract (Issue #425)"
