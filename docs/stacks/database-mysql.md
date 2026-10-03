@@ -16,7 +16,7 @@ activation:
     - drizzle.config.ts
 verification:
   fast:
-    - mysql "$DATABASE_URL" -e 'select 1'
+    - mysql --defaults-extra-file="${MYSQL_DEFAULTS_FILE:?}" -e 'select 1'
   required:
     - run the repository migration validation command
   extended:
@@ -51,4 +51,4 @@ Confirm an active module datasource using an explicit MySQL URL (`mysql://`, `jd
 
 ## 3. Tiered Verification Commands
 
-Fast: use the configured client for `select 1`; required: run the migration tool's validate/check command; extended: run integration tests against isolated MySQL. Discover repository-specific commands and never verify by mutating production data.
+Fast: when the repository provides a MySQL client option file with its connection settings, run `mysql --defaults-extra-file="${MYSQL_DEFAULTS_FILE:?}" -e 'select 1'`; required: run the migration tool's validate/check command; extended: run integration tests against isolated MySQL. For URI-only configuration, use the repository's configured URI-aware driver or shell rather than passing the URI as `mysql`'s database argument. Keep credentials in the option file or secret manager, never on the command line. Discover repository-specific commands and never verify by mutating production data.
