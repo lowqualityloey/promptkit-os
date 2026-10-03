@@ -792,6 +792,23 @@ assert_contains "scripts/isolate-worktree.ps1" "LASTEXITCODE" "PowerShell worktr
 assert_contains "scripts/isolate-worktree.sh" "Failed to create worktree" "Bash worktree isolation utility checks worktree add exit code"
 assert_contains "scripts/isolate-worktree.sh" "Failed to merge branch" "Bash worktree isolation utility checks merge exit code"
 
+echo "📌 Scenario AP: KMP, Backend, Database, Cloud Playbooks and Cross-Cutting Recipes (#519-#523)"
+for playbook in mobile-kmp systems-java-spring systems-csharp-dotnet database-postgres database-mysql deploy-aws deploy-gcp; do
+    assert_contains "docs/stacks/$playbook.md" "^name: $playbook$" "$playbook playbook exists with matching name"
+    assert_contains "docs/stacks/README.md" "$playbook.md" "Stack catalog indexes $playbook"
+done
+assert_contains "workflows/onboard.md" "org.jetbrains.kotlin.multiplatform" "KMP activation requires the applied plugin"
+assert_contains "workflows/onboard.md" "unused catalog alias" "KMP detection rejects an unused version-catalog alias"
+assert_contains "workflows/onboard.md" "systems-java-spring.md" "Onboarding detects Java Spring"
+assert_contains "workflows/onboard.md" "systems-csharp-dotnet.md" "Onboarding detects ASP.NET Core"
+assert_contains "workflows/onboard.md" "database-postgres.md" "Onboarding detects PostgreSQL from engine evidence"
+assert_contains "workflows/onboard.md" "deploy-aws.md" "Onboarding detects AWS deployment"
+assert_contains "workflows/onboard.md" "deploy-gcp.md" "Onboarding detects GCP deployment"
+assert_contains "docs/recipes/state-management.md" "## 3. Anti-Patterns to Avoid" "State recipe follows required structure"
+assert_contains "docs/recipes/websocket-realtime.md" "ping/pong heartbeats" "WebSocket recipe defines heartbeat lifecycle"
+assert_contains "workflows/api.md" "docs/recipes/websocket-realtime.md" "API workflow links WebSocket recipe"
+assert_contains "workflows/design-system.md" "docs/recipes/state-management.md" "Design workflow links state-management recipe"
+
 echo ""
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"

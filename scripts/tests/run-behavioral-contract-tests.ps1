@@ -766,6 +766,23 @@ Assert-Contains "scripts/isolate-worktree.ps1" "LASTEXITCODE" "PowerShell worktr
 Assert-Contains "scripts/isolate-worktree.sh" "Failed to create worktree" "Bash worktree isolation utility checks worktree add exit code"
 Assert-Contains "scripts/isolate-worktree.sh" "Failed to merge branch" "Bash worktree isolation utility checks merge exit code"
 
+Write-Host "`n📌 Scenario AP: KMP, Backend, Database, Cloud Playbooks and Cross-Cutting Recipes (#519-#523)" -ForegroundColor Yellow
+foreach ($playbook in @('mobile-kmp', 'systems-java-spring', 'systems-csharp-dotnet', 'database-postgres', 'database-mysql', 'deploy-aws', 'deploy-gcp')) {
+    Assert-Contains "docs/stacks/$playbook.md" "^name: $playbook$" "$playbook playbook exists with matching name"
+    Assert-Contains "docs/stacks/README.md" "$playbook.md" "Stack catalog indexes $playbook"
+}
+Assert-Contains "workflows/onboard.md" "org.jetbrains.kotlin.multiplatform" "KMP activation requires the applied plugin"
+Assert-Contains "workflows/onboard.md" "unused catalog alias" "KMP detection rejects an unused version-catalog alias"
+Assert-Contains "workflows/onboard.md" "systems-java-spring.md" "Onboarding detects Java Spring"
+Assert-Contains "workflows/onboard.md" "systems-csharp-dotnet.md" "Onboarding detects ASP.NET Core"
+Assert-Contains "workflows/onboard.md" "database-postgres.md" "Onboarding detects PostgreSQL from engine evidence"
+Assert-Contains "workflows/onboard.md" "deploy-aws.md" "Onboarding detects AWS deployment"
+Assert-Contains "workflows/onboard.md" "deploy-gcp.md" "Onboarding detects GCP deployment"
+Assert-Contains "docs/recipes/state-management.md" "## 3. Anti-Patterns to Avoid" "State recipe follows required structure"
+Assert-Contains "docs/recipes/websocket-realtime.md" "ping/pong heartbeats" "WebSocket recipe defines heartbeat lifecycle"
+Assert-Contains "workflows/api.md" "docs/recipes/websocket-realtime.md" "API workflow links WebSocket recipe"
+Assert-Contains "workflows/design-system.md" "docs/recipes/state-management.md" "Design workflow links state-management recipe"
+
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
 Write-Host "===========================================================" -ForegroundColor DarkGray
