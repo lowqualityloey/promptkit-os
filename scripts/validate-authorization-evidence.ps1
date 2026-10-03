@@ -56,7 +56,7 @@ foreach ($line in $diffLines) {
     if (-not $boundaryMatch.Success -or $boundaryMatch.Groups[1].Value -cnotin @('review', 'pr', 'full')) { Write-Output "INVALID_AUTHORIZATION_BOUNDARY|$record|Checkpoint $id must declare review, pr, or full"; $errors++ }
     $taskText = Get-Content -LiteralPath (Join-Path $rootPath $record) -Raw
     if ($taskText -match '(?m)^-[ \t]+\*\*Mode\*\*:[^\r\n]*Approved Batch Mode') {
-        $batchMatch = [regex]::Match($taskText, '(?m)^-[ \t]+\*\*Batch Authorization\*\*:[^\r\n]*`([^`]+)`')
+        $batchMatch = [regex]::Match($taskText, '(?m)^-[ \t]+\*\*Batch Authorization\*\*:[ \t]*`([^`\r\n]+)`[ \t]*$')
         if (-not $batchMatch.Success -or -not (Test-Path -LiteralPath (Join-Path $rootPath $batchMatch.Groups[1].Value))) {
             Write-Output "MISSING_BATCH_AUTHORIZATION|$record|Approved Batch Mode link does not resolve"
             $errors++
@@ -90,7 +90,7 @@ foreach ($candidate in ($changedRecords | Sort-Object -Unique)) {
     if ($taskText -notmatch '(?m)^-[ \t]+\*\*Mode\*\*:[^\r\n]*Approved Batch Mode') { continue }
     $candidateDiff = if ($untrackedFiles -contains $candidate) { Get-Content -LiteralPath $taskPath } else { @(git.exe -C $rootPath diff --unified=0 $Baseline -- $candidate) }
     if (-not ($candidateDiff | Where-Object { $_ -match '^\+[^+].*\*\*(Mode|Batch Authorization)\*\*:' })) { continue }
-    $batchMatch = [regex]::Match($taskText, '(?m)^-[ \t]+\*\*Batch Authorization\*\*:[^\r\n]*`([^`]+)`')
+    $batchMatch = [regex]::Match($taskText, '(?m)^-[ \t]+\*\*Batch Authorization\*\*:[ \t]*`([^`\r\n]+)`[ \t]*$')
     if (-not $batchMatch.Success -or -not (Test-Path -LiteralPath (Join-Path $rootPath $batchMatch.Groups[1].Value))) {
         Write-Output "MISSING_BATCH_AUTHORIZATION|$candidate|Approved Batch Mode link does not resolve"
         $errors++
