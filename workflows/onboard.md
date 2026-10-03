@@ -111,6 +111,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    - **Mobile — Kotlin Multiplatform**: Gradle settings/build files are candidates only. Confirm `org.jetbrains.kotlin.multiplatform` is applied directly, or resolve an applied version-catalog alias to that plugin ID. Include Kotlin DSL and Groovy; if activation is hidden behind an unresolved convention plugin, report unconfirmed. Do not activate for plain Android/JVM or an unused catalog alias. Mount [`mobile-kmp.md`](../docs/stacks/mobile-kmp.md) only after confirmation.
    - **Backend — Java / Spring Boot**: `pom.xml` or Gradle build files plus Spring Boot dependency/plugin evidence; mount [`systems-java-spring.md`](../docs/stacks/systems-java-spring.md).
    - **Backend — C# / ASP.NET Core**: `.csproj` or `.sln` plus ASP.NET Core references; mount [`systems-csharp-dotnet.md`](../docs/stacks/systems-csharp-dotnet.md).
+   - **Database — PostgreSQL / MySQL**: identify the engine from connection configuration, driver, or dialect-specific migration evidence. Migration folders alone are candidates, not proof; mount only the matching [`database-postgres.md`](../docs/stacks/database-postgres.md) or [`database-mysql.md`](../docs/stacks/database-mysql.md).
    - **Backend — Clean / Hexagonal**: `domain/`, `application/`, `infrastructure/`, `adapters/`.
    - **Frontend — Feature-Sliced / Component**: `src/features/*`, `src/modules/*`.
    - **Monorepo Multi-Package Topology**:
