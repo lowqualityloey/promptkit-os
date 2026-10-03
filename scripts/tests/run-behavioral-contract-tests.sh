@@ -720,6 +720,17 @@ else
     echo "  ✅ PASS: release validation checks tag code without OIDC"
     PASS_COUNT=$((PASS_COUNT + 1))
 fi
+trust_line="$(grep -nF 'git merge-base --is-ancestor "$TAG_COMMIT" "origin/$DEFAULT_BRANCH"' <<< "$release_validate_job" | cut -d: -f1)"
+checkout_line="$(grep -nF 'git checkout --detach "$TAG_COMMIT"' <<< "$release_validate_job" | cut -d: -f1)"
+version_line="$(grep -nF 'npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts' <<< "$release_validate_job" | cut -d: -f1)"
+smoke_line="$(grep -nF 'Smoke Test Courier Against This Release' <<< "$release_validate_job" | cut -d: -f1)"
+if [ -z "$trust_line" ] || [ -z "$checkout_line" ] || [ -z "$version_line" ] || [ -z "$smoke_line" ] || [ "$trust_line" -ge "$checkout_line" ] || [ "$checkout_line" -ge "$version_line" ] || [ "$version_line" -ge "$smoke_line" ]; then
+    echo "  ❌ FAIL: release tag ancestry must be checked before checkout or execution"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+    echo "  ✅ PASS: release tag trust is established before tagged code runs"
+    PASS_COUNT=$((PASS_COUNT + 1))
+fi
 if grep -q 'id-token: write' <<< "$release_pack_job" || ! grep -q 'git show' <<< "$release_pack_job" || ! grep -q 'npm pack --ignore-scripts' <<< "$release_pack_job"; then
     echo "  ❌ FAIL: clean package job must assemble commit data without OIDC or lifecycle scripts"
     FAIL_COUNT=$((FAIL_COUNT + 1))

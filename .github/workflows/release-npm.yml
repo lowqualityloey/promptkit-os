@@ -80,6 +80,7 @@ jobs:
         id: release_source
         env:
           TAG: ${{ steps.tag.outputs.tag }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           # --force is required, not lazy: actions/checkout already fetched this tag
           # (fetch-depth: 0 pulls tags), so a plain fetch aborts with
@@ -91,6 +92,7 @@ jobs:
             echo "::error::Could not resolve tag refs/tags/$TAG to a commit"
             exit 1
           fi
+          git merge-base --is-ancestor "$TAG_COMMIT" "origin/$DEFAULT_BRANCH" || { echo "::error::release tag $TAG is not reachable from $DEFAULT_BRANCH"; exit 1; }
           git checkout --detach "$TAG_COMMIT"
           CURRENT_HEAD=$(git rev-parse HEAD)
           if [ "$CURRENT_HEAD" != "$TAG_COMMIT" ]; then
@@ -105,7 +107,7 @@ jobs:
           VERSION: ${{ steps.tag.outputs.version }}
         run: |
           cd package
-          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts
           # Refuse to ship a wrapper whose version drifted from the tag it claims to mirror.
           node -e "const p=require('./package.json'); if(p.version!==process.env.VERSION){console.error('version mismatch');process.exit(1)}"
           echo "Courier version: $(node -p "require('./package.json').version")"

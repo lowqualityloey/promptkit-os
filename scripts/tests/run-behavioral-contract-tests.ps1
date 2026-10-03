@@ -711,6 +711,17 @@ if ($releaseGlobalPermissions -match 'id-token:\s*write' -or $releaseValidateJob
     Write-Host '  ✅ PASS: release validation checks tag code without OIDC' -ForegroundColor Green
     $script:PassCount++
 }
+$trustLine = $releaseValidateJob.IndexOf('git merge-base --is-ancestor "$TAG_COMMIT" "origin/$DEFAULT_BRANCH"', [StringComparison]::Ordinal)
+$checkoutLine = $releaseValidateJob.IndexOf('git checkout --detach "$TAG_COMMIT"', [StringComparison]::Ordinal)
+$versionLine = $releaseValidateJob.IndexOf('npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts', [StringComparison]::Ordinal)
+$smokeLine = $releaseValidateJob.IndexOf('Smoke Test Courier Against This Release', [StringComparison]::Ordinal)
+if ($trustLine -lt 0 -or $checkoutLine -lt 0 -or $versionLine -lt 0 -or $smokeLine -lt 0 -or $trustLine -ge $checkoutLine -or $checkoutLine -ge $versionLine -or $versionLine -ge $smokeLine) {
+    Write-Host '  ❌ FAIL: release tag ancestry must be checked before checkout or execution' -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Write-Host '  ✅ PASS: release tag trust is established before tagged code runs' -ForegroundColor Green
+    $script:PassCount++
+}
 if ($releasePackJob -match 'id-token:\s*write' -or $releasePackJob -notmatch 'git show' -or $releasePackJob -notmatch 'npm pack --ignore-scripts') {
     Write-Host '  ❌ FAIL: clean package job must assemble commit data without OIDC or lifecycle scripts' -ForegroundColor Red
     $script:FailCount++
