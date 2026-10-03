@@ -108,6 +108,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    - **API — FastAPI**: `main.py`, `app/main.py`, `pyproject.toml` (FastAPI dependency), Pydantic schemas, async endpoints.
    - **API — Node.js Server**: `package.json` (Express/Fastify/Hono/Nest), `tsconfig.json`, route handlers, runtime validation schemas.
    - **CMS — WordPress**: `wp-config.php`, `wp-content/`, themes/plugins, Bedrock `composer.json`.
+   - **Mobile — Kotlin Multiplatform**: Gradle settings/build files are candidates only. Confirm `org.jetbrains.kotlin.multiplatform` is applied directly, or resolve an applied version-catalog alias to that plugin ID. Include Kotlin DSL and Groovy; if activation is hidden behind an unresolved convention plugin, report unconfirmed. Do not activate for plain Android/JVM or an unused catalog alias. Mount [`mobile-kmp.md`](../docs/stacks/mobile-kmp.md) only after confirmation.
    - **Backend — Clean / Hexagonal**: `domain/`, `application/`, `infrastructure/`, `adapters/`.
    - **Frontend — Feature-Sliced / Component**: `src/features/*`, `src/modules/*`.
    - **Monorepo Multi-Package Topology**:
