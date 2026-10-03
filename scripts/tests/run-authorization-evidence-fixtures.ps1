@@ -62,7 +62,15 @@ try {
     Assert-Case 'unsupported batch boundary' 1
     (Get-Content -LiteralPath $batchPath -Raw).Replace('`final`', '`review`') | Set-Content -LiteralPath $batchPath -Encoding utf8
     Assert-Case 'restored valid batch boundary' 0
-    Write-Output 'AUTHORIZATION_FIXTURES|PASS|8 scenarios'
+
+    Set-Content -LiteralPath $batchPath -Value @('# Batch', '- **Declared Boundary**: `review`', '- **Permitted Actions**: `N/A`', '- **Milestone Scope**: `None`') -Encoding utf8
+    Assert-Case 'placeholder batch actions and scope fail' 1
+
+    Write-Task 'review'
+    Set-Content -LiteralPath (Join-Path $taskDir 'TASK-2026-01-02-foreign.md') -Value @('# Foreign Task', '<a id="AUTHZ-foreign-001"></a>', '- **Declared Boundary**: `review`', '- **Verbatim Human Instruction**: `Run M1 through review only`', '- **Instruction Source**: `user message 1`', '- **Frozen Task and Milestone Scope**: `M1 files only`') -Encoding utf8
+    Set-Content -LiteralPath (Join-Path $taskDir 'TASK-2026-01-03-borrowed.md') -Value @('# Borrowed Checkpoint', '- **Mode**: `Gated Mode`', '- **Batch Authorization**: `N/A`', '- **Commit Evidence Entry**: `abc123 message; Authorization Checkpoint Reference: AUTHZ-foreign-001; Authorization Source: user message 1`') -Encoding utf8
+    Assert-Case 'checkpoint cannot be borrowed from another Task Record' 1
+    Write-Output 'AUTHORIZATION_FIXTURES|PASS|10 scenarios'
 } finally {
     Remove-Item -LiteralPath $fixtureRoot -Recurse -Force
 }

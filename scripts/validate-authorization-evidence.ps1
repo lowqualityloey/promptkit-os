@@ -14,6 +14,14 @@ foreach ($untrackedFile in $untrackedFiles) {
     $diffLines += "+++ b/$untrackedFile"
     foreach ($addedLine in (Get-Content -LiteralPath (Join-Path $rootPath $untrackedFile))) { $diffLines += "+$addedLine" }
 }
+function Test-MeaningfulBatchField([string]$Text, [string]$Field) {
+    $pattern = '(?m)^[-*]?[ \t]*\*\*' + [regex]::Escape($Field) + '\*\*:[ \t]*(.*)$'
+    $match = [regex]::Match($Text, $pattern)
+    if (-not $match.Success) { return $false }
+    $value = $match.Groups[1].Value.Trim().Trim('`').Trim()
+    return -not [string]::IsNullOrWhiteSpace($value) -and $value -notmatch '^(?i:n/?a|none|null|tbd|todo|not applicable|\[\])$'
+}
+
 $errors = 0
 $record = ''
 foreach ($line in $diffLines) {
@@ -27,13 +35,13 @@ foreach ($line in $diffLines) {
         $errors++
         continue
     }
-    $matches = @(Get-ChildItem -LiteralPath (Join-Path $rootPath 'docs/tasks') -Filter '*.md' -Recurse | Where-Object { Select-String -LiteralPath $_.FullName -SimpleMatch "<a id=`"$id`"></a>" -Quiet })
-    if ($matches.Count -eq 0) {
-        Write-Output "UNRESOLVED_AUTHORIZATION|$record|Checkpoint $id does not resolve in a Task Record"
+    $checkpointPath = if ($record) { Join-Path $rootPath $record } else { '' }
+    if (-not $checkpointPath -or -not (Test-Path -LiteralPath $checkpointPath) -or -not (Select-String -LiteralPath $checkpointPath -SimpleMatch "<a id=`"$id`"></a>" -Quiet)) {
+        Write-Output "UNRESOLVED_AUTHORIZATION|$record|Checkpoint $id does not resolve in the cited Task Record"
         $errors++
         continue
     }
-    $content = Get-Content -LiteralPath $matches[0].FullName
+    $content = Get-Content -LiteralPath $checkpointPath
     $anchor = "<a id=`"$id`"></a>"
     $start = [Array]::IndexOf($content, $anchor)
     $end = $content.Count
@@ -55,8 +63,8 @@ foreach ($line in $diffLines) {
         } else {
             $batchText = Get-Content -LiteralPath (Join-Path $rootPath $batchMatch.Groups[1].Value) -Raw
             foreach ($field in @('Declared Boundary', 'Permitted Actions', 'Milestone Scope')) {
-                if ($batchText -notmatch "(?m)^[-*]?[ \t]*\*\*$([regex]::Escape($field))\*\*:[ \t]*[^\[\r\n]+") {
-                    Write-Output "MISSING_BATCH_AUTHORIZATION|$record|Batch Authorization lacks $field"
+                if (-not (Test-MeaningfulBatchField $batchText $field)) {
+                    Write-Output "MISSING_BATCH_AUTHORIZATION|$record|Batch Authorization lacks a meaningful $field"
                     $errors++
                 }
             }
@@ -90,8 +98,8 @@ foreach ($candidate in ($changedRecords | Sort-Object -Unique)) {
     }
     $batchText = Get-Content -LiteralPath (Join-Path $rootPath $batchMatch.Groups[1].Value) -Raw
     foreach ($field in @('Declared Boundary', 'Permitted Actions', 'Milestone Scope')) {
-        if ($batchText -notmatch "(?m)^[-*]?[ \t]*\*\*$([regex]::Escape($field))\*\*:[ \t]*[^\[\r\n]+") {
-            Write-Output "MISSING_BATCH_AUTHORIZATION|$candidate|Batch Authorization lacks $field"
+        if (-not (Test-MeaningfulBatchField $batchText $field)) {
+            Write-Output "MISSING_BATCH_AUTHORIZATION|$candidate|Batch Authorization lacks a meaningful $field"
             $errors++
         }
     }

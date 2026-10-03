@@ -83,4 +83,29 @@ assert_result "unsupported batch boundary fails" 1
 sed -i 's/`final`/`review`/' "$FIXTURE/docs/tasks/batch-example.md"
 assert_result "restored valid batch boundary passes" 0
 
-echo "AUTHORIZATION_FIXTURES|PASS|11 cases"
+cat > "$FIXTURE/docs/tasks/batch-example.md" <<'EOF'
+# Batch Authorization
+- **Declared Boundary**: `review`
+- **Permitted Actions**: `N/A`
+- **Milestone Scope**: `None`
+EOF
+assert_result "placeholder batch actions and scope fail" 1
+
+write_checkpoint review N/A
+cat > "$FIXTURE/docs/tasks/TASK-2026-01-02-foreign.md" <<'EOF'
+# Foreign Task Record
+<a id="AUTHZ-foreign-001"></a>
+- **Declared Boundary**: `review`
+- **Verbatim Human Instruction**: `Run M1 through review only`
+- **Instruction Source**: `user message 1`
+- **Frozen Task and Milestone Scope**: `M1 files only`
+EOF
+cat > "$FIXTURE/docs/tasks/TASK-2026-01-03-borrowed.md" <<'EOF'
+# Borrowed Checkpoint
+- **Mode**: `Gated Mode`
+- **Batch Authorization**: `N/A`
+- **Commit Evidence Entry**: `abc123 message; Authorization Checkpoint Reference: AUTHZ-foreign-001; Authorization Source: user message 1`
+EOF
+assert_result "checkpoint cannot be borrowed from another Task Record" 1
+
+echo "AUTHORIZATION_FIXTURES|PASS|13 cases"

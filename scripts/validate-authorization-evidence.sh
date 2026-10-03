@@ -15,6 +15,14 @@ if [ -z "$BASELINE" ] || ! git -C "$ROOT" rev-parse --verify "$BASELINE^{commit}
     exit 2
 fi
 ROOT="$(cd "$ROOT" && pwd)"
+meaningful_batch_field() {
+    local file="$1" field="$2" line value normalized
+    line="$(grep -E "^[-*]?[[:space:]]*\*\*$field\*\*:" "$file" | head -n1 || true)"
+    value="${line#*:}"
+    value="$(printf '%s' "$value" | tr -d '`' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    normalized="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+    [ -n "$normalized" ] && [[ ! "$normalized" =~ ^(n/?a|none|null|tbd|todo|not[[:space:]]+applicable|\[\])$ ]]
+}
 diff_output="$(git -C "$ROOT" diff --unified=0 "$BASELINE" -- docs/tasks 2>&1)"
 if [ "$?" -ne 0 ]; then echo "INVALID|AUTHORIZATION_DIFF|Unable to compare docs/tasks with the declared baseline"; exit 2; fi
 while IFS= read -r untracked; do
@@ -36,9 +44,9 @@ while IFS= read -r line; do
         errors=$((errors + 1))
         continue
     fi
-    checkpoint="$(grep -RFl "<a id=\"$id\"></a>" "$ROOT/docs/tasks" --include='*.md' | head -n1 || true)"
-    if [ -z "$checkpoint" ]; then
-        echo "UNRESOLVED_AUTHORIZATION|${record:-docs/tasks}|Checkpoint $id does not resolve in a Task Record"
+    checkpoint="$ROOT/${record:-}"
+    if [ -z "$record" ] || [ ! -f "$checkpoint" ] || ! grep -Fq "<a id=\"$id\"></a>" "$checkpoint"; then
+        echo "UNRESOLVED_AUTHORIZATION|${record:-docs/tasks}|Checkpoint $id does not resolve in the cited Task Record"
         errors=$((errors + 1))
         continue
     fi
@@ -60,8 +68,8 @@ while IFS= read -r line; do
             errors=$((errors + 1))
         else
             for field in 'Declared Boundary' 'Permitted Actions' 'Milestone Scope'; do
-                if ! grep -Eq "^[-*]?[[:space:]]*\\*\\*$field\\*\\*:[[:space:]]*[^[]" "$ROOT/$batch"; then
-                    echo "MISSING_BATCH_AUTHORIZATION|$record|Batch Authorization lacks $field"
+                if ! meaningful_batch_field "$ROOT/$batch" "$field"; then
+                    echo "MISSING_BATCH_AUTHORIZATION|$record|Batch Authorization lacks a meaningful $field"
                     errors=$((errors + 1))
                 fi
             done
@@ -92,8 +100,8 @@ for candidate in $changed_records $untracked_records; do
                 errors=$((errors + 1))
             else
                 for field in 'Declared Boundary' 'Permitted Actions' 'Milestone Scope'; do
-                    if ! grep -Eq "^[-*]?[[:space:]]*\\*\\*$field\\*\\*:[[:space:]]*[^[]" "$ROOT/$batch"; then
-                        echo "MISSING_BATCH_AUTHORIZATION|$candidate|Batch Authorization lacks $field"
+                    if ! meaningful_batch_field "$ROOT/$batch" "$field"; then
+                        echo "MISSING_BATCH_AUTHORIZATION|$candidate|Batch Authorization lacks a meaningful $field"
                         errors=$((errors + 1))
                     fi
                 done
