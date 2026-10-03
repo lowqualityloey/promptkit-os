@@ -24,15 +24,11 @@ const KIT_DIR = ".promptkit";
 // a sidecar would either be excluded from the published package (useless) or
 // require a workflow change to allowlist.
 //
-// UPDATE INSTRUCTION FOR RELEASES: after pushing tag vX.Y.Z (and before the npm
-// publish), download the immutable release tarball, hash it, and add the entry:
-//   curl -sL "https://github.com/lowqualityloey/promptkit-os/archive/refs/tags/vX.Y.Z.tar.gz" -o /tmp/release.tar.gz
-//   sha256sum /tmp/release.tar.gz
-// then add `"X.Y.Z": "<64-hex-chars>",` below so the courier verifies that exact
-// tarball before extracting or executing anything from it. If no pin exists for
-// the running version the courier warns loudly and continues (pins can only be
-// minted after the tag exists); set PROMPTKIT_REQUIRE_INTEGRITY_PIN=1 to fail
-// closed instead. PROMPTKIT_TARBALL_SHA256 overrides the map (testing / rotation).
+// Release pins are inserted and checked by the repository release workflow after
+// it checks out the tag and before npm publication. Do not mint pins by hand. If
+// no pin exists for the running version, the courier warns and continues (pins can
+// only be minted after the tag exists); set PROMPTKIT_REQUIRE_INTEGRITY_PIN=1 to
+// fail closed. PROMPTKIT_TARBALL_SHA256 overrides the map for testing or rotation.
 //
 // CAVEAT: these digests pin GitHub's *generated* archive for a tag. That archive
 // is reproducible today (verified by double download when each pin was minted)
@@ -43,6 +39,7 @@ const KIT_DIR = ".promptkit";
 const TARBALL_SHA256_BY_VERSION = {
   "1.10.1": "1e55459914a1c46aa71df8f9cb8ce4c9ff37d1c02d67f70e5607b3bfd4f48d4b",
   "1.11.0": "6503fdfcde286055b8c053aa0ffa8bdf244cf77df3321cccd6a8d8f780195ade",
+  // @pin-insert
 };
 
 function die(msg) {
@@ -199,7 +196,6 @@ async function main() {
   const url = `https://github.com/${REPO}/archive/refs/tags/v${version}.tar.gz`;
   const kitDir = path.join(root, KIT_DIR);
   assertInstallTargetIsClean(kitDir, force);
-  fs.mkdirSync(kitDir, { recursive: true });
 
   const tarball = await download(url);
   const expectedDigest = expectedTarballDigest(version);
@@ -217,6 +213,7 @@ async function main() {
         "proceeding unverified — set PROMPTKIT_REQUIRE_INTEGRITY_PIN=1 to fail closed.\n"
     );
   }
+  fs.mkdirSync(kitDir, { recursive: true });
   await extract(tarball, kitDir);
   process.stderr.write(`[promptkit-os] extracted release v${version} into ${KIT_DIR}/\n`);
 

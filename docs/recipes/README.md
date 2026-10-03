@@ -17,6 +17,8 @@ Recipes provide concrete, production-grade solutions for specific architectural 
 | [`env-validation.md`](env-validation.md) | Configuration & Preflight | `recipe` | $\le$ 1,500 tok | `workflows/debug.md`, `workflows/onboard.md` | Boot-time preflight validation, client vs server boundaries, and type-safe environment schemas. |
 | [`form-mutations.md`](form-mutations.md) | API & Mutation Contracts | `recipe` | $\le$ 1,500 tok | `workflows/api.md` | Standard Action Envelopes, schema validation, optimistic rollbacks, and mutation idempotency. |
 | [`test-isolation.md`](test-isolation.md) | Testing & Network Seams | `recipe` | $\le$ 1,500 tok | `workflows/test.md` | Network boundary isolation (MSW), transactional database rollbacks, and deterministic test fixtures. |
+| [`state-management.md`](state-management.md) | Client State Boundaries | `recipe` | $\le$ 1,500 tok | `workflows/design-system.md` | Isolate server, URL, and ephemeral UI state; avoid global stores as request caches. |
+| [`websocket-realtime.md`](websocket-realtime.md) | Realtime Connections | `recipe` | $\le$ 1,500 tok | `workflows/api.md` | Authenticate upgrades, bound connection resources, and define heartbeat and reconnect semantics. |
 | [`webhook-idempotency.md`](webhook-idempotency.md) | API & Webhook Ingestion | `recipe` | $\le$ 1,500 tok | `workflows/api.md` | Raw body preservation, timing-safe HMAC verification, and idempotency ledgers. |
 
 ---

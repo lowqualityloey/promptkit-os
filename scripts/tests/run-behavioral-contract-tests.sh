@@ -24,6 +24,20 @@ assert_contains() {
     fi
 }
 
+assert_not_contains() {
+    local file="$1"
+    local pattern="$2"
+    local desc="$3"
+
+    if grep -Ei "$pattern" "$REPO_ROOT/$file" >/dev/null 2>&1; then
+        echo "  ❌ FAIL: $desc (unexpected pattern '$pattern' found in $file)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    else
+        echo "  ✅ PASS: $desc"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    fi
+}
+
 echo ""
 echo "🧪 Running PromptKit OS Behavioral Prompt-Contract Tests"
 echo "==========================================================="
@@ -689,15 +703,54 @@ assert_contains "package/bin/promptkit-os.js" "init\.sh" "Courier delegates to t
 assert_contains "package/bin/promptkit-os.js" "init\.ps1" "Courier delegates to the canonical init.ps1 on Windows"
 assert_contains "package/package.json" "\"name\": \"promptkit-os\"" "Courier package name matches the reserved registry name"
 assert_contains "package/package.json" "provenance" "Courier publishes with provenance attestation"
-assert_contains ".github/workflows/release-npm.yml" "npm publish --provenance" "Release job publishes with provenance"
-assert_contains ".github/workflows/release-npm.yml" "id-token: write" "Release job requests OIDC for attestation"
+assert_contains ".github/workflows/release-npm.yml" "npm publish.*--provenance" "Release job publishes with provenance"
+assert_contains ".github/workflows/release-npm.yml" "^  validate-release:" "Release validation has an unprivileged job"
+assert_contains ".github/workflows/release-npm.yml" "git merge-base --is-ancestor" "Release tags must point into default-branch history"
+assert_contains ".github/workflows/release-npm.yml" "^  publish-npm-courier:" "Release publishing has a separate job"
+assert_contains ".github/workflows/release-npm.yml" "^      id-token: write" "Only the isolated publish job requests OIDC"
+assert_contains ".github/workflows/release-npm.yml" "npm publish.*--ignore-scripts" "Privileged publishing skips package lifecycle scripts"
+release_validate_job="$(awk '/^  validate-release:/{inside=1} inside && /^  pack-release:/{exit} inside{print}' .github/workflows/release-npm.yml)"
+release_pack_job="$(awk '/^  pack-release:/{inside=1} inside && /^  publish-npm-courier:/{exit} inside{print}' .github/workflows/release-npm.yml)"
+release_publish_job="$(awk '/^  publish-npm-courier:/{inside=1} inside{print}' .github/workflows/release-npm.yml)"
+release_global_permissions="$(awk '/^permissions:/{inside=1} inside && /^jobs:/{exit} inside{print}' .github/workflows/release-npm.yml)"
+if grep -q 'id-token: write' <<< "$release_global_permissions" || grep -q 'id-token: write' <<< "$release_validate_job" || ! grep -q 'actions/checkout' <<< "$release_validate_job"; then
+    echo "  ❌ FAIL: release validation must use checkout without OIDC"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+    echo "  ✅ PASS: release validation checks tag code without OIDC"
+    PASS_COUNT=$((PASS_COUNT + 1))
+fi
+trust_line="$(grep -nF 'git merge-base --is-ancestor "$TAG_COMMIT" "origin/$DEFAULT_BRANCH"' <<< "$release_validate_job" | cut -d: -f1)"
+checkout_line="$(grep -nF 'git checkout --detach "$TAG_COMMIT"' <<< "$release_validate_job" | cut -d: -f1)"
+version_line="$(grep -nF 'npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts' <<< "$release_validate_job" | cut -d: -f1)"
+smoke_line="$(grep -nF 'Smoke Test Courier Against This Release' <<< "$release_validate_job" | cut -d: -f1)"
+if [ -z "$trust_line" ] || [ -z "$checkout_line" ] || [ -z "$version_line" ] || [ -z "$smoke_line" ] || [ "$trust_line" -ge "$checkout_line" ] || [ "$checkout_line" -ge "$version_line" ] || [ "$version_line" -ge "$smoke_line" ]; then
+    echo "  ❌ FAIL: release tag ancestry must be checked before checkout or execution"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+    echo "  ✅ PASS: release tag trust is established before tagged code runs"
+    PASS_COUNT=$((PASS_COUNT + 1))
+fi
+if grep -q 'id-token: write' <<< "$release_pack_job" || ! grep -q 'git show' <<< "$release_pack_job" || ! grep -q 'npm pack --ignore-scripts' <<< "$release_pack_job"; then
+    echo "  ❌ FAIL: clean package job must assemble commit data without OIDC or lifecycle scripts"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+    echo "  ✅ PASS: release artifact is built from commit data in an unprivileged job"
+    PASS_COUNT=$((PASS_COUNT + 1))
+fi
+if grep -Eq 'actions/checkout|npm pack|npm version|bash .*scripts/|node .*package/' <<< "$release_publish_job" || ! grep -q 'npm publish .*--ignore-scripts' <<< "$release_publish_job" || ! grep -q 'TARBALL=\$path' <<< "$release_publish_job"; then
+    echo "  ❌ FAIL: OIDC publish job must publish the verified tarball without running repository code"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+    echo "  ✅ PASS: OIDC publish job is isolated from repository code"
+    PASS_COUNT=$((PASS_COUNT + 1))
+fi
 assert_contains "README.md" "courier, not a dependency" "README states the courier contract"
 assert_contains "README.md" "git submodule add" "Submodule path stays first-documented and canonical"
 assert_contains "QUICKSTART.md" "npx promptkit-os@latest" "QUICKSTART documents the optional npx path"
 assert_contains "package/bin/promptkit-os.js" "Refusing to overlay" "Courier refuses to overlay a non-empty .promptkit (no silent tar merge)"
 assert_contains "package/bin/promptkit-os.js" "assertInstallTargetIsClean" "Courier guards the install target before extracting"
 assert_contains "package/README.md" "PowerShell 7" "Courier README states the Windows pwsh prerequisite"
-assert_contains ".github/workflows/release-npm.yml" "No .cache: npm." "Release job documents why npm cache is absent (no lockfile)"
 
 echo ""
 echo "📌 Scenario AK: Grill Completion Contract (Issue #425)"
@@ -791,6 +844,17 @@ assert_contains "workflows/review.md" "mode-appropriate review diff" "Review wor
 assert_contains "scripts/isolate-worktree.ps1" "LASTEXITCODE" "PowerShell worktree isolation utility checks LASTEXITCODE on git mutations"
 assert_contains "scripts/isolate-worktree.sh" "Failed to create worktree" "Bash worktree isolation utility checks worktree add exit code"
 assert_contains "scripts/isolate-worktree.sh" "Failed to merge branch" "Bash worktree isolation utility checks merge exit code"
+
+echo "📌 Scenario AP: Stack activation contracts and recipe wiring (#519-#523; static only)"
+for playbook in mobile-kmp systems-java-spring systems-csharp-dotnet database-postgres database-mysql deploy-aws deploy-gcp; do
+    assert_contains "docs/stacks/$playbook.md" "^name: $playbook$" "$playbook frontmatter declares its matching name"
+    assert_contains "docs/stacks/README.md" "$playbook.md" "Stack catalog indexes $playbook"
+done
+assert_contains "docs/recipes/state-management.md" "## 3. Anti-Patterns to Avoid" "State recipe follows required structure"
+assert_contains "workflows/api.md" "docs/recipes/websocket-realtime.md" "API workflow links WebSocket recipe"
+assert_contains "workflows/design-system.md" "docs/recipes/state-management.md" "Design workflow links state-management recipe"
+assert_not_contains "templates/agent-directive-template.md" "state-management.md" "State recipe is not permanently injected"
+assert_not_contains "templates/agent-directive-template.md" "websocket-realtime.md" "WebSocket recipe is not permanently injected"
 
 echo ""
 echo "📊 Behavioral Contract Verification Summary"

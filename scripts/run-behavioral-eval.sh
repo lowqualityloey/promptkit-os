@@ -30,6 +30,8 @@ SCEN_DIR="$REPO_ROOT/scripts/tests/eval-scenarios"
 
 PASS_COUNT=0
 FAIL_COUNT=0
+CHECKS_MET=0
+CHECKS_TOTAL=0
 
 section() {
     # section <file> <heading> : print lines under "## <heading>" until next "## " or EOF
@@ -67,6 +69,7 @@ eval_checks() {
             *) echo "    ✗ unknown check type '$type'"; ;;
         esac
     done <<< "$checks"
+    printf 'CHECKS|%s|%s\n' "$ok" "$total"
     [ "$ok" -eq "$total" ] && [ "$total" -gt 0 ]
 }
 
@@ -115,10 +118,20 @@ run_score() {
     local checks detail
     checks="$(section "$f" "Checks")"
     if detail="$(eval_checks "$transcript" "$checks" 2>&1)"; then
-        echo "$name|live|PASS|all-checks-hold"
+        CHECKS_MET="$(printf '%s\n' "$detail" | tail -n 1 | cut -d'|' -f2)"
+        CHECKS_TOTAL="$(printf '%s\n' "$detail" | tail -n 1 | cut -d'|' -f3)"
+        echo "$name|live|PASS|checks=$CHECKS_MET/$CHECKS_TOTAL"
     else
-        echo "$name|live|FAIL|check-violations"
-        echo "$detail"
+        CHECKS_MET="$(printf '%s\n' "$detail" | tail -n 1 | cut -d'|' -f2)"
+        CHECKS_TOTAL="$(printf '%s\n' "$detail" | tail -n 1 | cut -d'|' -f3)"
+        detail="$(printf '%s\n' "$detail" | sed '$d')"
+        if [ "$CHECKS_MET" -gt 0 ]; then
+            echo "$name|live|PARTIAL|checks=$CHECKS_MET/$CHECKS_TOTAL"
+            echo "$detail"
+        else
+            echo "$name|live|FAIL|checks=0/$CHECKS_TOTAL"
+            echo "$detail"
+        fi
         exit 1
     fi
 }

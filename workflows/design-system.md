@@ -1,5 +1,7 @@
 # Design System Workflow (Modern UI/UX & Component Architecture)
 
+For application state boundaries, load [`docs/recipes/state-management.md`](../docs/recipes/state-management.md) when choosing between URL, server cache, component, and shared client state.
+
 ## Fast Shorthand
 Trigger anytime with: `pk:design` (or `/pk-design`)
 

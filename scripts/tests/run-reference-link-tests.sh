@@ -26,13 +26,15 @@ for dir in workflows protocols templates activities; do
 done
 # Minimal stubs for the cross-tree targets the copied workflow files link to, so
 # the fixture stays small (fast) and only link resolution is under test.
-mkdir -p "$FIXTURE_ROOT/docs/adrs" "$FIXTURE_ROOT/docs/internal" "$FIXTURE_ROOT/docs/recipes" \
+mkdir -p "$FIXTURE_ROOT/docs/adrs" "$FIXTURE_ROOT/docs/internal" "$FIXTURE_ROOT/docs/recipes" "$FIXTURE_ROOT/docs/stacks" \
          "$FIXTURE_ROOT/docs/archive" "$FIXTURE_ROOT/notes"
 for stub in \
     docs/BENCHMARKS.md docs/TURBO-WAVES-GUIDE.md docs/WORKFLOW-MAP.md \
     docs/adrs/0002-workflow-lifecycle-policy.md docs/internal/release-evaluation.md \
     docs/recipes/auto-phrase-boundary-sheet.md docs/recipes/auto-wave-pause-resume.md \
-    docs/recipes/auto-waves-preflight-checklist.md \
+    docs/recipes/auto-waves-preflight-checklist.md docs/recipes/websocket-realtime.md docs/recipes/state-management.md \
+    docs/stacks/mobile-kmp.md docs/stacks/systems-java-spring.md docs/stacks/systems-csharp-dotnet.md \
+    docs/stacks/database-postgres.md docs/stacks/database-mysql.md docs/stacks/deploy-aws.md docs/stacks/deploy-gcp.md \
     notes/learning-plan.md notes/progress-journal.md notes/skill-matrix.md; do
     printf '# Fixture stub\n' > "$FIXTURE_ROOT/$stub"
 done

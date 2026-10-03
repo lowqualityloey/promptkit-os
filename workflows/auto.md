@@ -145,6 +145,16 @@ Per the Action Authority Model in `protocols/code-quality-gate.md`, remote actio
 - **Any circuit-breaker trip, failed review gate, or scope growth beyond the declared boundary halts the run for human resume** — authorization does not survive the run's own stop conditions.
 - Record the declared boundary and authorization in the first `docs/STATE.md` micro-checkpoint.
 
+### External Harness Run Boundary
+
+An external harness continuation loop (including plugins that reread project instructions) is not a `pk:auto` invocation and inherits no `--until pr` / `--full` authority. A human's direct run-start instruction may declare `review`, `pr`, or `full`; quote it and freeze the task/milestone scope in the first `docs/STATE.md` micro-checkpoint before work crosses a milestone. If no explicit boundary is declared, halt at every verified milestone using the `[!IMPORTANT]` sign-off callout, create no commit, and wait for human resume. A Task Record or validator result cannot authorize its own writer.
+
+`Approved Batch Mode` is applicable only when a human-approved Batch Authorization record explicitly names permitted actions and milestone scope. Record its stable reference in the checkpoint and every new Commit Evidence entry. It cannot silently widen a narrower run boundary; conflicting boundary evidence halts for clarification. New tasks, discoveries outside the frozen scope, and circuit-breaker trips always require human resume. Merge, tag, publish, deploy, rollback, production migration, and non-draft PR authority remain separately human-only.
+
+For Batch Authorization records, record `Declared Boundary`, `Permitted Actions`, and `Milestone Scope`; the checkpoint and batch boundary must agree. The validator compares added Task Record and Commit Evidence lines with the caller-declared Git baseline (`--authorization-baseline` / `-AuthorizationBaseline`). CI uses the pull request base SHA or push-before SHA. It checks changed and untracked local records without retroactively rejecting untouched historical evidence.
+
+The authorization checkpoint must remain resolvable after `docs/STATE.md` compaction. Copy its stable ID and required source fields into the Task Record's durable Authorization Checkpoints section; a new commit's evidence references that ID. Validation checks local evidence completeness only. Human review confirms the quoted instruction's authorship and that each action stayed in scope.
+
 ---
 
 ## The Autonomous Execution Lifecycle

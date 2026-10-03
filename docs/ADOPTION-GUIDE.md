@@ -18,6 +18,10 @@ PromptKit OS is designed for **gradual adoption**. You don't need to:
 
 ## Adoption Levels (Choose Your Starting Point)
 
+### OpenCode + OmO install-time setup
+
+Install PromptKit OS using the OpenCode host target so its generated `.opencode/rules.md` is loaded by OpenCode. Install and configure OmO separately in OpenCode, then set its agent-to-model mapping in `omo.jsonc`. These are setup facts only; consult [`docs/HOST-CONFORMANCE.md`](HOST-CONFORMANCE.md) for measured runtime fidelity. OmO is a plugin on the OpenCode row, not a separate installer host.
+
 ### Level 0: Zero Installation (Try Before You Buy)
 **Time**: 5 minutes  
 **Commitment**: None  
