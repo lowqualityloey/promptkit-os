@@ -30,6 +30,10 @@ anti_patterns:
 
 Confirm `org.jetbrains.kotlin.multiplatform` is applied in Kotlin or Groovy Gradle configuration. A catalog alias counts only when build configuration applies it and it resolves to that plugin ID. Convention plugins that cannot be resolved are unconfirmed; Gradle filenames alone do not activate this playbook. Plain Android/JVM builds are excluded.
 
+## Source Verification
+
+Guidance checked against the official [Kotlin Multiplatform Gradle configuration](https://kotlinlang.org/docs/gradle-configure-project.html) and [Gradle Version Catalog](https://docs.gradle.org/current/userguide/version_catalogs.html) documentation on 2026-10-04. The Kotlin docs require the Multiplatform plugin for multiplatform targets; Gradle documents plugin aliases as catalog declarations applied from project build scripts. Commands below are candidates: inspect the repository's Gradle task graph, module prefixes, and installed toolchains before running them.
+
 ## 1. Architectural Invariants
 
 - Keep `commonMain` platform-neutral. Prefer injected platform implementations over broad `expect`/`actual` class hierarchies.
