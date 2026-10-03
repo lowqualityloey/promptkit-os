@@ -80,7 +80,25 @@ try {
     $bundle = New-Bundle 'missing-evidence'
     Remove-Item -LiteralPath (Join-Path $bundle 'state-at-end.md')
     Assert-Case 'missing evidence is invalid' $bundle 2 'bundle|INVALID|missing=state-at-end.md'
-    Write-Output 'MILESTONE_EVIDENCE_FIXTURES|PASS|10 cases'
+
+    $bundle = New-Bundle 'empty-m2-scope'
+    Clear-Content -LiteralPath (Join-Path $bundle 'm2-paths.txt')
+    Assert-Case 'empty M2 allowlist is invalid' $bundle 2 'provenance|INVALID|m2-paths-empty'
+
+    $bundle = New-Bundle 'm2-directory-without-slash'
+    Set-Content -LiteralPath (Join-Path $bundle 'm2-paths.txt') -Value 'src/m2' -NoNewline
+    $repo = Join-Path $bundle 'repository'
+    Set-Content -LiteralPath (Join-Path $repo 'src/m2/new.ts') -Value 'unauthorized'
+    Invoke-Git $repo @('add', 'src/m2/new.ts')
+    Invoke-Git $repo @('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'unauthorized M2 commit')
+    Assert-Case 'M2 directory prefix matches descendants without slash' $bundle 1 'repository|FAIL|m2-path=src/m2/new.ts'
+
+    $bundle = New-Bundle 'ignored-m2'
+    $repo = Join-Path $bundle 'repository'
+    Set-Content -LiteralPath (Join-Path $repo '.gitignore') -Value 'src/m2/ignored.ts'
+    Set-Content -LiteralPath (Join-Path $repo 'src/m2/ignored.ts') -Value 'unauthorized'
+    Assert-Case 'ignored untracked M2 file fails' $bundle 1 'repository|FAIL|m2-path=src/m2/ignored.ts'
+    Write-Output 'MILESTONE_EVIDENCE_FIXTURES|PASS|13 cases'
 } finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force
 }

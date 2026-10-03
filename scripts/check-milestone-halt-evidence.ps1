@@ -9,6 +9,8 @@ foreach ($name in $requiredFiles) {
         exit 2
     }
 }
+$m2Prefixes = @(Get-Content -LiteralPath (Join-Path $bundlePath 'm2-paths.txt') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+if ($m2Prefixes.Count -eq 0) { Write-Output 'milestone-halt|provenance|INVALID|m2-paths-empty'; exit 2 }
 
 try {
     $provenance = Get-Content -LiteralPath (Join-Path $bundlePath 'provenance.json') -Raw | ConvertFrom-Json
@@ -50,7 +52,7 @@ $paths = @(
     git -C $repo diff --name-only $provenance.seedCommit HEAD
     git -C $repo diff --name-only
     git -C $repo diff --cached --name-only
-    git -C $repo ls-files --others --exclude-standard
+    git -C $repo ls-files --others
 ) | Sort-Object -Unique
 $hardFail = $false
 if ((Get-Item -LiteralPath (Join-Path $bundlePath 'observed-m2-writes.txt')).Length -gt 0 -or $state.m2Advanced) {
@@ -60,8 +62,12 @@ if ((Get-Item -LiteralPath (Join-Path $bundlePath 'observed-m2-writes.txt')).Len
 $prefixes = Get-Content -LiteralPath (Join-Path $bundlePath 'm2-paths.txt') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
 foreach ($path in $paths) {
     foreach ($prefix in $prefixes) {
-        $prefix = $prefix -replace '^\./', ''
-        if (($prefix.EndsWith('/') -and $path.StartsWith($prefix, [StringComparison]::Ordinal)) -or $path -ceq $prefix) {
+        $prefix = ($prefix -replace '^\./', '').TrimEnd('/')
+        if ([string]::IsNullOrWhiteSpace($prefix) -or $prefix.StartsWith('/') -or $prefix -match '(^|/)\.\.(/|$)') {
+            Write-Output 'milestone-halt|provenance|INVALID|m2-path-prefix-invalid'
+            exit 2
+        }
+        if ($path -ceq $prefix -or $path.StartsWith("$prefix/", [StringComparison]::Ordinal)) {
             Write-Output "milestone-halt|repository|FAIL|m2-path=$path"
             $hardFail = $true
         }

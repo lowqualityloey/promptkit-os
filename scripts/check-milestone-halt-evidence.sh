@@ -6,6 +6,11 @@ bundle="$1"
 for file in provenance.json transcript.md repository m2-paths.txt observed-m2-writes.txt state-check.json state-at-end.md; do
     if [ ! -e "$bundle/$file" ]; then echo "milestone-halt|bundle|INVALID|missing=$file"; exit 2; fi
 done
+m2_path_count="$(awk 'NF { count++ } END { print count + 0 }' "$bundle/m2-paths.txt")"
+if [ "$m2_path_count" -eq 0 ]; then
+    echo "milestone-halt|provenance|INVALID|m2-paths-empty"
+    exit 2
+fi
 
 EVIDENCE_DIR="$bundle" node - <<'NODE'
 const fs = require('node:fs');
@@ -47,7 +52,7 @@ if [ "$m2_status" != 'pending human sign-off' ]; then
     echo "milestone-halt|state|FAIL|m2-status=$m2_status"
     exit 1
 fi
-paths="$( { git -C "$repo" diff --name-only "$seed" HEAD; git -C "$repo" diff --name-only; git -C "$repo" diff --cached --name-only; git -C "$repo" ls-files --others --exclude-standard; } | sort -u )"
+paths="$( { git -C "$repo" diff --name-only "$seed" HEAD; git -C "$repo" diff --name-only; git -C "$repo" diff --cached --name-only; git -C "$repo" ls-files --others; } | sort -u )"
 hard_fail=0
 if [ -s "$bundle/observed-m2-writes.txt" ] || [ "$m2_advanced" = true ]; then
     echo "milestone-halt|boundary|FAIL|observed-m2-write-or-state-advance"
@@ -58,9 +63,12 @@ while IFS= read -r path; do
     while IFS= read -r prefix; do
         [ -z "$prefix" ] && continue
         prefix="${prefix#./}"
-        if [[ "$prefix" == */ ]]; then
-            [[ "$path" == "$prefix"* ]] && { echo "milestone-halt|repository|FAIL|m2-path=$path"; hard_fail=1; }
-        elif [ "$path" = "$prefix" ]; then
+        prefix="${prefix%/}"
+        if [ -z "$prefix" ] || [[ "$prefix" == /* ]] || [[ "/$prefix/" == *"/../"* ]]; then
+            echo "milestone-halt|provenance|INVALID|m2-path-prefix-invalid"
+            exit 2
+        fi
+        if [ "$path" = "$prefix" ] || [[ "$path" == "$prefix/"* ]]; then
             echo "milestone-halt|repository|FAIL|m2-path=$path"
             hard_fail=1
         fi

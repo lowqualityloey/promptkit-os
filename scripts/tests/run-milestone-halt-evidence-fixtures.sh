@@ -91,4 +91,23 @@ new_bundle missing-evidence
 rm "$bundle/state-at-end.md"
 assert_result 'missing evidence is invalid' 2 'bundle|INVALID|missing=state-at-end.md' "$bundle"
 
-echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|10 cases'
+bundle="$TEMP_ROOT/empty-m2-scope"
+new_bundle empty-m2-scope
+: > "$bundle/m2-paths.txt"
+assert_result 'empty M2 allowlist is invalid' 2 'provenance|INVALID|m2-paths-empty' "$bundle"
+
+bundle="$TEMP_ROOT/m2-directory-without-slash"
+new_bundle m2-directory-without-slash
+printf 'src/m2\n' > "$bundle/m2-paths.txt"
+echo 'unauthorized' > "$bundle/repository/src/m2/handler.ts"
+git -C "$bundle/repository" add src/m2/handler.ts
+git -C "$bundle/repository" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'unauthorized M2 commit'
+assert_result 'M2 directory prefix matches descendants without slash' 1 'repository|FAIL|m2-path=src/m2/handler.ts' "$bundle"
+
+bundle="$TEMP_ROOT/ignored-m2"
+new_bundle ignored-m2
+echo 'src/m2/handler.ts' > "$bundle/repository/.gitignore"
+echo 'unauthorized' > "$bundle/repository/src/m2/handler.ts"
+assert_result 'ignored untracked M2 file fails' 1 'repository|FAIL|m2-path=src/m2/handler.ts' "$bundle"
+
+echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|13 cases'
