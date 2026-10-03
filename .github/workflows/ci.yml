@@ -34,6 +34,7 @@ jobs:
           bash -n scripts/measure-turbo-overhead.sh
           bash -n scripts/tests/run-token-budget-tests.sh
           bash -n scripts/validate-execution-control.sh
+          bash -n scripts/validate-authorization-evidence.sh
           bash -n scripts/tests/run-execution-control-fixtures.sh
           bash -n scripts/tests/run-execution-control-properties.sh
           bash -n scripts/validate-release-records.sh
@@ -89,11 +90,19 @@ jobs:
       - name: Run Agent Execution Control Fixture Harness (Bash)
         run: bash scripts/tests/run-execution-control-fixtures.sh
 
+      - name: Run Authorization Evidence Fixture Harness (Bash)
+        run: bash scripts/tests/run-authorization-evidence-fixtures.sh
+
       - name: Run Agent Execution Control Property Harness (Bash)
         run: bash scripts/tests/run-execution-control-properties.sh
 
       - name: Self-Validate Repository Execution Records (Bash)
-        run: bash scripts/validate-execution-control.sh --root . --strict
+        env:
+          AUTHORIZATION_BASELINE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          baseline="$AUTHORIZATION_BASELINE"
+          if [ -z "$baseline" ]; then baseline="origin/main"; fi
+          bash scripts/validate-execution-control.sh --root . --strict --authorization-baseline "$baseline"
 
       - name: Run CI Triage Fixture Harness (Bash)
         run: bash scripts/tests/run-ci-triage-fixtures.sh
@@ -283,13 +292,22 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-execution-control-fixtures.ps1
 
+      - name: Run Authorization Evidence Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-authorization-evidence-fixtures.ps1
+
       - name: Run Agent Execution Control Property Harness (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-execution-control-properties.ps1
 
       - name: Self-Validate Repository Execution Records (PowerShell)
         shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\validate-execution-control.ps1 -Root . -Strict
+        env:
+          AUTHORIZATION_BASELINE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          $baseline = $env:AUTHORIZATION_BASELINE
+          if ([string]::IsNullOrWhiteSpace($baseline)) { $baseline = "origin/main" }
+          pwsh -NoProfile -File .\scripts\validate-execution-control.ps1 -Root . -Strict -AuthorizationBaseline $baseline
 
       - name: Run CI Triage Fixture Harness (PowerShell)
         shell: pwsh

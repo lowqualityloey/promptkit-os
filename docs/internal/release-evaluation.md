@@ -8,6 +8,8 @@ This evaluation applies only to the Better-PromptKit repository. It is a documen
 
 The evaluation must remain separate from production execution. A calculated version is a preliminary candidate, not an Approved Release Version. A passing validator, CI result, checkpoint handoff, empty blocker list, or completed QA review does not create a tag, hosted release, published changelog, remote operation, deployment, or rollback authorization.
 
+For the external-harness authorization contract introduced by #516, record public-contract impact as `minor` and use `v1.12.0` as the effective release. CI compares new Task Record and Commit Evidence lines with the declared PR-base or push-before SHA; untouched legacy evidence is not revalidated retroactively.
+
 #### 1. Establish Evaluation Identity and the Version Source of Truth
 
 For npm courier releases, the publish workflow computes the GitHub tag-archive SHA-256 from two separate downloads and injects the verified digest into the packed courier before its fail-closed smoke test. The tagged source therefore intentionally differs from the published `bin/promptkit-os.js` by one entry in `TARBALL_SHA256_BY_VERSION`. Record the computed digest, both-download equality, and this expected one-entry package diff in the release evaluation evidence; an existing source pin must equal the fresh digest.

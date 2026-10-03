@@ -4,7 +4,8 @@
 [CmdletBinding()]
 param(
     [string]$Root = ".",
-    [switch]$Strict
+    [switch]$Strict,
+    [string]$AuthorizationBaseline = ""
 )
 
 $ErrorCount = 0
@@ -620,6 +621,14 @@ if (Test-Path -LiteralPath $stateFile -PathType Leaf) {
             if (-not [string]::IsNullOrWhiteSpace($stateRevision) -and -not [string]::IsNullOrWhiteSpace($taskRevision) -and $stateRevision -ne $taskRevision) { Add-Diagnostic 'REVISION_MISMATCH' $stateId $statePath "STATE revision '$stateRevision' disagrees with Task Record revision '$taskRevision'" 'Use one exact validated revision across linked evidence' }
         }
     }
+}
+
+if (-not [string]::IsNullOrWhiteSpace($AuthorizationBaseline)) {
+    $authValidator = Join-Path $PSScriptRoot 'validate-authorization-evidence.ps1'
+    $authOutput = & pwsh -NoProfile -File $authValidator -Root $Root -Baseline $AuthorizationBaseline 2>&1
+    $authExitCode = $LASTEXITCODE
+    foreach ($line in $authOutput) { Write-Output $line }
+    if ($authExitCode -ne 0) { $ErrorCount++ }
 }
 
 if ($ErrorCount -eq 0) {
