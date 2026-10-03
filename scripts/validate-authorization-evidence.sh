@@ -16,9 +16,16 @@ if [ -z "$BASELINE" ] || ! git -C "$ROOT" rev-parse --verify "$BASELINE^{commit}
 fi
 ROOT="$(cd "$ROOT" && pwd)"
 resolve_batch_authorization() {
-    local reference="$1" resolved task_root
+    local reference="$1" resolved task_root current component
+    local -a components
     [[ "$reference" == docs/tasks/* ]] || return 1
     [[ "$reference" != *\\* && ! "$reference" =~ (^|/)\.\.?(/|$) ]] || return 1
+    current="$ROOT"
+    IFS='/' read -r -a components <<< "$reference"
+    for component in "${components[@]}"; do
+        current+="/$component"
+        [[ ! -L "$current" ]] || return 1
+    done
     resolved="$(realpath -e -- "$ROOT/$reference" 2>/dev/null)" || return 1
     task_root="$(realpath -e -- "$ROOT/docs/tasks" 2>/dev/null)" || return 1
     [[ -f "$resolved" && "$resolved" == "$task_root/"* ]] || return 1

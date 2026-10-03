@@ -83,6 +83,11 @@ sed -i 's/Declared Boundary\*\*: review/Declared Boundary**: `final`/' "$FIXTURE
 assert_result "unsupported batch boundary fails" 1
 sed -i 's/`final`/`review`/' "$FIXTURE/docs/tasks/batch-example.md"
 assert_result "restored valid batch boundary passes" 0
+ln -s batch-example.md "$FIXTURE/docs/tasks/batch-link.md"
+write_checkpoint review docs/tasks/batch-link.md
+sed -i 's/`Gated Mode`/`Approved Batch Mode`/' "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
+assert_result "symlinked batch authorization is rejected" 1 "MISSING_BATCH_AUTHORIZATION"
+rm "$FIXTURE/docs/tasks/batch-link.md"
 
 cat > "$FIXTURE/docs/tasks/batch-example.md" <<'EOF'
 # Batch Authorization
@@ -119,4 +124,4 @@ write_checkpoint review ../outside-batch.md
 sed -i 's/`Gated Mode`/`Approved Batch Mode`/' "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
 assert_result "batch authorization cannot escape repository root" 1 "MISSING_BATCH_AUTHORIZATION"
 
-echo "AUTHORIZATION_FIXTURES|PASS|14 cases"
+echo "AUTHORIZATION_FIXTURES|PASS|15 cases"
