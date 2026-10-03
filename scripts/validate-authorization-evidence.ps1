@@ -69,7 +69,7 @@ foreach ($line in $diffLines) {
                 }
             }
             $checkpointBoundaryMatch = [regex]::Match($section, '(?m)^-[ \t]+\*\*Declared Boundary\*\*:[ \t]*`([^`]+)`')
-            $batchBoundaryMatch = [regex]::Match($batchText, '(?m)^[-*]?[ \t]*\*\*Declared Boundary\*\*:[ \t]*`(review|pr|full)`[ \t]*$')
+            $batchBoundaryMatch = [regex]::Match($batchText, '(?m)^[-*]?[ \t]*\*\*Declared Boundary\*\*:[ \t]*`(review|pr|full)`[ \t]*\r?$')
             if (-not $batchBoundaryMatch.Success) {
                 Write-Output "INVALID_AUTHORIZATION_BOUNDARY|$record|Batch Authorization must declare review, pr, or full in backticks"
                 $errors++
@@ -103,8 +103,8 @@ foreach ($candidate in ($changedRecords | Sort-Object -Unique)) {
             $errors++
         }
     }
-    $batchBoundaryMatch = [regex]::Match($batchText, '(?m)^[-*]?[ \t]*\*\*Declared Boundary\*\*:[ \t]*`(review|pr|full)`[ \t]*$')
-    $checkpointBoundaryMatch = [regex]::Match($taskText, '(?m)^-[ \t]+\*\*Declared Boundary\*\*:[ \t]*`(review|pr|full)`[ \t]*$')
+    $batchBoundaryMatch = [regex]::Match($batchText, '(?m)^[-*]?[ \t]*\*\*Declared Boundary\*\*:[ \t]*`(review|pr|full)`[ \t]*\r?$')
+    $checkpointBoundaryMatch = [regex]::Match($taskText, '(?m)^-[ \t]+\*\*Declared Boundary\*\*:[ \t]*`(review|pr|full)`[ \t]*\r?$')
     if (-not $batchBoundaryMatch.Success) {
         Write-Output "INVALID_AUTHORIZATION_BOUNDARY|$candidate|Batch Authorization must declare review, pr, or full in backticks"
         $errors++
