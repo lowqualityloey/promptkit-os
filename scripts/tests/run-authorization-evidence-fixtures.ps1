@@ -84,7 +84,12 @@ try {
     Set-Content -LiteralPath (Join-Path $taskDir 'TASK-2026-01-02-foreign.md') -Value @('# Foreign Task', '<a id="AUTHZ-foreign-001"></a>', '- **Declared Boundary**: `review`', '- **Verbatim Human Instruction**: `Run M1 through review only`', '- **Instruction Source**: `user message 1`', '- **Frozen Task and Milestone Scope**: `M1 files only`') -Encoding utf8
     Set-Content -LiteralPath (Join-Path $taskDir 'TASK-2026-01-03-borrowed.md') -Value @('# Borrowed Checkpoint', '- **Mode**: `Gated Mode`', '- **Batch Authorization**: `N/A`', '- **Commit Evidence Entry**: `abc123 message; Authorization Checkpoint Reference: AUTHZ-foreign-001; Authorization Source: user message 1`') -Encoding utf8
     Assert-Case 'checkpoint cannot be borrowed from another Task Record' 1
-    Write-Output 'AUTHORIZATION_FIXTURES|PASS|10 scenarios'
+    $outsideBatchPath = Join-Path (Split-Path $fixtureRoot -Parent) 'outside-batch.md'
+    Set-Content -LiteralPath $outsideBatchPath -Value @('# Batch', '- **Declared Boundary**: `review`', '- **Permitted Actions**: `local commits`', '- **Milestone Scope**: `M1`') -Encoding utf8
+    Write-Task 'review' '../outside-batch.md' 'Approved Batch Mode'
+    Assert-Case 'batch authorization cannot escape repository root' 1
+    Write-Output 'AUTHORIZATION_FIXTURES|PASS|11 scenarios'
 } finally {
+    if ($outsideBatchPath -and (Test-Path -LiteralPath $outsideBatchPath)) { Remove-Item -LiteralPath $outsideBatchPath -Force }
     Remove-Item -LiteralPath $fixtureRoot -Recurse -Force
 }

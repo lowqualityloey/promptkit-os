@@ -21,6 +21,21 @@ function Test-MeaningfulBatchField([string]$Text, [string]$Field) {
     $value = $match.Groups[1].Value.Trim().Trim('`').Trim()
     return -not [string]::IsNullOrWhiteSpace($value) -and $value -notmatch '^(?i:n/?a|none|null|tbd|todo|not applicable|\[\])$'
 }
+function Resolve-BatchAuthorizationPath([string]$Reference) {
+    if ($Reference -notmatch '^docs/tasks/(?!\.\.?(/|$))(?!.*?/\.\.?(/|$))[^\\]+$') { return $null }
+    $taskRoot = [IO.Path]::GetFullPath((Join-Path $rootPath 'docs/tasks')) + [IO.Path]::DirectorySeparatorChar
+    $candidate = Join-Path $rootPath ($Reference -replace '/', [string][IO.Path]::DirectorySeparatorChar)
+    if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) { return $null }
+    $resolved = (Resolve-Path -LiteralPath $candidate).Path
+    if (-not $resolved.StartsWith($taskRoot, [StringComparison]::OrdinalIgnoreCase)) { return $null }
+    $current = Join-Path $rootPath 'docs'
+    foreach ($segment in @('tasks') + (($Reference -replace '^docs/tasks/', '') -split '/')) {
+        $current = Join-Path $current $segment
+        $item = Get-Item -LiteralPath $current -Force
+        if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { return $null }
+    }
+    return $resolved
+}
 
 $errors = 0
 $record = ''
@@ -57,11 +72,12 @@ foreach ($line in $diffLines) {
     $taskText = Get-Content -LiteralPath (Join-Path $rootPath $record) -Raw
     if ($taskText -match '(?m)^-[ \t]+\*\*Mode\*\*:[^\r\n]*Approved Batch Mode') {
         $batchMatch = [regex]::Match($taskText, '(?m)^-[ \t]+\*\*Batch Authorization\*\*:[ \t]*`([^`\r\n]+)`[ \t]*\r?$')
-        if (-not $batchMatch.Success -or -not (Test-Path -LiteralPath (Join-Path $rootPath $batchMatch.Groups[1].Value))) {
+        $batchPath = if ($batchMatch.Success) { Resolve-BatchAuthorizationPath $batchMatch.Groups[1].Value } else { $null }
+        if (-not $batchPath) {
             Write-Output "MISSING_BATCH_AUTHORIZATION|$record|Approved Batch Mode link does not resolve"
             $errors++
         } else {
-            $batchText = Get-Content -LiteralPath (Join-Path $rootPath $batchMatch.Groups[1].Value) -Raw
+            $batchText = Get-Content -LiteralPath $batchPath -Raw
             foreach ($field in @('Declared Boundary', 'Permitted Actions', 'Milestone Scope')) {
                 if (-not (Test-MeaningfulBatchField $batchText $field)) {
                     Write-Output "MISSING_BATCH_AUTHORIZATION|$record|Batch Authorization lacks a meaningful $field"
@@ -91,12 +107,13 @@ foreach ($candidate in ($changedRecords | Sort-Object -Unique)) {
     $candidateDiff = if ($untrackedFiles -contains $candidate) { Get-Content -LiteralPath $taskPath } else { @(git.exe -C $rootPath diff --unified=0 $Baseline -- $candidate) }
     if (-not ($candidateDiff | Where-Object { $_ -match '^\+[^+].*\*\*(Mode|Batch Authorization)\*\*:' })) { continue }
     $batchMatch = [regex]::Match($taskText, '(?m)^-[ \t]+\*\*Batch Authorization\*\*:[ \t]*`([^`\r\n]+)`[ \t]*\r?$')
-    if (-not $batchMatch.Success -or -not (Test-Path -LiteralPath (Join-Path $rootPath $batchMatch.Groups[1].Value))) {
+    $batchPath = if ($batchMatch.Success) { Resolve-BatchAuthorizationPath $batchMatch.Groups[1].Value } else { $null }
+    if (-not $batchPath) {
         Write-Output "MISSING_BATCH_AUTHORIZATION|$candidate|Approved Batch Mode link does not resolve"
         $errors++
         continue
     }
-    $batchText = Get-Content -LiteralPath (Join-Path $rootPath $batchMatch.Groups[1].Value) -Raw
+    $batchText = Get-Content -LiteralPath $batchPath -Raw
     foreach ($field in @('Declared Boundary', 'Permitted Actions', 'Milestone Scope')) {
         if (-not (Test-MeaningfulBatchField $batchText $field)) {
             Write-Output "MISSING_BATCH_AUTHORIZATION|$candidate|Batch Authorization lacks a meaningful $field"

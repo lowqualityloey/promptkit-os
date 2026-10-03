@@ -20,12 +20,13 @@ git -C "$FIXTURE" -c user.name=Fixture -c user.email=fixture@example.invalid com
 BASELINE="$(git -C "$FIXTURE" rev-parse HEAD)"
 
 assert_result() {
-    local name="$1" expected="$2" output actual
+    local name="$1" expected="$2" needle="${3:-}" output actual
     set +e
     output="$(bash "$REPO_ROOT/scripts/validate-authorization-evidence.sh" --root "$FIXTURE" --baseline "$BASELINE" 2>&1)"
     actual=$?
     set -e
     if [ "$actual" -ne "$expected" ]; then echo "FAIL|$name|exit=$actual|$output"; exit 1; fi
+    if [ -n "$needle" ] && [[ "$output" != *"$needle"* ]]; then echo "FAIL|$name|expected diagnostic '$needle'|$output"; exit 1; fi
     echo "PASS|$name"
 }
 
@@ -108,4 +109,14 @@ cat > "$FIXTURE/docs/tasks/TASK-2026-01-03-borrowed.md" <<'EOF'
 EOF
 assert_result "checkpoint cannot be borrowed from another Task Record" 1
 
-echo "AUTHORIZATION_FIXTURES|PASS|13 cases"
+cat > "$TEMP_ROOT/outside-batch.md" <<'EOF'
+# Batch Authorization
+- **Declared Boundary**: `review`
+- **Permitted Actions**: `local commits`
+- **Milestone Scope**: `M1`
+EOF
+write_checkpoint review ../outside-batch.md
+sed -i 's/`Gated Mode`/`Approved Batch Mode`/' "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
+assert_result "batch authorization cannot escape repository root" 1 "MISSING_BATCH_AUTHORIZATION"
+
+echo "AUTHORIZATION_FIXTURES|PASS|14 cases"

@@ -15,6 +15,15 @@ if [ -z "$BASELINE" ] || ! git -C "$ROOT" rev-parse --verify "$BASELINE^{commit}
     exit 2
 fi
 ROOT="$(cd "$ROOT" && pwd)"
+resolve_batch_authorization() {
+    local reference="$1" resolved task_root
+    [[ "$reference" == docs/tasks/* ]] || return 1
+    [[ "$reference" != *\\* && ! "$reference" =~ (^|/)\.\.?(/|$) ]] || return 1
+    resolved="$(realpath -e -- "$ROOT/$reference" 2>/dev/null)" || return 1
+    task_root="$(realpath -e -- "$ROOT/docs/tasks" 2>/dev/null)" || return 1
+    [[ -f "$resolved" && "$resolved" == "$task_root/"* ]] || return 1
+    printf '%s\n' "$resolved"
+}
 meaningful_batch_field() {
     local file="$1" field="$2" line value normalized
     line="$(grep -E "^[-*]?[[:space:]]*\*\*$field\*\*:" "$file" | head -n1 || true)"
@@ -63,18 +72,19 @@ while IFS= read -r line; do
     mode="$(grep -E '^-[[:space:]]+\*\*Mode\*\*:' "$ROOT/$record" | tail -n1 | grep -oE 'Approved Batch Mode' || true)"
     if [ -n "$mode" ]; then
         batch="$(grep -E '^-[[:space:]]+\*\*Batch Authorization\*\*:' "$ROOT/$record" | tail -n1 | grep -oE '`[^`]+`' | tr -d '`' || true)"
-        if [ -z "$batch" ] || [ ! -f "$ROOT/$batch" ]; then
+        batch_file="$(resolve_batch_authorization "$batch" || true)"
+        if [ -z "$batch_file" ]; then
             echo "MISSING_BATCH_AUTHORIZATION|$record|Approved Batch Mode link does not resolve"
             errors=$((errors + 1))
         else
             for field in 'Declared Boundary' 'Permitted Actions' 'Milestone Scope'; do
-                if ! meaningful_batch_field "$ROOT/$batch" "$field"; then
+                if ! meaningful_batch_field "$batch_file" "$field"; then
                     echo "MISSING_BATCH_AUTHORIZATION|$record|Batch Authorization lacks a meaningful $field"
                     errors=$((errors + 1))
                 fi
             done
             checkpoint_boundary="$boundary"
-            batch_boundary="$(grep -E '^[-*]?[[:space:]]*\*\*Declared Boundary\*\*:' "$ROOT/$batch" | sed -nE 's/.*`(review|pr|full)`[[:space:]]*$/\1/p' | head -n1)"
+            batch_boundary="$(grep -E '^[-*]?[[:space:]]*\*\*Declared Boundary\*\*:' "$batch_file" | sed -nE 's/.*`(review|pr|full)`[[:space:]]*$/\1/p' | head -n1)"
             if [ -z "$batch_boundary" ]; then
                 echo "INVALID_AUTHORIZATION_BOUNDARY|$record|Batch Authorization must declare review, pr, or full in backticks"
                 errors=$((errors + 1))
@@ -95,17 +105,18 @@ for candidate in $changed_records $untracked_records; do
     fi
     if [ -n "$(grep -E '^-[[:space:]]+\*\*Mode\*\*:' "$ROOT/$candidate" | grep -F 'Approved Batch Mode' || true)" ] && [ -n "$(grep -E '^\+[^+][[:space:]]+\*\*(Mode|Batch Authorization)\*\*:' <<< "$candidate_diff" | head -n1)" ]; then
             batch="$(grep -E '^-[[:space:]]+\*\*Batch Authorization\*\*:' "$ROOT/$candidate" | tail -n1 | grep -oE '`[^`]+`' | tr -d '`' || true)"
-            if [ -z "$batch" ] || [ ! -f "$ROOT/$batch" ]; then
+            batch_file="$(resolve_batch_authorization "$batch" || true)"
+            if [ -z "$batch_file" ]; then
                 echo "MISSING_BATCH_AUTHORIZATION|$candidate|Approved Batch Mode link does not resolve"
                 errors=$((errors + 1))
             else
                 for field in 'Declared Boundary' 'Permitted Actions' 'Milestone Scope'; do
-                    if ! meaningful_batch_field "$ROOT/$batch" "$field"; then
+                    if ! meaningful_batch_field "$batch_file" "$field"; then
                         echo "MISSING_BATCH_AUTHORIZATION|$candidate|Batch Authorization lacks a meaningful $field"
                         errors=$((errors + 1))
                     fi
                 done
-                batch_boundary="$(grep -E '^[-*]?[[:space:]]*\*\*Declared Boundary\*\*:' "$ROOT/$batch" | sed -nE 's/.*`(review|pr|full)`[[:space:]]*$/\1/p' | head -n1)"
+                batch_boundary="$(grep -E '^[-*]?[[:space:]]*\*\*Declared Boundary\*\*:' "$batch_file" | sed -nE 's/.*`(review|pr|full)`[[:space:]]*$/\1/p' | head -n1)"
                 checkpoint_boundary="$(grep -E '^-[[:space:]]+\*\*Declared Boundary\*\*:' "$ROOT/$candidate" | sed -nE 's/.*`(review|pr|full)`[[:space:]]*$/\1/p' | head -n1)"
                 if [ -z "$batch_boundary" ]; then
                     echo "INVALID_AUTHORIZATION_BOUNDARY|$candidate|Batch Authorization must declare review, pr, or full in backticks"
