@@ -12,6 +12,11 @@ on:
       tag:
         description: "Release tag to sync and publish (e.g. v1.9.0)"
         required: true
+      dry_run:
+        description: "Verify the release without publishing to npm"
+        type: boolean
+        required: true
+        default: true
 
 permissions:
   contents: read
@@ -63,6 +68,7 @@ jobs:
           chmod +x "$RUNNER_TEMP/hardened-smoke/smoke.sh"
 
       - name: Checkout Resolved Release Tag
+        id: release_source
         env:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
@@ -82,6 +88,7 @@ jobs:
             echo "::error::HEAD ($CURRENT_HEAD) does not match resolved tag commit ($TAG_COMMIT)"
             exit 1
           fi
+          echo "tag_commit=$TAG_COMMIT" >> "$GITHUB_OUTPUT"
           echo "Successfully checked out detached commit $TAG_COMMIT for tag $TAG"
 
       - name: Setup Node
@@ -165,6 +172,7 @@ jobs:
         env:
           TAG: ${{ steps.tag.outputs.tag }}
           VERSION: ${{ steps.tag.outputs.version }}
+          TAG_COMMIT: ${{ steps.release_source.outputs.tag_commit }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -172,7 +180,7 @@ jobs:
           [[ "$VERSION" == "${TAG#v}" ]] || { echo "::error::release version does not match tag"; exit 1; }
           work="$(mktemp -d)"
           trap 'rm -rf "$work"' EXIT
-          archive="https://github.com/$REPOSITORY/archive/refs/tags/$TAG.tar.gz"
+          archive="https://github.com/$REPOSITORY/archive/$TAG_COMMIT.tar.gz"
           curl --fail --silent --show-error --location "$archive" --output "$work/first.tar.gz"
           curl --fail --silent --show-error --location "$archive" --output "$work/second.tar.gz"
           gzip -t "$work/first.tar.gz"
@@ -182,25 +190,7 @@ jobs:
           [[ "$first" == "$second" ]] || { echo "::error::release archive downloads were not reproducible"; exit 1; }
           digest="$first"
           export DIGEST="$digest"
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const file = 'package/bin/promptkit-os.js';
-          const source = fs.readFileSync(file, 'utf8');
-          const version = process.env.VERSION;
-          const digest = process.env.DIGEST;
-          const marker = '  // @pin-insert';
-          const key = JSON.stringify(version);
-          const entries = source.split('\n').filter((line) => line.trimStart().startsWith(`${key}:`));
-          if (entries.length > 1) throw new Error(`duplicate integrity pin for ${version}`);
-          if (entries.length === 1) {
-            const existing = entries[0].match(/"([0-9a-f]{64})"/);
-            if (!existing || existing[1] !== digest) throw new Error(`committed integrity pin for ${version} does not match archive`);
-          } else {
-            if (!/^[0-9a-f]{64}$/.test(digest)) throw new Error('invalid computed digest');
-            if (source.split(marker).length !== 2) throw new Error('integrity pin insertion marker missing or duplicated');
-            fs.writeFileSync(file, source.replace(marker, `  ${key}: ${JSON.stringify(digest)},\n${marker}`));
-          }
-          NODE
+          bash scripts/mint-courier-integrity-pin.sh package/bin/promptkit-os.js "$VERSION" "$digest"
           node - <<'NODE'
           const courier = require('./package/bin/promptkit-os.js');
           const version = process.env.VERSION;
@@ -229,7 +219,19 @@ jobs:
           PROMPTKIT_REQUIRE_INTEGRITY_PIN: "1"
         run: bash "$RUNNER_TEMP/hardened-smoke/smoke.sh"
 
+      - name: Confirm Release Tag Still Targets Checked-Out Commit
+        if: github.event_name == 'release' || inputs.dry_run == false
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          TAG_COMMIT: ${{ steps.release_source.outputs.tag_commit }}
+        run: |
+          set -euo pipefail
+          refs="$(git ls-remote --tags origin "refs/tags/$TAG" "refs/tags/$TAG^{}")"
+          current="$(printf '%s\n' "$refs" | awk -v tag="refs/tags/$TAG" '$2 == tag { direct=$1 } $2 == tag "^{}" { peeled=$1 } END { if (peeled != "") print peeled; else print direct }')"
+          [[ "$current" == "$TAG_COMMIT" ]] || { echo "::error::release tag $TAG no longer targets checked-out commit $TAG_COMMIT"; exit 1; }
+
       - name: Publish to npm with Provenance
+        if: github.event_name == 'release' || inputs.dry_run == false
         working-directory: package
         # Trusted publishing (OIDC): no long-lived token. The npmjs.com trusted
         # publisher entry (repo promptkit-os, workflow release-npm.yml) mints a
@@ -239,6 +241,14 @@ jobs:
         # makes the OIDC exchange 403 on publisher mismatch.
         run: npm publish --provenance --access public
 
+      - name: Report Dry Run
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          TAG_COMMIT: ${{ steps.release_source.outputs.tag_commit }}
+        run: echo "Dry run complete for $TAG at $TAG_COMMIT; npm publish was skipped."
+
       - name: Report
+        if: github.event_name == 'release' || inputs.dry_run == false
         run: |
           echo "::notice::published promptkit-os@${{ steps.tag.outputs.version }} (courier for ${{ steps.tag.outputs.tag }})"
