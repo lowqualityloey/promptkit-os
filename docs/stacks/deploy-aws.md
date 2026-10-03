@@ -12,7 +12,7 @@ verification:
   fast:
     - npx cdk synth
   required:
-    - npx cdk diff
+    - npx cdk diff --method=template
   extended:
     - cfn-lint template.yaml
 invariants:
@@ -45,4 +45,4 @@ Confirm AWS CDK (`cdk.json`) or SAM/CloudFormation manifests before activation. 
 
 ## 3. Tiered Verification Commands
 
-Fast: `npx cdk synth` for CDK or `sam validate` for SAM; required: inspect `npx cdk diff` or the equivalent change set; extended: run `cfn-lint` and policy checks. Commands are candidates; use repository-pinned tooling and never execute deployment as verification.
+Fast: `npx cdk synth` for CDK or `sam validate` for SAM; required: inspect `npx cdk diff --method=template` or the equivalent local template diff. Template mode avoids creating a CloudFormation change set or publishing assets; confirm options against the repository-pinned CLI version. Extended: run `cfn-lint` and policy checks. Never execute deployment as verification.
