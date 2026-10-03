@@ -45,7 +45,14 @@ try {
     Assert-Case 'missing authorization source' 1
 
     Write-Task 'review'
-    (Get-Content -LiteralPath $taskPath -Raw).Replace('<a id="AUTHZ-example-001"></a>', '<a id="AUTHZ-other-001"></a>') | Set-Content -LiteralPath $taskPath -Encoding utf8
+    $taskLines = @(Get-Content -LiteralPath $taskPath)
+    $anchorIndex = [Array]::IndexOf($taskLines, '<a id="AUTHZ-example-001"></a>')
+    if ($anchorIndex -lt 0) { throw 'unresolved checkpoint fixture could not find its original anchor' }
+    $taskLines[$anchorIndex] = '<a id="AUTHZ-other-001"></a>'
+    Set-Content -LiteralPath $taskPath -Value $taskLines -Encoding utf8
+    if (Select-String -LiteralPath $taskPath -SimpleMatch '<a id="AUTHZ-example-001"></a>' -Quiet) {
+        throw 'unresolved checkpoint fixture retained the original anchor'
+    }
     Assert-Case 'unresolved checkpoint' 1
 
     Write-Task 'review' 'docs/tasks/batch-example.md' 'Approved Batch Mode'
