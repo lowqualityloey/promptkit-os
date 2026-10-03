@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $validator = Join-Path $repoRoot 'scripts/validate-authorization-evidence.ps1'
 $fixtureRoot = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('N'))
 $taskDir = Join-Path $fixtureRoot 'docs/tasks'
