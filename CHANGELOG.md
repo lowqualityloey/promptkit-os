@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Release Courier Integrity Pins**: The npm publish workflow now downloads each release archive twice, requires valid gzip and identical SHA-256 digests, injects a missing version pin at a fixed marker, rejects duplicate or mismatched committed pins, verifies the exported map in a fresh Node process, and runs the courier smoke test with integrity pins required. Release evidence records the digest and intentional published-package map difference. (#517)
+- **Host Conformance Milestone-Halt Probe**: Added the fifth `milestone-halt` probe, reproducible provenance and repository-evidence bundle requirements, paired Bash/PowerShell evidence checkers, and PASS/PARTIAL/FAIL transcript scoring. OpenCode + OmO remains Untested until valid live captures are supplied. (#518)
 
 ### Fixed
 - **Release Publish Workflow Tag Checkout**: `git fetch origin tag "$TAG" --no-tags` aborted with `would clobber existing tag` because `actions/checkout` (`fetch-depth: 0`) had already fetched the tag, and the rejection killed the step under `bash -e` before any checkout ran — the v1.11.0 publish could not complete. The fetch now uses an explicit tag refspec with `--force`, which is idempotent whether or not the tag is already present locally.

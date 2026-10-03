@@ -27,6 +27,8 @@ $ScenDir = Join-Path $RepoRoot "scripts/tests/eval-scenarios"
 
 $script:PassCount = 0
 $script:FailCount = 0
+$script:ChecksMet = 0
+$script:ChecksTotal = 0
 
 function Get-Section {
     param([string]$File, [string]$Heading)
@@ -75,6 +77,8 @@ function Test-Checks {
             default { Write-Host "    ✗ unknown check type '$type'" }
         }
     }
+    $script:ChecksMet = $ok
+    $script:ChecksTotal = $total
     return ($ok -eq $total) -and ($total -gt 0)
 }
 
@@ -115,8 +119,9 @@ function Invoke-Score {
     if (-not (Test-Path $TranscriptPath)) { Write-Error "Transcript file '$TranscriptPath' not found"; exit 2 }
     $t = Get-Content -Path $TranscriptPath
     $checks = Get-Section $f "Checks"
-    if (Test-Checks $t $checks) { Write-Output "$Name|live|PASS|all-checks-hold" }
-    else { Write-Output "$Name|live|FAIL|check-violations"; exit 1 }
+    if (Test-Checks $t $checks) { Write-Output "$Name|live|PASS|checks=$($script:ChecksMet)/$($script:ChecksTotal)" }
+    elseif ($script:ChecksMet -gt 0) { Write-Output "$Name|live|PARTIAL|checks=$($script:ChecksMet)/$($script:ChecksTotal)"; exit 1 }
+    else { Write-Output "$Name|live|FAIL|checks=0/$($script:ChecksTotal)"; exit 1 }
 }
 
 if ($SelfTest) { Invoke-SelfTest }
