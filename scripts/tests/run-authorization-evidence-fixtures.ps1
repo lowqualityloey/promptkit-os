@@ -55,7 +55,14 @@ try {
     Write-Task 'review' 'docs/tasks/batch-example.md' 'Approved Batch Mode'
     Set-Content -LiteralPath (Join-Path $taskDir 'batch-example.md') -Value @('# Batch', '- **Declared Boundary**: `review`', '- **Permitted Actions**: `local commits`', '- **Milestone Scope**: `M1`') -Encoding utf8
     Assert-Case 'valid batch authorization' 0
-    Write-Output 'AUTHORIZATION_FIXTURES|PASS|5 scenarios'
+    $batchPath = Join-Path $taskDir 'batch-example.md'
+    (Get-Content -LiteralPath $batchPath -Raw).Replace('`review`', 'review') | Set-Content -LiteralPath $batchPath -Encoding utf8
+    Assert-Case 'batch boundary without required markup' 1
+    (Get-Content -LiteralPath $batchPath -Raw).Replace('Declared Boundary**: review', 'Declared Boundary**: `final`') | Set-Content -LiteralPath $batchPath -Encoding utf8
+    Assert-Case 'unsupported batch boundary' 1
+    (Get-Content -LiteralPath $batchPath -Raw).Replace('`final`', '`review`') | Set-Content -LiteralPath $batchPath -Encoding utf8
+    Assert-Case 'restored valid batch boundary' 0
+    Write-Output 'AUTHORIZATION_FIXTURES|PASS|8 scenarios'
 } finally {
     Remove-Item -LiteralPath $fixtureRoot -Recurse -Force
 }

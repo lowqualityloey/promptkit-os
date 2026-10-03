@@ -76,5 +76,11 @@ EOF
 assert_result "conflicting run and batch boundary fails" 1
 sed -i 's/`pr`/`review`/' "$FIXTURE/docs/tasks/batch-example.md"
 assert_result "valid batch authorization link passes" 0
+sed -i 's/`review`/review/' "$FIXTURE/docs/tasks/batch-example.md"
+assert_result "batch boundary without required markup fails" 1
+sed -i 's/Declared Boundary\*\*: review/Declared Boundary**: `final`/' "$FIXTURE/docs/tasks/batch-example.md"
+assert_result "unsupported batch boundary fails" 1
+sed -i 's/`final`/`review`/' "$FIXTURE/docs/tasks/batch-example.md"
+assert_result "restored valid batch boundary passes" 0
 
-echo "AUTHORIZATION_FIXTURES|PASS|8 cases"
+echo "AUTHORIZATION_FIXTURES|PASS|11 cases"

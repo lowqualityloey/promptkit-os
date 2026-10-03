@@ -66,8 +66,11 @@ while IFS= read -r line; do
                 fi
             done
             checkpoint_boundary="$boundary"
-            batch_boundary="$(grep -E '^[-*]?[[:space:]]*\*\*Declared Boundary\*\*:' "$ROOT/$batch" | sed -n 's/.*`\([^`]*\)`.*/\1/p' | head -n1)"
-            if [ -n "$checkpoint_boundary" ] && [ -n "$batch_boundary" ] && [ "$checkpoint_boundary" != "$batch_boundary" ]; then
+            batch_boundary="$(grep -E '^[-*]?[[:space:]]*\*\*Declared Boundary\*\*:' "$ROOT/$batch" | sed -nE 's/.*`(review|pr|full)`[[:space:]]*$/\1/p' | head -n1)"
+            if [ -z "$batch_boundary" ]; then
+                echo "INVALID_AUTHORIZATION_BOUNDARY|$record|Batch Authorization must declare review, pr, or full in backticks"
+                errors=$((errors + 1))
+            elif [ -n "$checkpoint_boundary" ] && [ "$checkpoint_boundary" != "$batch_boundary" ]; then
                 echo "CONFLICTING_AUTHORIZATION|$record|Run boundary '$checkpoint_boundary' conflicts with batch boundary '$batch_boundary'"
                 errors=$((errors + 1))
             fi
@@ -94,6 +97,18 @@ for candidate in $changed_records $untracked_records; do
                         errors=$((errors + 1))
                     fi
                 done
+                batch_boundary="$(grep -E '^[-*]?[[:space:]]*\*\*Declared Boundary\*\*:' "$ROOT/$batch" | sed -nE 's/.*`(review|pr|full)`[[:space:]]*$/\1/p' | head -n1)"
+                checkpoint_boundary="$(grep -E '^-[[:space:]]+\*\*Declared Boundary\*\*:' "$ROOT/$candidate" | sed -nE 's/.*`(review|pr|full)`[[:space:]]*$/\1/p' | head -n1)"
+                if [ -z "$batch_boundary" ]; then
+                    echo "INVALID_AUTHORIZATION_BOUNDARY|$candidate|Batch Authorization must declare review, pr, or full in backticks"
+                    errors=$((errors + 1))
+                elif [ -z "$checkpoint_boundary" ]; then
+                    echo "INVALID_AUTHORIZATION_BOUNDARY|$candidate|Task Record must declare review, pr, or full in backticks"
+                    errors=$((errors + 1))
+                elif [ "$checkpoint_boundary" != "$batch_boundary" ]; then
+                    echo "CONFLICTING_AUTHORIZATION|$candidate|Run boundary '$checkpoint_boundary' conflicts with batch boundary '$batch_boundary'"
+                    errors=$((errors + 1))
+                fi
             fi
     fi
 done

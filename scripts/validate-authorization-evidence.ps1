@@ -61,8 +61,11 @@ foreach ($line in $diffLines) {
                 }
             }
             $checkpointBoundaryMatch = [regex]::Match($section, '(?m)^-[ \t]+\*\*Declared Boundary\*\*:[ \t]*`([^`]+)`')
-            $batchBoundaryMatch = [regex]::Match($batchText, '(?m)^[-*]?[ \t]*\*\*Declared Boundary\*\*:[ \t]*`([^`]+)`')
-            if ($checkpointBoundaryMatch.Success -and $batchBoundaryMatch.Success -and $checkpointBoundaryMatch.Groups[1].Value -cne $batchBoundaryMatch.Groups[1].Value) {
+            $batchBoundaryMatch = [regex]::Match($batchText, '(?m)^[-*]?[ \t]*\*\*Declared Boundary\*\*:[ \t]*`(review|pr|full)`[ \t]*$')
+            if (-not $batchBoundaryMatch.Success) {
+                Write-Output "INVALID_AUTHORIZATION_BOUNDARY|$record|Batch Authorization must declare review, pr, or full in backticks"
+                $errors++
+            } elseif ($checkpointBoundaryMatch.Success -and $checkpointBoundaryMatch.Groups[1].Value -cne $batchBoundaryMatch.Groups[1].Value) {
                 Write-Output "CONFLICTING_AUTHORIZATION|$record|Run boundary '$($checkpointBoundaryMatch.Groups[1].Value)' conflicts with batch boundary '$($batchBoundaryMatch.Groups[1].Value)'"
                 $errors++
             }
@@ -91,6 +94,18 @@ foreach ($candidate in ($changedRecords | Sort-Object -Unique)) {
             Write-Output "MISSING_BATCH_AUTHORIZATION|$candidate|Batch Authorization lacks $field"
             $errors++
         }
+    }
+    $batchBoundaryMatch = [regex]::Match($batchText, '(?m)^[-*]?[ \t]*\*\*Declared Boundary\*\*:[ \t]*`(review|pr|full)`[ \t]*$')
+    $checkpointBoundaryMatch = [regex]::Match($taskText, '(?m)^-[ \t]+\*\*Declared Boundary\*\*:[ \t]*`(review|pr|full)`[ \t]*$')
+    if (-not $batchBoundaryMatch.Success) {
+        Write-Output "INVALID_AUTHORIZATION_BOUNDARY|$candidate|Batch Authorization must declare review, pr, or full in backticks"
+        $errors++
+    } elseif (-not $checkpointBoundaryMatch.Success) {
+        Write-Output "INVALID_AUTHORIZATION_BOUNDARY|$candidate|Task Record must declare review, pr, or full in backticks"
+        $errors++
+    } elseif ($checkpointBoundaryMatch.Groups[1].Value -cne $batchBoundaryMatch.Groups[1].Value) {
+        Write-Output "CONFLICTING_AUTHORIZATION|$candidate|Run boundary '$($checkpointBoundaryMatch.Groups[1].Value)' conflicts with batch boundary '$($batchBoundaryMatch.Groups[1].Value)'"
+        $errors++
     }
 }
 if ($errors -eq 0) { Write-Output 'VALID|AUTHORIZATION_EVIDENCE=COMPLETE'; exit 0 }
