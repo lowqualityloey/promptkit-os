@@ -35,6 +35,11 @@ jobs:
           bash -n scripts/tests/run-token-budget-tests.sh
           bash -n scripts/validate-execution-control.sh
           bash -n scripts/validate-authorization-evidence.sh
+          bash -n scripts/mint-courier-integrity-pin.sh
+          bash -n scripts/check-milestone-halt-evidence.sh
+          bash -n scripts/tests/run-authorization-evidence-fixtures.sh
+          bash -n scripts/tests/run-milestone-halt-evidence-fixtures.sh
+          bash -n scripts/tests/run-courier-integrity-pin-fixtures.sh
           bash -n scripts/tests/run-execution-control-fixtures.sh
           bash -n scripts/tests/run-execution-control-properties.sh
           bash -n scripts/validate-release-records.sh
@@ -92,6 +97,12 @@ jobs:
 
       - name: Run Authorization Evidence Fixture Harness (Bash)
         run: bash scripts/tests/run-authorization-evidence-fixtures.sh
+
+      - name: Run Milestone Halt Evidence Fixture Harness (Bash)
+        run: bash scripts/tests/run-milestone-halt-evidence-fixtures.sh
+
+      - name: Run Courier Integrity Pin Fixture Harness
+        run: bash scripts/tests/run-courier-integrity-pin-fixtures.sh
 
       - name: Run Agent Execution Control Property Harness (Bash)
         run: bash scripts/tests/run-execution-control-properties.sh
@@ -295,6 +306,10 @@ jobs:
       - name: Run Authorization Evidence Fixture Harness (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-authorization-evidence-fixtures.ps1
+
+      - name: Run Milestone Halt Evidence Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-milestone-halt-evidence-fixtures.ps1
 
       - name: Run Agent Execution Control Property Harness (PowerShell)
         shell: pwsh

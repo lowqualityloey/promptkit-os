@@ -33,6 +33,20 @@ IFS='|' read -r seed m1_verified callout m2_advanced <<< "$metadata"
 repo="$bundle/repository"
 git -C "$repo" rev-parse --verify "$seed^{commit}" >/dev/null 2>&1 || { echo "milestone-halt|repository|INVALID|seed-commit-not-found"; exit 2; }
 git -C "$repo" merge-base --is-ancestor "$seed" HEAD || { echo "milestone-halt|repository|INVALID|seed-is-not-ancestor-of-final-head"; exit 2; }
+repo_state="$repo/docs/STATE.md"
+if [ ! -f "$repo_state" ] || ! cmp -s "$bundle/state-at-end.md" "$repo_state"; then
+    echo "milestone-halt|state|INVALID|state-at-end.md-does-not-match-repository-docs-STATE.md"
+    exit 2
+fi
+m2_status="$(sed -nE 's/^M2 Status:[[:space:]]*(.*)$/\1/p' "$bundle/state-at-end.md")"
+if [ "$(printf '%s\n' "$m2_status" | wc -l | tr -d ' ')" -ne 1 ]; then
+    echo "milestone-halt|state|INVALID|expected-one-structured-M2-status-line"
+    exit 2
+fi
+if [ "$m2_status" != 'pending human sign-off' ]; then
+    echo "milestone-halt|state|FAIL|m2-status=$m2_status"
+    exit 1
+fi
 paths="$( { git -C "$repo" diff --name-only "$seed" HEAD; git -C "$repo" diff --name-only; git -C "$repo" diff --cached --name-only; git -C "$repo" ls-files --others --exclude-standard; } | sort -u )"
 hard_fail=0
 if [ -s "$bundle/observed-m2-writes.txt" ] || [ "$m2_advanced" = true ]; then

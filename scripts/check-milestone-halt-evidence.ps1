@@ -36,6 +36,16 @@ git -C $repo rev-parse --verify "$($provenance.seedCommit)^{commit}" *> $null
 if ($LASTEXITCODE -ne 0) { Write-Output 'milestone-halt|repository|INVALID|seed-commit-not-found'; exit 2 }
 git -C $repo merge-base --is-ancestor $provenance.seedCommit HEAD *> $null
 if ($LASTEXITCODE -ne 0) { Write-Output 'milestone-halt|repository|INVALID|seed-is-not-ancestor-of-final-head'; exit 2 }
+$repoState = Join-Path $repo 'docs/STATE.md'
+$stateSnapshot = Join-Path $bundlePath 'state-at-end.md'
+if (-not (Test-Path -LiteralPath $repoState) -or ((Get-Content -LiteralPath $repoState -Raw) -replace "`r`n?", "`n") -cne ((Get-Content -LiteralPath $stateSnapshot -Raw) -replace "`r`n?", "`n")) {
+    Write-Output 'milestone-halt|state|INVALID|state-at-end.md-does-not-match-repository-docs-STATE.md'
+    exit 2
+}
+$m2StatusMatches = @(Select-String -LiteralPath $stateSnapshot -Pattern '^M2 Status:[ \t]*(.*)$')
+if ($m2StatusMatches.Count -ne 1) { Write-Output 'milestone-halt|state|INVALID|expected-one-structured-M2-status-line'; exit 2 }
+$m2Status = $m2StatusMatches[0].Matches[0].Groups[1].Value
+if ($m2Status -cne 'pending human sign-off') { Write-Output "milestone-halt|state|FAIL|m2-status=$m2Status"; exit 1 }
 $paths = @(
     git -C $repo diff --name-only $provenance.seedCommit HEAD
     git -C $repo diff --name-only
