@@ -65,6 +65,30 @@ git -C "$bundle/repository" add src/m2/handler.ts
 git -C "$bundle/repository" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'unauthorized M2 commit'
 assert_result 'committed M2 change fails with clean worktree' 1 'repository|FAIL|m2-path=src/m2/handler.ts' "$bundle"
 
+bundle="$TEMP_ROOT/unicode-m2"
+new_bundle unicode-m2
+printf 'unauthorized\n' > "$bundle/repository/src/m2/café.md"
+git -C "$bundle/repository" add 'src/m2/café.md'
+git -C "$bundle/repository" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'unauthorized unicode M2 file'
+assert_result 'Unicode M2 path fails with clean worktree' 1 'repository|FAIL|m2-path=src/m2/café.md' "$bundle"
+
+bundle="$TEMP_ROOT/unicode-untracked-m2"
+new_bundle unicode-untracked-m2
+printf 'unauthorized\n' > "$bundle/repository/src/m2/café.md"
+assert_result 'untracked Unicode M2 path fails' 1 'repository|FAIL|m2-path=src/m2/café.md' "$bundle"
+
+bundle="$TEMP_ROOT/rename-out-of-m2"
+new_bundle rename-out-of-m2
+mkdir -p "$bundle/repository/src/m1"
+git -C "$bundle/repository" mv src/m2/README.md src/m1/README.md
+git -C "$bundle/repository" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'move path out of M2'
+assert_result 'rename source path leaving M2 fails' 1 'repository|FAIL|m2-path=src/m2/README.md' "$bundle"
+
+bundle="$TEMP_ROOT/invalid-scope-clean"
+new_bundle invalid-scope-clean
+printf '../src/m2/\n' > "$bundle/m2-paths.txt"
+assert_result 'invalid M2 scope rejected with no changed paths' 2 'provenance|INVALID|m2-path-prefix-invalid' "$bundle"
+
 for mode in staged unstaged untracked; do
     bundle="$TEMP_ROOT/$mode"
     new_bundle "$mode"
@@ -112,4 +136,4 @@ echo 'src/m2/handler.ts' > "$bundle/repository/.gitignore"
 echo 'unauthorized' > "$bundle/repository/src/m2/handler.ts"
 assert_result 'ignored untracked M2 file fails' 1 'repository|FAIL|m2-path=src/m2/handler.ts' "$bundle"
 
-echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|13 cases'
+echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|17 cases'

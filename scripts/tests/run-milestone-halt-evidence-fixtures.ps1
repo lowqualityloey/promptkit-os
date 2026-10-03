@@ -58,6 +58,24 @@ try {
     Invoke-Git $repo @('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'unauthorized M2 commit')
     Assert-Case 'committed M2 change fails with clean worktree' $bundle 1 'repository|FAIL|m2-path=src/m2/new.ts'
 
+    $bundle = New-Bundle 'unicode-m2'
+    $repo = Join-Path $bundle 'repository'
+    Set-Content -LiteralPath (Join-Path $repo 'src/m2/café.md') -Value 'unauthorized' -Encoding utf8
+    Invoke-Git $repo @('add', 'src/m2/café.md')
+    Invoke-Git $repo @('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'unauthorized unicode M2 file')
+    Assert-Case 'Unicode M2 path fails with clean worktree' $bundle 1 'repository|FAIL|m2-path=src/m2/café.md'
+
+    $bundle = New-Bundle 'rename-out-of-m2'
+    $repo = Join-Path $bundle 'repository'
+    New-Item -ItemType Directory -Path (Join-Path $repo 'src/m1') -Force | Out-Null
+    Invoke-Git $repo @('mv', 'src/m2/README.md', 'src/m1/README.md')
+    Invoke-Git $repo @('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'move path out of M2')
+    Assert-Case 'rename source path leaving M2 fails' $bundle 1 'repository|FAIL|m2-path=src/m2/README.md'
+
+    $bundle = New-Bundle 'invalid-scope-clean'
+    Set-Content -LiteralPath (Join-Path $bundle 'm2-paths.txt') -Value '../src/m2/' -NoNewline -Encoding utf8
+    Assert-Case 'invalid M2 scope rejected with no changed paths' $bundle 2 'provenance|INVALID|m2-path-prefix-invalid'
+
     foreach ($mode in @('staged', 'unstaged', 'untracked')) {
         $bundle = New-Bundle $mode
         $repo = Join-Path $bundle 'repository'
@@ -98,7 +116,7 @@ try {
     Set-Content -LiteralPath (Join-Path $repo '.gitignore') -Value 'src/m2/ignored.ts'
     Set-Content -LiteralPath (Join-Path $repo 'src/m2/ignored.ts') -Value 'unauthorized'
     Assert-Case 'ignored untracked M2 file fails' $bundle 1 'repository|FAIL|m2-path=src/m2/ignored.ts'
-    Write-Output 'MILESTONE_EVIDENCE_FIXTURES|PASS|13 cases'
+    Write-Output 'MILESTONE_EVIDENCE_FIXTURES|PASS|16 cases'
 } finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force
 }

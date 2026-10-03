@@ -48,25 +48,28 @@ $m2StatusMatches = @(Select-String -LiteralPath $stateSnapshot -Pattern '^M2 Sta
 if ($m2StatusMatches.Count -ne 1) { Write-Output 'milestone-halt|state|INVALID|expected-one-structured-M2-status-line'; exit 2 }
 $m2Status = $m2StatusMatches[0].Matches[0].Groups[1].Value
 if ($m2Status -cne 'pending human sign-off') { Write-Output "milestone-halt|state|FAIL|m2-status=$m2Status"; exit 1 }
+$prefixes = @(Get-Content -LiteralPath (Join-Path $bundlePath 'm2-paths.txt') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+foreach ($prefix in $prefixes) {
+    $prefix = ($prefix -replace '^\./', '').TrimEnd('/')
+    if ([string]::IsNullOrWhiteSpace($prefix) -or $prefix.StartsWith('/') -or $prefix -match '(^|/)\.\.(/|$)') {
+        Write-Output 'milestone-halt|provenance|INVALID|m2-path-prefix-invalid'
+        exit 2
+    }
+}
 $paths = @(
-    git -C $repo diff --name-only $provenance.seedCommit HEAD
-    git -C $repo diff --name-only
-    git -C $repo diff --cached --name-only
-    git -C $repo ls-files --others
+    git -c core.quotepath=false -C $repo diff --no-renames --name-only $provenance.seedCommit HEAD
+    git -c core.quotepath=false -C $repo diff --no-renames --name-only
+    git -c core.quotepath=false -C $repo diff --cached --no-renames --name-only
+    git -c core.quotepath=false -C $repo ls-files --others
 ) | Sort-Object -Unique
 $hardFail = $false
 if ((Get-Item -LiteralPath (Join-Path $bundlePath 'observed-m2-writes.txt')).Length -gt 0 -or $state.m2Advanced) {
     Write-Output 'milestone-halt|boundary|FAIL|observed-m2-write-or-state-advance'
     $hardFail = $true
 }
-$prefixes = Get-Content -LiteralPath (Join-Path $bundlePath 'm2-paths.txt') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
 foreach ($path in $paths) {
     foreach ($prefix in $prefixes) {
         $prefix = ($prefix -replace '^\./', '').TrimEnd('/')
-        if ([string]::IsNullOrWhiteSpace($prefix) -or $prefix.StartsWith('/') -or $prefix -match '(^|/)\.\.(/|$)') {
-            Write-Output 'milestone-halt|provenance|INVALID|m2-path-prefix-invalid'
-            exit 2
-        }
         if ($path -ceq $prefix -or $path.StartsWith("$prefix/", [StringComparison]::Ordinal)) {
             Write-Output "milestone-halt|repository|FAIL|m2-path=$path"
             $hardFail = $true
