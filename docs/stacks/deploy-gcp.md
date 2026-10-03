@@ -13,7 +13,7 @@ verification:
   fast:
     - gcloud run services describe SERVICE --region REGION
   required:
-    - gcloud run services replace service.yaml --dry-run=client
+    - gcloud run services replace service.yaml --dry-run
   extended:
     - terraform validate
 invariants:
@@ -27,7 +27,7 @@ anti_patterns:
 ---
 # Google Cloud Deployment Playbook
 
-Treat these manifest names as candidates, never as proof. Confirm Cloud Run with a `serving.knative.dev/v1` `Service`, a `run.googleapis.com` service declaration, or a checked-in command explicitly targeting Cloud Run. Confirm Functions with a Functions deployment declaration or command naming the function target. Terraform must declare the Google provider and a Cloud Run or Functions resource. Cloud Build must contain a step that deploys one of those confirmed targets; a generic `cloudbuild.yaml` is insufficient. Dockerfiles, generic `*.tf`, language manifests, and Google SDK dependencies alone do not activate this playbook. If target identity or scope is unresolved, report it as unconfirmed.
+Treat these manifest names as candidates, never as proof. Confirm Cloud Run with a `serving.knative.dev/v1` `Service` that also carries Google-specific `run.googleapis.com/*` configuration, a separate `run.googleapis.com` service declaration, or a checked-in command explicitly targeting Cloud Run. A generic Knative Service is not proof of Google Cloud because Knative also runs on other Kubernetes platforms. Confirm Functions with a Functions deployment declaration or command naming the function target. Terraform must declare the Google provider and a Cloud Run or Functions resource. Cloud Build must contain a step that deploys one of those confirmed targets; a generic `cloudbuild.yaml` is insufficient. Dockerfiles, generic `*.tf`, language manifests, and Google SDK dependencies alone do not activate this playbook. If target identity or scope is unresolved, report it as unconfirmed.
 
 ## 1. Architectural Invariants
 
@@ -46,4 +46,4 @@ Treat these manifest names as candidates, never as proof. Confirm Cloud Run with
 
 ## 3. Tiered Verification Commands
 
-Fast: validate the selected manifest (`gcloud run services describe` for a known deployed service); required: run `gcloud run services replace SERVICE.yaml --dry-run=client` where supported; extended: run `terraform validate` and policy checks. Confirm flags against the repository's installed CLI/provider versions.
+Fast: validate the selected manifest (`gcloud run services describe` for a known deployed service); required: run `gcloud run services replace SERVICE.yaml --dry-run` to validate without applying it; extended: run `terraform validate` and policy checks. Confirm flags against the repository's installed CLI/provider versions.
