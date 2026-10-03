@@ -51,7 +51,7 @@ if ($m2Status -cne 'pending human sign-off') { Write-Output "milestone-halt|stat
 $prefixes = @(Get-Content -LiteralPath (Join-Path $bundlePath 'm2-paths.txt') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 foreach ($prefix in $prefixes) {
     $prefix = ($prefix -replace '^\./', '').TrimEnd('/')
-    if ([string]::IsNullOrWhiteSpace($prefix) -or $prefix.StartsWith('/') -or $prefix -match '(^|/)\.\.(/|$)' -or $prefix -match '(^|/)\.(/|$)') {
+    if ([string]::IsNullOrWhiteSpace($prefix) -or $prefix.StartsWith('/') -or $prefix -match '//' -or $prefix.Contains('\') -or $prefix -match '^[A-Za-z]:' -or $prefix -match '(^|/)\.\.(/|$)' -or $prefix -match '(^|/)\.(/|$)') {
         Write-Output 'milestone-halt|provenance|INVALID|m2-path-prefix-invalid'
         exit 2
     }

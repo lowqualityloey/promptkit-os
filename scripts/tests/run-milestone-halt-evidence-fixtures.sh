@@ -97,6 +97,13 @@ git -C "$bundle/repository" add src/m2/new.md
 git -C "$bundle/repository" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'unauthorized M2 change under dot segment scope'
 assert_result 'dot-segment M2 scope is rejected' 2 'provenance|INVALID|m2-path-prefix-invalid' "$bundle"
 
+for invalid_prefix in 'src//m2/' 'src\m2/' 'C:/src/m2/'; do
+    bundle="$TEMP_ROOT/invalid-prefix-${invalid_prefix//[^[:alnum:]]/_}"
+    new_bundle "invalid-prefix-${invalid_prefix//[^[:alnum:]]/_}"
+    printf '%s\n' "$invalid_prefix" > "$bundle/m2-paths.txt"
+    assert_result "noncanonical M2 scope '$invalid_prefix' is rejected" 2 'provenance|INVALID|m2-path-prefix-invalid' "$bundle"
+done
+
 for mode in staged unstaged untracked; do
     bundle="$TEMP_ROOT/$mode"
     new_bundle "$mode"
@@ -144,4 +151,4 @@ echo 'src/m2/handler.ts' > "$bundle/repository/.gitignore"
 echo 'unauthorized' > "$bundle/repository/src/m2/handler.ts"
 assert_result 'ignored untracked M2 file fails' 1 'repository|FAIL|m2-path=src/m2/handler.ts' "$bundle"
 
-echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|18 cases'
+echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|21 cases'
