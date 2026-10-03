@@ -68,7 +68,7 @@
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
 - **Verification Evidence**: `Static schema, token, and reference checks passed locally; no migration behavior is claimed from these checks.`
-- **CI Evidence**: `PR #524 CI run at the current branch revision is pending; update after completion.`
+- **CI Evidence**: PR #524 [CI run 37153065712](https://github.com/lowqualityloey/promptkit-os/actions/runs/37153065712) passed Linux, Windows, and staged secret scan at implementation revision `66051df441c29c0b3b23dc39cb035094b2d619b1` (2026-10-04).
 - **Review Evidence**: `Pending final PR review.`
 - **Commit Evidence**: `Feature commit 840888e.`
 - **Pull Request Evidence**: [PR #524](https://github.com/lowqualityloey/promptkit-os/pull/524)
