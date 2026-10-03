@@ -130,6 +130,15 @@ cat > "$FIXTURE/docs/tasks/TASK-2026-01-03-borrowed.md" <<'EOF'
 EOF
 assert_result "checkpoint cannot be borrowed from another Task Record" 1
 
+write_checkpoint review N/A
+cat > "$FIXTURE/docs/tasks/TASK-2026-01-04 whitespace.md" <<'EOF'
+# Untracked Task Record
+- **Mode**: `Approved Batch Mode`
+- **Batch Authorization**: `N/A`
+EOF
+assert_result "untracked batch record with spaces is rejected" 1 "MISSING_BATCH_AUTHORIZATION"
+rm "$FIXTURE/docs/tasks/TASK-2026-01-04 whitespace.md"
+
 cat > "$TEMP_ROOT/outside-batch.md" <<'EOF'
 # Batch Authorization
 - **Declared Boundary**: `review`
@@ -140,4 +149,4 @@ write_checkpoint review ../outside-batch.md
 sed -i 's/`Gated Mode`/`Approved Batch Mode`/' "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
 assert_result "batch authorization cannot escape repository root" 1 "MISSING_BATCH_AUTHORIZATION"
 
-echo "AUTHORIZATION_FIXTURES|PASS|17 cases"
+echo "AUTHORIZATION_FIXTURES|PASS|18 cases"

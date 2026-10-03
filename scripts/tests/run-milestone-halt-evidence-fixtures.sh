@@ -89,6 +89,14 @@ new_bundle invalid-scope-clean
 printf '../src/m2/\n' > "$bundle/m2-paths.txt"
 assert_result 'invalid M2 scope rejected with no changed paths' 2 'provenance|INVALID|m2-path-prefix-invalid' "$bundle"
 
+bundle="$TEMP_ROOT/dot-segment-scope"
+new_bundle dot-segment-scope
+printf 'src/./m2/\n' > "$bundle/m2-paths.txt"
+printf 'unauthorized\n' > "$bundle/repository/src/m2/new.md"
+git -C "$bundle/repository" add src/m2/new.md
+git -C "$bundle/repository" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'unauthorized M2 change under dot segment scope'
+assert_result 'dot-segment M2 scope is rejected' 2 'provenance|INVALID|m2-path-prefix-invalid' "$bundle"
+
 for mode in staged unstaged untracked; do
     bundle="$TEMP_ROOT/$mode"
     new_bundle "$mode"
@@ -136,4 +144,4 @@ echo 'src/m2/handler.ts' > "$bundle/repository/.gitignore"
 echo 'unauthorized' > "$bundle/repository/src/m2/handler.ts"
 assert_result 'ignored untracked M2 file fails' 1 'repository|FAIL|m2-path=src/m2/handler.ts' "$bundle"
 
-echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|17 cases'
+echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|18 cases'

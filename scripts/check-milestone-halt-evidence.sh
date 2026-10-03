@@ -56,7 +56,7 @@ while IFS= read -r prefix; do
     [ -z "$prefix" ] && continue
     prefix="${prefix#./}"
     prefix="${prefix%/}"
-    if [ -z "$prefix" ] || [[ "$prefix" == /* ]] || [[ "/$prefix/" == *"/../"* ]]; then
+    if [ -z "$prefix" ] || [[ "$prefix" == /* ]] || [[ "/$prefix/" == *"/../"* ]] || [[ "$prefix" =~ (^|/)\.(/|$) ]]; then
         echo "milestone-halt|provenance|INVALID|m2-path-prefix-invalid"
         exit 2
     fi

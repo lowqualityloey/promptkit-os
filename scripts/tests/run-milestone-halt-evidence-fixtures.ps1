@@ -76,6 +76,14 @@ try {
     Set-Content -LiteralPath (Join-Path $bundle 'm2-paths.txt') -Value '../src/m2/' -NoNewline -Encoding utf8
     Assert-Case 'invalid M2 scope rejected with no changed paths' $bundle 2 'provenance|INVALID|m2-path-prefix-invalid'
 
+    $bundle = New-Bundle 'dot-segment-scope'
+    Set-Content -LiteralPath (Join-Path $bundle 'm2-paths.txt') -Value 'src/./m2/' -NoNewline -Encoding utf8
+    $repo = Join-Path $bundle 'repository'
+    Set-Content -LiteralPath (Join-Path $repo 'src/m2/new.md') -Value 'unauthorized' -Encoding utf8
+    Invoke-Git $repo @('add', 'src/m2/new.md')
+    Invoke-Git $repo @('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'unauthorized dot segment M2 scope')
+    Assert-Case 'dot-segment M2 scope is rejected' $bundle 2 'provenance|INVALID|m2-path-prefix-invalid'
+
     foreach ($mode in @('staged', 'unstaged', 'untracked')) {
         $bundle = New-Bundle $mode
         $repo = Join-Path $bundle 'repository'
@@ -116,7 +124,7 @@ try {
     Set-Content -LiteralPath (Join-Path $repo '.gitignore') -Value 'src/m2/ignored.ts'
     Set-Content -LiteralPath (Join-Path $repo 'src/m2/ignored.ts') -Value 'unauthorized'
     Assert-Case 'ignored untracked M2 file fails' $bundle 1 'repository|FAIL|m2-path=src/m2/ignored.ts'
-    Write-Output 'MILESTONE_EVIDENCE_FIXTURES|PASS|16 cases'
+    Write-Output 'MILESTONE_EVIDENCE_FIXTURES|PASS|17 cases'
 } finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force
 }

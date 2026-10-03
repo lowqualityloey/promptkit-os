@@ -106,12 +106,11 @@ while IFS= read -r line; do
         fi
     fi
 done <<< "$diff_output"
-changed_records="$(git -C "$ROOT" diff --name-only "$BASELINE" -- docs/tasks)"
-untracked_records="$(git -C "$ROOT" ls-files --others --exclude-standard -- docs/tasks)"
-for candidate in $changed_records $untracked_records; do
-    [ -f "$ROOT/$candidate" ] || continue
+validate_changed_batch_record() {
+    local candidate="$1" source="$2" candidate_diff batch batch_file batch_boundary checkpoint_boundary field
+    [ -f "$ROOT/$candidate" ] || return 0
     candidate_diff="$(git -C "$ROOT" diff --unified=0 "$BASELINE" -- "$candidate")"
-    if printf '%s\n' "$untracked_records" | grep -Fxq "$candidate"; then
+    if [ "$source" = untracked ]; then
         candidate_diff="$(sed 's/^/+/g' "$ROOT/$candidate")"
     fi
     if [ -n "$(grep -E '^-[[:space:]]+\*\*Mode\*\*:' "$ROOT/$candidate" | grep -F 'Approved Batch Mode' || true)" ] && [ -n "$(grep -E '^\+[^+][[:space:]]+\*\*(Mode|Batch Authorization)\*\*:' <<< "$candidate_diff" | head -n1)" ]; then
@@ -141,7 +140,9 @@ for candidate in $changed_records $untracked_records; do
                 fi
             fi
     fi
-done
+}
+while IFS= read -r -d '' candidate; do validate_changed_batch_record "$candidate" tracked; done < <(git -C "$ROOT" diff --name-only -z "$BASELINE" -- docs/tasks)
+while IFS= read -r -d '' candidate; do validate_changed_batch_record "$candidate" untracked; done < <(git -C "$ROOT" ls-files --others --exclude-standard -z -- docs/tasks)
 if [ "$errors" -eq 0 ]; then echo "VALID|AUTHORIZATION_EVIDENCE=COMPLETE"; exit 0; fi
 echo "FAILED|AUTHORIZATION_ERRORS=$errors"
 exit 1
