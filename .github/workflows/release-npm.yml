@@ -161,6 +161,55 @@ jobs:
           node -e "const p=require('./package.json'); if(p.version!==process.env.VERSION){console.error('version mismatch');process.exit(1)}"
           echo "Courier version: $(node -p "require('./package.json').version")"
 
+      - name: Mint and Inject Courier Integrity Pin
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          VERSION: ${{ steps.tag.outputs.version }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || { echo "::error::invalid release tag '$TAG'"; exit 1; }
+          [[ "$VERSION" == "${TAG#v}" ]] || { echo "::error::release version does not match tag"; exit 1; }
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          archive="https://github.com/$REPOSITORY/archive/refs/tags/$TAG.tar.gz"
+          curl --fail --silent --show-error --location "$archive" --output "$work/first.tar.gz"
+          curl --fail --silent --show-error --location "$archive" --output "$work/second.tar.gz"
+          gzip -t "$work/first.tar.gz"
+          gzip -t "$work/second.tar.gz"
+          first="$(sha256sum "$work/first.tar.gz" | cut -d' ' -f1)"
+          second="$(sha256sum "$work/second.tar.gz" | cut -d' ' -f1)"
+          [[ "$first" == "$second" ]] || { echo "::error::release archive downloads were not reproducible"; exit 1; }
+          digest="$first"
+          export DIGEST="$digest"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const file = 'package/bin/promptkit-os.js';
+          const source = fs.readFileSync(file, 'utf8');
+          const version = process.env.VERSION;
+          const digest = process.env.DIGEST;
+          const marker = '  // @pin-insert';
+          const key = JSON.stringify(version);
+          const entries = source.split('\n').filter((line) => line.trimStart().startsWith(`${key}:`));
+          if (entries.length > 1) throw new Error(`duplicate integrity pin for ${version}`);
+          if (entries.length === 1) {
+            const existing = entries[0].match(/"([0-9a-f]{64})"/);
+            if (!existing || existing[1] !== digest) throw new Error(`committed integrity pin for ${version} does not match archive`);
+          } else {
+            if (!/^[0-9a-f]{64}$/.test(digest)) throw new Error('invalid computed digest');
+            if (source.split(marker).length !== 2) throw new Error('integrity pin insertion marker missing or duplicated');
+            fs.writeFileSync(file, source.replace(marker, `  ${key}: ${JSON.stringify(digest)},\n${marker}`));
+          }
+          NODE
+          node - <<'NODE'
+          const courier = require('./package/bin/promptkit-os.js');
+          const version = process.env.VERSION;
+          if (courier.TARBALL_SHA256_BY_VERSION[version] !== process.env.DIGEST) {
+            throw new Error(`post-injection integrity pin check failed for ${version}`);
+          }
+          console.log(`Verified courier integrity pin ${version}: ${process.env.DIGEST}`);
+          NODE
+
       - name: Verify Courier Contents Are Minimal
         run: |
           cd package
@@ -177,6 +226,7 @@ jobs:
         env:
           PROMPTKIT_VERSION: ${{ steps.tag.outputs.version }}
           PROMPTKIT_REPO_ROOT: ${{ github.workspace }}
+          PROMPTKIT_REQUIRE_INTEGRITY_PIN: "1"
         run: bash "$RUNNER_TEMP/hardened-smoke/smoke.sh"
 
       - name: Publish to npm with Provenance

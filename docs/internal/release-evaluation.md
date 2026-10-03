@@ -10,6 +10,8 @@ The evaluation must remain separate from production execution. A calculated vers
 
 #### 1. Establish Evaluation Identity and the Version Source of Truth
 
+For npm courier releases, the publish workflow computes the GitHub tag-archive SHA-256 from two separate downloads and injects the verified digest into the packed courier before its fail-closed smoke test. The tagged source therefore intentionally differs from the published `bin/promptkit-os.js` by one entry in `TARBALL_SHA256_BY_VERSION`. Record the computed digest, both-download equality, and this expected one-entry package diff in the release evaluation evidence; an existing source pin must equal the fresh digest.
+
 Create one stable **Evaluation ID** for every release evaluation and use that exact identifier in the evaluation, candidate, QA/Reviewer review, release notes, draft changelog entries, and Approved Release Record. Record the accountable Release Coordinator and the date the evaluation was opened.
 
 Select the prior approved baseline before inspecting impact:

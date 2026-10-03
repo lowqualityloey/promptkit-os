@@ -43,6 +43,7 @@ const KIT_DIR = ".promptkit";
 const TARBALL_SHA256_BY_VERSION = {
   "1.10.1": "1e55459914a1c46aa71df8f9cb8ce4c9ff37d1c02d67f70e5607b3bfd4f48d4b",
   "1.11.0": "6503fdfcde286055b8c053aa0ffa8bdf244cf77df3321cccd6a8d8f780195ade",
+  // @pin-insert
 };
 
 function die(msg) {

@@ -37,6 +37,18 @@ cp -R "$REPO_ROOT/package/." "$STAGE_PKG_DIR/"
 # Sync version in the staged copy
 (cd "$STAGE_PKG_DIR" && npm version "$VERSION" --no-git-tag-version --allow-same-version >/dev/null)
 
+EXPECTED_DIGEST="$(PROMPTKIT_REPO_ROOT="$REPO_ROOT" PROMPTKIT_VERSION="$VERSION" node - <<'NODE'
+const path = require('node:path');
+const modulePath = path.join(process.env.PROMPTKIT_REPO_ROOT, 'package/bin/promptkit-os.js');
+const courier = require(modulePath);
+process.stdout.write(courier.TARBALL_SHA256_BY_VERSION[process.env.PROMPTKIT_VERSION] || '');
+NODE
+)"
+if [ "${PROMPTKIT_REQUIRE_INTEGRITY_PIN:-}" = "1" ] && ! printf '%s' "$EXPECTED_DIGEST" | grep -Eq '^[0-9a-f]{64}$'; then
+    echo "FAIL: no valid courier integrity pin for $VERSION"
+    exit 1
+fi
+
 PACK_DIR="$WORK/pack"
 mkdir -p "$PACK_DIR"
 (cd "$STAGE_PKG_DIR" && npm pack --pack-destination "$PACK_DIR" >/dev/null)
@@ -48,7 +60,12 @@ chmod +x "$COURIER_BIN"
 
 COURIER_DIR="$WORK/courier"
 mkdir -p "$COURIER_DIR"
-(cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 node "$COURIER_BIN" --balanced "$COURIER_DIR")
+INSTALL_OUTPUT="$(cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 node "$COURIER_BIN" --balanced "$COURIER_DIR" 2>&1)"
+printf '%s\n' "$INSTALL_OUTPUT"
+if [ "${PROMPTKIT_REQUIRE_INTEGRITY_PIN:-}" = "1" ]; then
+    printf '%s' "$INSTALL_OUTPUT" | grep -q "verified release tarball integrity" || { echo "FAIL: courier did not verify release tarball integrity"; exit 1; }
+    if printf '%s' "$INSTALL_OUTPUT" | grep -q "no integrity pin"; then echo "FAIL: courier warned about a missing integrity pin"; exit 1; fi
+fi
 
 echo "== 1b. courier guard: refuse silent overlay of existing .promptkit without --force =="
 set +e
