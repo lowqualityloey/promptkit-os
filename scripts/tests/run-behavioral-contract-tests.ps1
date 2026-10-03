@@ -18,7 +18,7 @@ function Assert-Contains {
 
     $fullPath = Join-Path $RepoRoot $File
     if (Test-Path $fullPath) {
-        $content = Get-Content -Path $fullPath -Raw
+        $content = (Get-Content -Path $fullPath -Raw) -replace '\r', ''
         if ($content -match $Pattern) {
             Write-Host "  ✅ PASS: $Description" -ForegroundColor Green
             $script:PassCount++
@@ -42,7 +42,7 @@ function Assert-NotContains {
         $script:FailCount++
         return
     }
-    $content = Get-Content -Path $fullPath -Raw
+    $content = (Get-Content -Path $fullPath -Raw) -replace '\r', ''
     if ($content -match $Pattern) {
         Write-Host "  ❌ FAIL: $Description (unexpected pattern '$Pattern' found in $File)" -ForegroundColor Red
         $script:FailCount++
