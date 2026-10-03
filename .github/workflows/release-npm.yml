@@ -176,11 +176,11 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || { echo "::error::invalid release tag '$TAG'"; exit 1; }
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]] || { echo "::error::invalid release tag '$TAG'"; exit 1; }
           [[ "$VERSION" == "${TAG#v}" ]] || { echo "::error::release version does not match tag"; exit 1; }
           work="$(mktemp -d)"
           trap 'rm -rf "$work"' EXIT
-          archive="https://github.com/$REPOSITORY/archive/$TAG_COMMIT.tar.gz"
+          archive="https://github.com/$REPOSITORY/archive/refs/tags/$TAG.tar.gz"
           curl --fail --silent --show-error --location "$archive" --output "$work/first.tar.gz"
           curl --fail --silent --show-error --location "$archive" --output "$work/second.tar.gz"
           gzip -t "$work/first.tar.gz"
@@ -220,7 +220,6 @@ jobs:
         run: bash "$RUNNER_TEMP/hardened-smoke/smoke.sh"
 
       - name: Confirm Release Tag Still Targets Checked-Out Commit
-        if: github.event_name == 'release' || inputs.dry_run == false
         env:
           TAG: ${{ steps.tag.outputs.tag }}
           TAG_COMMIT: ${{ steps.release_source.outputs.tag_commit }}
@@ -231,7 +230,7 @@ jobs:
           [[ "$current" == "$TAG_COMMIT" ]] || { echo "::error::release tag $TAG no longer targets checked-out commit $TAG_COMMIT"; exit 1; }
 
       - name: Publish to npm with Provenance
-        if: github.event_name == 'release' || inputs.dry_run == false
+        if: github.event_name == 'release' || (inputs.dry_run == false && github.ref == 'refs/heads/main')
         working-directory: package
         # Trusted publishing (OIDC): no long-lived token. The npmjs.com trusted
         # publisher entry (repo promptkit-os, workflow release-npm.yml) mints a
@@ -241,6 +240,12 @@ jobs:
         # makes the OIDC exchange 403 on publisher mismatch.
         run: npm publish --provenance --access public
 
+      - name: Reject Manual Publish Outside Main
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == false && github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::manual publication must use the protected main workflow ref"
+          exit 1
+
       - name: Report Dry Run
         if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
         env:
@@ -249,6 +254,6 @@ jobs:
         run: echo "Dry run complete for $TAG at $TAG_COMMIT; npm publish was skipped."
 
       - name: Report
-        if: github.event_name == 'release' || inputs.dry_run == false
+        if: github.event_name == 'release' || (inputs.dry_run == false && github.ref == 'refs/heads/main')
         run: |
           echo "::notice::published promptkit-os@${{ steps.tag.outputs.version }} (courier for ${{ steps.tag.outputs.tag }})"

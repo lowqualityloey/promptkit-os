@@ -67,6 +67,20 @@ if [ "${PROMPTKIT_REQUIRE_INTEGRITY_PIN:-}" = "1" ]; then
     if printf '%s' "$INSTALL_OUTPUT" | grep -q "no integrity pin"; then echo "FAIL: courier warned about a missing integrity pin"; exit 1; fi
 fi
 
+if [ "${PROMPTKIT_REQUIRE_INTEGRITY_PIN:-}" = "1" ]; then
+    echo "== 1a. corrupted pin fails before extraction =="
+    CORRUPT_DIR="$WORK/corrupt-pin"
+    mkdir -p "$CORRUPT_DIR"
+    set +e
+    CORRUPT_OUTPUT="$(cd "$CORRUPT_DIR" && PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_TARBALL_SHA256=0000000000000000000000000000000000000000000000000000000000000000 node "$COURIER_BIN" --balanced "$CORRUPT_DIR" 2>&1)"
+    CORRUPT_STATUS=$?
+    set -e
+    [ "$CORRUPT_STATUS" -ne 0 ] || { echo "FAIL: corrupted pin unexpectedly succeeded"; exit 1; }
+    printf '%s' "$CORRUPT_OUTPUT" | grep -q "tarball integrity mismatch" || { echo "FAIL: corrupted pin returned an unexpected error"; exit 1; }
+    [ ! -e "$CORRUPT_DIR/.promptkit" ] || { echo "FAIL: corrupted pin extracted .promptkit"; exit 1; }
+    echo "  ok: corrupted pin failed before extraction"
+fi
+
 echo "== 1b. courier guard: refuse silent overlay of existing .promptkit without --force =="
 set +e
 refusal_out=$( (cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 node "$COURIER_BIN" --balanced "$COURIER_DIR") 2>&1 )

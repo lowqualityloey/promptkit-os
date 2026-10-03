@@ -16,7 +16,7 @@ const fs = require('node:fs');
 const file = process.env.SOURCE_FILE;
 const version = process.env.VERSION;
 const digest = process.env.DIGEST;
-if (!/^\d+\.\d+\.\d+(?:[.-][0-9A-Za-z.-]+)?$/.test(version)) throw new Error(`invalid courier version: ${version}`);
+if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(version)) throw new Error(`invalid courier version: ${version}`);
 if (!/^[0-9a-f]{64}$/.test(digest)) throw new Error('invalid computed SHA-256 digest');
 
 const source = fs.readFileSync(file, 'utf8');
