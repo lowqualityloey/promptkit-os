@@ -30,6 +30,22 @@ assert_result() {
     echo "PASS|$name"
 }
 
+assert_missing_option_value() {
+    local name="$1" option="$2" output actual
+    set +e
+    output="$(timeout 3 bash "$REPO_ROOT/scripts/validate-authorization-evidence.sh" "$option" 2>&1)"
+    actual=$?
+    set -e
+    if [ "$actual" -ne 2 ] || [[ "$output" != *'Usage: validate-authorization-evidence.sh'* ]]; then
+        echo "FAIL|$name|exit=$actual|$output"
+        exit 1
+    fi
+    echo "PASS|$name"
+}
+
+assert_missing_option_value 'missing --baseline value exits with usage' --baseline
+assert_missing_option_value 'missing --root value exits with usage' --root
+
 write_checkpoint() {
     local boundary="$1" batch_ref="$2"
     cat > "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md" <<EOF
@@ -124,4 +140,4 @@ write_checkpoint review ../outside-batch.md
 sed -i 's/`Gated Mode`/`Approved Batch Mode`/' "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
 assert_result "batch authorization cannot escape repository root" 1 "MISSING_BATCH_AUTHORIZATION"
 
-echo "AUTHORIZATION_FIXTURES|PASS|15 cases"
+echo "AUTHORIZATION_FIXTURES|PASS|17 cases"

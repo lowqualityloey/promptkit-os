@@ -29,6 +29,8 @@ function Resolve-BatchAuthorizationPath([string]$Reference) {
     $resolved = (Resolve-Path -LiteralPath $candidate).Path
     if (-not $resolved.StartsWith($taskRoot, [StringComparison]::OrdinalIgnoreCase)) { return $null }
     $current = Join-Path $rootPath 'docs'
+    $docsItem = Get-Item -LiteralPath $current -Force
+    if (($docsItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { return $null }
     foreach ($segment in @('tasks') + (($Reference -replace '^docs/tasks/', '') -split '/')) {
         $current = Join-Path $current $segment
         $item = Get-Item -LiteralPath $current -Force
@@ -104,7 +106,7 @@ foreach ($candidate in ($changedRecords | Sort-Object -Unique)) {
     if (-not (Test-Path -LiteralPath $taskPath)) { continue }
     $taskText = Get-Content -LiteralPath $taskPath -Raw
     if ($taskText -notmatch '(?m)^-[ \t]+\*\*Mode\*\*:[^\r\n]*Approved Batch Mode') { continue }
-    $candidateDiff = if ($untrackedFiles -contains $candidate) { Get-Content -LiteralPath $taskPath } else { @(git.exe -C $rootPath diff --unified=0 $Baseline -- $candidate) }
+    $candidateDiff = if ($untrackedFiles -contains $candidate) { @(Get-Content -LiteralPath $taskPath | ForEach-Object { "+$_" }) } else { @(git.exe -C $rootPath diff --unified=0 $Baseline -- $candidate) }
     if (-not ($candidateDiff | Where-Object { $_ -match '^\+[^+].*\*\*(Mode|Batch Authorization)\*\*:' })) { continue }
     $batchMatch = [regex]::Match($taskText, '(?m)^-[ \t]+\*\*Batch Authorization\*\*:[ \t]*`([^`\r\n]+)`[ \t]*\r?$')
     $batchPath = if ($batchMatch.Success) { Resolve-BatchAuthorizationPath $batchMatch.Groups[1].Value } else { $null }

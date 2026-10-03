@@ -88,8 +88,35 @@ try {
     Set-Content -LiteralPath $outsideBatchPath -Value @('# Batch', '- **Declared Boundary**: `review`', '- **Permitted Actions**: `local commits`', '- **Milestone Scope**: `M1`') -Encoding utf8
     Write-Task 'review' '../outside-batch.md' 'Approved Batch Mode'
     Assert-Case 'batch authorization cannot escape repository root' 1
-    Write-Output 'AUTHORIZATION_FIXTURES|PASS|11 scenarios'
+
+    $untrackedBatchTask = Join-Path $taskDir 'TASK-2026-01-04-untracked-batch.md'
+    Set-Content -LiteralPath $untrackedBatchTask -Value @(
+        '# Untracked Batch Task',
+        '- **Mode**: `Approved Batch Mode`',
+        '- **Batch Authorization**: `N/A`'
+    ) -Encoding utf8
+    Assert-Case 'untracked Approved Batch Mode record requires authorization' 1
+
+    if ($IsWindows) {
+        $outsideDocs = Join-Path (Split-Path $fixtureRoot -Parent) 'external-docs'
+        New-Item -ItemType Directory -Path (Join-Path $outsideDocs 'tasks') -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $outsideDocs 'tasks/batch-external.md') -Value @('# Batch', '- **Declared Boundary**: `review`', '- **Permitted Actions**: `local commits`', '- **Milestone Scope**: `M1`') -Encoding utf8
+        Move-Item -LiteralPath (Join-Path $fixtureRoot 'docs') -Destination (Join-Path $fixtureRoot 'docs-original')
+        New-Item -ItemType Junction -Path (Join-Path $fixtureRoot 'docs') -Target $outsideDocs | Out-Null
+        Write-Task 'review' 'docs/tasks/batch-external.md' 'Approved Batch Mode'
+        Assert-Case 'docs junction cannot escape repository root' 1
+        Write-Output 'AUTHORIZATION_FIXTURES|PASS|13 scenarios'
+    } else {
+        Write-Output 'AUTHORIZATION_FIXTURES|PASS|12 scenarios (Windows junction case is Windows-only)'
+    }
 } finally {
     if ($outsideBatchPath -and (Test-Path -LiteralPath $outsideBatchPath)) { Remove-Item -LiteralPath $outsideBatchPath -Force }
+    $docsPath = Join-Path $fixtureRoot 'docs'
+    if ((Test-Path -LiteralPath $docsPath) -and ((Get-Item -LiteralPath $docsPath -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        Remove-Item -LiteralPath $docsPath -Force
+    }
+    $originalDocsPath = Join-Path $fixtureRoot 'docs-original'
+    if ((Test-Path -LiteralPath $originalDocsPath) -and -not (Test-Path -LiteralPath $docsPath)) { Move-Item -LiteralPath $originalDocsPath -Destination $docsPath }
+    if ($outsideDocs -and (Test-Path -LiteralPath $outsideDocs)) { Remove-Item -LiteralPath $outsideDocs -Recurse -Force }
     Remove-Item -LiteralPath $fixtureRoot -Recurse -Force
 }

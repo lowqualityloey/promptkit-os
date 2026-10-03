@@ -5,8 +5,12 @@ ROOT="."
 BASELINE=""
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        --root) ROOT="${2:-}"; shift 2 ;;
-        --baseline) BASELINE="${2:-}"; shift 2 ;;
+        --root)
+            if [ "$#" -lt 2 ] || [ -z "$2" ]; then echo "Usage: validate-authorization-evidence.sh --baseline <git-ref> [--root PATH]" >&2; exit 2; fi
+            ROOT="$2"; shift 2 ;;
+        --baseline)
+            if [ "$#" -lt 2 ] || [ -z "$2" ]; then echo "Usage: validate-authorization-evidence.sh --baseline <git-ref> [--root PATH]" >&2; exit 2; fi
+            BASELINE="$2"; shift 2 ;;
         *) echo "Usage: validate-authorization-evidence.sh --baseline <git-ref> [--root PATH]" >&2; exit 2 ;;
     esac
 done
