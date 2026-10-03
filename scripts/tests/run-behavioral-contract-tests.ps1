@@ -693,8 +693,29 @@ Assert-Contains "package/bin/promptkit-os.js" "init\.sh" "Courier delegates to t
 Assert-Contains "package/bin/promptkit-os.js" "init\.ps1" "Courier delegates to the canonical init.ps1 on Windows"
 Assert-Contains "package/package.json" '"name": "promptkit-os"' "Courier package name matches the reserved registry name"
 Assert-Contains "package/package.json" "provenance" "Courier publishes with provenance attestation"
-Assert-Contains ".github/workflows/release-npm.yml" "npm publish --provenance" "Release job publishes with provenance"
-Assert-Contains ".github/workflows/release-npm.yml" "id-token: write" "Release job requests OIDC for attestation"
+Assert-Contains ".github/workflows/release-npm.yml" "npm publish.*--provenance" "Release job publishes with provenance"
+Assert-Contains ".github/workflows/release-npm.yml" "^  validate-release:" "Release validation has an unprivileged job"
+Assert-Contains ".github/workflows/release-npm.yml" "^  publish-npm-courier:" "Release publishing has a separate job"
+Assert-Contains ".github/workflows/release-npm.yml" "^      id-token: write" "Only the isolated publish job requests OIDC"
+Assert-Contains ".github/workflows/release-npm.yml" "npm publish.*--ignore-scripts" "Privileged publishing skips package lifecycle scripts"
+$releaseWorkflow = (Get-Content -Path (Join-Path $RepoRoot '.github/workflows/release-npm.yml') -Raw) -replace '\r', ''
+$releaseValidateJob = [regex]::Match($releaseWorkflow, '(?ms)^  validate-release:\n.*?(?=^  publish-npm-courier:)').Value
+$releasePublishJob = [regex]::Match($releaseWorkflow, '(?ms)^  publish-npm-courier:\n.*').Value
+$releaseGlobalPermissions = [regex]::Match($releaseWorkflow, '(?ms)^permissions:\n.*?(?=^jobs:)').Value
+if ($releaseGlobalPermissions -match 'id-token:\s*write' -or $releaseValidateJob -match 'id-token:\s*write' -or $releaseValidateJob -notmatch 'actions/checkout') {
+    Write-Host '  ❌ FAIL: release validation must use checkout without OIDC' -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Write-Host '  ✅ PASS: release validation checks tag code without OIDC' -ForegroundColor Green
+    $script:PassCount++
+}
+if ($releasePublishJob -match 'actions/checkout|npm pack|npm version|bash .*scripts/|node .*package/' -or $releasePublishJob -notmatch 'npm publish .*--ignore-scripts') {
+    Write-Host '  ❌ FAIL: OIDC publish job must publish the verified tarball without running repository code' -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Write-Host '  ✅ PASS: OIDC publish job is isolated from repository code' -ForegroundColor Green
+    $script:PassCount++
+}
 Assert-Contains "README.md" "courier, not a dependency" "README states the courier contract"
 Assert-Contains "README.md" "git submodule add" "Submodule path stays first-documented and canonical"
 Assert-Contains "QUICKSTART.md" "npx promptkit-os@latest" "QUICKSTART documents the optional npx path"

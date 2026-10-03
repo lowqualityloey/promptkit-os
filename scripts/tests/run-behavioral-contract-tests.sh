@@ -703,8 +703,28 @@ assert_contains "package/bin/promptkit-os.js" "init\.sh" "Courier delegates to t
 assert_contains "package/bin/promptkit-os.js" "init\.ps1" "Courier delegates to the canonical init.ps1 on Windows"
 assert_contains "package/package.json" "\"name\": \"promptkit-os\"" "Courier package name matches the reserved registry name"
 assert_contains "package/package.json" "provenance" "Courier publishes with provenance attestation"
-assert_contains ".github/workflows/release-npm.yml" "npm publish --provenance" "Release job publishes with provenance"
-assert_contains ".github/workflows/release-npm.yml" "id-token: write" "Release job requests OIDC for attestation"
+assert_contains ".github/workflows/release-npm.yml" "npm publish.*--provenance" "Release job publishes with provenance"
+assert_contains ".github/workflows/release-npm.yml" "^  validate-release:" "Release validation has an unprivileged job"
+assert_contains ".github/workflows/release-npm.yml" "^  publish-npm-courier:" "Release publishing has a separate job"
+assert_contains ".github/workflows/release-npm.yml" "^      id-token: write" "Only the isolated publish job requests OIDC"
+assert_contains ".github/workflows/release-npm.yml" "npm publish.*--ignore-scripts" "Privileged publishing skips package lifecycle scripts"
+release_validate_job="$(awk '/^  validate-release:/{inside=1} inside && /^  publish-npm-courier:/{exit} inside{print}' .github/workflows/release-npm.yml)"
+release_publish_job="$(awk '/^  publish-npm-courier:/{inside=1} inside{print}' .github/workflows/release-npm.yml)"
+release_global_permissions="$(awk '/^permissions:/{inside=1} inside && /^jobs:/{exit} inside{print}' .github/workflows/release-npm.yml)"
+if grep -q 'id-token: write' <<< "$release_global_permissions" || grep -q 'id-token: write' <<< "$release_validate_job" || ! grep -q 'actions/checkout' <<< "$release_validate_job"; then
+    echo "  ❌ FAIL: release validation must use checkout without OIDC"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+    echo "  ✅ PASS: release validation checks tag code without OIDC"
+    PASS_COUNT=$((PASS_COUNT + 1))
+fi
+if grep -Eq 'actions/checkout|npm pack|npm version|bash .*scripts/|node .*package/' <<< "$release_publish_job" || ! grep -q 'npm publish .*--ignore-scripts' <<< "$release_publish_job"; then
+    echo "  ❌ FAIL: OIDC publish job must publish the verified tarball without running repository code"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+else
+    echo "  ✅ PASS: OIDC publish job is isolated from repository code"
+    PASS_COUNT=$((PASS_COUNT + 1))
+fi
 assert_contains "README.md" "courier, not a dependency" "README states the courier contract"
 assert_contains "README.md" "git submodule add" "Submodule path stays first-documented and canonical"
 assert_contains "QUICKSTART.md" "npx promptkit-os@latest" "QUICKSTART documents the optional npx path"
