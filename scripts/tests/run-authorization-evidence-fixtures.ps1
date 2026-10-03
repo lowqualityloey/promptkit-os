@@ -34,10 +34,17 @@ function Assert-Case([string]$Name, [int]$Expected) {
 try {
     Invoke-Git @('init', '-q')
     Invoke-Git @('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '--allow-empty', '-qm', 'baseline')
-    Write-Task 'review'
+    Set-Content -LiteralPath (Join-Path $taskDir 'TASK-2026-01-01-example.md') -Value @(
+        '# Task Record',
+        '- **Mode**: `Gated Mode`',
+        '- **Batch Authorization**: `N/A`',
+        '- **Commit Evidence**: `old-sha old commit`'
+    ) -Encoding utf8
     Invoke-Git @('add', 'docs/tasks/TASK-2026-01-01-example.md')
     Invoke-Git @('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'seed legacy evidence')
     $script:baseline = (& git.exe -C $fixtureRoot rev-parse HEAD).Trim()
+
+    Write-Task 'review'
     Assert-Case 'valid run checkpoint' 0
 
     $taskPath = Join-Path $taskDir 'TASK-2026-01-01-example.md'
