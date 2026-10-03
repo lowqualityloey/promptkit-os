@@ -112,6 +112,8 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    - **Backend — Java / Spring Boot**: `pom.xml` or Gradle build files plus Spring Boot dependency/plugin evidence; mount [`systems-java-spring.md`](../docs/stacks/systems-java-spring.md).
    - **Backend — C# / ASP.NET Core**: `.csproj` or `.sln` plus ASP.NET Core references; mount [`systems-csharp-dotnet.md`](../docs/stacks/systems-csharp-dotnet.md).
    - **Database — PostgreSQL / MySQL**: identify the engine from connection configuration, driver, or dialect-specific migration evidence. Migration folders alone are candidates, not proof; mount only the matching [`database-postgres.md`](../docs/stacks/database-postgres.md) or [`database-mysql.md`](../docs/stacks/database-mysql.md).
+   - **Deploy — AWS**: `cdk.json`, SAM config/template, or CloudFormation evidence; mount [`deploy-aws.md`](../docs/stacks/deploy-aws.md).
+   - **Deploy — Google Cloud**: Cloud Run/Functions, Cloud Build or Terraform resources with GCP provider evidence; generic YAML alone is insufficient; mount [`deploy-gcp.md`](../docs/stacks/deploy-gcp.md).
    - **Backend — Clean / Hexagonal**: `domain/`, `application/`, `infrastructure/`, `adapters/`.
    - **Frontend — Feature-Sliced / Component**: `src/features/*`, `src/modules/*`.
    - **Monorepo Multi-Package Topology**:
