@@ -5,8 +5,12 @@ version: 1
 token_budget: 1500
 activation:
   manifests:
-    - migrations/
-    - db/migrations/
+    - .env.example
+    - application.yml
+    - application.properties
+    - settings.py
+    - compose.yaml
+    - docker-compose.yml
     - knexfile.js
     - prisma/schema.prisma
     - drizzle.config.ts
@@ -28,7 +32,7 @@ anti_patterns:
 ---
 # MySQL Playbook
 
-Confirm MySQL from connection configuration, driver, or dialect-specific migrations. Shared migration folder names alone do not identify the engine.
+Confirm an active module datasource using an explicit MySQL URL (`mysql://`, `jdbc:mysql:`, or `jdbc:mariadb:` when the target is MySQL-compatible), ORM/provider value (`mysql`), dialect-specific migration configuration, or a MySQL service image used by the module's integration environment. Knex, Prisma, Drizzle, compose files, and migration directories are candidate paths: inspect their content and active references. An installed driver or generic `migrations/` folder alone is not proof. Prefer the module's configured engine; if PostgreSQL and MySQL signals conflict, report that datasource as unconfirmed. Separate active modules may select both and must record scope. If the project uses a managed MySQL-compatible service, follow its existing provider playbook as well.
 
 ## 1. Architectural Invariants
 

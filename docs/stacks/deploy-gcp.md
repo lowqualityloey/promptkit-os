@@ -27,7 +27,7 @@ anti_patterns:
 ---
 # Google Cloud Deployment Playbook
 
-Confirm Cloud Run/Functions manifests, Cloud Build configuration, or Terraform resources. Generic YAML files are not sufficient evidence by themselves.
+Treat these manifest names as candidates, never as proof. Confirm Cloud Run with a `serving.knative.dev/v1` `Service`, a `run.googleapis.com` service declaration, or a checked-in command explicitly targeting Cloud Run. Confirm Functions with a Functions deployment declaration or command naming the function target. Terraform must declare the Google provider and a Cloud Run or Functions resource. Cloud Build must contain a step that deploys one of those confirmed targets; a generic `cloudbuild.yaml` is insufficient. Dockerfiles, generic `*.tf`, language manifests, and Google SDK dependencies alone do not activate this playbook. If target identity or scope is unresolved, report it as unconfirmed.
 
 ## 1. Architectural Invariants
 

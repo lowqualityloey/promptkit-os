@@ -25,7 +25,7 @@ anti_patterns:
 ---
 # C# .NET Backend Playbook
 
-Confirm ASP.NET Core and EF Core references in the project before selecting this guidance. Use the solution's target framework and existing central package management rather than pinning versions here.
+Select for a `.csproj` using `Microsoft.NET.Sdk.Web`, `Microsoft.NET.Sdk.Worker`, or EF Core. Resolve inherited `Sdk` values in `Directory.Build.props` / imported targets and EF Core versions through `Directory.Packages.props`; if those files cannot be resolved, report the framework as unconfirmed. Web and Worker projects do not require the same entry-point/controller structure. EF Core guidance applies to backend libraries only when an EF Core package is actually referenced; plain class libraries stay unselected.
 
 ## 1. Architectural Invariants
 

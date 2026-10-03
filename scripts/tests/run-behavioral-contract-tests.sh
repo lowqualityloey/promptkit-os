@@ -24,6 +24,20 @@ assert_contains() {
     fi
 }
 
+assert_not_contains() {
+    local file="$1"
+    local pattern="$2"
+    local desc="$3"
+
+    if grep -Ei "$pattern" "$REPO_ROOT/$file" >/dev/null 2>&1; then
+        echo "  ❌ FAIL: $desc (unexpected pattern '$pattern' found in $file)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    else
+        echo "  ✅ PASS: $desc"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    fi
+}
+
 echo ""
 echo "🧪 Running PromptKit OS Behavioral Prompt-Contract Tests"
 echo "==========================================================="
@@ -792,22 +806,31 @@ assert_contains "scripts/isolate-worktree.ps1" "LASTEXITCODE" "PowerShell worktr
 assert_contains "scripts/isolate-worktree.sh" "Failed to create worktree" "Bash worktree isolation utility checks worktree add exit code"
 assert_contains "scripts/isolate-worktree.sh" "Failed to merge branch" "Bash worktree isolation utility checks merge exit code"
 
-echo "📌 Scenario AP: KMP, Backend, Database, Cloud Playbooks and Cross-Cutting Recipes (#519-#523)"
+echo "📌 Scenario AP: Stack activation contracts and recipe wiring (#519-#523; static only)"
 for playbook in mobile-kmp systems-java-spring systems-csharp-dotnet database-postgres database-mysql deploy-aws deploy-gcp; do
-    assert_contains "docs/stacks/$playbook.md" "^name: $playbook$" "$playbook playbook exists with matching name"
+    assert_contains "docs/stacks/$playbook.md" "^name: $playbook$" "$playbook frontmatter declares its matching name"
     assert_contains "docs/stacks/README.md" "$playbook.md" "Stack catalog indexes $playbook"
 done
 assert_contains "workflows/onboard.md" "org.jetbrains.kotlin.multiplatform" "KMP activation requires the applied plugin"
-assert_contains "workflows/onboard.md" "unused catalog alias" "KMP detection rejects an unused version-catalog alias"
-assert_contains "workflows/onboard.md" "systems-java-spring.md" "Onboarding detects Java Spring"
-assert_contains "workflows/onboard.md" "systems-csharp-dotnet.md" "Onboarding detects ASP.NET Core"
-assert_contains "workflows/onboard.md" "database-postgres.md" "Onboarding detects PostgreSQL from engine evidence"
-assert_contains "workflows/onboard.md" "deploy-aws.md" "Onboarding detects AWS deployment"
-assert_contains "workflows/onboard.md" "deploy-gcp.md" "Onboarding detects GCP deployment"
+assert_contains "workflows/onboard.md" "unused catalog alias" "KMP activation excludes an unused alias"
+assert_contains "workflows/onboard.md" "plain Android/JVM" "KMP activation excludes Android/JVM-only projects"
+assert_contains "workflows/onboard.md" "systems-java-spring.md" "Onboarding documents Spring Boot selection"
+assert_contains "workflows/onboard.md" "Microsoft.NET.Sdk.Worker" ".NET activation documents Worker services"
+assert_contains "workflows/onboard.md" "Microsoft.EntityFrameworkCore" ".NET activation documents EF Core libraries"
+assert_contains "workflows/onboard.md" "Directory.Packages.props" ".NET activation documents central package resolution"
+assert_contains "workflows/onboard.md" "active module configuration" "Database activation requires active configuration"
+assert_contains "workflows/onboard.md" "driver dependency or generic migration folder alone is insufficient" "Database activation rejects incidental drivers and migration folders"
+assert_contains "workflows/onboard.md" "active signals conflict" "Database activation reports conflicting engines as unconfirmed"
+assert_contains "workflows/onboard.md" "serving.knative.dev/v1" "GCP activation requires a concrete Cloud Run target"
+assert_contains "workflows/onboard.md" "provider \"google\"" "GCP Terraform activation requires the Google provider"
+assert_contains "workflows/onboard.md" 'generic `cloudbuild.yaml`' "GCP activation rejects generic Cloud Build files"
+assert_contains "workflows/onboard.md" "plain class library without EF Core stays unselected" ".NET activation excludes plain class libraries"
 assert_contains "docs/recipes/state-management.md" "## 3. Anti-Patterns to Avoid" "State recipe follows required structure"
 assert_contains "docs/recipes/websocket-realtime.md" "ping/pong heartbeats" "WebSocket recipe defines heartbeat lifecycle"
 assert_contains "workflows/api.md" "docs/recipes/websocket-realtime.md" "API workflow links WebSocket recipe"
 assert_contains "workflows/design-system.md" "docs/recipes/state-management.md" "Design workflow links state-management recipe"
+assert_not_contains "templates/agent-directive-template.md" "state-management.md" "State recipe is not permanently injected"
+assert_not_contains "templates/agent-directive-template.md" "websocket-realtime.md" "WebSocket recipe is not permanently injected"
 
 echo ""
 echo "📊 Behavioral Contract Verification Summary"

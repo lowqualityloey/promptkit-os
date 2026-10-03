@@ -5,8 +5,12 @@ version: 1
 token_budget: 1500
 activation:
   manifests:
-    - migrations/
-    - db/migrations/
+    - .env.example
+    - application.yml
+    - application.properties
+    - settings.py
+    - compose.yaml
+    - docker-compose.yml
     - alembic.ini
     - prisma/schema.prisma
     - drizzle.config.ts
@@ -28,7 +32,7 @@ anti_patterns:
 ---
 # PostgreSQL Playbook
 
-Confirm PostgreSQL from connection configuration, driver, or migration syntax; generic migration folders alone identify a database candidate, not its engine.
+Confirm an active module datasource using an explicit PostgreSQL URL (`postgresql://`, `postgres://`, or `jdbc:postgresql:`), ORM/provider value (`postgresql` / `postgres`), dialect-specific migration configuration, or a PostgreSQL service image used by the module's integration environment. `alembic.ini`, Prisma, Drizzle, compose files, and migration directories are candidate paths: inspect their content and active references. An installed driver or generic `migrations/` folder alone is not proof. Prefer the module's configured engine; if PostgreSQL and MySQL signals conflict, report that datasource as unconfirmed. Separate active modules may select both and must record scope. Respect managed-provider guidance when the project uses Supabase, Neon, or another PostgreSQL service.
 
 ## 1. Architectural Invariants
 

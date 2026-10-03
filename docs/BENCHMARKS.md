@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [25 Inlined Workflows (106,685 tok) + Templates + Protocols] │
+│ Every Turn: [25 Inlined Workflows (107,009 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -41,11 +41,11 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
 | Core-six Lite subset | 6 | **26,944 tok** |
-| Full workflow set | 25 | **106,685 tok** |
+| Full workflow set | 25 | **107,009 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
-> **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (91% Balanced, 95% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (19–34% Balanced, 23–39% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
+> **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (91% Balanced, 95% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (19–34% Balanced, 23–38% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
 
 | Component (Balanced) | Lines | Approx. Token Weight | Purpose |
 | :--- | :---: | :---: | :--- |
@@ -98,7 +98,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,734 tok** | **8,670 tok** | **-24% Balanced, -33% Lite (-3,127 to -4,191 tok)** |
 | **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **20,046 tok** | **18,982 tok** | **-19% Balanced, -23% Lite (-4,620 to -5,684 tok)** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **16,257 tok** | **15,193 tok** | **-34% Balanced, -39% Lite (-8,504 to -9,568 tok)** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **16,320 tok** | **15,256 tok** | **-34% Balanced, -38% Lite (-8,441 to -9,505 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 

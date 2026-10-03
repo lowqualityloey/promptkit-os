@@ -25,11 +25,11 @@ Stack playbooks are activated **just-in-time (JIT)** when detectable project man
 | [`mobile-flutter.md`](mobile-flutter.md) | `mobile` | `pubspec.yaml` | $\le$ 1,500 tok | `flutter analyze` / `flutter test` / `flutter build` |
 | [`mobile-kmp.md`](mobile-kmp.md) | `mobile` | Gradle build files + confirmed `org.jetbrains.kotlin.multiplatform` plugin | $\le$ 1,500 tok | `compileCommonMainKotlinMetadata` / `allTests` / `check` |
 | [`systems-java-spring.md`](systems-java-spring.md) | `systems` | `pom.xml`, `build.gradle`, `build.gradle.kts` + Spring Boot | $\le$ 1,500 tok | Maven compile / test / verify |
-| [`systems-csharp-dotnet.md`](systems-csharp-dotnet.md) | `systems` | `*.csproj`, `*.sln` + ASP.NET Core | $\le$ 1,500 tok | `dotnet build` / `dotnet test` / `dotnet format --verify-no-changes` |
-| [`database-postgres.md`](database-postgres.md) | `database` | PostgreSQL config/driver + migration tooling | $\le$ 1,500 tok | connection check / migration validation / integration suite |
-| [`database-mysql.md`](database-mysql.md) | `database` | MySQL config/driver + migration tooling | $\le$ 1,500 tok | connection check / migration validation / integration suite |
+| [`systems-csharp-dotnet.md`](systems-csharp-dotnet.md) | `systems` | `.csproj` with confirmed Web SDK, Worker SDK, or EF Core reference | $\le$ 1,500 tok | `dotnet build` / `dotnet test` / `dotnet format --verify-no-changes` |
+| [`database-postgres.md`](database-postgres.md) | `database` | Active PostgreSQL datasource, dialect, or test-service image | $\le$ 1,500 tok | connection check / migration validation / integration suite |
+| [`database-mysql.md`](database-mysql.md) | `database` | Active MySQL datasource, dialect, or test-service image | $\le$ 1,500 tok | connection check / migration validation / integration suite |
 | [`deploy-aws.md`](deploy-aws.md) | `cloud` | `cdk.json`, SAM or CloudFormation manifests | $\le$ 1,500 tok | synth / diff / `cfn-lint` |
-| [`deploy-gcp.md`](deploy-gcp.md) | `cloud` | Cloud Run/Build manifests or Terraform resources | $\le$ 1,500 tok | manifest check / dry-run / `terraform validate` |
+| [`deploy-gcp.md`](deploy-gcp.md) | `cloud` | Confirmed Cloud Run/Functions target in config, command, or Google-provider resource | $\le$ 1,500 tok | manifest check / dry-run / `terraform validate` |
 | [`systems-go.md`](systems-go.md) | `systems` | `go.mod`, `go.sum` | $\le$ 1,500 tok | `go vet` / `go test -race ./...` / `golangci-lint run` |
 | [`systems-rust.md`](systems-rust.md) | `systems` | `Cargo.toml`, `Cargo.lock` | $\le$ 1,500 tok | `cargo check` / `cargo test` / `cargo clippy -- -D warnings` |
 | [`web-astro.md`](web-astro.md) | `web` | `astro.config.mjs`, `astro.config.ts`, `astro.config.js` | $\le$ 1,500 tok | `npx astro check` / `npx astro build` / `npm test` |
