@@ -97,6 +97,14 @@ git -C "$bundle/repository" add src/m2/new.md
 git -C "$bundle/repository" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'unauthorized M2 change under dot segment scope'
 assert_result 'dot-segment M2 scope is rejected' 2 'provenance|INVALID|m2-path-prefix-invalid' "$bundle"
 
+bundle="$TEMP_ROOT/trailing-double-slash-scope"
+new_bundle trailing-double-slash-scope
+printf 'src/m2//\n' > "$bundle/m2-paths.txt"
+printf 'unauthorized\n' > "$bundle/repository/src/m2/new.md"
+git -C "$bundle/repository" add src/m2/new.md
+git -C "$bundle/repository" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'unauthorized M2 change under repeated trailing slash scope'
+assert_result 'repeated trailing slash M2 scope is rejected' 2 'provenance|INVALID|m2-path-prefix-invalid' "$bundle"
+
 for invalid_prefix in 'src//m2/' 'src\m2/' 'C:/src/m2/'; do
     bundle="$TEMP_ROOT/invalid-prefix-${invalid_prefix//[^[:alnum:]]/_}"
     new_bundle "invalid-prefix-${invalid_prefix//[^[:alnum:]]/_}"
@@ -151,4 +159,4 @@ echo 'src/m2/handler.ts' > "$bundle/repository/.gitignore"
 echo 'unauthorized' > "$bundle/repository/src/m2/handler.ts"
 assert_result 'ignored untracked M2 file fails' 1 'repository|FAIL|m2-path=src/m2/handler.ts' "$bundle"
 
-echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|21 cases'
+echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|22 cases'

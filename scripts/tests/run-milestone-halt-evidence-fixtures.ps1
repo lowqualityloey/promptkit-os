@@ -84,6 +84,14 @@ try {
     Invoke-Git $repo @('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'unauthorized dot segment M2 scope')
     Assert-Case 'dot-segment M2 scope is rejected' $bundle 2 'provenance|INVALID|m2-path-prefix-invalid'
 
+    $bundle = New-Bundle 'trailing-double-slash-scope'
+    Set-Content -LiteralPath (Join-Path $bundle 'm2-paths.txt') -Value 'src/m2//' -NoNewline -Encoding utf8
+    $repo = Join-Path $bundle 'repository'
+    Set-Content -LiteralPath (Join-Path $repo 'src/m2/new.md') -Value 'unauthorized' -Encoding utf8
+    Invoke-Git $repo @('add', 'src/m2/new.md')
+    Invoke-Git $repo @('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'unauthorized repeated trailing slash M2 scope')
+    Assert-Case 'repeated trailing slash M2 scope is rejected' $bundle 2 'provenance|INVALID|m2-path-prefix-invalid'
+
     foreach ($invalidPrefix in @('src//m2/', 'src\m2/', 'C:/src/m2/')) {
         $name = 'invalid-prefix-' + ($invalidPrefix -replace '[^A-Za-z0-9]', '_')
         $bundle = New-Bundle $name
@@ -131,7 +139,7 @@ try {
     Set-Content -LiteralPath (Join-Path $repo '.gitignore') -Value 'src/m2/ignored.ts'
     Set-Content -LiteralPath (Join-Path $repo 'src/m2/ignored.ts') -Value 'unauthorized'
     Assert-Case 'ignored untracked M2 file fails' $bundle 1 'repository|FAIL|m2-path=src/m2/ignored.ts'
-    Write-Output 'MILESTONE_EVIDENCE_FIXTURES|PASS|20 cases'
+    Write-Output 'MILESTONE_EVIDENCE_FIXTURES|PASS|21 cases'
 } finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force
 }
