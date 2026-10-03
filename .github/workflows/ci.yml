@@ -104,6 +104,9 @@ jobs:
       - name: Run Courier Integrity Pin Fixture Harness
         run: bash scripts/tests/run-courier-integrity-pin-fixtures.sh
 
+      - name: Run Release Archive Commit-Binding Fixture Harness
+        run: bash scripts/tests/run-release-archive-verification-fixtures.sh
+
       - name: Run Agent Execution Control Property Harness (Bash)
         run: bash scripts/tests/run-execution-control-properties.sh
 
