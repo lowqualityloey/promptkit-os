@@ -89,7 +89,7 @@ All host environments—including Claude Code, Cursor, and GitHub Copilot—rema
 | **Windsurf (Codeium)** | `.windsurfrules` | Untested | None | Next major host release |
 | **Cline / Roo Code** | `.clinerules` | Untested | None | Next major host release |
 | **Trae IDE** | `.traerules` | Untested | None | Next major host release |
-| **OpenCode** | `.opencode/rules.md` | Untested | No valid live capture; pre-#516 attempt invalid (no provider credentials) | Maintainer live capture required |
+| **OpenCode** | `.opencode/rules.md` | Untested | No valid live capture; pre-#516 and post-#516 attempts invalid (no provider credentials) | Maintainer live capture required |
 | **Aider** | `CONVENTIONS.md` | Untested | None | Next major host release |
 | **Codex CLI** | `AGENTS.md` | Untested | None | Next major host release |
 
