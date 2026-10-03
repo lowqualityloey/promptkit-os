@@ -15,12 +15,12 @@ function Write-Task([string]$Boundary, [string]$BatchPath = 'N/A', [string]$Batc
     $lines += '<a id="AUTHZ-example-001"></a>'
     if ($IncludeFields) {
         $lines += "- **Declared Boundary**: ``$Boundary``"
-        $lines += '- **Verbatim Human Instruction**: ``Run M1 through review only``'
-        $lines += '- **Instruction Source**: ``user message 1``'
-        $lines += '- **Frozen Task and Milestone Scope**: ``M1 files only``'
+        $lines += '- **Verbatim Human Instruction**: `Run M1 through review only`'
+        $lines += '- **Instruction Source**: `user message 1`'
+        $lines += '- **Frozen Task and Milestone Scope**: `M1 files only`'
     }
     $lines += "- **Batch Authorization Reference**: ``$BatchPath``"
-    $lines += '- **Commit Evidence Entry**: ``abc123 message; Authorization Checkpoint Reference: AUTHZ-example-001; Authorization Source: user message 1``'
+    $lines += '- **Commit Evidence Entry**: `abc123 message; Authorization Checkpoint Reference: AUTHZ-example-001; Authorization Source: user message 1`'
     Set-Content -LiteralPath (Join-Path $taskDir 'TASK-2026-01-01-example.md') -Value $lines -Encoding utf8
 }
 
