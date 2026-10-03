@@ -71,7 +71,7 @@
 - **Verification Evidence**: `Playbook schema and token checks passed locally; reference validation passed. Static assertions do not establish actual onboarding selection.`
 - **CI Evidence**: PR #524 [CI run 37153065712](https://github.com/lowqualityloey/promptkit-os/actions/runs/37153065712) passed Linux, Windows, and staged secret scan at implementation revision `66051df441c29c0b3b23dc39cb035094b2d619b1` (2026-10-04).
 - **Review Evidence**: `Pending final PR review.`
-- **Commit Evidence**: `Feature commit 840888e; source-verification follow-up 9f8f981.`
+- **Commit Evidence**: `Feature commits b7b0770 and 9f8f981.`
 - **Pull Request Evidence**: [PR #524](https://github.com/lowqualityloey/promptkit-os/pull/524)
 - **Release Evidence**: `N/A - documentation work.`
 - **Blocker and Resume Condition**: `Live onboarding evidence is pending. Resume when the maintainer can run KMP and plain Android seed repositories through pk:onboard and preserve transcripts.`

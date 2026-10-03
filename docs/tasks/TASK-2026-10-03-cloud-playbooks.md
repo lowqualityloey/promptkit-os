@@ -70,7 +70,7 @@
 - **Verification Evidence**: `Static schema, token, and reference checks passed locally; they do not establish actual provider selection.`
 - **CI Evidence**: PR #524 [CI run 37153065712](https://github.com/lowqualityloey/promptkit-os/actions/runs/37153065712) passed Linux, Windows, and staged secret scan at implementation revision `66051df441c29c0b3b23dc39cb035094b2d619b1` (2026-10-04).
 - **Review Evidence**: `Pending final PR review.`
-- **Commit Evidence**: `Feature commits c447331 and 840888e.`
+- **Commit Evidence**: `Feature commit c447331.`
 - **Pull Request Evidence**: [PR #524](https://github.com/lowqualityloey/promptkit-os/pull/524)
 - **Release Evidence**: `N/A - documentation work.`
 - **Blocker and Resume Condition**: `Provider smoke evidence is pending. Resume with representative CDK, SAM, Cloud Run, Functions, and generic-manifest seed repositories.`
