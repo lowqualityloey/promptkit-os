@@ -12,6 +12,8 @@ new_bundle() {
     local name="$1" bundle="$TEMP_ROOT/$1"
     mkdir -p "$bundle/repository/docs" "$bundle/repository/src/m2"
     git -C "$bundle/repository" init -q
+    git -C "$bundle/repository" config user.name Fixture
+    git -C "$bundle/repository" config user.email fixture@example.invalid
     git -C "$bundle/repository" -c user.name=Fixture -c user.email=fixture@example.invalid commit --allow-empty -qm seed
     printf 'M1 Status: complete\nM2 Status: pending human sign-off\n' > "$bundle/repository/docs/STATE.md"
     printf 'seed\n' > "$bundle/repository/src/m2/README.md"
