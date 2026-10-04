@@ -45,6 +45,38 @@ The developer must never wonder what to type or whether they have to write an es
 
 ---
 
+## Pre-Response Check (Compact, Per Turn)
+
+Before composing the reply, answer five questions from the current execution state. This is a **reasoning step, not a mandated tool call** (see *Honest Limits* below).
+
+1. **Stop state** — genuine halt (`🛑ACTION REQUIRED` / `🚫BLOCKED`), advisory turn, or *Quiet Completion*? Silence is only correct for the third.
+2. **Highest applicable callout** — exactly one, at the highest applicable tier per *The Single-Callout Invariant*.
+3. **Concrete action + reply hint** — does it name one specific thing the human must do and close with a `👉 Reply:` line from the *Mandatory Reply Hint Contract*?
+4. **Retention** — is every *other* unresolved human action still recorded and unchanged?
+5. **Turn obligations** — TL;DR on substantive turns (informational L0 fast-path replies stay exempt), and every number traced to this turn per the *Provenance Invariant* or reported `not measured`.
+
+### Suppression Is Not Resolution
+
+A lower-priority action that was not shown stays **recorded, unresolved, and unchanged** in the canonical record. The Single-Callout Invariant limits how many *boxes* a turn renders; it never discharges an obligation. Re-surface the action on the turn it becomes the highest applicable one. Never state or imply that "only one callout was shown" means the others were handled, approved, or dropped.
+
+### Reply Interpretation Is Record-Bound
+
+`done`, `merged`, a bare number, `continue`, `retry`, and `skip` resolve **only the recorded action they were offered against**. They never authorize an unrelated protected action (commit, push, PR, release, deploy, rollback, scope change), never cross a milestone boundary, and never promote a Priority 2 blocker into a Priority 1 approval. Where an externally observable condition exists — PR merged, CI green, file written, value on disk — verify it in this turn before treating the action as met: a reply is a claim about the human's side of the world, not evidence for it.
+
+### Resolution Requires the Recorded Condition
+
+An action is resolved only when its recorded condition is actually met and, where one exists, verified as above. Until then it stays pending across turns, compaction, and handoff. Pending actions live in the canonical record the work already requires — never in a second parallel action ledger — and that record holds no credentials, tokens, or secret values; reference the env key or secret store instead.
+
+### Cards-Off Still Communicates Genuine Halts
+
+`card-style: off` / `status-cards: off` suppresses only the decorative card and advisory framing, never a genuine halt. A `🛑ACTION REQUIRED` or `🚫BLOCKED` stop still fires with its concrete action and reply hint intact, rendered in plain text when nothing decorative is shown.
+
+### Honest Limits
+
+The host cannot mechanically halt an agent, inspect a future turn, or detect a missing callout; this check is a stated discipline that any model may still under-apply, and no claim is made that it prevents measured session drift. It adds no mandatory disk read or tool call to a trivial reply. Where an existing protocol already requires reading the canonical record for current state (e.g. *STATE.md Untrusted Until Read*, `pk:checkpoint`), that read answers the check too — the check never mandates an additional one.
+
+---
+
 ## Dual-Compatible Telemetry Status Cards
 
 Provides dual-mode rendering: **Framed Mode** (ceiling-and-floor boxes, default) and **Markdown Mode** (for GitHub-style blockquote alerts in rich renderers).

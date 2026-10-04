@@ -95,6 +95,17 @@ Record an in-scope bug detour **inside this Task Record** — never as a second 
 
 Detour evidence never satisfies the parent's remaining acceptance criteria, and a detour cannot grant new authority — expanded scope or new approvals require human confirmation through the existing interception routes. On compaction or handoff, recovery reconciles against this block so it never spawns a duplicate parent task or drops a pending next action.
 
+### Pending Human Actions (Optional)
+
+Track unresolved human actions **inside this Task Record** — never in a second parallel action ledger, and never store credentials, tokens, or secret values here (reference the env key or secret store instead). Omit this block when nothing is pending. Contract: `protocols/telemetry-cards.md` *Pre-Response Check*.
+
+| Pending Action ID | Reason and Required Condition | Owner | Status | Authority Scope | Resume Condition |
+|---|---|---|---|---|---|
+| `PENDING-<task-slug>-<nn>` | `[Why it is pending and the exact observable condition that resolves it]` | `[Human role/name]` | `pending` <!-- pending | resolved | withdrawn --> | `[What the reply may authorize — never an unrelated protected action or a milestone boundary]` | `[Precise condition to resume]` |
+
+- **Pending Action Retention**: `An action stays pending across turns, compaction, and handoff until its recorded condition is actually met and, where an externally observable condition exists, verified. A callout suppressed by the Single-Callout Invariant is retained unchanged — suppression is not resolution.`
+- **Reply Binding**: `A done / merged / numeric / continue reply resolves only the recorded action it was offered against; record the resolving reply and its evidence here.`
+
 ## 6. Evidence and Completion Gate
 
 - **Changed Files**:
