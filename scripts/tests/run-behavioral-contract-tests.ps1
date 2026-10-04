@@ -448,8 +448,8 @@ function Check-BenchmarkFigure([string]$Description, [object]$Measured, [object]
 
 Check-BenchmarkFigure "Balanced static directive" (Get-StaticMeasurement 'BALANCED' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Balanced)')
 Check-BenchmarkFigure "Lite static directive" (Get-StaticMeasurement 'LITE' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')
-Check-BenchmarkFigure "Balanced static reduction percent" (Get-StaticSavingsPercent $balancedSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~27.4k current core-subset baseline¹' 'Balanced')
-Check-BenchmarkFigure "Lite static reduction percent" (Get-StaticSavingsPercent $liteSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~27.4k current core-subset baseline¹' 'Lite')
+Check-BenchmarkFigure "Balanced static reduction percent" (Get-StaticSavingsPercent $balancedSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~27.5k current core-subset baseline¹' 'Balanced')
+Check-BenchmarkFigure "Lite static reduction percent" (Get-StaticSavingsPercent $liteSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~27.5k current core-subset baseline¹' 'Lite')
 Check-BenchmarkFigure "Full workflow-set token total" (Get-FullsetTokens $fullsetOutput) (Get-BenchmarkMetric 'Inventory' 'Measured Tokens' 'Full workflow set')
 Check-BenchmarkFigure "Core-six workflow-set token total" (Get-CoreSixTokens $fullsetOutput) (Get-BenchmarkMetric 'Inventory' 'Measured Tokens' 'Core-six Lite subset')
 $liveWorkflowCount = @(Get-ChildItem (Join-Path $RepoRoot "workflows") -Filter "*.md" -File).Count

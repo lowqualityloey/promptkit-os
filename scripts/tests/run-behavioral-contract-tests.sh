@@ -427,9 +427,9 @@ check_benchmark_figure "Balanced static directive" "$(static_metric BALANCED)" \
 check_benchmark_figure "Lite static directive" "$(static_metric LITE)" \
     "$(benchmark_metric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')"
 check_benchmark_figure "Balanced static reduction percent" "$(static_savings_percent "$BALANCED_SAVINGS_OUT")" \
-    "$(benchmark_metric 'Profile' 'Reduction vs ~27.4k current core-subset baseline¹' 'Balanced')"
+    "$(benchmark_metric 'Profile' 'Reduction vs ~27.5k current core-subset baseline¹' 'Balanced')"
 check_benchmark_figure "Lite static reduction percent" "$(static_savings_percent "$LITE_SAVINGS_OUT")" \
-    "$(benchmark_metric 'Profile' 'Reduction vs ~27.4k current core-subset baseline¹' 'Lite')"
+    "$(benchmark_metric 'Profile' 'Reduction vs ~27.5k current core-subset baseline¹' 'Lite')"
 check_benchmark_figure "Full workflow-set token total" "$(fullset_measured_tokens "$FULLSET_OUT")" \
     "$(benchmark_metric 'Inventory' 'Measured Tokens' 'Full workflow set')"
 check_benchmark_figure "Core-six workflow-set token total" "$(core_six_measured_tokens "$FULLSET_OUT")" \

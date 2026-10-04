@@ -140,8 +140,8 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 
 The core instruction layer stays small. Workflows, stack playbooks, and boundary recipes are loaded only when the task requires them.
 
-- **Balanced** profile: ~2,394 tok static footprint (~91% static saving vs. ~27.4k current core-subset baseline; 2,500 tok budget cap)
-- **Lite** profile: ~1,331 tok static footprint (~95% static saving vs. the current baseline; 1,500 tok budget cap)
+- **Balanced** profile: ~2,401 tok static footprint (~91% static saving vs. ~27.5k current core-subset baseline; 2,500 tok budget cap)
+- **Lite** profile: ~1,338 tok static footprint (~95% static saving vs. the current baseline; 1,500 tok budget cap)
 
 PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), enforcing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 task risk ceremony). Retrieval confidence is treated as evidence rather than authority, ensuring high-risk boundaries trigger mandatory zoom-outs.
 
