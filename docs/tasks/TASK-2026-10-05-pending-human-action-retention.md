@@ -78,13 +78,13 @@
 - **Event-Driven Checkpoints**: `Milestone, scope change, compaction, handoff, or context drift.`
 - **Stop Conditions**: `Failed verification, static budget breach, scope expansion beyond the recorded In Scope boundary, missing approval for a gated action, or developer stop.`
 - **Host Timer Capability**: `The host cannot mechanically halt generation, detect a missing callout, or observe whether a reply satisfied a recorded condition; this is a stated discipline, not an enforced control.`
-- **Execution State**: `awaiting_review`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Execution State**: `completed`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-10-05`
 - **Current Actor**: `Sisyphus (executor)`
 - **Branch / Revision**: `fix/drift-527-530` (base `origin/main` @ `2fee6d7`)
-- **Next Action**: `Await human review of the combined #527-#530 drift-series PR; merge remains human-only.`
+- **Next Action**: `None — merged in PR #532. Successor work is tracked in #525.`
 
 ### Transition History
 
@@ -93,6 +93,7 @@
 | N/A | planned | 2026-10-05 | Sisyphus | Task initialized from issue #529 source-backed response/recovery gap. | Issue #529 |
 | planned | in_progress | 2026-10-05 | Sisyphus | Delegated the two directives and the callout protocol under a hard byte budget, then integrated the record block and figure propagation. | Local edits on branch fix/drift-527-530 |
 | in_progress | awaiting_review | 2026-10-05 | Sisyphus | Directive triggers, protocol section, and record block in place inside budget; full gate suite green. | 420/420 behavioral contracts |
+| awaiting_review | completed | 2026-10-05 | Sisyphus (executor) | PR #532 merged; post-merge commit, PR, CI, and review evidence recorded. | PR #532 / 4c858b0 |
 
 ## 6. Evidence and Completion Gate
 
@@ -111,7 +112,7 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**:
+- **Verification Evidence**: `Behavioral contract suite 420 passed / 0 failed; execution control VALID (61 records); strict static budgets pass with Balanced 2,475/2,500 and Lite 1,411/1,500 with no budget constant raised; all six per-task baselines pass; validate-references, reference-link harness, release-record examples, profile matrix 10/10, token-budget regression 7/7, execution-control properties, playbook contracts, math labels, and git diff --check passed. Itemized commands are recorded below.`
   - `bash scripts/tests/run-behavioral-contract-tests.sh` passed (420 passed, 0 failed).
   - `bash scripts/measure-tokens.sh --strict` passed (BALANCED 2475/2500, LITE 1411/1500). The directive addition is 294 bytes each, consuming 74 and 73 tokens and leaving 25 and 89 tokens of headroom without raising any budget constant.
   - `bash scripts/measure-per-task-tokens.sh --strict` passed for all six payload gates.
@@ -120,13 +121,14 @@
   - Re-measured after the change: Balanced static directive 2,401 -> 2,475 tok (9,604 -> 9,898 bytes, 70 lines); Lite 1,338 -> 1,411 tok (5,350 -> 5,644 bytes, 55 lines); static reductions unchanged at 92% Balanced and 95% Lite; `pk:fix` 10,597 -> 10,671 and 9,534 -> 9,607 tok (-18%/-26% -> -17%/-25%); `pk:plan` 20,097 -> 20,171 and 19,034 -> 19,107 tok (-19% -> -18% Balanced); `pk:ship` 16,371 -> 16,445 and 15,308 -> 15,381 tok (percentages unchanged).
   - Diff to `protocols/telemetry-cards.md` is insertion-only: 32 lines added, 0 removed, so no pinned heading or contract phrase was reworded.
   - Not verified: PowerShell behavioral-contract parity cannot execute in this WSL environment (measurement tool exits 64, reproducing on a pristine worktree at `2fee6d7`); Windows CI is authoritative. No live host capture was performed, so no model-conformance result is claimed.
-- **CI Evidence**: `Pending — Windows CI is the authoritative parity check for the PowerShell behavioral-contract variant.`
-- **Review Evidence**: `N/A — no separate review record for this change.`
-- **Commit Evidence**: `Pending at record-update time; see the branch commit for #529.`
-- **Pull Request Evidence**: `Pending — human-confirmed before opening.`
+- Final merged measurement at `4c858b0`: core-six Lite subset **29,391 tok**, full 25-workflow set **111,086 tok**, Balanced **2,475/2,500**, Lite **1,411/1,500**, `pk:fix` **11,454** Balanced / **10,390** Lite — matching `docs/BENCHMARKS.md`. Earlier deltas above are that commit's incremental effect, not current state.
+- **CI Evidence**: `PR #532 CI passed on 4c858b0 (Linux, Windows, and staged secret-scan jobs). The Windows job ran the PowerShell behavioral-contract variant, so the parity limitation recorded in Verification Evidence is resolved rather than outstanding.`
+- **Review Evidence**: `Adversarial review of PR #532 returned APPROVE WITH CONDITIONS; its stale-body and disclosure findings were fixed in 28634fb and 97d5ffb and merged within #532.`
+- **Commit Evidence**: `Squash-merged as 4c858b0 via PR #532; branch commits b8941e2 (#527), 8f9e2f7 (#528), 6a3d3e6 (#529), 86d4e24 (#530), 28634fb and 97d5ffb (review follow-ups).`
+- **Pull Request Evidence**: `PR #532 (https://github.com/lowqualityloey/promptkit-os/pull/532), merged to main as 4c858b0.`
 - **Release Evidence**: `N/A — no release action in scope.`
 - **Blocker and Resume Condition**: `None.`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: `AC-1 through AC-7 verified against the local gate suite.`
 - **Changed-File Summary**: `Add a compact pre-response check to both directives, make suppression non-resolving and replies record-bound in the callout protocol, persist pending actions in the canonical record, and re-propagate all measured figures.`
 - **Completion Exception**: `None.`

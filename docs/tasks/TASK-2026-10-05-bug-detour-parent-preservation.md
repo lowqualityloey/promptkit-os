@@ -76,13 +76,13 @@
 - **Event-Driven Checkpoints**: `Milestone, scope change, compaction, handoff, or context drift.`
 - **Stop Conditions**: `Failed verification, scope expansion beyond the recorded In Scope boundary, missing approval for a gated action, or developer stop.`
 - **Host Timer Capability**: `The host cannot mechanically enforce checkpoint deadlines, observe an in-flight detour, or forcibly stop generation; timing and detour observation remain a manual protocol limitation.`
-- **Execution State**: `awaiting_review`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Execution State**: `completed`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-10-05`
 - **Current Actor**: `Sisyphus (executor)`
 - **Branch / Revision**: `fix/drift-527-530` (base `origin/main` @ `2fee6d7`)
-- **Next Action**: `Await human review of the combined #527-#530 drift-series PR; merge remains human-only.`
+- **Next Action**: `None — merged in PR #532. Successor work is tracked in #525.`
 
 ### Transition History
 
@@ -91,6 +91,7 @@
 | N/A | planned | 2026-10-05 | Sisyphus | Task initialized from issue #528 source-backed missing return-to-parent transition. | Issue #528 |
 | planned | in_progress | 2026-10-05 | Sisyphus | Delegated the two workflow files, then integrated the canonical record block and figure propagation. | Local edits on branch fix/drift-527-530 |
 | in_progress | awaiting_review | 2026-10-05 | Sisyphus | Step 5 detour contract, debug Phase 6 pointer, and record block in place; full gate suite green. | 420/420 behavioral contracts |
+| awaiting_review | completed | 2026-10-05 | Sisyphus (executor) | PR #532 merged; post-merge commit, PR, CI, and review evidence recorded. | PR #532 / 4c858b0 |
 
 ## 6. Evidence and Completion Gate
 
@@ -108,7 +109,7 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**:
+- **Verification Evidence**: `Behavioral contract suite 420 passed / 0 failed; execution control VALID (61 records); strict static and per-task budgets pass (pk:fix 11,454 Balanced / 10,390 Lite against a 12,861 baseline); validate-references, reference-link harness 6/6, release-record examples, profile matrix 10/10, execution-control properties, playbook contracts, and git diff --check passed. Itemized commands are recorded below.`
   - `bash scripts/tests/run-behavioral-contract-tests.sh` passed (420 passed, 0 failed).
   - Every string-literal assertion pinned against `workflows/fix.md` and `workflows/debug.md` in both the Bash and PowerShell suites was re-verified present verbatim after the edit (6 for fix.md, 5 for debug.md, plus the `Level 0 and Level 1.*bypass` regex).
   - `bash scripts/measure-per-task-tokens.sh --strict` passed; `pk:fix` Balanced payload 10,597 tok and Lite payload 9,534 tok remain under the 12,861 tok baseline.
@@ -118,14 +119,15 @@
   - `bash scripts/tests/run-profile-matrix.sh`, `run-execution-control-properties.sh`, and `run-playbook-contract-tests.sh` passed.
   - `git diff --check` passed.
   - Re-measured after the change: core-six Lite subset 29,252 -> 29,391 tok; full 25-workflow set 109,368 -> 110,319 tok; `pk:fix` Balanced 9,785 -> 10,597 tok and Lite 8,722 -> 9,534 tok, with its context-reduction cells updated from -24%/-32% to -18%/-26%.
-  - Not verified: PowerShell behavioral-contract parity cannot execute in this WSL environment — the PowerShell measurement tool exits 64 and yields empty output, reproducing on a pristine detached worktree at `2fee6d7`. Windows CI remains authoritative. No behavioral host capture was performed, so no model-conformance or drift-reduction result is claimed.
-- **CI Evidence**: `Pending — Windows CI is the authoritative parity check for the PowerShell behavioral-contract variant.`
-- **Review Evidence**: `N/A — no separate review record for this change.`
-- **Commit Evidence**: `Pending at record-update time; see the branch commit for #528.`
-- **Pull Request Evidence**: `Pending — human-confirmed before opening.`
+  - Not verified: PowerShell behavioral-contract parity cannot execute in this WSL environment — the PowerShell measurement tool exits 64 and yields empty output, reproducing on a pristine detached worktree at `2fee6d7`. Windows CI was resolved by the PR #532 Windows job. No behavioral host capture was performed, so no model-conformance or drift-reduction result is claimed.
+- Final merged measurement at `4c858b0`: core-six Lite subset **29,391 tok**, full 25-workflow set **111,086 tok**, Balanced **2,475/2,500**, Lite **1,411/1,500**, `pk:fix` **11,454** Balanced / **10,390** Lite — matching `docs/BENCHMARKS.md`. Earlier deltas above are that commit's incremental effect, not current state.
+- **CI Evidence**: `PR #532 CI passed on 4c858b0 (Linux, Windows, and staged secret-scan jobs). The Windows job ran the PowerShell behavioral-contract variant, so the parity limitation recorded in Verification Evidence is resolved rather than outstanding.`
+- **Review Evidence**: `Adversarial review of PR #532 returned APPROVE WITH CONDITIONS; its stale-body and disclosure findings were fixed in 28634fb and 97d5ffb and merged within #532.`
+- **Commit Evidence**: `Squash-merged as 4c858b0 via PR #532; branch commits b8941e2 (#527), 8f9e2f7 (#528), 6a3d3e6 (#529), 86d4e24 (#530), 28634fb and 97d5ffb (review follow-ups).`
+- **Pull Request Evidence**: `PR #532 (https://github.com/lowqualityloey/promptkit-os/pull/532), merged to main as 4c858b0.`
 - **Release Evidence**: `N/A — no release action in scope.`
 - **Blocker and Resume Condition**: `None.`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: `AC-1 through AC-6 verified against the local gate suite.`
 - **Changed-File Summary**: `Add a bounded bug-detour contract to pk:fix and pk:debug, persist the detour in the canonical Task Record, and re-propagate the published token figures.`
 - **Completion Exception**: `None.`

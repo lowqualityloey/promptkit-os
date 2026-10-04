@@ -73,13 +73,13 @@
 - **Event-Driven Checkpoints**: `Milestone, scope change, compaction, handoff, or context drift.`
 - **Stop Conditions**: `Failed verification, scope expansion beyond the recorded In Scope boundary, missing approval for a gated action, or developer stop.`
 - **Host Timer Capability**: `The host cannot mechanically enforce checkpoint deadlines or forcibly stop generation; timing remains a manual protocol limitation.`
-- **Execution State**: `awaiting_review`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Execution State**: `completed`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-10-05`
 - **Current Actor**: `Sisyphus (executor)`
 - **Branch / Revision**: `fix/drift-527-530` (base `origin/main` @ `2fee6d7`)
-- **Next Action**: `Await human review; merge remains human-only.`
+- **Next Action**: `None — merged in PR #532. Successor work is tracked in #525.`
 
 ### Transition History
 
@@ -90,6 +90,7 @@
 | in_progress | awaiting_review | 2026-10-05 | Sisyphus | Template, example, and claim repaired; figures re-propagated; full gate suite green. | Stale-base draft; superseded by rebuild onto 2fee6d7 |
 | awaiting_review | in_progress | 2026-10-05 | Sisyphus | Base staleness discovered: local HEAD e78fde0 predated origin/main 2fee6d7 (#524, #526/#531), so the token figures were measured against the wrong tree and every benchmark claim site collided. | git merge-base --is-ancestor 2fee6d7 HEAD returned false |
 | in_progress | awaiting_review | 2026-10-05 | Sisyphus | Rebuilt onto origin/main @ 2fee6d7, re-measured, re-propagated all figure claim sites, and re-verified against the 420-test suite. | 13/13 local gates green |
+| awaiting_review | completed | 2026-10-05 | Sisyphus (executor) | PR #532 merged; post-merge commit, PR, CI, and review evidence recorded. | PR #532 / 4c858b0 |
 
 ## 6. Evidence and Completion Gate
 
@@ -106,7 +107,7 @@
 - **Checkpoint Records**: `None`
 - **Base Reconcile Note**: `This work was first drafted against a stale local base (e78fde0, 2 commits behind origin/main @ 2fee6d7) and was rebuilt onto 2fee6d7. Every token figure below is measured on the corrected base; the stale-base numbers were discarded, not shipped.`
 - **Handoff Records**: `None`
-- **Verification Evidence**:
+- **Verification Evidence**: `Behavioral contract suite 420 passed / 0 failed; execution control VALID (61 records); validate-references, reference-link harness 6/6, release-record examples, profile matrix 10/10, token-budget regression 7/7, execution-control properties, playbook contracts, milestone-halt and authorization fixtures, math labels, and git diff --check all passed. Itemized commands and the pre-existing WSL PowerShell limitation are recorded below; the PR #532 Windows job later ran that variant and passed.`
   - `bash scripts/tests/run-behavioral-contract-tests.sh` passed (420/420 passed, 0 failed) on base `2fee6d7`.
   - `bash scripts/validate-execution-control.sh --root .` passed (VALID, 58 records).
   - `bash scripts/tests/release-records.examples.sh` passed.
@@ -120,16 +121,17 @@
   - `bash scripts/tests/run-token-budget-tests.sh` passed.
   - `bash scripts/tests/run-milestone-halt-evidence-fixtures.sh` and `run-authorization-evidence-fixtures.sh` passed.
   - `bash scripts/check-math-labels.sh --root .` and `git diff --check` passed.
-  - Re-measured on the corrected base: core-six Lite subset 27,547 -> 29,252 tok; full 25-workflow set 107,662 -> 109,368 tok; Balanced static reduction 91% -> 92%; Lite unchanged at 95%.
+  - Re-measured on the corrected base: core-six Lite subset 27,547 -> 29,252 tok; full 25-workflow set 107,662 -> 109,368 tok (incremental effect of #527 at commit `b8941e2`; superseded by later commits in the same PR); Balanced static reduction 91% -> 92%; Lite unchanged at 95%.
   - Repo-wide sweep confirms no unconditional "zero lost context" claim remains outside historical records.
-  - `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/tests/run-behavioral-contract-tests.ps1` cannot complete in this WSL environment: the PowerShell measurement tool exits 64 and yields empty output, cascading into figure-check failures. An identical failure reproduces on a pristine detached worktree at `2fee6d7`, so it is environmental and pre-existing, not a regression. Windows CI remains the authoritative parity check.
-- **CI Evidence**: `Pending — Windows CI parity for the PowerShell behavioral contract variant is the authoritative check for the pre-existing WSL measurement-tool limitation recorded above.`
-- **Review Evidence**: `N/A — no separate review record for this change.`
-- **Commit Evidence**: `Pending — not committed at the time of this record update.`
-- **Pull Request Evidence**: `Pending — human-confirmed before opening.`
+  - `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/tests/run-behavioral-contract-tests.ps1` cannot complete in this WSL environment: the PowerShell measurement tool exits 64 and yields empty output, cascading into figure-check failures. An identical failure reproduces on a pristine detached worktree at `2fee6d7`, so it is environmental and pre-existing, not a regression. The PR #532 Windows job later ran that variant and passed, so parity is confirmed rather than outstanding.
+- Final merged measurement at `4c858b0`: core-six Lite subset **29,391 tok**, full 25-workflow set **111,086 tok**, Balanced **2,475/2,500**, Lite **1,411/1,500**, `pk:fix` **11,454** Balanced / **10,390** Lite — matching `docs/BENCHMARKS.md`. Earlier deltas above are that commit's incremental effect, not current state.
+- **CI Evidence**: `PR #532 CI passed on 4c858b0 (Linux, Windows, and staged secret-scan jobs). The Windows job ran the PowerShell behavioral-contract variant, so the WSL measurement-tool limitation recorded in Verification Evidence no longer gates parity.`
+- **Review Evidence**: `Adversarial review of PR #532 returned APPROVE WITH CONDITIONS; its stale-body and disclosure findings were fixed in 28634fb and 97d5ffb and merged within #532.`
+- **Commit Evidence**: `Squash-merged as 4c858b0 via PR #532; branch commits b8941e2 (#527), 8f9e2f7 (#528), 6a3d3e6 (#529), 86d4e24 (#530), 28634fb and 97d5ffb (review follow-ups).`
+- **Pull Request Evidence**: `PR #532 (https://github.com/lowqualityloey/promptkit-os/pull/532), merged to main as 4c858b0.`
 - **Release Evidence**: `N/A — no release action in scope.`
 - **Blocker and Resume Condition**: `None.`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: `AC-1 through AC-7 verified against the local gate suite.`
 - **Changed-File Summary**: `Reconcile the pk:checkpoint fresh-chat handover template with the checkpoint contract and re-propagate the measured static-token baseline figures.`
 - **Completion Exception**: `None.`
