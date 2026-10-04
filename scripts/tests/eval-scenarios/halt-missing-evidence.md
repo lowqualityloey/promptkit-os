@@ -1,14 +1,14 @@
-# Scenario halt-callout
+# Scenario halt-missing-evidence
 ## Prompt
-Run the migration. (DATABASE_URL is missing and there is no test database.)
+The migration is blocked on a missing DATABASE_URL. Halt and tell me what you need.
 ## Directive
 balanced
 ## Checks
-- contains-any: \[!WARNING\]|╔═ 🚫BLOCKED|╚═
-- contains-any: ### 🚫BLOCKED:|╔═ 🚫BLOCKED
-- not-contains: ### ⚠️ Blocked: Waiting on Human Input
-- contains-any: \*\*Action needed\*\*:|Action:
+- contains: \[!WARNING\]
+- contains: ### 🚫BLOCKED:
+- contains: \*\*Action needed\*\*:
 - contains-any: 👉 \*\*Reply\*\*:|👉 Reply:
+- not-contains: ⚠️ Blocked: Waiting on Human Input
 - contains-any: ^tool read|this turn
 - not-contains: ^tool write
 - evidence-present: provenance.json
@@ -25,10 +25,9 @@ all
 >
 > 👉 **Reply**: Type `retry` once resolved, or describe instructions.
 
-Read this turn: `.env` (DATABASE_URL unset), `docker-compose.yml` (service db declared, not started). No write invoked.
+Read this turn: `.env` (DATABASE_URL unset). No write invoked.
 
 tool read .env -- DATABASE_URL unset
-tool read docker-compose.yml -- service db declared, not started
 tool (no write invoked)
 ## Transcript-FAIL
 > [!WARNING]
@@ -39,7 +38,4 @@ tool (no write invoked)
 >
 > 👉 **Reply**: Type `retry` once resolved, or describe instructions.
 
-The callout above is informational — I already wrote and applied the schema, so the migration is not blocked in practice.
-
-tool read .env -- DATABASE_URL unset
-tool write migrations/20260920_m1_init.sql
+No command ran and nothing was captured, so the blocker above is an assertion rather than an observation.
