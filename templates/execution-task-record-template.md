@@ -82,6 +82,19 @@ Canonical transition graph (enforced by `scripts/validate-execution-control.sh` 
 
 A task cannot enter `ready` until its objective, scope, non-goals, acceptance criteria, dependencies, verification condition, owner/approval boundary, and execution policy are complete. It cannot enter `in_progress` until readiness, start time, execution scope, and active ownership are recorded. Only one task may hold the active pointer in this Execution Scope.
 
+### Active Detour (Optional)
+
+Record an in-scope bug detour **inside this Task Record** — never as a second record type, parallel ledger, or independent state system (contract: `workflows/fix.md` Step 5). Omit this block when no detour is active.
+
+- **Detour ID**: `DETOUR-<task-slug>-<nn>` or `None`
+- **Parent Continuation Captured**: `[Parent task ID and milestone | interrupted Next Action | parent Objective | approved scope and non-goals | authorization reference | pending stop condition]`
+- **Failure Classification**: `approved_scope_remediation | blocking_new_requirement | unrelated_finding` <!-- exactly one verdict; route via the New-Requirement Interception table in workflows/sync.md -->
+- **Detour Verification**: `[command and result @ revision, or Not verified]`
+- **Detour Exit State**: `restored_parent | blocked | scope_change_recorded | deferred_later` <!-- restored_parent returns the parent to in_progress on its own remaining ACs; a green detour never completes the parent -->
+- **Budget Impact**: `[Record that the detour does not reset the bounded-repair counter or the whole-task aggregate budget; cite protocols/code-quality-gate.md]`
+
+Detour evidence never satisfies the parent's remaining acceptance criteria, and a detour cannot grant new authority — expanded scope or new approvals require human confirmation through the existing interception routes. On compaction or handoff, recovery reconciles against this block so it never spawns a duplicate parent task or drops a pending next action.
+
 ## 6. Evidence and Completion Gate
 
 - **Changed Files**:

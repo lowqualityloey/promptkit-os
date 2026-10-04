@@ -465,7 +465,7 @@ Remember: **AI assistants aren't perfect**. PromptKit structures their reasoning
 **How it works**:
 - **Baseline footprint**: Initialization scripts inject only a lean router directive into your configuration file (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, etc.) — current measured footprints live in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
 - **On-demand loading**: The AI only reads specific workflow files (e.g. `workflows/debug.md`) from the local filesystem when that specific workflow is triggered or routed.
-- **Comparison to monolithic prompts**: Traditional prompt packs inline all rules, workflows, and templates directly into the prompt on every turn, consuming ~19,794 to ~75,505 tokens statically before work begins (historical core-6 lifecycle figures; current core-subset baseline is ~29.3k). PromptKit preserves ~90% of static context overhead compared to monolithic packs (~29.3k current core-subset baseline).
+- **Comparison to monolithic prompts**: Traditional prompt packs inline all rules, workflows, and templates directly into the prompt on every turn, consuming ~19,794 to ~75,505 tokens statically before work begins (historical core-6 lifecycle figures; current core-subset baseline is ~29.4k). PromptKit preserves ~90% of static context overhead compared to monolithic packs (~29.4k current core-subset baseline).
 - **Subagent context preservation**: Multi-file exploration is delegated to subagents whose results are synthesized into compact findings, reducing conversational bloat by up to 98%.
 - **Mechanical verification**: Measure your exact active directive token footprint anytime using `pwsh -File .promptkit/scripts/measure-tokens.ps1` (or `bash .promptkit/scripts/measure-tokens.sh`).
 

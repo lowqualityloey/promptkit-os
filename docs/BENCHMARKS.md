@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [25 Inlined Workflows (109,368 tok) + Templates + Protocols] │
+│ Every Turn: [25 Inlined Workflows (110,319 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -30,7 +30,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 ## 2. Static Injection Footprint (Measured Tokens)
 
-| Profile | Template | UTF-8 Bytes | Est. Tokens (bytes/4) | Reduction vs ~29.3k current core-subset baseline¹ | Use |
+| Profile | Template | UTF-8 Bytes | Est. Tokens (bytes/4) | Reduction vs ~29.4k current core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
 | **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 5,350 | **1,338 tok** | **95% static** | Onboarding, new users, tiny fixes |
 | **Balanced** | `agent-directive-template.md` (25 workflows) | 9,604 | **2,401 tok** | **92% static** | Teams, production, default |
@@ -40,8 +40,8 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **29,252 tok** |
-| Full workflow set | 25 | **109,368 tok** |
+| Core-six Lite subset | 6 | **29,391 tok** |
+| Full workflow set | 25 | **110,319 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -54,7 +54,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | **Engineering Quality Gates** | ~36 | ~642 tokens | Secret hygiene, timeout budgets, and anti-hallucination rules |
 | **Task Ceremony Levels & Output** | ~25 | ~397 tokens | Composable 4-level task ceremony engine & output protocol |
 | **Standard Output Directories** | ~17 | ~226 tokens | Canonical locations for generated specs, ADRs, and plans |
-| **Total Baseline Static Overhead (Balanced)** | **69 lines** | **~2,401 tokens** | **Permanent footprint in system prompt (~92% static saving vs. current ~29.3k core-subset (~98% vs. current full 25-file set))** |
+| **Total Baseline Static Overhead (Balanced)** | **69 lines** | **~2,401 tokens** | **Permanent footprint in system prompt (~92% static saving vs. current ~29.4k core-subset (~98% vs. current full 25-file set))** |
 | **Total Baseline Static Overhead (Lite)** | **54 lines** | **~1,338 tokens** | **95% static saving, ~56% of Balanced** |
 | **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,338 tok — skipped silently) |
 
@@ -96,7 +96,7 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,785 tok** | **8,722 tok** | **-24% Balanced, -32% Lite (-3,076 to -4,139 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **10,597 tok** | **9,534 tok** | **-18% Balanced, -26% Lite (-2,264 to -3,327 tok)** |
 | **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **20,097 tok** | **19,034 tok** | **-19% Balanced, -23% Lite (-4,569 to -5,632 tok)** |
 | **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **16,371 tok** | **15,308 tok** | **-34% Balanced, -38% Lite (-8,390 to -9,453 tok)** |
 

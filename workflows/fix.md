@@ -31,20 +31,20 @@ Before applying any fix, classify the task using the PromptKit OS ceremony model
 
 ---
 
-## The 6-Step Remediation Lifecycle
+## The 7-Step Remediation Lifecycle
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    PK:FIX LIFECYCLE                         │
-├─────────────────┬─────────────────┬─────────────────────────┤
-│ Step 1:         │ Step 2:         │ Step 3:                 │
-│ Finding Review  │ Security-First  │ Reproduction or         │
-│ & Scope Lock    │ Priority Check  │ Baseline Measurement    │
-├─────────────────┼─────────────────┼─────────────────────────┤
-│ Step 4:         │ Step 5:         │ Step 6:                 │
-│ Surgical Fix    │ Evidence-Gated  │ Handoff & Atomic        │
-│ Implementation  │ Verification    │ Conventional Commit     │
-└─────────────────┴─────────────────┴─────────────────────────┘
+├─────────────────────────────────────────────────────────────┤
+│ Step 1: Finding Review & Scope Lock                        │
+│ Step 2: Security-First Priority Check                      │
+│ Step 3: Reproduction or Baseline Measurement                │
+│ Step 4: Surgical Fix Implementation                        │
+│ Step 5: Detour Entry, Failure Classification & Restore     │
+│ Step 6: Evidence-Gated Verification & Escape Hatch         │
+│ Step 7: Handoff & Atomic Conventional Commit               │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -97,7 +97,29 @@ Before writing or editing code:
 
 ---
 
-### Step 5: Evidence-Gated Verification & Escape Hatch
+### Step 5: Detour Entry, Failure Classification & Parent Restoration
+
+> [!IMPORTANT]
+> **DETOUR DISCIPLINE**: A `pk:fix` run started *inside* an unfinished parent task is a **detour**, not the parent's completion. Record the parent continuation before touching code, then restore it. Repairing the bug does not complete the parent.
+
+1. **Detour Entry — Capture Parent Continuation (no new state system)**:
+   Before the first detour edit, write these into the **existing canonical Task Record** (`docs/tasks/<task-id>.md`; Level 0/1 uses inline tracking or `docs/STATE.md`): parent task ID and milestone, interrupted next action, parent objective, approved scope and non-goals, authorization reference, pending stop condition. A small bounded detour entry **inside** the current record — never a second record type, parallel ledger, or independent state system.
+2. **Classify the Failure — Exactly One Verdict**:
+   - **Approved-scope remediation**: the defect blocks the parent objective and its repair is inside approved scope → continue the detour.
+   - **Blocking new requirement**: a new constraint blocks the parent objective → route through the existing Scope Change Record or planning re-open (`intake status: partial`) per the canonical New-Requirement Interception table in `workflows/sync.md`.
+   - **Unrelated finding**: outside the parent objective → record it in the **Later ledger** or as its own Task Record. Never silently absorb it into the detour.
+3. **Record Detour Verification and Result**: capture the detour's minimal verification command and result (Step 6 tiers scoped to the detour only). Detour evidence never satisfies the parent's remaining acceptance criteria.
+4. **Detour Exit — Restore the Parent**:
+   - *On success*: restore the parent's recorded next action, remaining acceptance criteria, and stop conditions. The parent returns to `in_progress` and continues its **own** remaining criteria; a green detour is not parent completion.
+   - *Unresolved*: keep the captured parent continuation intact, record the blocker with owner and precise resume condition, and HALT with the canonical `> [!WARNING]` `### 🚫BLOCKED:` callout per `protocols/telemetry-cards.md`. Respect the Step 6 repair limit and any milestone sign-off. **A detour cannot grant new authority**: expanded scope, new approvals, or widened non-goals require human confirmation through the existing interception routes.
+5. **Recover an Active Detour After Compaction or Handoff**: on a reported compaction, continuation, or fresh-session handover, run the canonical recovery in `workflows/sync.md`, then resume the captured parent continuation — reconcile against the recorded detour entry so recovery never spawns a duplicate parent task or drops a pending next action.
+
+> [!NOTE]
+> PromptKit states this discipline; the host executes it. There is no mechanical enforcement — record `POLICY_LIMITATION` when the host cannot observe an in-flight detour, and never claim this closes measured session drift.
+
+---
+
+### Step 6: Evidence-Gated Verification & Escape Hatch
 
 1. **Lock-In Regression Test**:
    Convert the reproduction check into a permanent regression test at the real call-site seam (`pk:test`).
@@ -120,7 +142,7 @@ Before writing or editing code:
 
 ---
 
-### Step 6: Handoff & Atomic Conventional Commit
+### Step 7: Handoff & Atomic Conventional Commit
 
 Once verified, hand off to downstream workflows:
 
@@ -137,6 +159,7 @@ Once verified, hand off to downstream workflows:
 - [ ] Security-first ordering enforced (`🚨 [BLOCKING]` resolved first).
 - [ ] Reproduction check or performance baseline captured prior to editing code.
 - [ ] Minimal surgical fix applied without unrelated scope creep.
-- [ ] Verification required by the task's ceremony level passes (Step 5 `fast` / `required` / `extended` tiers). Regression test added when the defect is behaviorally testable and an appropriate test seam exists.
+- [ ] Verification required by the task's ceremony level passes (Step 6 `fast` / `required` / `extended` tiers). Regression test added when the defect is behaviorally testable and an appropriate test seam exists.
+- [ ] Detour bookkeeping (Step 5) satisfied when this fix ran mid-task: parent continuation captured before the detour, failure classified into exactly one verdict, detour verification recorded, and the parent's next action and remaining acceptance criteria restored on exit — or the blocker, pending stop condition, and resume condition recorded when unresolved.
 - [ ] Changes staged cleanly via `pk:commit` with atomic Conventional Commit message.
 - [ ] **Dual-Compatible Telemetry Status Card**: Conclude with a 3-line telemetry status card (`> 📊 **Milestone**: ... \n> 🎯 **Active**: ... \n> 🟢 **Quality Gate**: ...`). Add a `> [!TIP]` recommending `pk:commit` or downstream verification only when no higher-priority `[!IMPORTANT]` or `[!WARNING]` halt is active. Every human callout block must include an explicit action hint (`👉 Reply: Type '...'` or `👉 Action: Press Enter to accept Option 1 ...`). When multiple next steps exist, invoke native interactive selection tools (e.g. `ask_question`) as your final tool call with Option 1 `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`. If PROMPTKIT.md declares `status-cards: off`, skip the decorative card; halts still fire. Bounded to closed-set operational choices: for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead — see the Picker routing rule in `workflows/plan.md`.
