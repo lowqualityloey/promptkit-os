@@ -27,14 +27,16 @@ try {
     }
 
     # Minimal stubs for the cross-tree targets the copied workflow files link to.
-    foreach ($sub in @("docs/adrs", "docs/internal", "docs/recipes", "docs/archive", "notes")) {
+    foreach ($sub in @("docs/adrs", "docs/internal", "docs/recipes", "docs/stacks", "docs/archive", "notes")) {
         New-Item -ItemType Directory -Path (Join-Path $FixtureRoot $sub) -Force | Out-Null
     }
     $stubs = @(
         "docs/BENCHMARKS.md", "docs/TURBO-WAVES-GUIDE.md", "docs/WORKFLOW-MAP.md",
         "docs/adrs/0002-workflow-lifecycle-policy.md", "docs/internal/release-evaluation.md",
         "docs/recipes/auto-phrase-boundary-sheet.md", "docs/recipes/auto-wave-pause-resume.md",
-        "docs/recipes/auto-waves-preflight-checklist.md",
+        "docs/recipes/auto-waves-preflight-checklist.md", "docs/recipes/websocket-realtime.md", "docs/recipes/state-management.md",
+        "docs/stacks/mobile-kmp.md", "docs/stacks/systems-java-spring.md", "docs/stacks/systems-csharp-dotnet.md",
+        "docs/stacks/database-postgres.md", "docs/stacks/database-mysql.md", "docs/stacks/deploy-aws.md", "docs/stacks/deploy-gcp.md",
         "notes/learning-plan.md", "notes/progress-journal.md", "notes/skill-matrix.md"
     )
     foreach ($stub in $stubs) {

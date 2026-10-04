@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # Read-only Agent Execution Control validator.
-# Usage: ./scripts/validate-execution-control.sh [--root PATH] [--strict]
+# Usage: ./scripts/validate-execution-control.sh [--root PATH] [--strict] [--authorization-baseline REF]
 
 set -u
 
 ROOT="."
 STRICT=0
+AUTHORIZATION_BASELINE=""
 ERROR_COUNT=0
 RECORD_COUNT=0
 
 usage() {
     cat <<'EOF'
-Usage: validate-execution-control.sh [--root PATH] [--strict]
+Usage: validate-execution-control.sh [--root PATH] [--strict] [--authorization-baseline REF]
 
 Validate durable Agent Execution Control Markdown records without modifying
 records, files, Git state, remotes, releases, or task state.
@@ -35,6 +36,11 @@ while [ "$#" -gt 0 ]; do
         --strict)
             STRICT=1
             shift
+            ;;
+        --authorization-baseline)
+            AUTHORIZATION_BASELINE="${2:-}"
+            [ -n "$AUTHORIZATION_BASELINE" ] || { echo "USAGE|AUTHORIZATION_BASELINE|--authorization-baseline requires a git ref"; exit 2; }
+            shift 2
             ;;
         -h|--help)
             usage
@@ -737,6 +743,13 @@ if [ -f "$STATE_FILE" ]; then
             fi
         fi
     fi
+fi
+
+if [ -n "$AUTHORIZATION_BASELINE" ]; then
+    auth_output="$(bash "$ROOT/scripts/validate-authorization-evidence.sh" --root "$ROOT" --baseline "$AUTHORIZATION_BASELINE" 2>&1)"
+    auth_status=$?
+    printf '%s\n' "$auth_output"
+    [ "$auth_status" -eq 0 ] || ERROR_COUNT=$((ERROR_COUNT + 1))
 fi
 
 if [ "$ERROR_COUNT" -eq 0 ]; then

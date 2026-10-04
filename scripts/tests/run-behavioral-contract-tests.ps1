@@ -18,7 +18,7 @@ function Assert-Contains {
 
     $fullPath = Join-Path $RepoRoot $File
     if (Test-Path $fullPath) {
-        $content = Get-Content -Path $fullPath -Raw
+        $content = (Get-Content -Path $fullPath -Raw) -replace '\r', ''
         if ($content -match $Pattern) {
             Write-Host "  ✅ PASS: $Description" -ForegroundColor Green
             $script:PassCount++
@@ -27,6 +27,29 @@ function Assert-Contains {
     }
     Write-Host "  ❌ FAIL: $Description (pattern '$Pattern' not found in $File)" -ForegroundColor Red
     $script:FailCount++
+}
+
+function Assert-NotContains {
+    param(
+        [string]$File,
+        [string]$Pattern,
+        [string]$Description
+    )
+
+    $fullPath = Join-Path $RepoRoot $File
+    if (-not (Test-Path $fullPath)) {
+        Write-Host "  ❌ FAIL: $Description (file $File not found)" -ForegroundColor Red
+        $script:FailCount++
+        return
+    }
+    $content = (Get-Content -Path $fullPath -Raw) -replace '\r', ''
+    if ($content -match $Pattern) {
+        Write-Host "  ❌ FAIL: $Description (unexpected pattern '$Pattern' found in $File)" -ForegroundColor Red
+        $script:FailCount++
+        return
+    }
+    Write-Host "  ✅ PASS: $Description" -ForegroundColor Green
+    $script:PassCount++
 }
 
 Write-Host "`n🧪 Running PromptKit OS Behavioral Prompt-Contract Tests" -ForegroundColor Cyan
@@ -670,15 +693,55 @@ Assert-Contains "package/bin/promptkit-os.js" "init\.sh" "Courier delegates to t
 Assert-Contains "package/bin/promptkit-os.js" "init\.ps1" "Courier delegates to the canonical init.ps1 on Windows"
 Assert-Contains "package/package.json" '"name": "promptkit-os"' "Courier package name matches the reserved registry name"
 Assert-Contains "package/package.json" "provenance" "Courier publishes with provenance attestation"
-Assert-Contains ".github/workflows/release-npm.yml" "npm publish --provenance" "Release job publishes with provenance"
-Assert-Contains ".github/workflows/release-npm.yml" "id-token: write" "Release job requests OIDC for attestation"
+Assert-Contains ".github/workflows/release-npm.yml" "npm publish.*--provenance" "Release job publishes with provenance"
+Assert-Contains ".github/workflows/release-npm.yml" "(?m)^  validate-release:" "Release validation has an unprivileged job"
+Assert-Contains ".github/workflows/release-npm.yml" "git merge-base --is-ancestor" "Release tags must point into default-branch history"
+Assert-Contains ".github/workflows/release-npm.yml" "(?m)^  publish-npm-courier:" "Release publishing has a separate job"
+Assert-Contains ".github/workflows/release-npm.yml" "(?m)^      id-token: write" "Only the isolated publish job requests OIDC"
+Assert-Contains ".github/workflows/release-npm.yml" "npm publish.*--ignore-scripts" "Privileged publishing skips package lifecycle scripts"
+$releaseWorkflow = (Get-Content -Path (Join-Path $RepoRoot '.github/workflows/release-npm.yml') -Raw) -replace '\r', ''
+$releaseValidateJob = [regex]::Match($releaseWorkflow, '(?ms)^  validate-release:\n.*?(?=^  pack-release:)').Value
+$releasePackJob = [regex]::Match($releaseWorkflow, '(?ms)^  pack-release:\n.*?(?=^  publish-npm-courier:)').Value
+$releasePublishJob = [regex]::Match($releaseWorkflow, '(?ms)^  publish-npm-courier:\n.*').Value
+$releaseGlobalPermissions = [regex]::Match($releaseWorkflow, '(?ms)^permissions:\n.*?(?=^jobs:)').Value
+if ($releaseGlobalPermissions -match 'id-token:\s*write' -or $releaseValidateJob -match 'id-token:\s*write' -or $releaseValidateJob -notmatch 'actions/checkout') {
+    Write-Host '  ❌ FAIL: release validation must use checkout without OIDC' -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Write-Host '  ✅ PASS: release validation checks tag code without OIDC' -ForegroundColor Green
+    $script:PassCount++
+}
+$trustLine = $releaseValidateJob.IndexOf('git merge-base --is-ancestor "$TAG_COMMIT" "origin/$DEFAULT_BRANCH"', [StringComparison]::Ordinal)
+$checkoutLine = $releaseValidateJob.IndexOf('git checkout --detach "$TAG_COMMIT"', [StringComparison]::Ordinal)
+$versionLine = $releaseValidateJob.IndexOf('npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts', [StringComparison]::Ordinal)
+$smokeLine = $releaseValidateJob.IndexOf('Smoke Test Courier Against This Release', [StringComparison]::Ordinal)
+if ($trustLine -lt 0 -or $checkoutLine -lt 0 -or $versionLine -lt 0 -or $smokeLine -lt 0 -or $trustLine -ge $checkoutLine -or $checkoutLine -ge $versionLine -or $versionLine -ge $smokeLine) {
+    Write-Host '  ❌ FAIL: release tag ancestry must be checked before checkout or execution' -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Write-Host '  ✅ PASS: release tag trust is established before tagged code runs' -ForegroundColor Green
+    $script:PassCount++
+}
+if ($releasePackJob -match 'id-token:\s*write' -or $releasePackJob -notmatch 'git show' -or $releasePackJob -notmatch 'npm pack --ignore-scripts') {
+    Write-Host '  ❌ FAIL: clean package job must assemble commit data without OIDC or lifecycle scripts' -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Write-Host '  ✅ PASS: release artifact is built from commit data in an unprivileged job' -ForegroundColor Green
+    $script:PassCount++
+}
+if ($releasePublishJob -match 'actions/checkout|npm pack|npm version|bash .*scripts/|node .*package/' -or $releasePublishJob -notmatch 'npm publish .*--ignore-scripts' -or $releasePublishJob -notmatch 'TARBALL=\$path') {
+    Write-Host '  ❌ FAIL: OIDC publish job must publish the verified tarball without running repository code' -ForegroundColor Red
+    $script:FailCount++
+} else {
+    Write-Host '  ✅ PASS: OIDC publish job is isolated from repository code' -ForegroundColor Green
+    $script:PassCount++
+}
 Assert-Contains "README.md" "courier, not a dependency" "README states the courier contract"
 Assert-Contains "README.md" "git submodule add" "Submodule path stays first-documented and canonical"
 Assert-Contains "QUICKSTART.md" "npx promptkit-os@latest" "QUICKSTART documents the optional npx path"
 Assert-Contains "package/bin/promptkit-os.js" "Refusing to overlay" "Courier refuses to overlay a non-empty .promptkit (no silent tar merge)"
 Assert-Contains "package/bin/promptkit-os.js" "assertInstallTargetIsClean" "Courier guards the install target before extracting"
 Assert-Contains "package/README.md" "PowerShell 7" "Courier README states the Windows pwsh prerequisite"
-Assert-Contains ".github/workflows/release-npm.yml" "No .cache: npm." "Release job documents why npm cache is absent (no lockfile)"
 
 Write-Host "`n📌 Scenario AK: Grill Completion Contract (Issue #425)" -ForegroundColor Yellow
 Assert-Contains "workflows/tutor.md" "Suspend Teaching Rules" "Grill drill suspends Tier-3 snippets and the Just Show Me guardrail"
@@ -765,6 +828,17 @@ Assert-Contains "workflows/review.md" "mode-appropriate review diff" "Review wor
 Assert-Contains "scripts/isolate-worktree.ps1" "LASTEXITCODE" "PowerShell worktree isolation utility checks LASTEXITCODE on git mutations"
 Assert-Contains "scripts/isolate-worktree.sh" "Failed to create worktree" "Bash worktree isolation utility checks worktree add exit code"
 Assert-Contains "scripts/isolate-worktree.sh" "Failed to merge branch" "Bash worktree isolation utility checks merge exit code"
+
+Write-Host "`n📌 Scenario AP: Stack activation contracts and recipe wiring (#519-#523; static only)" -ForegroundColor Yellow
+foreach ($playbook in @('mobile-kmp', 'systems-java-spring', 'systems-csharp-dotnet', 'database-postgres', 'database-mysql', 'deploy-aws', 'deploy-gcp')) {
+    Assert-Contains "docs/stacks/$playbook.md" "(?m)^name: $playbook$" "$playbook frontmatter declares its matching name"
+    Assert-Contains "docs/stacks/README.md" "$playbook.md" "Stack catalog indexes $playbook"
+}
+Assert-Contains "docs/recipes/state-management.md" "## 3. Anti-Patterns to Avoid" "State recipe follows required structure"
+Assert-Contains "workflows/api.md" "docs/recipes/websocket-realtime.md" "API workflow links WebSocket recipe"
+Assert-Contains "workflows/design-system.md" "docs/recipes/state-management.md" "Design workflow links state-management recipe"
+Assert-NotContains "templates/agent-directive-template.md" "state-management.md" "State recipe is not permanently injected"
+Assert-NotContains "templates/agent-directive-template.md" "websocket-realtime.md" "WebSocket recipe is not permanently injected"
 
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

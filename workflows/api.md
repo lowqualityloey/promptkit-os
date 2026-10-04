@@ -1,5 +1,7 @@
 # API Workflow (Frontend-Backend Contracts & Error Envelopes)
 
+For long-lived bidirectional connections, load [`docs/recipes/websocket-realtime.md`](../docs/recipes/websocket-realtime.md) before designing the handshake, subscription, and disconnect lifecycle.
+
 ## Fast Shorthand
 Trigger anytime with: `pk:api` (or `/pk-api`)
 

@@ -56,6 +56,7 @@
 - **Mode**: `Gated Mode` <!-- Use Approved Batch Mode only with a linked Batch Authorization. This is execution policy, not TDD mode. -->
 - **TDD Enforcement Mode** *(Required for `sdlc-overlay-v1`; choose disabled or enabled. An absent field defaults to disabled only for legacy records)*: `disabled` <!-- The Task Record owns this field. -->
 - **Batch Authorization**: `[docs/tasks/batch-[batch-id].md or N/A]`
+- **Authorization Checkpoint Reference** *(Required for new external-harness commits; N/A before an authorization checkpoint exists)*: `[AUTHZ-<task-slug>-<nnn>]`
 - **Soft Checkpoint**: `[Around 60 minutes, configured alternative, or N/A with reason]`
 - **Hard Checkpoint**: `[At or before 90 minutes, configured alternative, or N/A with reason]`
 - **Event-Driven Checkpoints**: `Milestone, task switch, scope expansion, handoff, compaction, or context drift`
@@ -95,10 +96,30 @@ A task cannot enter `ready` until its objective, scope, non-goals, acceptance cr
 - **TDD Exception Verification [Required for Documentation, Configuration, or Research Work; Not applicable for Code Work]**: `[Exception verification link and reason]` or `N/A - Code Work`
 - **CI Evidence**: `[Provider, workflow/job, run, revision, result, or N/A]`
 - **Review Evidence**: `[REVIEW-<review-slug>](../reviews/<review-slug>.md#REVIEW-<review-slug>); reviewer; result; or N/A]`
-- **Commit Evidence**: `[Commit SHA and message, or N/A before commit]`
+- **Commit Evidence**: `[N/A before commit; for each new commit add a Commit Evidence Entry with SHA, message, Authorization Checkpoint Reference, and Authorization Source]`
 - **Pull Request Evidence**: `[PR URL/number, or N/A before PR]`
 - **Release Evidence**: `[Release evaluation/tag/post-release link, or N/A]`
 - **Blocker and Resume Condition**: `[Blocker, owner, evidence, and precise resume condition, or None]`
+
+### Durable Authorization Checkpoints
+
+Copy each authorized run checkpoint here so its source remains resolvable after `docs/STATE.md` compaction. This record documents authorization; it cannot grant it. A human reviewer must confirm the quoted instruction and source.
+
+<!-- Replace the example anchor with an immutable authorization checkpoint ID. -->
+<a id="AUTHZ-task-slug-001"></a>
+
+- **Authorization Checkpoint ID**: `AUTHZ-<task-slug>-<nnn>`
+- **Declared Boundary**: `review | pr | full`
+- **Verbatim Human Instruction**: `[Exact run-start instruction authorizing the boundary]`
+- **Instruction Source**: `[User message/session reference]`
+- **Frozen Task and Milestone Scope**: `[Exact authorized scope at run start]`
+- **Batch Authorization Reference**: `[Human-approved record with permitted actions and milestones, or N/A]`
+
+A referenced Batch Authorization record must contain `Declared Boundary`, `Permitted Actions`, and `Milestone Scope`. Its boundary must match the run checkpoint; conflicts halt for clarification.
+
+### Commit Evidence Entries
+
+- **Commit Evidence Entry**: `[SHA and message; Authorization Checkpoint Reference: AUTHZ-<task-slug>-<nnn>; Authorization Source: [user instruction reference or Batch Authorization link]]`
 
 ### TDD Mode Branches
 

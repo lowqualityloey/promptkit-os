@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [25 Inlined Workflows (105,691 tok) + Templates + Protocols] │
+│ Every Turn: [25 Inlined Workflows (107,009 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -41,11 +41,11 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
 | Core-six Lite subset | 6 | **26,944 tok** |
-| Full workflow set | 25 | **105,691 tok** |
+| Full workflow set | 25 | **107,059 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
-> **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (91% Balanced, 95% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (21–37% Balanced, 25–41% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
+> **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (91% Balanced, 95% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (19–34% Balanced, 23–38% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
 
 | Component (Balanced) | Lines | Approx. Token Weight | Purpose |
 | :--- | :---: | :---: | :--- |
@@ -96,9 +96,9 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,395 tok** | **8,331 tok** | **-27% Balanced, -35% Lite (-3,466 to -4,530 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **19,707 tok** | **18,643 tok** | **-20% Balanced, -24% Lite (-4,959 to -6,023 tok)** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **15,949 tok** | **14,885 tok** | **-36% Balanced, -40% Lite (-8,812 to -9,876 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **9,734 tok** | **8,670 tok** | **-24% Balanced, -33% Lite (-3,127 to -4,191 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **20,046 tok** | **18,982 tok** | **-19% Balanced, -23% Lite (-4,620 to -5,684 tok)** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **16,320 tok** | **15,256 tok** | **-34% Balanced, -38% Lite (-8,441 to -9,505 tok)** |
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 
