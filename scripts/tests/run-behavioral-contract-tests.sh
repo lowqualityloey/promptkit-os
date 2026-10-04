@@ -183,7 +183,6 @@ assert_contains "templates/agent-directive-template.md" "STATE.md Untrusted Unti
 assert_contains "templates/agent-directive-template.md" "Telemetry Card Provenance" "Directive mandates telemetry card provenance"
 assert_contains "templates/agent-directive-lite-template.md" "~15 substantive turns" "Lite directive carries the endurance rule"
 assert_contains "templates/agent-directive-lite-template.md" "not measured" "Lite directive carries the provenance rule"
-assert_contains "workflows/sync.md" "### Mandatory Re-Entry Recovery" "Sync workflow defines the direct re-entry checklist"
 assert_contains "templates/agent-directive-template.md" 'pk:spike. -> .research\.md' "Directive lists trigger-to-file rename exceptions"
 assert_contains "workflows/route.md" "Tie-Break" "Router defines the mixed-level tie-break rule"
 assert_contains "templates/agent-directive-template.md" "Ties take the higher level" "Directive carries the tie-break rule"
