@@ -40,6 +40,17 @@ Any tool call attempting to modify a deny-listed path without explicit instructi
 5. ⏱️ **Execution Timeouts & Step Caps**:
    Enforce a maximum 30-second timeout per test command execution and a cap of ≤15 tool calls per subtask to prevent async deadlocks and runaway token consumption.
 
+### Aggregate Round Budget (composes with the 3-strike breaker; never replaces it)
+
+The 3-strike breaker bounds *consecutive* failures on one verification; it cannot bound repeated work, because findings raised after a green verification start a fresh sequence. The whole-task aggregate budget closes that loop and is owned by `protocols/code-quality-gate.md` (referenced, not duplicated).
+
+- **A round is** one full review → remediate → re-verify cycle across the whole task — not one tool call, not one refine attempt, not one subtask. Waves share the task total; a wave never opens a fresh budget.
+- **Default 6 rounds**, configurable per task in the Task Record by a human. A green verification never resets the total; only a human may change or reset it.
+- Counters are checkpointed to `docs/STATE.md` and restored across compaction, handoff, and `pk:fix` bug detours — never silently replenished. Read-only work is not exempt.
+- **Consolidate first**: gather one round's independent findings, fix them together, rerun only the affected lanes.
+- **On exhaustion**: checkpoint outstanding findings and evidence, emit the `### 🚫BLOCKED:` callout naming the required human action, and stop. Never weaken a test, skip a gate, or convert incomplete work into done to stay inside budget.
+- **No latency claim**: this bounds repeated work, not provider speed. Record counters only when observed (`not measured` otherwise) and claim no improvement without comparable measurements.
+
 ---
 
 ## Terminal Stop Boundaries & Leash Control

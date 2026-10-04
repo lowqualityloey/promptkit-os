@@ -82,6 +82,42 @@ Canonical transition graph (enforced by `scripts/validate-execution-control.sh` 
 
 A task cannot enter `ready` until its objective, scope, non-goals, acceptance criteria, dependencies, verification condition, owner/approval boundary, and execution policy are complete. It cannot enter `in_progress` until readiness, start time, execution scope, and active ownership are recorded. Only one task may hold the active pointer in this Execution Scope.
 
+### Active Detour (Optional)
+
+Record an in-scope bug detour **inside this Task Record** — never as a second record type, parallel ledger, or independent state system (contract: `workflows/fix.md` Step 5). Omit this block when no detour is active.
+
+- **Detour ID**: `DETOUR-<task-slug>-<nn>` or `None`
+- **Parent Continuation Captured**: `[Parent task ID and milestone | interrupted Next Action | parent Objective | approved scope and non-goals | authorization reference | pending stop condition]`
+- **Failure Classification**: `approved_scope_remediation | blocking_new_requirement | unrelated_finding` <!-- exactly one verdict; route via the New-Requirement Interception table in workflows/sync.md -->
+- **Detour Verification**: `[command and result @ revision, or Not verified]`
+- **Detour Exit State**: `restored_parent | blocked | scope_change_recorded | deferred_later` <!-- restored_parent returns the parent to in_progress on its own remaining ACs; a green detour never completes the parent -->
+- **Budget Impact**: `[Record that the detour does not reset the bounded-repair counter or the whole-task aggregate budget; cite protocols/code-quality-gate.md]`
+
+Detour evidence never satisfies the parent's remaining acceptance criteria, and a detour cannot grant new authority — expanded scope or new approvals require human confirmation through the existing interception routes. On compaction or handoff, recovery reconciles against this block so it never spawns a duplicate parent task or drops a pending next action.
+
+### Pending Human Actions (Optional)
+
+Track unresolved human actions **inside this Task Record** — never in a second parallel action ledger, and never store credentials, tokens, or secret values here (reference the env key or secret store instead). Omit this block when nothing is pending. Contract: `protocols/telemetry-cards.md` *Pre-Response Check*.
+
+| Pending Action ID | Reason and Required Condition | Owner | Status | Authority Scope | Resume Condition |
+|---|---|---|---|---|---|
+| `PENDING-<task-slug>-<nn>` | `[Why it is pending and the exact observable condition that resolves it]` | `[Human role/name]` | `pending` <!-- pending | resolved | withdrawn --> | `[What the reply may authorize — never an unrelated protected action or a milestone boundary]` | `[Precise condition to resume]` |
+
+- **Pending Action Retention**: `An action stays pending across turns, compaction, and handoff until its recorded condition is actually met and, where an externally observable condition exists, verified. A callout suppressed by the Single-Callout Invariant is retained unchanged — suppression is not resolution.`
+- **Reply Binding**: `A done / merged / numeric / continue reply resolves only the recorded action it was offered against; record the resolving reply and its evidence here.`
+
+### Aggregate Work Budget (Optional)
+
+Record the durable whole-task bound on repeated review/remediation work. It composes with the Bounded Repair Rule and never replaces, relaxes, or lengthens it. Contract: `protocols/code-quality-gate.md` *Aggregate Round Budget*.
+
+- **Total Rounds Consumed**: `[N]` <!-- one round = one full review -> remediate -> re-verify cycle over the whole task; counted when its re-verification completes, green or red -->
+- **Configured Round Limit**: `[Default 6, or the human-set value]` <!-- a human may set this using their real time/quota constraints; only a human may change or reset it -->
+- **Observed Tool Work / Elapsed Time**: `[measured values, or not measured]` <!-- record only when the host exposes them; never estimate -->
+- **Current Progress**: `[What is verified so far and what remains]`
+- **Stop / Resume Condition**: `[Exact condition that ends the budget, and the condition to resume after it]`
+
+A passing verification may clear the *consecutive*-failure counter but **never resets the total**; compaction, session handoff, and an active bug detour restore the recorded total rather than replenishing it. On exhaustion the task stays incomplete with its findings open — no test is weakened, no mandatory gate is skipped, and reused evidence keeps its original revision/coverage binding and is labeled historical.
+
 ## 6. Evidence and Completion Gate
 
 - **Changed Files**:

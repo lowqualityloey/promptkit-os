@@ -4,7 +4,7 @@
 Trigger anytime with: `pk:checkpoint` (or `/pk-checkpoint`, `pk:handoff`)
 
 ## Mission
-Eliminate AI context window degradation, token lag, and instruction drift during extended pairing sessions. Compress the active working state into an architectural snapshot, persist progress into `docs/STATE.md` on disk, and generate a plug-and-play **Handover Prompt** to resume work in a fresh chat window with zero lost context.
+Eliminate AI context window degradation, token lag, and instruction drift during extended pairing sessions. Compress the active working state into an architectural snapshot, persist progress into `docs/STATE.md` on disk, and generate a plug-and-play **Handover Prompt** that carries canonical task identity, authority, and stop/resume conditions into a fresh chat window. Nothing is preserved unconditionally: the receiver regains a task only as far as the cited records verify it, and a missing or conflicting boundary field leaves work blocked rather than assumed approved.
 
 ---
 
@@ -146,36 +146,62 @@ Record the complete workspace state before switching sessions, including intenti
     If `docs/STATE.md` does not yet exist, offer to scaffold it from `templates/state-tracker-template.md`.
 
 2. **Generate Clean Handover Prompt**:
-   Generate a self-contained, copy-pasteable prompt block formatted for a brand-new chat session:
+   Generate a self-contained, copy-pasteable prompt block formatted for a brand-new chat session.
+
+   Section 1 through Section 6 are **required for every task**, including Level 0 (Direct) and Level 1 (Standard) work that has no Task Record file — record `N/A — no Task Record (Level 0/1)` explicitly rather than deleting the field. Section 7 stays optional and applies only to release-evaluation transfers.
+
+   Field names mirror [`templates/execution-handoff-template.md`](../templates/execution-handoff-template.md) so the block is a **projection of the canonical records**, never a second source of truth. Populate every boundary field from the records themselves: a summary written here is not new authority, and a blank boundary field is not a default.
 
 ````markdown
 ### Handover Prompt for Fresh Chat Session
 
-Copy and paste the block below into a new chat window to resume work with zero lost context:
+Copy and paste the block below into a new chat window. It carries the work forward only as far as the receiver can verify the cited records — it does not pre-approve anything:
 
 ```markdown
-# Session Resume: [Feature / Task Name]
+# Session Resume: [Task ID] — [Feature / Task Name]
 
-## 1. Context & Environment
-- **Branch**: `[branch-name]` at commit `[commit-hash]`
-- **Active Task**: [1-sentence summary of the active task]
-- **Current Status**: [e.g., Schema migrated, backend endpoints complete, frontend pending]
+## 1. Identity and Authority
+- **Task ID**: `[TASK-YYYY-MM-DD-<slug> or N/A — no Task Record (Level 0/1)]`
+- **Task Record (canonical)**: `docs/tasks/<task-id>.md` · **Specification**: `[path or N/A]`
+- **Checkpoint / Handoff Records**: `[docs/tasks/<task-id>.checkpoint-<n>.md | .handoff-<n>.md | none]`
+- **Approval Boundary**: `[who approved which action, and where that approval is recorded — cite the approval source; a narrative summary here is not new authority]`
+- **Sender → Intended Receiver**: `[current session/role] → [fresh session/role]`
+- **Branch / Validated Revision**: `[branch]` @ `[commit]`
+- **Changed Files**: `[path — state]`, including intentional uncommitted work (`git status -s` at handoff time)
 
-## 2. Key Files to Inspect
-- `[path/to/file1.ts]`: [Role of this file]
-- `[path/to/file2.ts]`: [Role of this file]
-- `docs/[specs|data|auth]/...md`: [Active design spec or matrix]
+## 2. Objective, Milestone, and Execution State
+- **Milestone / Objective**: `[milestone]` — `[one observable objective]`
+- **Execution State**: `[in_progress | checkpoint_due | blocked | paused | handoff_ready | awaiting_review]`
+- **Completed**: `[milestone or AC-* and its evidence]`
+- **Remaining**: `[AC-* IDs and what is left]`
+- **Acceptance Criteria**: `[AC-* → condition to satisfy]`
+- **Locked Technical Invariants (Do Not Undo)**: `[invariant — how it is verified]`
 
-## 3. Locked Technical Invariants (Do Not Undo)
-- [Invariant 1, e.g., All database tables use UUIDv7 primary keys]
-- [Invariant 2, e.g., Auth sessions require HttpOnly, SameSite=Lax cookies]
-- [Invariant 3, e.g., Presentation components must not contain business logic]
+## 3. Blockers, Pending Human Actions, and Resume Condition
+- **Blockers and Resume Conditions**: `[blocker, owner, evidence, and precise condition, or None]`
+- **Pending Human Actions**: `[decision or sign-off awaited, and from whom, or None]`
+- **Resume Condition**: `[the one condition that lifts the stop state]`
+- **Scope and Approval Constraints**: `[what the receiver must not change without a Scope Change Record]`
 
-## 4. Current State & Immediate Next Step
-- **What is done**: [Brief list of completed work]
-- **Next immediate action**: [Exact next task to execute]
+## 4. Verification Evidence
+- **Command → Result @ Revision**: `[command]` → `[exit code and result]` @ `[revision it was measured at]`
+- **Historical or current?**: `[current — measured this turn | historical — from <revision/date>, NOT re-run this turn]`
+- **Not Verified**: `[gates still open or unmeasured, or None]`
 
-## 5. Optional Release-Evaluation Handoff
+## 5. Next Action (exactly one)
+- [Exactly one prioritized action]
+
+## 6. Receiver Validation — complete before any edit
+- [ ] **Task identity**: Task ID and specification match the Task Record.
+- [ ] **Revision**: workspace matches the validated revision, or the difference is recorded.
+- [ ] **Changed files**: current file set matches this block, or discrepancies are recorded.
+- [ ] **Acceptance and invariants**: remaining `AC-*` criteria, locked decisions, and scope constraints are understood.
+- [ ] **Blockers**: blockers, pending human actions, and the resume condition are still valid.
+- [ ] **Next action**: exactly one next action is accepted without implicit scope expansion.
+
+Missing, conflicting, or stale identity/authority fields do **not** default to approval or task completion: stay `blocked` or `checkpoint_due` and reconcile with the human first. Record the reconciliation in the Handoff Record. Read-only diagnosis may continue while blocked; do not rewrite scope, invariants, or acceptance criteria from inference.
+
+## 7. Optional Release-Evaluation Handoff
 - **Evaluation ID**: [Stable evaluation identifier or N/A]
 - **Release Candidate Commit**: [Exact candidate revision or N/A]
 - **Preliminary SemVer Candidate**: [Candidate version or no candidate] (status: `preliminary`, not approved)
@@ -183,9 +209,9 @@ Copy and paste the block below into a new chat window to resume work with zero l
 - **Unresolved Blockers**: [Named blocker, owner, and resolution condition, or none recorded]
 - **Requested Release Coordinator Decision**: [One explicit next human action or N/A]
 - **Source Evaluation / Task Record**: [Authoritative record paths or N/A]
-- **Handoff Boundary**: [This is a handoff projection only; final approval belongs to `pk:ship` and the Release Coordinator. No tag, release, publication, remote, deployment, or rollback action is authorized.]
+- **Handoff Status**: [Ready for Coordinator Review | Blocked | Deferred | N/A]
 
-Please inspect the files listed above and confirm you are ready to proceed with the next step.
+Read the canonical records above, reconcile any discrepancy, and confirm before editing. A receiver may also recover the projection by typing `pk:route` per `protocols/context-sync.md` §8; this block additionally carries the identity, authority, and stop/resume fields that the `docs/STATE.md` projection alone does not.
 ```
 ````
 
@@ -218,23 +244,49 @@ Please inspect the files listed above and confirm you are ready to proceed with 
 
 ### Ready-to-Paste Handover Prompt for New Chat:
 
+Ordinary task, so the optional release-evaluation fragment (§7) is omitted — Sections 1–6 carry the same identity, authority, and stop/resume fields a release handoff would.
+
 ```markdown
-# Session Resume: Email Verification Invariant
+# Session Resume: TASK-304-invite-verification — Email Verification Invariant
 
-## 1. Context & Environment
-- **Branch**: `feature/email-verification` at commit `9312b1a`
-- **Active Task**: Implement verification gate on team invite server action
-- **Current Status**: Database migration and auth spec complete; server action update pending
+## 1. Identity and Authority
+- **Task ID**: `TASK-304-invite-verification`
+- **Task Record (canonical)**: `docs/tasks/TASK-304-invite-verification.md` · **Specification**: `docs/auth/email-verification-matrix.md`
+- **Checkpoint / Handoff Records**: `docs/tasks/TASK-304-invite-verification.checkpoint-1.md` · no handoff record yet
+- **Approval Boundary**: human approved the `email_verified_at` migration and the 403 barrier shape in `docs/tasks/TASK-304-invite-verification.md` §1; the M2 milestone sign-off is **not** granted, so no commit or PR action is authorized.
+- **Sender → Intended Receiver**: `Antigravity (executor)` → `fresh session`
+- **Branch / Validated Revision**: `feature/email-verification` @ `9312b1a`
+- **Changed Files**: `db/migrations/20260906_add_email_verified_at.sql` (committed at `9312b1a`), `docs/auth/email-verification-matrix.md` (committed), `tests/auth/verify-email.test.ts` (committed), `src/server/actions/invite.ts` (uncommitted, untouched)
 
-## 2. Key Files to Inspect
-- `src/server/actions/invite.ts`: Target server action to protect
-- `docs/auth/email-verification-matrix.md`: Auth capability matrix
-- `tests/auth/verify-email.test.ts`: Verified test cases
+## 2. Objective, Milestone, and Execution State
+- **Milestone / Objective**: M2: Auth & Invitations — unverified invitees are rejected at the server action.
+- **Execution State**: `awaiting_review`
+- **Completed**: migration `email_verified_at` added; auth matrix updated; unit tests added.
+- **Remaining**: `AC-2` — enforce the barrier inside `inviteUser`; `AC-3` — integration test for the 403 path.
+- **Acceptance Criteria**: `AC-2` server rejects unverified invitees; `AC-3` `tests/auth/invite-verification.test.ts` asserts `ERR_EMAIL_UNVERIFIED`.
+- **Locked Technical Invariants (Do Not Undo)**: unverified users receive 403 `ERR_EMAIL_UNVERIFIED`; verification reads the server session, never client props.
 
-## 3. Locked Technical Invariants
-- Unverified users must receive 403 Forbidden with `ERR_EMAIL_UNVERIFIED`
-- All verification checks happen on the server session, never trusted from client props
+## 3. Blockers, Pending Human Actions, and Resume Condition
+- **Blockers and Resume Conditions**: milestone sign-off pending — owner: human approver; evidence: `docs/tasks/TASK-304-invite-verification.md` §5 `awaiting_review`.
+- **Pending Human Actions**: decide the M2 milestone sign-off.
+- **Resume Condition**: the human accepts the recorded migration and matrix, or names a change; until then no commit, PR, or milestone advance.
+- **Scope and Approval Constraints**: stay inside `docs/tasks/TASK-304-invite-verification.md` scope; the 403 contract change needs a Scope Change Record, not an inline edit.
 
+## 4. Verification Evidence
+- **Command → Result @ Revision**: `pnpm vitest run tests/auth/verify-email.test.ts` → `12 passed, 0 failed`, exit 0 @ `9312b1a`
+- **Historical or current?**: historical — measured this session before the handoff at `9312b1a`; **not** re-run against the uncommitted `invite.ts`
+- **Not Verified**: integration path for `inviteUser` (no test exists yet), full suite, `tsc --noEmit`
+
+## 5. Next Action (exactly one)
+- Add the verification barrier inside `inviteUser` (`src/server/actions/invite.ts`) — read-only diagnosis allowed first.
+
+## 6. Receiver Validation — complete before any edit
+- [ ] **Task identity**: `TASK-304-invite-verification` and the spec path match the Task Record.
+- [ ] **Revision**: workspace is at `9312b1a` with `invite.ts` uncommitted, or the difference is recorded.
+- [ ] **Changed files**: the four files above match the working tree.
+- [ ] **Acceptance and invariants**: `AC-2`/`AC-3` and the 403 contract are understood.
+- [ ] **Blockers**: sign-off is still pending and the resume condition is unchanged.
+- [ ] **Next action**: the single `inviteUser` barrier action is accepted without scope expansion.
 ```
 ````
 
@@ -284,3 +336,5 @@ No further ledger rows accumulate after `COMPLETED`. This record is the receipt 
 
 ## Related References
 - Canonical workflow navigation: [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md)
+- Canonical record schemas projected by the handover prompt: [`templates/execution-handoff-template.md`](../templates/execution-handoff-template.md), [`templates/execution-task-record-template.md`](../templates/execution-task-record-template.md), [`templates/state-tracker-template.md`](../templates/state-tracker-template.md)
+- Fresh-session recovery paths: [`protocols/context-sync.md`](../protocols/context-sync.md) (§8 threshold and reconnect) and [`workflows/sync.md`](sync.md) (post-compaction re-entry)

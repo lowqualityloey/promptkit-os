@@ -177,6 +177,7 @@ Once the failure point is proven, trace the failure back to the fundamental brok
 6. **Independent Fresh-Context Verification (Pattern C - Level 2+ Only)**:
    - For Level 2+ fixes, the Pattern C verifier's brief includes an **adversarial pass**: attempt to make the fix fail; try the failure mode the fix claims to close, test edge conditions, and actively attempt to break the fix.
    - Level 0 and Level 1 fixes bypass Pattern C verification completely (zero token impact on the fast path). Single-pass contract applies (max 15-line synthesis, zero child delegation).
+7. **Mid-Task Fix = Detour**: if this Phase 6 fix starts inside an unfinished parent task, it is a detour — capture the parent task/milestone, interrupted next action, objective, scope, authorization, and pending stop condition in the existing canonical Task Record before editing, classify the failure as approved-scope remediation / blocking new requirement / unrelated finding, then restore the parent's next action and remaining acceptance criteria on exit. A green detour never completes the parent. Full contract: **Step 5 of `workflows/fix.md`**.
 
 ---
 

@@ -325,6 +325,17 @@ For **Level 2 (Controlled)** and **Level 3 (Release-Critical)** Work, the lead a
    - **15-Line Synthesis**: Output is capped at a 15-line Pass/Fail matrix with file/line references for missing edge cases.
    - **Targeted Verifier Scope**: Input is strictly bounded to the target Acceptance Criteria, mode-appropriate review diff, test commands with recorded execution evidence, and bounded claim excerpts; returns a concise synthesis, preventing expensive multi-turn downstream debugging.
 
+### Aggregate Round Accounting (all review lanes, not only the final verifier)
+
+The bounded final verifier above caps one lane's single pass; it does not bound repeated work across the review lanes or across the task. Round accounting is owned by `protocols/code-quality-gate.md` (referenced, not duplicated) and applies to every lane here.
+
+- **A round is** one full review → remediate → re-verify cycle over the whole task. Findings that arrive *after* a green verification — a second Spec Fidelity pass, a reopened Standards axis, a simplification audit on new code — consume a round from the same total.
+- **Default 6 rounds per task**, configurable by a human in the Task Record; the counter is durable across compaction, handoff, and debug detours. A passing lane clears the consecutive-failure counter only; it never resets the total.
+- **Consolidate before fixing**: merge a round's independent findings into one remediation pass, then rerun only the lanes whose inputs changed or whose concerns are unresolved.
+- **Evidence provenance**: reused evidence keeps its exact revision and coverage binding and is labeled historical. Never present reused or prior-round evidence as a current-turn green verification result.
+- **On exhaustion**: checkpoint the unresolved findings and gathered evidence, state the required human action, and stop — incomplete findings stay open and no gate is bypassed or waived.
+- **No speed claim**: repeated-work counters are separate from tool/network/model latency; claim no improvement without comparable recorded measurements.
+
 ---
 
 ## Socratic Debrief & Next Steps

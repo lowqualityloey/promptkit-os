@@ -22,6 +22,7 @@ PromptKit OS Lite is active in this workspace (`./$KIT_DIR_REL`). Lightweight mo
 - **Telemetry Cards & Callout**: format card and callouts per `card-style:` (framed ceiling/floor box default; GFM alert when markdown per `protocols/telemetry-cards.md`; `[■■■■■■■■□□]` n/m · quality gate measured/not measured). Max 1 callout/turn (IMPORTANT > WARNING > TIP). Suppress on `status-cards: off` (default on). Halting → ACTION REQUIRED (PR links `👉 [#N](url)`).
 - **Disk-First**: Always read `$KIT_DIR_REL/workflows/<trigger>.md` fresh from disk, never rely on memory. `pk:sync` refreshes. Nudge at ~15 substantive turns, hard checkpoint ~30 turns; when `docs/STATE.md` invariants cannot be recited fresh, run `pk:checkpoint` and recommend a fresh session; unpopulated STATE.md fields report `not tracked`, never computed-looking numbers.
 - **Context Recovery**: After handover, compaction/continuation, task-invariant loss, or status interruption that displaced active work, pause writes; read `$KIT_DIR_REL/workflows/sync.md` before resuming.
+- **Pre-Response Check**: Before replying, confirm stop state, the highest-priority unresolved human action with its concrete action + `👉 Reply:` hint, retained suppressed actions, honest evidence, and TL;DR on substantive turns (L0 exempt); see `$KIT_DIR_REL/protocols/telemetry-cards.md`.
 - **DB Isolation**: Use project-scoped containers, never foreign DBs.
 - **Git Boundaries**: Never start new milestone with dirty tree. At milestone end: verify, `pk:commit`, update `docs/STATE.md`, request sign-off.
 
