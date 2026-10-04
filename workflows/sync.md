@@ -6,6 +6,18 @@ Trigger anytime with: `pk:sync` (or `/pk-sync`, `pk:update`, `pk:refresh`)
 ## Mission
 Eliminate instruction decay, stale working assumptions, and formatting divergence after updating PromptKit OS. Re-read root configuration files (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`), inspect newly added or updated workflows, and immediately reload the agent's operational rules from disk — then announce any rule that differs from what the session has been doing.
 
+### Mandatory Re-Entry Recovery
+
+Run this before any project-state write after a fresh-session handover, host-reported compaction or continuation, detected loss of task invariants, or a status interruption that displaced active work. Do not resume from a summary alone.
+
+1. For Level 2/3 or otherwise controlled work, read the canonical Local Task Record (`docs/tasks/<task-id>.md`) and the checkpoint or handoff it identifies; verify task identity and exact revision. For work without a Task Record, read the applicable handoff/checkpoint and the human instruction that authorized the active scope. If either source is unavailable after a fresh-session handover, stop and ask for the missing authority.
+2. Read `docs/STATE.md` as a projection, the active workflow, and the applicable installed root directives (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, or host equivalent).
+3. Restore the objective, milestone, frozen scope, authorization source, blockers and pending human actions, resume condition, and exactly one next action from those records and instructions.
+4. Reconcile record/revision conflicts before any write. The Task Record is canonical and STATE is only its projection. If authority is missing, conflicting, or still stopped, preserve that stop state; a summary, `continue`, continuation event, or new session cannot create approval or broaden scope.
+5. Resume only after all required reads agree and the recorded resume condition is met. Never invent a missing Task Record or authority from a summary; retain any existing stop condition until authority is established.
+
+Hosts that expose no compaction or continuation signal cannot reliably detect it. Apply recovery on a fresh-session handover or reported context reset; otherwise report detection as unavailable rather than claiming automatic recovery.
+
 ---
 
 ## Preconditions & When to Sync

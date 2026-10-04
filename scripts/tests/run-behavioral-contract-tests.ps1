@@ -184,6 +184,9 @@ Assert-Contains "templates/agent-directive-template.md" "STATE.md Untrusted Unti
 Assert-Contains "templates/agent-directive-template.md" "Telemetry Card Provenance" "Directive mandates telemetry card provenance"
 Assert-Contains "templates/agent-directive-lite-template.md" "~15 substantive turns" "Lite directive carries the endurance rule"
 Assert-Contains "templates/agent-directive-lite-template.md" "not measured" "Lite directive carries the provenance rule"
+Assert-Contains "templates/agent-directive-template.md" "Context Recovery" "Balanced root directive exposes a re-entry recovery trigger"
+Assert-Contains "templates/agent-directive-lite-template.md" "Context Recovery" "Lite root directive exposes a re-entry recovery trigger"
+Assert-Contains "workflows/sync.md" "### Mandatory Re-Entry Recovery" "Sync workflow defines the direct re-entry checklist"
 Assert-Contains "templates/agent-directive-template.md" 'pk:spike. -> .research\.md' "Directive lists trigger-to-file rename exceptions"
 Assert-Contains "workflows/route.md" "Tie-Break" "Router defines the mixed-level tie-break rule"
 Assert-Contains "templates/agent-directive-template.md" "Ties take the higher level" "Directive carries the tie-break rule"
@@ -448,8 +451,8 @@ function Check-BenchmarkFigure([string]$Description, [object]$Measured, [object]
 
 Check-BenchmarkFigure "Balanced static directive" (Get-StaticMeasurement 'BALANCED' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Balanced)')
 Check-BenchmarkFigure "Lite static directive" (Get-StaticMeasurement 'LITE' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')
-Check-BenchmarkFigure "Balanced static reduction percent" (Get-StaticSavingsPercent $balancedSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~26.9k current core-subset baseline¹' 'Balanced')
-Check-BenchmarkFigure "Lite static reduction percent" (Get-StaticSavingsPercent $liteSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~26.9k current core-subset baseline¹' 'Lite')
+Check-BenchmarkFigure "Balanced static reduction percent" (Get-StaticSavingsPercent $balancedSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~27.4k current core-subset baseline¹' 'Balanced')
+Check-BenchmarkFigure "Lite static reduction percent" (Get-StaticSavingsPercent $liteSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~27.4k current core-subset baseline¹' 'Lite')
 Check-BenchmarkFigure "Full workflow-set token total" (Get-FullsetTokens $fullsetOutput) (Get-BenchmarkMetric 'Inventory' 'Measured Tokens' 'Full workflow set')
 Check-BenchmarkFigure "Core-six workflow-set token total" (Get-CoreSixTokens $fullsetOutput) (Get-BenchmarkMetric 'Inventory' 'Measured Tokens' 'Core-six Lite subset')
 $liveWorkflowCount = @(Get-ChildItem (Join-Path $RepoRoot "workflows") -Filter "*.md" -File).Count

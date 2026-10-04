@@ -183,6 +183,9 @@ assert_contains "templates/agent-directive-template.md" "STATE.md Untrusted Unti
 assert_contains "templates/agent-directive-template.md" "Telemetry Card Provenance" "Directive mandates telemetry card provenance"
 assert_contains "templates/agent-directive-lite-template.md" "~15 substantive turns" "Lite directive carries the endurance rule"
 assert_contains "templates/agent-directive-lite-template.md" "not measured" "Lite directive carries the provenance rule"
+assert_contains "templates/agent-directive-template.md" "Context Recovery" "Balanced root directive exposes a re-entry recovery trigger"
+assert_contains "templates/agent-directive-lite-template.md" "Context Recovery" "Lite root directive exposes a re-entry recovery trigger"
+assert_contains "workflows/sync.md" "### Mandatory Re-Entry Recovery" "Sync workflow defines the direct re-entry checklist"
 assert_contains "templates/agent-directive-template.md" 'pk:spike. -> .research\.md' "Directive lists trigger-to-file rename exceptions"
 assert_contains "workflows/route.md" "Tie-Break" "Router defines the mixed-level tie-break rule"
 assert_contains "templates/agent-directive-template.md" "Ties take the higher level" "Directive carries the tie-break rule"
@@ -427,9 +430,9 @@ check_benchmark_figure "Balanced static directive" "$(static_metric BALANCED)" \
 check_benchmark_figure "Lite static directive" "$(static_metric LITE)" \
     "$(benchmark_metric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')"
 check_benchmark_figure "Balanced static reduction percent" "$(static_savings_percent "$BALANCED_SAVINGS_OUT")" \
-    "$(benchmark_metric 'Profile' 'Reduction vs ~26.9k current core-subset baseline¹' 'Balanced')"
+    "$(benchmark_metric 'Profile' 'Reduction vs ~27.4k current core-subset baseline¹' 'Balanced')"
 check_benchmark_figure "Lite static reduction percent" "$(static_savings_percent "$LITE_SAVINGS_OUT")" \
-    "$(benchmark_metric 'Profile' 'Reduction vs ~26.9k current core-subset baseline¹' 'Lite')"
+    "$(benchmark_metric 'Profile' 'Reduction vs ~27.4k current core-subset baseline¹' 'Lite')"
 check_benchmark_figure "Full workflow-set token total" "$(fullset_measured_tokens "$FULLSET_OUT")" \
     "$(benchmark_metric 'Inventory' 'Measured Tokens' 'Full workflow set')"
 check_benchmark_figure "Core-six workflow-set token total" "$(core_six_measured_tokens "$FULLSET_OUT")" \

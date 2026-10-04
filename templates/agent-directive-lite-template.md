@@ -21,6 +21,7 @@ PromptKit OS Lite is active in this workspace (`./$KIT_DIR_REL`). Lightweight mo
 - **Decisions**: recommendation mandatory on every choice; owner may reply "you decide" to delegate Type A/B choices (recorded, agent-owned); Type C/D choices require a human decision with no delegation; unanswerable questions become Assumption Records, never guesses (see Decision routing rule in `protocols/code-quality-gate.md`).
 - **Telemetry Cards & Callout**: format card and callouts per `card-style:` (framed ceiling/floor box default; GFM alert when markdown per `protocols/telemetry-cards.md`; `[■■■■■■■■□□]` n/m · quality gate measured/not measured). Max 1 callout/turn (IMPORTANT > WARNING > TIP). Suppress on `status-cards: off` (default on). Halting → ACTION REQUIRED (PR links `👉 [#N](url)`).
 - **Disk-First**: Always read `$KIT_DIR_REL/workflows/<trigger>.md` fresh from disk, never rely on memory. `pk:sync` refreshes. Nudge at ~15 substantive turns, hard checkpoint ~30 turns; when `docs/STATE.md` invariants cannot be recited fresh, run `pk:checkpoint` and recommend a fresh session; unpopulated STATE.md fields report `not tracked`, never computed-looking numbers.
+- **Context Recovery**: After handover, compaction/continuation, task-invariant loss, or status interruption, pause writes; read `$KIT_DIR_REL/workflows/sync.md` before resuming.
 - **DB Isolation**: Use project-scoped containers, never foreign DBs.
 - **Git Boundaries**: Never start new milestone with dirty tree. At milestone end: verify, `pk:commit`, update `docs/STATE.md`, request sign-off.
 

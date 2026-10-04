@@ -40,7 +40,8 @@ fi
 D="$TEST_ROOT/t2"; mkdir -p "$D"
 if bash "$REPO_ROOT/init.sh" --lite "$D" </dev/null >/dev/null 2>&1 \
    && [[ "$(profile_of "$D")" == "lite" ]] \
-   && grep -q 'PromptKit OS Lite' "$D/AGENTS.md"; then
+   && grep -q 'PromptKit OS Lite' "$D/AGENTS.md" \
+   && grep -q '^- \*\*Context Recovery\*\*:' "$D/AGENTS.md"; then
     ok "--lite sets profile lite and injects Lite directive"
 else
     notok "--lite install (profile=$(profile_of "$D"))"
@@ -50,7 +51,8 @@ fi
 D="$TEST_ROOT/t3"; mkdir -p "$D"
 if bash "$REPO_ROOT/init.sh" --balanced "$D" </dev/null >/dev/null 2>&1 \
    && [[ "$(profile_of "$D")" == "balanced" ]] \
-   && grep -q '^## PromptKit OS: Engineering Operating System$' "$D/AGENTS.md"; then
+   && grep -q '^## PromptKit OS: Engineering Operating System$' "$D/AGENTS.md" \
+   && grep -q '^- \*\*Context Recovery\*\*:' "$D/AGENTS.md"; then
     ok "--balanced sets profile balanced and injects full directive"
 else
     notok "--balanced install (profile=$(profile_of "$D"))"

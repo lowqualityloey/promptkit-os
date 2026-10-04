@@ -30,6 +30,8 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit 
 
 In an interactive terminal, the wizard uses arrow keys and Enter for profile and task-tracker choices, then Space and Enter to choose AI-host files. A final review lets you edit a choice, install, or cancel. Existing settings are kept on reruns; command-line flags remain available for automated installs.
 
+To refresh installed directives after updating PromptKit OS, update the kit using the same installation method and rerun its canonical `init.sh` or `init.ps1` installer. The installer regenerates the managed directive block from the selected profile template; custom content outside that block is preserved.
+
 *(For CI pipelines or headless scripts, pass flags directly: `--balanced`, `--lite`, `--host=<name>`.)*
 
 ---
@@ -138,8 +140,8 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 
 The core instruction layer stays small. Workflows, stack playbooks, and boundary recipes are loaded only when the task requires them.
 
-- **Balanced** profile: ~2,350 tok static footprint (~91% static saving vs. ~26.9k current core-subset baseline; 2,500 tok budget cap)
-- **Lite** profile: ~1,286 tok static footprint (~95% static saving vs. the current baseline; 1,500 tok budget cap)
+- **Balanced** profile: ~2,394 tok static footprint (~91% static saving vs. ~27.4k current core-subset baseline; 2,500 tok budget cap)
+- **Lite** profile: ~1,331 tok static footprint (~95% static saving vs. the current baseline; 1,500 tok budget cap)
 
 PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), enforcing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 task risk ceremony). Retrieval confidence is treated as evidence rather than authority, ensuring high-risk boundaries trigger mandatory zoom-outs.
 

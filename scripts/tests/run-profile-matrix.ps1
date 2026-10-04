@@ -53,14 +53,14 @@ else { NotOk "no flag should default balanced (rc=$LASTEXITCODE, profile=$(Profi
 $d = NewDir "t2"
 & pwsh -NoProfile -File $Init --lite $d 2>&1 | Out-Null
 $agents = (Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue -Raw) -replace "\r\n", "`n"
-if ((ProfileOf $d) -eq "lite" -and $agents -match "PromptKit OS Lite") { Ok "--lite sets profile lite and injects Lite directive" }
+if ((ProfileOf $d) -eq "lite" -and $agents -match "PromptKit OS Lite" -and $agents -match "(?m)^- \*\*Context Recovery\*\*:") { Ok "--lite sets profile lite and injects Lite recovery directive" }
 else { NotOk "--lite install (profile=$(ProfileOf $d))" }
 
 # 3. --balanced: profile balanced + full directive header.
 $d = NewDir "t3"
 & pwsh -NoProfile -File $Init --balanced $d 2>&1 | Out-Null
 $agents = (Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue -Raw) -replace "\r\n", "`n"
-if ((ProfileOf $d) -eq "balanced" -and $agents -match "(?m)^## PromptKit OS: Engineering Operating System$") { Ok "--balanced sets profile balanced and injects full directive" }
+if ((ProfileOf $d) -eq "balanced" -and $agents -match "(?m)^## PromptKit OS: Engineering Operating System$" -and $agents -match "(?m)^- \*\*Context Recovery\*\*:") { Ok "--balanced sets profile balanced and injects full recovery directive" }
 else { NotOk "--balanced install (profile=$(ProfileOf $d))" }
 
 # 4. --turbo without --experimental: must fail with guard message.
