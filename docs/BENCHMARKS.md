@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [25 Inlined Workflows (107,662 tok) + Templates + Protocols] │
+│ Every Turn: [25 Inlined Workflows (109,368 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -30,22 +30,22 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 ## 2. Static Injection Footprint (Measured Tokens)
 
-| Profile | Template | UTF-8 Bytes | Est. Tokens (bytes/4) | Reduction vs ~27.5k current core-subset baseline¹ | Use |
+| Profile | Template | UTF-8 Bytes | Est. Tokens (bytes/4) | Reduction vs ~29.3k current core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
 | **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 5,350 | **1,338 tok** | **95% static** | Onboarding, new users, tiny fixes |
-| **Balanced** | `agent-directive-template.md` (25 workflows) | 9,604 | **2,401 tok** | **91% static** | Teams, production, default |
-| **Turbo** | same as Balanced + parallel waves | 9,604 | 2,401 tok + subagents (~2x measured total (bounds model, see section 8)) | 91% static, higher total | Experimental, greenfield, accepts cost |
+| **Balanced** | `agent-directive-template.md` (25 workflows) | 9,604 | **2,401 tok** | **92% static** | Teams, production, default |
+| **Turbo** | same as Balanced + parallel waves | 9,604 | 2,401 tok + subagents (~2x measured total (bounds model, see section 8)) | 92% static, higher total | Experimental, greenfield, accepts cost |
 
 ### Current Workflow Inventory
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **27,547 tok** |
-| Full workflow set | 25 | **107,662 tok** |
+| Core-six Lite subset | 6 | **29,252 tok** |
+| Full workflow set | 25 | **109,368 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
-> **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (91% Balanced, 95% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (19–34% Balanced, 23–38% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
+> **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (92% Balanced, 95% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (19–34% Balanced, 23–38% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
 
 | Component (Balanced) | Lines | Approx. Token Weight | Purpose |
 | :--- | :---: | :---: | :--- |
@@ -54,7 +54,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | **Engineering Quality Gates** | ~36 | ~642 tokens | Secret hygiene, timeout budgets, and anti-hallucination rules |
 | **Task Ceremony Levels & Output** | ~25 | ~397 tokens | Composable 4-level task ceremony engine & output protocol |
 | **Standard Output Directories** | ~17 | ~226 tokens | Canonical locations for generated specs, ADRs, and plans |
-| **Total Baseline Static Overhead (Balanced)** | **69 lines** | **~2,401 tokens** | **Permanent footprint in system prompt (~91% static saving vs. current ~27.5k core-subset (~98% vs. current full 25-file set))** |
+| **Total Baseline Static Overhead (Balanced)** | **69 lines** | **~2,401 tokens** | **Permanent footprint in system prompt (~92% static saving vs. current ~29.3k core-subset (~98% vs. current full 25-file set))** |
 | **Total Baseline Static Overhead (Lite)** | **54 lines** | **~1,338 tokens** | **95% static saving, ~56% of Balanced** |
 | **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,338 tok — skipped silently) |
 
