@@ -34,6 +34,12 @@ function ProfileOf([string]$dir) {
     return ""
 }
 
+function ManagedBlockMatchesTemplate([string]$target, [string]$template) {
+    $hostText = (Get-Content $target -Raw) -replace "`r`n", "`n"
+    $templateText = (Get-Content $template -Raw) -replace "`r`n", "`n"
+    return $hostText.Contains($templateText)
+}
+
 function NewDir([string]$name) {
     $d = Join-Path $TestRoot $name
     New-Item -ItemType Directory -Force -Path $d | Out-Null
@@ -53,14 +59,14 @@ else { NotOk "no flag should default balanced (rc=$LASTEXITCODE, profile=$(Profi
 $d = NewDir "t2"
 & pwsh -NoProfile -File $Init --lite $d 2>&1 | Out-Null
 $agents = (Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue -Raw) -replace "\r\n", "`n"
-if ((ProfileOf $d) -eq "lite" -and $agents -match "PromptKit OS Lite" -and $agents -match "(?m)^- \*\*Context Recovery\*\*:") { Ok "--lite sets profile lite and injects Lite recovery directive" }
+if ((ProfileOf $d) -eq "lite" -and $agents -match "PromptKit OS Lite" -and (ManagedBlockMatchesTemplate (Join-Path $d "AGENTS.md") (Join-Path $RepoRoot "templates/agent-directive-lite-template.md"))) { Ok "--lite sets profile lite and renders the selected directive template" }
 else { NotOk "--lite install (profile=$(ProfileOf $d))" }
 
 # 3. --balanced: profile balanced + full directive header.
 $d = NewDir "t3"
 & pwsh -NoProfile -File $Init --balanced $d 2>&1 | Out-Null
 $agents = (Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue -Raw) -replace "\r\n", "`n"
-if ((ProfileOf $d) -eq "balanced" -and $agents -match "(?m)^## PromptKit OS: Engineering Operating System$" -and $agents -match "(?m)^- \*\*Context Recovery\*\*:") { Ok "--balanced sets profile balanced and injects full recovery directive" }
+if ((ProfileOf $d) -eq "balanced" -and $agents -match "(?m)^## PromptKit OS: Engineering Operating System$" -and (ManagedBlockMatchesTemplate (Join-Path $d "AGENTS.md") (Join-Path $RepoRoot "templates/agent-directive-template.md"))) { Ok "--balanced sets profile balanced and renders the selected directive template" }
 else { NotOk "--balanced install (profile=$(ProfileOf $d))" }
 
 # 4. --turbo without --experimental: must fail with guard message.

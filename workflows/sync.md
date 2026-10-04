@@ -23,7 +23,7 @@ Hosts that expose no compaction or continuation signal cannot reliably detect it
 ## Preconditions & When to Sync
 - **PromptKit Engine Updated**: Submodule updated, `git -C .promptkit pull origin main`, or `bash .promptkit/init.sh` was just run.
 - **Instruction Drift / Formatting Divergence**: The AI is omitting visual callouts (`> [!TIP]`, `> [!IMPORTANT]`), failing to render the telemetry status card when enabled (3 mandatory lines `📊 / 🎯 / 🟢` + optional `📈`; suppressed when `PROMPTKIT.md` declares `status-cards: off`, while halts still fire per `protocols/telemetry-cards.md`), or not prioritizing native interactive selection tools.
-- **Post-Compaction Re-Entry**: After a conversation summary/continuation, the first substantive action should be a disk re-read of `docs/STATE.md` and the active workflow — do not act from a summarized recollection of protocol.
+- **Post-Compaction Re-Entry**: After a conversation summary/continuation, run **Mandatory Re-Entry Recovery** before resuming project work; do not treat rereading STATE and the active workflow alone or relying on summarized protocol as sufficient.
 - **New Session Startup / Protocol Verification**: Starting work on a fresh branch or verifying that the active agent is fully aligned with host repository guardrails.
 
 ---

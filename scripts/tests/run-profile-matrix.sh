@@ -24,6 +24,11 @@ profile_of() {
     grep -E '^profile:' "$1/PROMPTKIT.md" 2>/dev/null | tail -1 | awk '{print $2}'
 }
 
+managed_block_matches_template() {
+    local target="$1" template="$2"
+    diff -u <(sed 's|\$KIT_DIR_REL|.promptkit|g' "$template") <(awk '/^<!-- PROMPTKIT_START -->$/{copy=1} copy{print} /^<!-- PROMPTKIT_END -->$/{copy=0}' "$target")
+}
+
 echo "🧪 init.sh Profile Matrix Tests (non-interactive contract)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
@@ -41,8 +46,8 @@ D="$TEST_ROOT/t2"; mkdir -p "$D"
 if bash "$REPO_ROOT/init.sh" --lite "$D" </dev/null >/dev/null 2>&1 \
    && [[ "$(profile_of "$D")" == "lite" ]] \
    && grep -q 'PromptKit OS Lite' "$D/AGENTS.md" \
-   && grep -q '^- \*\*Context Recovery\*\*:' "$D/AGENTS.md"; then
-    ok "--lite sets profile lite and injects Lite directive"
+   && managed_block_matches_template "$D/AGENTS.md" "$REPO_ROOT/templates/agent-directive-lite-template.md"; then
+    ok "--lite sets profile lite and renders the selected directive template"
 else
     notok "--lite install (profile=$(profile_of "$D"))"
 fi
@@ -52,8 +57,8 @@ D="$TEST_ROOT/t3"; mkdir -p "$D"
 if bash "$REPO_ROOT/init.sh" --balanced "$D" </dev/null >/dev/null 2>&1 \
    && [[ "$(profile_of "$D")" == "balanced" ]] \
    && grep -q '^## PromptKit OS: Engineering Operating System$' "$D/AGENTS.md" \
-   && grep -q '^- \*\*Context Recovery\*\*:' "$D/AGENTS.md"; then
-    ok "--balanced sets profile balanced and injects full directive"
+   && managed_block_matches_template "$D/AGENTS.md" "$REPO_ROOT/templates/agent-directive-template.md"; then
+    ok "--balanced sets profile balanced and renders the selected directive template"
 else
     notok "--balanced install (profile=$(profile_of "$D"))"
 fi
