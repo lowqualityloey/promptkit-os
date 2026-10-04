@@ -100,6 +100,10 @@ By embedding decision-grade Level 0–3 classification directly into the static 
 | **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **20,954 tok** | **19,890 tok** | **-15% Balanced, -19% Lite (-3,712 to -4,776 tok)** |
 | **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **17,228 tok** | **16,164 tok** | **-30% Balanced, -35% Lite (-7,533 to -8,597 tok)** |
 
+> **Budget headroom is now the binding structural constraint.** The Balanced static directive has grown 2,350 tok (#503) → 2,401 tok (#531) → **2,475 tok of a 2,500 tok cap — 25 tokens of headroom**; Lite sits at 1,411 of 1,500. Each governance or recovery rule added to `templates/agent-directive-*.md` costs roughly 70-75 tokens, so the next such change requires either a scoped reduction elsewhere or an explicit, documented budget decision. Do not absorb this by silently raising the cap.
+>
+> **Per-task savings are eroding, and the table above does not show it.** The comparison baseline is a fixed historical constant, so every payload addition shows up as a smaller reduction: `pk:fix` has moved 24% → 11% Balanced on the current `main` baseline (9,785 → 11,454 tok). Most of that erosion is contract text, not overhead regression — the #528 detour discipline in `workflows/fix.md` (+812 tok) and the #530 aggregate round budget in `protocols/code-quality-gate.md` (+783 tok, loaded by all three measured tasks). The absolute figures remain honest and reproducible; read the trend, not only the endpoint, when judging whether a payload change is acceptable.
+
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 
 The intake wave adds a bounded one-time cost and no steady-state cost (measured at `db4da7c`, `bytes/4` convention, reproducible via `wc -c protocols/discovery-intake.md workflows/plan.md`):
