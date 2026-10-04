@@ -37,6 +37,7 @@ function ProfileOf([string]$dir) {
 function ManagedBlockMatchesTemplate([string]$target, [string]$template) {
     $hostText = (Get-Content $target -Raw) -replace "`r`n", "`n"
     $templateText = (Get-Content $template -Raw) -replace "`r`n", "`n"
+    $templateText = $templateText.Replace('$KIT_DIR_REL', '.promptkit')
     return $hostText.Contains($templateText)
 }
 
