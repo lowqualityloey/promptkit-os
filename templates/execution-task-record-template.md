@@ -106,6 +106,18 @@ Track unresolved human actions **inside this Task Record** — never in a second
 - **Pending Action Retention**: `An action stays pending across turns, compaction, and handoff until its recorded condition is actually met and, where an externally observable condition exists, verified. A callout suppressed by the Single-Callout Invariant is retained unchanged — suppression is not resolution.`
 - **Reply Binding**: `A done / merged / numeric / continue reply resolves only the recorded action it was offered against; record the resolving reply and its evidence here.`
 
+### Aggregate Work Budget (Optional)
+
+Record the durable whole-task bound on repeated review/remediation work. It composes with the Bounded Repair Rule and never replaces, relaxes, or lengthens it. Contract: `protocols/code-quality-gate.md` *Aggregate Round Budget*.
+
+- **Total Rounds Consumed**: `[N]` <!-- one round = one full review -> remediate -> re-verify cycle over the whole task; counted when its re-verification completes, green or red -->
+- **Configured Round Limit**: `[Default 6, or the human-set value]` <!-- a human may set this using their real time/quota constraints; only a human may change or reset it -->
+- **Observed Tool Work / Elapsed Time**: `[measured values, or not measured]` <!-- record only when the host exposes them; never estimate -->
+- **Current Progress**: `[What is verified so far and what remains]`
+- **Stop / Resume Condition**: `[Exact condition that ends the budget, and the condition to resume after it]`
+
+A passing verification may clear the *consecutive*-failure counter but **never resets the total**; compaction, session handoff, and an active bug detour restore the recorded total rather than replenishing it. On exhaustion the task stays incomplete with its findings open — no test is weakened, no mandatory gate is skipped, and reused evidence keeps its original revision/coverage binding and is labeled historical.
+
 ## 6. Evidence and Completion Gate
 
 - **Changed Files**:
