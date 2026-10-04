@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Mandatory Context Recovery**: Require canonical task and authorization recovery before resuming after compaction, continuation, handover, invariant loss, or status interruption; preserve stop states and prevent summaries from expanding scope. (#526)
 - **Stack Playbooks and Cross-Cutting Recipes**: Added Kotlin Multiplatform, Java/Spring, C#/.NET, PostgreSQL, MySQL, AWS, and GCP playbooks with evidence-based onboarding detection, plus state-management and WebSocket lifecycle recipes. Refreshed token benchmark figures affected by the onboarding guidance. (#519–#523)
 - **Release Courier Integrity Pins**: The npm publish workflow now resolves each tag to a commit, double-downloads that immutable archive, requires valid gzip and matching SHA-256 digests, injects a missing version pin at a fixed marker, rejects duplicate or mismatched committed pins, verifies the exported map in a fresh Node process, smoke-tests the tagged archive, and rechecks the remote tag before publishing. Manual dispatch defaults to a non-publishing dry run. Offline fixtures cover missing, matching, mismatched, and markerless pins. (#517)
 - **Host Conformance Milestone-Halt Probe**: Added the fifth `milestone-halt` probe, reproducible provenance and repository-evidence bundle requirements, paired Bash/PowerShell evidence checkers, and PASS/PARTIAL/FAIL transcript scoring. OpenCode + OmO remains Untested until valid live captures are supplied. (#518)

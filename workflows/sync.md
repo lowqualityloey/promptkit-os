@@ -6,12 +6,24 @@ Trigger anytime with: `pk:sync` (or `/pk-sync`, `pk:update`, `pk:refresh`)
 ## Mission
 Eliminate instruction decay, stale working assumptions, and formatting divergence after updating PromptKit OS. Re-read root configuration files (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`), inspect newly added or updated workflows, and immediately reload the agent's operational rules from disk — then announce any rule that differs from what the session has been doing.
 
+### Mandatory Re-Entry Recovery
+
+Run this before any project-state write after a fresh-session handover, host-reported compaction or continuation, detected loss of task invariants, or a status interruption that displaced active work. Do not resume from a summary alone.
+
+1. For Level 2/3 or otherwise controlled work, read the canonical Local Task Record (`docs/tasks/<task-id>.md`) and the checkpoint or handoff it identifies; verify task identity and exact revision. For low-risk work without a Task Record, retain the current human instruction as the scope authority and read a handoff/checkpoint only when one exists. If controlled-work authority or a required handoff/checkpoint is unavailable after a fresh-session handover, stop and ask for the missing authority.
+2. Read `docs/STATE.md` as a projection when tracked project/task state applies; read the active workflow when one governs the work; and read the applicable installed root directives (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, or host equivalent). For Level 0 requests or work with no applicable STATE/workflow, skip those absent artifacts; their absence alone is not a blocker.
+3. For active tracked or controlled work, restore the objective, milestone, frozen scope, authorization source, blockers and pending human actions, and resume condition from those records and identify exactly one next action. For low-risk work without tracking, retain the current human instruction as the objective and scope, and restore only applicable blockers or pending actions. Do not invent task state or require workflow-specific fields for work with no active workflow.
+4. Reconcile record/revision conflicts before any write. The Task Record is canonical and STATE is only its projection. If authority is missing, conflicting, or still stopped, preserve that stop state; a summary, `continue`, continuation event, or new session cannot create approval or broaden scope.
+5. Resume only after all required reads agree and any applicable recorded resume condition is met. Never invent a missing Task Record or authority from a summary; retain any existing stop condition until authority is established.
+
+Hosts that expose no compaction or continuation signal cannot reliably detect it. Apply recovery on a fresh-session handover or reported context reset; otherwise report detection as unavailable rather than claiming automatic recovery.
+
 ---
 
 ## Preconditions & When to Sync
 - **PromptKit Engine Updated**: Submodule updated, `git -C .promptkit pull origin main`, or `bash .promptkit/init.sh` was just run.
 - **Instruction Drift / Formatting Divergence**: The AI is omitting visual callouts (`> [!TIP]`, `> [!IMPORTANT]`), failing to render the telemetry status card when enabled (3 mandatory lines `📊 / 🎯 / 🟢` + optional `📈`; suppressed when `PROMPTKIT.md` declares `status-cards: off`, while halts still fire per `protocols/telemetry-cards.md`), or not prioritizing native interactive selection tools.
-- **Post-Compaction Re-Entry**: After a conversation summary/continuation, the first substantive action should be a disk re-read of `docs/STATE.md` and the active workflow — do not act from a summarized recollection of protocol.
+- **Post-Compaction Re-Entry**: After a conversation summary/continuation, run **Mandatory Re-Entry Recovery** before resuming project work; do not treat rereading STATE and the active workflow alone or relying on summarized protocol as sufficient.
 - **New Session Startup / Protocol Verification**: Starting work on a fresh branch or verifying that the active agent is fully aligned with host repository guardrails.
 
 ---
