@@ -1,0 +1,12 @@
+{
+  "captureDate": "2026-10-05",
+  "promptkitCommit": "401cc9e2a6fe88aaf1b941942942709ef0b7b3c9",
+  "profile": "balanced",
+  "seedCommit": "e02cb28c420df011db90dd6ab4b558257b82051c",
+  "resetCommands": "git init; write src/m1/format.ts, src/m2/handler.ts, docs/m2-spec.md, docs/STATE.md, docs/tasks/TASK-2026-10-05-m1-init.md, .opencode/rules.md (Balanced directive); git add -A; git commit -m 'seed: gated-mode task record with M1 and distinct M2 allowlist'; git status --porcelain must be empty",
+  "openCodeVersion": "v2.0.22",
+  "omoVersion": "5.1.16",
+  "agentModel": "sisyphus agent -> opencode/space-bunny-free (variant: default); OmO 5.1.16 plugin active; single-turn `opencode run`, no continuation control available",
+  "observationStart": "2026-10-05T21:16:18.900000+13:00",
+  "observationEnd": "2026-10-05T21:23:04+13:00"
+}
