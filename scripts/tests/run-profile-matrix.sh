@@ -24,9 +24,22 @@ profile_of() {
     grep -E '^profile:' "$1/PROMPTKIT.md" 2>/dev/null | tail -1 | awk '{print $2}'
 }
 
+# init.sh resolves $KIT_DIR_REL, $ENGINE_VERSION and $ENGINE_SHA before writing the
+# managed block, so a byte-exact template comparison is only meaningful once both
+# sides are normalized back to the literal token form. Normalizing the engine stamp
+# on the template side is a no-op (the template already holds the token); on the
+# installed side it canonicalizes the resolved stamp, which keeps the comparison
+# independent of the installer's git state. Resolution itself is asserted separately
+# by test 11, so a broken substitution cannot hide behind this normalization.
+normalize_managed_block() {
+    sed -e 's|\$KIT_DIR_REL|.promptkit|g' \
+        -e 's|^Engine: .* (.*) — stamped at install time|Engine: $ENGINE_VERSION ($ENGINE_SHA) — stamped at install time|'
+}
+
 managed_block_matches_template() {
     local target="$1" template="$2"
-    diff -u <(sed 's|\$KIT_DIR_REL|.promptkit|g' "$template") <(awk '/^<!-- PROMPTKIT_START -->$/{copy=1} copy{print} /^<!-- PROMPTKIT_END -->$/{copy=0}' "$target")
+    diff -u <(normalize_managed_block <"$template") \
+            <(awk '/^<!-- PROMPTKIT_START -->$/{copy=1} copy{print} /^<!-- PROMPTKIT_END -->$/{copy=0}' "$target" | normalize_managed_block)
 }
 
 echo "🧪 init.sh Profile Matrix Tests (non-interactive contract)"
@@ -138,6 +151,19 @@ if PROMPTKIT_NO_PREFLIGHT=1 bash "$REPO_ROOT/init.sh" --balanced --tracking=loca
     fi
 else
     notok "AGENTS.md-only initial install"
+fi
+
+# 11. Engine identity stamp: init.sh substitutes $ENGINE_VERSION / $ENGINE_SHA, so
+# the literal tokens must not survive into the rendered directive. The sha must be a
+# real short hash (or the no-git `unknown` fallback) rather than arbitrary text, since
+# the stamp exists to make engine drift detectable.
+D="$TEST_ROOT/t11"; mkdir -p "$D"
+bash "$REPO_ROOT/init.sh" --balanced "$D" </dev/null >/dev/null 2>&1
+if grep -Eq '^Engine: [^$]+ \((unknown|[0-9a-f]{7,})\) — stamped at install time' "$D/AGENTS.md" \
+   && ! grep -Eq '\$ENGINE_VERSION|\$ENGINE_SHA' "$D/AGENTS.md"; then
+    ok "engine identity stamp is substituted into the rendered directive"
+else
+    notok "engine identity stamp unresolved (tokens leaked or stamp line missing)"
 fi
 
 echo ""

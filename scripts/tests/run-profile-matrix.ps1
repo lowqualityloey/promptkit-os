@@ -34,11 +34,23 @@ function ProfileOf([string]$dir) {
     return ""
 }
 
+function Normalize-ManagedBlock([string]$text) {
+    $text = $text.Replace('$KIT_DIR_REL', '.promptkit')
+    # Canonicalize the resolved engine stamp back to the literal token so the
+    # template comparison does not depend on the installer's git state. This is
+    # a no-op on the template, which already holds the token. A MatchEvaluator is
+    # used rather than -replace because the replacement text contains a literal
+    # '$', which -replace would read as a substitution reference.
+    return [regex]::Replace(
+        $text,
+        '(?m)^Engine: .* \(.*\) — stamped at install time',
+        { param($match) 'Engine: $ENGINE_VERSION ($ENGINE_SHA) — stamped at install time' })
+}
+
 function ManagedBlockMatchesTemplate([string]$target, [string]$template) {
     $hostText = (Get-Content $target -Raw) -replace "`r`n", "`n"
     $templateText = (Get-Content $template -Raw) -replace "`r`n", "`n"
-    $templateText = $templateText.Replace('$KIT_DIR_REL', '.promptkit')
-    return $hostText.Contains($templateText)
+    return (Normalize-ManagedBlock $hostText).Contains((Normalize-ManagedBlock $templateText))
 }
 
 function NewDir([string]$name) {
@@ -123,6 +135,19 @@ if ($initialExitCode -eq 0) {
     } else { NotOk "AGENTS.md-only rerun did not preserve universal host choice (rc=$rerunExitCode)" }
 } else { NotOk "AGENTS.md-only initial install (rc=$initialExitCode)" }
 Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+
+# 10. Engine identity stamp: init.ps1 substitutes $ENGINE_VERSION / $ENGINE_SHA, so
+# the literal tokens must not survive into the rendered directive. The sha must be a
+# real short hash (or the no-git `unknown` fallback) rather than arbitrary text, since
+# the stamp exists to make engine drift detectable.
+$d = NewDir "t10-engine-stamp"
+& pwsh -NoProfile -File $Init --balanced $d 2>&1 | Out-Null
+$stampAgents = (Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue -Raw) -replace "`r`n", "`n"
+if ($stampAgents -match "(?m)^Engine: [^\$]+ \((unknown|[0-9a-f]{7,})\) — stamped at install time" -and $stampAgents -notmatch '\$ENGINE_VERSION|\$ENGINE_SHA') {
+    Ok "engine identity stamp is substituted into the rendered directive"
+} else {
+    NotOk "engine identity stamp unresolved (tokens leaked or stamp line missing)"
+}
 
 Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 Write-Host "Passed: $script:Pass | Failed: $script:Fail"
