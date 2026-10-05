@@ -149,6 +149,60 @@ if ($stampAgents -match "(?m)^Engine: [^\$]+ \((unknown|[0-9a-f]{7,})\) — stam
     NotOk "engine identity stamp unresolved (tokens leaked or stamp line missing)"
 }
 
+# 11. Adversarial git tag: a legal ref name may contain .NET replacement metacharacters
+# ('$' introduces a substitution reference, '&' is the whole match). The install must still
+# succeed with the hostile version degraded rather than substituted into the directive.
+# NOTE: the Windows filesystem cannot create a ref containing '|', so the payload here is the
+# '$'/'&' class only; the POSIX harness additionally covers the sed delimiter.
+$fixtureKit = Join-Path $TestRoot "t11-kit"
+New-Item -ItemType Directory -Force -Path (Join-Path $fixtureKit "scripts") | Out-Null
+Copy-Item -LiteralPath (Join-Path $RepoRoot "templates") -Destination $fixtureKit -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $RepoRoot "scripts\terminal-picker.ps1") -Destination (Join-Path $fixtureKit "scripts") -Force -ErrorAction SilentlyContinue
+Copy-Item -LiteralPath (Join-Path $RepoRoot "init.ps1") -Destination $fixtureKit -Force
+& git -C $fixtureKit init -q 2>&1 | Out-Null
+& git -C $fixtureKit add -A 2>&1 | Out-Null
+& git -C $fixtureKit -c user.email=fixture@example.invalid -c user.name=fixture commit -qm fixture 2>&1 | Out-Null
+& git -C $fixtureKit tag ("v1.0.0-" + [char]36 + "1-" + [char]38 + "y") 2>&1 | Out-Null
+$d = Join-Path $TestRoot "t11-proj"
+New-Item -ItemType Directory -Force -Path $d | Out-Null
+& pwsh -NoProfile -File (Join-Path $fixtureKit "init.ps1") --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+$t11Agents = (Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue -Raw) -replace "`r`n", "`n"
+if ($LASTEXITCODE -eq 0 -and $t11Agents -match "(?m)^Engine: [A-Za-z0-9._+-]+ \(([0-9a-f]{7,}|unknown)\) — stamped at install time" -and $t11Agents -notmatch '\$ENGINE_VERSION|\$ENGINE_SHA') {
+    Ok "adversarial git tag cannot abort or corrupt the install"
+} else {
+    NotOk "adversarial git tag handling ($((($t11Agents -split "`n") | Where-Object { $_ -match '^Engine: ' }) -join ''))"
+}
+
+# 12. docs/STATE.md is mutated in place by the stamp pass, so it must be part of the rollback
+# transaction. Sabotage a later scaffold step and assert both files are restored.
+$d = NewDir "t12-rollback"
+New-Item -ItemType Directory -Force -Path (Join-Path $d "docs") | Out-Null
+Set-Content -LiteralPath (Join-Path $d "docs\STATE.md") -Value "- **Engine Version**: vOLD @ deadbee"
+Set-Content -LiteralPath (Join-Path $d "PROMPTKIT.md") -Value "profile: lite"
+Set-Content -LiteralPath (Join-Path $d ".github") -Value ""
+& pwsh -NoProfile -File $Init --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+$rbState = Get-Content (Join-Path $d "docs\STATE.md") -Raw
+$rbProfile = Get-Content (Join-Path $d "PROMPTKIT.md") -Raw
+if ($rbState -match "vOLD @ deadbee" -and $rbProfile -match "profile: lite") {
+    Ok "rollback restores a pre-existing docs/STATE.md after a later failure"
+} else {
+    NotOk "rollback left docs/STATE.md mutated ($(($rbState -split "`r?`n" | Where-Object { $_ -match 'Engine Version' }) -join ''))"
+}
+
+# 13. A STATE.md that predates the engine stamp has no row to replace, so one must be inserted
+# without disturbing the surrounding user content.
+$d = NewDir "t13-legacy-state"
+New-Item -ItemType Directory -Force -Path (Join-Path $d "docs") | Out-Null
+$legacyState = "# Project State`n`n## 1. Executive Summary & Current Position`n- **Project Name**: Legacy`n- **Last Updated**: 2026-01-01`n`n---`n`n## 2. Milestone`n"
+Set-Content -LiteralPath (Join-Path $d "docs\STATE.md") -Value $legacyState
+& pwsh -NoProfile -File $Init --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+$legacyAfter = (Get-Content (Join-Path $d "docs\STATE.md") -Raw) -replace "`r`n", "`n"
+if (([regex]::Matches($legacyAfter, "(?m)^- \*\*Engine Version\*\*:")).Count -eq 1 -and $legacyAfter -match "\*\*Project Name\*\*: Legacy" -and $legacyAfter -match "Last Updated\*\*: 2026-01-01" -and $legacyAfter -match "(?m)^## 2\. Milestone$") {
+    Ok "legacy STATE.md gains the engine stamp row without losing user content"
+} else {
+    NotOk "legacy STATE.md stamp insertion (rows=$(([regex]::Matches($legacyAfter, 'Engine Version')).Count))"
+}
+
 Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 Write-Host "Passed: $script:Pass | Failed: $script:Fail"
 

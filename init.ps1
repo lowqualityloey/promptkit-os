@@ -534,6 +534,22 @@ try {
     $EngineSha = "unknown"
 }
 
+# `git describe` output is influenced by any tag an attacker can push to the kit repo, and
+# both values are substituted into the directive below. A legal git ref may contain '$',
+# which PowerShell's -replace reads as a substitution reference in the REPLACEMENT text
+# ($1, $&, ${name}). Legitimate describe and short-SHA output only ever uses [A-Za-z0-9._+-],
+# so anything else is rejected at the source and degrades to "unknown" like any other
+# unresolved value: the stamp stays display-only and no tag can rewrite the directive.
+if ($EngineVersion -notmatch '^[A-Za-z0-9._+-]+$') { $EngineVersion = "unknown" }
+if ($EngineSha -notmatch '^[A-Za-z0-9._+-]+$') { $EngineSha = "unknown" }
+
+# Escape a value for use as .NET replacement text, where '$' introduces a substitution
+# reference. Doubling every '$' makes it literal.
+function ConvertTo-LiteralReplacement([string]$value) {
+    if ($null -eq $value) { return "" }
+    return $value -replace '\$', '$$$$'
+}
+
 if (Test-Path -LiteralPath $DesignProfile) {
     Write-Host "  [✓] DESIGN.md detected (brand identity & anti-slop rules)" -ForegroundColor DarkGray
 }# 2b. Host probing + selection (which AI assistants get directive files)
@@ -767,9 +783,9 @@ if ($Profile -eq "lite") {
 if (Test-Path -LiteralPath $TemplateDirective) {
     $RawTemplate = [System.IO.File]::ReadAllText($TemplateDirective, [System.Text.Encoding]::UTF8)
     $Directive = ($RawTemplate `
-        -replace '\$KIT_DIR_REL', $KitDirRel `
-        -replace '\$ENGINE_VERSION', $EngineVersion `
-        -replace '\$ENGINE_SHA', $EngineSha).TrimEnd("`r", "`n")
+        -replace '\$KIT_DIR_REL', (ConvertTo-LiteralReplacement $KitDirRel) `
+        -replace '\$ENGINE_VERSION', (ConvertTo-LiteralReplacement $EngineVersion) `
+        -replace '\$ENGINE_SHA', (ConvertTo-LiteralReplacement $EngineSha)).TrimEnd("`r", "`n")
 } else {
     throw "Error: Canonical directive template not found at $TemplateDirective"
 }
@@ -998,6 +1014,26 @@ try {
         $bIdx++
     }
 
+    # STATE.md is mutated in place rather than staged, so it belongs in the transaction even
+    # though it is not a staged target. Without this, a failure after the stamp pass restores
+    # PROMPTKIT.md and the host targets but leaves an already-stamped STATE.md behind.
+    if (Test-Path -LiteralPath $StateTracker) {
+        $stateCanon = Resolve-CanonicalPath $StateTracker
+        $alreadySnapshotted = $false
+        foreach ($existingBkp in $backedUpFiles) {
+            if ($stateCanon.Equals((Resolve-CanonicalPath $existingBkp), $comparison)) {
+                $alreadySnapshotted = $true
+                break
+            }
+        }
+        if (-not $alreadySnapshotted) {
+            $bkp = Join-Path $backupDir "STATE.md"
+            Copy-Item -LiteralPath $StateTracker -Destination $bkp -Force
+            $backedUpFiles.Add($StateTracker)
+            $backupSources.Add($bkp)
+        }
+    }
+
     # Ensure doc directories
     foreach ($dir in $DocDirs) {
         $fullPath = Join-Path $ProjectRoot $dir
@@ -1040,12 +1076,23 @@ try {
         $createdFiles.Add($StateTracker)
         Write-Host "  [+] Created: docs/STATE.md (living project & state tracker)" -ForegroundColor Green
     }
-    # STATE.md is copied verbatim, not substituted, so it needs its own stamp pass.
+    # STATE.md is copied verbatim, not substituted, so it needs its own stamp pass. A STATE.md
+    # that predates this feature has no Engine Version row at all, so insert one after the Last
+    # Updated row instead of skipping the file forever; a file carrying neither anchor is left
+    # untouched rather than guessed at.
     if (Test-Path -LiteralPath $StateTracker) {
         $stateText = [System.IO.File]::ReadAllText($StateTracker, [System.Text.Encoding]::UTF8)
+        $stampRow = "- **Engine Version**: $EngineVersion @ $EngineSha"
         if ($stateText -match "(?m)^- \*\*Engine Version\*\*:") {
-            $stateText = $stateText -replace "(?m)^- \*\*Engine Version\*\*:.*", "- **Engine Version**: $EngineVersion @ $EngineSha"
+            $stateText = $stateText -replace "(?m)^- \*\*Engine Version\*\*:.*", (ConvertTo-LiteralReplacement $stampRow)
             [System.IO.File]::WriteAllText($StateTracker, $stateText, $utf8NoBom)
+        } elseif ($stateText -match "(?m)^- \*\*Last Updated\*\*:") {
+            $inserted = [System.Text.RegularExpressions.Regex]::Replace(
+                $stateText,
+                "(?m)^(- \*\*Last Updated\*\*:.*)$",
+                { param($m) $m.Groups[1].Value + "`n" + $stampRow },
+                1)
+            [System.IO.File]::WriteAllText($StateTracker, $inserted, $utf8NoBom)
         }
     }
     if (-not (Test-Path -LiteralPath $PrTemplateTarget) -and (Test-Path -LiteralPath $TemplatePr)) {

@@ -166,6 +166,56 @@ else
     notok "engine identity stamp unresolved (tokens leaked or stamp line missing)"
 fi
 
+# 12. Adversarial git tag: a legal ref name may contain the sed delimiter '|' and sed's
+# whole-match '&'. Both used to abort the install or splice text into the rendered
+# directive, so the install must still succeed with the hostile version degraded.
+FIXTURE="$TEST_ROOT/t12/kit"; mkdir -p "$FIXTURE/scripts"
+cp -R "$REPO_ROOT/templates" "$FIXTURE/"
+cp "$REPO_ROOT/scripts/terminal-picker.sh" "$FIXTURE/scripts/" 2>/dev/null || true
+cp "$REPO_ROOT/init.sh" "$FIXTURE/"
+git -C "$FIXTURE" init -q .
+git -C "$FIXTURE" add -A
+git -C "$FIXTURE" -c user.email=fixture@example.invalid -c user.name=fixture commit -qm "fixture"
+git -C "$FIXTURE" tag 'v1.0.0-x|y&z'
+D="$TEST_ROOT/t12/proj"; mkdir -p "$D"
+bash "$FIXTURE/init.sh" --balanced --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1
+if [[ -f "$D/AGENTS.md" ]] \
+   && grep -Eq '^Engine: [A-Za-z0-9._+-]+ \([0-9a-f]{7,}\) — stamped at install time' "$D/AGENTS.md" \
+   && ! grep -Eq '\$ENGINE_VERSION|\$ENGINE_SHA' "$D/AGENTS.md" \
+   && ! grep -Eq '^- \*\*Engine Version\*\*:.*[|&]' "$D/docs/STATE.md"; then
+    ok "adversarial git tag cannot abort or corrupt the install"
+else
+    notok "adversarial git tag handling ($(grep -h '^Engine: ' "$D/AGENTS.md" 2>/dev/null))"
+fi
+
+# 13. docs/STATE.md is mutated in place by the stamp pass, so it must be part of the
+# rollback transaction. Sabotage a later scaffold step and assert both files are restored.
+D="$TEST_ROOT/t13"; mkdir -p "$D/docs"
+printf -- '- **Engine Version**: vOLD @ deadbee\n' > "$D/docs/STATE.md"
+printf 'profile: lite\n' > "$D/PROMPTKIT.md"
+touch "$D/.github"
+bash "$REPO_ROOT/init.sh" --balanced --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1
+if grep -q 'vOLD @ deadbee' "$D/docs/STATE.md" 2>/dev/null \
+   && head -1 "$D/PROMPTKIT.md" 2>/dev/null | grep -q 'profile: lite'; then
+    ok "rollback restores a pre-existing docs/STATE.md after a later failure"
+else
+    notok "rollback left docs/STATE.md mutated ($(grep -h 'Engine Version' "$D/docs/STATE.md" 2>/dev/null))"
+fi
+
+# 14. A STATE.md that predates the engine stamp has no row to replace, so one must be
+# inserted without disturbing the surrounding user content.
+D="$TEST_ROOT/t14"; mkdir -p "$D/docs"
+printf '# Project State\n\n## 1. Executive Summary & Current Position\n- **Project Name**: Legacy\n- **Last Updated**: 2026-01-01\n\n---\n\n## 2. Milestone\n' > "$D/docs/STATE.md"
+bash "$REPO_ROOT/init.sh" --balanced --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1
+if [[ "$(grep -c '^- \*\*Engine Version\*\*:' "$D/docs/STATE.md" 2>/dev/null)" -eq 1 ]] \
+   && grep -q '\*\*Project Name\*\*: Legacy' "$D/docs/STATE.md" \
+   && grep -q 'Last Updated\*\*: 2026-01-01' "$D/docs/STATE.md" \
+   && grep -q '^## 2. Milestone' "$D/docs/STATE.md"; then
+    ok "legacy STATE.md gains the engine stamp row without losing user content"
+else
+    notok "legacy STATE.md stamp insertion (rows=$(grep -c 'Engine Version' "$D/docs/STATE.md" 2>/dev/null))"
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Passed: $PASS | Failed: $FAIL"

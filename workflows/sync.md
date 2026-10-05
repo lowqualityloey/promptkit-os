@@ -68,18 +68,20 @@ A stale session is the failure this audit exists to prevent, so nothing here is 
    - `git -C <kit-path> rev-parse --is-shallow-repository` returns true → report `shallow-or-offline` and stop this audit. Never substitute a guess for the missing history.
 2. **Comparison (a), directive stamp vs `docs/STATE.md` stamp**: parse the `Engine: <ver> (<sha>)` stamp inside the host file's `<!-- PROMPTKIT_START -->` block, then parse the `**Engine Version**: <ver> @ <sha>` line in `docs/STATE.md`. No git involved. Normalize both to a `<ver>` / `<sha>` pair, then state the outcome as one line: `stamp cross-check: match`, `stamp cross-check: mismatch (directive <ver>/<sha>, STATE.md <ver>/<sha>)`, or `stamp cross-check: STATE.md unstamped`. The directive stamp is the reporting authority; a mismatch is an observation appended after the state line below, never a seventh state.
 3. **Comparison (b), stamp vs on-disk engine**: `git -C <kit-path> rev-parse --short HEAD` returns the commit actually sitting in the engine directory. Compare it against the stamped short SHA; equality means the stamp still describes this tree.
-4. **Comparison (c), on-disk engine vs upstream**: resolve `<tag-or-ref>` (the stamped `<ver>` when it resolves as a ref, otherwise the stamped `<sha>`) and `<upstream-ref>` (the engine's remote-tracking default branch, normally `origin/main`) from what is already on disk. Then `git -C <kit-path> rev-list --count <tag-or-ref>..<upstream-ref>` yields the `+n` figure, and `git -C <kit-path> merge-base --is-ancestor HEAD <upstream-ref>` decides divergence: exit 0 means the local engine is an ancestor of upstream, any other exit means it is not.
+4. **Comparison (c), on-disk engine vs upstream**: resolve `<upstream-ref>` (the engine's remote-tracking default branch, normally `origin/main`) from what is already on disk. Then `git -C <kit-path> rev-list --count HEAD..<upstream-ref>` yields the `+n` figure, and `git -C <kit-path> merge-base --is-ancestor HEAD <upstream-ref>` decides divergence: exit 0 means the local engine is an ancestor of upstream, any other exit means it is not. **Both figures come from `HEAD`.** Never substitute the stamped ref: measuring distance from the stamp reports an engine that has since moved against the wrong commit.
 
-Classify the three results into exactly one state, and report the remediation text verbatim:
+Classify by walking the table top to bottom and stopping at the first row that matches. The rows are disjoint by construction — `diverged` is tested before `behind` because a divergent engine usually also has a positive count, and `behind` before `ok` because any positive count disqualifies `ok` — so exactly one state is ever reported:
 
-| State | Condition | Report as |
+| State | Condition (first match wins) | Report as |
 | :--- | :--- | :--- |
-| unknown | no stamp present in the directive | `engine unknown — re-run the installer to stamp` (warn once, never error) |
-| ok | stamp matches on-disk engine, and engine is at or behind upstream with no divergence | `engine <ver> (<sha>) current` |
-| behind(+n) | `rev-list --count <ref>..<upstream>` > 0 | `engine <ver> < upstream (+n) — offer pk:sync upgrade` |
-| diverged | local engine is not an ancestor of upstream (`git merge-base --is-ancestor` fails) | `engine <ver> diverged from upstream — reconcile manually` |
-| shallow-or-offline | `git rev-parse --is-shallow-repository` is true, OR the upstream ref cannot be resolved | `engine <ver> cannot verify drift (shallow/offline) — fetch --unshallow to check` |
 | not-a-git-install | `<kit>/.git` does not exist (npx courier tarball install) | `engine <ver> (courier install — version from release tarball, not git)` |
+| unknown | no stamp present in the directive | `engine unknown — re-run the installer to stamp` (warn once, never error) |
+| shallow-or-offline | `git rev-parse --is-shallow-repository` is true, OR `<upstream-ref>` cannot be resolved | `engine <ver> cannot verify drift (shallow/offline) — fetch --unshallow to check` |
+| diverged | `git merge-base --is-ancestor HEAD <upstream-ref>` exits non-zero | `engine <ver> diverged from upstream — reconcile manually` |
+| behind(+n) | is-ancestor exits 0 AND `rev-list --count HEAD..<upstream-ref>` > 0 | `engine <ver> < upstream (+n) — offer pk:sync upgrade` |
+| ok | is-ancestor exits 0 AND `rev-list --count HEAD..<upstream-ref>` is 0 | `engine <ver> (<sha>) current` |
+
+**Stamp drift is not engine drift.** Comparison (b) reports whether the stamp still describes the tree; it never changes which state above is reported. Append it as its own observation line after the state, exactly like comparison (a): `stamp vs engine: match`, or `stamp vs engine: stale (stamp <ver>/<sha>, engine <sha>)`. A stale stamp with an up-to-date engine is still `ok` plus that observation — the engine is current, the record of it is not, and conflating the two would send the developer to upgrade an engine that needs no upgrade.
 
 **Hard rules.** Violating any of these reintroduces the exact bug this audit exists to prevent:
 
