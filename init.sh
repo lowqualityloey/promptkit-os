@@ -8,6 +8,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIR_NAME="$(basename "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/scripts/terminal-picker.sh"
 
+# Stamp the installed engine identity (#545). Must never fail the install: unresolved
+# values degrade to "unknown", which pk:sync reports as its own state, not an error.
+# Never add --abbrev=0 here: it discards commit distance (measured: v1.10.1 vs
+# v1.10.1-12-ge78fde0), hiding exactly the drift the stamp exists to expose. --match
+# excludes the repo's non-release backup/* tags, which describe would otherwise pick.
+ENGINE_VERSION="unknown"
+ENGINE_SHA="unknown"
+resolve_engine_identity() {
+    if [[ -e "$SCRIPT_DIR/.git" ]] && command -v git >/dev/null 2>&1; then
+        local described short_sha
+        described="$(git -C "$SCRIPT_DIR" describe --tags --match 'v[0-9]*' 2>/dev/null || true)"
+        short_sha="$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || true)"
+        if [[ -n "$described" ]]; then ENGINE_VERSION="$described"; fi
+        if [[ -n "$short_sha" ]]; then ENGINE_SHA="$short_sha"; fi
+    fi
+    return 0
+}
+resolve_engine_identity
+
 show_setup_banner() {
     [[ "$PICKER_TTY" -eq 1 ]] || return 0
     PK_PICKER_BANNER_PATH="$SCRIPT_DIR/templates/terminal-banner.txt"
@@ -722,7 +741,11 @@ else
 fi
 
 if [[ -f "$TEMPLATE_DIRECTIVE" ]]; then
-    DIRECTIVE="$(sed "s|\\\$KIT_DIR_REL|$KIT_DIR_REL|g" "$TEMPLATE_DIRECTIVE")"
+    DIRECTIVE="$(sed \
+        -e "s|\\\$KIT_DIR_REL|$KIT_DIR_REL|g" \
+        -e "s|\\\$ENGINE_VERSION|$ENGINE_VERSION|g" \
+        -e "s|\\\$ENGINE_SHA|$ENGINE_SHA|g" \
+        "$TEMPLATE_DIRECTIVE")"
 else
     echo "Error: Canonical directive template not found at $TEMPLATE_DIRECTIVE" >&2
     exit 1
@@ -846,6 +869,13 @@ if grep -q "^profile:" "$STAGED_PROFILE" 2>/dev/null; then
             sed -i.bak "s/^- \*\*Profile\*\*:.*/- **Profile**: $PROFILE/" "$STAGED_PROFILE" && rm -f "$STAGED_PROFILE.bak"
         fi
     fi
+    if grep -q '^- \*\*Installed\*\*:' "$STAGED_PROFILE" 2>/dev/null; then
+        if sed --version >/dev/null 2>&1; then
+            sed -i "s/^- \*\*Installed\*\*:.*/- **Installed**: $(date +%Y-%m-%d)/" "$STAGED_PROFILE"
+        else
+            sed -i.bak "s/^- \*\*Installed\*\*:.*/- **Installed**: $(date +%Y-%m-%d)/" "$STAGED_PROFILE" && rm -f "$STAGED_PROFILE.bak"
+        fi
+    fi
 else
     TMP_P=$(mktemp "$STAGING_DIR/prof_sec.XXXXXX")
     {
@@ -958,6 +988,14 @@ if [[ ! -f "$STATE_TRACKER" && -f "$TEMPLATE_STATE" ]]; then
     CREATED_FILES+=("$STATE_TRACKER")
     cp "$TEMPLATE_STATE" "$STATE_TRACKER"
     echo -e "  \033[0;32m[+]\\033[0m Created: docs/STATE.md (living project & state tracker)"
+fi
+# STATE.md is copied verbatim, not substituted, so it needs its own stamp pass.
+if [[ -f "$STATE_TRACKER" ]] && grep -q '^- \*\*Engine Version\*\*:' "$STATE_TRACKER" 2>/dev/null; then
+    if sed --version >/dev/null 2>&1; then
+        sed -i "s|^- \*\*Engine Version\*\*:.*|- **Engine Version**: $ENGINE_VERSION @ $ENGINE_SHA|" "$STATE_TRACKER"
+    else
+        sed -i.bak "s|^- \*\*Engine Version\*\*:.*|- **Engine Version**: $ENGINE_VERSION @ $ENGINE_SHA|" "$STATE_TRACKER" && rm -f "$STATE_TRACKER.bak"
+    fi
 fi
 if [[ ! -f "$PR_TEMPLATE_TARGET" && -f "$TEMPLATE_PR" ]]; then
     mkdir -p "$GITHUB_DIR"

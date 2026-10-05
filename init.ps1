@@ -515,6 +515,25 @@ $TaskTemplateTarget = Join-Path $IssueTemplateDir "task.md"
 $TemplateTask = Join-Path $ScriptDir "templates/github-issue-template.md"
 $EngineDir = Split-Path $ScriptDir -Leaf
 
+# Stamp the installed engine identity (#545). Must never fail the install: unresolved
+# values degrade to "unknown", which pk:sync reports as its own state, not an error.
+# Never add -abbrev=0 here: it discards commit distance (measured: v1.10.1 vs
+# v1.10.1-12-ge78fde0), hiding exactly the drift the stamp exists to expose. -match
+# excludes the repo's non-release backup/* tags, which describe would otherwise pick.
+$EngineVersion = "unknown"
+$EngineSha = "unknown"
+try {
+    if ((Test-Path -LiteralPath (Join-Path $ScriptDir ".git")) -and (Get-Command git -ErrorAction SilentlyContinue)) {
+        $described = git -C $ScriptDir describe --tags --match "v[0-9]*" 2>$null | Select-Object -First 1
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($described)) { $EngineVersion = "$described".Trim() }
+        $shortSha = git -C $ScriptDir rev-parse --short HEAD 2>$null | Select-Object -First 1
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($shortSha)) { $EngineSha = "$shortSha".Trim() }
+    }
+} catch {
+    $EngineVersion = "unknown"
+    $EngineSha = "unknown"
+}
+
 if (Test-Path -LiteralPath $DesignProfile) {
     Write-Host "  [✓] DESIGN.md detected (brand identity & anti-slop rules)" -ForegroundColor DarkGray
 }# 2b. Host probing + selection (which AI assistants get directive files)
@@ -747,7 +766,10 @@ if ($Profile -eq "lite") {
 
 if (Test-Path -LiteralPath $TemplateDirective) {
     $RawTemplate = [System.IO.File]::ReadAllText($TemplateDirective, [System.Text.Encoding]::UTF8)
-    $Directive = ($RawTemplate -replace '\$KIT_DIR_REL', $KitDirRel).TrimEnd("`r", "`n")
+    $Directive = ($RawTemplate `
+        -replace '\$KIT_DIR_REL', $KitDirRel `
+        -replace '\$ENGINE_VERSION', $EngineVersion `
+        -replace '\$ENGINE_SHA', $EngineSha).TrimEnd("`r", "`n")
 } else {
     throw "Error: Canonical directive template not found at $TemplateDirective"
 }
@@ -894,6 +916,9 @@ function Get-UpdatedProfileContent {
         if ($text -match "(?m)^- \*\*Profile\*\*:") {
             $text = $text -replace "(?m)^- \*\*Profile\*\*:.*", "- **Profile**: $Profile"
         }
+        if ($text -match "(?m)^- \*\*Installed\*\*:") {
+            $text = $text -replace "(?m)^- \*\*Installed\*\*:.*", "- **Installed**: $(Get-Date -Format 'yyyy-MM-dd')"
+        }
     } else {
         $firstLine = ""
         $rest = ""
@@ -1014,6 +1039,14 @@ try {
         Copy-Item -LiteralPath $TemplateState -Destination $StateTracker -Force
         $createdFiles.Add($StateTracker)
         Write-Host "  [+] Created: docs/STATE.md (living project & state tracker)" -ForegroundColor Green
+    }
+    # STATE.md is copied verbatim, not substituted, so it needs its own stamp pass.
+    if (Test-Path -LiteralPath $StateTracker) {
+        $stateText = [System.IO.File]::ReadAllText($StateTracker, [System.Text.Encoding]::UTF8)
+        if ($stateText -match "(?m)^- \*\*Engine Version\*\*:") {
+            $stateText = $stateText -replace "(?m)^- \*\*Engine Version\*\*:.*", "- **Engine Version**: $EngineVersion @ $EngineSha"
+            [System.IO.File]::WriteAllText($StateTracker, $stateText, $utf8NoBom)
+        }
     }
     if (-not (Test-Path -LiteralPath $PrTemplateTarget) -and (Test-Path -LiteralPath $TemplatePr)) {
         $ghParent = Split-Path -Parent $PrTemplateTarget

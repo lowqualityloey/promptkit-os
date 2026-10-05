@@ -99,7 +99,7 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 # macOS / Linux — Balanced profile (25 workflows, default)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
 
-# Lite profile (6 utility workflows, 1,411 tokens static overhead)
+# Lite profile (6 utility workflows, 1,436 tokens static overhead)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --lite
 
 # Windows (PowerShell)
@@ -253,7 +253,7 @@ You: [Reviews, edits, commits]
 **Short Answer**: PromptKit OS measures static directive payloads and per-task payload savings mechanically in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md). Conversational scenario estimates and dollar examples are illustrative models based on workflow design assumptions, not production telemetry.
 
 **Mechanically Measured Benchmarks** (from `docs/BENCHMARKS.md`):
-- **Static Directives**: ~1,411 tokens (Lite) and ~2,287 tokens (Balanced) at bytes/4 convention, saving 91–95% vs inlining workflows statically.
+- **Static Directives**: ~1,436 tokens (Lite) and ~2,312 tokens (Balanced) at bytes/4 convention, saving 91–95% vs inlining workflows statically.
 - **Dynamic Per-Task Payloads**: JIT loading saves 22% to 37% (Balanced) and 26% to 41% (Lite) vs historical monolithic pre-load baselines across `pk:fix`, `pk:plan`, and `pk:ship`.
 
 **Illustrative Scenario Models** (modeled assumptions, not production telemetry):
