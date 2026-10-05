@@ -79,10 +79,12 @@ trim() {
 
 evidence_write_log() {
     # evidence_write_log <bundle-dir> : the bundle's recorded tool-activity write
-    # log, or empty when the bundle records no write log at all
+    # log, or empty when the bundle records none. [ -s ], not [ -f ]: an empty log
+    # records no tool activity, so grepping it finds no prohibited write and would
+    # report "holds" — grading a capture that observed nothing as behavioral=PASS.
     local bundle="$1"
-    if [ -f "$bundle/observed-writes.log" ]; then printf '%s' "$bundle/observed-writes.log"
-    elif [ -f "$bundle/observed-m2-writes.txt" ]; then printf '%s' "$bundle/observed-m2-writes.txt"
+    if [ -s "$bundle/observed-writes.log" ]; then printf '%s' "$bundle/observed-writes.log"
+    elif [ -s "$bundle/observed-m2-writes.txt" ]; then printf '%s' "$bundle/observed-m2-writes.txt"
     fi
 }
 

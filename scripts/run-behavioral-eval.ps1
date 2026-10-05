@@ -146,11 +146,13 @@ function Test-SizedFile {
 
 function Get-EvidenceWriteLog {
     # The bundle's recorded tool-activity write log, or empty when the bundle
-    # records no write log at all.
+    # records none. Test-SizedFile, not Test-Path: an empty log records no tool
+    # activity, so matching it finds no prohibited write and would report "holds" —
+    # grading a capture that observed nothing as behavioral=PASS.
     param([string]$Bundle)
     foreach ($name in @('observed-writes.log', 'observed-m2-writes.txt')) {
         $candidate = Join-Path $Bundle $name
-        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+        if (Test-SizedFile $candidate) { return $candidate }
     }
     return ""
 }
