@@ -446,6 +446,54 @@ function Check-BenchmarkFigure([string]$Description, [object]$Measured, [object]
     }
 }
 
+# Provenance-anchor guard. Twin of the Bash guard: same rule, same measured
+# inputs, same SKIP-not-FAIL branch for an unresolvable anchor. See the Bash
+# implementation for why ancestry is deliberately not asserted -- squash merges
+# orphan the source branch commits, so an anchor recorded on a PR branch is
+# legitimately not an ancestor of main.
+#
+# Exit codes are used rather than captured output: `git rev-parse --verify`
+# signals resolvability and `git diff --quiet` signals "unchanged" without any
+# output parsing, which keeps this robust across shells and PowerShell versions.
+function Test-ProvenanceAnchor([string]$Path) {
+    $text = Get-Content -Path $Path -Raw
+    $m = [regex]::Match($text, 'Current measurements:\*\*[^`]*`([0-9a-f]{7,40})`')
+    if (-not $m.Success) {
+        Write-Host "  ❌ FAIL: docs/BENCHMARKS.md states no 'Current measurements:** ... at ``<commit>``' anchor" -ForegroundColor Red
+        $script:FailCount++
+        return
+    }
+    $anchor = $m.Groups[1].Value
+
+    git -C $RepoRoot rev-parse --verify --quiet "$anchor^{commit}" 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  ⚠️ SKIP: provenance anchor $anchor does not resolve in this clone; cannot verify the measured-input tree is unchanged since it" -ForegroundColor Yellow
+        return
+    }
+
+    $paths = @(
+        'workflows',
+        'protocols/code-quality-gate.md',
+        'templates/agent-directive-template.md',
+        'templates/agent-directive-lite-template.md',
+        'templates/tech-spec-template.md',
+        'templates/release-checklist.md'
+    )
+    git -C $RepoRoot diff --quiet $anchor HEAD -- @paths
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  ✅ PASS: provenance anchor $anchor (measured-input tree unchanged since it)" -ForegroundColor Green
+        $script:PassCount++
+    } else {
+        $drifted = @(git -C $RepoRoot diff --name-only $anchor HEAD -- @paths 2>$null)
+        Write-Host "  ❌ FAIL: provenance anchor $anchor is stale; these measured inputs changed after it and the published figures must have moved with them:" -ForegroundColor Red
+        foreach ($f in $drifted) { Write-Host "           $f" }
+        Write-Host "           Restate the anchor in docs/BENCHMARKS.md and re-propagate every published figure." -ForegroundColor Red
+        $script:FailCount++
+    }
+}
+
+Test-ProvenanceAnchor (Join-Path $RepoRoot "docs/BENCHMARKS.md")
+
 Check-BenchmarkFigure "Balanced static directive" (Get-StaticMeasurement 'BALANCED' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Balanced)')
 Check-BenchmarkFigure "Lite static directive" (Get-StaticMeasurement 'LITE' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')
 Check-BenchmarkFigure "Balanced static reduction percent" (Get-StaticSavingsPercent $balancedSavingsOutput) (Get-BenchmarkMetric 'Profile' 'Reduction vs ~29.4k current core-subset baseline¹' 'Balanced')
