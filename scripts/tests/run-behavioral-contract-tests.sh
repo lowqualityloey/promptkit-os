@@ -418,13 +418,14 @@ static_metric() {
 # perfectly valid. The check is therefore content-based and merge-strategy
 # agnostic.
 measured_input_paths() {
-    printf '%s\n' \
-        "$REPO_ROOT/workflows" \
-        "$REPO_ROOT/protocols/code-quality-gate.md" \
-        "$REPO_ROOT/templates/agent-directive-template.md" \
-        "$REPO_ROOT/templates/agent-directive-lite-template.md" \
-        "$REPO_ROOT/templates/tech-spec-template.md" \
+    MEASURED_INPUT_PATHS=(
+        "$REPO_ROOT/workflows"
+        "$REPO_ROOT/protocols/code-quality-gate.md"
+        "$REPO_ROOT/templates/agent-directive-template.md"
+        "$REPO_ROOT/templates/agent-directive-lite-template.md"
+        "$REPO_ROOT/templates/tech-spec-template.md"
         "$REPO_ROOT/templates/release-checklist.md"
+    )
 }
 
 provenance_anchor() {
@@ -432,7 +433,7 @@ provenance_anchor() {
 }
 
 check_provenance_anchor() {
-    local anchor drifted
+    local anchor drifted rc
     anchor="$(provenance_anchor)"
     if [[ -z "$anchor" ]]; then
         echo "  ❌ FAIL: docs/BENCHMARKS.md states no 'Current measurements:** ... at \`<commit>\`' anchor"
@@ -446,8 +447,22 @@ check_provenance_anchor() {
         echo "  ⚠️ SKIP: provenance anchor $anchor does not resolve in this clone; cannot verify the measured-input tree is unchanged since it"
         return
     fi
-    drifted="$(git -C "$REPO_ROOT" diff --name-only "$anchor" HEAD -- $(measured_input_paths) 2>/dev/null)"
-    if [[ -z "$drifted" ]]; then
+    measured_input_paths
+    drifted=""
+    rc=0
+    # `|| rc=$?` is load-bearing under `set -euo pipefail`: without it a failing
+    # command substitution aborts the entire suite before the triage below runs.
+    drifted="$(git -C "$REPO_ROOT" diff --name-only "$anchor" HEAD -- "${MEASURED_INPUT_PATHS[@]}" 2>/dev/null)" || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        # Fail closed. `git diff --name-only` exits 0 whether or not it found
+        # differences, so any non-zero status is an error rather than drift -- and an
+        # error prints nothing, indistinguishable from "no drift" if only stdout is
+        # read. The PowerShell twin already fails closed here; this keeps the two
+        # error paths identical.
+        echo "  ❌ FAIL: could not diff the measured-input tree against provenance anchor $anchor (git exit $rc)"
+        echo "           Treating an unreadable comparison as a pass would silently disable this guard."
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    elif [[ -z "$drifted" ]]; then
         echo "  ✅ PASS: provenance anchor $anchor (measured-input tree unchanged since it)"
         PASS_COUNT=$((PASS_COUNT + 1))
     else
