@@ -4,31 +4,31 @@ PromptKit OS is active in this workspace (`./$KIT_DIR_REL`). Follow these protoc
 
 ### Fast Shorthand Triggers (Collision-Free)
 Activate workflows anytime with these namespaced triggers:
-- `pk:route`: Engineering lifecycle router and workflow decision matrix.
-- `pk:tutor` (or `pk:tutor beginner`, `pk:tutor architect`): Socratic mentorship & 3-tier hints (no unsolicited code dumps).
-- `pk:grill`: Intensive Staff Engineer architecture interview and defense drill.
-- `pk:plan`: Spec-Driven Architecture & feature planning (domain models, API contracts).
-- `pk:onboard`: Project intake: greenfield interview or brownfield scan; scaffold PROMPTKIT.md.
-- `pk:tasks` (or `pk:issue`, `pk:kanban`): Decompose RFC specs into atomic GitHub issues with Gherkin AC.
-- `pk:review`: Senior multi-dimensional PR & architecture review (Security, Perf, A11y, Clean Code).
-- `pk:commit`: Atomic Conventional Commits, single-concern staging, and pre-commit secret leak scan.
-- `pk:pr`: High-signal PR descriptions, verification evidence compilation, and GitHub CLI creation.
-- `pk:debug`: Hypothesis-driven scientific debugging & root cause analysis (5-Whys).
-- `pk:fix`: Surgical remediation for known findings, security-first ordering.
-- `pk:refactor`: Structural debt remediation, Golden Master pinning, Mikado method.
-- `pk:perf`: Empirical performance profiling, latency SLAs, EXPLAIN ANALYZE.
-- `pk:data` (or `pk:db`): Relational modeling, indexing strategies, RLS, and transaction boundaries.
-- `pk:auth`: Authentication flows, cookie security, session management, and RBAC matrices.
-- `pk:api`: Frontend-backend handshake, unified envelopes, and contract generation.
-- `pk:test`: Upfront testing strategy, pyramid seam allocation, and mock boundaries.
-- `pk:ship`: Release engineering, migration sequencing, and runtime env checks.
-- `pk:spike` (or `pk:research`): Technical spikes, benchmarks, and multi-vector trade-off matrices.
-- `pk:design`: Modern UI/UX, Design Tokens, and WCAG 2.2 Level AA accessibility.
-- `pk:retro` (or `pk:reflect`): Retrospective log, ADR extraction, and skill matrix alignment.
-- `pk:checkpoint` (or `pk:handoff`): Session state compaction, docs/STATE.md update, and handover prompt.
-- `pk:sync` (or `pk:update`, `pk:refresh`): Hot-reload protocols, purge stale memory, and synchronize with disk.
-- `pk:profile`: Switch Lite/Balanced/Turbo profile at runtime via the idempotent installer re-injection path.
-- `pk:auto`: Autonomous SDLC pipeline (plan→tasks→code→test→review), default stop at review-ready.
+- `pk:route`: Lifecycle router + decision matrix.
+- `pk:tutor` (or `pk:tutor beginner`, `pk:tutor architect`): Socratic mentorship, 3-tier hints.
+- `pk:grill`: Staff Engineer architecture interview + defense drill.
+- `pk:plan`: Spec-driven architecture + feature planning.
+- `pk:onboard`: Project intake + PROMPTKIT.md scaffold.
+- `pk:tasks` (or `pk:issue`, `pk:kanban`): Decompose specs into atomic issues.
+- `pk:review`: Multi-dimensional PR + architecture review.
+- `pk:commit`: Atomic commits, single-concern staging, secret-leak scan.
+- `pk:pr`: PR descriptions, verification evidence, GitHub CLI.
+- `pk:debug`: Hypothesis-driven debugging + root cause analysis.
+- `pk:fix`: Surgical remediation, security-first ordering.
+- `pk:refactor`: Structural debt remediation.
+- `pk:perf`: Performance profiling, latency SLAs.
+- `pk:data` (or `pk:db`): Relational modeling, indexing, RLS.
+- `pk:auth`: Auth flows, cookie security, session, RBAC.
+- `pk:api`: Frontend-backend handshake, unified envelopes.
+- `pk:test`: Testing strategy, seam allocation, mock boundaries.
+- `pk:ship`: Release engineering, migration sequencing.
+- `pk:spike` (or `pk:research`): Technical spikes + benchmarks.
+- `pk:design`: UI/UX, design tokens, WCAG 2.2 AA.
+- `pk:retro` (or `pk:reflect`): Retrospective log + ADR extraction.
+- `pk:checkpoint` (or `pk:handoff`): State compaction, STATE.md update, handover prompt.
+- `pk:sync` (or `pk:update`, `pk:refresh`): Hot-reload protocols, sync to disk.
+- `pk:profile`: Switch Lite/Balanced/Turbo profile at runtime.
+- `pk:auto`: Autonomous SDLC pipeline, stop at review-ready.
 
 ### Smart Auto-Route & Guardrails (Triggers Are Optional)
 You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigger, apply this triage:
