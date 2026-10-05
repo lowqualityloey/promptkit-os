@@ -1016,9 +1016,59 @@ New-FixtureTranscript 'halt-valid-resume' (Join-Path $b 'transcript.md')
 Assert-Behavioral "recovery reads present but inverted are behavioral=FAIL and exit non-zero" `
     'halt-valid-resume' (Join-Path $b 'transcript.md') 'behavioral=FAIL' 'provenance=verified' 1
 
-# 8. The write-log lookup must be sized in both twins, or they diverge on the same bundle.
-Assert-Contains "scripts/run-behavioral-eval.sh" '\[ -s "\$bundle/observed-writes.log" \]' "Bash write-log lookup requires a non-empty log"
-Assert-Contains "scripts/run-behavioral-eval.ps1" "Test-SizedFile \`$candidate" "PowerShell write-log lookup requires a non-empty log"
+# 8. A log that records no activity is not a log. An empty file, a whitespace-only
+#    file, and a directory of that name all record nothing, and matching finds no
+#    prohibited write in any of them, so each graded behavioral=PASS.
+$b = New-EvidenceBundle 'blank-log' "   `n`t`n"
+New-FixtureTranscript 'halt-committed-write' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a whitespace-only write log is behavioral=UNTESTED, never PASS" `
+    'halt-committed-write' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
+
+# 9. A directory named like the log is not a log either. Size alone is true for a
+#    directory, so selecting on it reported provenance=verified for a bundle whose only
+#    artifact was an unreadable directory.
+$b = New-EvidenceBundle 'dir-log' "tool read docs/STATE.md`n"
+Remove-Item -LiteralPath (Join-Path $b 'observed-writes.log') -Force
+New-Item -ItemType Directory -Path (Join-Path $b 'observed-writes.log') -Force | Out-Null
+New-FixtureTranscript 'halt-committed-write' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a directory named observed-writes.log is behavioral=UNTESTED, never a verified capture" `
+    'halt-committed-write' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
+
+# 10. An unreadable log is unjudgeable, not clean. `grep` exits 2 on error, which was
+>#     read as "no prohibited write found"; in PowerShell `Get-Content` yields $null and
+>#     Test-PatternIn then iterates nothing. Skipped as root, which can read mode 000.
+$b = New-EvidenceBundle 'unreadable-log' "tool read docs/STATE.md`n"
+if ($env:USERNAME -ne 'root' -and [int](& id -u) -ne 0) {
+    (Get-Item -LiteralPath (Join-Path $b 'observed-writes.log')).IsReadOnly = $false
+    & chmod 000 (Join-Path $b 'observed-writes.log')
+    New-FixtureTranscript 'halt-committed-write' (Join-Path $b 'transcript.md')
+    Assert-Behavioral "an unreadable write log is behavioral=UNTESTED, never PASS" `
+        'halt-committed-write' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
+    & chmod 644 (Join-Path $b 'observed-writes.log')
+} else {
+    Write-Host "  ➖ SKIP: an unreadable write log is behavioral=UNTESTED (running as root, which bypasses mode 000)" -ForegroundColor DarkGray
+}
+
+# 11. A directory is not a provenance.json, and it is not evidence either. `-PathType Leaf`
+#    and a length test are both bypassed by one, so the ten required keys read as
+#    "present" in something that has none, and evidence-present reported a bundle
+#    artifact as held.
+$b = New-EvidenceBundle 'dir-provenance' "tool read docs/STATE.md`n"
+Remove-Item -LiteralPath (Join-Path $b 'provenance.json') -Force
+New-Item -ItemType Directory -Path (Join-Path $b 'provenance.json') -Force | Out-Null
+New-FixtureTranscript 'checkpoint-nudge' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a directory named provenance.json is provenance=unverified, never a verified capture" `
+    'checkpoint-nudge' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
+New-FixtureTranscript 'halt-missing-reply-hint' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a directory named provenance.json is not a satisfied evidence-present check" `
+    'halt-missing-reply-hint' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
+
+# 12. Both twins must reject a directory, or they grade the same bundle differently:
+#     bash `[ -s ]` is true for a directory while PowerShell's PathType Leaf is not.
+Assert-Contains "scripts/run-behavioral-eval.sh" '\[ -f "\$1" \] && \[ -s "\$1" \]' "Bash mirrors the twin's regular-file test"
+Assert-Contains "scripts/run-behavioral-eval.sh" "grep -m1 '\^CHECKS" "Bash reads the side channel by prefix, not by position"
+Assert-Contains "scripts/run-behavioral-eval.ps1" "PathType Leaf" "PowerShell write-log lookup rejects a directory"
+Assert-Contains "scripts/run-behavioral-eval.ps1" "Test-RecordedActivity" "PowerShell write-log lookup requires a non-blank log"
 
 Remove-Item -LiteralPath $BehavioralRoot -Recurse -Force -ErrorAction SilentlyContinue
 

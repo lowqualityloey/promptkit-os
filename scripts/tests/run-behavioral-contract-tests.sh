@@ -1056,9 +1056,55 @@ else
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 
-# 10. The write-log lookup must be sized in both twins, or they diverge on the same bundle.
-assert_contains "scripts/run-behavioral-eval.sh" '\[ -s "\$bundle/observed-writes.log" \]' "Bash write-log lookup requires a non-empty log"
-assert_contains "scripts/run-behavioral-eval.ps1" "Test-SizedFile [$]candidate" "PowerShell write-log lookup requires a non-empty log"
+# 10. A log that records no activity is not a log. An empty file, a whitespace-only
+#     file, and a file this process cannot read all record nothing, and grep matches
+#     no prohibited write in any of them, so each graded behavioral=PASS.
+B="$BEHAVIORAL_TMP/blank-log"; write_bundle "$B" "$(printf '   \n\t')"
+fixture_pass_transcript halt-committed-write "$B/transcript.md"
+assert_behavioral "a whitespace-only write log is behavioral=UNTESTED, never PASS" \
+    halt-committed-write "$B/transcript.md" "behavioral=UNTESTED" "provenance=unverified" 0
+
+# 11. A directory named like the log is not a log either. `[ -s ]` alone is true for
+#     a directory, so selecting on size alone reported provenance=verified for a bundle
+#     whose only artifact was an unreadable directory.
+B="$BEHAVIORAL_TMP/dir-log"; write_bundle "$B" "tool read docs/STATE.md"
+rm -f "$B/observed-writes.log"; mkdir -p "$B/observed-writes.log"
+fixture_pass_transcript halt-committed-write "$B/transcript.md"
+assert_behavioral "a directory named observed-writes.log is behavioral=UNTESTED, never a verified capture" \
+    halt-committed-write "$B/transcript.md" "behavioral=UNTESTED" "provenance=unverified" 0
+
+# 12. An unreadable log is unjudgeable, not clean. `grep` exits 2 on error, which was
+#     read as "no prohibited write found"; in PowerShell `Get-Content` yields $null and
+#     Test-PatternIn then iterates nothing. Skipped as root, which can read mode 000.
+B="$BEHAVIORAL_TMP/unreadable-log"; write_bundle "$B" "tool read docs/STATE.md"
+if [ "$(id -u)" != "0" ]; then
+    chmod 000 "$B/observed-writes.log"
+    fixture_pass_transcript halt-committed-write "$B/transcript.md"
+    assert_behavioral "an unreadable write log is behavioral=UNTESTED, never PASS" \
+        halt-committed-write "$B/transcript.md" "behavioral=UNTESTED" "provenance=unverified" 0
+    chmod 644 "$B/observed-writes.log"
+else
+    echo "  ➖ SKIP: an unreadable write log is behavioral=UNTESTED (running as root, which bypasses mode 000)"
+fi
+
+# 13. A directory is not a provenance.json, and it is not evidence either. `[ -s ]` and
+#     `[ -e ]` are both true for one, so the ten required keys read as "present" in
+#     something that has none, and evidence-present reported a bundle artifact as held.
+B="$BEHAVIORAL_TMP/dir-provenance"; write_bundle "$B" "tool read docs/STATE.md"
+rm -f "$B/provenance.json"; mkdir -p "$B/provenance.json"
+fixture_pass_transcript checkpoint-nudge "$B/transcript.md"
+assert_behavioral "a directory named provenance.json is provenance=unverified, never a verified capture" \
+    checkpoint-nudge "$B/transcript.md" "behavioral=UNTESTED" "provenance=unverified" 0
+fixture_pass_transcript halt-missing-reply-hint "$B/transcript.md"
+assert_behavioral "a directory named provenance.json is not a satisfied evidence-present check" \
+    halt-missing-reply-hint "$B/transcript.md" "behavioral=UNTESTED" "provenance=unverified" 0
+
+# 14. Both twins must reject a directory, or they grade the same bundle differently:
+#     bash `[ -s ]` is true for a directory while PowerShell's PathType Leaf is not.
+assert_contains "scripts/run-behavioral-eval.sh" '\[ -f "\$1" \] && \[ -s "\$1" \]' "Bash mirrors the twin's regular-file test"
+assert_contains "scripts/run-behavioral-eval.ps1" "PathType Leaf" "PowerShell write-log lookup rejects a directory"
+assert_contains "scripts/run-behavioral-eval.ps1" "Test-RecordedActivity" "PowerShell write-log lookup requires a non-blank log"
+assert_contains "scripts/run-behavioral-eval.sh" "grep -m1 '\^CHECKS" "Bash reads the side channel by prefix, not by position"
 
 echo ""
 echo "📊 Behavioral Contract Verification Summary"

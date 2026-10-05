@@ -138,21 +138,32 @@ function Find-FirstPatternLine {
 }
 
 function Test-SizedFile {
-    # `[ -s <file> ]` : a regular file with at least one byte.
+    # A regular file with at least one byte, i.e. bash's `[ -f ] && [ -s ]`.
+    # PathType Leaf is load-bearing: plain `[ -s ]` is also true for a directory.
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
     return (Get-Item -LiteralPath $Path).Length -gt 0
 }
 
+function Test-RecordedActivity {
+    # True when the file holds at least one non-whitespace byte. A log that is empty
+    # or entirely blank records no tool activity, and matching against one finds no
+    # prohibited write, so without this a capture that observed nothing is graded as
+    # full compliance.
+    param([string]$Path)
+    try { return ((Get-Content -LiteralPath $Path -Raw) -match '\S') }
+    catch { return $false }
+}
+
 function Get-EvidenceWriteLog {
     # The bundle's recorded tool-activity write log, or empty when the bundle
-    # records none. Test-SizedFile, not Test-Path: an empty log records no tool
-    # activity, so matching it finds no prohibited write and would report "holds" —
-    # grading a capture that observed nothing as behavioral=PASS.
+    # records none. All three tests are load-bearing and each looks removable:
+    # a directory of that name, an unreadable file, and a whitespace-only file all
+    # record no tool activity.
     param([string]$Bundle)
     foreach ($name in @('observed-writes.log', 'observed-m2-writes.txt')) {
         $candidate = Join-Path $Bundle $name
-        if (Test-SizedFile $candidate) { return $candidate }
+        if ((Test-SizedFile $candidate) -and (Test-RecordedActivity $candidate)) { return $candidate }
     }
     return ""
 }
@@ -317,15 +328,22 @@ function Invoke-EvidenceCheck {
             if (-not (Test-SizedFile (Join-Path $Bundle $Pattern))) { return 0 }
             $script:EvidenceDetail = "    ✗ evidence-absent '$Pattern' present in bundle"; return 2
         }
-        'prohibited-action' {
-            if ($log -eq '') {
-                $script:EvidenceDetail = "    ✗ prohibited-action '$Pattern' unjudgeable (bundle records no write log)"; return 1
-            }
-            if (Test-PatternIn (Get-Content -LiteralPath $log) $Pattern) {
-                $script:EvidenceDetail = "    ✗ prohibited action '$Pattern' observed in $(Split-Path -Leaf $log)"; return 2
-            }
-            return 0
-        }
+'prohibited-action' {
+              if ($log -eq '') {
+                  $script:EvidenceDetail = "    ✗ prohibited-action '$Pattern' unjudgeable (bundle records no readable write log with recorded activity)"; return 1
+              }
+              # An unreadable log must not read as "no prohibited write found": with
+              # $ErrorActionPreference Continue, Get-Content yields $null on failure
+              # and Test-PatternIn then iterates nothing and reports no match.
+              try { $lines = Get-Content -LiteralPath $log -ErrorAction Stop }
+              catch {
+                  $script:EvidenceDetail = "    ✗ prohibited-action '$Pattern' unjudgeable ($(Split-Path -Leaf $log) unreadable)"; return 1
+              }
+              if (Test-PatternIn $lines $Pattern) {
+                  $script:EvidenceDetail = "    ✗ prohibited action '$Pattern' observed in $(Split-Path -Leaf $log)"; return 2
+              }
+              return 0
+          }
         'evidence-order' {
             # Ordered steps, space- or pipe-separated. Proves the mandated read
             # order (task record, then checkpoint, then STATE/workflow/root
