@@ -2,6 +2,7 @@
 ## PromptKit OS Lite: Engineering Operating System (Lite Profile)
 
 PromptKit OS Lite is active in this workspace (`./$KIT_DIR_REL`). Lightweight mode: 6 utility workflows, <1,500 tok, 80% value. For the full Balanced profile, run `init.sh --balanced`.
+Engine: $ENGINE_VERSION ($ENGINE_SHA) — stamped at install time; run `pk:sync` to check for drift.
 
 ### Fast Shorthand Triggers (Lite - 6 workflows)
 - `pk:route`: Workflow router — what workflow do I need?

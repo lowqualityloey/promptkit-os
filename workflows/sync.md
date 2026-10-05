@@ -55,7 +55,44 @@ Before responding, the AI assistant inspects the physical workspace. If the envi
 3. **Inspect Engine Path & Workflows**:
    Identify the engine directory (typically `.promptkit/` — the path quoted in your injected directive) and verify available workflows in its `workflows/` directory (count them with the file listing, do not recall a number).
 4. **Check Version & Release Records**:
-   Inspect the engine's `docs/releases/` or recent commits on the PromptKit submodule to identify newly added capabilities.
+   Do not eyeball `docs/releases/` or scroll a commit log. Run the three comparisons in **Engine Version & Drift Audit** below, then report exactly one of the six states it defines, using that state's remediation text verbatim.
+
+#### Engine Version & Drift Audit
+
+<a id="engine-version-drift-audit"></a>
+
+A stale session is the failure this audit exists to prevent, so nothing here is a judgment call. Classify the install first, then run the three comparisons in order, one command each:
+
+1. **Install classification, two checks that gate everything after them**:
+   - `test -e <kit-path>/.git` is false → `<kit-path>` holds no repository, so report `not-a-git-install` and stop this audit. The check passes for a submodule (a gitfile pointing into the host repo's `.git/modules/`) and for a real clone (a directory), so `test -e` is the right test, not `test -d`.
+   - `git -C <kit-path> rev-parse --is-shallow-repository` returns true → report `shallow-or-offline` and stop this audit. Never substitute a guess for the missing history.
+2. **Comparison (a), directive stamp vs `docs/STATE.md` stamp**: parse the `Engine: <ver> (<sha>)` stamp inside the host file's `<!-- PROMPTKIT_START -->` block, then parse the `**Engine Version**: <ver> @ <sha>` line in `docs/STATE.md`. No git involved. Normalize both to a `<ver>` / `<sha>` pair, then state the outcome as one line: `stamp cross-check: match`, `stamp cross-check: mismatch (directive <ver>/<sha>, STATE.md <ver>/<sha>)`, or `stamp cross-check: STATE.md unstamped`. The directive stamp is the reporting authority; a mismatch is an observation appended after the state line below, never a seventh state.
+3. **Comparison (b), stamp vs on-disk engine**: `git -C <kit-path> rev-parse --short HEAD` returns the commit actually sitting in the engine directory. Compare it against the stamped short SHA; equality means the stamp still describes this tree.
+4. **Comparison (c), on-disk engine vs upstream**: resolve `<upstream-ref>` (the engine's remote-tracking default branch, normally `origin/main`) from what is already on disk. Then `git -C <kit-path> rev-list --count HEAD..<upstream-ref>` yields the `+n` figure, and `git -C <kit-path> merge-base --is-ancestor HEAD <upstream-ref>` decides divergence: exit 0 means the local engine is an ancestor of upstream, any other exit means it is not. **Both figures come from `HEAD`.** Never substitute the stamped ref: measuring distance from the stamp reports an engine that has since moved against the wrong commit.
+
+Classify by walking the table top to bottom and stopping at the first row that matches. The rows are disjoint by construction — `diverged` is tested before `behind` because a divergent engine usually also has a positive count, and `behind` before `ok` because any positive count disqualifies `ok` — so exactly one state is ever reported:
+
+| State | Condition (first match wins) | Report as |
+| :--- | :--- | :--- |
+| not-a-git-install | `<kit>/.git` does not exist (npx courier tarball install) | `engine <ver> (courier install — version from release tarball, not git)` |
+| unknown | no stamp present in the directive | `engine unknown — re-run the installer to stamp` (warn once, never error) |
+| shallow-or-offline | `git rev-parse --is-shallow-repository` is true, OR `<upstream-ref>` cannot be resolved | `engine <ver> cannot verify drift (shallow/offline) — fetch --unshallow to check` |
+| diverged | `git merge-base --is-ancestor HEAD <upstream-ref>` exits non-zero | `engine <ver> diverged from upstream — reconcile manually` |
+| behind(+n) | is-ancestor exits 0 AND `rev-list --count HEAD..<upstream-ref>` > 0 | `engine <ver> < upstream (+n) — offer pk:sync upgrade` |
+| ok | is-ancestor exits 0 AND `rev-list --count HEAD..<upstream-ref>` is 0 | `engine <ver> (<sha>) current` |
+
+**Stamp drift is not engine drift.** Comparison (b) reports whether the stamp still describes the tree; it never changes which state above is reported. Append it as its own observation line after the state, exactly like comparison (a): `stamp vs engine: match`, or `stamp vs engine: stale (stamp <ver>/<sha>, engine <sha>)`. A stale stamp with an up-to-date engine is still `ok` plus that observation — the engine is current, the record of it is not, and conflating the two would send the developer to upgrade an engine that needs no upgrade.
+
+**Hard rules.** Violating any of these reintroduces the exact bug this audit exists to prevent:
+
+- **Never run `git describe --tags --abbrev=0` (or `--abbrev=0` in any form) to produce or store a stamp.** `--abbrev=0` discards the commit distance. Measured in this very repository: `git describe --tags` returns `v1.10.1-12-ge78fde0` while `git describe --tags --abbrev=0` returns `v1.10.1`, silently hiding 12 commits. `describe` output is display-only.
+- **When restricting a tag lookup to release tags, use `--match 'v[0-9]*'`.** This repository also carries non-release `backup/*` tags, and an unfiltered `describe --tags` can resolve to one of them and report a garbage version.
+- **A shallow install must report `shallow-or-offline`, never a confident `ok` and never a fabricated `+n`.** In a shallow clone, `rev-list --count` and `merge-base --is-ancestor` are both unreliable. Measured here: `rev-list --count v1.11.0..HEAD` returns `4` while `v1.11.0..origin/main` returns `14`.
+- **A courier install has no git repository at all.** The npm courier resolves its version from the package manifest and unpacks a pinned release tarball; it invokes git nowhere. Report `not-a-git-install` and continue. Never treat it as an error.
+
+**Read-only, always.** This audit never stages, commits, fetches, pulls, updates a submodule, invokes the installer, or writes any file in the host repository or the engine checkout. Allowed operations are exactly: file reads plus `rev-parse`, `rev-list`, `merge-base`, and `is-shallow-repository`. When a remediation names an action such as `fetch --unshallow` or re-running the installer, that is a request to the developer, never one for the agent to perform.
+
+**Courier installs are recognizable from this file alone.** A `npx promptkit-os` install has no `<kit>/.git` at all: the courier copies an unpacked release tree into the engine directory, so nothing there is a repository. Comparison (c) is therefore `not-a-git-install` by construction, not a failure to retry and not a reason to install git tooling.
 
 ---
 

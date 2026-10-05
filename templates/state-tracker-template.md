@@ -7,6 +7,7 @@
 - **Target Release / Deadline**: [e.g., v1.0.0 / YYYY-MM-DD]
 - **Current Working Branch**: [e.g., main or feature/branch-name]
 - **Last Updated**: [YYYY-MM-DD]
+- **Engine Version**: [vX.Y.Z @ short-sha | not stamped — re-run installer]
 
 ---
 

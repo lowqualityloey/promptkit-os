@@ -99,7 +99,7 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 # macOS / Linux — Balanced profile (25 workflows, default)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
 
-# Lite profile (6 utility workflows, 1,411 tokens static overhead)
+# Lite profile (6 utility workflows, 1,436 tokens static overhead)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --lite
 
 # Windows (PowerShell)
@@ -253,7 +253,7 @@ You: [Reviews, edits, commits]
 **Short Answer**: PromptKit OS measures static directive payloads and per-task payload savings mechanically in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md). Conversational scenario estimates and dollar examples are illustrative models based on workflow design assumptions, not production telemetry.
 
 **Mechanically Measured Benchmarks** (from `docs/BENCHMARKS.md`):
-- **Static Directives**: ~1,411 tokens (Lite) and ~2,287 tokens (Balanced) at bytes/4 convention, saving 91–95% vs inlining workflows statically.
+- **Static Directives**: ~1,436 tokens (Lite) and ~2,312 tokens (Balanced) at bytes/4 convention, saving 91–95% vs inlining workflows statically.
 - **Dynamic Per-Task Payloads**: JIT loading saves 22% to 37% (Balanced) and 26% to 41% (Lite) vs historical monolithic pre-load baselines across `pk:fix`, `pk:plan`, and `pk:ship`.
 
 **Illustrative Scenario Models** (modeled assumptions, not production telemetry):
@@ -465,7 +465,7 @@ Remember: **AI assistants aren't perfect**. PromptKit structures their reasoning
 **How it works**:
 - **Baseline footprint**: Initialization scripts inject only a lean router directive into your configuration file (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, etc.) — current measured footprints live in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
 - **On-demand loading**: The AI only reads specific workflow files (e.g. `workflows/debug.md`) from the local filesystem when that specific workflow is triggered or routed.
-- **Comparison to monolithic prompts**: Traditional prompt packs inline all rules, workflows, and templates directly into the prompt on every turn, consuming ~19,794 to ~75,505 tokens statically before work begins (historical core-6 lifecycle figures; current core-subset baseline is ~29.4k). PromptKit preserves ~90% of static context overhead compared to monolithic packs (~29.4k current core-subset baseline).
+- **Comparison to monolithic prompts**: Traditional prompt packs inline all rules, workflows, and templates directly into the prompt on every turn, consuming ~19,794 to ~75,505 tokens statically before work begins (historical core-6 lifecycle figures; current core-subset baseline is ~31.0k). PromptKit preserves ~90% of static context overhead compared to monolithic packs (~31.0k current core-subset baseline).
 - **Subagent context preservation**: Multi-file exploration is delegated to subagents whose results are synthesized into compact findings, reducing conversational bloat by up to 98%.
 - **Mechanical verification**: Measure your exact active directive token footprint anytime using `pwsh -File .promptkit/scripts/measure-tokens.ps1` (or `bash .promptkit/scripts/measure-tokens.sh`).
 

@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Historical baseline:** 2026-09-14 on `main` (v1.6.0 with 2+1 profiles) · **Current measurements:** 2026-10-05 at `653352f`, regenerated from the source tree (rerun the commands below after input changes) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 lifecycle subset 19,794 tok / full 25-workflow set 75,505 tok.
+**Historical baseline:** 2026-09-14 on `main` (v1.6.0 with 2+1 profiles) · **Current measurements:** 2026-10-06 at `37eb053`, regenerated from the source tree (rerun the commands below after input changes) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 lifecycle subset 19,794 tok / full 25-workflow set 75,505 tok.
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -15,13 +15,13 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [25 Inlined Workflows (111,086 tok) + Templates + Protocols] │
+│ Every Turn: [25 Inlined Workflows (112,660 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                   PROMPTKIT OS JIT FILESYSTEM MODEL                     │
-│ Baseline Static Injection: Router Directive (1,411 tok Lite / 2,287 Bal)  │
+│ Baseline Static Injection: Router Directive (1,436 tok Lite / 2,312 Bal)  │
 │ On-Demand Loading: Tool loads only target workflow file (e.g. pk:debug) │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -30,36 +30,36 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 ## 2. Static Injection Footprint (Measured Tokens)
 
-| Profile | Template | UTF-8 Bytes | Est. Tokens (bytes/4) | Reduction vs ~29.4k current core-subset baseline¹ | Use |
+| Profile | Template | UTF-8 Bytes | Est. Tokens (bytes/4) | Reduction vs ~31.0k current core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
-| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 5,644 | **1,411 tok** | **95% static** | Onboarding, new users, tiny fixes |
-| **Balanced** | `agent-directive-template.md` (25 workflows) | 9,146 | **2,287 tok** | **92% static** | Teams, production, default |
-| **Turbo** | same as Balanced + parallel waves | 9,146 | 2,287 tok + subagents (~2x measured total (bounds model, see section 8)) | 92% static, higher total | Experimental, greenfield, accepts cost |
+| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 5,745 | **1,436 tok** | **95% static** | Onboarding, new users, tiny fixes |
+| **Balanced** | `agent-directive-template.md` (25 workflows) | 9,247 | **2,312 tok** | **93% static** | Teams, production, default |
+| **Turbo** | same as Balanced + parallel waves | 9,247 | 2,312 tok + subagents (~2x measured total (bounds model, see section 8)) | 93% static, higher total | Experimental, greenfield, accepts cost |
 
 ### Current Workflow Inventory
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **29,391 tok** |
-| Full workflow set | 25 | **111,086 tok** |
+| Core-six Lite subset | 6 | **30,966 tok** |
+| Full workflow set | 25 | **112,660 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
-> **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (92% Balanced, 95% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (12–31% Balanced, 19–35% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
+> **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (93% Balanced, 95% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (12–31% Balanced, 19–35% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
 
-Component rows are measured per section at `653352f` (the enforced banner anchor) with the repo's own convention (`(bytes + 2) / 4`, the same formula `scripts/measure-tokens.sh` applies to the whole directive). Each row is a contiguous line range of `templates/agent-directive-template.md`: lines 1-4, 5-31, 33-51, 52-58, 60-66, and 68-70. Those cover **67 of the file's 70 lines**; the three omitted lines — 32, 59, and 67 — are blank separators between sections and carry no content. The rows sum to 2,285 against the 2,287-token figure `scripts/measure-tokens.sh` reports for the same file, and the 2-token gap is fully accounted for in bytes: the six ranges total 9,137 B, the three omitted blank lines add 3 B for 9,140 B of content, and rounding each range independently gives 2,285 — exactly the unrounded content figure. The remaining 1 B is the trailing newline that `measure-tokens.sh` includes in its captured block (9,146 B -> 2,287). The component rows are a decomposition for orientation; the `Total Baseline Static Overhead` row below is the gated figure and carries the tool value. The `Total Baseline Static Overhead` rows are the CI-gated cells (`scripts/tests/run-behavioral-contract-tests.sh` looks up `Component (Balanced)` / `Approx. Token Weight` / `Total Baseline Static Overhead (Balanced)` by exact string equality) and must continue to match `measure-tokens.sh` output; the component rows are explanatory and are not gated.
+Component rows are measured per section at `37eb053` (the enforced banner anchor) with the repo's own convention (`(bytes + 2) / 4`, the same formula `scripts/measure-tokens.sh` applies to the whole directive). Each row is a contiguous line range of `templates/agent-directive-template.md`: lines 1-4, 6-32, 34-51, 53-59, 61-67, and 69-71. Those cover **66 of the file's 71 lines**; the five omitted lines (5, 33, 52, 60, and 68) are blank separators between sections and carry no content. The rows sum to 2,310 against the 2,312-token figure `scripts/measure-tokens.sh` reports for the same file, and the 2-token gap is fully accounted for in bytes: the six ranges total 9,242 B, which is exactly 2,311 tokens unrounded, so rounding each range independently and adding the parts lands one lower at 2,310. The five omitted blank lines add 5 B for 9,247 B, the file's full byte count, which `measure-tokens.sh` rounds to 2,312. The component rows are a decomposition for orientation; the `Total Baseline Static Overhead` row below is the gated figure and carries the tool value. The `Total Baseline Static Overhead` rows are the CI-gated cells (`scripts/tests/run-behavioral-contract-tests.sh` looks up `Component (Balanced)` / `Approx. Token Weight` / `Total Baseline Static Overhead (Balanced)` by exact string equality) and must continue to match `measure-tokens.sh` output; the component rows are explanatory and are not gated.
 
 | Component (Balanced) | Lines | Approx. Token Weight | Purpose |
 | :--- | :---: | :---: | :--- |
-| **System Introduction & Scope** | 3 | ~62 tokens | Identifies PromptKit root in workspace (`./.promptkit`) |
+| **System Introduction & Scope** | 4 | ~87 tokens | Identifies PromptKit root in workspace (`./.promptkit`) |
 | **Fast Shorthand Triggers** | 27 | ~425 tokens | Direct workflow routing shorthand (`pk:debug`, `pk:test`, etc.) |
 | **Smart Auto-Route & Guardrails** | 18 | ~1,178 tokens | Secret hygiene, circuit breaker, telemetry provenance, milestone boundaries |
 | **Workflows & Protocols Reference** | 7 | ~231 tokens | Lazy-load convention plus trigger-to-file exceptions |
 | **Task Ceremony Levels** | 7 | ~293 tokens | Composable 4-level task ceremony engine |
 | **Project Artifact Output Paths** | 3 | ~96 tokens | Canonical locations for generated specs, ADRs, and plans |
-| **Total Baseline Static Overhead (Balanced)** | **70 lines** | **~2,287 tokens** | **Permanent footprint in system prompt (~92% static saving vs. current ~29.4k core-subset (~98% vs. current full 25-file set))** |
-| **Total Baseline Static Overhead (Lite)** | **55 lines** | **~1,411 tokens** | **95% static saving, ~62% of Balanced** |
-| **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,411 tok — skipped silently) |
+| **Total Baseline Static Overhead (Balanced)** | **71 lines** | **~2,312 tokens** | **Permanent footprint in system prompt (~93% static saving vs. current ~31.0k core-subset (~98% vs. current full 25-file set))** |
+| **Total Baseline Static Overhead (Lite)** | **56 lines** | **~1,436 tokens** | **95% static saving, ~62% of Balanced** |
+| **Opt-in add-on: §5a LSP diagnostics** | `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok) | 3,228 | **~447 tok** | Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines | **Balanced + `pk:review` on TS repos** (Lite stays at 1,436 tok — skipped silently) |
 
 By contrast, the measured cost of inlining the complete workflow set is listed in the Current Workflow Inventory above; it would be paid on turn 1 before any user request is processed.
 
@@ -84,28 +84,28 @@ Gate coverage: the static dual-profile budget **and** the per-task baseline gate
 
 ## 3. Dynamic Per-Task Context Economics & Runtime Benchmarks
 
-PromptKit OS benchmarks both the **static footprint** (1,411 tok Lite, 2,287 tok Balanced) and the **dynamic per-task runtime context**.
+PromptKit OS benchmarks both the **static footprint** (1,436 tok Lite, 2,312 tok Balanced) and the **dynamic per-task runtime context**.
 
 By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without a mandatory preload of `workflows/route.md` (6,962 tokens at the historical `fc98f2f` benchmark; 9,263 tokens at the current measurement). At the historical revision, Change A's modeled saving was 6,915 tokens (6,962 route tokens less 47 tokens of directive growth); current end-to-end payloads are measured below and do not reuse that historical estimate.
 
 **Methodology for per-task table:**
 - Historical comparison anchors: `fc98f2f` (after 2+1 profiles) and `c34be80` (before profiles, Balanced only). These SHAs identify historical inputs; they are not the source of the refreshed current values.
-- Comparison-input fingerprint: base revision `2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40` plus measured-input diff SHA-256 `8f0f0d2313d6ad3b633f9f156cb6f39966cc4728dce836d596f99589d60e454d`, captured on 2026-10-02 for the prior comparison. The digest is reproducible with `git diff --binary 2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`; it is not the source of the current figures. Current per-task values were remeasured at `653352f` — the same commit the banner names, which is the anchor the behavioral twins enforce — on 2026-10-05 with `bash scripts/measure-per-task-tokens.sh`, which sums the current directive, workflow, `code-quality-gate.md`, and relevant task template. The anchor is the commit the figures were measured at, and it DOES move when a measured input changes: `60765c3` compressed the trigger descriptions in `templates/agent-directive-template.md`, which is inside the measured-input set, so every Balanced figure moved with it. Re-measuring at the previous anchor `86d4e24` reproduces the superseded numbers (2,475 / 11,454 / 20,954 / 17,228), which is why the anchor is restated rather than left to drift. **A documentation-only commit on top of `60765c3` reproduces these figures exactly; any commit touching `workflows/*.md`, `protocols/code-quality-gate.md`, or a measured template must restate this anchor and re-propagate.**
+- Comparison-input fingerprint: base revision `2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40` plus measured-input diff SHA-256 `8f0f0d2313d6ad3b633f9f156cb6f39966cc4728dce836d596f99589d60e454d`, captured on 2026-10-02 for the prior comparison. The digest is reproducible with `git diff --binary 2b6c9e9db5f0b8fe8e54f8e6f7d7eb4bd80b6e40 -- 'workflows/*.md' protocols/code-quality-gate.md templates/agent-directive-template.md templates/agent-directive-lite-template.md templates/tech-spec-template.md templates/release-checklist.md | sha256sum`; it is not the source of the current figures. Current per-task values were remeasured at `37eb053` — the same commit the banner names, which is the anchor the behavioral twins enforce — on 2026-10-06 with `bash scripts/measure-per-task-tokens.sh`, which sums the current directive, workflow, `code-quality-gate.md`, and relevant task template. The anchor is the commit the figures were measured at, and it DOES move when a measured input changes: `60765c3` compressed the trigger descriptions in `templates/agent-directive-template.md`, which is inside the measured-input set, so every Balanced figure moved with it. Re-measuring at the previous anchor `86d4e24` reproduces the superseded numbers (2,475 / 11,454 / 20,954 / 17,228), which is why the anchor is restated rather than left to drift. **A documentation-only commit on top of `60765c3` reproduces these figures exactly; any commit touching `workflows/*.md`, `protocols/code-quality-gate.md`, or a measured template must restate this anchor and re-propagate.**
 - Historical baseline payload = directive 1,882 + route 6,962 + workflow + gate (old behavior before Change A), plus the same task template where applicable.
-- Current JIT payload = directive 1,411-2,287 + workflow + gate + relevant task template (route.md is not loaded by default).
-- Current Lite vs Balanced static directive sizes: 1,411 vs 2,287 tokens.
+- Current JIT payload = directive 1,436-2,312 + workflow + gate + relevant task template (route.md is not loaded by default).
+- Current Lite vs Balanced static directive sizes: 1,436 vs 2,312 tokens.
 
 ### Measured Per-Task Context Breakdown (bytes / 4 convention, after Change A + B):
 
 | Workflow Path | Task Type & Loaded Scope | Baseline Payload (before A) | PromptKit OS JIT Payload (Balanced) | PromptKit OS JIT Payload (Lite) | Context Reduction vs Baseline |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **11,266 tok** | **10,390 tok** | **-12% Balanced, -19% Lite (-1,595 to -2,471 tok)** |
-| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **20,766 tok** | **19,890 tok** | **-16% Balanced, -19% Lite (-3,900 to -4,776 tok)** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **17,040 tok** | **16,164 tok** | **-31% Balanced, -35% Lite (-7,721 to -8,597 tok)** |
+| **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **11,291 tok** | **10,415 tok** | **-12% Balanced, -19% Lite (-1,570 to -2,446 tok)** |
+| **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **20,791 tok** | **19,915 tok** | **-16% Balanced, -19% Lite (-3,875 to -4,751 tok)** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **17,065 tok** | **16,189 tok** | **-31% Balanced, -35% Lite (-7,696 to -8,572 tok)** |
 
-> **Budget headroom: the binding constraint was relieved by description compression, not by raising the cap.** The Balanced static directive grew 2,350 tok (#503) → 2,401 tok (#531) → 2,475 tok (#527–#530), leaving **25 tokens of a 2,500 cap** — roughly one rule short of the ~70-75 tokens a new governance or recovery rule costs. Compressing the 25 `pk:` trigger *descriptions* in `templates/agent-directive-template.md` (names and aliases untouched, so discoverability is unchanged) brought the directive to **2,287 tok — 213 tokens of headroom**, about three rules of room. The 2,500 cap was **not** raised. Lite sits at 1,411 of 1,500. The lesson generalizes: the trigger catalog was carrying ~425 tok of prose that restated what each workflow file already says, and the names alone are cheap. When a rule no longer fits, extract the *detail* to a lazy-loaded protocol and leave a pointer — the pattern #526 and #529 already use — before reaching for the cap. Do not absorb this by silently raising the cap.
+> **Budget headroom: the binding constraint was relieved by description compression, not by raising the cap.** The Balanced static directive grew 2,350 tok (#503) → 2,401 tok (#531) → 2,475 tok (#527–#530), leaving **25 tokens of a 2,500 cap** — roughly one rule short of the ~70-75 tokens a new governance or recovery rule costs. Compressing the 25 `pk:` trigger *descriptions* in `templates/agent-directive-template.md` (names and aliases untouched, so discoverability is unchanged) brought the directive to **2,287 tok — 213 tokens of headroom**. The install-time engine stamp then cost 25 tok, so it now sits at **2,312 tok — 188 tokens of headroom**, roughly two to three rules of room. The 2,500 cap was **not** raised. Lite sits at 1,436 of 1,500. The lesson generalizes: the trigger catalog was carrying ~425 tok of prose that restated what each workflow file already says, and the names alone are cheap. When a rule no longer fits, extract the *detail* to a lazy-loaded protocol and leave a pointer — the pattern #526 and #529 already use — before reaching for the cap. Do not absorb this by silently raising the cap.
 >
-> **Per-task savings are eroding, and the table above does not show it.** The comparison baseline is a fixed historical constant, so every payload addition shows up as a smaller reduction: `pk:fix` has moved 24% → 12% Balanced on the current `main` baseline (9,785 → 11,266 tok). Most of that erosion is contract text, not overhead regression — the #528 detour discipline in `workflows/fix.md` (+812 tok) and the #530 aggregate round budget in `protocols/code-quality-gate.md` (+783 tok, loaded by all three measured tasks). Compression works in the other direction too: #536 removed 188 tok of trigger-description prose from the directive, which is why all three Balanced payloads dropped by exactly 188 tok and the reductions ticked back up one point each. The absolute figures remain honest and reproducible; read the trend, not only the endpoint, when judging whether a payload change is acceptable.
+> **Per-task savings are eroding, and the table above does not show it.** The comparison baseline is a fixed historical constant, so every payload addition shows up as a smaller reduction: `pk:fix` has moved 24% → 12% Balanced on the current `main` baseline (9,785 → 11,291 tok). Most of that erosion is contract text, not overhead regression — the #528 detour discipline in `workflows/fix.md` (+812 tok) and the #530 aggregate round budget in `protocols/code-quality-gate.md` (+783 tok, loaded by all three measured tasks). Compression works in the other direction too: #536 removed 188 tok of trigger-description prose from the directive, which is why all three Balanced payloads dropped by exactly 188 tok and the reductions ticked back up one point each. The absolute figures remain honest and reproducible; read the trend, not only the endpoint, when judging whether a payload change is acceptable.
 
 ### Planning-Intake Cost: One-Time Premium, Zero Steady State
 
@@ -233,14 +233,14 @@ The figures in this section use the `bytes/4` proxy. Issue #194 validated that c
 > [!IMPORTANT]
 > This section is **ungated** — `scripts/measure-tokenizer-delta.sh` always exits 0 and prints `SKIPPED` when `tiktoken` is unavailable, so no CI job fails when these rows go stale. That is a deliberate trade (the check needs network-free BPE data and is validation-only), but it means staleness is caught by review, not by a gate. Re-run it in the same change that touches a measured input, and treat a stale row here as a documentation defect. See `CONTRIBUTING.md` item 4.
 
-**Current measurement:** The tokenizer comparison below was re-measured 2026-10-05 at `main` @ `401cc9e`, superseding the 2026-10-02 `2b6c9e9` snapshot, the 2026-10-01 `e159c70` one, and the earlier 2026-09-28 `b7e9c8c` one. Validation only — `bytes/4` remains the gated convention and no published budget figure changed. Three rows had gone stale since the previous snapshot and are corrected here: both directive templates (the Balanced directive moved 2,350 → 2,287 when #536 compressed the trigger descriptions, and the Lite directive moved 1,286 → 1,411 as its root-directive triggers grew) and `workflows/fix.md` (2,770 → 3,582 when #528 added the bounded detour contract).
+**Current measurement:** The tokenizer comparison below was re-measured 2026-10-06 on the current source tree, superseding the 2026-10-05 `401cc9e` snapshot, the 2026-10-02 `2b6c9e9` one, the 2026-10-01 `e159c70` one, and the earlier 2026-09-28 `b7e9c8c` one. Validation only — `bytes/4` remains the gated convention and no published budget figure changed. Two rows had gone stale again and are corrected here: both directive templates, which moved on the install-time engine stamp (Balanced 2,287 → 2,312, Lite 1,411 → 1,436). The `workflows/` and `protocols/` rows still match the 2026-10-05 snapshot.
 
-**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-10-05 at `main` @ `401cc9e` (prior: 2026-10-02 at `2b6c9e9`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4. This table is **not** gated and never fails the build, so unlike the sections above it has no CI guard against going stale: re-run it whenever a measured input changes, which is every release that touches `workflows/`, `protocols/code-quality-gate.md`, or a measured template.
+**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-10-06 on the current source tree (prior: 2026-10-05 at `401cc9e`, 2026-10-02 at `2b6c9e9`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4. This table is **not** gated and never fails the build, so unlike the sections above it has no CI guard against going stale: re-run it whenever a measured input changes, which is every release that touches `workflows/`, `protocols/code-quality-gate.md`, or a measured template.
 
 | File | BYTES4 | CL100K | O200K | RATIO |
 | :--- | ---: | ---: | ---: | ---: |
-| `templates/agent-directive-template.md` | 2,287 | 2,322 | 2,312 | 1.015 |
-| `templates/agent-directive-lite-template.md` | 1,411 | 1,456 | 1,451 | 1.032 |
+| `templates/agent-directive-template.md` | 2,312 | 2,348 | 2,338 | 1.016 |
+| `templates/agent-directive-lite-template.md` | 1,436 | 1,482 | 1,477 | 1.032 |
 | `workflows/plan.md` | 7,602 | 6,165 | 6,153 | 0.811 |
 | `workflows/route.md` | 9,263 | 8,039 | 8,013 | 0.868 |
 | `workflows/fix.md` | 3,582 | 3,055 | 3,041 | 0.853 |
@@ -249,7 +249,7 @@ The figures in this section use the `bytes/4` proxy. Issue #194 validated that c
 
 **Verdict (published as measured):**
 
-- **Gated artifacts are sound.** The Balanced directive reads ~1.5% low against `cl100k_base` (2,287 proxy vs 2,322 actual) and Lite ~3% low (1,411 vs 1,456). The 2500/1500 budget gates therefore guard real cost rather than only the proxy, with slightly less headroom than the previous snapshot claimed.
+- **Gated artifacts are sound.** The Balanced directive reads ~1.5% low against `cl100k_base` (2,312 proxy vs 2,348 actual) and Lite ~3% low (1,436 vs 1,482). The 2500/1500 budget gates therefore guard real cost rather than only the proxy, with slightly less headroom than the previous snapshot claimed.
 - **Workflow/protocol figures are conservative.** The proxy overstates real counts by ~14–28% (whitespace, table padding, comments). Published per-task payloads are upper bounds — real costs are lower.
 - **Relative savings hold approximately.** Both sides of each reduction ratio were measured in the same convention, so the overstatement largely cancels; absolute tok figures should be read as conservative estimates.
 - **Encodings agree.** `cl100k_base` vs `o200k_base` differ by ≤1% on every file (max observed 0.46%) — no per-host restatement is warranted from this data.

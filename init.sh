@@ -8,6 +8,44 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIR_NAME="$(basename "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/scripts/terminal-picker.sh"
 
+# Stamp the installed engine identity (#545). Must never fail the install: unresolved
+# values degrade to "unknown", which pk:sync reports as its own state, not an error.
+# Never add --abbrev=0 here: it discards commit distance (measured: v1.10.1 vs
+# v1.10.1-12-ge78fde0), hiding exactly the drift the stamp exists to expose. --match
+# excludes the repo's non-release backup/* tags, which describe would otherwise pick.
+ENGINE_VERSION="unknown"
+ENGINE_SHA="unknown"
+resolve_engine_identity() {
+    if [[ -e "$SCRIPT_DIR/.git" ]] && command -v git >/dev/null 2>&1; then
+        local described short_sha
+        described="$(git -C "$SCRIPT_DIR" describe --tags --match 'v[0-9]*' 2>/dev/null || true)"
+        short_sha="$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || true)"
+        if [[ -n "$described" ]]; then ENGINE_VERSION="$described"; fi
+        if [[ -n "$short_sha" ]]; then ENGINE_SHA="$short_sha"; fi
+    fi
+    validate_engine_identity
+    return 0
+}
+
+# `git describe` output is influenced by any tag an attacker can push to the kit repo,
+# and both values below are interpolated into sed replacement text. A legal git ref may
+# contain '|' (the s|...| delimiter), '&' (sed's whole-match) and '\'; those either abort
+# the install or silently splice text into the rendered directive. Legitimate describe and
+# short-SHA output only ever uses [A-Za-z0-9._+-], so anything else is rejected at the
+# source and degrades to "unknown" like any other unresolved value — the stamp stays
+# display-only and an install is never aborted by a hostile tag name.
+validate_engine_identity() {
+    if [[ ! "$ENGINE_VERSION" =~ ^[A-Za-z0-9._+-]+$ ]]; then ENGINE_VERSION="unknown"; fi
+    if [[ ! "$ENGINE_SHA" =~ ^[A-Za-z0-9._+-]+$ ]]; then ENGINE_SHA="unknown"; fi
+}
+
+# Escape an arbitrary value for use as sed REPLACEMENT text. Backslash must be doubled
+# first, or it would re-escape the metacharacters handled after it.
+sed_replacement_escape() {
+    printf '%s' "$1" | sed -e 's/[\\&|]/\\&/g' | tr '\n' ' '
+}
+resolve_engine_identity
+
 show_setup_banner() {
     [[ "$PICKER_TTY" -eq 1 ]] || return 0
     PK_PICKER_BANNER_PATH="$SCRIPT_DIR/templates/terminal-banner.txt"
@@ -722,7 +760,14 @@ else
 fi
 
 if [[ -f "$TEMPLATE_DIRECTIVE" ]]; then
-    DIRECTIVE="$(sed "s|\\\$KIT_DIR_REL|$KIT_DIR_REL|g" "$TEMPLATE_DIRECTIVE")"
+    KIT_DIR_REL_SED="$(sed_replacement_escape "$KIT_DIR_REL")"
+    ENGINE_VERSION_SED="$(sed_replacement_escape "$ENGINE_VERSION")"
+    ENGINE_SHA_SED="$(sed_replacement_escape "$ENGINE_SHA")"
+    DIRECTIVE="$(sed \
+        -e "s|\\\$KIT_DIR_REL|$KIT_DIR_REL_SED|g" \
+        -e "s|\\\$ENGINE_VERSION|$ENGINE_VERSION_SED|g" \
+        -e "s|\\\$ENGINE_SHA|$ENGINE_SHA_SED|g" \
+        "$TEMPLATE_DIRECTIVE")"
 else
     echo "Error: Canonical directive template not found at $TEMPLATE_DIRECTIVE" >&2
     exit 1
@@ -846,6 +891,13 @@ if grep -q "^profile:" "$STAGED_PROFILE" 2>/dev/null; then
             sed -i.bak "s/^- \*\*Profile\*\*:.*/- **Profile**: $PROFILE/" "$STAGED_PROFILE" && rm -f "$STAGED_PROFILE.bak"
         fi
     fi
+    if grep -q '^- \*\*Installed\*\*:' "$STAGED_PROFILE" 2>/dev/null; then
+        if sed --version >/dev/null 2>&1; then
+            sed -i "s/^- \*\*Installed\*\*:.*/- **Installed**: $(date +%Y-%m-%d)/" "$STAGED_PROFILE"
+        else
+            sed -i.bak "s/^- \*\*Installed\*\*:.*/- **Installed**: $(date +%Y-%m-%d)/" "$STAGED_PROFILE" && rm -f "$STAGED_PROFILE.bak"
+        fi
+    fi
 else
     TMP_P=$(mktemp "$STAGING_DIR/prof_sec.XXXXXX")
     {
@@ -926,6 +978,26 @@ for (( i=0; i<${#TARGETS_FOUND[@]}; i++ )); do
     fi
 done
 
+# STATE.md is mutated in place rather than staged, so it belongs in the transaction even
+# though it is not a staged target. Without this, a failure after the stamp pass restores
+# PROMPTKIT.md and the host targets but leaves an already-stamped STATE.md behind.
+if [[ -f "$STATE_TRACKER" ]]; then
+    already_snapshotted=0
+    state_canon="$(resolve_canonical_path "$STATE_TRACKER")"
+    for (( j=0; j<${#BACKED_UP_FILES[@]}; j++ )); do
+        if [[ "$(resolve_canonical_path "${BACKED_UP_FILES[j]}")" == "$state_canon" ]]; then
+            already_snapshotted=1
+            break
+        fi
+    done
+    if [[ "$already_snapshotted" -eq 0 ]]; then
+        bkp="$BACKUP_DIR/STATE.md"
+        cp -p "$STATE_TRACKER" "$bkp"
+        BACKED_UP_FILES+=("$STATE_TRACKER")
+        BACKUP_SOURCES+=("$bkp")
+    fi
+fi
+
 # Ensure doc directories exist
 for dir in "${DOC_DIRS[@]}"; do
     if [[ ! -d "$PROJECT_ROOT/$dir" ]]; then
@@ -958,6 +1030,27 @@ if [[ ! -f "$STATE_TRACKER" && -f "$TEMPLATE_STATE" ]]; then
     CREATED_FILES+=("$STATE_TRACKER")
     cp "$TEMPLATE_STATE" "$STATE_TRACKER"
     echo -e "  \033[0;32m[+]\\033[0m Created: docs/STATE.md (living project & state tracker)"
+fi
+# STATE.md is copied verbatim, not substituted, so it needs its own stamp pass. A STATE.md
+# that predates this feature has no Engine Version row at all, so insert one after the Last
+# Updated row instead of skipping the file forever; a file carrying neither anchor is left
+# untouched rather than guessed at.
+if [[ -f "$STATE_TRACKER" ]]; then
+    STAMP_ROW="- **Engine Version**: $ENGINE_VERSION @ $ENGINE_SHA"
+    if grep -q '^- \*\*Engine Version\*\*:' "$STATE_TRACKER" 2>/dev/null; then
+        STAMP_VALUE="$(sed_replacement_escape "$STAMP_ROW")"
+        if sed --version >/dev/null 2>&1; then
+            sed -i "s|^- \*\*Engine Version\*\*:.*|$STAMP_VALUE|" "$STATE_TRACKER"
+        else
+            sed -i.bak "s|^- \*\*Engine Version\*\*:.*|$STAMP_VALUE|" "$STATE_TRACKER" && rm -f "$STATE_TRACKER.bak"
+        fi
+    elif grep -q '^- \*\*Last Updated\*\*:' "$STATE_TRACKER" 2>/dev/null; then
+        STATE_STAMP_TMP="$(mktemp "$STAGING_DIR/state_stamp.XXXXXX")"
+        awk -v row="$STAMP_ROW" '{ print } /^- \*\*Last Updated\*\*:/ && !done { print row; done = 1 }' \
+            "$STATE_TRACKER" > "$STATE_STAMP_TMP"
+        cat "$STATE_STAMP_TMP" > "$STATE_TRACKER"
+        rm -f "$STATE_STAMP_TMP"
+    fi
 fi
 if [[ ! -f "$PR_TEMPLATE_TARGET" && -f "$TEMPLATE_PR" ]]; then
     mkdir -p "$GITHUB_DIR"

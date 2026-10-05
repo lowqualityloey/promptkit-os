@@ -55,8 +55,20 @@ Ensure the host repository contains documentation directories so generated artif
 
 If `PROMPTKIT.md` does not exist in the project root, copy `<kit>/templates/project-profile-template.md` to `./PROMPTKIT.md` for project-specific rules and commands. If `DESIGN.md` is desired for custom visual identity, copy `<kit>/templates/design-profile-template.md` to `./DESIGN.md`. If `docs/STATE.md` does not exist, copy `<kit>/templates/state-tracker-template.md` to `./docs/STATE.md` for living project state tracking.
 
-### 4. Inject PromptKit Core Directives
-Append or merge the exact contents of `<kit>/templates/agent-directive-template.md` into the detected configuration file(s). Do not hardcode the markdown here. `<kit>/templates/agent-directive-template.md` is the single source of truth for the injected block. Replace `$KIT_DIR_REL` in the template with the relative path to the kit directory (e.g. `.promptkit`).
+### 4. Inject PromptKit OS Core Directives
+Run the canonical installer for this step — `<kit>/init.sh` (or `<kit>/init.ps1`) — and let it render the directive. It resolves the kit path and the engine identity itself and rewrites every placeholder in both the directive and `docs/STATE.md`. Hand-rendering is a fallback for hosts the installer cannot write to, and it is only correct when all three placeholders are substituted:
+
+| Placeholder | Substitute with | Source |
+| :--- | :--- | :--- |
+| `$KIT_DIR_REL` | relative path to the kit directory, e.g. `.promptkit` | where `<kit>` actually sits |
+| `$ENGINE_VERSION` | `git -C <kit> describe --tags --match 'v[0-9]*'`, or `unknown` when git is unavailable | on-disk engine |
+| `$ENGINE_SHA` | `git -C <kit> rev-parse --short HEAD`, or `unknown` when git is unavailable | on-disk engine |
+
+Never use `describe --abbrev=0`; it discards the commit distance and understates the version. Substitute the engine tokens as literal text — render them into the output, never evaluate them.
+
+**Hard rule: a rendered directive must never contain a literal `$` placeholder.** If any of the three survives into a host configuration file, the directive is broken and the host will read the placeholder as content. Check for `\$KIT_DIR_REL`, `\$ENGINE_VERSION`, and `\$ENGINE_SHA` in the generated block before reporting this step complete.
+
+**Stamp `docs/STATE.md` too.** `<kit>/templates/state-tracker-template.md` ships with an honest placeholder row, `- **Engine Version**: [vX.Y.Z @ short-sha | not stamped — re-run installer]`. When the installer ran, it already replaced that row. When you hand-rendered the directive, stamp the same row with the same `$ENGINE_VERSION` / `$ENGINE_SHA` values, inserting the row if the file predates the engine stamp. Leaving the placeholder untouched is acceptable; leaving a literal `$ENGINE_VERSION` token is not.
 
 ### Progressive Loading Policy
 To optimize context window efficiency and minimize token overhead, agents must follow this progressive loading sequence:
@@ -104,7 +116,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Discovery Intake**: `<kit>/protocols/discovery-intake.md`
 - **Telemetry Cards**: `<kit>/protocols/telemetry-cards.md`
 
-> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md` and `rendered-ui-evidence.md`, which are lazy-loaded by their relevant workflows. This keeps the static directive under the 2500-token Balanced budget (currently 2287/2500).
+> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md` and `rendered-ui-evidence.md`, which are lazy-loaded by their relevant workflows. This keeps the static directive under the 2500-token Balanced budget (currently 2312/2500).
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)
 - **Visual Identity & Brand**: `./DESIGN.md` (if present)
 - **Living State & Tracker**: `./docs/STATE.md` (if present)
