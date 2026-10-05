@@ -230,26 +230,29 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
 
 The figures in this section use the `bytes/4` proxy. Issue #194 validated that convention against real tokenizers without replacing it; `bytes/4` remained the gated convention and the validation did not change the published figures at that time.
 
-**Current measurement:** The tokenizer comparison below was re-measured 2026-10-02 at `main` @ `2b6c9e9`, superseding the 2026-10-01 `e159c70` snapshot and the earlier 2026-09-28 `b7e9c8c` one. Validation only — `bytes/4` remains the gated convention and no published budget figure changed.
+> [!IMPORTANT]
+> This section is **ungated** — `scripts/measure-tokenizer-delta.sh` always exits 0 and prints `SKIPPED` when `tiktoken` is unavailable, so no CI job fails when these rows go stale. That is a deliberate trade (the check needs network-free BPE data and is validation-only), but it means staleness is caught by review, not by a gate. Re-run it in the same change that touches a measured input, and treat a stale row here as a documentation defect. See `CONTRIBUTING.md` item 4.
 
-**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-10-02 at `main` @ `2b6c9e9` (prior: 2026-10-01 at `e159c70`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4.
+**Current measurement:** The tokenizer comparison below was re-measured 2026-10-05 at `main` @ `401cc9e`, superseding the 2026-10-02 `2b6c9e9` snapshot, the 2026-10-01 `e159c70` one, and the earlier 2026-09-28 `b7e9c8c` one. Validation only — `bytes/4` remains the gated convention and no published budget figure changed. Three rows had gone stale since the previous snapshot and are corrected here: both directive templates (the Balanced directive moved 2,350 → 2,287 when #536 compressed the trigger descriptions, and the Lite directive moved 1,286 → 1,411 as its root-directive triggers grew) and `workflows/fix.md` (2,770 → 3,582 when #528 added the bounded detour contract).
+
+**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-10-05 at `main` @ `401cc9e` (prior: 2026-10-02 at `2b6c9e9`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4. This table is **not** gated and never fails the build, so unlike the sections above it has no CI guard against going stale: re-run it whenever a measured input changes, which is every release that touches `workflows/`, `protocols/code-quality-gate.md`, or a measured template.
 
 | File | BYTES4 | CL100K | O200K | RATIO |
 | :--- | ---: | ---: | ---: | ---: |
-| `templates/agent-directive-template.md` | 2,350 | 2,356 | 2,346 | 1.003 |
-| `templates/agent-directive-lite-template.md` | 1,286 | 1,342 | 1,337 | 1.044 |
+| `templates/agent-directive-template.md` | 2,287 | 2,322 | 2,312 | 1.015 |
+| `templates/agent-directive-lite-template.md` | 1,411 | 1,456 | 1,451 | 1.032 |
 | `workflows/plan.md` | 7,602 | 6,165 | 6,153 | 0.811 |
 | `workflows/route.md` | 9,263 | 8,039 | 8,013 | 0.868 |
-| `workflows/fix.md` | 2,770 | 2,374 | 2,357 | 0.857 |
+| `workflows/fix.md` | 3,582 | 3,055 | 3,041 | 0.853 |
 | `workflows/ship.md` | 5,947 | 4,653 | 4,654 | 0.782 |
 | `protocols/discovery-intake.md` | 3,938 | 3,458 | 3,446 | 0.878 |
 
 **Verdict (published as measured):**
 
-- **Gated artifacts are sound.** The Balanced directive matches real tokenizers within 0.5%; Lite understates by ~5% (proxy reads low). The 2500/1500 budget gates therefore guard real cost, not just the proxy.
+- **Gated artifacts are sound.** The Balanced directive reads ~1.5% low against `cl100k_base` (2,287 proxy vs 2,322 actual) and Lite ~3% low (1,411 vs 1,456). The 2500/1500 budget gates therefore guard real cost rather than only the proxy, with slightly less headroom than the previous snapshot claimed.
 - **Workflow/protocol figures are conservative.** The proxy overstates real counts by ~14–28% (whitespace, table padding, comments). Published per-task payloads are upper bounds — real costs are lower.
 - **Relative savings hold approximately.** Both sides of each reduction ratio were measured in the same convention, so the overstatement largely cancels; absolute tok figures should be read as conservative estimates.
-- **Encodings agree.** `cl100k_base` vs `o200k_base` differ by ≤1% on every file — no per-host restatement is warranted from this data.
+- **Encodings agree.** `cl100k_base` vs `o200k_base` differ by ≤1% on every file (max observed 0.46%) — no per-host restatement is warranted from this data.
 
 ---
 
