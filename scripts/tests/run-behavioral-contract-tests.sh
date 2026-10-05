@@ -398,6 +398,67 @@ check_benchmark_figure() {
 static_metric() {
     printf '%s\n' "$STATIC_OUT" | awk -F'|' -v key="$1" '$1 == key { print $2; exit }'
 }
+
+# Provenance-anchor guard.
+#
+# docs/BENCHMARKS.md anchors its published figures to a commit, and every figure
+# in it is also compared against a live measurement above. Those are different
+# guarantees. A measurement comparison catches a wrong NUMBER; nothing caught
+# the anchor text going stale, which is how #536 re-introduced, one PR after
+# #532 had fixed, the exact regression where the figures were measured at one
+# commit and the banner still named another.
+#
+# The rule this enforces: if the anchor resolves, the measured-input tree must
+# be unchanged between it and HEAD. That makes the "measured at <anchor>" and
+# "unchanged since <anchor>" claims true by construction.
+#
+# Ancestry is deliberately NOT asserted. Squash merges orphan the source branch
+# commits, so an anchor recorded on a PR branch is legitimately not an ancestor
+# of main -- `86d4e24` and `60765c3` both fail that test today while being
+# perfectly valid. The check is therefore content-based and merge-strategy
+# agnostic.
+measured_input_paths() {
+    printf '%s\n' \
+        "$REPO_ROOT/workflows" \
+        "$REPO_ROOT/protocols/code-quality-gate.md" \
+        "$REPO_ROOT/templates/agent-directive-template.md" \
+        "$REPO_ROOT/templates/agent-directive-lite-template.md" \
+        "$REPO_ROOT/templates/tech-spec-template.md" \
+        "$REPO_ROOT/templates/release-checklist.md"
+}
+
+provenance_anchor() {
+    sed -nE 's/.*Current measurements:\*\*[^`]*`([0-9a-f]{7,40})`.*/\1/p' "$BENCHMARKS" | head -n 1
+}
+
+check_provenance_anchor() {
+    local anchor drifted
+    anchor="$(provenance_anchor)"
+    if [[ -z "$anchor" ]]; then
+        echo "  ❌ FAIL: docs/BENCHMARKS.md states no 'Current measurements:** ... at \`<commit>\`' anchor"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+        return
+    fi
+    if ! git -C "$REPO_ROOT" cat-file -e "${anchor}^{commit}" 2>/dev/null; then
+        # An unresolvable anchor cannot be verified. Reported, not failed: after a
+        # squash merge and branch deletion the commit may exist only as a dangling
+        # object, and failing here would make the suite fail on correct content.
+        echo "  ⚠️ SKIP: provenance anchor $anchor does not resolve in this clone; cannot verify the measured-input tree is unchanged since it"
+        return
+    fi
+    drifted="$(git -C "$REPO_ROOT" diff --name-only "$anchor" HEAD -- $(measured_input_paths) 2>/dev/null)"
+    if [[ -z "$drifted" ]]; then
+        echo "  ✅ PASS: provenance anchor $anchor (measured-input tree unchanged since it)"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        echo "  ❌ FAIL: provenance anchor $anchor is stale; these measured inputs changed after it and the published figures must have moved with them:"
+        printf '           %s\n' $drifted
+        echo "           Restate the anchor in docs/BENCHMARKS.md and re-propagate every published figure."
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+
+check_provenance_anchor
 per_task_metric() {
     local task="$1" field="$2"
     printf '%s\n' "$PER_TASK_OUT" | awk -F'|' -v task="$task" -v field="$field" '
