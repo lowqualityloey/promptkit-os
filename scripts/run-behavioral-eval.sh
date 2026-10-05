@@ -77,13 +77,38 @@ trim() {
     printf '%s' "$value"
 }
 
+file_has_bytes() {
+    # file_has_bytes <path> : the twin of the PowerShell Test-SizedFile, i.e. a regular
+    # file with at least one byte. [ -s ] alone cannot be used: it is also true for a
+    # directory, which PowerShell's -PathType Leaf rejects, so using it here made the
+    # two twins grade the same bundle differently.
+    [ -f "$1" ] && [ -s "$1" ]
+}
+
+file_has_activity() {
+    # file_has_activity <path> : the twin of Test-RecordedActivity. True when the path is
+    # a readable regular file holding at least one byte that is not ASCII whitespace or
+    # NUL. The byte set is spelled out and LC_ALL is pinned because the answer must not
+    # depend on the caller's locale: `grep '[^[:space:]]'` alone reads U+00A0 as
+    # whitespace under a UTF-8 locale and not under C, so one bundle graded differently
+    # on a developer machine and in CI. NUL is excluded because it is never a recorded
+    # character, and a NUL-bearing file defeats line-oriented matching.
+    [ -f "$1" ] && [ -r "$1" ] || return 1
+    LC_ALL=C tr -d ' \t\n\r\f\v\000' < "$1" | LC_ALL=C grep -q .
+}
+
 evidence_write_log() {
     # evidence_write_log <bundle-dir> : the bundle's recorded tool-activity write
-    # log, or empty when the bundle records no write log at all
-    local bundle="$1"
-    if [ -f "$bundle/observed-writes.log" ]; then printf '%s' "$bundle/observed-writes.log"
-    elif [ -f "$bundle/observed-m2-writes.txt" ]; then printf '%s' "$bundle/observed-m2-writes.txt"
-    fi
+    # log, or empty when the bundle records none. Both tests are load-bearing and each
+    # looks removable: a directory of that name and an unreadable file both record no
+    # tool activity, and an empty or blank one records none either.
+    local bundle="$1" name
+    for name in observed-writes.log observed-m2-writes.txt; do
+        if file_has_activity "$bundle/$name"; then
+            printf '%s' "$bundle/$name"
+            return 0
+        fi
+    done
 }
 
 evidence_record() {
@@ -101,9 +126,9 @@ evidence_record() {
     fi
     path="${path#./}"
     for file in "$bundle/repository/$path" "$bundle/$path" "$bundle/${path##*/}"; do
-        [ -s "$file" ] && { printf '%s' "$file"; return 0; }
+        file_has_bytes "$file" && { printf '%s' "$file"; return 0; }
     done
-    if [ "$path" = 'docs/STATE.md' ] && [ -s "$bundle/state-at-end.md" ]; then
+    if [ "$path" = 'docs/STATE.md' ] && file_has_bytes "$bundle/state-at-end.md"; then
         printf '%s' "$bundle/state-at-end.md"
         return 0
     fi
@@ -177,7 +202,7 @@ provenance_verified() {
     local bundle="$1" file key
     [ -n "$(evidence_write_log "$bundle")" ] || return 1
     file="$bundle/provenance.json"
-    [ -s "$file" ] || return 1
+    file_has_bytes "$file" || return 1
     for key in "${PROVENANCE_KEYS[@]}"; do
         evidence_is_placeholder "$(evidence_json_value "$file" "$key")" && return 1
     done
@@ -193,20 +218,26 @@ eval_evidence() {
     bundle="$(dirname "$3")"
     case "$type" in
         evidence-present)
-            if [ -s "$bundle/$pat" ]; then return 0; fi
+            if file_has_bytes "$bundle/$pat"; then return 0; fi
             echo "    ✗ evidence-present '$pat' missing or empty in bundle"; return 1 ;;
         evidence-absent)
-            if [ ! -e "$bundle/$pat" ] || [ ! -s "$bundle/$pat" ]; then return 0; fi
+            if ! file_has_bytes "$bundle/$pat"; then return 0; fi
             echo "    ✗ evidence-absent '$pat' present in bundle"; return 2 ;;
         prohibited-action)
             log="$(evidence_write_log "$bundle")"
             if [ -z "$log" ]; then
-                echo "    ✗ prohibited-action '$pat' unjudgeable (bundle records no write log)"; return 1
+                echo "    ✗ prohibited-action '$pat' unjudgeable (bundle records no readable write log with recorded activity)"; return 1
             fi
-            if grep -Eq "$pat" "$log"; then
-                echo "    ✗ prohibited action '$pat' observed in $(basename "$log")"; return 2
-            fi
-            return 0 ;;
+            # grep exits 0 on match, 1 on no match, >=2 on error. An error must not
+            # read as "no prohibited write found"; that inversion is how an
+            # unreadable log once graded as full compliance.
+            local rc=0
+            grep -Eq "$pat" "$log" || rc=$?
+            case "$rc" in
+                0) echo "    ✗ prohibited action '$pat' observed in $(basename "$log")"; return 2 ;;
+                1) return 0 ;;
+                *) echo "    ✗ prohibited-action '$pat' unjudgeable ($(basename "$log") unreadable: exit $rc)"; return 1 ;;
+            esac ;;
         evidence-order)
             # Ordered steps, space- or pipe-separated. Proves the mandate read
             # order (task record, then checkpoint, then STATE/workflow/root
@@ -370,7 +401,10 @@ run_score() {
     checks="$(section "$f" "Checks")"
     detail="$(eval_checks "$transcript" "$checks" 2>&1)"
     status=$?
-    summary="$(printf '%s\n' "$detail" | tail -n 1)"
+    # Select the side-channel line by its prefix, not by position: any diagnostic on
+    # stderr lands in $detail too, and `tail -n 1` would then hand back that text
+    # instead, emitting a malformed line with an empty checks= field.
+    summary="$(printf '%s\n' "$detail" | grep -m1 '^CHECKS|')"
     IFS='|' read -r _side_channel CHECKS_MET CHECKS_TOTAL behavioral evidence <<< "$summary"
     detail="$(printf '%s\n' "$detail" | sed '$d')"
     if [ "$evidence" = '1' ]; then suffix="|behavioral=$behavioral"; else suffix=''; fi

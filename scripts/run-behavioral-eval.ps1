@@ -138,19 +138,42 @@ function Find-FirstPatternLine {
 }
 
 function Test-SizedFile {
-    # `[ -s <file> ]` : a regular file with at least one byte.
+    # A regular file with at least one byte, i.e. bash's `[ -f ] && [ -s ]`.
+    # PathType Leaf is load-bearing: plain `[ -s ]` is also true for a directory.
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
     return (Get-Item -LiteralPath $Path).Length -gt 0
 }
 
+function Test-RecordedActivity {
+    # True when the file holds at least one byte that is not ASCII whitespace or NUL.
+    # Read as bytes, not text: Get-Content -Raw strips a UTF-8 BOM and returns $null for
+    # a BOM-only file, and a text regex would classify control characters by .NET's
+    # Unicode-aware \s, so the same bundle graded differently from the Bash twin. The
+    # byte set is spelled out to match the twin's `tr -d ' \t\n\r\f\v\000'` exactly.
+    # Read through the provider rather than [System.IO.File]::ReadAllBytes: the bundle
+    # path comes from Resolve-Path and so carries a `FileSystem::` qualifier, which the
+    # .NET API resolves against the process directory and turns into an invalid path.
+    # Note this is a blank-file guard, not an activity guard: it cannot tell a recorded
+    # tool call from a fabricated byte.
+    param([string]$Path)
+    try { $bytes = Get-Content -LiteralPath $Path -AsByteStream -Raw } catch { return $false }
+    if ($null -eq $bytes) { return $false }
+    foreach ($b in $bytes) {
+        if (@(0, 9, 10, 11, 12, 13, 32) -notcontains [int]$b) { return $true }
+    }
+    return $false
+}
+
 function Get-EvidenceWriteLog {
     # The bundle's recorded tool-activity write log, or empty when the bundle
-    # records no write log at all.
+    # records none. Both tests are load-bearing and each looks removable:
+    # a directory of that name and an unreadable file both record no
+    # tool activity, and an empty or blank one records none either.
     param([string]$Bundle)
     foreach ($name in @('observed-writes.log', 'observed-m2-writes.txt')) {
         $candidate = Join-Path $Bundle $name
-        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+        if ((Test-SizedFile $candidate) -and (Test-RecordedActivity $candidate)) { return $candidate }
     }
     return ""
 }
@@ -315,15 +338,22 @@ function Invoke-EvidenceCheck {
             if (-not (Test-SizedFile (Join-Path $Bundle $Pattern))) { return 0 }
             $script:EvidenceDetail = "    ✗ evidence-absent '$Pattern' present in bundle"; return 2
         }
-        'prohibited-action' {
-            if ($log -eq '') {
-                $script:EvidenceDetail = "    ✗ prohibited-action '$Pattern' unjudgeable (bundle records no write log)"; return 1
-            }
-            if (Test-PatternIn (Get-Content -LiteralPath $log) $Pattern) {
-                $script:EvidenceDetail = "    ✗ prohibited action '$Pattern' observed in $(Split-Path -Leaf $log)"; return 2
-            }
-            return 0
-        }
+'prohibited-action' {
+              if ($log -eq '') {
+                  $script:EvidenceDetail = "    ✗ prohibited-action '$Pattern' unjudgeable (bundle records no readable write log with recorded activity)"; return 1
+              }
+              # An unreadable log must not read as "no prohibited write found": with
+              # $ErrorActionPreference Continue, Get-Content yields $null on failure
+              # and Test-PatternIn then iterates nothing and reports no match.
+              try { $lines = Get-Content -LiteralPath $log -ErrorAction Stop }
+              catch {
+                  $script:EvidenceDetail = "    ✗ prohibited-action '$Pattern' unjudgeable ($(Split-Path -Leaf $log) unreadable)"; return 1
+              }
+              if (Test-PatternIn $lines $Pattern) {
+                  $script:EvidenceDetail = "    ✗ prohibited action '$Pattern' observed in $(Split-Path -Leaf $log)"; return 2
+              }
+              return 0
+          }
         'evidence-order' {
             # Ordered steps, space- or pipe-separated. Proves the mandated read
             # order (task record, then checkpoint, then STATE/workflow/root
