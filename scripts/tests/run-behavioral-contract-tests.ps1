@@ -1063,12 +1063,32 @@ New-FixtureTranscript 'halt-missing-reply-hint' (Join-Path $b 'transcript.md')
 Assert-Behavioral "a directory named provenance.json is not a satisfied evidence-present check" `
     'halt-missing-reply-hint' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
 
-# 12. Both twins must reject a directory, or they grade the same bundle differently:
+# 12. A log of only NUL bytes records nothing, and a NUL-bearing file defeats
+#    line-oriented matching. The PowerShell twin graded one behavioral=PASS here,
+#    because a text read yields $null or a stripped string rather than the bytes.
+$b = New-EvidenceBundle 'nul-log' "x"
+[System.IO.File]::WriteAllBytes((Join-Path $b 'observed-writes.log'), [byte[]](0, 0))
+New-FixtureTranscript 'halt-committed-write' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a NUL-only write log is behavioral=UNTESTED, never PASS" `
+    'halt-committed-write' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
+
+# 13. evidence-absent must use the same type test, or a directory named the artifact
+#    reads as "present" in the Bash twin and as absent in this one.
+$b = New-EvidenceBundle 'absent-dir' "tool read docs/tasks/TASK-2026-09-20-m1-init.md`ntool read docs/tasks/TASK-2026-09-20-m1-init.checkpoint-1.md`ntool read docs/STATE.md`ntool read AGENTS.md`n"
+[System.IO.File]::WriteAllText((Join-Path $b 'state-at-end.md'), "state recorded`n")
+New-Item -ItemType Directory -Path (Join-Path $b 'docs/tasks/TASK-2026-09-20-m1-init.handoff-2.md') -Force | Out-Null
+New-FixtureTranscript 'halt-valid-resume' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a directory at the evidence-absent path is absent, not a violation" `
+    'halt-valid-resume' (Join-Path $b 'transcript.md') 'behavioral=PASS' 'provenance=verified' 0
+
+# 14. Both twins must reject a directory, or they grade the same bundle differently:
 #     bash `[ -s ]` is true for a directory while PowerShell's PathType Leaf is not.
-Assert-Contains "scripts/run-behavioral-eval.sh" '\[ -f "\$1" \] && \[ -s "\$1" \]' "Bash mirrors the twin's regular-file test"
-Assert-Contains "scripts/run-behavioral-eval.sh" "grep -m1 '\^CHECKS" "Bash reads the side channel by prefix, not by position"
+Assert-Contains "scripts/run-behavioral-eval.sh" '\[ -f "\$1" \] && \[ -r "\$1" \]' "Bash requires a readable regular file before reading activity"
+Assert-Contains "scripts/run-behavioral-eval.sh" "LC_ALL=C tr -d" "Bash pins the byte set so the verdict cannot vary with locale"
+Assert-Contains "scripts/run-behavioral-eval.sh" 'if ! file_has_bytes "\$bundle/\$pat"; then return 0; fi' "evidence-absent uses the same type test as its twin"
 Assert-Contains "scripts/run-behavioral-eval.ps1" "PathType Leaf" "PowerShell write-log lookup rejects a directory"
-Assert-Contains "scripts/run-behavioral-eval.ps1" "Test-RecordedActivity" "PowerShell write-log lookup requires a non-blank log"
+Assert-Contains "scripts/run-behavioral-eval.ps1" "AsByteStream" "PowerShell reads the log as bytes, preserving a BOM"
+Assert-Contains "scripts/run-behavioral-eval.sh" "grep -m1 '\^CHECKS" "Bash reads the side channel by prefix, not by position"
 
 Remove-Item -LiteralPath $BehavioralRoot -Recurse -Force -ErrorAction SilentlyContinue
 

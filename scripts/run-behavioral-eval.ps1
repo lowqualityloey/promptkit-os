@@ -146,20 +146,30 @@ function Test-SizedFile {
 }
 
 function Test-RecordedActivity {
-    # True when the file holds at least one non-whitespace byte. A log that is empty
-    # or entirely blank records no tool activity, and matching against one finds no
-    # prohibited write, so without this a capture that observed nothing is graded as
-    # full compliance.
+    # True when the file holds at least one byte that is not ASCII whitespace or NUL.
+    # Read as bytes, not text: Get-Content -Raw strips a UTF-8 BOM and returns $null for
+    # a BOM-only file, and a text regex would classify control characters by .NET's
+    # Unicode-aware \s, so the same bundle graded differently from the Bash twin. The
+    # byte set is spelled out to match the twin's `tr -d ' \t\n\r\f\v\000'` exactly.
+    # Read through the provider rather than [System.IO.File]::ReadAllBytes: the bundle
+    # path comes from Resolve-Path and so carries a `FileSystem::` qualifier, which the
+    # .NET API resolves against the process directory and turns into an invalid path.
+    # Note this is a blank-file guard, not an activity guard: it cannot tell a recorded
+    # tool call from a fabricated byte.
     param([string]$Path)
-    try { return ((Get-Content -LiteralPath $Path -Raw) -match '\S') }
-    catch { return $false }
+    try { $bytes = Get-Content -LiteralPath $Path -AsByteStream -Raw } catch { return $false }
+    if ($null -eq $bytes) { return $false }
+    foreach ($b in $bytes) {
+        if (@(0, 9, 10, 11, 12, 13, 32) -notcontains [int]$b) { return $true }
+    }
+    return $false
 }
 
 function Get-EvidenceWriteLog {
     # The bundle's recorded tool-activity write log, or empty when the bundle
-    # records none. All three tests are load-bearing and each looks removable:
-    # a directory of that name, an unreadable file, and a whitespace-only file all
-    # record no tool activity.
+    # records none. Both tests are load-bearing and each looks removable:
+    # a directory of that name and an unreadable file both record no
+    # tool activity, and an empty or blank one records none either.
     param([string]$Bundle)
     foreach ($name in @('observed-writes.log', 'observed-m2-writes.txt')) {
         $candidate = Join-Path $Bundle $name

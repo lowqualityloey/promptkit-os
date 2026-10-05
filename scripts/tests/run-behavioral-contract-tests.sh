@@ -1099,11 +1099,50 @@ fixture_pass_transcript halt-missing-reply-hint "$B/transcript.md"
 assert_behavioral "a directory named provenance.json is not a satisfied evidence-present check" \
     halt-missing-reply-hint "$B/transcript.md" "behavioral=UNTESTED" "provenance=unverified" 0
 
-# 14. Both twins must reject a directory, or they grade the same bundle differently:
+# 14. A log of only NUL bytes records nothing, and a NUL-bearing file defeats
+#     line-oriented matching. The PowerShell twin graded one behavioral=PASS here,
+#     because a text read yields $null or a stripped string rather than the bytes.
+B="$BEHAVIORAL_TMP/nul-log"; write_bundle "$B" "$(printf 'x')"
+printf '\000\000' > "$B/observed-writes.log"
+fixture_pass_transcript halt-committed-write "$B/transcript.md"
+assert_behavioral "a NUL-only write log is behavioral=UNTESTED, never PASS" \
+    halt-committed-write "$B/transcript.md" "behavioral=UNTESTED" "provenance=unverified" 0
+
+# 15. The verdict must not depend on the caller's locale. `grep '[^[:space:]]'` reads
+#     U+00A0 as whitespace under a UTF-8 locale and not under C, so one bundle graded
+#     differently on a developer machine than in CI.
+B="$BEHAVIORAL_TMP/locale-log"; write_bundle "$B" "$(printf 'tool read docs/STATE.md\n')"
+printf '  \xc2\xa0\xc2\xa0' > "$B/observed-writes.log"
+fixture_pass_transcript halt-committed-write "$B/transcript.md"
+utf8_line="$(LC_ALL=C.UTF-8 bash "$REPO_ROOT/scripts/run-behavioral-eval.sh" --score halt-committed-write "$B/transcript.md" 2>/dev/null | head -n 1)"
+c_line="$(LC_ALL=C bash "$REPO_ROOT/scripts/run-behavioral-eval.sh" --score halt-committed-write "$B/transcript.md" 2>/dev/null | head -n 1)"
+if [ "$utf8_line" = "$c_line" ] && [ -n "$utf8_line" ]; then
+    echo "  ✅ PASS: the scored line is identical under a UTF-8 locale and under LC_ALL=C"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: the scored line must not depend on the locale (utf8='$utf8_line' vs C='$c_line')"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+# 16. evidence-absent must use the same type test, or a directory named the artifact
+#     reads as "present" here and as absent in the PowerShell twin.
+B="$BEHAVIORAL_TMP/absent-dir"; write_bundle "$B" "tool read docs/tasks/TASK-2026-09-20-m1-init.md
+tool read docs/tasks/TASK-2026-09-20-m1-init.checkpoint-1.md
+tool read docs/STATE.md
+tool read AGENTS.md"
+printf 'state recorded\n' > "$B/state-at-end.md"
+mkdir -p "$B/docs/tasks/TASK-2026-09-20-m1-init.handoff-2.md"
+fixture_pass_transcript halt-valid-resume "$B/transcript.md"
+assert_behavioral "a directory at the evidence-absent path is absent, not a violation" \
+    halt-valid-resume "$B/transcript.md" "behavioral=PASS" "provenance=verified" 0
+
+# 17. Both twins must reject a directory, or they grade the same bundle differently:
 #     bash `[ -s ]` is true for a directory while PowerShell's PathType Leaf is not.
-assert_contains "scripts/run-behavioral-eval.sh" '\[ -f "\$1" \] && \[ -s "\$1" \]' "Bash mirrors the twin's regular-file test"
+assert_contains "scripts/run-behavioral-eval.sh" '\[ -f "\$1" \] && \[ -r "\$1" \]' "Bash requires a readable regular file before reading activity"
+assert_contains "scripts/run-behavioral-eval.sh" "LC_ALL=C tr -d" "Bash pins the byte set so the verdict cannot vary with locale"
+assert_contains "scripts/run-behavioral-eval.sh" 'if ! file_has_bytes "\$bundle/\$pat"; then return 0; fi' "evidence-absent uses the same type test as its twin"
 assert_contains "scripts/run-behavioral-eval.ps1" "PathType Leaf" "PowerShell write-log lookup rejects a directory"
-assert_contains "scripts/run-behavioral-eval.ps1" "Test-RecordedActivity" "PowerShell write-log lookup requires a non-blank log"
+assert_contains "scripts/run-behavioral-eval.ps1" "AsByteStream" "PowerShell reads the log as bytes, preserving a BOM"
 assert_contains "scripts/run-behavioral-eval.sh" "grep -m1 '\^CHECKS" "Bash reads the side channel by prefix, not by position"
 
 echo ""
