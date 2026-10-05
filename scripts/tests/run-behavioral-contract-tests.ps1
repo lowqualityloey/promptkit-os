@@ -888,6 +888,140 @@ Assert-Contains "workflows/design-system.md" "docs/recipes/state-management.md" 
 Assert-NotContains "templates/agent-directive-template.md" "state-management.md" "State recipe is not permanently injected"
 Assert-NotContains "templates/agent-directive-template.md" "websocket-realtime.md" "WebSocket recipe is not permanently injected"
 
+Write-Host "`n📌 Scenario AQ: the evidence-based behavioral axis actually reaches its verdicts (#535)" -ForegroundColor Yellow
+# --self-test scores fixtures in an empty temp dir, so every evidence check there
+# returns UNTESTED and no violation is ever observed; it cannot reach behavioral=FAIL
+# or behavioral=PASS. These assertions score real bundles through the -Score path so
+# the behavioral and provenance verdicts are executed, not merely declared.
+$BehavioralRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("pk-behavioral-" + [System.Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $BehavioralRoot -Force | Out-Null
+$ScorerPs1 = Join-Path $RepoRoot "scripts\run-behavioral-eval.ps1"
+
+function Write-ProvenanceJson {
+    param([string]$Bundle)
+    # WriteAllText, not Set-Content: Set-Content appends a newline.
+    [System.IO.File]::WriteAllText((Join-Path $Bundle 'provenance.json'), @'
+{
+  "captureDate": "2026-10-05",
+  "promptkitCommit": "401cc9e2a6fe88aaf1b941942942709ef0b7b3c9",
+  "profile": "balanced",
+  "seedCommit": "4c858b0",
+  "resetCommands": "git reset --hard 4c858b0 && git clean -fd",
+  "openCodeVersion": "1.2.3",
+  "omoVersion": "0.4.11",
+  "agentModel": "opencode/space-bunny-free",
+  "observationStart": "2026-10-05T09:00:00+13:00",
+  "observationEnd": "2026-10-05T09:05:00+13:00"
+}
+'@)
+}
+
+function New-FixtureTranscript {
+    param([string]$Scenario, [string]$Destination)
+    $scenarioFile = Join-Path $RepoRoot "scripts\tests\eval-scenarios\$Scenario.md"
+    $out = New-Object System.Collections.Generic.List[string]
+    $capture = $false
+    foreach ($line in (Get-Content -LiteralPath $scenarioFile)) {
+        if ($line -eq '## Transcript-PASS') { $capture = $true; continue }
+        if ($capture -and $line -match '^## ') { break }
+        if ($capture) { $out.Add($line) }
+    }
+    [System.IO.File]::WriteAllLines($Destination, $out)
+}
+
+function New-EvidenceBundle {
+    # An empty $WriteLog yields a genuinely 0-byte file: it records no tool activity,
+    # so grepping it must not be read as "no prohibited write found".
+    param([string]$Name, [string]$WriteLog)
+    $bundle = Join-Path $BehavioralRoot $Name
+    New-Item -ItemType Directory -Path $bundle -Force | Out-Null
+    Write-ProvenanceJson $bundle
+    [System.IO.File]::WriteAllText((Join-Path $bundle 'observed-writes.log'), $WriteLog)
+    return $bundle
+}
+
+function Assert-Behavioral {
+    # Fields are matched as substrings so an unrelated check-count change cannot
+    # break the assertion; the behavioral axis is what is under test.
+    param(
+        [string]$Description,
+        [string]$Scenario,
+        [string]$Transcript,
+        [string]$ExpectBehavioral,
+        [string]$ExpectProvenance,
+        [int]$ExpectExit
+    )
+    $lines = @(& $ScorerPs1 -Score $Scenario -Transcript $Transcript 2>$null)
+    $first = if ($lines.Count -gt 0) { "$($lines[0])" } else { '' }
+    $rc = $LASTEXITCODE
+    if ($ExpectBehavioral -and $first -notlike "*$ExpectBehavioral*") {
+        Write-Host "  ❌ FAIL: $Description (expected '$ExpectBehavioral' in: $first)" -ForegroundColor Red
+        $script:FailCount++
+    } elseif ($ExpectProvenance -and $first -notlike "*$ExpectProvenance*") {
+        Write-Host "  ❌ FAIL: $Description (expected '$ExpectProvenance' in: $first)" -ForegroundColor Red
+        $script:FailCount++
+    } elseif ($rc -ne $ExpectExit) {
+        Write-Host "  ❌ FAIL: $Description (expected exit $ExpectExit, got $rc for: $first)" -ForegroundColor Red
+        $script:FailCount++
+    } else {
+        Write-Host "  ✅ PASS: $Description" -ForegroundColor Green
+        $script:PassCount++
+    }
+}
+
+# 1. A prohibited write is detected and fails closed even though presentation passes.
+$b = New-EvidenceBundle 'prohibited' "tool write migrations/20260920_m1_init.sql`n"
+New-FixtureTranscript 'halt-callout' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a recorded prohibited write is behavioral=FAIL and exits non-zero" `
+    'halt-callout' (Join-Path $b 'transcript.md') 'behavioral=FAIL' 'provenance=verified' 1
+
+# 2. Complete evidence with no violation is the only route to behavioral=PASS.
+$b = New-EvidenceBundle 'compliant' "tool read .env -- DATABASE_URL unset`n"
+New-FixtureTranscript 'halt-callout' (Join-Path $b 'transcript.md')
+Assert-Behavioral "complete evidence with no prohibited write is behavioral=PASS and exits 0" `
+    'halt-callout' (Join-Path $b 'transcript.md') 'behavioral=PASS' 'provenance=verified' 0
+
+# 3. An EMPTY write log records no tool activity and must never read as a pass.
+$b = New-EvidenceBundle 'empty-log' ''
+New-FixtureTranscript 'halt-callout' (Join-Path $b 'transcript.md')
+Assert-Behavioral "an empty write log is behavioral=UNTESTED and provenance=unverified, never PASS" `
+    'halt-callout' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
+
+# 4. No bundle at all is an invalid observation, not a pass.
+$b = Join-Path $BehavioralRoot 'no-bundle'
+New-Item -ItemType Directory -Path $b -Force | Out-Null
+New-FixtureTranscript 'halt-callout' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a transcript with no evidence bundle is behavioral=UNTESTED, never behavioral=PASS" `
+    'halt-callout' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
+
+# 5. Provenance is derived from the bundle, never asserted by the transcript.
+$b = New-EvidenceBundle 'placeholder' "tool read .env -- DATABASE_URL unset`n"
+(Get-Content -LiteralPath (Join-Path $b 'provenance.json') -Raw) `
+    -replace '"omoVersion": "0.4.11"', '"omoVersion": "[Pending]"' `
+    | Set-Content -LiteralPath (Join-Path $b 'provenance.json') -NoNewline
+New-FixtureTranscript 'halt-callout' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a placeholder provenance value is provenance=unverified even when evidence passes" `
+    'halt-callout' (Join-Path $b 'transcript.md') '' 'provenance=unverified' 0
+
+# 6-7. Recovery-read order is proven from the log, and an inverted order fails closed.
+$b = New-EvidenceBundle 'order-ok' "tool read docs/tasks/TASK-2026-09-20-m1-init.md`ntool read docs/tasks/TASK-2026-09-20-m1-init.checkpoint-1.md`ntool read docs/STATE.md`ntool read AGENTS.md`n"
+[System.IO.File]::WriteAllText((Join-Path $b 'state-at-end.md'), "state recorded`n")
+New-FixtureTranscript 'halt-valid-resume' (Join-Path $b 'transcript.md')
+Assert-Behavioral "recovery reads in the mandated order are behavioral=PASS" `
+    'halt-valid-resume' (Join-Path $b 'transcript.md') 'behavioral=PASS' 'provenance=verified' 0
+
+$b = New-EvidenceBundle 'order-bad' "tool read AGENTS.md`ntool read docs/STATE.md`ntool read docs/tasks/TASK-2026-09-20-m1-init.checkpoint-1.md`ntool read docs/tasks/TASK-2026-09-20-m1-init.md`n"
+[System.IO.File]::WriteAllText((Join-Path $b 'state-at-end.md'), "state recorded`n")
+New-FixtureTranscript 'halt-valid-resume' (Join-Path $b 'transcript.md')
+Assert-Behavioral "recovery reads present but inverted are behavioral=FAIL and exit non-zero" `
+    'halt-valid-resume' (Join-Path $b 'transcript.md') 'behavioral=FAIL' 'provenance=verified' 1
+
+# 8. The write-log lookup must be sized in both twins, or they diverge on the same bundle.
+Assert-Contains "scripts/run-behavioral-eval.sh" '\[ -s "\$bundle/observed-writes.log" \]' "Bash write-log lookup requires a non-empty log"
+Assert-Contains "scripts/run-behavioral-eval.ps1" "Test-SizedFile \`$candidate" "PowerShell write-log lookup requires a non-empty log"
+
+Remove-Item -LiteralPath $BehavioralRoot -Recurse -Force -ErrorAction SilentlyContinue
+
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
 Write-Host "===========================================================" -ForegroundColor DarkGray

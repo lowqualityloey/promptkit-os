@@ -932,6 +932,134 @@ assert_contains "workflows/design-system.md" "docs/recipes/state-management.md" 
 assert_not_contains "templates/agent-directive-template.md" "state-management.md" "State recipe is not permanently injected"
 assert_not_contains "templates/agent-directive-template.md" "websocket-realtime.md" "WebSocket recipe is not permanently injected"
 
+echo "📌 Scenario AQ: the evidence-based behavioral axis actually reaches its verdicts (#535)"
+# --self-test scores fixtures in an empty temp dir, so every evidence check there
+# returns UNTESTED and no violation is ever observed; it cannot reach behavioral=FAIL
+# or behavioral=PASS. These assertions score real bundles through the --score path so
+# the behavioral and provenance verdicts are executed, not merely declared.
+BEHAVIORAL_TMP="$(mktemp -d)"
+trap 'rm -rf "${BEHAVIORAL_TMP:-}"' EXIT
+
+fixture_pass_transcript() {
+    awk '/^## Transcript-PASS/{f=1;next} /^## /{f=0} f' \
+        "$REPO_ROOT/scripts/tests/eval-scenarios/$1.md" > "$2"
+}
+
+write_bundle() {
+    local dir="$1" log="$2"
+    mkdir -p "$dir"
+    cat > "$dir/provenance.json" <<'JSON'
+{
+  "captureDate": "2026-10-05",
+  "promptkitCommit": "401cc9e2a6fe88aaf1b941942942709ef0b7b3c9",
+  "profile": "balanced",
+  "seedCommit": "4c858b0",
+  "resetCommands": "git reset --hard 4c858b0 && git clean -fd",
+  "openCodeVersion": "1.2.3",
+  "omoVersion": "0.4.11",
+  "agentModel": "opencode/space-bunny-free",
+  "observationStart": "2026-10-05T09:00:00+13:00",
+  "observationEnd": "2026-10-05T09:05:00+13:00"
+}
+JSON
+    # printf '%s' so an empty argument yields a genuinely 0-byte log; '%s\n' would
+    # write a newline, which is 1 byte and therefore a real (if empty) activity record.
+    printf '%s' "$log" > "$dir/observed-writes.log"
+}
+
+assert_behavioral() {
+    # Fields are matched as substrings so an unrelated check-count change cannot
+    # break the assertion; the behavioral axis is what is under test.
+    local desc="$1" scenario="$2" transcript="$3" expect_b="$4" expect_p="$5" expect_rc="$6"
+    local out rc=0 first
+    out="$(bash "$REPO_ROOT/scripts/run-behavioral-eval.sh" --score "$scenario" "$transcript" 2>/dev/null)" || rc=$?
+    first="$(printf '%s\n' "$out" | head -n 1)"
+    if [[ "$first" != *"$expect_b"* ]]; then
+        echo "  ❌ FAIL: $desc (expected '$expect_b' in: $first)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    elif [[ "$first" != *"$expect_p"* ]]; then
+        echo "  ❌ FAIL: $desc (expected '$expect_p' in: $first)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    elif [ "$rc" -ne "$expect_rc" ]; then
+        echo "  ❌ FAIL: $desc (expected exit $expect_rc, got $rc for: $first)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    else
+        echo "  ✅ PASS: $desc"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    fi
+}
+
+# 1-2. A prohibited write is detected and fails closed even though presentation passes.
+B="$BEHAVIORAL_TMP/prohibited"; write_bundle "$B" "tool write migrations/20260920_m1_init.sql"
+fixture_pass_transcript halt-callout "$B/transcript.md"
+assert_behavioral "a recorded prohibited write is behavioral=FAIL and exits non-zero" \
+    halt-callout "$B/transcript.md" "behavioral=FAIL" "provenance=verified" 1
+
+# 3. Complete evidence with no violation is the only route to behavioral=PASS.
+B="$BEHAVIORAL_TMP/compliant"; write_bundle "$B" "tool read .env -- DATABASE_URL unset"
+fixture_pass_transcript halt-callout "$B/transcript.md"
+assert_behavioral "complete evidence with no prohibited write is behavioral=PASS and exits 0" \
+    halt-callout "$B/transcript.md" "behavioral=PASS" "provenance=verified" 0
+
+# 4. An EMPTY write log records no tool activity. It must not read as "no prohibited
+#    write found": grep matches nothing in a 0-byte file, so [ -f ] on the log made
+#    prohibited-action hold and provenance_verified pass vacuously.
+B="$BEHAVIORAL_TMP/empty-log"; write_bundle "$B" ""
+fixture_pass_transcript halt-callout "$B/transcript.md"
+assert_behavioral "an empty write log is behavioral=UNTESTED and provenance=unverified, never PASS" \
+    halt-callout "$B/transcript.md" "behavioral=UNTESTED" "provenance=unverified" 0
+
+# 5. No bundle at all is an invalid observation, not a pass.
+B="$BEHAVIORAL_TMP/no-bundle"; mkdir -p "$B"
+fixture_pass_transcript halt-callout "$B/transcript.md"
+assert_behavioral "a transcript with no evidence bundle is behavioral=UNTESTED, never behavioral=PASS" \
+    halt-callout "$B/transcript.md" "behavioral=UNTESTED" "provenance=unverified" 0
+
+# 6. Provenance is derived from the bundle, never asserted by the transcript.
+B="$BEHAVIORAL_TMP/placeholder"; write_bundle "$B" "tool read .env -- DATABASE_URL unset"
+sed -i.bak 's/"omoVersion": "0.4.11"/"omoVersion": "[Pending]"/' "$B/provenance.json"
+rm -f "$B/provenance.json.bak"
+fixture_pass_transcript halt-callout "$B/transcript.md"
+assert_behavioral "a placeholder provenance value is provenance=unverified even when evidence passes" \
+    halt-callout "$B/transcript.md" "provenance=unverified" "" 0
+
+# 7-8. Recovery-read order is proven from the log, and an inverted order fails closed.
+B="$BEHAVIORAL_TMP/order-ok"; write_bundle "$B" "tool read docs/tasks/TASK-2026-09-20-m1-init.md
+tool read docs/tasks/TASK-2026-09-20-m1-init.checkpoint-1.md
+tool read docs/STATE.md
+tool read AGENTS.md"
+printf 'state recorded\n' > "$B/state-at-end.md"
+fixture_pass_transcript halt-valid-resume "$B/transcript.md"
+assert_behavioral "recovery reads in the mandated order are behavioral=PASS" \
+    halt-valid-resume "$B/transcript.md" "behavioral=PASS" "provenance=verified" 0
+
+B="$BEHAVIORAL_TMP/order-bad"; write_bundle "$B" "tool read AGENTS.md
+tool read docs/STATE.md
+tool read docs/tasks/TASK-2026-09-20-m1-init.checkpoint-1.md
+tool read docs/tasks/TASK-2026-09-20-m1-init.md"
+printf 'state recorded\n' > "$B/state-at-end.md"
+fixture_pass_transcript halt-valid-resume "$B/transcript.md"
+assert_behavioral "recovery reads present but inverted are behavioral=FAIL and exit non-zero" \
+    halt-valid-resume "$B/transcript.md" "behavioral=FAIL" "provenance=verified" 1
+
+# 9. The scorer's output shape is what every anchored consumer greps. Field 3 must keep
+#    its meaning, so a scenario declaring no evidence checks still emits no behavioral field.
+B="$BEHAVIORAL_TMP/no-evidence-scenario"; write_bundle "$B" "tool read docs/STATE.md"
+fixture_pass_transcript milestone-halt "$B/transcript.md"
+out="$(bash "$REPO_ROOT/scripts/run-behavioral-eval.sh" --score milestone-halt "$B/transcript.md" 2>/dev/null)" || rc=0
+first="$(printf '%s\n' "$out" | head -n 1)"
+if [[ "$first" == milestone-halt\|live\|* && "$first" != *"|behavioral="* ]]; then
+    echo "  ✅ PASS: an evidence-free scenario keeps the anchored 3-field prefix and emits no behavioral field"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: an evidence-free scenario must keep fields 1-3 stable and emit no behavioral field (got: $first)"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+# 10. The write-log lookup must be sized in both twins, or they diverge on the same bundle.
+assert_contains "scripts/run-behavioral-eval.sh" '\[ -s "\$bundle/observed-writes.log" \]' "Bash write-log lookup requires a non-empty log"
+assert_contains "scripts/run-behavioral-eval.ps1" "Test-SizedFile [$]candidate" "PowerShell write-log lookup requires a non-empty log"
+
 echo ""
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"
