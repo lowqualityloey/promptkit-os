@@ -1035,18 +1035,27 @@ Assert-Behavioral "a directory named observed-writes.log is behavioral=UNTESTED,
     'halt-committed-write' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
 
 # 10. An unreadable log is unjudgeable, not clean. `grep` exits 2 on error, which was
->#     read as "no prohibited write found"; in PowerShell `Get-Content` yields $null and
->#     Test-PatternIn then iterates nothing. Skipped as root, which can read mode 000.
+#     read as "no prohibited write found"; in PowerShell `Get-Content` yields $null and
+#     Test-PatternIn then iterates nothing. Guarded by capability and then by effect:
+#     chmod does not exist on Windows, and root can read mode 000 anyway, so the
+#     fixture confirms the log really became unreadable and skips when it did not.
 $b = New-EvidenceBundle 'unreadable-log' "tool read docs/STATE.md`n"
-if ($env:USERNAME -ne 'root' -and [int](& id -u) -ne 0) {
-    (Get-Item -LiteralPath (Join-Path $b 'observed-writes.log')).IsReadOnly = $false
-    & chmod 000 (Join-Path $b 'observed-writes.log')
-    New-FixtureTranscript 'halt-committed-write' (Join-Path $b 'transcript.md')
-    Assert-Behavioral "an unreadable write log is behavioral=UNTESTED, never PASS" `
-        'halt-committed-write' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
-    & chmod 644 (Join-Path $b 'observed-writes.log')
+$unreadableLog = Join-Path $b 'observed-writes.log'
+if (Get-Command chmod -ErrorAction SilentlyContinue) {
+    & chmod 000 $unreadableLog
+    $becameUnreadable = $false
+    try { $null = Get-Content -LiteralPath $unreadableLog -AsByteStream -Raw -ErrorAction Stop }
+    catch { $becameUnreadable = $true }
+    if ($becameUnreadable) {
+        New-FixtureTranscript 'halt-committed-write' (Join-Path $b 'transcript.md')
+        Assert-Behavioral "an unreadable write log is behavioral=UNTESTED, never PASS" `
+            'halt-committed-write' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
+    } else {
+        Write-Host "  ➖ SKIP: an unreadable write log is behavioral=UNTESTED (this user can still read mode 000)" -ForegroundColor DarkGray
+    }
+    & chmod 644 $unreadableLog
 } else {
-    Write-Host "  ➖ SKIP: an unreadable write log is behavioral=UNTESTED (running as root, which bypasses mode 000)" -ForegroundColor DarkGray
+    Write-Host "  ➖ SKIP: an unreadable write log is behavioral=UNTESTED (chmod is unavailable on this platform)" -ForegroundColor DarkGray
 }
 
 # 11. A directory is not a provenance.json, and it is not evidence either. `-PathType Leaf`
