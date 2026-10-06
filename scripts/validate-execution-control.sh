@@ -26,8 +26,12 @@ records, files, Git state, remotes, releases, or task state.
   --authorization-baseline REF  Also run authorization-evidence validation
   --import PAYLOAD              Parse a foreign /handoff prose payload, print an
                                 imported Checkpoint draft (markdown) to stdout, and
-                                emit an IMPORT-DRAFT verdict on stderr. Grants no
-                                execution, commit, push, PR, or release authority.
+                                emit an IMPORT-DRAFT verdict on stderr (QUICK-VALID,
+                                FULL-VALID, DRAFT-INCOMPLETE, or REFUSED-L0). Exit
+                                status is 0 only for QUICK-VALID / FULL-VALID, 1 for
+                                DRAFT-INCOMPLETE or REFUSED-L0, 2 for usage errors.
+                                Grants no execution, commit, push, PR, or release
+                                authority.
   -h, --help                    Show this help
 EOF
 }
@@ -865,11 +869,13 @@ import_handoff() {
     local level="" cnorm
     cnorm="$(printf '%s' "$ceremony" | tr '[:upper:]' '[:lower:]' | tr -s ' ')"
     case "$cnorm" in
-        l0|"level 0"|0|l0*|"level 0"*|*direct*|*informational*) level="L1" ;;
+        l0|"level 0"|0|l0*|"level 0"*|*direct*|*informational*) level="L0" ;;
         l1|"level 1"|1|l1*|"level 1"*|*standard*|*quick*) level="L1" ;;
         l2|"level 2"|2|l2*|"level 2"*|*controlled*) level="L2" ;;
-        l3|"level 3"|3|l3*|"level 3"*|*release*) level="L2" ;;
+        l3|"level 3"|3|l3*|"level 3"*|*release*) level="L3" ;;
     esac
+    local level_explicit=0
+    [ -n "$level" ] && level_explicit=1
     if [ -z "$level" ] && [ -n "${P[Record Type]-}" ]; then
         local rtnorm
         rtnorm="$(printf '%s' "${P[Record Type]}" | tr '[:upper:]' '[:lower:]')"
@@ -878,6 +884,12 @@ import_handoff() {
             *record*) : ;;
             *) level="L1" ;;
         esac
+    fi
+
+    if [ "$level" = "L0" ]; then
+        diagnostic POLICY_LIMITATION UNKNOWN "$payload" "Level 0 requests must not write execution-control records to docs/" "Do not import Level 0 handoffs into docs/tasks; no durable record is permitted at Level 0" >&2
+        printf 'IMPORT-DRAFT|tier=none|unresolved=0|verdict=REFUSED-L0\n' >&2
+        return 1
     fi
 
     local task_supplied=0 task_id=""
@@ -889,14 +901,10 @@ import_handoff() {
     local tier
     if [ "$level" = "L1" ]; then
         tier="quick"
-    elif [ "$level" = "L2" ]; then
-        tier="full"
-    elif [ "$task_supplied" -eq 1 ]; then
-        tier="full"
-    elif [ "${#TASK_FILE_BY_ID[@]}" -gt 0 ]; then
-        tier="full"
     else
-        tier="quick"
+        # L2, L3, and any unlabeled payload default fail-closed to the full tier;
+        # the tier never depends on which records the scanned repo happens to hold.
+        tier="full"
     fi
 
     local checkpoint_id=""
@@ -962,19 +970,28 @@ import_handoff() {
         value="${P[$label]-}"
         presence_only=0
         case "$label" in
-            "Changed Files"|"Blockers"|"Scope Changes") presence_only=1 ;;
+            "Changed Files"|"Scope Changes") presence_only=1 ;;
+            "Blockers") [ "$tier" = "full" ] && presence_only=1 ;;
         esac
         if [ -n "$(trim "$value")" ]; then
-            if [ "$presence_only" -eq 1 ] || ! import_is_placeholder "$value"; then
+            if [ "$presence_only" -eq 1 ] || ! import_is_placeholder "$value" || { [ "$label" = "Blockers" ] && [ "$(trim "$value")" = "None identified" ]; }; then
                 OUT["$label"]="$(trim "$value")"
                 RESOLVED["$label"]=1
             fi
         fi
     done
 
+    # Quick tier: only the ten quick-required labels block the verdict; every
+    # unresolved full-only label degrades explicitly via POLICY_LIMITATION.
+    local quick_required=" Record Type|Checkpoint ID|Created|Execution State|Objective|Remaining Work|Blockers|Next Action|Resume Condition|Recorded By "
     local unresolved_count=0
+    local -a DEGRADED=()
     for label in "${label_order[@]}"; do
         if [ -z "${RESOLVED[$label]+x}" ]; then
+            if [ "$tier" = "quick" ] && [[ "|$quick_required|" != *"|$label|"* ]]; then
+                [ "$label" = "Task ID" ] || DEGRADED+=("$label")
+                continue
+            fi
             unresolved_count=$((unresolved_count + 1))
             UNRESOLVED+=("$label")
         fi
@@ -987,12 +1004,27 @@ import_handoff() {
         fi
     done
 
+    local degraded_label
+    for degraded_label in "${DEGRADED[@]}"; do
+        case "$degraded_label" in
+            "Verification Evidence"|"CI Evidence") continue ;;
+        esac
+        diagnostic POLICY_LIMITATION "$checkpoint_id" "$payload" "Unresolved label for Level 1 quick checkpoint: $degraded_label" "Full tier requires a resolved value; this quick draft is never full-valid" >&2
+    done
+
     if [ "$trace" -eq 1 ]; then
         diagnostic TRACEABILITY_MISSING "$checkpoint_id" "$payload" "$trace_message" "Link the checkpoint to an existing canonical Task Record" >&2
     fi
 
     printf '%s\n\n' "# Checkpoint Record: Imported /handoff draft"
     for label in "${label_order[@]}"; do
+        if [ "$label" = "Specification" ]; then
+            case "$level" in
+                L1) printf -- '- **Ceremony Level**: %s\n' "Level 1 (Standard)" ;;
+                L2) [ "$level_explicit" -eq 1 ] && printf -- '- **Ceremony Level**: %s\n' "Level 2 (Controlled)" ;;
+                L3) printf -- '- **Ceremony Level**: %s\n' "Level 3 (Release-Critical)" ;;
+            esac
+        fi
         [ -n "${RESOLVED[$label]+x}" ] || continue
         if [ "$label" = "Changed Files" ]; then
             printf '%s\n' "- **Changed Files**:"
@@ -1010,7 +1042,7 @@ import_handoff() {
 
     local verdict="DRAFT-INCOMPLETE"
     if [ "$unresolved_count" -eq 0 ] && [ "$trace" -eq 0 ]; then
-        verdict="VALID"
+        if [ "$tier" = "quick" ]; then verdict="QUICK-VALID"; else verdict="FULL-VALID"; fi
     fi
     printf 'IMPORT-DRAFT|tier=%s|unresolved=%s|verdict=%s\n' "$tier" "$unresolved_count" "$verdict" >&2
     if [ "$unresolved_count" -gt 0 ]; then
@@ -1020,6 +1052,8 @@ import_handoff() {
         done
         printf 'IMPORT-UNRESOLVED|%s\n' "$joined" >&2
     fi
+    # Exit status carries the verdict: 0 only for QUICK-VALID / FULL-VALID.
+    [ "$verdict" = "DRAFT-INCOMPLETE" ] && return 1
     return 0
 }
 

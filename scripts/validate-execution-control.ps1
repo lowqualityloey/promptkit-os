@@ -335,8 +335,12 @@ function Show-Usage {
     Write-Output '  -AuthorizationBaseline REF   Also run authorization-evidence validation'
     Write-Output '  -Import PAYLOAD              Parse a foreign /handoff prose payload, print an'
     Write-Output '                               imported Checkpoint draft (markdown) to stdout, and'
-    Write-Output '                               emit an IMPORT-DRAFT verdict on stderr. Grants no'
-    Write-Output '                               execution, commit, push, PR, or release authority.'
+    Write-Output '                               emit an IMPORT-DRAFT verdict on stderr (QUICK-VALID,'
+    Write-Output '                               FULL-VALID, DRAFT-INCOMPLETE, or REFUSED-L0). Exit'
+    Write-Output '                               status is 0 only for QUICK-VALID / FULL-VALID, 1 for'
+    Write-Output '                               DRAFT-INCOMPLETE or REFUSED-L0, 2 for usage errors.'
+    Write-Output '                               Grants no execution, commit, push, PR, or release'
+    Write-Output '                               authority.'
     Write-Output '  -Help, -h                    Show this help'
 }
 
@@ -369,11 +373,11 @@ function Write-ImportDiagnostic {
 function Get-ImportLevel {
     param([AllowEmptyString()][string]$Norm)
     switch -Wildcard ($Norm) {
-        'l0*' { return 'L1' }
-        'level 0*' { return 'L1' }
-        '0' { return 'L1' }
-        '*direct*' { return 'L1' }
-        '*informational*' { return 'L1' }
+        'l0*' { return 'L0' }
+        'level 0*' { return 'L0' }
+        '0' { return 'L0' }
+        '*direct*' { return 'L0' }
+        '*informational*' { return 'L0' }
         'l1*' { return 'L1' }
         'level 1*' { return 'L1' }
         '1' { return 'L1' }
@@ -383,10 +387,10 @@ function Get-ImportLevel {
         'level 2*' { return 'L2' }
         '2' { return 'L2' }
         '*controlled*' { return 'L2' }
-        'l3*' { return 'L2' }
-        'level 3*' { return 'L2' }
-        '3' { return 'L2' }
-        '*release*' { return 'L2' }
+        'l3*' { return 'L3' }
+        'level 3*' { return 'L3' }
+        '3' { return 'L3' }
+        '*release*' { return 'L3' }
     }
     return ''
 }
@@ -482,6 +486,7 @@ function Invoke-ImportHandoff {
 
     $ceremonyNorm = ($ceremony.ToLowerInvariant() -replace ' +', ' ')
     $level = Get-ImportLevel $ceremonyNorm
+    $levelExplicit = -not [string]::IsNullOrEmpty($level)
     $recordTypeValue = if ($P.ContainsKey('Record Type')) { Trim-Value ([string]$P['Record Type']) } else { '' }
     if ([string]::IsNullOrEmpty($level) -and -not [string]::IsNullOrEmpty($recordTypeValue)) {
         $rtnorm = $recordTypeValue.ToLowerInvariant()
@@ -498,6 +503,13 @@ function Invoke-ImportHandoff {
         }
     }
 
+    if ($level -eq 'L0') {
+        Write-ImportDiagnostic 'POLICY_LIMITATION' 'UNKNOWN' $Payload "Level 0 requests must not write execution-control records to docs/" "Do not import Level 0 handoffs into docs/tasks; no durable record is permitted at Level 0"
+        [Console]::Error.WriteLine('IMPORT-DRAFT|tier=none|unresolved=0|verdict=REFUSED-L0')
+        $script:ImportExitCode = 1
+        return
+    }
+
     $taskSupplied = $false
     $taskId = ''
     if ($P.ContainsKey('Task ID')) {
@@ -508,12 +520,10 @@ function Invoke-ImportHandoff {
         }
     }
 
+    # L2, L3, and any unlabeled payload default fail-closed to the full tier;
+    # the tier never depends on which records the scanned repo happens to hold.
     $tier = ''
-    if ($level -eq 'L1') { $tier = 'quick' }
-    elseif ($level -eq 'L2') { $tier = 'full' }
-    elseif ($taskSupplied) { $tier = 'full' }
-    elseif ($TaskById.Count -gt 0) { $tier = 'full' }
-    else { $tier = 'quick' }
+    if ($level -eq 'L1') { $tier = 'quick' } else { $tier = 'full' }
 
     $checkpointId = ''
     if ($P.ContainsKey('Checkpoint ID') -and -not (Test-ImportPlaceholder ([string]$P['Checkpoint ID']))) {
@@ -572,19 +582,28 @@ function Invoke-ImportHandoff {
     foreach ($label in $labelOrder) {
         if ($label -in @('Record Type', 'Checkpoint ID', 'Task ID', 'Branch / Revision')) { continue }
         $value = if ($P.ContainsKey($label)) { [string]$P[$label] } else { '' }
-        $presenceOnly = $label -in @('Changed Files', 'Blockers', 'Scope Changes')
+        $presenceOnly = $label -in @('Changed Files', 'Scope Changes')
+        if ($label -eq 'Blockers' -and $tier -eq 'full') { $presenceOnly = $true }
         if (-not [string]::IsNullOrEmpty((Trim-Value $value))) {
-            if ($presenceOnly -or -not (Test-ImportPlaceholder $value)) {
+            if ($presenceOnly -or -not (Test-ImportPlaceholder $value) -or ($label -eq 'Blockers' -and (Trim-Value $value) -ceq 'None identified')) {
                 $OUT[$label] = Trim-Value $value
                 $RESOLVED[$label] = $true
             }
         }
     }
 
+    # Quick tier: only the ten quick-required labels block the verdict; every
+    # unresolved full-only label degrades explicitly via POLICY_LIMITATION.
+    $quickRequired = @('Record Type', 'Checkpoint ID', 'Created', 'Execution State', 'Objective', 'Remaining Work', 'Blockers', 'Next Action', 'Resume Condition', 'Recorded By')
     $unresolvedCount = 0
     $unresolvedLabels = @()
+    $degradedLabels = @()
     foreach ($label in $labelOrder) {
         if (-not $RESOLVED.ContainsKey($label)) {
+            if ($tier -eq 'quick' -and $label -notin $quickRequired) {
+                if ($label -ne 'Task ID') { $degradedLabels += $label }
+                continue
+            }
             $unresolvedCount++
             $unresolvedLabels += $label
         }
@@ -596,6 +615,11 @@ function Invoke-ImportHandoff {
         }
     }
 
+    foreach ($degradedLabel in $degradedLabels) {
+        if ($degradedLabel -in @('Verification Evidence', 'CI Evidence')) { continue }
+        Write-ImportDiagnostic 'POLICY_LIMITATION' $checkpointId $Payload "Unresolved label for Level 1 quick checkpoint: $degradedLabel" "Full tier requires a resolved value; this quick draft is never full-valid"
+    }
+
     if ($trace -eq 1) {
         Write-ImportDiagnostic 'TRACEABILITY_MISSING' $checkpointId $Payload $traceMessage 'Link the checkpoint to an existing canonical Task Record'
     }
@@ -603,6 +627,13 @@ function Invoke-ImportHandoff {
     Write-Output '# Checkpoint Record: Imported /handoff draft'
     Write-Output ''
     foreach ($label in $labelOrder) {
+        if ($label -eq 'Specification') {
+            switch ($level) {
+                'L1' { Write-Output '- **Ceremony Level**: Level 1 (Standard)' }
+                'L2' { if ($levelExplicit) { Write-Output '- **Ceremony Level**: Level 2 (Controlled)' } }
+                'L3' { Write-Output '- **Ceremony Level**: Level 3 (Release-Critical)' }
+            }
+        }
         if (-not $RESOLVED.ContainsKey($label)) { continue }
         if ($label -eq 'Changed Files') {
             Write-Output '- **Changed Files**:'
@@ -617,11 +648,15 @@ function Invoke-ImportHandoff {
     Write-Output ''
 
     $verdict = 'DRAFT-INCOMPLETE'
-    if ($unresolvedCount -eq 0 -and $trace -eq 0) { $verdict = 'VALID' }
+    if ($unresolvedCount -eq 0 -and $trace -eq 0) {
+        if ($tier -eq 'quick') { $verdict = 'QUICK-VALID' } else { $verdict = 'FULL-VALID' }
+    }
     [Console]::Error.WriteLine("IMPORT-DRAFT|tier=$tier|unresolved=$unresolvedCount|verdict=$verdict")
     if ($unresolvedCount -gt 0) {
         [Console]::Error.WriteLine('IMPORT-UNRESOLVED|' + ($unresolvedLabels -join '|'))
     }
+    # Exit status carries the verdict: 0 only for QUICK-VALID / FULL-VALID.
+    if ($verdict -eq 'DRAFT-INCOMPLETE') { $script:ImportExitCode = 1 }
 }
 
 function Test-Transitions {

@@ -9,3 +9,6 @@ minimal-linked	valid	no	yes	minimal-linked.import-draft.txt	minimal-linked.impor
 minimal-unlinked	valid	yes	no	minimal-unlinked.import-draft.txt	minimal-unlinked.import-unresolved.txt
 no-task-record	valid	yes	no	no-task-record.import-draft.txt	no-task-record.import-unresolved.txt
 placeholder-rejection	valid	no	yes	placeholder-rejection.import-draft.txt	placeholder-rejection.import-unresolved.txt
+quick-complete	valid	no	yes	quick-complete.import-draft.txt	-
+quick-incomplete	valid	no	yes	quick-incomplete.import-draft.txt	quick-incomplete.import-unresolved.txt
+l0-refused	valid	no	no	l0-refused.import-draft.txt	-

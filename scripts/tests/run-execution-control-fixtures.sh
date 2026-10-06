@@ -140,15 +140,23 @@ assert_import_case() {
     local payload_file="$IMPORT_ROOT/${name}.txt"
     local output_file="$TEMP_ROOT/import-${name}.output"
     local normalized_file="$TEMP_ROOT/import-${name}.normalized"
-    local actual_exit
+    local actual_exit expected_exit expected_verdict
 
     [ -f "$payload_file" ] || fail "Missing import payload: $payload_file"
+
+    # Exit status carries the verdict: 0 for QUICK-VALID / FULL-VALID, 1 otherwise.
+    expected_verdict="$(tr -d '\r\n' < "$draft_expected_file")"
+    expected_verdict="${expected_verdict##*|verdict=}"
+    case "$expected_verdict" in
+        *-VALID) expected_exit=0 ;;
+        *) expected_exit=1 ;;
+    esac
 
     set +e
     bash "$VALIDATOR" --root "$root" --import "$payload_file" > "$output_file" 2>&1
     actual_exit=$?
     set -e
-    [ "$actual_exit" -eq 0 ] || fail "import $name expected exit 0 but received $actual_exit"
+    [ "$actual_exit" -eq "$expected_exit" ] || fail "import $name expected exit $expected_exit but received $actual_exit"
 
     normalize_output "$output_file" "$normalized_file"
 
@@ -181,6 +189,23 @@ assert_import_case() {
         expected_unresolved="$(tr -d '\r\n' < "$unresolved_expected_file")"
         actual_unresolved="$(grep -E '^IMPORT-UNRESOLVED\|' "$normalized_file" | tail -n 1 || true)"
         [ "$actual_unresolved" = "$expected_unresolved" ] || fail "import $name unresolved mismatch: $actual_unresolved (expected $expected_unresolved)"
+    fi
+
+    # Round trip: a QUICK-VALID draft must pass the canonical validator when
+    # persisted as a checkpoint record (the importer's tier survives re-validation).
+    if [ "$expected_verdict" = "QUICK-VALID" ]; then
+        local rt_root="$TEMP_ROOT/import-${name}-roundtrip"
+        local rt_output="$TEMP_ROOT/import-${name}-roundtrip.output"
+        mkdir -p "$rt_root/docs/tasks"
+        set +e
+        bash "$VALIDATOR" --root "$root" --import "$payload_file" > "$rt_root/docs/tasks/${name}.checkpoint-001.md" 2>/dev/null
+        set -e
+        set +e
+        bash "$VALIDATOR" --root "$rt_root" > "$rt_output" 2>&1
+        actual_exit=$?
+        set -e
+        [ "$actual_exit" -eq 0 ] || fail "import $name round-trip draft failed canonical validation (exit $actual_exit)"
+        grep -Eq '^VALID\|' "$rt_output" || fail "import $name round-trip draft did not report VALID"
     fi
 }
 

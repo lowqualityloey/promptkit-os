@@ -1,0 +1,9 @@
+# Foreign /handoff payload fixture: quick-incomplete.
+# Level 1 payload missing the quick-required Objective and Blockers labels.
+Ceremony Level: Level 1 (Standard)
+Created: 2026-10-07 09:00 UTC
+Execution State: in_progress
+Remaining Work: Run the spellcheck pass
+Next Action: Run the spellcheck pass
+Resume Condition: Spellcheck pass completes
+Recorded By: foreign-harness

@@ -130,7 +130,12 @@ function Assert-ImportCase {
     $payload = Join-Path $importRoot "$Name.txt"
     if (-not (Test-Path -LiteralPath $payload)) { Fail-Harness "Missing import payload: $payload" }
     $result = Invoke-Import $Name $Root $payload
-    if ($result.ExitCode -ne 0) { Fail-Harness "import $Name expected exit 0 but received $($result.ExitCode)" }
+
+    # Exit status carries the verdict: 0 for QUICK-VALID / FULL-VALID, 1 otherwise.
+    $expectedVerdictLine = (Get-Content -LiteralPath $DraftExpectedFile -Raw).TrimEnd("`r", "`n")
+    $expectedVerdict = $expectedVerdictLine.Substring($expectedVerdictLine.LastIndexOf('|') + 1)
+    $expectedExit = if ($expectedVerdict.EndsWith('-VALID')) { 0 } else { 1 }
+    if ($result.ExitCode -ne $expectedExit) { Fail-Harness "import $Name expected exit $expectedExit but received $($result.ExitCode)" }
 
     $expectedDraft = "IMPORT-DRAFT|" + (Get-Content -LiteralPath $DraftExpectedFile -Raw).TrimEnd("`r", "`n")
     $actualDraft = (@($result.Lines | Where-Object { $_ -match '^IMPORT-DRAFT\|' } | Select-Object -Last 1) -join "")
@@ -155,6 +160,22 @@ function Assert-ImportCase {
         $expectedUnresolved = (Get-Content -LiteralPath $UnresolvedExpectedFile -Raw).TrimEnd("`r", "`n")
         $actualUnresolved = (@($result.Lines | Where-Object { $_ -match '^IMPORT-UNRESOLVED\|' } | Select-Object -Last 1) -join "")
         if ($actualUnresolved -ne $expectedUnresolved) { Fail-Harness "import $Name unresolved mismatch: $actualUnresolved (expected $expectedUnresolved)" }
+    }
+
+    # Round trip: a QUICK-VALID draft must pass the canonical validator when
+    # persisted as a checkpoint record (the importer's tier survives re-validation).
+    if ($expectedVerdict -eq 'QUICK-VALID') {
+        $roundTripRoot = Join-Path $tempRoot "rt-$Name"
+        $roundTripTasks = Join-Path $roundTripRoot "docs/tasks"
+        New-Item -ItemType Directory -Path $roundTripTasks -Force | Out-Null
+        $roundTripRecord = Join-Path $roundTripTasks "$Name.checkpoint-001.md"
+        & pwsh -NoProfile -File $validator -Root $Root -Import $payload 2>$null | Set-Content -LiteralPath $roundTripRecord -Encoding utf8
+        $roundTripRaw = @(& pwsh -NoProfile -File $validator -Root $roundTripRoot 2>&1)
+        $roundTripExit = $LASTEXITCODE
+        $roundTripLines = @(Normalize-Lines $roundTripRaw)
+        if ($roundTripExit -ne 0) { Fail-Harness "import $Name round-trip draft failed canonical validation (exit $roundTripExit)" }
+        $validSummaries = @($roundTripLines | Where-Object { $_ -match '^VALID\|' })
+        if ($validSummaries.Count -lt 1) { Fail-Harness "import $Name round-trip draft did not report VALID" }
     }
 }
 

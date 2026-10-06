@@ -1,0 +1,6 @@
+# Foreign /handoff payload fixture: Level 0 refusal.
+# Level 0 work must not write execution-control records to docs/.
+Ceremony Level: Level 0
+Objective: Answer a one-off question
+Execution State: complete
+Next Action: None
