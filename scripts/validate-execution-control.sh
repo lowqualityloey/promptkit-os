@@ -559,7 +559,7 @@ validate_scope_change() {
     for label in "${value_labels[@]}"; do require_value "$file" "$id" "$label"; done
     [ "$(field_value "$file" "Record Type")" = "Scope Change Record" ] || diagnostic INVALID_STATE "$id" "$path" "Record Type is not Scope Change Record" "Use the canonical Scope Change Record type"
     local task_id="$(field_value "$file" "Task ID")"
-    if [ -z "${TASK_FILE_BY_ID[$task_id]+set}" ]; then
+    if [ -z "${TASK_FILE_BY_ID[${task_id:-}]+set}" ]; then
         diagnostic TRACEABILITY_MISSING "$id" "$path" "Scope Change Record references unknown Task ID: $task_id" "Link the record to an existing canonical Task Record"
     fi
     local decision="$(field_value "$file" "Decision")"
@@ -585,7 +585,7 @@ validate_checkpoint() {
     done
     [ "$(field_value "$file" "Record Type")" = "Checkpoint Record" ] || diagnostic CHECKPOINT_INCOMPLETE "$id" "$path" "Record Type is not Checkpoint Record" "Use the canonical Checkpoint Record type"
     local task_id="$(field_value "$file" "Task ID")"
-    [ -n "${TASK_FILE_BY_ID[$task_id]+set}" ] || diagnostic TRACEABILITY_MISSING "$id" "$path" "Checkpoint references unknown Task ID: $task_id" "Link the checkpoint to an existing Task Record"
+    [ -n "$task_id" ] && [ -n "${TASK_FILE_BY_ID[$task_id]+set}" ] || diagnostic TRACEABILITY_MISSING "$id" "$path" "Checkpoint references unknown Task ID: $task_id" "Link the checkpoint to an existing Task Record"
 }
 
 validate_handoff() {
@@ -599,7 +599,7 @@ validate_handoff() {
     for label in "${value_labels[@]}"; do require_value "$file" "$id" "$label" "HANDOFF_INCOMPLETE"; done
     [ "$(field_value "$file" "Record Type")" = "Handoff Record" ] || diagnostic HANDOFF_INCOMPLETE "$id" "$path" "Record Type is not Handoff Record" "Use the canonical Handoff Record type"
     local task_id="$(field_value "$file" "Task ID")"
-    [ -n "${TASK_FILE_BY_ID[$task_id]+set}" ] || diagnostic TRACEABILITY_MISSING "$id" "$path" "Handoff references unknown Task ID: $task_id" "Link the handoff to an existing Task Record"
+    [ -n "${TASK_FILE_BY_ID[${task_id:-}]+set}" ] || diagnostic TRACEABILITY_MISSING "$id" "$path" "Handoff references unknown Task ID: $task_id" "Link the handoff to an existing Task Record"
     require_value "$file" "$id" "Next Action" "HANDOFF_INCOMPLETE"
     require_value "$file" "$id" "Host or Timer Limitations" "POLICY_LIMITATION"
     local decision="$(field_value "$file" "Acceptance Decision")"
