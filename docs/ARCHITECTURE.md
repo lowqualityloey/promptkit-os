@@ -325,6 +325,7 @@ promptkit-os/
 │   ├── execution-task-record-template.md # Canonical Controlled Work Task Record
 │   ├── friction-evaluation-template.md    # Adaptation friction evaluation & improvement
 │   ├── execution-scope-change-template.md # Approved scope expansion/change record
+│   ├── execution-checkpoint-template.md # Tiered session progress snapshot (Quick L1 / Full L2/L3)
 │   ├── execution-handoff-template.md # Receiver-validated session or role handoff
 │   ├── data-model-spec.md          # Relational schema & RLS specification
 │   ├── auth-matrix-template.md     # Auth architecture & RBAC capability matrix
