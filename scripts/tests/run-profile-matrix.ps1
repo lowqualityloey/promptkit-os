@@ -34,23 +34,33 @@ function ProfileOf([string]$dir) {
     return ""
 }
 
-function Normalize-ManagedBlock([string]$text) {
-    $text = $text.Replace('$KIT_DIR_REL', '.promptkit')
-    # Canonicalize the resolved engine stamp back to the literal token so the
-    # template comparison does not depend on the installer's git state. This is
-    # a no-op on the template, which already holds the token. A MatchEvaluator is
-    # used rather than -replace because the replacement text contains a literal
-    # '$', which -replace would read as a substitution reference.
+function Normalize-EngineStamp([string]$text) {
+    # The engine stamp is resolved from git, so it differs per machine and per commit. It is
+    # canonicalized on BOTH sides, which keeps the comparison independent of the installer's
+    # git state. That is safe only because test 10 separately asserts the installed block
+    # contains no leftover $ENGINE_VERSION/$ENGINE_SHA tokens.
+    # A MatchEvaluator is used rather than -replace because the replacement text contains a
+    # literal '$', which -replace would read as a substitution reference.
     return [regex]::Replace(
         $text,
         '(?m)^Engine: .* \(.*\) — stamped at install time',
         { param($match) 'Engine: $ENGINE_VERSION ($ENGINE_SHA) — stamped at install time' })
 }
 
+function Normalize-Template([string]$text) {
+    # $KIT_DIR_REL is normalized on the TEMPLATE SIDE ONLY, and that asymmetry is deliberate.
+    # Applying it to both sides would rewrite a literal $KIT_DIR_REL in the installed block into
+    # .promptkit and make a broken substitution compare clean — masking the exact defect the
+    # comparison exists to catch. Nothing else in the suite asserts $KIT_DIR_REL does not leak,
+    # so test 14 pins that rejection directly.
+    $text = $text.Replace('$KIT_DIR_REL', '.promptkit')
+    return (Normalize-EngineStamp $text)
+}
+
 function ManagedBlockMatchesTemplate([string]$target, [string]$template) {
     $hostText = (Get-Content $target -Raw) -replace "`r`n", "`n"
     $templateText = (Get-Content $template -Raw) -replace "`r`n", "`n"
-    return (Normalize-ManagedBlock $hostText).Contains((Normalize-ManagedBlock $templateText))
+    return (Normalize-EngineStamp $hostText).Contains((Normalize-Template $templateText))
 }
 
 function NewDir([string]$name) {
@@ -201,6 +211,17 @@ if (([regex]::Matches($legacyAfter, "(?m)^- \*\*Engine Version\*\*:")).Count -eq
     Ok "legacy STATE.md gains the engine stamp row without losing user content"
 } else {
     NotOk "legacy STATE.md stamp insertion (rows=$(([regex]::Matches($legacyAfter, 'Engine Version')).Count))"
+}
+
+# 14. Normalization asymmetry guard: $KIT_DIR_REL is substituted on the template side only.
+# Normalizing it on the installed side too would rewrite a leaked placeholder into
+# .promptkit and make a broken installer compare clean, so this pins that rejection.
+$d = NewDir "t14-kit-dir-leak"
+Set-Content -LiteralPath (Join-Path $d "AGENTS.md") -Value ((Get-Content (Join-Path $RepoRoot "templates\agent-directive-template.md") -Raw) -replace '\$KIT_DIR_REL', '$KIT_DIR_REL') -NoNewline
+if (ManagedBlockMatchesTemplate (Join-Path $d "AGENTS.md") (Join-Path $RepoRoot "templates\agent-directive-template.md")) {
+    NotOk "harness accepts a leaked `$KIT_DIR_REL placeholder (normalizer masking regression)"
+} else {
+    Ok "harness rejects a leaked `$KIT_DIR_REL placeholder"
 }
 
 Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
