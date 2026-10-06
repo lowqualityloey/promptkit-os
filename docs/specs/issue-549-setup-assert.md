@@ -17,7 +17,7 @@ So that a broken or partial install fails loudly with the correct remedy instead
 
 The previous draft asserted, unconditionally, that `.gitmodules` exists, that `git ls-files -s .promptkit` shows a gitlink, and that `git submodule status` is clean. That assertion is valid for exactly **one** of the five documented install doors and would falsely reject the other four — including the one the README recommends. It also hardcoded `.promptkit` while `promptkit/` is an equally supported layout.
 
-The original GitButler guard ("refuse a `gitbutler/workspace` HEAD") was removed from this issue: it is a strict subset of #552 task 2, and #552 owns it. This issue is now purely the install-time structural assert.
+The original synthetic-base guard ("refuse a workspace-HEAD that is not a real branch tip") was removed from this issue: it is a strict subset of #552 task 2, and #552 owns it. This issue is now purely the install-time structural assert.
 
 ### Documented install modes (all five must pass)
 
@@ -49,7 +49,7 @@ Additionally, the kit directory may be `.promptkit/` **or** `promptkit/` (`proto
 
 ### Out of Scope
 
-* GitButler workspace-HEAD detection and base-derivation guards — owned by #552.
+* Synthetic-base and base-derivation guards — owned by #552.
 * Changing `.gitignore` defaults or documented install guidance.
 * Repairing a broken install automatically; this issue reports and prints the remedy.
 
