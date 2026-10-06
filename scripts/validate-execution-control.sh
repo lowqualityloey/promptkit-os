@@ -76,8 +76,8 @@ diagnostic() {
     local path="$3"
     local message="$4"
     local remediation="$5"
-    message="$(printf '%s' "$message" | tr '\r\n|' '   ')"
-    remediation="$(printf '%s' "$remediation" | tr '\r\n|' '   ')"
+    message="$(trim "$(printf '%s' "$message" | tr '\r\n|' '   ')")"
+    remediation="$(trim "$(printf '%s' "$remediation" | tr '\r\n|' '   ')")"
     printf '%s|%s|%s|%s|%s\n' "$category" "$record_id" "$path" "$message" "$remediation"
     ERROR_COUNT=$((ERROR_COUNT + 1))
 }
@@ -88,8 +88,8 @@ degradation() {
     local path="$3"
     local message="$4"
     local remediation="$5"
-    message="$(printf '%s' "$message" | tr '\r\n|' '   ')"
-    remediation="$(printf '%s' "$remediation" | tr '\r\n|' '   ')"
+    message="$(trim "$(printf '%s' "$message" | tr '\r\n|' '   ')")"
+    remediation="$(trim "$(printf '%s' "$remediation" | tr '\r\n|' '   ')")"
     DEGRADATIONS+=("$(printf '%s|%s|%s|%s|%s' "$category" "$record_id" "$path" "$message" "$remediation")")
 }
 

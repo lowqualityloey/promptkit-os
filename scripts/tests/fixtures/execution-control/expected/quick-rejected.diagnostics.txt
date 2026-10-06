@@ -13,4 +13,4 @@ CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-202
 CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Specification|Add the labeled field to the canonical record
 CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Task ID|Add the labeled field to the canonical record
 CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Verification Evidence|Add the labeled field to the canonical record
-TRACEABILITY_MISSING|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Checkpoint references unknown Task ID: |Link the checkpoint to an existing Task Record
+TRACEABILITY_MISSING|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Checkpoint references unknown Task ID:|Link the checkpoint to an existing Task Record
