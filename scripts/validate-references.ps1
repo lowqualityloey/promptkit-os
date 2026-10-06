@@ -102,6 +102,25 @@ function Test-FileReference {
 # gate while 404ing for readers on the host.
 $script:LinkExemptDirs = @("docs/releases/", "docs/tasks/", "docs/archive/", "docs/internal/", "docs/spikes/")
 
+# The trigger/workflow correspondence check cannot be applied to public
+# specifications: a spec's subject is frequently the trigger it proposes to add, so
+# issue-547 legitimately names `pk:doctor` while `workflows/doctor.md` does not exist
+# yet. Without this, committing an accurate spec fails the build for being accurate,
+# and the only ways out are to mangle the trigger token out of the prose or to ship the
+# workflow early. The correspondence is still enforced where triggers actually ship --
+# the directive templates and protocols/setup.md -- and by the behavioral contract that
+# asserts zero warnings. Same exemption policy as LinkExemptDirs.
+$script:TriggerScanExemptDirs = @("docs/specs/")
+
+function Test-TriggerScanExempt {
+    param([string]$RelPath)
+    $normalizedRelPath = $RelPath.Replace('\', '/')
+    foreach ($exempt in $script:TriggerScanExemptDirs) {
+        if ($normalizedRelPath.StartsWith($exempt)) { return $true }
+    }
+    return $false
+}
+
 function Test-LinkExempt {
     param([string]$RelPath)
     $normalizedRelPath = $RelPath.Replace('\', '/')
@@ -195,7 +214,7 @@ foreach ($file in $AllMarkdownFiles) {
     # Capture the whole trigger token. A pattern that stops at the first hyphen
     # truncates names such as pk:init-repo to "init", which hides the real token
     # behind an unrelated alias match.
-    if ($content -match 'pk:([a-z][a-z0-9-]*)') {
+    if (-not (Test-TriggerScanExempt $relPath) -and $content -match 'pk:([a-z][a-z0-9-]*)') {
         $triggers = [regex]::Matches($content, 'pk:([a-z][a-z0-9-]*)') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
         foreach ($trigger in $triggers) {
             $expectedWorkflow = Join-Path $WorkflowsDir "$trigger.md"
