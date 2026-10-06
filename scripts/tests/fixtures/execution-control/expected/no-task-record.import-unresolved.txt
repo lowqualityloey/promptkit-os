@@ -1,0 +1,1 @@
+IMPORT-UNRESOLVED|Task ID|Specification|Created|Checkpoint Type|Execution State|Objective|Completed Work|Remaining Work|Changed Files|Locked Decisions and Invariants|Verification Evidence|CI Evidence|Blockers|Scope Changes|Resume Condition|Recorded By

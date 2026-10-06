@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Read-only Agent Execution Control validator.
-# Usage: ./scripts/validate-execution-control.sh [--root PATH] [--strict] [--authorization-baseline REF]
+# Usage: ./scripts/validate-execution-control.sh [--root PATH] [--strict] [--authorization-baseline REF] [--import PAYLOAD]
 
 set -u
 
 ROOT="."
 STRICT=0
 AUTHORIZATION_BASELINE=""
+IMPORT_FILE=""
 ERROR_COUNT=0
 RECORD_COUNT=0
 HAS_QUICK_RECORD=0
@@ -15,10 +16,19 @@ declare -a DEGRADATIONS=()
 
 usage() {
     cat <<'EOF'
-Usage: validate-execution-control.sh [--root PATH] [--strict] [--authorization-baseline REF]
+Usage: validate-execution-control.sh [--root PATH] [--strict] [--authorization-baseline REF] [--import PAYLOAD]
 
 Validate durable Agent Execution Control Markdown records without modifying
 records, files, Git state, remotes, releases, or task state.
+
+  --root PATH                   Repository root to scan (default: .)
+  --strict                      Emit diagnostics for untyped records
+  --authorization-baseline REF  Also run authorization-evidence validation
+  --import PAYLOAD              Parse a foreign /handoff prose payload, print an
+                                imported Checkpoint draft (markdown) to stdout, and
+                                emit an IMPORT-DRAFT verdict on stderr. Grants no
+                                execution, commit, push, PR, or release authority.
+  -h, --help                    Show this help
 EOF
 }
 
@@ -44,6 +54,18 @@ while [ "$#" -gt 0 ]; do
             AUTHORIZATION_BASELINE="${2:-}"
             [ -n "$AUTHORIZATION_BASELINE" ] || { echo "USAGE|AUTHORIZATION_BASELINE|--authorization-baseline requires a git ref"; exit 2; }
             shift 2
+            ;;
+        --import)
+            if [ "$#" -lt 2 ]; then
+                echo "USAGE|IMPORT|--import requires a payload file"
+                exit 2
+            fi
+            IMPORT_FILE="$2"
+            shift 2
+            ;;
+        --import=*)
+            IMPORT_FILE="${1#*=}"
+            shift
             ;;
         -h|--help)
             usage
@@ -751,6 +773,260 @@ validate_handoff() {
         require_value "$file" "$id" "Validation Evidence" "HANDOFF_INCOMPLETE"
     fi
 }
+
+import_is_placeholder() {
+    local value
+    value="$(trim "$1")"
+    is_placeholder "$value" && return 0
+    case "$value" in
+        "TBD"|"tbd"|"Tbd"|"T.B.D."|"To be determined"|"to be determined"|"TO BE DETERMINED"|"TODO"|"todo") return 0 ;;
+    esac
+    return 1
+}
+
+# Best-effort importer for a foreign harness `/handoff` prose payload.
+# Emits a Checkpoint draft on stdout; verdict and diagnostics go to stderr so
+# callers can redirect stdout straight into a record file. Never writes records,
+# never synthesizes a Task ID, and grants no execution authority.
+import_handoff() {
+    local payload="$1"
+    if [ ! -f "$payload" ]; then
+        printf 'USAGE|IMPORT|Payload file not found: %s\n' "$payload" >&2
+        return 2
+    fi
+
+    if [ -d "$TASK_DIR" ]; then
+        local task_file task_type task_id
+        while IFS= read -r task_file; do
+            task_type="$(field_value "$task_file" "Record Type")"
+            [ "$task_type" = "Task Record" ] || continue
+            task_id="$(field_value "$task_file" "Task ID")"
+            [ -n "$task_id" ] || continue
+            TASK_FILE_BY_ID["$task_id"]="$task_file"
+        done < <(find "$TASK_DIR" -maxdepth 1 -type f -name '*.md' -print | sort)
+    fi
+
+    local label_order=(
+        "Record Type" "Checkpoint ID" "Task ID" "Specification" "Created"
+        "Checkpoint Type" "Execution State" "Objective" "Completed Work"
+        "Remaining Work" "Changed Files" "Branch / Revision"
+        "Locked Decisions and Invariants" "Verification Evidence" "CI Evidence"
+        "Blockers" "Scope Changes" "Next Action" "Resume Condition" "Recorded By"
+    )
+
+    declare -A P=()
+    local branch="" revision="" ceremony=""
+    local line stripped payload_label payload_value norm
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%$'\r'}"
+        stripped="$(trim "$line")"
+        [ -z "$stripped" ] && continue
+        case "$stripped" in
+            "- "*) stripped="$(trim "${stripped#- }")" ;;
+            "* "*) stripped="$(trim "${stripped#* }")" ;;
+        esac
+        [[ "$stripped" == *:* ]] || continue
+        payload_label="${stripped%%:*}"
+        payload_value="$(trim "${stripped#*:}")"
+        payload_label="${payload_label//\*/}"
+        payload_label="$(trim "$payload_label")"
+        norm="$(printf '%s' "$payload_label" | tr '[:upper:]' '[:lower:]' | tr -s ' ')"
+        case "$norm" in
+            "branch") branch="$payload_value" ;;
+            "revision"|"validated revision") revision="$payload_value" ;;
+            "branch / revision"|"branch and revision") P["Branch / Revision"]="$payload_value" ;;
+            "task id") P["Task ID"]="$payload_value" ;;
+            "record type") P["Record Type"]="$payload_value" ;;
+            "checkpoint id") P["Checkpoint ID"]="$payload_value" ;;
+            "specification") P["Specification"]="$payload_value" ;;
+            "created") P["Created"]="$payload_value" ;;
+            "checkpoint type") P["Checkpoint Type"]="$payload_value" ;;
+            "execution state") P["Execution State"]="$payload_value" ;;
+            "objective") P["Objective"]="$payload_value" ;;
+            "completed work") P["Completed Work"]="$payload_value" ;;
+            "remaining work") P["Remaining Work"]="$payload_value" ;;
+            "changed files") P["Changed Files"]="$payload_value" ;;
+            "locked decisions and invariants"|"locked decisions"|"locked decisions / invariants") P["Locked Decisions and Invariants"]="$payload_value" ;;
+            "verification evidence") P["Verification Evidence"]="$payload_value" ;;
+            "ci evidence") P["CI Evidence"]="$payload_value" ;;
+            "blockers"|"blocker") P["Blockers"]="$payload_value" ;;
+            "scope changes"|"scope change") P["Scope Changes"]="$payload_value" ;;
+            "next action") P["Next Action"]="$payload_value" ;;
+            "resume condition"|"resume conditions") P["Resume Condition"]="$payload_value" ;;
+            "recorded by"|"recorded by and timestamp") P["Recorded By"]="$payload_value" ;;
+            "ceremony level"|"level"|"work classification"|"ceremony"|"task ceremony") ceremony="$payload_value" ;;
+            *) : ;;
+        esac
+    done < "$payload"
+
+    import_is_placeholder "$branch" && branch=""
+    import_is_placeholder "$revision" && revision=""
+
+    local level="" cnorm
+    cnorm="$(printf '%s' "$ceremony" | tr '[:upper:]' '[:lower:]' | tr -s ' ')"
+    case "$cnorm" in
+        l0|"level 0"|0|l0*|"level 0"*|*direct*|*informational*) level="L1" ;;
+        l1|"level 1"|1|l1*|"level 1"*|*standard*|*quick*) level="L1" ;;
+        l2|"level 2"|2|l2*|"level 2"*|*controlled*) level="L2" ;;
+        l3|"level 3"|3|l3*|"level 3"*|*release*) level="L2" ;;
+    esac
+    if [ -z "$level" ] && [ -n "${P[Record Type]-}" ]; then
+        local rtnorm
+        rtnorm="$(printf '%s' "${P[Record Type]}" | tr '[:upper:]' '[:lower:]')"
+        case "$rtnorm" in
+            *"task record"*|*"checkpoint record"*|*"handoff record"*|*"scope change record"*|*controlled*|*l2*|*l3*) level="L2" ;;
+            *record*) : ;;
+            *) level="L1" ;;
+        esac
+    fi
+
+    local task_supplied=0 task_id=""
+    if [ -n "${P[Task ID]-}" ] && [ -n "$(trim "${P[Task ID]}")" ] && ! import_is_placeholder "${P[Task ID]}"; then
+        task_supplied=1
+        task_id="$(trim "${P[Task ID]}")"
+    fi
+
+    local tier
+    if [ "$level" = "L1" ]; then
+        tier="quick"
+    elif [ "$level" = "L2" ]; then
+        tier="full"
+    elif [ "$task_supplied" -eq 1 ]; then
+        tier="full"
+    elif [ "${#TASK_FILE_BY_ID[@]}" -gt 0 ]; then
+        tier="full"
+    else
+        tier="quick"
+    fi
+
+    local checkpoint_id=""
+    if [ -n "${P[Checkpoint ID]-}" ] && ! import_is_placeholder "${P[Checkpoint ID]}"; then
+        checkpoint_id="$(trim "${P[Checkpoint ID]}")"
+    else
+        local date_part slug
+        date_part="$(printf '%s' "${P[Created]-}" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n 1 || true)"
+        [ -n "$date_part" ] || date_part="$(date +%F)"
+        slug="imported"
+        if [ -n "$task_id" ]; then
+            slug="$(printf '%s' "$task_id" | tr -c 'A-Za-z0-9._-' '-')"
+        fi
+        checkpoint_id="CHECKPOINT-${date_part}-${slug}-1"
+    fi
+
+    declare -A OUT=()
+    declare -A RESOLVED=()
+    local -a UNRESOLVED=()
+
+    OUT["Record Type"]="Checkpoint Record"
+    RESOLVED["Record Type"]=1
+    OUT["Checkpoint ID"]="$checkpoint_id"
+    RESOLVED["Checkpoint ID"]=1
+
+    local trace=0 trace_message=""
+    if [ "$task_supplied" -eq 1 ]; then
+        if [ -n "${TASK_FILE_BY_ID[$task_id]+x}" ]; then
+            OUT["Task ID"]="$task_id"
+            RESOLVED["Task ID"]=1
+        else
+            trace=1
+            trace_message="Checkpoint references unknown Task ID: $task_id"
+        fi
+    elif [ "$tier" = "quick" ]; then
+        OUT["Task ID"]="N/A — no Task Record (Level 0/1)"
+        RESOLVED["Task ID"]=1
+    else
+        trace=1
+        trace_message="Checkpoint references missing Task ID: no canonical Task Record linked"
+    fi
+
+    local branch_revision=""
+    if [ -n "${P[Branch / Revision]-}" ] && ! import_is_placeholder "${P[Branch / Revision]}"; then
+        branch_revision="$(trim "${P[Branch / Revision]}")"
+    elif [ -n "$branch" ] && [ -n "$revision" ]; then
+        branch_revision="$branch @ $revision"
+    elif [ -n "$branch" ]; then
+        branch_revision="$branch"
+    elif [ -n "$revision" ]; then
+        branch_revision="$revision"
+    fi
+    if [ -n "$branch_revision" ]; then
+        OUT["Branch / Revision"]="$branch_revision"
+        RESOLVED["Branch / Revision"]=1
+    fi
+
+    local label value presence_only
+    for label in "${label_order[@]}"; do
+        case "$label" in
+            "Record Type"|"Checkpoint ID"|"Task ID"|"Branch / Revision") continue ;;
+        esac
+        value="${P[$label]-}"
+        presence_only=0
+        case "$label" in
+            "Changed Files"|"Blockers"|"Scope Changes") presence_only=1 ;;
+        esac
+        if [ -n "$(trim "$value")" ]; then
+            if [ "$presence_only" -eq 1 ] || ! import_is_placeholder "$value"; then
+                OUT["$label"]="$(trim "$value")"
+                RESOLVED["$label"]=1
+            fi
+        fi
+    done
+
+    local unresolved_count=0
+    for label in "${label_order[@]}"; do
+        if [ -z "${RESOLVED[$label]+x}" ]; then
+            unresolved_count=$((unresolved_count + 1))
+            UNRESOLVED+=("$label")
+        fi
+    done
+
+    local evidence
+    for evidence in "Verification Evidence" "CI Evidence"; do
+        if [ -z "${RESOLVED[$evidence]+x}" ]; then
+            diagnostic POLICY_LIMITATION "$checkpoint_id" "$payload" "Foreign /handoff payload cannot mechanically supply $evidence" "Run and record $evidence locally, then promote this draft into a canonical Checkpoint Record" >&2
+        fi
+    done
+
+    if [ "$trace" -eq 1 ]; then
+        diagnostic TRACEABILITY_MISSING "$checkpoint_id" "$payload" "$trace_message" "Link the checkpoint to an existing canonical Task Record" >&2
+    fi
+
+    printf '%s\n\n' "# Checkpoint Record: Imported /handoff draft"
+    for label in "${label_order[@]}"; do
+        [ -n "${RESOLVED[$label]+x}" ] || continue
+        if [ "$label" = "Changed Files" ]; then
+            printf '%s\n' "- **Changed Files**:"
+            local entry
+            while IFS= read -r entry; do
+                entry="$(trim "$entry")"
+                [ -z "$entry" ] && continue
+                printf '  - %s\n' "$entry"
+            done < <(printf '%s\n' "${OUT[$label]}" | tr ',' '\n')
+        else
+            printf -- '- **%s**: %s\n' "$label" "${OUT[$label]}"
+        fi
+    done
+    printf '\n'
+
+    local verdict="DRAFT-INCOMPLETE"
+    if [ "$unresolved_count" -eq 0 ] && [ "$trace" -eq 0 ]; then
+        verdict="VALID"
+    fi
+    printf 'IMPORT-DRAFT|tier=%s|unresolved=%s|verdict=%s\n' "$tier" "$unresolved_count" "$verdict" >&2
+    if [ "$unresolved_count" -gt 0 ]; then
+        local joined="" name
+        for name in "${UNRESOLVED[@]}"; do
+            if [ -z "$joined" ]; then joined="$name"; else joined="$joined|$name"; fi
+        done
+        printf 'IMPORT-UNRESOLVED|%s\n' "$joined" >&2
+    fi
+    return 0
+}
+
+if [ -n "$IMPORT_FILE" ]; then
+    import_handoff "$IMPORT_FILE"
+    exit $?
+fi
 
 if [ ! -d "$TASK_DIR" ]; then
     if [ "$STRICT" -eq 1 ]; then

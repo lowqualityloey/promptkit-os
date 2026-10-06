@@ -1,0 +1,7 @@
+# Foreign /handoff payload fixture: placeholder rejection.
+# Literal placeholders must not satisfy required values (is_placeholder).
+Branch: feature/issue-550-importer-fixtures
+Revision: REV-550-001
+Task ID: TASK-2026-09-08-validator
+Objective: TBD
+Next Action: N/A

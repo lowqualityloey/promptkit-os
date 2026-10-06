@@ -1,0 +1,5 @@
+# Foreign /handoff payload fixture: minimal, unlinked.
+# Branch + revision + next action only; no Task ID is supplied at all.
+Branch: feature/issue-550-importer-fixtures
+Revision: REV-550-001
+Next Action: Wire the PowerShell twin harness section
