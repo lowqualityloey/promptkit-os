@@ -1,0 +1,12 @@
+# Foreign /handoff payload fixture: quick-invalid-checkpoint-id.
+# Supplied Checkpoint ID is not a stable canonical ID: unresolved, kept visible, INVALID_ID.
+Ceremony Level: Level 1 (Standard)
+Created: 2026-10-07 09:00 UTC
+Execution State: in_progress
+Remaining Work: Run the spellcheck pass
+Blockers: None identified
+Next Action: Run the spellcheck pass
+Resume Condition: Spellcheck pass completes
+Recorded By: foreign-harness
+Checkpoint ID: garbage
+Objective: Fix a typo in the README

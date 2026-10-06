@@ -778,9 +778,22 @@ validate_handoff() {
     fi
 }
 
+# Quick-tier required labels (workflows/checkpoint.md, Level 1). Membership is an
+# exact-match case so no padding or delimiter can break a label at either end.
+import_is_quick_required() {
+    case "$1" in
+        "Record Type"|"Checkpoint ID"|"Created"|"Execution State"|"Objective"|"Remaining Work"|"Blockers"|"Next Action"|"Resume Condition"|"Recorded By") return 0 ;;
+    esac
+    return 1
+}
+
 import_is_placeholder() {
     local value
     value="$(trim "$1")"
+    # Mirror field_value(): a value wrapped in backticks is read without them.
+    if [[ "$value" == \`*\` ]] && [ "${#value}" -ge 2 ]; then
+        value="$(trim "${value:1:${#value}-2}")"
+    fi
     is_placeholder "$value" && return 0
     case "$value" in
         "TBD"|"tbd"|"Tbd"|"T.B.D."|"To be determined"|"to be determined"|"TO BE DETERMINED"|"TODO"|"todo") return 0 ;;
@@ -886,16 +899,44 @@ import_handoff() {
         esac
     fi
 
-    if [ "$level" = "L0" ]; then
-        diagnostic POLICY_LIMITATION UNKNOWN "$payload" "Level 0 requests must not write execution-control records to docs/" "Do not import Level 0 handoffs into docs/tasks; no durable record is permitted at Level 0" >&2
-        printf 'IMPORT-DRAFT|tier=none|unresolved=0|verdict=REFUSED-L0\n' >&2
-        return 1
-    fi
-
     local task_supplied=0 task_id=""
     if [ -n "${P[Task ID]-}" ] && [ -n "$(trim "${P[Task ID]}")" ] && ! import_is_placeholder "${P[Task ID]}"; then
         task_supplied=1
         task_id="$(trim "${P[Task ID]}")"
+    fi
+
+    # A resolvable Task Record owns the ceremony level: the effective level is the
+    # higher of the payload claim and the record's classification (default Level 2,
+    # as validate_checkpoint does), and a lower payload claim is a flagged downgrade.
+    local task_level="" downgrade_note=""
+    if [ "$task_supplied" -eq 1 ] && [ -n "${TASK_FILE_BY_ID[$task_id]+x}" ]; then
+        local linked_file="${TASK_FILE_BY_ID[$task_id]}" linked_ceremony
+        linked_ceremony="$(field_value "$linked_file" "Ceremony Level")"
+        [ -z "$linked_ceremony" ] && linked_ceremony="$(field_value "$linked_file" "Work Classification")"
+        if [ -n "$linked_ceremony" ]; then
+            task_level="$(parse_ceremony_level "$linked_ceremony")"
+            [ "$task_level" = "invalid" ] && task_level=""
+        fi
+        [ -z "$task_level" ] && task_level="2"
+        local payload_n=""
+        case "$level" in L1) payload_n=1 ;; L2) payload_n=2 ;; L3) payload_n=3 ;; esac
+        if [ -n "$payload_n" ] && [ "$payload_n" -lt "$task_level" ]; then
+            if [ "$level_explicit" -eq 1 ]; then
+                downgrade_note="Checkpoint cannot downgrade Ceremony Level from Level $task_level to Level $payload_n"
+            fi
+            level="L$task_level"
+            level_explicit=1
+        elif [ -z "$payload_n" ] && [ "$task_level" = "1" ]; then
+            level="L1"
+        elif [ "$task_level" = "0" ]; then
+            level="L0"
+        fi
+    fi
+
+    if [ "$level" = "L0" ]; then
+        diagnostic POLICY_LIMITATION UNKNOWN "$payload" "Level 0 requests must not write execution-control records to docs/" "Do not import Level 0 handoffs into docs/tasks; no durable record is permitted at Level 0" >&2
+        printf 'IMPORT-DRAFT|tier=none|unresolved=0|verdict=REFUSED-L0\n' >&2
+        return 1
     fi
 
     local tier
@@ -907,9 +948,10 @@ import_handoff() {
         tier="full"
     fi
 
-    local checkpoint_id=""
+    local checkpoint_id="" checkpoint_id_valid=1
     if [ -n "${P[Checkpoint ID]-}" ] && ! import_is_placeholder "${P[Checkpoint ID]}"; then
         checkpoint_id="$(trim "${P[Checkpoint ID]}")"
+        is_valid_child_id "$checkpoint_id" || checkpoint_id_valid=0
     else
         local date_part slug
         date_part="$(printf '%s' "${P[Created]-}" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n 1 || true)"
@@ -928,7 +970,7 @@ import_handoff() {
     OUT["Record Type"]="Checkpoint Record"
     RESOLVED["Record Type"]=1
     OUT["Checkpoint ID"]="$checkpoint_id"
-    RESOLVED["Checkpoint ID"]=1
+    [ "$checkpoint_id_valid" -eq 1 ] && RESOLVED["Checkpoint ID"]=1
 
     local trace=0 trace_message=""
     if [ "$task_supplied" -eq 1 ]; then
@@ -938,6 +980,7 @@ import_handoff() {
         else
             trace=1
             trace_message="Checkpoint references unknown Task ID: $task_id"
+            OUT["Task ID"]="$task_id"
         fi
     elif [ "$tier" = "quick" ]; then
         OUT["Task ID"]="N/A — no Task Record (Level 0/1)"
@@ -983,12 +1026,11 @@ import_handoff() {
 
     # Quick tier: only the ten quick-required labels block the verdict; every
     # unresolved full-only label degrades explicitly via POLICY_LIMITATION.
-    local quick_required=" Record Type|Checkpoint ID|Created|Execution State|Objective|Remaining Work|Blockers|Next Action|Resume Condition|Recorded By "
     local unresolved_count=0
     local -a DEGRADED=()
     for label in "${label_order[@]}"; do
         if [ -z "${RESOLVED[$label]+x}" ]; then
-            if [ "$tier" = "quick" ] && [[ "|$quick_required|" != *"|$label|"* ]]; then
+            if [ "$tier" = "quick" ] && ! import_is_quick_required "$label"; then
                 [ "$label" = "Task ID" ] || DEGRADED+=("$label")
                 continue
             fi
@@ -996,6 +1038,13 @@ import_handoff() {
             UNRESOLVED+=("$label")
         fi
     done
+
+    if [ -n "$downgrade_note" ]; then
+        diagnostic POLICY_LIMITATION "$checkpoint_id" "$payload" "$downgrade_note" "Match the established task ceremony level" >&2
+    fi
+    if [ "$checkpoint_id_valid" -eq 0 ]; then
+        diagnostic INVALID_ID "$checkpoint_id" "$payload" "Checkpoint ID is not stable: $checkpoint_id" "Use CHECKPOINT-YYYY-MM-DD-task-id-sequence" >&2
+    fi
 
     local evidence
     for evidence in "Verification Evidence" "CI Evidence"; do
@@ -1025,7 +1074,12 @@ import_handoff() {
                 L3) printf -- '- **Ceremony Level**: %s\n' "Level 3 (Release-Critical)" ;;
             esac
         fi
-        [ -n "${RESOLVED[$label]+x}" ] || continue
+        if [ -z "${RESOLVED[$label]+x}" ]; then
+            # Supplied but unresolved (unknown Task ID, malformed Checkpoint ID):
+            # keep the value so canonical re-validation reports the same failure.
+            [ -n "${OUT[$label]+x}" ] && printf -- '- **%s**: %s\n' "$label" "${OUT[$label]}"
+            continue
+        fi
         if [ "$label" = "Changed Files" ]; then
             printf '%s\n' "- **Changed Files**:"
             local entry

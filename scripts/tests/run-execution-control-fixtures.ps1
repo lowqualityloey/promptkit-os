@@ -133,7 +133,7 @@ function Assert-ImportCase {
 
     # Exit status carries the verdict: 0 for QUICK-VALID / FULL-VALID, 1 otherwise.
     $expectedVerdictLine = (Get-Content -LiteralPath $DraftExpectedFile -Raw).TrimEnd("`r", "`n")
-    $expectedVerdict = $expectedVerdictLine.Substring($expectedVerdictLine.LastIndexOf('|') + 1)
+    $expectedVerdict = $expectedVerdictLine -replace '^.*\|verdict=', ''
     $expectedExit = if ($expectedVerdict.EndsWith('-VALID')) { 0 } else { 1 }
     if ($result.ExitCode -ne $expectedExit) { Fail-Harness "import $Name expected exit $expectedExit but received $($result.ExitCode)" }
 
@@ -148,12 +148,14 @@ function Assert-ImportCase {
         Fail-Harness "import $Name expected no TRACEABILITY_MISSING but received $traceCount"
     }
 
-    # No fabricated task identity: a Task ID draft line appears only when the payload supplied an ID that resolved.
+    # No fabricated task identity: the draft only carries a Task ID line when the
+    # payload supplied one (kept even if unresolved, so re-validation also fails)
+    # or the quick tier states N/A.
     $taskLineCount = @($result.Lines | Where-Object { $_ -match '^- \*\*Task ID\*\*:' }).Count
     if ($ExpectTaskLine -eq "yes") {
-        if ($taskLineCount -ne 1) { Fail-Harness "import $Name expected one resolved Task ID draft line but found $taskLineCount" }
+        if ($taskLineCount -ne 1) { Fail-Harness "import $Name expected one Task ID draft line but found $taskLineCount" }
     } elseif ($taskLineCount -ne 0) {
-        Fail-Harness "import $Name emitted a synthesized or unresolved Task ID draft line ($taskLineCount)"
+        Fail-Harness "import $Name emitted an unexpected Task ID draft line ($taskLineCount)"
     }
 
     if ($UnresolvedExpectedFile -ne "-") {
@@ -162,20 +164,29 @@ function Assert-ImportCase {
         if ($actualUnresolved -ne $expectedUnresolved) { Fail-Harness "import $Name unresolved mismatch: $actualUnresolved (expected $expectedUnresolved)" }
     }
 
-    # Round trip: a QUICK-VALID draft must pass the canonical validator when
-    # persisted as a checkpoint record (the importer's tier survives re-validation).
-    if ($expectedVerdict -eq 'QUICK-VALID') {
-        $roundTripRoot = Join-Path $tempRoot "rt-$Name"
-        $roundTripTasks = Join-Path $roundTripRoot "docs/tasks"
-        New-Item -ItemType Directory -Path $roundTripTasks -Force | Out-Null
-        $roundTripRecord = Join-Path $roundTripTasks "$Name.checkpoint-001.md"
+    # Round trip: the importer's verdict must agree with the canonical validator.
+    # Persist the draft into a copy of the fixture root and re-validate it. A
+    # QUICK-VALID / FULL-VALID draft must pass; a DRAFT-INCOMPLETE draft must not
+    # report VALID. A REFUSED-L0 import emits no draft and is not round-tripped.
+    if ($expectedVerdict -ne 'REFUSED-L0') {
+        $roundTripRoot = Join-Path $tempRoot "import-$Name-roundtrip"
+        $roundTripOutput = Join-Path $tempRoot "import-$Name-roundtrip.output.txt"
+        if (Test-Path -LiteralPath $roundTripRoot) { Remove-Item -LiteralPath $roundTripRoot -Recurse -Force }
+        Copy-Item -LiteralPath $Root -Destination $roundTripRoot -Recurse
+        $roundTripRecord = Join-Path $roundTripRoot "docs/tasks/$Name.checkpoint-001.md"
         & pwsh -NoProfile -File $validator -Root $Root -Import $payload 2>$null | Set-Content -LiteralPath $roundTripRecord -Encoding utf8
         $roundTripRaw = @(& pwsh -NoProfile -File $validator -Root $roundTripRoot 2>&1)
         $roundTripExit = $LASTEXITCODE
         $roundTripLines = @(Normalize-Lines $roundTripRaw)
-        if ($roundTripExit -ne 0) { Fail-Harness "import $Name round-trip draft failed canonical validation (exit $roundTripExit)" }
+        $roundTripLines | Set-Content -LiteralPath $roundTripOutput -Encoding utf8
         $validSummaries = @($roundTripLines | Where-Object { $_ -match '^VALID\|' })
-        if ($validSummaries.Count -lt 1) { Fail-Harness "import $Name round-trip draft did not report VALID" }
+        if ($expectedExit -eq 0) {
+            if ($roundTripExit -ne 0) { Fail-Harness "import $Name ($expectedVerdict) draft failed canonical validation (exit $roundTripExit)" }
+            if ($validSummaries.Count -lt 1) { Fail-Harness "import $Name ($expectedVerdict) draft did not report VALID on re-validation" }
+        } else {
+            if ($roundTripExit -eq 0) { Fail-Harness "import $Name ($expectedVerdict) draft passed canonical validation (importer and validator disagree)" }
+            if ($validSummaries.Count -ge 1) { Fail-Harness "import $Name ($expectedVerdict) draft reported VALID on re-validation" }
+        }
     }
 }
 

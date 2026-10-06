@@ -346,15 +346,32 @@ function Show-Usage {
 
 function Test-ImportPlaceholder {
     param([AllowEmptyString()][string]$Value)
-    if (Test-Placeholder $Value) { return $true }
     $value = Trim-Value $Value
-    switch ($value) {
+    # Mirror Get-FieldValue: a value wrapped in backticks is read without them.
+    if ($value.Length -ge 2 -and $value.StartsWith('`') -and $value.EndsWith('`')) {
+        $value = Trim-Value $value.Substring(1, $value.Length - 2)
+    }
+    if (Test-Placeholder $value) { return $true }
+    switch -CaseSensitive ($value) {
         'TBD' { return $true }
+        'tbd' { return $true }
+        'Tbd' { return $true }
         'T.B.D.' { return $true }
         'To be determined' { return $true }
+        'to be determined' { return $true }
+        'TO BE DETERMINED' { return $true }
         'TODO' { return $true }
+        'todo' { return $true }
     }
     return $false
+}
+
+# Quick-tier required labels (workflows/checkpoint.md, Level 1). Membership is an
+# exact-match case so no padding or delimiter can break a label at either end, and
+# it is case-sensitive (-cin) to mirror the sh twin where -in is case-insensitive.
+function Test-ImportQuickRequired {
+    param([string]$Label)
+    return $Label -cin @('Record Type', 'Checkpoint ID', 'Created', 'Execution State', 'Objective', 'Remaining Work', 'Blockers', 'Next Action', 'Resume Condition', 'Recorded By')
 }
 
 function Write-ImportDiagnostic {
@@ -503,13 +520,6 @@ function Invoke-ImportHandoff {
         }
     }
 
-    if ($level -eq 'L0') {
-        Write-ImportDiagnostic 'POLICY_LIMITATION' 'UNKNOWN' $Payload "Level 0 requests must not write execution-control records to docs/" "Do not import Level 0 handoffs into docs/tasks; no durable record is permitted at Level 0"
-        [Console]::Error.WriteLine('IMPORT-DRAFT|tier=none|unresolved=0|verdict=REFUSED-L0')
-        $script:ImportExitCode = 1
-        return
-    }
-
     $taskSupplied = $false
     $taskId = ''
     if ($P.ContainsKey('Task ID')) {
@@ -520,14 +530,56 @@ function Invoke-ImportHandoff {
         }
     }
 
+    # A resolvable Task Record owns the ceremony level: the effective level is the
+    # higher of the payload claim and the record's classification (default Level 2,
+    # as validate_checkpoint does), and a lower payload claim is a flagged downgrade.
+    $taskLevel = ''
+    $downgradeNote = ''
+    if ($taskSupplied -and $TaskById.ContainsKey($taskId)) {
+        $linkedFile = $TaskById[$taskId]
+        $linkedCeremony = Get-FieldValue $linkedFile 'Ceremony Level'
+        if ([string]::IsNullOrEmpty($linkedCeremony)) { $linkedCeremony = Get-FieldValue $linkedFile 'Work Classification' }
+        if (-not [string]::IsNullOrEmpty($linkedCeremony)) {
+            $taskLevel = Get-ParsedCeremonyLevel $linkedCeremony
+            if ($taskLevel -eq 'invalid') { $taskLevel = '' }
+        }
+        if ([string]::IsNullOrEmpty($taskLevel)) { $taskLevel = '2' }
+        $payloadN = ''
+        switch -CaseSensitive ($level) {
+            'L1' { $payloadN = '1' }
+            'L2' { $payloadN = '2' }
+            'L3' { $payloadN = '3' }
+        }
+        if (-not [string]::IsNullOrEmpty($payloadN) -and [int]$payloadN -lt [int]$taskLevel) {
+            if ($levelExplicit) {
+                $downgradeNote = "Checkpoint cannot downgrade Ceremony Level from Level $taskLevel to Level $payloadN"
+            }
+            $level = "L$taskLevel"
+            $levelExplicit = $true
+        } elseif ([string]::IsNullOrEmpty($payloadN) -and $taskLevel -ceq '1') {
+            $level = 'L1'
+        } elseif ($taskLevel -ceq '0') {
+            $level = 'L0'
+        }
+    }
+
+    if ($level -eq 'L0') {
+        Write-ImportDiagnostic 'POLICY_LIMITATION' 'UNKNOWN' $Payload "Level 0 requests must not write execution-control records to docs/" "Do not import Level 0 handoffs into docs/tasks; no durable record is permitted at Level 0"
+        [Console]::Error.WriteLine('IMPORT-DRAFT|tier=none|unresolved=0|verdict=REFUSED-L0')
+        $script:ImportExitCode = 1
+        return
+    }
+
     # L2, L3, and any unlabeled payload default fail-closed to the full tier;
     # the tier never depends on which records the scanned repo happens to hold.
     $tier = ''
     if ($level -eq 'L1') { $tier = 'quick' } else { $tier = 'full' }
 
     $checkpointId = ''
+    $checkpointIdValid = $true
     if ($P.ContainsKey('Checkpoint ID') -and -not (Test-ImportPlaceholder ([string]$P['Checkpoint ID']))) {
         $checkpointId = Trim-Value ([string]$P['Checkpoint ID'])
+        if (-not (Test-ChildId $checkpointId)) { $checkpointIdValid = $false }
     } else {
         $createdVal = if ($P.ContainsKey('Created')) { [string]$P['Created'] } else { '' }
         $dateMatch = [regex]::Match($createdVal, '[0-9]{4}-[0-9]{2}-[0-9]{2}')
@@ -543,7 +595,7 @@ function Invoke-ImportHandoff {
     $OUT['Record Type'] = 'Checkpoint Record'
     $RESOLVED['Record Type'] = $true
     $OUT['Checkpoint ID'] = $checkpointId
-    $RESOLVED['Checkpoint ID'] = $true
+    if ($checkpointIdValid) { $RESOLVED['Checkpoint ID'] = $true }
 
     $trace = 0
     $traceMessage = ''
@@ -554,6 +606,7 @@ function Invoke-ImportHandoff {
         } else {
             $trace = 1
             $traceMessage = "Checkpoint references unknown Task ID: $taskId"
+            $OUT['Task ID'] = $taskId
         }
     } elseif ($tier -eq 'quick') {
         $OUT['Task ID'] = 'N/A — no Task Record (Level 0/1)'
@@ -594,19 +647,25 @@ function Invoke-ImportHandoff {
 
     # Quick tier: only the ten quick-required labels block the verdict; every
     # unresolved full-only label degrades explicitly via POLICY_LIMITATION.
-    $quickRequired = @('Record Type', 'Checkpoint ID', 'Created', 'Execution State', 'Objective', 'Remaining Work', 'Blockers', 'Next Action', 'Resume Condition', 'Recorded By')
     $unresolvedCount = 0
     $unresolvedLabels = @()
     $degradedLabels = @()
     foreach ($label in $labelOrder) {
         if (-not $RESOLVED.ContainsKey($label)) {
-            if ($tier -eq 'quick' -and $label -notin $quickRequired) {
+            if ($tier -eq 'quick' -and -not (Test-ImportQuickRequired $label)) {
                 if ($label -ne 'Task ID') { $degradedLabels += $label }
                 continue
             }
             $unresolvedCount++
             $unresolvedLabels += $label
         }
+    }
+
+    if (-not [string]::IsNullOrEmpty($downgradeNote)) {
+        Write-ImportDiagnostic 'POLICY_LIMITATION' $checkpointId $Payload $downgradeNote 'Match the established task ceremony level'
+    }
+    if (-not $checkpointIdValid) {
+        Write-ImportDiagnostic 'INVALID_ID' $checkpointId $Payload "Checkpoint ID is not stable: $checkpointId" 'Use CHECKPOINT-YYYY-MM-DD-task-id-sequence'
     }
 
     foreach ($evidence in @('Verification Evidence', 'CI Evidence')) {
@@ -634,7 +693,12 @@ function Invoke-ImportHandoff {
                 'L3' { Write-Output '- **Ceremony Level**: Level 3 (Release-Critical)' }
             }
         }
-        if (-not $RESOLVED.ContainsKey($label)) { continue }
+        if (-not $RESOLVED.ContainsKey($label)) {
+            # Supplied but unresolved (unknown Task ID, malformed Checkpoint ID):
+            # keep the value so canonical re-validation reports the same failure.
+            if ($OUT.ContainsKey($label)) { Write-Output "- **${label}**: $($OUT[$label])" }
+            continue
+        }
         if ($label -eq 'Changed Files') {
             Write-Output '- **Changed Files**:'
             foreach ($entry in ([string]$OUT[$label] -split ',')) {

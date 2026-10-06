@@ -1,0 +1,11 @@
+# Foreign /handoff payload fixture: quick-missing-recorded-by.
+# Level 1 payload missing the last quick-required label (Recorded By).
+Ceremony Level: Level 1 (Standard)
+Created: 2026-10-07 09:00 UTC
+Execution State: in_progress
+Remaining Work: Run the spellcheck pass
+Blockers: None identified
+Next Action: Run the spellcheck pass
+Resume Condition: Spellcheck pass completes
+Checkpoint ID: CHECKPOINT-2026-10-07-norecorder-1
+Objective: Fix a typo in the README

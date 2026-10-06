@@ -1,0 +1,1 @@
+IMPORT-UNRESOLVED|Specification|Checkpoint Type|Completed Work|Changed Files|Branch / Revision|Locked Decisions and Invariants|Verification Evidence|CI Evidence|Scope Changes

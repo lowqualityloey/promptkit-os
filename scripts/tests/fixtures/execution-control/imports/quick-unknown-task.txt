@@ -1,0 +1,13 @@
+# Foreign /handoff payload fixture: quick-unknown-task.
+# Level 1 payload whose supplied Task ID has no record: the ID stays in the draft so canonical re-validation also reports TRACEABILITY_MISSING.
+Ceremony Level: Level 1 (Standard)
+Created: 2026-10-07 09:00 UTC
+Execution State: in_progress
+Remaining Work: Run the spellcheck pass
+Blockers: None identified
+Next Action: Run the spellcheck pass
+Resume Condition: Spellcheck pass completes
+Recorded By: foreign-harness
+Checkpoint ID: CHECKPOINT-2026-10-07-unknown-1
+Objective: Fix a typo in the README
+Task ID: TASK-2099-01-01-no-such-record

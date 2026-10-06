@@ -174,13 +174,14 @@ assert_import_case() {
     fi
 
     # No fabricated task identity: the draft only carries a Task ID line when the
-    # payload supplied an ID that resolved in TASK_FILE_BY_ID.
+    # payload supplied one (kept even if unresolved, so re-validation also fails)
+    # or the quick tier states N/A.
     local task_line_count
     task_line_count="$(grep -Ec '^- \*\*Task ID\*\*:' "$normalized_file" || true)"
     if [ "$expect_task_line" = "yes" ]; then
-        [ "$task_line_count" -eq 1 ] || fail "import $name expected one resolved Task ID draft line but found $task_line_count"
+        [ "$task_line_count" -eq 1 ] || fail "import $name expected one Task ID draft line but found $task_line_count"
     else
-        [ "$task_line_count" -eq 0 ] || fail "import $name emitted a synthesized or unresolved Task ID draft line ($task_line_count)"
+        [ "$task_line_count" -eq 0 ] || fail "import $name emitted an unexpected Task ID draft line ($task_line_count)"
     fi
 
     if [ "$unresolved_expected_file" != "-" ]; then
@@ -191,21 +192,27 @@ assert_import_case() {
         [ "$actual_unresolved" = "$expected_unresolved" ] || fail "import $name unresolved mismatch: $actual_unresolved (expected $expected_unresolved)"
     fi
 
-    # Round trip: a QUICK-VALID draft must pass the canonical validator when
-    # persisted as a checkpoint record (the importer's tier survives re-validation).
-    if [ "$expected_verdict" = "QUICK-VALID" ]; then
+    # Round trip: the importer's verdict must agree with the canonical validator.
+    # Persist the draft into a copy of the fixture root and re-validate it. A
+    # QUICK-VALID / FULL-VALID draft must pass; a DRAFT-INCOMPLETE draft must not
+    # report VALID. A REFUSED-L0 import emits no draft and is not round-tripped.
+    if [ "$expected_verdict" != "REFUSED-L0" ]; then
         local rt_root="$TEMP_ROOT/import-${name}-roundtrip"
         local rt_output="$TEMP_ROOT/import-${name}-roundtrip.output"
-        mkdir -p "$rt_root/docs/tasks"
+        rm -rf "$rt_root"
+        cp -R "$root" "$rt_root"
         set +e
         bash "$VALIDATOR" --root "$root" --import "$payload_file" > "$rt_root/docs/tasks/${name}.checkpoint-001.md" 2>/dev/null
-        set -e
-        set +e
         bash "$VALIDATOR" --root "$rt_root" > "$rt_output" 2>&1
         actual_exit=$?
         set -e
-        [ "$actual_exit" -eq 0 ] || fail "import $name round-trip draft failed canonical validation (exit $actual_exit)"
-        grep -Eq '^VALID\|' "$rt_output" || fail "import $name round-trip draft did not report VALID"
+        if [ "$expected_exit" -eq 0 ]; then
+            [ "$actual_exit" -eq 0 ] || fail "import $name ($expected_verdict) draft failed canonical validation (exit $actual_exit)"
+            grep -Eq '^VALID\|' "$rt_output" || fail "import $name ($expected_verdict) draft did not report VALID on re-validation"
+        else
+            [ "$actual_exit" -ne 0 ] || fail "import $name ($expected_verdict) draft passed canonical validation (importer and validator disagree)"
+            ! grep -Eq '^VALID\|' "$rt_output" || fail "import $name ($expected_verdict) draft reported VALID on re-validation"
+        fi
     fi
 }
 
