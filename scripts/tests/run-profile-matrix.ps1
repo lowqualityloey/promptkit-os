@@ -233,7 +233,7 @@ Get-ChildItem -LiteralPath $RepoRoot -Force | Where-Object { $_.Name -notin @(".
 $t15Output = & pwsh -NoProfile -File (Join-Path $t15Kit "init.ps1") --balanced --engine-version=v9.8.7 --tracking=local --host=agents $t15Project 2>&1
 $t15Agents = Get-Content -Raw (Join-Path $t15Project "AGENTS.md") -ErrorAction SilentlyContinue
 $t15State = Get-Content -Raw (Join-Path $t15Project "docs/STATE.md") -ErrorAction SilentlyContinue
-if ($LASTEXITCODE -eq 0 -and $t15Agents -match '(?m)^Engine: v9\.8\.7 \(unknown\) — stamped at install time$' -and $t15State -match '(?m)^- \*\*Engine Version\*\*: v9\.8\.7 @ unknown$') {
+if ($LASTEXITCODE -eq 0 -and $t15Agents -match '(?m)^Engine: v9\.8\.7 \(unknown\) — stamped at install time' -and $t15State -match '(?m)^- \*\*Engine Version\*\*: v9\.8\.7 @ unknown$') {
     Ok "courier release version is stamped while SHA remains unknown"
 } else {
     NotOk "courier identity stamp (agent=$($t15Agents -split "`r?`n" | Where-Object { $_ -match '^Engine:' }), state=$($t15State -split "`r?`n" | Where-Object { $_ -match 'Engine Version' }))"
@@ -245,7 +245,7 @@ git -C $t15Kit tag v1.2.3
 $t15GitProject = NewDir "courier-git-identity"
 $t15GitOutput = & pwsh -NoProfile -File (Join-Path $t15Kit "init.ps1") --balanced --engine-version=v9.8.7 --tracking=local --host=agents $t15GitProject 2>&1
 $t15GitAgents = Get-Content -Raw (Join-Path $t15GitProject "AGENTS.md") -ErrorAction SilentlyContinue
-if ($LASTEXITCODE -eq 0 -and $t15GitAgents -match '(?m)^Engine: v1\.2\.3 \([0-9a-f]{7,}\) — stamped at install time$') {
+if ($LASTEXITCODE -eq 0 -and $t15GitAgents -match '(?m)^Engine: v1\.2\.3 \([0-9a-f]{7,}\) — stamped at install time') {
     Ok "Git-derived engine identity overrides courier version hint"
 } else {
     NotOk "Git identity precedence (agent=$($t15GitAgents -split "`r?`n" | Where-Object { $_ -match '^Engine:' }))"
