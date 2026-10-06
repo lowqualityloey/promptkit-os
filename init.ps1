@@ -37,6 +37,7 @@ $UsePicker = [Environment]::UserInteractive -and -not [Console]::IsInputRedirect
 $ProfileInteractive = $false
 $TrackingInteractive = $false
 $HostInteractive = $false
+$CourierEngineVersion = ""
 
 function Show-SetupBanner {
     if (-not $UsePicker) { return }
@@ -387,6 +388,7 @@ foreach ($a in $AllArgs) {
         "--tracking=github" { $Tracking = "github"; $TrackingSet = $true }
         "--tracking=jira" { $Tracking = "jira"; $TrackingSet = $true }
         "--tracking=linear" { $Tracking = "linear"; $TrackingSet = $true }
+        { $_ -like "--engine-version=*" } { $CourierEngineVersion = $_.Substring(17) }
         { $_ -like "--host=*" } { $Hosts = $_.Substring(7); $HostSet = $true }
         { $_ -like "--add-host=*" } {
             $ah = $_.Substring(11)
@@ -523,11 +525,15 @@ $EngineDir = Split-Path $ScriptDir -Leaf
 $EngineVersion = "unknown"
 $EngineSha = "unknown"
 try {
-    if ((Test-Path -LiteralPath (Join-Path $ScriptDir ".git")) -and (Get-Command git -ErrorAction SilentlyContinue)) {
-        $described = git -C $ScriptDir describe --tags --match "v[0-9]*" 2>$null | Select-Object -First 1
-        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($described)) { $EngineVersion = "$described".Trim() }
-        $shortSha = git -C $ScriptDir rev-parse --short HEAD 2>$null | Select-Object -First 1
-        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($shortSha)) { $EngineSha = "$shortSha".Trim() }
+    if (Test-Path -LiteralPath (Join-Path $ScriptDir ".git")) {
+        if (Get-Command git -ErrorAction SilentlyContinue) {
+            $described = git -C $ScriptDir describe --tags --match "v[0-9]*" 2>$null | Select-Object -First 1
+            if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($described)) { $EngineVersion = "$described".Trim() }
+            $shortSha = git -C $ScriptDir rev-parse --short HEAD 2>$null | Select-Object -First 1
+            if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($shortSha)) { $EngineSha = "$shortSha".Trim() }
+        }
+    } elseif (-not [string]::IsNullOrWhiteSpace($CourierEngineVersion)) {
+        $EngineVersion = $CourierEngineVersion
     }
 } catch {
     $EngineVersion = "unknown"
