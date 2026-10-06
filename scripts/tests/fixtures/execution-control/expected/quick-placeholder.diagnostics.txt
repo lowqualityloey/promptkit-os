@@ -1,0 +1,1 @@
+CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-placeholder-1|docs/tasks/TASK-2026-10-07-quick-placeholder.checkpoint-1.md|Missing usable value: Next Action|Provide a non-placeholder value for the labeled field

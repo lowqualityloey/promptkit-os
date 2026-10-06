@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [25 Inlined Workflows (112,660 tok) + Templates + Protocols] │
+│ Every Turn: [25 Inlined Workflows (112,888 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -40,8 +40,8 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **30,966 tok** |
-| Full workflow set | 25 | **112,660 tok** |
+| Core-six Lite subset | 6 | **31,194 tok** |
+| Full workflow set | 25 | **112,888 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 

@@ -9,6 +9,9 @@ STRICT=0
 AUTHORIZATION_BASELINE=""
 ERROR_COUNT=0
 RECORD_COUNT=0
+HAS_QUICK_RECORD=0
+QUICK_UNRESOLVED_COUNT=0
+declare -a DEGRADATIONS=()
 
 usage() {
     cat <<'EOF'
@@ -79,6 +82,18 @@ diagnostic() {
     ERROR_COUNT=$((ERROR_COUNT + 1))
 }
 
+degradation() {
+    local category="$1"
+    local record_id="$2"
+    local path="$3"
+    local message="$4"
+    local remediation="$5"
+    message="$(printf '%s' "$message" | tr '\r\n|' '   ')"
+    remediation="$(printf '%s' "$remediation" | tr '\r\n|' '   ')"
+    DEGRADATIONS+=("$(printf '%s|%s|%s|%s|%s' "$category" "$record_id" "$path" "$message" "$remediation")")
+}
+
+
 trim() {
     local value="$1"
     value="${value%$'\r'}"
@@ -129,7 +144,7 @@ is_placeholder() {
     value="$(trim "$1")"
     [ -z "$value" ] && return 0
     case "$value" in
-        "N/A"|"n/a"|"None"|"none"|"Not applicable"|"not applicable"|"[N/A]"|"[None]"|"[Pending]"|"Pending") return 0 ;;
+        "N/A"|"n/a"|"None"|"none"|"Not applicable"|"not applicable"|"TBD"|"tbd"|"[N/A]"|"[None]"|"[Pending]"|"Pending"|"[TBD]"|"[tbd]") return 0 ;;
     esac
     [[ "$value" == \[*\] ]] && return 0
     return 1
@@ -574,6 +589,63 @@ validate_checkpoint() {
     local file="$1" id="$(field_value "$1" "Checkpoint ID")" path
     path="$(relative_path "$file")"; [ -z "$id" ] && id="UNKNOWN"; RECORD_COUNT=$((RECORD_COUNT + 1))
     is_valid_child_id "$id" || diagnostic INVALID_ID "$id" "$path" "Checkpoint ID is not stable: $id" "Use CHECKPOINT-YYYY-MM-DD-task-id-sequence"
+
+    local ceremony_level="$(field_value "$file" "Ceremony Level")"
+    local parsed_level=""
+    case "$ceremony_level" in
+        0|[Ll]evel\ 0*|[Ll]0*) parsed_level="0" ;;
+        1|[Ll]evel\ 1*|[Ll]1*) parsed_level="1" ;;
+        2|[Ll]evel\ 2*|[Ll]2*) parsed_level="2" ;;
+        3|[Ll]evel\ 3*|[Ll]3*) parsed_level="3" ;;
+    esac
+
+    if [ "$parsed_level" = "0" ]; then
+        diagnostic POLICY_LIMITATION "$id" "$path" "Level 0 requests must not write execution-control records to docs/" "Remove Level 0 checkpoint record from docs/tasks"
+        return 0
+    fi
+
+    local tier="full"
+    if [ "$parsed_level" = "1" ]; then
+        tier="quick"
+    fi
+
+    if [ "$tier" = "quick" ]; then
+        HAS_QUICK_RECORD=1
+        [ "$(field_value "$file" "Record Type")" = "Checkpoint Record" ] || diagnostic CHECKPOINT_INCOMPLETE "$id" "$path" "Record Type is not Checkpoint Record" "Use the canonical Checkpoint Record type"
+        require_value "$file" "$id" "Execution State" "CHECKPOINT_INCOMPLETE"
+        require_value "$file" "$id" "Branch / Revision" "CHECKPOINT_INCOMPLETE"
+        require_value "$file" "$id" "Next Action" "CHECKPOINT_INCOMPLETE"
+
+        local task_id="$(field_value "$file" "Task ID")"
+        local unresolved_count=0
+
+        if [ -z "$task_id" ] || is_placeholder "$task_id"; then
+            unresolved_count=$((unresolved_count + 1))
+            degradation POLICY_LIMITATION "$id" "$path" "Task ID is unlinked for Level 1 quick checkpoint" "Level 1 does not require a canonical Task Record"
+        elif [ -z "${TASK_FILE_BY_ID[$task_id]+set}" ]; then
+            unresolved_count=$((unresolved_count + 1))
+            degradation POLICY_LIMITATION "$id" "$path" "Task ID '$task_id' has no canonical Task Record (Level 1 quick checkpoint)" "Level 1 does not require a canonical Task Record"
+        fi
+
+        local non_core_labels=("Specification" "Created" "Checkpoint Type" "Objective" "Completed Work" "Remaining Work" "Changed Files" "Locked Decisions and Invariants" "Verification Evidence" "CI Evidence" "Blockers" "Scope Changes" "Resume Condition" "Recorded By")
+        local label
+        for label in "${non_core_labels[@]}"; do
+            if [ "$label" = "Changed Files" ] || [ "$label" = "Blockers" ] || [ "$label" = "Scope Changes" ]; then
+                if ! field_exists "$file" "$label"; then
+                    unresolved_count=$((unresolved_count + 1))
+                    degradation POLICY_LIMITATION "$id" "$path" "Unresolved label for Level 1 quick checkpoint: $label" "Full tier requires presence of $label"
+                fi
+            else
+                if ! field_exists "$file" "$label" || is_placeholder "$(field_value "$file" "$label")"; then
+                    unresolved_count=$((unresolved_count + 1))
+                    degradation POLICY_LIMITATION "$id" "$path" "Unresolved label for Level 1 quick checkpoint: $label" "Full tier requires non-placeholder value"
+                fi
+            fi
+        done
+        QUICK_UNRESOLVED_COUNT=$((QUICK_UNRESOLVED_COUNT + unresolved_count))
+        return 0
+    fi
+
     local labels=("Record Type" "Checkpoint ID" "Task ID" "Specification" "Created" "Checkpoint Type" "Execution State" "Objective" "Completed Work" "Remaining Work" "Changed Files" "Branch / Revision" "Locked Decisions and Invariants" "Verification Evidence" "CI Evidence" "Blockers" "Scope Changes" "Next Action" "Resume Condition" "Recorded By")
     local label
     for label in "${labels[@]}"; do
@@ -753,7 +825,14 @@ if [ -n "$AUTHORIZATION_BASELINE" ]; then
 fi
 
 if [ "$ERROR_COUNT" -eq 0 ]; then
-    printf 'VALID|RECORDS=%s|ROOT=%s\n' "$RECORD_COUNT" "."
+    for deg in "${DEGRADATIONS[@]}"; do
+        printf '%s\n' "$deg"
+    done
+    if [ "$HAS_QUICK_RECORD" -eq 1 ]; then
+        printf 'VALID|RECORDS=%s|TIER=quick|UNRESOLVED=%s|ROOT=%s\n' "$RECORD_COUNT" "$QUICK_UNRESOLVED_COUNT" "."
+    else
+        printf 'VALID|RECORDS=%s|ROOT=%s\n' "$RECORD_COUNT" "."
+    fi
     exit 0
 fi
 printf 'FAILED|ERRORS=%s|RECORDS=%s\n' "$ERROR_COUNT" "$RECORD_COUNT"

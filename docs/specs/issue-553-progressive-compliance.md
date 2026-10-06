@@ -65,17 +65,17 @@ Of the 20 checkpoint labels, **17 require a non-placeholder value** (`scripts/va
 
 ## Implementation Tasks (The Build)
 
-* [ ] 1. **Jointly specify the tier contract with #550 before implementing either half.** Resolve, in one place: the label count (20 / 42 unique / 24 value-bearing), which labels each tier requires, how `Task ID` absence is represented at L1, and which diagnostic marks each unresolved label produces. Do not implement a 5-field projection that includes a `Task ID` while `workflows/route.md` (anchor: `does **not** trigger Level 2 Controlled Work requirements or mandate creating`) says L1 needs no Task Record.
-* [ ] 2. Define the `quick` tier as a **level-aware** shape, not a fixed field count:
+* [x] 1. **Jointly specify the tier contract with #550 before implementing either half.** Resolve, in one place: the label count (20 / 42 unique / 24 value-bearing), which labels each tier requires, how `Task ID` absence is represented at L1, and which diagnostic marks each unresolved label produces. Do not implement a 5-field projection that includes a `Task ID` while `workflows/route.md` (anchor: `does **not** trigger Level 2 Controlled Work requirements or mandate creating`) says L1 needs no Task Record.
+* [x] 2. Define the `quick` tier as a **level-aware** shape, not a fixed field count:
   * **L0** — no `docs/` write at all (`workflows/route.md` (anchor: `do **not** write files to`)); nothing to validate.
   * **L1** — `quick`: state projection fields only, `Task ID` optional and explicitly marked when absent.
   * **L2/L3** — `full`: all 20 labels (17 value-bearing + 3 presence-only), `Task ID` mandatory and required to resolve (`scripts/validate-execution-control.sh` (anchor: `Checkpoint references unknown Task ID`)).
-* [ ] 3. Split the validator by tier in `scripts/validate-execution-control.sh` (+ `.ps1` twin) with identical behavior. Reuse `POLICY_LIMITATION` (`scripts/validate-execution-control.sh` (anchor: `diagnostic POLICY_LIMITATION`)); introduce no new diagnostic category without a matching `.ps1` twin and a fixture in both harnesses.
-* [ ] 4. Emit the tier and the unresolved-label count in validator output, so `quick`-tier acceptance is machine-checkable rather than inferred.
-* [ ] 5. Wire tier selection to `workflows/route.md` ceremony level in `workflows/checkpoint.md`; the level is read from the established declaration, never inferred by the agent.
-* [ ] 6. Document the model floor as a **guidance note** in `docs/ADOPTION-GUIDE.md` + profile docs: fast-tier models are adequate for L0/L1. Do not encode a hard model restriction; there is no conformance evidence in-repo to support one, and `docs/HOST-CONFORMANCE.md` (anchor: `live host accounts, provider subscriptions, executing fresh sessions`) reserves runtime verification for maintainer-owned sessions.
-* [ ] 7. Fixtures under `scripts/tests/fixtures/execution-control/` (+ both twins): `quick`-pass at L1 with **no** Task Record file; `quick`-rejected at L3; `full`-unchanged at L2; L0 asserting no `docs/` write.
-* [ ] 8. Update `CHANGELOG.md` (`[Unreleased]`).
+* [x] 3. Split the validator by tier in `scripts/validate-execution-control.sh` (+ `.ps1` twin) with identical behavior. Reuse `POLICY_LIMITATION` (`scripts/validate-execution-control.sh` (anchor: `diagnostic POLICY_LIMITATION`)); introduce no new diagnostic category without a matching `.ps1` twin and a fixture in both harnesses.
+* [x] 4. Emit the tier and the unresolved-label count in validator output, so `quick`-tier acceptance is machine-checkable rather than inferred.
+* [x] 5. Wire tier selection to `workflows/route.md` ceremony level in `workflows/checkpoint.md`; the level is read from the established declaration, never inferred by the agent.
+* [x] 6. Document the model floor as a **guidance note** in `docs/ADOPTION-GUIDE.md` + profile docs: fast-tier models are adequate for L0/L1. Do not encode a hard model restriction; there is no conformance evidence in-repo to support one, and `docs/HOST-CONFORMANCE.md` (anchor: `live host accounts, provider subscriptions, executing fresh sessions`) reserves runtime verification for maintainer-owned sessions.
+* [x] 7. Fixtures under `scripts/tests/fixtures/execution-control/` (+ both twins): `quick`-pass at L1 with **no** Task Record file; `quick`-rejected at L3; `full`-unchanged at L2; L0 asserting no `docs/` write.
+* [x] 8. Update `CHANGELOG.md` (`[Unreleased]`).
 
 --------
 
