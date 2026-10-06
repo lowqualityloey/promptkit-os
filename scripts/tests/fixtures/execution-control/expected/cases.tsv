@@ -22,3 +22,8 @@ legacy-none-profile	0	legacy-none-profile.summary.txt	legacy-none-profile.diagno
 adaptation-invalid-id	1	adaptation-invalid-id.summary.txt	adaptation-invalid-id.diagnostics.txt
 adaptation-invalid-fields	1	adaptation-invalid-fields.summary.txt	adaptation-invalid-fields.diagnostics.txt
 transition-table-scope	0	transition-table-scope.summary.txt	transition-table-scope.diagnostics.txt
+quick-pass	0	quick-pass.summary.txt	quick-pass.diagnostics.txt
+quick-unlinked	1	quick-unlinked.summary.txt	quick-unlinked.diagnostics.txt
+quick-rejected	1	quick-rejected.summary.txt	quick-rejected.diagnostics.txt
+quick-placeholder	1	quick-placeholder.summary.txt	quick-placeholder.diagnostics.txt
+l0-no-write	1	l0-no-write.summary.txt	l0-no-write.diagnostics.txt

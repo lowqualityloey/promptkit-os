@@ -9,6 +9,9 @@ STRICT=0
 AUTHORIZATION_BASELINE=""
 ERROR_COUNT=0
 RECORD_COUNT=0
+HAS_QUICK_RECORD=0
+QUICK_UNRESOLVED_COUNT=0
+declare -a DEGRADATIONS=()
 
 usage() {
     cat <<'EOF'
@@ -73,11 +76,23 @@ diagnostic() {
     local path="$3"
     local message="$4"
     local remediation="$5"
-    message="$(printf '%s' "$message" | tr '\r\n|' '   ')"
-    remediation="$(printf '%s' "$remediation" | tr '\r\n|' '   ')"
+    message="$(trim "$(printf '%s' "$message" | tr '\r\n|' '   ')")"
+    remediation="$(trim "$(printf '%s' "$remediation" | tr '\r\n|' '   ')")"
     printf '%s|%s|%s|%s|%s\n' "$category" "$record_id" "$path" "$message" "$remediation"
     ERROR_COUNT=$((ERROR_COUNT + 1))
 }
+
+degradation() {
+    local category="$1"
+    local record_id="$2"
+    local path="$3"
+    local message="$4"
+    local remediation="$5"
+    message="$(trim "$(printf '%s' "$message" | tr '\r\n|' '   ')")"
+    remediation="$(trim "$(printf '%s' "$remediation" | tr '\r\n|' '   ')")"
+    DEGRADATIONS+=("$(printf '%s|%s|%s|%s|%s' "$category" "$record_id" "$path" "$message" "$remediation")")
+}
+
 
 trim() {
     local value="$1"
@@ -135,6 +150,33 @@ is_placeholder() {
     return 1
 }
 
+is_quick_placeholder() {
+    local value
+    value="$(trim "$1")"
+    is_placeholder "$value" && return 0
+    case "$value" in
+        "TBD"|"tbd"|"[TBD]"|"[tbd]") return 0 ;;
+    esac
+    return 1
+}
+
+parse_ceremony_level() {
+    local val
+    val="$(trim "$1")"
+    [ -z "$val" ] && return 0
+    if [[ "$val" =~ ^[[:space:]]*(0|[Ll]evel[[:space:]]*0|[Ll]0)([^0-9]|$) ]]; then
+        echo "0"
+    elif [[ "$val" =~ ^[[:space:]]*(1|[Ll]evel[[:space:]]*1|[Ll]1)([^0-9]|$) ]]; then
+        echo "1"
+    elif [[ "$val" =~ ^[[:space:]]*(2|[Ll]evel[[:space:]]*2|[Ll]2)([^0-9]|$) ]]; then
+        echo "2"
+    elif [[ "$val" =~ ^[[:space:]]*(3|[Ll]evel[[:space:]]*3|[Ll]3)([^0-9]|$) ]]; then
+        echo "3"
+    else
+        echo "invalid"
+    fi
+}
+
 require_label() {
     local file="$1" id="$2" label="$3" category="${4:-MISSING_FIELD}"
     if ! field_exists "$file" "$label"; then
@@ -150,6 +192,18 @@ require_value() {
     local value
     value="$(field_value "$file" "$label")"
     if is_placeholder "$value"; then
+        diagnostic "$category" "$id" "$(relative_path "$file")" "Missing usable value: $label" "$remediation"
+        return 1
+    fi
+    return 0
+}
+
+require_quick_value() {
+    local file="$1" id="$2" label="$3" category="${4:-MISSING_FIELD}" remediation="${5:-Provide a non-placeholder value for the labeled field}"
+    require_label "$file" "$id" "$label" "$category" || return 1
+    local value
+    value="$(field_value "$file" "$label")"
+    if is_quick_placeholder "$value"; then
         diagnostic "$category" "$id" "$(relative_path "$file")" "Missing usable value: $label" "$remediation"
         return 1
     fi
@@ -574,6 +628,95 @@ validate_checkpoint() {
     local file="$1" id="$(field_value "$1" "Checkpoint ID")" path
     path="$(relative_path "$file")"; [ -z "$id" ] && id="UNKNOWN"; RECORD_COUNT=$((RECORD_COUNT + 1))
     is_valid_child_id "$id" || diagnostic INVALID_ID "$id" "$path" "Checkpoint ID is not stable: $id" "Use CHECKPOINT-YYYY-MM-DD-task-id-sequence"
+
+    local ceremony_level="$(field_value "$file" "Ceremony Level")"
+    local parsed_level=""
+    if [ -n "$ceremony_level" ]; then
+        parsed_level="$(parse_ceremony_level "$ceremony_level")"
+        if [ "$parsed_level" = "invalid" ]; then
+            diagnostic INVALID_STATE "$id" "$path" "Unknown or malformed Ceremony Level: $ceremony_level" "Use Level 0, Level 1, Level 2, or Level 3"
+            return 0
+        fi
+    fi
+
+    local task_id="$(field_value "$file" "Task ID")"
+    local task_level=""
+    if [ -n "$task_id" ] && [ -n "${TASK_FILE_BY_ID[${task_id:-}]+set}" ]; then
+        local task_file="${TASK_FILE_BY_ID[$task_id]}"
+        local task_ceremony="$(field_value "$task_file" "Ceremony Level")"
+        [ -z "$task_ceremony" ] && task_ceremony="$(field_value "$task_file" "Work Classification")"
+        if [ -n "$task_ceremony" ]; then
+            task_level="$(parse_ceremony_level "$task_ceremony")"
+            [ "$task_level" = "invalid" ] && task_level=""
+        fi
+        [ -z "$task_level" ] && task_level="2"
+    fi
+
+    local effective_level="$parsed_level"
+    if [ -n "$task_level" ]; then
+        if [ -z "$effective_level" ] || [ "$task_level" -gt "$effective_level" ]; then
+            effective_level="$task_level"
+        fi
+        if [ -n "$parsed_level" ] && [ "$parsed_level" -lt "$task_level" ]; then
+            diagnostic POLICY_LIMITATION "$id" "$path" "Checkpoint cannot downgrade Ceremony Level from Level $task_level to Level $parsed_level" "Match the established task ceremony level"
+        fi
+    fi
+
+    if [ "$effective_level" = "0" ]; then
+        diagnostic POLICY_LIMITATION "$id" "$path" "Level 0 requests must not write execution-control records to docs/" "Remove Level 0 checkpoint record from docs/tasks"
+        return 0
+    fi
+
+    local tier="full"
+    if [ "$effective_level" = "1" ]; then
+        tier="quick"
+    fi
+
+    if [ "$tier" = "quick" ]; then
+        HAS_QUICK_RECORD=1
+        [ "$(field_value "$file" "Record Type")" = "Checkpoint Record" ] || diagnostic CHECKPOINT_INCOMPLETE "$id" "$path" "Record Type is not Checkpoint Record" "Use the canonical Checkpoint Record type"
+
+        local quick_required=("Created" "Execution State" "Objective" "Remaining Work" "Next Action" "Resume Condition" "Recorded By")
+        local req_lbl
+        for req_lbl in "${quick_required[@]}"; do
+            require_quick_value "$file" "$id" "$req_lbl" "CHECKPOINT_INCOMPLETE"
+        done
+
+        if ! field_exists "$file" "Blockers"; then
+            diagnostic CHECKPOINT_INCOMPLETE "$id" "$path" "Missing field: Blockers" "Add the labeled field to the canonical record"
+        else
+            local blockers_val="$(field_value "$file" "Blockers")"
+            if [ "$blockers_val" != "None identified" ] && is_quick_placeholder "$blockers_val"; then
+                diagnostic CHECKPOINT_INCOMPLETE "$id" "$path" "Missing usable value: Blockers" "Provide a concrete value or 'None identified' for Blockers"
+            fi
+        fi
+
+        if [ -n "$task_id" ] && ! is_placeholder "$task_id" && ! [[ "$task_id" =~ ^N/A ]]; then
+            if [ -z "${TASK_FILE_BY_ID[${task_id:-}]+set}" ]; then
+                diagnostic TRACEABILITY_MISSING "$id" "$path" "Checkpoint references unknown Task ID: $task_id" "Link the checkpoint to an existing Task Record or omit Task ID for Level 1"
+            fi
+        fi
+
+        local non_core_labels=("Specification" "Checkpoint Type" "Completed Work" "Changed Files" "Branch / Revision" "Locked Decisions and Invariants" "Verification Evidence" "CI Evidence" "Scope Changes")
+        local label
+        local unresolved_count=0
+        for label in "${non_core_labels[@]}"; do
+            if [ "$label" = "Changed Files" ] || [ "$label" = "Scope Changes" ]; then
+                if ! field_exists "$file" "$label"; then
+                    unresolved_count=$((unresolved_count + 1))
+                    degradation POLICY_LIMITATION "$id" "$path" "Unresolved label for Level 1 quick checkpoint: $label" "Full tier requires presence of $label"
+                fi
+            else
+                if ! field_exists "$file" "$label" || is_quick_placeholder "$(field_value "$file" "$label")"; then
+                    unresolved_count=$((unresolved_count + 1))
+                    degradation POLICY_LIMITATION "$id" "$path" "Unresolved label for Level 1 quick checkpoint: $label" "Full tier requires non-placeholder value"
+                fi
+            fi
+        done
+        QUICK_UNRESOLVED_COUNT=$((QUICK_UNRESOLVED_COUNT + unresolved_count))
+        return 0
+    fi
+
     local labels=("Record Type" "Checkpoint ID" "Task ID" "Specification" "Created" "Checkpoint Type" "Execution State" "Objective" "Completed Work" "Remaining Work" "Changed Files" "Branch / Revision" "Locked Decisions and Invariants" "Verification Evidence" "CI Evidence" "Blockers" "Scope Changes" "Next Action" "Resume Condition" "Recorded By")
     local label
     for label in "${labels[@]}"; do
@@ -752,9 +895,22 @@ if [ -n "$AUTHORIZATION_BASELINE" ]; then
     [ "$auth_status" -eq 0 ] || ERROR_COUNT=$((ERROR_COUNT + 1))
 fi
 
+for deg in "${DEGRADATIONS[@]}"; do
+    printf '%s\n' "$deg"
+done
+
 if [ "$ERROR_COUNT" -eq 0 ]; then
-    printf 'VALID|RECORDS=%s|ROOT=%s\n' "$RECORD_COUNT" "."
+    if [ "$HAS_QUICK_RECORD" -eq 1 ]; then
+        printf 'VALID|RECORDS=%s|TIER=quick|UNRESOLVED=%s|ROOT=%s\n' "$RECORD_COUNT" "$QUICK_UNRESOLVED_COUNT" "."
+    else
+        printf 'VALID|RECORDS=%s|ROOT=%s\n' "$RECORD_COUNT" "."
+    fi
     exit 0
 fi
-printf 'FAILED|ERRORS=%s|RECORDS=%s\n' "$ERROR_COUNT" "$RECORD_COUNT"
+
+if [ "$HAS_QUICK_RECORD" -eq 1 ]; then
+    printf 'FAILED|ERRORS=%s|RECORDS=%s|TIER=quick|UNRESOLVED=%s\n' "$ERROR_COUNT" "$RECORD_COUNT" "$QUICK_UNRESOLVED_COUNT"
+else
+    printf 'FAILED|ERRORS=%s|RECORDS=%s\n' "$ERROR_COUNT" "$RECORD_COUNT"
+fi
 exit 1

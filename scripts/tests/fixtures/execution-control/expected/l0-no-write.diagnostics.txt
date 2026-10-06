@@ -1,0 +1,1 @@
+POLICY_LIMITATION|CHECKPOINT-2026-10-07-l0-no-write-1|docs/tasks/TASK-2026-10-07-l0-no-write.checkpoint-1.md|Level 0 requests must not write execution-control records to docs/|Remove Level 0 checkpoint record from docs/tasks

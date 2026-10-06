@@ -1,6 +1,6 @@
 ### Metadata
 
-* **Related Spec:** `workflows/route.md` Levels 0–3 — L0 `workflows/route.md` (anchor: `Zero task records, no GitHub issue required, no state tracking overhead`), L1 `workflows/route.md` (anchor: `without requiring formal Task Record files`), Task Record "**No**" `workflows/route.md` (anchor: `**No** (Fast-path direct execution`) / `workflows/route.md` (anchor: `**No** (Natural workflow`), L1 rule `workflows/route.md` (anchor: `does **not** trigger Level 2 Controlled Work requirements or mandate creating`), L0 no-write `workflows/route.md` (anchor: `do **not** write files to`); `scripts/validate-execution-control.sh` — `validate_checkpoint` `scripts/validate-execution-control.sh` (anchor: `validate_checkpoint() {`), label array `scripts/validate-execution-control.sh` (anchor: `local labels=("Record Type" "Checkpoint ID" "Task ID"`), `require_value` `scripts/validate-execution-control.sh` (anchor: `require_value() {`), `is_placeholder` `scripts/validate-execution-control.sh` (anchor: `is_placeholder() {`), `TRACEABILITY_MISSING` `scripts/validate-execution-control.sh` (anchor: `Checkpoint references unknown Task ID`); `scripts/validate-execution-control.ps1` (twin), #550 (joint tier contract — **must land first**)
+* **Related Spec:** `workflows/route.md` Levels 0–3 — L0 `workflows/route.md` (anchor: `Zero task records, no GitHub issue required, no state tracking overhead`), L1 `workflows/route.md` (anchor: `without requiring formal Task Record files`), Task Record "**No**" `workflows/route.md` (anchor: `**No** (Fast-path direct execution`) / `workflows/route.md` (anchor: `**No** (Natural workflow`), L1 rule `workflows/route.md` (anchor: `does **not** trigger Level 2 Controlled Work requirements or mandate creating`), L0 no-write `workflows/route.md` (anchor: `do **not** write files to`); `scripts/validate-execution-control.sh` — `validate_checkpoint` `scripts/validate-execution-control.sh` (anchor: `validate_checkpoint() {`), label array `scripts/validate-execution-control.sh` (anchor: `local labels=("Record Type" "Checkpoint ID" "Task ID"`), `require_value` `scripts/validate-execution-control.sh` (anchor: `require_value() {`), `is_placeholder` `scripts/validate-execution-control.sh` (anchor: `is_placeholder() {`), `TRACEABILITY_MISSING` `scripts/validate-execution-control.sh` (anchor: `Checkpoint references unknown Task ID`); `scripts/validate-execution-control.ps1` (twin), #550 (consumes this tier contract — **lands after #553**)
 * **Priority:** `priority/p2`
 * **Labels:** `type:feature`, `area:tooling`, `priority/p2`
 * **Work Classification:** `L2` (validator contract tiers; proposed SemVer impact `minor`)
@@ -25,6 +25,22 @@ The previous draft defined the `quick` tier as the "5-field minimal projection" 
 **Therefore a `quick` tier containing a `Task ID` is unsatisfiable at L1 unless it also mandates creating a Task Record** — which directly re-creates the ceremony burden this issue exists to remove. Worse, at **L0** a record cannot be written at all: `workflows/route.md` (anchor: `do **not** write files to`) states an informational L0 request must "**not** write files to `docs/`".
 
 The tier must therefore bind to ceremony level **without** inheriting a Task Record requirement at L0/L1.
+
+### Canonical tier contract (owned by #553; #550 consumes it)
+
+The ceremony level established by `workflows/route.md` is the sole tier source. Neither an imported `/handoff` payload nor a caller may lower it.
+
+| Level | Record behavior | Validation contract |
+| :--- | :--- | :--- |
+| L0 | No checkpoint file under `docs/`; state remains in conversation. | No record validation. |
+| L1 | A quick Checkpoint Record is allowed without a Task Record. | Required labels: Record Type, Checkpoint ID, Created, Execution State, Objective, Remaining Work, Blockers, Next Action, Resume Condition, and Recorded By; each needs a non-placeholder value (Blockers may be None identified). Task ID is optional; when absent, state N/A — no Task Record (Level 0/1) and do not emit TRACEABILITY_MISSING. |
+| L2/L3 | A `full` Checkpoint Record is mandatory. | Preserve the current full contract: all 20 checkpoint labels, with a `Task ID` resolving to a canonical Task Record. No field, diagnostic, or exit behavior is relaxed. |
+
+The stronger L1 `Blockers` value requirement is deliberate: a quick record must state concrete blockers or `None identified` because it carries less supporting context. The full tier retains its existing presence-only requirement for compatibility; this issue does not tighten it.
+
+For L1, each of the other nine full-contract labels (`Specification`, `Checkpoint Type`, `Completed Work`, `Changed Files`, `Branch / Revision`, `Locked Decisions and Invariants`, `Verification Evidence`, `CI Evidence`, and `Scope Changes`) that cannot be established must be named as an explicit `POLICY_LIMITATION`; report the unresolved count. A supplied but unresolved `Task ID` emits `TRACEABILITY_MISSING` and keeps the record visibly degraded. A quick-valid record is never represented as full-valid, complete, release-ready, or approval.
+
+`#553` owns this tier table and the validator implementation. `#550` maps imported fields into the selected tier and must not create a second tier definition. An L1 import can satisfy the quick tier only when all ten quick-required labels resolve; otherwise it remains `DRAFT-INCOMPLETE`. At L2/L3, every imported record follows the full contract and remains `DRAFT-INCOMPLETE` until all full requirements resolve.
 
 ### Corrections to the previous draft's stated numbers
 
@@ -65,12 +81,12 @@ Of the 20 checkpoint labels, **17 require a non-placeholder value** (`scripts/va
 
 ## Implementation Tasks (The Build)
 
-* [ ] 1. **Jointly specify the tier contract with #550 before implementing either half.** Resolve, in one place: the label count (20 / 42 unique / 24 value-bearing), which labels each tier requires, how `Task ID` absence is represented at L1, and which diagnostic marks each unresolved label produces. Do not implement a 5-field projection that includes a `Task ID` while `workflows/route.md` (anchor: `does **not** trigger Level 2 Controlled Work requirements or mandate creating`) says L1 needs no Task Record.
+* [ ] 1. Implement the canonical tier contract above in this issue first. `#550` consumes that contract in its importer; it does not co-own or redefine the tier table.
 * [ ] 2. Define the `quick` tier as a **level-aware** shape, not a fixed field count:
   * **L0** — no `docs/` write at all (`workflows/route.md` (anchor: `do **not** write files to`)); nothing to validate.
-  * **L1** — `quick`: state projection fields only, `Task ID` optional and explicitly marked when absent.
+  * **L1** — `quick`: exactly the ten required labels listed in the canonical tier table; `Task ID` is optional and explicitly marked when absent.
   * **L2/L3** — `full`: all 20 labels (17 value-bearing + 3 presence-only), `Task ID` mandatory and required to resolve (`scripts/validate-execution-control.sh` (anchor: `Checkpoint references unknown Task ID`)).
-* [ ] 3. Split the validator by tier in `scripts/validate-execution-control.sh` (+ `.ps1` twin) with identical behavior. Reuse `POLICY_LIMITATION` (`scripts/validate-execution-control.sh` (anchor: `diagnostic POLICY_LIMITATION`)); introduce no new diagnostic category without a matching `.ps1` twin and a fixture in both harnesses.
+* [ ] 3. Split the validator by tier in `scripts/validate-execution-control.sh` (+ `.ps1` twin) with identical behavior. The existing Bash traceability guard (`[ -n "$task_id" ] && [ -n "${TASK_FILE_BY_ID[$task_id]+set}" ] || diagnostic TRACEABILITY_MISSING`) currently reports even an absent Task ID; the PowerShell twin does the equivalent `TaskById.ContainsKey` lookup. Branch this check by tier: absence (including the prescribed no-Task-Record marker) is silent only at L1 quick, a supplied unresolved ID still emits `TRACEABILITY_MISSING`, and L2/L3 keeps the existing behavior. Reuse `POLICY_LIMITATION` (`scripts/validate-execution-control.sh` (anchor: `diagnostic POLICY_LIMITATION`)); introduce no new diagnostic category without a matching `.ps1` twin and a fixture in both harnesses.
 * [ ] 4. Emit the tier and the unresolved-label count in validator output, so `quick`-tier acceptance is machine-checkable rather than inferred.
 * [ ] 5. Wire tier selection to `workflows/route.md` ceremony level in `workflows/checkpoint.md`; the level is read from the established declaration, never inferred by the agent.
 * [ ] 6. Document the model floor as a **guidance note** in `docs/ADOPTION-GUIDE.md` + profile docs: fast-tier models are adequate for L0/L1. Do not encode a hard model restriction; there is no conformance evidence in-repo to support one, and `docs/HOST-CONFORMANCE.md` (anchor: `live host accounts, provider subscriptions, executing fresh sessions`) reserves runtime verification for maintainer-owned sessions.
@@ -91,7 +107,7 @@ Of the 20 checkpoint labels, **17 require a non-placeholder value** (`scripts/va
 
 * Given an L1 record that **does** carry a `Task ID` for which no Task Record file exists,
 * When it is validated,
-* Then it reports the unresolved linkage as an explicit degradation mark and never silently passes as complete — while still not demanding the agent create a Task Record, per `workflows/route.md` (anchor: `does **not** trigger Level 2 Controlled Work requirements or mandate creating`).
+* Then it emits `TRACEABILITY_MISSING`, reports the unresolved linkage and tier visibly, and never reports `full-valid` — while still not demanding the agent create a Task Record, per `workflows/route.md` (anchor: `does **not** trigger Level 2 Controlled Work requirements or mandate creating`).
 
 ### Scenario 3: L3 demands the full tier
 
@@ -133,3 +149,4 @@ bash scripts/validate-execution-control.sh --root scripts/tests/fixtures/executi
 bash scripts/tests/run-behavioral-contract-tests.sh
 pwsh -NoProfile -File scripts/tests/run-execution-control-fixtures.ps1
 ```
+

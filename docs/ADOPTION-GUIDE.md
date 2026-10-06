@@ -22,6 +22,13 @@ PromptKit OS is designed for **gradual adoption**. You don't need to:
 
 Install PromptKit OS using the OpenCode host target so its generated `.opencode/rules.md` is loaded by OpenCode. Install and configure OmO separately in OpenCode, then set its agent-to-model mapping in `omo.jsonc`. These are setup facts only; consult [`docs/HOST-CONFORMANCE.md`](HOST-CONFORMANCE.md) for measured runtime fidelity. OmO is a plugin on the OpenCode row, not a separate installer host.
 
+### Model Floor Guidance Note
+
+- **Level 0 (Direct) & Level 1 (Standard)**: Fast-tier / smaller models (e.g. Flash, Haiku, GPT-4o-mini, local models) are adequate for direct execution, exploratory debugging, and minimal `quick`-tier checkpoint projections without Task Record files.
+- **Level 2 (Controlled) & Level 3 (Release-Critical)**: Frontier reasoning models are recommended to satisfy the complete 20-label checkpoint gate, maintain multi-step traceability, invariant tracking, and release evidence.
+- *Note*: This is operational guidance, not an automated runtime restriction; PromptKit OS does not enforce runtime model gating.
+
+
 ### Level 0: Zero Installation (Try Before You Buy)
 **Time**: 5 minutes  
 **Commitment**: None  
