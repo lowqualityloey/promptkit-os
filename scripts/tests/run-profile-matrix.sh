@@ -24,22 +24,28 @@ profile_of() {
     grep -E '^profile:' "$1/PROMPTKIT.md" 2>/dev/null | tail -1 | awk '{print $2}'
 }
 
-# init.sh resolves $KIT_DIR_REL, $ENGINE_VERSION and $ENGINE_SHA before writing the
-# managed block, so a byte-exact template comparison is only meaningful once both
-# sides are normalized back to the literal token form. Normalizing the engine stamp
-# on the template side is a no-op (the template already holds the token); on the
-# installed side it canonicalizes the resolved stamp, which keeps the comparison
-# independent of the installer's git state. Resolution itself is asserted separately
-# by test 11, so a broken substitution cannot hide behind this normalization.
-normalize_managed_block() {
+# The engine stamp is resolved from git, so it differs per machine and per commit. It is
+# canonicalized on BOTH sides, which keeps the comparison independent of the installer's
+# git state. That is safe only because test 11 separately asserts the installed block
+# contains no leftover $ENGINE_VERSION/$ENGINE_SHA tokens.
+normalize_engine_stamp() {
+    sed -e 's|^Engine: .* (.*) — stamped at install time|Engine: $ENGINE_VERSION ($ENGINE_SHA) — stamped at install time|'
+}
+
+# $KIT_DIR_REL is normalized on the TEMPLATE SIDE ONLY, and that asymmetry is deliberate.
+# Applying it to both sides would rewrite a literal $KIT_DIR_REL in the installed block into
+# .promptkit and make a broken substitution compare clean — masking the exact defect the
+# comparison exists to catch. Nothing else in the suite asserts $KIT_DIR_REL does not leak,
+# so test 15 pins that rejection directly.
+normalize_template() {
     sed -e 's|\$KIT_DIR_REL|.promptkit|g' \
         -e 's|^Engine: .* (.*) — stamped at install time|Engine: $ENGINE_VERSION ($ENGINE_SHA) — stamped at install time|'
 }
 
 managed_block_matches_template() {
     local target="$1" template="$2"
-    diff -u <(normalize_managed_block <"$template") \
-            <(awk '/^<!-- PROMPTKIT_START -->$/{copy=1} copy{print} /^<!-- PROMPTKIT_END -->$/{copy=0}' "$target" | normalize_managed_block)
+    diff -u <(normalize_template <"$template") \
+            <(awk '/^<!-- PROMPTKIT_START -->$/{copy=1} copy{print} /^<!-- PROMPTKIT_END -->$/{copy=0}' "$target" | normalize_engine_stamp)
 }
 
 echo "🧪 init.sh Profile Matrix Tests (non-interactive contract)"
@@ -214,6 +220,17 @@ if [[ "$(grep -c '^- \*\*Engine Version\*\*:' "$D/docs/STATE.md" 2>/dev/null)" -
     ok "legacy STATE.md gains the engine stamp row without losing user content"
 else
     notok "legacy STATE.md stamp insertion (rows=$(grep -c 'Engine Version' "$D/docs/STATE.md" 2>/dev/null))"
+fi
+
+# 15. Normalization asymmetry guard: $KIT_DIR_REL is substituted on the template side
+# only. Normalizing it on the installed side too would rewrite a leaked placeholder into
+# .promptkit and make a broken installer compare clean, so this pins that rejection.
+D="$TEST_ROOT/t15"; mkdir -p "$D"
+sed -e 's|\$KIT_DIR_REL|$KIT_DIR_REL|g' "$REPO_ROOT/templates/agent-directive-template.md" > "$D/AGENTS.md"
+if managed_block_matches_template "$D/AGENTS.md" "$REPO_ROOT/templates/agent-directive-template.md" >/dev/null 2>&1; then
+    notok "harness accepts a leaked \$KIT_DIR_REL placeholder (normalizer masking regression)"
+else
+    ok "harness rejects a leaked \$KIT_DIR_REL placeholder"
 fi
 
 echo ""
