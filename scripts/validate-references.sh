@@ -96,6 +96,27 @@ check_file_reference() {
 # gate while 404ing for readers on the host.
 LINK_EXEMPT_DIRS="docs/releases/ docs/tasks/ docs/archive/ docs/internal/ docs/spikes/"
 
+# The trigger/workflow correspondence check cannot be applied to public
+# specifications: a spec's subject is frequently the trigger it proposes to add, so
+# issue-547 legitimately names `pk:doctor` while `workflows/doctor.md` does not exist
+# yet. Without this, committing an accurate spec fails the build for being accurate,
+# and the only ways out are to mangle the trigger token out of the prose or to ship the
+# workflow early. The correspondence is still enforced where triggers actually ship --
+# the directive templates and protocols/setup.md -- and by the behavioral contract that
+# asserts zero warnings. Same exemption policy as LINK_EXEMPT_DIRS.
+TRIGGER_SCAN_EXEMPT_DIRS="docs/specs/"
+
+is_trigger_scan_exempt() {
+    local rel="$1"
+    local exempt
+    for exempt in $TRIGGER_SCAN_EXEMPT_DIRS; do
+        case "$rel" in
+            "$exempt"*) return 0 ;;
+        esac
+    done
+    return 1
+}
+
 is_link_exempt() {
     local rel="$1"
     local exempt
@@ -194,7 +215,10 @@ for file in "${ALL_MD_FILES[@]}"; do
     # Capture the whole trigger token. A pattern that stops at the first hyphen
     # truncates names such as pk:init-repo to "init", which hides the real token
     # behind an unrelated alias match.
-    triggers=$(grep -oE 'pk:[a-z][a-z0-9-]*' "$file" | sed 's/pk://' | sort -u)
+    triggers=""
+    if ! is_trigger_scan_exempt "$rel_path"; then
+        triggers=$(grep -oE 'pk:[a-z][a-z0-9-]*' "$file" | sed 's/pk://' | sort -u)
+    fi
     for trigger in $triggers; do
         expected_workflow="$WORKFLOWS_DIR/$trigger.md"
         if [ ! -f "$expected_workflow" ]; then
