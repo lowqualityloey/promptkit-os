@@ -48,7 +48,7 @@ The previous draft's force-add invariant addressed Mode A while the observed inc
 It also does not deliver the durability the invariant promised:
 
 * Staging writes only to the index. It creates no commit, so it is destroyed by `git reset --hard`, `git checkout .`, `git stash drop`, or `git clean -fd`, and is absent from any fresh clone.
-* Under per-agent branching (including GitButler, which this repository's own `AGENTS.md` mandates), an uncommitted staged change never reaches another agent's branch.
+* Under per-agent branching (which this repository's own `AGENTS.md` mandates), an uncommitted staged change never reaches another agent's branch.
 
 A workflow must not silently change what a repository publishes. Durability behind an ignore rule is the author's decision, surfaced — not made for them.
 

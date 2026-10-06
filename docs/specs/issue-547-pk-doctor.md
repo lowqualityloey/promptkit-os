@@ -49,7 +49,7 @@ So that "pk stopped working and nobody noticed for 1.5 days" becomes impossible.
 ### Out of Scope
 
 * Upgrade execution (owned by #545).
-* GitButler workspace-HEAD detection (owned by #552).
+* Synthetic-base detection (owned by #552).
 * Auto-fix beyond `--fix` re-emitting a host block.
 * Live host runtime verification — maintainer-owned per `docs/HOST-CONFORMANCE.md` (anchor: `- **Division of Labor**:`).
 
