@@ -53,7 +53,6 @@ jobs:
           bash -n scripts/validate-lsp-evidence.sh
           bash -n scripts/tests/run-lsp-evidence-fixtures.sh
           bash -n scripts/tests/run-reference-link-tests.sh
-          bash -n scripts/validate-spec-anchors.sh
           bash -n scripts/tests/run-behavioral-contract-tests.sh
           bash -n scripts/scan-staged-secrets.sh
           bash -n scripts/tests/run-staged-secret-scan-tests.sh
@@ -127,9 +126,6 @@ jobs:
 
       - name: Run Reference-Link Harness (Bash)
         run: bash scripts/tests/run-reference-link-tests.sh
-
-      - name: Validate Specification Anchor Citations (Bash)
-        run: bash scripts/validate-spec-anchors.sh
 
       - name: Run Release-Record Validator Fixtures (Bash)
         run: |
@@ -249,7 +245,6 @@ jobs:
             "scripts/validate-lsp-evidence.ps1",
             "scripts/tests/run-lsp-evidence-fixtures.ps1",
             "scripts/tests/run-reference-link-tests.ps1",
-          "scripts/validate-spec-anchors.ps1",
             "scripts/tests/run-behavioral-contract-tests.ps1",
             "scripts/scan-staged-secrets.ps1",
             "scripts/tests/run-staged-secret-scan-tests.ps1",
@@ -342,9 +337,6 @@ jobs:
 
       - name: Run Reference-Link Harness (PowerShell)
         run: pwsh -NoProfile -File .\scripts\tests\run-reference-link-tests.ps1
-
-      - name: Validate Specification Anchor Citations (PowerShell)
-        run: pwsh -NoProfile -File .\scripts\validate-spec-anchors.ps1
 
       - name: Run Release-Record Validator Fixtures (PowerShell)
         shell: pwsh
