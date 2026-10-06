@@ -27,7 +27,7 @@ The guard previously appeared in **two** issues with contradictory claims about 
 
 ### What already exists (do not duplicate)
 
-* **The base-deriving operations are enumerable and few.** Only three consume a base: `workflows/review.md` (anchor: `git rev-parse <fixed-point>`) (fixed-point diffs), `workflows/pr.md` (anchor: `BASE_REF="${BASE_REMOTE}/${TARGET_BASE}"`) (`BASE_REF`), and `scripts/check-changelog-entry.sh` (anchor: `git diff --name-only "$BASE...$HEAD"`) (`BASE...HEAD` range). `workflows/review.md` (anchor: `produces an empty diff`) already documents the empty-diff stall that a synthetic base produces.
+* **The base-deriving operations are enumerable and few.** Five consume a base, and all five must be guarded — a previous draft of this issue claimed three and omitted two, one of which runs in CI. `workflows/review.md` (anchor: `git rev-parse <fixed-point>`) (fixed-point diffs), `workflows/pr.md` (anchor: `BASE_REF="${BASE_REMOTE}/${TARGET_BASE}"`) (`BASE_REF`), `scripts/check-changelog-entry.sh` (anchor: `git diff --name-only "$BASE...$HEAD"`) (`BASE...HEAD` range), `workflows/sync.md` (anchor: `git merge-base --is-ancestor HEAD <upstream-ref>`) (Phase 1 drift audit against the upstream ref), and `scripts/check-milestone-halt-evidence.sh` (anchor: `merge-base --is-ancestor "$seed" HEAD`) (seed-to-head ancestry, which validates capture provenance and runs in CI). `workflows/review.md` (anchor: `produces an empty diff`) already documents the empty-diff stall that a synthetic base produces.
 * Detection is read-only by construction here: the preflight inspects Git state and reports. It never writes tool-managed state.
 
 ### Non-Negotiable Invariants
@@ -55,7 +55,7 @@ The guard previously appeared in **two** issues with contradictory claims about 
   * the current HEAD is not reachable from any carrying branch (`git branch --contains HEAD` is empty for all real branches), and/or
   * the commit has no upstream and does not appear in any local branch tip.
   * Do **not** treat "unpushed" as sufficient evidence.
-* [ ] 3. Apply the detector only at base-deriving points: `workflows/sync.md` (anchor: `### Phase 1: Engine & Rule Audit`), `workflows/review.md` (anchor: `git rev-parse <fixed-point>`), `workflows/pr.md` (anchor: `BASE_REF="${BASE_REMOTE}/${TARGET_BASE}"`), and `scripts/check-changelog-entry.sh` (anchor: `CHANGELOG_GATE|MISSING-BASE`). Print recovery steps (return to the carrying branch; rebase) with the invariant citation.
+* [ ] 3. Apply the detector at every base-deriving point — all five, not the three a previous draft listed: `workflows/sync.md` (anchor: `### Phase 1: Engine & Rule Audit`), `workflows/review.md` (anchor: `git rev-parse <fixed-point>`), `workflows/pr.md` (anchor: `BASE_REF="${BASE_REMOTE}/${TARGET_BASE}"`), `scripts/check-changelog-entry.sh` (anchor: `CHANGELOG_GATE|MISSING-BASE`), and `scripts/check-milestone-halt-evidence.sh` (anchor: `merge-base --is-ancestor "$seed" HEAD`) with its `.ps1` twin. Print recovery steps (return to the carrying branch; rebase) with the invariant citation.
 * [ ] 4. When detection yields insufficient evidence, report `UNKNOWN` and proceed — never block a normal repository.
 * [ ] 5. Ship the detector, a fixture, and a test harness **in this issue**, since no precedent exists. Add the fixture to the shared manifests and both `.sh` / `.ps1` twins per `CONTRIBUTING.md` (anchor: `Behavioral Contract & Parity`).
 * [ ] 6. Document in `docs/ADOPTION-GUIDE.md` (synthetic-base section) and `CHANGELOG.md` (`[Unreleased]`).
