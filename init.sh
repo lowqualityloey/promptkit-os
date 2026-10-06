@@ -367,6 +367,12 @@ for arg in "$@"; do
                 *) echo -e "\033[0;31m[!] Unknown tracking: $TRACKING (use local|github|jira|linear)\033[0m" >&2; exit 1 ;;
             esac
             ;;
+        --engine-version=*)
+            if [[ ! -e "$SCRIPT_DIR/.git" ]]; then
+                ENGINE_VERSION="${arg#--engine-version=}"
+                validate_engine_identity
+            fi
+            ;;
         --host=*)
             HOSTS="${arg#--host=}"
             HOST_SET=1

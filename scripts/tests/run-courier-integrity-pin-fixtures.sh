@@ -21,8 +21,10 @@ node -e "const fs=require('node:fs');const p=process.argv[1];let s=fs.readFileSy
 node - "$TARGET" "$PASS_DIGEST" <<'NODE'
 const courier = require(process.argv[2]);
 if (courier.TARBALL_SHA256_BY_VERSION['9.8.7'] !== process.argv[3]) process.exit(1);
+const args = courier.installerArgs(['--balanced', '/tmp/project'], '9.8.7');
+if (args.length !== 3 || args[2] !== '--engine-version=v9.8.7') process.exit(1);
 NODE
-echo 'PASS|missing pin inserted and exported'
+echo 'PASS|pinned digest exported and courier version forwarded'
 
 before="$(sha256sum "$TARGET" | cut -d' ' -f1)"
 "$HELPER" "$TARGET" 9.8.7 "$PASS_DIGEST"
