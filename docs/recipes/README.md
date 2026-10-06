@@ -91,11 +91,19 @@ description: <concise summary of the architectural boundary>
   pwsh -File scripts/tests/run-playbook-contract-tests.ps1
   ```
 
+### 4. Durability Contract for Recipe Authors
+
+To ensure recipes survive framework churn without requiring constant rewrites, all contributors MUST adhere to the Durability Contract:
+1. **No Boilerplate Tutorials — Minimal Boundary-Demonstrating Snippets Only**: Do not teach the agent *how* to write a basic boilerplate block. Snippets are permitted only where a few lines demonstrate the boundary itself (e.g. envelope shape, HMAC comparison); teach where the *boundaries* of that pattern are.
+2. **Version Agnostic**: Never hardcode specific library versions in the markdown text unless referencing a massive paradigm shift.
+3. **Focus on State, Network, and Anti-Patterns**: The only things that matter are where state lives, how the network is crossed, and what catastrophic failure modes to avoid.
+4. **Strict Token Ceiling**: Hard ceiling $\le$ **1,500 tokens** (measured via `(bytes + 2) / 4`).
+
 ---
 
-## 4. Backlog & Prioritized Gap Candidates
+## 5. Backlog & Prioritized Gap Candidates
 
-The following cross-cutting boundaries are prioritized for upcoming recipe additions:
+The following cross-cutting boundaries are prioritized for upcoming recipe additions. **(Help Wanted! Feel free to open a PR for any of these!)**
 
 1. **Rate Limiting & Tiered Throttling**: Sliding window log, token bucket algorithms, and Redis/memory multi-tenant throttles.
 2. **Optimistic Locking & Concurrency Control**: Version columns, ETags, and lost update prevention across distributed updates.

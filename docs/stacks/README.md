@@ -110,20 +110,20 @@ anti_patterns:
 ---
 ```
 
-### Invariant Rules for Playbook Authors
+### 4. Durability Contract for Playbook Authors
 
-1. **Clean Array Items**: Prohibit shell chaining operators (`&&`, `||`, `;`) in verification arrays. Each command must be a discrete array item.
-2. **Strict Token Ceiling**: Hard ceiling $\le$ **1,500 tokens** (measured via `(bytes + 2) / 4`).
-3. **Structured Body**:
-   - `## 1. Architectural Invariants`: Detailed operational principles.
-   - `## 2. Critical Anti-Patterns & Pitfalls`: Failure modes and remedies.
-   - `## 3. Tiered Verification Commands`: Mapping of fast/required/extended tiers to L0–L3 workflow gates.
+To ensure playbooks survive framework churn without requiring constant rewrites, all contributors MUST adhere to the Durability Contract:
+1. **No Boilerplate Tutorials — Minimal Boundary-Demonstrating Snippets Only**: Do not teach the agent *how* to write a basic API route or standard boilerplate. Snippets are permitted only where a few lines demonstrate the boundary itself; teach it where the *boundaries* of that route are.
+2. **Version Agnostic**: Never hardcode specific library versions in the markdown text unless referencing a massive paradigm shift (e.g., "Next.js 15+").
+3. **Focus on State, Network, and Anti-Patterns**: The only things that matter are where state lives, how the network is crossed, and what catastrophic failure modes to avoid.
+4. **Clean Array Items**: Prohibit shell chaining operators (`&&`, `||`, `;`) in verification arrays. Each command must be a discrete array item.
+5. **Strict Token Ceiling**: Hard ceiling $\le$ **1,500 tokens** (measured via `(bytes + 2) / 4`).
 
 ---
 
-## 4. Gap Matrix & Demand-Driven Roadmap
+## 5. Gap Matrix & Demand-Driven Roadmap
 
-The following stacks are prioritized for upcoming playbook additions:
+The following stacks are prioritized for upcoming playbook additions. **(Help Wanted! Feel free to open a PR for any of these!)**
 
 ### Immediate Wave
 1. [`web-astro.md`](web-astro.md) (Shipped): Content-driven, islands architecture, and zero-JS baseline.
@@ -132,6 +132,6 @@ The following stacks are prioritized for upcoming playbook additions:
 4. [`api-node.md`](api-node.md) (Shipped): Node.js server frameworks (Express / Hono / Fastify) and type-safe routing.
 5. [`cms-wordpress.md`](cms-wordpress.md) (Shipped): WordPress CMS & Bedrock architecture, nonce verification, prepared SQL statements, and capability checks.
 
-### Planned Expansions (Demand-Driven)
-- **Web**: `web-sveltekit.md`, `web-vue-nuxt.md`, `web-remix.md`.
-- **Backend / Systems**: `backend-elixir-phoenix.md`, `systems-csharp-dotnet.md`.
+### Planned Expansions (Help Wanted / Good First Issues)
+- **Backend / Systems:** `backend-elixir-phoenix.md`.
+- **Web:** `web-sveltekit.md`, `web-vue-nuxt.md`, `web-remix.md`.
