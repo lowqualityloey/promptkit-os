@@ -52,12 +52,14 @@ The guard previously appeared in **two** issues with contradictory claims about 
 
 * [ ] 1. Add the invariant to `PROMPTKIT.md` §7 and `docs/MAXIMS.md`, with canonical links matching the existing maxim format. Record the ADR 0002 non-overlap statement if the invariant changes workflow semantics.
 * [ ] 2. Implement a **read-only** synthetic-base detector. Establish what evidence is actually available and sufficient before coding:
-  * the current HEAD is not reachable from any carrying branch (`git branch --contains HEAD` is empty for all real branches), and/or
-  * the commit has no upstream and does not appear in any local branch tip.
+  * **Positive evidence is required to refuse.** A base is refused only when something positively identifies the commit as tool-owned — an owned namespace or reflog signature, a known workspace path pattern, or equivalent. Absence of evidence is never evidence of absence, so the following two signals are **corroborating only** and may never on their own trigger a refusal:
+    * the current HEAD is not reachable from any carrying branch (`git branch --contains HEAD` is empty), and/or
+    * the commit has no upstream and does not appear in any local branch tip.
+  * **A detached HEAD satisfies both corroborating signals while being entirely legitimate**, so it must resolve to `UNKNOWN` and proceed (Scenario 6). A previous draft listed these two signals as sufficient evidence; read that way the guard refuses a healthy detached checkout, which the evidence-based-refusal invariant above forbids.
   * Do **not** treat "unpushed" as sufficient evidence.
 * [ ] 3. Apply the detector at every base-deriving point — all five, not the three a previous draft listed: `workflows/sync.md` (anchor: `### Phase 1: Engine & Rule Audit`), `workflows/review.md` (anchor: `git rev-parse <fixed-point>`), `workflows/pr.md` (anchor: `BASE_REF="${BASE_REMOTE}/${TARGET_BASE}"`), `scripts/check-changelog-entry.sh` (anchor: `CHANGELOG_GATE|MISSING-BASE`), and `scripts/check-milestone-halt-evidence.sh` (anchor: `merge-base --is-ancestor "$seed" HEAD`) with its `.ps1` twin. Print recovery steps (return to the carrying branch; rebase) with the invariant citation.
 * [ ] 4. When detection yields insufficient evidence, report `UNKNOWN` and proceed — never block a normal repository.
-* [ ] 5. Ship the detector, a fixture, and a test harness **in this issue**, since no precedent exists. Add the fixture to the shared manifests and both `.sh` / `.ps1` twins per `CONTRIBUTING.md` (anchor: `Behavioral Contract & Parity`).
+* [ ] 5. Ship the detector, its fixtures, and a test harness **in this issue**, since no precedent exists. The fixture set must cover every scenario below, and the **detached-HEAD** case is mandatory rather than optional — it is what stops the corroborating signals in task 2 from being implemented as sufficient evidence. Add each fixture to the shared manifests and both `.sh` / `.ps1` twins per `CONTRIBUTING.md` (anchor: `Behavioral Contract & Parity`).
 * [ ] 6. Document in `docs/ADOPTION-GUIDE.md` (synthetic-base section) and `CHANGELOG.md` (`[Unreleased]`).
 
 --------
@@ -93,6 +95,12 @@ The guard previously appeared in **two** issues with contradictory claims about 
 * Given any of the above repositories,
 * When `pk:commit` runs,
 * Then behavior is identical to today; the guard never gates staging or commit.
+
+### Scenario 6: Legitimate detached HEAD is not a synthetic base
+
+* Given a checkout sitting at a real commit with a detached HEAD — `git branch --contains HEAD` empty and no upstream, which is the ordinary state of a detached checkout,
+* When a base-deriving operation runs,
+* Then it reports `UNKNOWN` and proceeds; it does **not** refuse. Detachment is a presentation state of a real commit, not evidence that the commit is synthetic, and refusing it would break the ordinary detached workflow this guard exists to keep working.
 
 --------
 
