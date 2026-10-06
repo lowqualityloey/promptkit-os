@@ -895,9 +895,11 @@ if [ -n "$AUTHORIZATION_BASELINE" ]; then
     [ "$auth_status" -eq 0 ] || ERROR_COUNT=$((ERROR_COUNT + 1))
 fi
 
-for deg in "${DEGRADATIONS[@]}"; do
-    printf '%s\n' "$deg"
-done
+if [ "${#DEGRADATIONS[@]}" -gt 0 ]; then
+    for deg in "${DEGRADATIONS[@]}"; do
+        printf '%s\n' "$deg"
+    done
+fi
 
 if [ "$ERROR_COUNT" -eq 0 ]; then
     if [ "$HAS_QUICK_RECORD" -eq 1 ]; then

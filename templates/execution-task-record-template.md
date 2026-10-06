@@ -13,6 +13,7 @@
 
 - **Record Type**: `Task Record`
 - **Task ID**: `TASK-<task-slug>` for `sdlc-overlay-v1`; preserve `TASK-YYYY-MM-DD-<slug>` for legacy/no-profile records
+- **Ceremony Level**: `Level 2 (Controlled Work)` <!-- Level 2 (Controlled Work) | Level 3 (Release-Critical) -->
 - **PromptKit Adaptation Profile** *(Optional; choose `none` for the legacy contract or `sdlc-overlay-v1` to validate the Adaptation fields below)*: `none`
 - **Work Type** *(Required for `sdlc-overlay-v1`; choose Code Work, Documentation Work, Configuration Work, or Research Work)*: `Code Work`
 - **Planning Record Link** *(Required for `sdlc-overlay-v1`; use the stable planning ID and matching explicit anchor)*: `N/A`

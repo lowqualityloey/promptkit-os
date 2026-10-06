@@ -33,7 +33,7 @@ The ceremony level established by `workflows/route.md` is the sole tier source. 
 | Level | Record behavior | Validation contract |
 | :--- | :--- | :--- |
 | L0 | No checkpoint file under `docs/`; state remains in conversation. | No record validation. |
-| L1 | A quick Checkpoint Record is allowed without a Task Record. | Required labels: Record Type, Checkpoint ID, Created, Execution State, Objective, Remaining Work, Blockers, Next Action, Resume Condition, and Recorded By; each needs a non-placeholder value (Blockers may be None identified). Task ID is optional; when absent, state N/A — no Task Record (Level 0/1) and do not emit TRACEABILITY_MISSING. |
+| L1 | A quick Checkpoint Record is allowed without a Task Record. | Required labels: Record Type, Checkpoint ID, Created, Execution State, Objective, Remaining Work, Blockers, Next Action, Resume Condition, and Recorded By; each needs a non-placeholder value (Blockers may be None identified). Task ID is optional; when absent, the field may be omitted or state N/A — no Task Record (Level 0/1) without emitting TRACEABILITY_MISSING. |
 | L2/L3 | A `full` Checkpoint Record is mandatory. | Preserve the current full contract: all 20 checkpoint labels, with a `Task ID` resolving to a canonical Task Record. No field, diagnostic, or exit behavior is relaxed. |
 
 The stronger L1 `Blockers` value requirement is deliberate: a quick record must state concrete blockers or `None identified` because it carries less supporting context. The full tier retains its existing presence-only requirement for compatibility; this issue does not tighten it.
@@ -125,7 +125,7 @@ Of the 20 checkpoint labels, **17 require a non-placeholder value** (`scripts/va
 
 * Given an L2 task with a complete 20-label record,
 * When validated,
-* Then behavior is byte-identical to today — no label requirement relaxed, no diagnostic code changed.
+* Then behavior is observably identical to today — no label requirement relaxed, no diagnostic code changed.
 
 ### Scenario 6: Placeholders never satisfy a `quick` field
 

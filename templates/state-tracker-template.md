@@ -42,6 +42,7 @@ Track tasks using atomic checklists (`[x]` Done, `[/]` In Progress, `[ ]` Queued
 - **Local Task Source**: `docs/tasks/<task-id>.md`
 - **Task ID**: `TASK-<task-slug>` (preserve `TASK-YYYY-MM-DD-<slug>` for legacy/`none`-profile records)
 - **Task Record**: `docs/tasks/<task-id>.md`
+- **Ceremony Level**: `[Level 1 (Standard) | Level 2 (Controlled) | Level 3 (Release-Critical)]`
 - **Specification**: `docs/specs/[specification].md`
 - **Execution Scope**: `[Repository, workspace, package, or session boundary]`
 - **Execution State**: `[planned | ready | in_progress | checkpoint_due | blocked | paused | handoff_ready | awaiting_review | completed | aborted]`
