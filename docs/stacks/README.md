@@ -110,7 +110,7 @@ anti_patterns:
 ---
 ```
 
-### 4. Durability Contract for Playbook Authors
+### Durability Contract for Playbook Authors
 
 To ensure playbooks survive framework churn without requiring constant rewrites, all contributors MUST adhere to the Durability Contract:
 1. **No Boilerplate Tutorials — Minimal Boundary-Demonstrating Snippets Only**: Do not teach the agent *how* to write a basic API route or standard boilerplate. Snippets are permitted only where a few lines demonstrate the boundary itself; teach it where the *boundaries* of that route are.
