@@ -31,6 +31,9 @@ The previous draft claimed a `/handoff` payload of *branch + revision + next act
 
 * Baseline: `bash scripts/validate-execution-control.sh --root <fixtures>` → `VALID|RECORDS=4`
 * Baseline + the 5-field happy-path record → **`FAILED|ERRORS=15`**, all `CHECKPOINT_INCOMPLETE`, **0** `TRACEABILITY_MISSING`
+* Baseline + that same record with `Task ID` omitted → **`FAILED|ERRORS=17`** — **16** `CHECKPOINT_INCOMPLETE` (the same 15, plus `Task ID` itself) **and 1** `TRACEABILITY_MISSING`
+
+Both measurements are load-bearing, because `Task ID` is one of the 17 value-bearing labels *and* is separately required to resolve in `TASK_FILE_BY_ID`. The 15-error figure is therefore reachable **only** by a payload that already carries a resolvable Task ID; a payload of branch + revision + next action alone cannot reach it. Pairing "no Task ID" with "15 unresolved labels" describes a state the validator cannot produce.
 
 **Corrections to the previous draft's stated numbers:**
 
@@ -76,7 +79,8 @@ Of the 20 checkpoint labels, **17 require a non-placeholder value** (`scripts/va
 * [ ] 4. Bind harness-spawned sessions to the #516 `workflows/auto.md --until review` default (one-line hook, no new semantics).
 * [ ] 5. Fixtures under `scripts/tests/fixtures/execution-control/` (+ both twins):
   * **complete** — a payload that resolves every required label → valid, zero diagnostics
-  * **minimal** — branch + revision + next action only → `DRAFT-INCOMPLETE` naming exactly which of the 15 unresolved labels are missing
+  * **minimal-linked** — branch + revision + next action **plus a Task ID that resolves** → `DRAFT-INCOMPLETE` naming exactly which of the 15 unresolved labels are missing; `FAILED|ERRORS=15`, `TRACEABILITY_MISSING=0`
+  * **minimal-unlinked** — branch + revision + next action only, no `Task ID` supplied at all → `DRAFT-INCOMPLETE` naming **16** unresolved labels (`Task ID` among them) **and** `TRACEABILITY_MISSING`; `FAILED|ERRORS=17`, with no synthesized ID
   * **no task record** — a resolvable-looking Task ID with no `docs/tasks/<task-id>.md` → `TRACEABILITY_MISSING`, and no synthesized ID
   * **placeholder rejection** — a payload whose fields are literal placeholders (`N/A`, `TBD`, `[…]`) → `CHECKPOINT_INCOMPLETE`, proving `is_placeholder` (`scripts/validate-execution-control.sh` (anchor: `is_placeholder() {`)) is honored
 * [ ] 6. Document the three-store precedence (`docs/tasks/<task-id>.md` canonical → `docs/STATE.md` §3A projection → harness-private store as supporting reference) in `protocols/context-sync.md`, citing `docs/WORKFLOW-MAP.md` (anchor: `The Task Record is authoritative for Controlled Work`), `docs/WORKFLOW-MAP.md` (anchor: `Controlled readiness, execution state, active ownership, and completion`), `docs/WORKFLOW-MAP.md` (anchor: `Preserves and projects evidence; does not approve, commit, release, deploy, or roll back.`). **Do not** reference `AGENTS.md` line numbers — no tracked `AGENTS.md` exists in this repository and those line numbers are unverifiable. `handoff.md` is not a PromptKit artifact; records live under `docs/tasks/`.
@@ -94,33 +98,42 @@ Of the 20 checkpoint labels, **17 require a non-placeholder value** (`scripts/va
 * When the importer runs,
 * Then the emitted record satisfies **all 20** labels at `scripts/validate-execution-control.sh` (anchor: `local labels=("Record Type" "Checkpoint ID"`) — 17 with non-placeholder values plus the 3 presence-only labels — and the validator reports **zero** `CHECKPOINT_INCOMPLETE` and **zero** `TRACEABILITY_MISSING` for that record.
 
-### Scenario 2: Minimal payload is an honest draft
+### Scenario 2: Minimal **linked** payload is an honest draft
 
-* Given a `/handoff` payload containing only branch, revision, and next action,
+* Given a `/handoff` payload containing branch, revision, next action, **and** a Task ID that resolves to an existing `docs/tasks/<task-id>.md`,
 * When the importer runs,
 * Then the result is `DRAFT-INCOMPLETE`, and it names **15** unresolved labels — `Specification`, `Created`, `Checkpoint Type`, `Execution State`, `Objective`, `Completed Work`, `Remaining Work`, `Changed Files`, `Locked Decisions and Invariants`, `Verification Evidence`, `CI Evidence`, `Blockers`, `Scope Changes`, `Resume Condition`, `Recorded By` — and does **not** claim validity.
 
-> Reproduces the measured baseline: `FAILED|ERRORS=15` against this repository's own fixture set.
+> Reproduces the measured baseline: `FAILED|ERRORS=15`, all `CHECKPOINT_INCOMPLETE`, `TRACEABILITY_MISSING=0` against this repository's own fixture set. The resolved Task ID is what makes 15 reachable.
 
-### Scenario 3: No canonical Task Record
+### Scenario 3: Minimal **unlinked** payload reports both failures
+
+* Given a `/handoff` payload containing only branch, revision, and next action, with **no** `Task ID`,
+* When the importer runs,
+* Then the result is `DRAFT-INCOMPLETE` naming **16** unresolved labels — the 15 above **plus `Task ID`** — **and** it reports `TRACEABILITY_MISSING` per `scripts/validate-execution-control.sh` (anchor: `diagnostic TRACEABILITY_MISSING "$id" "$path" "Checkpoint references unknown Task ID`) as a separate diagnostic, because that one is raised by the dedicated `TASK_FILE_BY_ID` lookup rather than by the label sweep. Total `FAILED|ERRORS=17`.
+* And it does **not** synthesize a Task ID to reach the Scenario 2 count.
+
+> Both halves are measured independently: 16 `CHECKPOINT_INCOMPLETE` + 1 `TRACEABILITY_MISSING`.
+
+### Scenario 4: No canonical Task Record
 
 * Given a payload with a Task ID that does **not** resolve to an existing Task Record,
 * When the importer runs,
 * Then it reports `TRACEABILITY_MISSING` per `scripts/validate-execution-control.sh` (anchor: `diagnostic TRACEABILITY_MISSING "$id" "$path" "Handoff references unknown Task ID`), records the missing linkage, and does **not** synthesize a Task ID to force a pass.
 
-### Scenario 4: Placeholders do not satisfy required values
+### Scenario 5: Placeholders do not satisfy required values
 
 * Given a payload whose `Objective` is `TBD` and whose `Next Action` is `N/A`,
 * When the importer runs,
 * Then both are reported as unresolved — `require_value` (`scripts/validate-execution-control.sh` (anchor: `require_value() {`)) rejects placeholders via `is_placeholder` (`scripts/validate-execution-control.sh` (anchor: `is_placeholder() {`)).
 
-### Scenario 5: Imported content stays a supporting reference
+### Scenario 6: Imported content stays a supporting reference
 
 * Given a valid imported record for a Controlled (L2) task whose canonical Task Record says otherwise,
 * When execution proceeds,
 * Then the Task Record remains authoritative per `docs/WORKFLOW-MAP.md` (anchor: `The Task Record is authoritative for Controlled Work`) and `docs/WORKFLOW-MAP.md` (anchor: `Controlled readiness, execution state, active ownership, and completion`), and the imported record is treated as evidence only — it cannot change execution state or grant approval.
 
-### Scenario 6: Import grants no external authority
+### Scenario 7: Import grants no external authority
 
 * Given a successful import,
 * When no human confirmation exists,

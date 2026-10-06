@@ -32,10 +32,12 @@ So that "pk stopped working and nobody noticed for 1.5 days" becomes impossible.
   | Code | Meaning |
   | :--- | :--- |
   | `0` | Every configured check is `OK`, `IGNORED`, or `SKIP` |
-  | `1` | At least one `STALE`, `MISSING`, or `DIVERGED` finding |
-  | `2` | `pk:doctor` could not run (missing prerequisite) |
+  | `1` | At least one `STALE`, `MISSING`, `DIVERGED`, or `INCOMPLETE` finding |
+  | `2` | `pk:doctor` could not run at all (missing prerequisite) |
 
   `IGNORED` **never** contributes to exit `1`. A path the developer intentionally ignores is a valid configuration, not a health failure — this is the difference between reporting a fact and passing a judgment.
+
+  **`INCOMPLETE` is fail-closed and contributes to exit `1`** — never `0`, and never `2`. The distinction from exit `2` is what makes the mapping decidable: exit `2` means no check ran because `pk:doctor` itself lacked a prerequisite, whereas `INCOMPLETE` means a check *did* run and could not establish its answer. Precedence when both apply: `2` only when no check could run at all, otherwise `1`. An implementation that lets `INCOMPLETE` reach `0` fails Scenario 6, and one that maps it to `2` fails it too, so both twins must implement this line identically.
 * **[ ] Machine-readable output:** one line per check, tab-separated, fields in stable order, parseable by `grep`/`awk`:
   `<scope>\t<STATUS>\t<detail>\t<remediation>`
   Status vocabulary: `OK` | `STALE` | `MISSING` | `IGNORED` | `DIVERGED` | `SKIP` | `INCOMPLETE`.
@@ -118,7 +120,7 @@ So that "pk stopped working and nobody noticed for 1.5 days" becomes impossible.
 
 * Given a git invocation returning an unexpected exit status,
 * When the ignore-state check runs,
-* Then the row reports `INCOMPLETE` — never `OK` — and the exit code is non-zero.
+* Then the row reports `INCOMPLETE` — never `OK` — and the exit code is exactly **`1`**, per the exit-code contract above: fail-closed, and distinct from the `2` that means the check never ran.
 
 --------
 
