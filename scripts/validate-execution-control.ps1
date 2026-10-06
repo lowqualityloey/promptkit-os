@@ -103,10 +103,42 @@ function Test-Placeholder {
     $value = Trim-Value $Value
     if ([string]::IsNullOrWhiteSpace($value)) { return $true }
     switch -Regex ($value) {
-        '^(N/A|n/a|None|none|Not applicable|not applicable|TBD|tbd|\[N/A\]|\[None\]|\[Pending\]|Pending|\[TBD\]|\[tbd\])$' { return $true }
+        '^(N/A|n/a|None|none|Not applicable|not applicable|\[N/A\]|\[None\]|\[Pending\]|Pending)$' { return $true }
         '^\[.*\]$' { return $true }
         default { return $false }
     }
+}
+
+function Test-QuickPlaceholder {
+    param([AllowEmptyString()][string]$Value)
+    if (Test-Placeholder $Value) { return $true }
+    $value = Trim-Value $Value
+    switch -Regex ($value) {
+        '^(TBD|tbd|\[TBD\]|\[tbd\])$' { return $true }
+        default { return $false }
+    }
+}
+
+function Get-ParsedCeremonyLevel {
+    param([string]$Value)
+    if ([string]::IsNullOrWhiteSpace($Value)) { return "" }
+    if ($Value -match '^\s*(0|[Ll]evel\s*0|[Ll]0)([^0-9]|$)') { return "0" }
+    if ($Value -match '^\s*(1|[Ll]evel\s*1|[Ll]1)([^0-9]|$)') { return "1" }
+    if ($Value -match '^\s*(2|[Ll]evel\s*2|[Ll]2)([^0-9]|$)') { return "2" }
+    if ($Value -match '^\s*(3|[Ll]evel\s*3|[Ll]3)([^0-9]|$)') { return "3" }
+    return "invalid"
+}
+
+function Require-QuickValue {
+    param([string]$FilePath, [string]$RecordId, [string]$Label, [string]$Category = "MISSING_FIELD", [string]$Remediation = "Provide a non-placeholder value for the labeled field")
+    $present = Require-Label $FilePath $RecordId $Label $Category
+    if (-not $present) { return $false }
+    $value = Get-FieldValue $FilePath $Label
+    if (Test-QuickPlaceholder $value) {
+        Add-Diagnostic $Category $RecordId (Get-RelativePath $FilePath) "Missing usable value: $Label" $Remediation
+        return $false
+    }
+    return $true
 }
 
 function Require-Label {
@@ -495,51 +527,81 @@ function Test-Checkpoint {
 
     $ceremonyLevel = Get-FieldValue $FilePath 'Ceremony Level'
     $parsedLevel = ""
-    switch -Regex ($ceremonyLevel) {
-        '^(0|[Ll]evel\s*0|[Ll]0)' { $parsedLevel = "0" }
-        '^(1|[Ll]evel\s*1|[Ll]1)' { $parsedLevel = "1" }
-        '^(2|[Ll]evel\s*2|[Ll]2)' { $parsedLevel = "2" }
-        '^(3|[Ll]evel\s*3|[Ll]3)' { $parsedLevel = "3" }
+    if (-not [string]::IsNullOrWhiteSpace($ceremonyLevel)) {
+        $parsedLevel = Get-ParsedCeremonyLevel $ceremonyLevel
+        if ($parsedLevel -eq 'invalid') {
+            Add-Diagnostic 'INVALID_STATE' $id $path "Unknown or malformed Ceremony Level: $ceremonyLevel" 'Use Level 0, Level 1, Level 2, or Level 3'
+            return
+        }
     }
 
-    if ($parsedLevel -eq "0") {
+    $taskId = Get-FieldValue $FilePath 'Task ID'
+    $taskLevel = ""
+    if ((-not [string]::IsNullOrWhiteSpace($taskId)) -and $TaskById.ContainsKey($taskId)) {
+        $taskFile = $TaskById[$taskId]
+        $taskCeremony = Get-FieldValue $taskFile 'Ceremony Level'
+        if ([string]::IsNullOrWhiteSpace($taskCeremony)) { $taskCeremony = Get-FieldValue $taskFile 'Work Classification' }
+        if (-not [string]::IsNullOrWhiteSpace($taskCeremony)) {
+            $taskLevel = Get-ParsedCeremonyLevel $taskCeremony
+            if ($taskLevel -eq 'invalid') { $taskLevel = "" }
+        }
+        if ([string]::IsNullOrWhiteSpace($taskLevel)) { $taskLevel = "2" }
+    }
+
+    $effectiveLevel = $parsedLevel
+    if (-not [string]::IsNullOrWhiteSpace($taskLevel)) {
+        if ([string]::IsNullOrWhiteSpace($effectiveLevel) -or ([int]$taskLevel -gt [int]$effectiveLevel)) {
+            $effectiveLevel = $taskLevel
+        }
+        if ((-not [string]::IsNullOrWhiteSpace($parsedLevel)) -and ([int]$parsedLevel -lt [int]$taskLevel)) {
+            Add-Diagnostic 'POLICY_LIMITATION' $id $path "Checkpoint cannot downgrade Ceremony Level from Level $taskLevel to Level $parsedLevel" 'Match the established task ceremony level'
+        }
+    }
+
+    if ($effectiveLevel -eq "0") {
         Add-Diagnostic 'POLICY_LIMITATION' $id $path 'Level 0 requests must not write execution-control records to docs/' 'Remove Level 0 checkpoint record from docs/tasks'
         return
     }
 
     $tier = 'full'
-    if ($parsedLevel -eq '1') {
+    if ($effectiveLevel -eq '1') {
         $tier = 'quick'
     }
 
     if ($tier -eq 'quick') {
         $script:HasQuickRecord = $true
         if ((Get-FieldValue $FilePath 'Record Type') -ne 'Checkpoint Record') { Add-Diagnostic 'CHECKPOINT_INCOMPLETE' $id $path 'Record Type is not Checkpoint Record' 'Use the canonical Checkpoint Record type' }
-        [void](Require-Value $FilePath $id 'Execution State' 'CHECKPOINT_INCOMPLETE')
-        [void](Require-Value $FilePath $id 'Branch / Revision' 'CHECKPOINT_INCOMPLETE')
-        [void](Require-Value $FilePath $id 'Next Action' 'CHECKPOINT_INCOMPLETE')
 
-        $taskId = Get-FieldValue $FilePath 'Task ID'
-        $unresolvedCount = 0
-
-        if ([string]::IsNullOrWhiteSpace($taskId) -or (Test-Placeholder $taskId)) {
-            $unresolvedCount++
-            Add-Degradation 'POLICY_LIMITATION' $id $path 'Task ID is unlinked for Level 1 quick checkpoint' 'Level 1 does not require a canonical Task Record'
-        } elseif (-not $TaskById.ContainsKey($taskId)) {
-            $unresolvedCount++
-            Add-Degradation 'POLICY_LIMITATION' $id $path "Task ID '$taskId' has no canonical Task Record (Level 1 quick checkpoint)" 'Level 1 does not require a canonical Task Record'
+        $quickRequired = @('Created', 'Execution State', 'Objective', 'Remaining Work', 'Next Action', 'Resume Condition', 'Recorded By')
+        foreach ($reqLbl in $quickRequired) {
+            [void](Require-QuickValue $FilePath $id $reqLbl 'CHECKPOINT_INCOMPLETE')
         }
 
-        $nonCoreLabels = @('Specification', 'Created', 'Checkpoint Type', 'Objective', 'Completed Work', 'Remaining Work', 'Changed Files', 'Locked Decisions and Invariants', 'Verification Evidence', 'CI Evidence', 'Blockers', 'Scope Changes', 'Resume Condition', 'Recorded By')
+        if (-not (Test-Label $FilePath 'Blockers')) {
+            Add-Diagnostic 'CHECKPOINT_INCOMPLETE' $id $path 'Missing field: Blockers' 'Add the labeled field to the canonical record'
+        } else {
+            $blockersVal = Get-FieldValue $FilePath 'Blockers'
+            if ($blockersVal -ne 'None identified' -and (Test-QuickPlaceholder $blockersVal)) {
+                Add-Diagnostic 'CHECKPOINT_INCOMPLETE' $id $path 'Missing usable value: Blockers' "Provide a concrete value or 'None identified' for Blockers"
+            }
+        }
+
+        if ((-not [string]::IsNullOrWhiteSpace($taskId)) -and (-not (Test-Placeholder $taskId)) -and (-not ($taskId -match '^N/A'))) {
+            if (-not $TaskById.ContainsKey($taskId)) {
+                Add-Diagnostic 'TRACEABILITY_MISSING' $id $path "Checkpoint references unknown Task ID: $taskId" 'Link the checkpoint to an existing Task Record or omit Task ID for Level 1'
+            }
+        }
+
+        $nonCoreLabels = @('Specification', 'Checkpoint Type', 'Completed Work', 'Changed Files', 'Branch / Revision', 'Locked Decisions and Invariants', 'Verification Evidence', 'CI Evidence', 'Scope Changes')
+        $unresolvedCount = 0
         foreach ($label in $nonCoreLabels) {
-            if ($label -eq 'Changed Files' -or $label -eq 'Blockers' -or $label -eq 'Scope Changes') {
+            if ($label -eq 'Changed Files' -or $label -eq 'Scope Changes') {
                 if (-not (Test-Label $FilePath $label)) {
                     $unresolvedCount++
                     Add-Degradation 'POLICY_LIMITATION' $id $path "Unresolved label for Level 1 quick checkpoint: $label" "Full tier requires presence of $label"
                 }
             } else {
-                $val = Get-FieldValue $FilePath $label
-                if (-not (Test-Label $FilePath $label) -or (Test-Placeholder $val)) {
+                if ((-not (Test-Label $FilePath $label)) -or (Test-QuickPlaceholder (Get-FieldValue $FilePath $label))) {
                     $unresolvedCount++
                     Add-Degradation 'POLICY_LIMITATION' $id $path "Unresolved label for Level 1 quick checkpoint: $label" "Full tier requires non-placeholder value"
                 }
@@ -559,7 +621,7 @@ function Test-Checkpoint {
     }
     if ((Get-FieldValue $FilePath 'Record Type') -ne 'Checkpoint Record') { Add-Diagnostic 'CHECKPOINT_INCOMPLETE' $id $path 'Record Type is not Checkpoint Record' 'Use the canonical Checkpoint Record type' }
     $taskId = Get-FieldValue $FilePath 'Task ID'
-    if (-not $TaskById.ContainsKey($taskId)) { Add-Diagnostic 'TRACEABILITY_MISSING' $id $path "Checkpoint references unknown Task ID: $taskId" 'Link the checkpoint to an existing Task Record' }
+    if ([string]::IsNullOrWhiteSpace($taskId) -or (-not $TaskById.ContainsKey($taskId))) { Add-Diagnostic 'TRACEABILITY_MISSING' $id $path "Checkpoint references unknown Task ID: $taskId" 'Link the checkpoint to an existing Task Record' }
 }
 
 function Test-Handoff {
@@ -705,8 +767,9 @@ if (-not [string]::IsNullOrWhiteSpace($AuthorizationBaseline)) {
     if ($authExitCode -ne 0) { $ErrorCount++ }
 }
 
+foreach ($deg in $Degradations) { Write-Output $deg }
+
 if ($ErrorCount -eq 0) {
-    foreach ($deg in $Degradations) { Write-Output $deg }
     if ($HasQuickRecord) {
         Write-Output ("VALID|RECORDS={0}|TIER=quick|UNRESOLVED={1}|ROOT=." -f $RecordCount, $QuickUnresolvedCount)
     } else {
@@ -715,5 +778,9 @@ if ($ErrorCount -eq 0) {
     exit 0
 }
 foreach ($diagnostic in $Diagnostics) { Write-Output $diagnostic }
-Write-Output ("FAILED|ERRORS={0}|RECORDS={1}" -f $ErrorCount, $RecordCount)
+if ($HasQuickRecord) {
+    Write-Output ("FAILED|ERRORS={0}|RECORDS={1}|TIER=quick|UNRESOLVED={2}" -f $ErrorCount, $RecordCount, $QuickUnresolvedCount)
+} else {
+    Write-Output ("FAILED|ERRORS={0}|RECORDS={1}" -f $ErrorCount, $RecordCount)
+}
 exit 1

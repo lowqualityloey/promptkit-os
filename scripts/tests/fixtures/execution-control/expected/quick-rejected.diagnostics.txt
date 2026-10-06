@@ -1,14 +1,9 @@
-CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Blockers|Add the labeled field to the canonical record
+CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Branch / Revision|Add the labeled field to the canonical record
 CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: CI Evidence|Add the labeled field to the canonical record
 CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Changed Files|Add the labeled field to the canonical record
 CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Checkpoint Type|Add the labeled field to the canonical record
 CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Completed Work|Add the labeled field to the canonical record
-CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Created|Add the labeled field to the canonical record
 CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Locked Decisions and Invariants|Add the labeled field to the canonical record
-CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Objective|Add the labeled field to the canonical record
-CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Recorded By|Add the labeled field to the canonical record
-CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Remaining Work|Add the labeled field to the canonical record
-CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Resume Condition|Add the labeled field to the canonical record
 CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Scope Changes|Add the labeled field to the canonical record
 CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Specification|Add the labeled field to the canonical record
 CHECKPOINT_INCOMPLETE|CHECKPOINT-2026-10-07-quick-rejected-1|docs/tasks/TASK-2026-10-07-quick-rejected.checkpoint-1.md|Missing field: Task ID|Add the labeled field to the canonical record
