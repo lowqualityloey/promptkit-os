@@ -184,9 +184,10 @@ git -C "$FIXTURE" add -A
 git -C "$FIXTURE" -c user.email=fixture@example.invalid -c user.name=fixture commit -qm "fixture"
 git -C "$FIXTURE" tag 'v1.0.0-x|y&z'
 D="$TEST_ROOT/t12/proj"; mkdir -p "$D"
-bash "$FIXTURE/init.sh" --balanced --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1
+bash "$FIXTURE/init.sh" --balanced --engine-version=v9.8.7 --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1
 if [[ -f "$D/AGENTS.md" ]] \
    && grep -Eq '^Engine: [A-Za-z0-9._+-]+ \([0-9a-f]{7,}\) — stamped at install time' "$D/AGENTS.md" \
+   && ! grep -q '^Engine: v9.8.7 ' "$D/AGENTS.md" \
    && ! grep -Eq '\$ENGINE_VERSION|\$ENGINE_SHA' "$D/AGENTS.md" \
    && ! grep -Eq '^- \*\*Engine Version\*\*:.*[|&]' "$D/docs/STATE.md"; then
     ok "adversarial git tag cannot abort or corrupt the install"
@@ -231,6 +232,17 @@ if managed_block_matches_template "$D/AGENTS.md" "$REPO_ROOT/templates/agent-dir
     notok "harness accepts a leaked \$KIT_DIR_REL placeholder (normalizer masking regression)"
 else
     ok "harness rejects a leaked \$KIT_DIR_REL placeholder"
+fi
+
+# 16. Courier release version is retained for a tarball install, with no fabricated SHA.
+KIT="$TEST_ROOT/t16/kit"; D="$TEST_ROOT/t16/project"; mkdir -p "$KIT" "$D"
+tar -C "$REPO_ROOT" --exclude=.git --exclude=.codegraph -cf - . | tar -C "$KIT" -xf -
+bash "$KIT/init.sh" --balanced --engine-version=v9.8.7 --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1
+if grep -q '^Engine: v9.8.7 (unknown) — stamped at install time' "$D/AGENTS.md" \
+   && grep -q '^- \*\*Engine Version\*\*: v9.8.7 @ unknown$' "$D/docs/STATE.md"; then
+    ok "courier release version is stamped while SHA remains unknown"
+else
+    notok "courier identity stamp (agent=$(grep -h '^Engine: ' "$D/AGENTS.md" 2>/dev/null), state=$(grep -h 'Engine Version' "$D/docs/STATE.md" 2>/dev/null))"
 fi
 
 echo ""

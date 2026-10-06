@@ -160,6 +160,10 @@ function runInstaller(kitDir, args) {
   }
 }
 
+function installerArgs(args, version) {
+  return [...args, `--engine-version=v${version}`];
+}
+
 async function main() {
   const version = PKG.version;
   if (version === "0.0.0") {
@@ -217,11 +221,11 @@ async function main() {
   await extract(tarball, kitDir);
   process.stderr.write(`[promptkit-os] extracted release v${version} into ${KIT_DIR}/\n`);
 
-  runInstaller(kitDir, args);
+  runInstaller(kitDir, installerArgs(args, version));
 }
 
 if (require.main === module) {
   main().catch((err) => die(err && err.message ? err.message : String(err)));
 } else {
-  module.exports = { verifyTarballIntegrity, expectedTarballDigest, TARBALL_SHA256_BY_VERSION };
+  module.exports = { verifyTarballIntegrity, expectedTarballDigest, TARBALL_SHA256_BY_VERSION, installerArgs };
 }
