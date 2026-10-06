@@ -61,6 +61,31 @@ Track tasks using atomic checklists (`[x]` Done, `[/]` In Progress, `[ ]` Queued
 - **Latest Handoff**: `[Record path or None]`
 - **Next Action**: `[Exactly one prioritized action]`
 
+#### Field-mapping (checkpoint labels)
+
+| Label | From /handoff payload | Derivable from local git | Degrades to (when unmappable) |
+| :--- | :--- | :--- | :--- |
+| Record Type | no | no | n/a |
+| Checkpoint ID | no | no | n/a |
+| Task ID | yes | no | TRACEABILITY_MISSING |
+| Specification | yes | no | N/A — no Task Record (Level 0/1) |
+| Created | partial | yes | n/a |
+| Checkpoint Type | no | no | POLICY_LIMITATION |
+| Execution State | yes | no | not measured |
+| Objective | yes | no | not measured |
+| Completed Work | partial | no | not measured |
+| Remaining Work | partial | no | not measured |
+| Changed Files | yes | yes | not measured |
+| Branch / Revision | yes | yes | n/a |
+| Locked Decisions and Invariants | yes | no | not measured |
+| Verification Evidence | yes | no | not measured |
+| CI Evidence | partial | no | POLICY_LIMITATION |
+| Blockers | partial | no | not measured |
+| Scope Changes | partial | no | not measured |
+| Next Action | yes | no | not measured |
+| Resume Condition | partial | no | not measured |
+| Recorded By | no | no | POLICY_LIMITATION |
+
 ---
 
 ## 3B. Release-Evaluation Handoff (Optional)

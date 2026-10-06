@@ -81,7 +81,7 @@ For Level 2 (Controlled) and Level 3 (Release-Critical) Work, checkpointing is a
 - Scope changes require a linked Scope Change Record before changing objective, files, acceptance criteria, dependencies, non-goals, risk, or verification. Expansion requires human confirmation or a separate Task Record.
 - Mid-implementation new requirements are intercepted, never silently absorbed, per the canonical New-Requirement Interception table in `workflows/sync.md` (doc-only appends, Scope Change Records, planning re-open with intake status `partial`, Later ledger).
 
-Phase 4 may synchronize `docs/STATE.md`, but STATE is a projection owned by `pk:checkpoint`; the canonical `docs/tasks/<task-id>.md` Task Record remains the Local Task Source. At a session or role boundary, the receiver must validate the Task ID, revision, changed files, acceptance criteria, blockers, invariants, and exactly one next action before editing. A mismatch leaves execution blocked or `checkpoint_due` until reconciled.
+Phase 4 may synchronize `docs/STATE.md`, but STATE is a projection owned by `pk:checkpoint`; the canonical `docs/tasks/<task-id>.md` Task Record remains the Local Task Source. At a session or role boundary, the receiver must validate the Task ID, revision, changed files, acceptance criteria, blockers, invariants, and exactly one next action before editing. A mismatch leaves execution blocked or `checkpoint_due` until reconciled. Harness-spawned sessions bind to the #516 default boundary: `workflows/auto.md --until review`.
 
 #### State Mutation Contract (single arbitration rule)
 
