@@ -55,7 +55,7 @@ A workflow must not silently change what a repository publishes. Durability behi
 ### What already exists (do not duplicate)
 
 * `workflows/checkpoint.md` (anchor: `### Phase 4: docs/STATE.md Sync & Handover Prompt Generation`) Phase 4 instructs a disk write and says "preserve session progress in git" — `workflows/checkpoint.md` (anchor: `update it to preserve session progress in git`) — but contains **no** `git add` / `git commit` / `git check-ignore` instruction. There is no existing staging invariant to revise.
-* Externalized-rules precedent: `scripts/harness-security-paths.txt` (`path|kind`) and `scripts/harness-security-rules.txt` (`RULE|scope|regex`), loaded at `scripts/check-harness-security.sh` (anchor: `for table in harness-security-paths.txt harness-security-rules.txt; do`) with fail-closed `INCOMPLETE` → `exit 2` on a missing file (anchor: `report INCOMPLETE RULES .; exit 2; fi`), and evaluated by the rules loop (anchor: `while IFS='|' read -r rule scope pattern; do`).
+* Externalized-rules precedent: `scripts/harness-security-paths.txt` (`path|kind`) and `scripts/harness-security-rules.txt` (`RULE|scope|regex`), loaded at `scripts/check-harness-security.sh` (anchor: `for table in harness-security-paths.txt harness-security-rules.txt; do`), fail-closed on a missing file — `scripts/check-harness-security.sh` (anchor: `report INCOMPLETE RULES .; exit 2; fi`) — and evaluated by the rules loop `scripts/check-harness-security.sh` (anchor: `while IFS='|' read -r rule scope pattern; do`).
 * Prior claim that `scripts/isolate-worktree.sh` "sets defensive-git precedent" is **false** — that script contains no `check-ignore` / `add -f` logic; its `--force` flags concern worktree/branch removal. Do not cite it.
 
 ### Non-Negotiable Invariants
