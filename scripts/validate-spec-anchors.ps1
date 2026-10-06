@@ -56,6 +56,7 @@ $barePattern = '`[A-Za-z0-9_./-]+\.(sh|ps1|md|js|mjs|json|yml|ymlc):[0-9]+`'
 $total = 0
 $bad = 0
 $bareCount = 0
+$orphanCount = 0
 
 foreach ($specFile in $Spec) {
     if (-not (Test-Path -LiteralPath $specFile -PathType Leaf)) {
@@ -81,6 +82,7 @@ foreach ($specFile in $Spec) {
             Write-Host "  [X] ${label}:${lineNo}  line-number citation $r -- use ``path`` (anchor: ``content``) instead"
         }
         $rest = $line
+        $matched = 0
         while ($true) {
             $m = [regex]::Match($rest, $pattern)
             if (-not $m.Success) { break }
@@ -88,6 +90,7 @@ foreach ($specFile in $Spec) {
             $anchor = $m.Groups[2].Value
             $total++
             $specTotal++
+            $matched++
             $target = if ([System.IO.Path]::IsPathRooted($path)) { $path } else { Join-Path $Root $path }
             $reason = ""
             if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
@@ -106,6 +109,16 @@ foreach ($specFile in $Spec) {
             }
             $rest = $rest.Substring($m.Index + $m.Length)
         }
+        # The citation grammar requires a backticked path immediately before `(anchor:`
+        # and the closing backtick immediately before `)`, so a malformed citation does not
+        # fail to match -- it disappears. Counting them is what keeps that from being a
+        # silent hole, and it mirrors the Bash twin's awk "X" record exactly.
+        $rawCount = [regex]::Matches($line, '\(anchor: ').Count
+        if ($matched -ne $rawCount) {
+            $orphanCount++
+            $specBad++
+            Write-Host "  [X] ${label}:${lineNo}  malformed anchor citation: $rawCount '(anchor:' occurrence(s) but only $matched well-formed -- a citation needs a backticked path immediately before (anchor: and the closing backtick immediately before )"
+        }
     }
     if ($specBad -eq 0) {
         Write-Host "  [OK] $label -- $specTotal anchor(s) resolve"
@@ -113,8 +126,8 @@ foreach ($specFile in $Spec) {
 }
 
 Write-Host ""
-Write-Host "Anchor citations checked: $total | unresolved: $bad | line-number citations rejected: $bareCount"
-if ($bad -gt 0 -or $bareCount -gt 0) {
+Write-Host "Anchor citations checked: $total | unresolved: $bad | line-number citations rejected: $bareCount | malformed anchor citations: $orphanCount"
+if ($bad -gt 0 -or $bareCount -gt 0 -or $orphanCount -gt 0) {
     Write-Host "[X] spec anchor validation FAILED"
     exit 1
 }

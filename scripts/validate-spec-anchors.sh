@@ -53,6 +53,7 @@ BARE_RE='`[A-Za-z0-9_./-]+\.(sh|ps1|md|js|mjs|json|yml|ymlc):[0-9]+`'
 
 declare -a BARE_REFS=()
 BARE_COUNT=0
+ORPHAN_COUNT=0
 
 for spec in $SPEC_DIR; do
     [[ -f "$spec" ]] || { echo "error: no such spec: $spec" >&2; exit 2; }
@@ -77,9 +78,19 @@ for spec in $SPEC_DIR; do
     # `grep -o` pipeline consumed by `read` -- and both silently under-counted. awk walks
     # the line with RSTART/RLENGTH exactly as the twin walks it with Match/Index, so the
     # two gates cannot drift apart on a shared-prefix line.
-    # Emits: <path> TAB <anchor> TAB <line number>
-    while IFS=$'\t' read -r path anchor bline; do
-        [[ -n "$path" ]] || continue
+    #
+    # awk emits `A<TAB>path<TAB>anchor<TAB>line` per citation, plus `X<TAB>line<TAB>raw<TAB>matched`
+    # for any line whose "(anchor:" count exceeds its well-formed citation count. The X record is
+    # the point: the citation grammar requires a backticked path immediately before `(anchor:`
+    # and the closing backtick immediately before `)`, so a malformed citation does not fail to
+    # match -- it disappears. Counting them is what keeps that from being a silent hole.
+    while IFS=$'\t' read -r kind f1 f2 f3; do
+        if [[ "$kind" == "X" ]]; then
+            ORPHAN_COUNT=$((ORPHAN_COUNT + 1)); spec_bad=$((spec_bad + 1))
+            printf '  ❌ %s:%s  malformed anchor citation: %s "(anchor:" occurrence(s) but only %s well-formed -- a citation needs a backticked path immediately before (anchor: and the closing backtick immediately before )\n' "$spec_label" "$f1" "$f2" "$f3"
+            continue
+        fi
+        path="$f1"; anchor="$f2"; bline="$f3"
         TOTAL=$((TOTAL + 1)); spec_total=$((spec_total + 1))
         target="$path"
         [[ "$target" != /* ]] && target="$ROOT/$target"
@@ -96,13 +107,18 @@ for spec in $SPEC_DIR; do
             printf '       anchor: %s\n' "$anchor"
         fi
     done < <(awk '{
+        probe = $0
+        raw = gsub(/\(anchor: /, "", probe)
         line = $0
+        matched = 0
         while (match(line, /`[^`]+`[[:space:]]+\(anchor:[[:space:]]*`[^`]+`\)/) > 0) {
             hit = substr(line, RSTART, RLENGTH)
             split(substr(hit, 2, length(hit) - 2), parts, "`")
-            printf "%s\t%s\t%d\n", parts[1], parts[3], FNR
+            printf "A\t%s\t%s\t%d\n", parts[1], parts[3], FNR
             line = substr(line, RSTART + RLENGTH)
+            matched++
         }
+        if (matched != raw) printf "X\t%d\t%d\t%d\n", FNR, raw, matched
     }' "$spec")
     if [[ "$spec_bad" -eq 0 ]]; then
         printf '  ✅ %s -- %s anchor(s) resolve\n' "$spec_label" "$spec_total"
@@ -110,8 +126,8 @@ for spec in $SPEC_DIR; do
 done
 
 echo ""
-echo "Anchor citations checked: $TOTAL | unresolved anchors: $BAD | line-number citations rejected: $BARE_COUNT"
-if [[ "$BAD" -gt 0 || "$BARE_COUNT" -gt 0 ]]; then
+echo "Anchor citations checked: $TOTAL | unresolved anchors: $BAD | line-number citations rejected: $BARE_COUNT | malformed anchor citations: $ORPHAN_COUNT"
+if [[ "$BAD" -gt 0 || "$BARE_COUNT" -gt 0 || "$ORPHAN_COUNT" -gt 0 ]]; then
     echo "❌ spec anchor validation FAILED"
     exit 1
 fi
