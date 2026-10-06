@@ -527,10 +527,14 @@ $EngineSha = "unknown"
 try {
     if (Test-Path -LiteralPath (Join-Path $ScriptDir ".git")) {
         if (Get-Command git -ErrorAction SilentlyContinue) {
-            $described = git -C $ScriptDir describe --tags --match "v[0-9]*" 2>$null | Select-Object -First 1
-            if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($described)) { $EngineVersion = "$described".Trim() }
-            $shortSha = git -C $ScriptDir rev-parse --short HEAD 2>$null | Select-Object -First 1
-            if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($shortSha)) { $EngineSha = "$shortSha".Trim() }
+            $describeOutput = git -C $ScriptDir describe --tags --match "v[0-9]*" 2>$null
+            $describeExit = $LASTEXITCODE
+            $described = $describeOutput | Select-Object -First 1
+            if ($describeExit -eq 0 -and -not [string]::IsNullOrWhiteSpace($described)) { $EngineVersion = "$described".Trim() }
+            $shaOutput = git -C $ScriptDir rev-parse --short HEAD 2>$null
+            $shaExit = $LASTEXITCODE
+            $shortSha = $shaOutput | Select-Object -First 1
+            if ($shaExit -eq 0 -and -not [string]::IsNullOrWhiteSpace($shortSha)) { $EngineSha = "$shortSha".Trim() }
         }
     } elseif (-not [string]::IsNullOrWhiteSpace($CourierEngineVersion)) {
         $EngineVersion = $CourierEngineVersion
