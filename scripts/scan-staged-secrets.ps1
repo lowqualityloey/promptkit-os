@@ -66,6 +66,45 @@ catch {
     Stop-Scan "Staged secret scan could not enumerate staged paths; stop before committing."
 }
 
+# Narrative-surface detectors and their allowlist are externalized data files
+# modeled on scripts/harness-security-*.txt. A missing or unreadable file fails
+# the scan closed (exit 2), mirroring the Bash twin and check-harness-security.ps1.
+$narrativeRulesPath = Join-Path $PSScriptRoot 'narrative-surface-rules.txt'
+$narrativePathsPath = Join-Path $PSScriptRoot 'narrative-surface-paths.txt'
+$narrativeRulesExtra = $env:PROMPTKIT_NARRATIVE_RULES_EXTRA
+$narrativePathsExtra = $env:PROMPTKIT_NARRATIVE_PATHS_EXTRA
+if (-not (Test-Path -LiteralPath $narrativeRulesPath -PathType Leaf) -or -not (Test-Path -LiteralPath $narrativePathsPath -PathType Leaf)) {
+    Stop-Scan "Staged secret scan could not read its narrative-surface rules; stop before committing."
+}
+if ($narrativeRulesExtra -and -not (Test-Path -LiteralPath $narrativeRulesExtra -PathType Leaf)) {
+    Stop-Scan "Staged secret scan could not read its narrative-surface rules extension; stop before committing."
+}
+if ($narrativePathsExtra -and -not (Test-Path -LiteralPath $narrativePathsExtra -PathType Leaf)) {
+    Stop-Scan "Staged secret scan could not read its narrative-surface allowlist extension; stop before committing."
+}
+
+$narrativeRules = @()
+foreach ($rulesFile in @($narrativeRulesPath, $narrativeRulesExtra)) {
+    if (-not $rulesFile) { continue }
+    foreach ($line in (Get-Content -LiteralPath $rulesFile)) {
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith('#')) { continue }
+        $fields = $line -split '\|', 3
+        if ($fields.Count -lt 3) { continue }
+        $narrativeRules += [pscustomobject]@{ Rule = $fields[0]; Regex = $fields[1]; Severity = $fields[2] }
+    }
+}
+
+$narrativeAllow = @()
+foreach ($pathsFile in @($narrativePathsPath, $narrativePathsExtra)) {
+    if (-not $pathsFile) { continue }
+    foreach ($line in (Get-Content -LiteralPath $pathsFile)) {
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith('#')) { continue }
+        $fields = $line -split '\|', 2
+        if ($fields.Count -lt 2 -or $fields[1] -ne 'allow') { continue }
+        $narrativeAllow += $fields[0]
+    }
+}
+
 $detectors = @(
     [pscustomobject]@{ Pattern = 'BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY'; Category = 'private-key marker' },
     [pscustomobject]@{ Pattern = 'AKIA[0-9A-Z]+'; Category = 'AWS access-key pattern' },
@@ -83,7 +122,12 @@ $detectors = @(
 )
 
 $scanFound = $false
+$narrativeFound = $false
 foreach ($path in $stagedPaths) {
+    $narrativeAllowed = $false
+    foreach ($glob in $narrativeAllow) {
+        if ($path -like $glob) { $narrativeAllowed = $true; break }
+    }
     $redactedPath = $path
     $pathPatterns = @($detectors.Pattern) + 'password\s*[:=]\s*[^\s/\\]+'
     foreach ($pattern in $pathPatterns) {
@@ -148,8 +192,17 @@ foreach ($path in $stagedPaths) {
                 [Console]::Out.WriteLine(('Potential {0} in staged additions: {1}:{2} (matching content suppressed).' -f 'high-entropy secret-assignment pattern', $escapedPath, $lineNumber))
             }
         }
+        if (-not $narrativeAllowed) {
+            foreach ($rule in $narrativeRules) {
+                if ($content -cmatch $rule.Regex) {
+                    $narrativeFound = $true
+                    [Console]::Out.WriteLine(('Narrative surface {0} ({1}) in staged additions: {2}:{3} (relativize the path to a $HOME-relative form, or untrack the file).' -f $rule.Rule, $rule.Severity, $escapedPath, $lineNumber))
+                }
+            }
+        }
         $lineNumber++
     }
 }
 
 if ($scanFound) { exit 1 }
+if ($narrativeFound) { exit 3 }

@@ -205,6 +205,98 @@ if command -v mawk >/dev/null 2>&1; then
     run_engine "$traditional_awk"
 fi
 
+# --- Narrative-Surface Staged Scan Tests ---
+slash='/'
+backslash='\'
+narrative_posix="${slash}home${slash}narrative-fixture${slash}project"
+narrative_macos="${slash}Users${slash}narrative-fixture${slash}project"
+narrative_windows="C:${backslash}Users${backslash}narrative-fixture"
+roadmap_marker=$(printf 'internal%sroadmap' ' ')
+
+narrative_repo="$tmp/narrative"
+mkdir -p "$narrative_repo"
+git -C "$narrative_repo" init -q
+git -C "$narrative_repo" config user.name "PromptKit narrative fixture"
+git -C "$narrative_repo" config user.email "narrative-fixture@example.invalid"
+printf '%s\n' 'ordinary baseline notes' >"$narrative_repo/notes.md"
+git -C "$narrative_repo" add -- notes.md
+git -C "$narrative_repo" commit -q -m baseline
+
+# Scenario 1: clean staged content passes silently.
+printf '%s\n' 'ordinary staged notes' >"$narrative_repo/clean.md"
+git -C "$narrative_repo" add -- clean.md
+status=0
+output=$(bash "$scanner" "$narrative_repo" 2>&1) || status=$?
+[[ "$status" -eq 0 && -z "$output" ]] || fail 'a clean staged tree should pass with no narrative output'
+git -C "$narrative_repo" reset -q HEAD -- clean.md
+
+# Scenario 2: absolute local path and roadmap markers exit 3 with remediation.
+{
+    printf 'home path: %s\n' "$narrative_posix"
+    printf 'mac path: %s\n' "$narrative_macos"
+    printf 'win path: %s\n' "$narrative_windows"
+    printf 'plan: %s\n' "$roadmap_marker"
+} >"$narrative_repo/notes.md"
+git -C "$narrative_repo" add -- notes.md
+status=0
+output=$(bash "$scanner" "$narrative_repo" 2>&1) || status=$?
+[[ "$status" -eq 3 ]] || fail "a narrative finding should exit 3, got $status"
+for rule in HOME_ABSOLUTE_PATH MACOS_USERS_PATH WINDOWS_USERS_PATH INTERNAL_ROADMAP; do
+    [[ "$output" == *"Narrative surface $rule"* ]] || fail "narrative scan missed the $rule detector"
+done
+[[ "$output" == *'notes.md:1'* && "$output" == *'notes.md:4'* ]] ||
+    fail 'narrative scan reported an incorrect or missing file:line'
+[[ "$output" == *'relativize'* ]] || fail 'narrative finding omitted the remediation guidance'
+[[ "$output" != *"$narrative_posix"* ]] || fail 'narrative scan leaked the matching absolute path'
+
+# Scenario 3: an allowlisted staged path does not fire.
+git -C "$narrative_repo" reset -q HEAD -- notes.md
+git -C "$narrative_repo" checkout -q -- notes.md
+mkdir -p "$narrative_repo/docs/reviews"
+printf 'source %s\n' "$narrative_posix" >"$narrative_repo/docs/reviews/2026-10-02-pr495-review.md"
+git -C "$narrative_repo" add -- docs/reviews/2026-10-02-pr495-review.md
+status=0
+output=$(bash "$scanner" "$narrative_repo" 2>&1) || status=$?
+[[ "$status" -eq 0 && -z "$output" ]] || fail 'an allowlisted staged path should not raise a narrative finding'
+
+# Scenario 6: pre-existing absolute paths outside the staged diff are not re-flagged.
+git -C "$narrative_repo" reset -q HEAD -- docs
+rm -rf "$narrative_repo/docs"
+printf 'preexisting %s\nsecond line\n' "$narrative_posix" >"$narrative_repo/history.md"
+git -C "$narrative_repo" add -- history.md
+git -C "$narrative_repo" commit -q -m 'record narrative'
+printf 'preexisting %s\nsecond line edited\n' "$narrative_posix" >"$narrative_repo/history.md"
+git -C "$narrative_repo" add -- history.md
+status=0
+output=$(bash "$scanner" "$narrative_repo" 2>&1) || status=$?
+[[ "$status" -eq 0 && -z "$output" ]] ||
+    fail 'an untouched pre-existing absolute path must not be re-flagged by a later edit'
+
+# Scenario 4: secrets keep precedence at exit 1 when a narrative finding co-occurs.
+git -C "$narrative_repo" reset -q HEAD -- history.md
+git -C "$narrative_repo" checkout -q -- history.md
+printf 'leak %s\nkey AKIA%s\n' "$narrative_posix" "$(printf '%016d' 0)" >"$narrative_repo/mixed.md"
+git -C "$narrative_repo" add -- mixed.md
+status=0
+output=$(bash "$scanner" "$narrative_repo" 2>&1) || status=$?
+[[ "$status" -eq 1 ]] || fail 'a secret must keep precedence at exit 1 over a narrative finding'
+[[ "$output" == *'Narrative surface'* && "$output" == *'AWS access-key pattern'* ]] ||
+    fail 'a co-occurring secret and narrative finding should both be reported'
+
+# Scenario 5: a missing shipped or overridden rules file is fail-closed at exit 2.
+status=0
+output=$(PROMPTKIT_NARRATIVE_RULES_EXTRA="$tmp/absent-rules.txt" bash "$scanner" "$narrative_repo" 2>&1) || status=$?
+[[ "$status" -eq 2 ]] || fail 'a missing narrative rules extension should fail closed at exit 2'
+[[ "$output" == *'narrative-surface rules extension'* ]] ||
+    fail 'the missing-extension failure did not name the unreadable rules file'
+
+isolated="$tmp/isolated-scripts"
+mkdir -p "$isolated"
+cp "$scanner" "$isolated/"
+status=0
+output=$(bash "$isolated/scan-staged-secrets.sh" "$narrative_repo" 2>&1) || status=$?
+[[ "$status" -eq 2 ]] || fail 'a scanner without its shipped rules files should fail closed at exit 2'
+
 # --- Probe Purge & Credential Filename Gate Tests ---
 hygiene_repo="$tmp/hygiene_repo"
 mkdir -p "$hygiene_repo"

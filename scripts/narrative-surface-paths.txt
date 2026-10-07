@@ -1,0 +1,15 @@
+# Narrative-surface allowlist: glob|kind
+#
+# Loaded by scripts/scan-staged-secrets.sh and scripts/scan-staged-secrets.ps1.
+# An `allow` entry exempts staged paths matching the glob from narrative-surface
+# detection only; secret detection still runs on every staged path. A missing or
+# unreadable copy of this file fails the scan closed (exit 2).
+#
+# Entries are narrow and evidence-backed. The two review records below are
+# tracked in this repository and legitimately quote isolated absolute worktree
+# paths from an external review, so an edit touching those lines must not be
+# reported as a leak. Add consumer-specific exemptions through the documented
+# override instead of editing this shipped list:
+#   PROMPTKIT_NARRATIVE_PATHS_EXTRA=/absolute/path/to/extra-paths.txt
+docs/reviews/2026-10-02-pr495-review.md|allow
+docs/reviews/2026-10-02-pr496-review.md|allow
