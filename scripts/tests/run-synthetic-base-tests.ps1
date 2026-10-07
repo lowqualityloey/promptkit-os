@@ -364,6 +364,37 @@ try {
     Want-Contains 'SYNTHETIC_BASE|UNKNOWN|'
     Want-NotContains 'REFUSE'
     Report-Scenario 'S21 ordinary ancestor of workspace tip -> UNKNOWN'
+
+    # S22: a remote-tracking workspace branch tip with no local branch is refused.
+    Begin-Scenario
+    $root22 = New-DetachedRepo 's22'
+    & git -C $root22 update-ref refs/remotes/origin/gitbutler/workspace HEAD | Out-Null
+    Invoke-Checker -CheckerRoot $root22
+    Want-Status 1
+    Want-Contains 'SYNTHETIC_BASE|REFUSE|'
+    Want-Contains 'owned-branch=refs/remotes/origin/gitbutler/workspace'
+    Want-Contains 'SYNTHETIC_BASE|RECOVERY|'
+    Report-Scenario 'S22 remote-tracking workspace tip -> REFUSE'
+
+    # S23: a name crossing the namespace boundary is not tool-owned -> OK.
+    Begin-Scenario
+    $root23 = New-DetachedRepo 's23'
+    & git -C $root23 update-ref refs/heads/gitbutler/workspace-backup HEAD | Out-Null
+    Invoke-Checker -CheckerRoot $root23
+    Want-Status 0
+    Want-Contains 'SYNTHETIC_BASE|OK|'
+    Want-NotContains 'REFUSE'
+    Report-Scenario 'S23 workspace-prefix name crossing a boundary -> OK'
+
+    # S24: a branch at a namespace path boundary is tool-owned -> REFUSE.
+    Begin-Scenario
+    $root24 = New-DetachedRepo 's24'
+    & git -C $root24 update-ref refs/heads/gitbutler/workspace/snapshot HEAD | Out-Null
+    Invoke-Checker -CheckerRoot $root24
+    Want-Status 1
+    Want-Contains 'SYNTHETIC_BASE|REFUSE|'
+    Want-Contains 'owned-branch=refs/heads/gitbutler/workspace/snapshot'
+    Report-Scenario 'S24 workspace-namespace subpath -> REFUSE'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }

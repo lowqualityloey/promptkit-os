@@ -349,6 +349,45 @@ s21() {
     want_not_contains 'REFUSE'
 }
 
+# S22: a commit carried only by the remote-tracking workspace branch
+# (refs/remotes/<remote>/gitbutler/workspace), with no local branch, is
+# positively tool-owned -> REFUSE.
+s22() {
+    local root
+    root="$(make_detached s22)"
+    git -C "$root" update-ref refs/remotes/origin/gitbutler/workspace HEAD
+    run_checker "$root"
+    want_status 1
+    want_contains 'SYNTHETIC_BASE|REFUSE|'
+    want_contains 'owned-branch=refs/remotes/origin/gitbutler/workspace'
+    want_contains 'SYNTHETIC_BASE|RECOVERY|'
+}
+
+# S23: a name that merely starts with the workspace prefix but crosses a path
+# boundary (gitbutler/workspace-backup) is NOT tool-owned; the carrier and tip
+# passes agree, so it is an ordinary carrying branch -> OK.
+s23() {
+    local root
+    root="$(make_detached s23)"
+    git -C "$root" update-ref refs/heads/gitbutler/workspace-backup HEAD
+    run_checker "$root"
+    want_status 0
+    want_contains 'SYNTHETIC_BASE|OK|'
+    want_not_contains 'REFUSE'
+}
+
+# S24: a branch under the workspace namespace at a path boundary
+# (gitbutler/workspace/<name>) IS tool-owned in both passes -> REFUSE.
+s24() {
+    local root
+    root="$(make_detached s24)"
+    git -C "$root" update-ref refs/heads/gitbutler/workspace/snapshot HEAD
+    run_checker "$root"
+    want_status 1
+    want_contains 'SYNTHETIC_BASE|REFUSE|'
+    want_contains 'owned-branch=refs/heads/gitbutler/workspace/snapshot'
+}
+
 begin; s1; report 'S1 normal branch HEAD -> OK'
 begin; s2; report 'S2 owned ref, no carrying branch -> REFUSE'
 begin; s3; report 'S3 unpushed carrying branch -> OK'
@@ -370,6 +409,9 @@ begin; s18; report 'S18 comments-only signals (empty arrays) -> UNKNOWN, no shel
 begin; s19; report 'S19 changelog gate fails closed when preflight is missing'
 begin; s20; report 'S20 ordinary gitbutler/target-only carrying -> OK'
 begin; s21; report 'S21 ordinary ancestor of workspace tip -> UNKNOWN'
+begin; s22; report 'S22 remote-tracking workspace tip -> REFUSE'
+begin; s23; report 'S23 workspace-prefix name crossing a boundary -> OK'
+begin; s24; report 'S24 workspace-namespace subpath -> REFUSE'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1

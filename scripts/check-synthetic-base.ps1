@@ -3,9 +3,10 @@
 #
 # Refuses to let a caller derive a comparison base from a commit that is
 # positively tool-owned: either the tip of a tool-namespace ref (ref-namespace|
-# rows, e.g. refs/gitbutler/) or carried only by tool-owned branch namespaces
-# (branch-namespace| rows, e.g. GitButler's refs/heads/gitbutler/workspace). A
-# commit carried by any ordinary branch is silent.
+# rows, e.g. refs/gitbutler/) or carried only by a tool-owned branch namespace
+# (branch-namespace| rows, e.g. GitButler's refs/heads/gitbutler/workspace or its
+# fetched refs/remotes/<remote>/gitbutler/workspace). A commit carried by any
+# ordinary branch is silent.
 # Read-only by construction: rev-parse/for-each-ref only. It never stages,
 # commits, fetches, rebases, invokes a vendor CLI, or writes any file.
 
@@ -95,6 +96,30 @@ function Invoke-LocalGit {
     }
 }
 
+# Tool-owned at a path-component boundary only: the name equals a
+# branch-namespace prefix exactly or begins with that prefix followed by a slash.
+# GitButler's gitbutler/workspace matches; gitbutler/workspace-backup does not,
+# matching how `for-each-ref` treats a ref pattern up to a slash.
+function Get-BranchNameForRef {
+    param([string]$RefName)
+    if ($RefName.StartsWith('refs/heads/')) { return $RefName.Substring('refs/heads/'.Length) }
+    if ($RefName.StartsWith('refs/remotes/')) {
+        $remoteRest = $RefName.Substring('refs/remotes/'.Length)
+        $slash = $remoteRest.IndexOf('/')
+        if ($slash -ge 0) { return $remoteRest.Substring($slash + 1) }
+        return $remoteRest
+    }
+    return $RefName
+}
+
+function Test-ToolOwnedBranch {
+    param([string]$BranchName)
+    foreach ($branchNs in $script:branchNamespaces) {
+        if ($BranchName -eq $branchNs -or $BranchName.StartsWith($branchNs + '/', [StringComparison]::Ordinal)) { return $true }
+    }
+    return $false
+}
+
 $null = Invoke-LocalGit @('rev-parse', '--git-dir')
 if ($script:gitStatus -ne 0) { Write-Output 'SYNTHETIC_BASE|INCOMPLETE|GIT_METADATA|.'; exit 2 }
 
@@ -111,24 +136,14 @@ if ($script:gitStatus -ne 0) { Write-Output 'SYNTHETIC_BASE|INCOMPLETE|REFS|.'; 
 # Any ordinary branch containing the commit makes it an ordinary commit and it
 # is silent (Scenario 1), even when a tool-owned branch also contains it. A ref
 # is tool-owned only when its branch name (after refs/heads/ or
-# refs/remotes/<remote>/) begins with a branch-namespace prefix.
+# refs/remotes/<remote>/) is a tool-owned branch name; the carrier classifier and
+# the tip lookup below share the predicate so they cannot disagree at a boundary.
 $ordinaryCarrying = ''
 foreach ($carryingRef in $carrying) {
     if ([string]::IsNullOrWhiteSpace([string]$carryingRef)) { continue }
     $refName = [string]$carryingRef
-    $branchName = $refName
-    if ($refName.StartsWith('refs/heads/')) {
-        $branchName = $refName.Substring('refs/heads/'.Length)
-    } elseif ($refName.StartsWith('refs/remotes/')) {
-        $remoteRest = $refName.Substring('refs/remotes/'.Length)
-        $slash = $remoteRest.IndexOf('/')
-        $branchName = if ($slash -ge 0) { $remoteRest.Substring($slash + 1) } else { $remoteRest }
-    }
-    $isToolBranch = $false
-    foreach ($branchNs in $branchNamespaces) {
-        if ($branchName.StartsWith($branchNs, [StringComparison]::Ordinal)) { $isToolBranch = $true; break }
-    }
-    if (-not $isToolBranch -and [string]::IsNullOrEmpty($ordinaryCarrying)) {
+    $branchName = Get-BranchNameForRef $refName
+    if (-not (Test-ToolOwnedBranch $branchName) -and [string]::IsNullOrEmpty($ordinaryCarrying)) {
         $ordinaryCarrying = $refName
     }
 }
@@ -139,16 +154,20 @@ if (-not [string]::IsNullOrEmpty($ordinaryCarrying)) {
 }
 
 # Positive class (b): the inspected commit is the TIP of a tool-owned workspace
-# branch. Tip-only, never --contains: an ordinary commit that merely precedes a
-# workspace snapshot is not itself a workspace snapshot, and ownership must be
-# evidence about the inspected commit.
+# branch -- GitButler's refs/heads/gitbutler/workspace, or its fetched
+# refs/remotes/<remote>/gitbutler/workspace when no local branch exists. Tip-only,
+# never --contains: an ordinary commit that merely precedes a workspace snapshot is
+# not itself a workspace snapshot, and ownership must be evidence about the
+# inspected commit. The tip set is classified with the same predicate as the
+# carrier loop above, so the two passes share one definition of tool-owned.
 $toolBranchTip = ''
-foreach ($branchNs in $branchNamespaces) {
-    $tip = @(Invoke-LocalGit @('for-each-ref', '--points-at', $sha, '--format=%(refname)', "refs/heads/$branchNs"))
+if ($branchNamespaces.Count -gt 0) {
+    $tipRefs = @(Invoke-LocalGit @('for-each-ref', '--points-at', $sha, '--format=%(refname)', 'refs/heads', 'refs/remotes'))
     if ($script:gitStatus -ne 0) { Write-Output 'SYNTHETIC_BASE|INCOMPLETE|REFS|.'; exit 2 }
-    if ($tip.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace([string]$tip[0])) {
-        $toolBranchTip = [string]$tip[0]
-        break
+    foreach ($tipRef in $tipRefs) {
+        if ([string]::IsNullOrWhiteSpace([string]$tipRef)) { continue }
+        $refName = [string]$tipRef
+        if (Test-ToolOwnedBranch (Get-BranchNameForRef $refName)) { $toolBranchTip = $refName; break }
     }
 }
 if (-not [string]::IsNullOrEmpty($toolBranchTip)) {
