@@ -54,6 +54,7 @@ Explicitly select and document one of three distinct review modes before reviewi
     ```
   - **Resolved Diff**: `git diff <fixed-point>...HEAD`
   - **Resolved Files**: `git diff <fixed-point>...HEAD --name-only`
+  - **Synthetic-base preflight (read-only)**: run `scripts/check-synthetic-base.sh` / `.ps1` before resolving the fixed point. `REFUSE` means `HEAD` is a synthetic workspace commit and the diff would be meaningless — return to the carrying branch or rebase onto a real branch tip first. A detached real commit reports `UNKNOWN` and proceeds. Never derive a base from a synthetic workspace commit ([`docs/MAXIMS.md`](../docs/MAXIMS.md)).
 
 - **Staged Changes Review Mode (Index before commit)**:
   - **Scope**: Index contents only; strictly excludes unstaged edits and unselected or untracked files.

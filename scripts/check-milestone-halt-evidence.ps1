@@ -34,6 +34,18 @@ try {
 }
 
 $repo = Join-Path $bundlePath 'repository'
+# Synthetic-base preflight: refuse a seed-to-head comparison whose HEAD is a
+# tool-owned workspace commit. Read-only; refuses only on positive evidence.
+$detector = Join-Path $PSScriptRoot 'check-synthetic-base.ps1'
+if (Test-Path -LiteralPath $detector -PathType Leaf) {
+    $sbOut = & $detector -Root $repo -Commit 'HEAD' 2>&1 | Out-String
+    $sbRc = $LASTEXITCODE
+    if ($sbRc -eq 1) {
+        Write-Output $sbOut.TrimEnd()
+        Write-Output 'milestone-halt|repository|INVALID|synthetic-base'
+        exit 2
+    }
+}
 git -C $repo rev-parse --verify "$($provenance.seedCommit)^{commit}" *> $null
 if ($LASTEXITCODE -ne 0) { Write-Output 'milestone-halt|repository|INVALID|seed-commit-not-found'; exit 2 }
 git -C $repo merge-base --is-ancestor $provenance.seedCommit HEAD *> $null

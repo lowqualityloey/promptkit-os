@@ -66,6 +66,8 @@ jobs:
           bash -n scripts/check-checkpoint-ignore.sh
           bash -n scripts/check-setup-assert.sh
           bash -n scripts/tests/run-checkpoint-ignore-tests.sh
+          bash -n scripts/check-synthetic-base.sh
+          bash -n scripts/tests/run-synthetic-base-tests.sh
           echo "Bash scripts parsed with 0 syntax errors."
 
       - name: Run Documentation-Contract Tests (Bash)
@@ -85,6 +87,9 @@ jobs:
 
       - name: Run Checkpoint Ignore Tests (Bash)
         run: bash scripts/tests/run-checkpoint-ignore-tests.sh
+
+      - name: Run Synthetic Base Tests (Bash)
+        run: bash scripts/tests/run-synthetic-base-tests.sh
 
       - name: Run init.sh Safety Regression Tests (Bash)
         run: bash scripts/tests/run-init-safety-tests.sh
@@ -263,7 +268,10 @@ jobs:
             "scripts/tests/release-records.examples.ps1",
             "scripts/check-checkpoint-ignore.ps1",
             "scripts/check-setup-assert.ps1",
-            "scripts/tests/run-checkpoint-ignore-tests.ps1"
+            "scripts/tests/run-checkpoint-ignore-tests.ps1",
+            "scripts/check-synthetic-base.ps1",
+            "scripts/tests/run-synthetic-base-tests.ps1",
+            "scripts/tests/run-milestone-halt-evidence-fixtures.ps1"
           )
           foreach ($file in $syntaxFiles) {
             $errors = @()
@@ -298,6 +306,10 @@ jobs:
       - name: Run Checkpoint Ignore Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-checkpoint-ignore-tests.ps1
+
+      - name: Run Synthetic Base Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-synthetic-base-tests.ps1
 
       - name: Run init.ps1 Safety Regression Tests (PowerShell)
         shell: pwsh

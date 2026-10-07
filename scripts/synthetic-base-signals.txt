@@ -1,0 +1,17 @@
+# Owned ref namespaces for the synthetic-base preflight (scripts/check-synthetic-base.sh / .ps1).
+#
+# A commit reachable from a ref under one of these prefixes, and carried by no
+# branch, is positively tool-owned: a synthetic workspace commit. The preflight
+# refuses to derive a comparison base from it. A commit carried by any branch
+# (refs/heads/* or refs/remotes/*) is ordinary and never refused, even if a
+# tool namespace also references it.
+#
+# Row grammar (strict; a malformed row fails the preflight closed as INCOMPLETE):
+#   ref-namespace|<ref-prefix>
+#
+# Projects extend the set with the PROMPTKIT_SYNTHETIC_REFS_EXTRA environment
+# variable (whitespace-separated prefixes) or a custom --signals-file.
+ref-namespace|refs/gitbutler/
+ref-namespace|refs/orca/
+ref-namespace|refs/codex/
+ref-namespace|refs/cline/

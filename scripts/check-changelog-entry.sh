@@ -34,6 +34,20 @@ if ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
     exit 0
 fi
 
+# Synthetic-base preflight: a base-deriving range is meaningless when HEAD is a
+# tool-owned workspace commit. Read-only; refuses only on positive evidence.
+script_dir="$(builtin cd -- "$(dirname -- "$0")" && pwd -P)" || script_dir="."
+detector="$script_dir/check-synthetic-base.sh"
+if [ -f "$detector" ]; then
+    sb_rc=0
+    sb_out="$(bash "$detector" --root . --commit "$HEAD")" || sb_rc=$?
+    if [ "$sb_rc" -eq 1 ]; then
+        printf '%s\n' "$sb_out"
+        echo "CHANGELOG_GATE|SYNTHETIC-BASE|refusing to derive $BASE...$HEAD from a synthetic workspace commit|Return to the carrying branch or rebase onto a real branch tip (docs/MAXIMS.md)"
+        exit 1
+    fi
+fi
+
 files="$(git diff --name-only "$BASE...$HEAD" || true)"
 if [ -z "$files" ]; then
     if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then

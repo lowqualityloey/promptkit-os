@@ -31,7 +31,7 @@ try {
         New-Item -ItemType Directory -Path (Join-Path $FixtureRoot $sub) -Force | Out-Null
     }
     $stubs = @(
-        "docs/BENCHMARKS.md", "docs/TURBO-WAVES-GUIDE.md", "docs/WORKFLOW-MAP.md",
+        "docs/BENCHMARKS.md", "docs/TURBO-WAVES-GUIDE.md", "docs/WORKFLOW-MAP.md", "docs/MAXIMS.md",
         "docs/adrs/0002-workflow-lifecycle-policy.md", "docs/internal/release-evaluation.md",
         "docs/recipes/auto-phrase-boundary-sheet.md", "docs/recipes/auto-wave-pause-resume.md",
         "docs/recipes/auto-waves-preflight-checklist.md", "docs/recipes/websocket-realtime.md", "docs/recipes/state-management.md",

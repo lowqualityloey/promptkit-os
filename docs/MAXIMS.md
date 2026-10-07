@@ -10,3 +10,4 @@ Quotable one-line invariants that distill existing doctrine. This page **summari
 - **Persist decisions, not transcripts.** Task Records own execution state; `docs/STATE.md` is the synchronized projection. ([checkpoint.md](../workflows/checkpoint.md), [context-sync.md](../protocols/context-sync.md))
 - **Use the smallest verified change.** One concern per fix, one concern per commit. ([fix.md](../workflows/fix.md), [commit.md](../workflows/commit.md))
 - **Reversible is not the same as authorized.** Silence is denial for remote actions; merge, tag, publish, deploy, and rollback always need explicit human action. ([code-quality-gate.md authorization table](../protocols/code-quality-gate.md))
+- **Never derive a base from a synthetic workspace commit.** Return to the carrying branch or rebase before resolving a comparison base. ([sync.md Phase 1](../workflows/sync.md), [review.md](../workflows/review.md))

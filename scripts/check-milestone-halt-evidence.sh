@@ -36,6 +36,18 @@ if [ "$?" -ne 0 ]; then exit 2; fi
 metadata="$(EVIDENCE_DIR="$bundle" node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync(process.env.EVIDENCE_DIR+'/provenance.json','utf8'));const s=JSON.parse(fs.readFileSync(process.env.EVIDENCE_DIR+'/state-check.json','utf8'));process.stdout.write([p.seedCommit,s.m1Verified,s.signoffCallout,s.m2Advanced].join('|'))")"
 IFS='|' read -r seed m1_verified callout m2_advanced <<< "$metadata"
 repo="$bundle/repository"
+# Synthetic-base preflight: refuse a seed-to-head comparison whose HEAD is a
+# tool-owned workspace commit. Read-only; refuses only on positive evidence.
+detector="$(builtin cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/check-synthetic-base.sh"
+if [ -f "$detector" ]; then
+    sb_rc=0
+    sb_out="$(bash "$detector" --root "$repo" --commit HEAD)" || sb_rc=$?
+    if [ "$sb_rc" -eq 1 ]; then
+        printf '%s\n' "$sb_out"
+        echo "milestone-halt|repository|INVALID|synthetic-base"
+        exit 2
+    fi
+fi
 git -C "$repo" rev-parse --verify "$seed^{commit}" >/dev/null 2>&1 || { echo "milestone-halt|repository|INVALID|seed-commit-not-found"; exit 2; }
 git -C "$repo" merge-base --is-ancestor "$seed" HEAD || { echo "milestone-halt|repository|INVALID|seed-is-not-ancestor-of-final-head"; exit 2; }
 repo_state="$repo/docs/STATE.md"

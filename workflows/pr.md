@@ -39,6 +39,7 @@ Transform a series of local commits into a high-signal, staff-level Pull Request
     git log ${BASE_REF}..HEAD --oneline
     git diff --stat ${BASE_REF}...HEAD
     ```
+    > **Synthetic-base preflight (read-only).** Run `scripts/check-synthetic-base.sh` / `.ps1` before resolving `BASE_REF`. A `REFUSE` verdict means `HEAD` is a synthetic workspace commit and `${BASE_REF}...HEAD` would be meaningless — return to the carrying branch or rebase onto a real branch tip first. A detached real commit reports `UNKNOWN` and proceeds. Never derive a base from a synthetic workspace commit ([`docs/MAXIMS.md`](../docs/MAXIMS.md)).
 2. **Pre-PR Conflict & Gate Check (Mandatory)**:
     ```bash
     git status -s

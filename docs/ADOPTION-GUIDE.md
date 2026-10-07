@@ -375,6 +375,25 @@ $$\text{lsp-mcp (future)} \rightarrow \text{Native IDE tools} \rightarrow \text{
 
 ---
 
+### Scenario 9: Never Derive a Base from a Synthetic Workspace Commit
+
+**Problem**: Some agent workspaces check out a *synthetic* commit rather than a branch tip — a tool-owned snapshot that no branch carries. Deriving a review fixed point, a PR base, a changelog range, or a drift-audit upstream comparison from that commit silently compares against the wrong thing; the usual symptom is an unexpectedly empty diff.
+
+**Solution**: Run the read-only preflight before any base-deriving step, and refuse when it finds positive evidence:
+
+```bash
+bash scripts/check-synthetic-base.sh          # or scripts/check-synthetic-base.ps1
+```
+
+- **Evidence-based, never fail-closed on a healthy repo**: the preflight refuses (`exit 1`) only when `HEAD` is positively tool-owned — reachable from a tool-namespace ref (e.g. `refs/gitbutler/*`, `refs/orca/*`, `refs/codex/*`, `refs/cline/*`) and carried by no branch. A detached real commit, an unpushed branch, and an ordinary branch tip all report `UNKNOWN` or `OK` and proceed; "unpushed" alone is never a fault.
+- **Recovery on refusal**: return to the carrying branch or rebase onto a real branch tip. The preflight never stages, commits, fetches, rebases, or writes tool-managed state.
+- **Externalized namespaces**: the recognized tool namespaces live in `scripts/synthetic-base-signals.txt` (`ref-namespace|<prefix>`); a malformed row fails the preflight closed (`2`). Extend the set with `PROMPTKIT_SYNTHETIC_REFS_EXTRA` or a custom `--signals-file`.
+- **Where it runs**: the guard is wired into the changelog range gate and the milestone-halt seed-ancestry check, and `pk:sync`, `pk:review`, and `pk:pr` instruct it before deriving their base. It never gates committing or staging.
+
+See [`docs/MAXIMS.md`](./MAXIMS.md).
+
+---
+
 ## Handling Resistance & Common Objections
 
 ### "This Looks Like Bureaucracy"
