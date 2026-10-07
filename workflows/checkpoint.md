@@ -151,6 +151,8 @@ Record the complete workspace state before switching sessions, including intenti
       Per-turn card figures stay in chat history; the ledger is the only durable spend artifact.
     If `docs/STATE.md` does not yet exist, offer to scaffold it from `templates/state-tracker-template.md`.
 
+    Before writing, run the read-only ignore preflight `bash scripts/check-checkpoint-ignore.sh --root .` (PowerShell: `pwsh -NoProfile -File scripts/check-checkpoint-ignore.ps1 -Root .`), which runs `git check-ignore -v` on each checkpoint target. Copy any `POLICY_LIMITATION|CHECKPOINT_IGNORE` line (it cites the ignoring rule verbatim) into the Verification Evidence of the handover; still write the record. Exit 2 (`INCOMPLETE`) means the ignore state is unmeasured — report it as not verified, never as OK. Never `git add`, `git add -f`, commit, or add a `!` negation to make a target visible: the ignore rule is the author's publication policy, surface it, do not override it.
+
 2. **Generate Clean Handover Prompt**:
    Generate a self-contained, copy-pasteable prompt block formatted for a brand-new chat session.
 
