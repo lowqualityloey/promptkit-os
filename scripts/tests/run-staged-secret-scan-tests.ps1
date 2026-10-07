@@ -34,7 +34,8 @@ function Invoke-GitSetup {
 }
 
 function Invoke-ScannerProcess {
-    param([string]$Root)
+    param([string]$Root, [string]$ScannerPath)
+    if (-not $ScannerPath) { $ScannerPath = $script:scanner }
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $pwshCommand = Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $pwshCommand) { $pwshCommand = Get-Command pwsh.exe -CommandType Application -ErrorAction Stop | Select-Object -First 1 }
@@ -42,7 +43,7 @@ function Invoke-ScannerProcess {
     $startInfo.UseShellExecute = $false
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
-    foreach ($argument in @("-NoProfile", "-File", $scanner, "-Root", $Root)) {
+    foreach ($argument in @("-NoProfile", "-File", $ScannerPath, "-Root", $Root)) {
         $null = $startInfo.ArgumentList.Add($argument)
     }
     $process = [System.Diagnostics.Process]::new()
@@ -190,6 +191,133 @@ try {
         if (-not $unscannableResult.ErrorText.Contains("could not inspect a binary diff") -or $unscannableResult.ErrorText.Contains($awsKey)) {
             Fail "Scanner did not fail closed without exposing binary staged content from $path."
         }
+    }
+
+    # --- Narrative-Surface Staged Scan Tests ---
+    $slash = [string][char]47
+    $backslash = [string][char]92
+    $narrativePosix = $slash + "home" + $slash + "narrative-fixture" + $slash + "project"
+    $narrativeMacos = $slash + "Users" + $slash + "narrative-fixture" + $slash + "project"
+    $narrativeWindows = "C:" + $backslash + "Users" + $backslash + "narrative-fixture"
+    $roadmapMarker = "internal" + [char]32 + "roadmap"
+
+    $narrativeRepo = Join-Path $tempRoot "narrative"
+    New-Item -ItemType Directory -Path $narrativeRepo -Force | Out-Null
+    Invoke-GitSetup $narrativeRepo @("init", "-q")
+    Invoke-GitSetup $narrativeRepo @("config", "user.name", "PromptKit narrative fixture")
+    Invoke-GitSetup $narrativeRepo @("config", "user.email", "narrative-fixture@example.invalid")
+    [System.IO.File]::WriteAllText((Join-Path $narrativeRepo "notes.md"), "ordinary baseline notes`n", $utf8NoBom)
+    Invoke-GitSetup $narrativeRepo @("add", "--", "notes.md")
+    Invoke-GitSetup $narrativeRepo @("commit", "-q", "-m", "baseline")
+
+    # Scenario 1: clean staged content passes silently.
+    [System.IO.File]::WriteAllText((Join-Path $narrativeRepo "clean.md"), "ordinary staged notes`n", $utf8NoBom)
+    Invoke-GitSetup $narrativeRepo @("add", "--", "clean.md")
+    $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+    if ($narrativeResult.ExitCode -ne 0 -or $narrativeResult.Output.Length -ne 0) { Fail "A clean staged tree should pass with no narrative output." }
+    Invoke-GitSetup $narrativeRepo @("reset", "-q", "HEAD", "--", "clean.md")
+
+    # Scenario 2: absolute local path and roadmap markers exit 3 with remediation.
+    $narrativeContent = @("home path: $narrativePosix", "mac path: $narrativeMacos", "win path: $narrativeWindows", "plan: $roadmapMarker") -join "`n"
+    [System.IO.File]::WriteAllText((Join-Path $narrativeRepo "notes.md"), ($narrativeContent + "`n"), $utf8NoBom)
+    Invoke-GitSetup $narrativeRepo @("add", "--", "notes.md")
+    $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+    if ($narrativeResult.ExitCode -ne 3) { Fail "A narrative finding should exit 3, got $($narrativeResult.ExitCode)." }
+    foreach ($rule in @("HOME_ABSOLUTE_PATH", "MACOS_USERS_PATH", "WINDOWS_USERS_PATH", "INTERNAL_ROADMAP")) {
+        if (-not $narrativeResult.Output.Contains("Narrative surface $rule")) { Fail "Narrative scan missed the $rule detector." }
+    }
+    if (-not ($narrativeResult.Output.Contains("notes.md`":1") -and $narrativeResult.Output.Contains("notes.md`":4"))) {
+        Fail "Narrative scan reported an incorrect file:line."
+    }
+    if (-not $narrativeResult.Output.Contains("relativize")) { Fail "Narrative finding omitted the remediation guidance." }
+    if ($narrativeResult.Output.Contains($narrativePosix)) { Fail "Narrative scan leaked the matching absolute path." }
+
+    # Scenario 3: an allowlisted staged path does not fire.
+    Invoke-GitSetup $narrativeRepo @("reset", "-q", "HEAD", "--", "notes.md")
+    Invoke-GitSetup $narrativeRepo @("checkout", "-q", "--", "notes.md")
+    $reviewDir = Join-Path $narrativeRepo "docs/reviews"
+    New-Item -ItemType Directory -Path $reviewDir -Force | Out-Null
+    [System.IO.File]::WriteAllText((Join-Path $reviewDir "2026-10-02-pr495-review.md"), ("source $narrativePosix`n"), $utf8NoBom)
+    Invoke-GitSetup $narrativeRepo @("add", "--", "docs/reviews/2026-10-02-pr495-review.md")
+    $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+    if ($narrativeResult.ExitCode -ne 0 -or $narrativeResult.Output.Length -ne 0) { Fail "An allowlisted staged path should not raise a narrative finding." }
+
+    # Scenario 6: pre-existing absolute paths outside the staged diff are not re-flagged.
+    Invoke-GitSetup $narrativeRepo @("reset", "-q", "HEAD", "--", "docs")
+    Remove-Item -LiteralPath (Join-Path $narrativeRepo "docs") -Recurse -Force
+    [System.IO.File]::WriteAllText((Join-Path $narrativeRepo "history.md"), ("preexisting $narrativePosix`nsecond line`n"), $utf8NoBom)
+    Invoke-GitSetup $narrativeRepo @("add", "--", "history.md")
+    Invoke-GitSetup $narrativeRepo @("commit", "-q", "-m", "record narrative")
+    [System.IO.File]::WriteAllText((Join-Path $narrativeRepo "history.md"), ("preexisting $narrativePosix`nsecond line edited`n"), $utf8NoBom)
+    Invoke-GitSetup $narrativeRepo @("add", "--", "history.md")
+    $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+    if ($narrativeResult.ExitCode -ne 0 -or $narrativeResult.Output.Length -ne 0) {
+        Fail "An untouched pre-existing absolute path must not be re-flagged by a later edit."
+    }
+
+    # Scenario 4: secrets keep precedence at exit 1 when a narrative finding co-occurs.
+    Invoke-GitSetup $narrativeRepo @("reset", "-q", "HEAD", "--", "history.md")
+    Invoke-GitSetup $narrativeRepo @("checkout", "-q", "--", "history.md")
+    $mixedSecret = "AKIA" + ("0" * 16)
+    [System.IO.File]::WriteAllText((Join-Path $narrativeRepo "mixed.md"), ("leak $narrativePosix`nkey $mixedSecret`n"), $utf8NoBom)
+    Invoke-GitSetup $narrativeRepo @("add", "--", "mixed.md")
+    $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+    if ($narrativeResult.ExitCode -ne 1) { Fail "A secret must keep precedence at exit 1 over a narrative finding." }
+    if (-not ($narrativeResult.Output.Contains("Narrative surface") -and $narrativeResult.Output.Contains("AWS access-key pattern"))) {
+        Fail "A co-occurring secret and narrative finding should both be reported."
+    }
+
+    # Scenario 5: a missing shipped or overridden rules file is fail-closed at exit 2.
+    $previousRulesExtra = $env:PROMPTKIT_NARRATIVE_RULES_EXTRA
+    try {
+        $env:PROMPTKIT_NARRATIVE_RULES_EXTRA = (Join-Path $tempRoot "absent-rules.txt")
+        $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+        if ($narrativeResult.ExitCode -ne 2) { Fail "A missing narrative rules extension should fail closed at exit 2." }
+        if (-not $narrativeResult.ErrorText.Contains("narrative-surface rules extension")) {
+            Fail "The missing-extension failure did not name the unreadable rules file."
+        }
+    } finally {
+        $env:PROMPTKIT_NARRATIVE_RULES_EXTRA = $previousRulesExtra
+    }
+
+    $isolated = Join-Path $tempRoot "isolated-scripts"
+    New-Item -ItemType Directory -Path $isolated -Force | Out-Null
+    Copy-Item -LiteralPath $scanner -Destination (Join-Path $isolated "scan-staged-secrets.ps1")
+    $narrativeResult = Invoke-ScannerProcess $narrativeRepo (Join-Path $isolated "scan-staged-secrets.ps1")
+    if ($narrativeResult.ExitCode -ne 2) { Fail "A scanner without its shipped rules files should fail closed at exit 2." }
+
+    # Scenario 5b: malformed rules or allowlist rows fail closed, never silently narrow coverage.
+    $malformedRules = Join-Path $tempRoot "malformed-rules.txt"
+    [System.IO.File]::WriteAllText($malformedRules, "MALFORMED NO PIPES`n", $utf8NoBom)
+    try {
+        $env:PROMPTKIT_NARRATIVE_RULES_EXTRA = $malformedRules
+        $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+        if ($narrativeResult.ExitCode -ne 2) { Fail "A malformed extra rules row should fail closed at exit 2." }
+        if (-not $narrativeResult.ErrorText.Contains("malformed narrative-surface rules row")) { Fail "The malformed-rule failure did not name the row violation." }
+    } finally {
+        $env:PROMPTKIT_NARRATIVE_RULES_EXTRA = $previousRulesExtra
+    }
+
+    $pipedRules = Join-Path $tempRoot "piped-rules.txt"
+    [System.IO.File]::WriteAllText($pipedRules, "HOSTNAME|foo|bar|high`n", $utf8NoBom)
+    try {
+        $env:PROMPTKIT_NARRATIVE_RULES_EXTRA = $pipedRules
+        $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+        if ($narrativeResult.ExitCode -ne 2) { Fail "A rules row whose regex contains a pipe should fail closed at exit 2." }
+    } finally {
+        $env:PROMPTKIT_NARRATIVE_RULES_EXTRA = $previousRulesExtra
+    }
+
+    $malformedPaths = Join-Path $tempRoot "malformed-paths.txt"
+    [System.IO.File]::WriteAllText($malformedPaths, "docs/**`n", $utf8NoBom)
+    $previousPathsExtra = $env:PROMPTKIT_NARRATIVE_PATHS_EXTRA
+    try {
+        $env:PROMPTKIT_NARRATIVE_PATHS_EXTRA = $malformedPaths
+        $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+        if ($narrativeResult.ExitCode -ne 2) { Fail "A malformed extra allowlist row should fail closed at exit 2." }
+        if (-not $narrativeResult.ErrorText.Contains("malformed narrative-surface allowlist row")) { Fail "The malformed-allowlist failure did not name the row violation." }
+    } finally {
+        $env:PROMPTKIT_NARRATIVE_PATHS_EXTRA = $previousPathsExtra
     }
 
     # --- Probe Purge & Credential Filename Gate Tests ---

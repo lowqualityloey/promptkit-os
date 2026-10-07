@@ -1,0 +1,29 @@
+# Narrative-surface detector rules: RULE|regex|severity
+#
+# Loaded by scripts/scan-staged-secrets.sh and scripts/scan-staged-secrets.ps1,
+# which apply each regex to the ADDED lines of the staged index. A missing or
+# unreadable copy of this file fails the scan closed (exit 2), mirroring
+# scripts/check-harness-security.sh.
+#
+# Patterns are intentionally limited to syntax both POSIX ERE (grep/awk) and
+# .NET Regex support: no [[:space:]] classes, no \s, and no alternation (a `|`
+# in a regex would collide with this file's own field separator). Each pattern
+# is also written so it cannot match its own textual form, because this file is
+# itself scanned when it is part of a staged change.
+#
+# Machine and host names are deliberately NOT shipped: a hardcoded hostname list
+# would be wrong for every repository but this one. Supply project-specific
+# machine-name (and extra roadmap) rules through the documented override, which
+# appends additional RULE|regex|severity files to this one:
+#   PROMPTKIT_NARRATIVE_RULES_EXTRA=/absolute/path/to/extra-rules.txt
+#
+# Every non-blank, non-# row must be exactly NAME|regex|severity with non-empty
+# fields. A malformed row -- including a regex that contains `|` -- fails the
+# scan closed at exit 2 rather than silently narrowing coverage.
+HOME_ABSOLUTE_PATH|[/]home[/][A-Za-z0-9._-]|high
+MACOS_USERS_PATH|[/]Users[/][A-Za-z0-9._-]|high
+WSL_WINDOWS_PATH|[/]mnt[/]c[/]Users[/][A-Za-z0-9._-]|high
+WINDOWS_USERS_PATH|[A-Za-z]:[\\]Users[\\][A-Za-z0-9._-]|high
+INTERNAL_ROADMAP|[Ii]nternal[ _-][Rr]oadmap|medium
+CONFIDENTIAL_ROADMAP|[Cc]onfidential[ _-][Rr]oadmap|medium
+DO_NOT_PUBLISH|[Dd]o not publish|high
