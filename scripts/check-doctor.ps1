@@ -96,6 +96,22 @@ if (-not $rootItem.PSIsContainer -or ($rootItem.Attributes -band [IO.FileAttribu
     exit 2
 }
 $kitRoot = $rootItem.FullName
+
+# Project root vs engine directory (Issue #547 FIX 1). KIT_ROOT is the project
+# root: PROMPTKIT.md, the host files, and docs/ live there. The installed engine
+# is the directory containing the running script's parent (e.g. <project>/.promptkit).
+# Version/ignore-rich git operations and path rendering must target the right one.
+$projectRoot = $kitRoot
+$scriptDir = $PSScriptRoot
+$engineDir = Split-Path -Parent $scriptDir
+$engineRelpath = '.'
+if ($engineDir -eq $projectRoot) {
+    $engineRelpath = '.'
+} elseif ($engineDir.StartsWith($projectRoot + [IO.Path]::DirectorySeparatorChar) -or $engineDir.StartsWith($projectRoot + [IO.Path]::AltDirectorySeparatorChar)) {
+    $engineRelpath = $engineDir.Substring($projectRoot.Length).TrimStart([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+} else {
+    $engineRelpath = Split-Path -Leaf $engineDir
+}
 $profilePath = Join-Path $kitRoot 'PROMPTKIT.md'
 
 # The kit root must carry PROMPTKIT.md; without it no check has a scope to run
@@ -153,17 +169,15 @@ if (Test-Path -LiteralPath $statePath -PathType Leaf) {
 }
 
 # -Fix template resolution, mirroring init.ps1's lite-fallback behavior.
-$scriptDir = $PSScriptRoot
-$engineRoot = Split-Path -Parent $scriptDir
 $template = ''
 if ($Fix) {
     if ($profile -eq 'lite') {
-        $template = Join-Path $engineRoot 'templates/agent-directive-lite-template.md'
+        $template = Join-Path $engineDir 'templates/agent-directive-lite-template.md'
         if (-not (Test-Path -LiteralPath $template -PathType Leaf)) {
-            $template = Join-Path $engineRoot 'templates/agent-directive-template.md'
+            $template = Join-Path $engineDir 'templates/agent-directive-template.md'
         }
     } else {
-        $template = Join-Path $engineRoot 'templates/agent-directive-template.md'
+        $template = Join-Path $engineDir 'templates/agent-directive-template.md'
     }
     if (-not (Test-Path -LiteralPath $template -PathType Leaf)) {
         Emit 'fix' 'INCOMPLETE' 'directive template unavailable' 'Restore templates/agent-directive-template.md from the kit'
@@ -173,7 +187,7 @@ if ($Fix) {
 
 # Render the managed directive block exactly as init.ps1 does.
 function Render-Directive {
-    $kitDirRel = Split-Path -Leaf $kitRoot
+    $kitDirRel = $engineRelpath
     $ver = $stampVer
     if ([string]::IsNullOrEmpty($ver)) { $ver = $stateVer }
     $sha = $stampSha
@@ -182,8 +196,8 @@ function Render-Directive {
         $described = ''
         $shortSha = ''
         try {
-            $described = ((& git -C $kitRoot describe --tags --match 'v[0-9]*' 2>$null | Out-String)).Trim()
-            $shortSha = ((& git -C $kitRoot rev-parse --short HEAD 2>$null | Out-String)).Trim()
+            $described = ((& git -C $engineDir describe --tags --match 'v[0-9]*' 2>$null | Out-String)).Trim()
+            $shortSha = ((& git -C $engineDir rev-parse --short HEAD 2>$null | Out-String)).Trim()
         } catch {
             $described = ''
             $shortSha = ''
@@ -214,6 +228,13 @@ function Repair-HostBlock {
     }
 }
 
+# A re-emitted block is only usable if the engine path it embeds actually
+# resolves on disk; otherwise the host row is MISSING rather than OK.
+function Test-EngineDirectiveUsable {
+    $routePath = Join-Path $projectRoot (Join-Path $engineRelpath 'workflows/route.md')
+    return (Test-Path -LiteralPath $routePath -PathType Leaf)
+}
+
 # --- Check 1: hosts -------------------------------------------------------
 # Enumerate the installer's host_file() map. A file that INSTALLED (exists) is
 # checked for the managed block; a file not present is SKIP(not installed) and
@@ -226,7 +247,11 @@ foreach ($id in $hostIds) {
     if ([string]::IsNullOrEmpty($rel)) { continue }
     $path = Join-Path $kitRoot $rel
     if (-not (Test-Path -LiteralPath $path)) {
-        Emit "host:$rel" 'SKIP(not installed)' 'host file not present' '-'
+        if ($rel -eq 'AGENTS.md') {
+            Emit "host:$rel" 'MISSING' 'universal host file absent' 'Re-run the installer to create AGENTS.md'
+        } else {
+            Emit "host:$rel" 'SKIP(not installed)' 'host file not present' '-'
+        }
         continue
     }
     $fileItem = Get-Item -LiteralPath $path -Force
@@ -239,10 +264,12 @@ foreach ($id in $hostIds) {
         Emit "host:$rel" 'OK' 'managed directive block present' '-'
     } elseif ($Fix) {
         try { Repair-HostBlock $path } catch { }
-        if (Test-Block $path) {
-            Emit "host:$rel" 'OK' 'managed directive block re-emitted by --fix' '-'
-        } else {
+        if (-not (Test-Block $path)) {
             Emit "host:$rel" 'MISSING' 'no PROMPTKIT_START block' 'Run the installer or pk:doctor --fix to re-emit the managed directive block'
+        } elseif (-not (Test-EngineDirectiveUsable)) {
+            Emit "host:$rel" 'MISSING' "repaired block references a missing engine path ($engineRelpath/workflows/route.md)" 'Restore the engine workflows/ directory or re-run the installer'
+        } else {
+            Emit "host:$rel" 'OK' 'managed directive block re-emitted by --fix' '-'
         }
     } else {
         Emit "host:$rel" 'MISSING' 'no PROMPTKIT_START block' 'Run the installer or pk:doctor --fix to re-emit the managed directive block'
@@ -255,9 +282,9 @@ foreach ($id in $hostIds) {
 # Audit), implemented as read-only git comparisons. Tests run top-to-bottom,
 # first match wins.
 function Invoke-LocalGit {
-    param([string[]]$GitArgs)
+    param([string]$Dir, [string[]]$GitArgs)
     try {
-        $out = & git --no-optional-locks -C $kitRoot -c core.fsmonitor=false @GitArgs 2>$null
+        $out = & git --no-optional-locks -C $Dir -c core.fsmonitor=false @GitArgs 2>$null
         $script:gitStatus = $LASTEXITCODE
         return $out
     } catch {
@@ -267,16 +294,16 @@ function Invoke-LocalGit {
 }
 
 function Resolve-Upstream {
-    $null = Invoke-LocalGit @('symbolic-ref', '-q', 'refs/remotes/origin/HEAD')
+    $null = Invoke-LocalGit -Dir $engineDir @('symbolic-ref', '-q', 'refs/remotes/origin/HEAD')
     if ($script:gitStatus -eq 0) {
-        $sym = ((Invoke-LocalGit @('symbolic-ref', '-q', 'refs/remotes/origin/HEAD')) | Out-String).Trim()
+        $sym = ((Invoke-LocalGit -Dir $engineDir @('symbolic-ref', '-q', 'refs/remotes/origin/HEAD')) | Out-String).Trim()
         if (-not [string]::IsNullOrEmpty($sym)) {
-            $null = Invoke-LocalGit @('rev-parse', '--verify', '--quiet', "$sym^{commit}")
+            $null = Invoke-LocalGit -Dir $engineDir @('rev-parse', '--verify', '--quiet', "$sym^{commit}")
             if ($script:gitStatus -eq 0) { return $sym }
         }
     }
     foreach ($candidate in @('refs/remotes/origin/main', 'refs/remotes/origin/master', 'refs/remotes/upstream/main', 'origin/main', 'origin/master')) {
-        $null = Invoke-LocalGit @('rev-parse', '--verify', '--quiet', "$candidate^{commit}")
+        $null = Invoke-LocalGit -Dir $engineDir @('rev-parse', '--verify', '--quiet', "$candidate^{commit}")
         if ($script:gitStatus -eq 0) { return $candidate }
     }
     return ''
@@ -287,15 +314,15 @@ function Check-Version {
         Emit 'version' 'SKIP(no engine stamp)' 'no Engine: <ver> (<sha>) stamp in any installed host directive' 'Re-run the installer to stamp the engine identity'
         return
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $kitRoot '.git'))) {
-        Emit 'version' 'SKIP(not-a-git-install)' 'no .git in kit root (courier install)' 'Version comes from the release tarball; no git drift to measure'
+    if (-not (Test-Path -LiteralPath (Join-Path $engineDir '.git'))) {
+        Emit 'version' 'SKIP(not-a-git-install)' 'no .git in engine dir (courier install)' 'Version comes from the release tarball; no git drift to measure'
         return
     }
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
         Emit 'version' 'SKIP(shallow-or-offline)' 'git unavailable' 'Install git to enable engine drift checks'
         return
     }
-    $shallowRaw = ((Invoke-LocalGit @('rev-parse', '--is-shallow-repository')) | Out-String).Trim()
+    $shallowRaw = ((Invoke-LocalGit -Dir $engineDir @('rev-parse', '--is-shallow-repository')) | Out-String).Trim()
     if ($script:gitStatus -ne 0 -or $shallowRaw -ne 'false') {
         Emit 'version' 'SKIP(shallow-or-offline)' 'shallow or offline checkout' 'Fetch full history (git fetch --unshallow) to check drift'
         return
@@ -305,7 +332,7 @@ function Check-Version {
         Emit 'version' 'SKIP(shallow-or-offline)' 'upstream ref unresolved' 'Resolve origin/main (or the engine default branch) to enable drift checks'
         return
     }
-    $null = Invoke-LocalGit @('merge-base', '--is-ancestor', 'HEAD', $upstream)
+    $null = Invoke-LocalGit -Dir $engineDir @('merge-base', '--is-ancestor', 'HEAD', $upstream)
     $mb = $script:gitStatus
     if ($mb -eq 1) {
         Emit 'version' 'DIVERGED' "engine $stampVer diverged from $upstream" 'Reconcile the engine checkout with upstream manually; doctor never fetches or resets'
@@ -315,7 +342,7 @@ function Check-Version {
         Emit 'version' 'SKIP(shallow-or-offline)' "merge-base returned unexpected status $mb" 'Resolve the upstream ref and re-run'
         return
     }
-    $countRaw = ((Invoke-LocalGit @('rev-list', '--count', "HEAD..$upstream")) | Out-String).Trim()
+    $countRaw = ((Invoke-LocalGit -Dir $engineDir @('rev-list', '--count', "HEAD..$upstream")) | Out-String).Trim()
     if ($script:gitStatus -ne 0 -or [string]::IsNullOrEmpty($countRaw)) {
         Emit 'version' 'SKIP(shallow-or-offline)' 'rev-list failed' 'Resolve the upstream ref and re-run'
         return
@@ -337,7 +364,7 @@ Check-Version
 # exit 0 -> IGNORED(<rule source>); exit 1 -> OK; anything else -> INCOMPLETE.
 function Test-IgnoreOne {
     param([string]$Rel)
-    $out = @(Invoke-LocalGit @('check-ignore', '--no-index', '-v', '--', $Rel))
+    $out = @(Invoke-LocalGit -Dir $projectRoot @('check-ignore', '--no-index', '-v', '--', $Rel))
     if ($script:gitStatus -eq 0) {
         $line = if ($out.Count -gt 0) { [string]$out[0] } else { '' }
         $rule = ($line -split "`t")[0]
@@ -351,17 +378,17 @@ function Test-IgnoreOne {
 }
 
 function Check-IgnoreState {
-    if (-not (Test-Path -LiteralPath (Join-Path $kitRoot '.git'))) {
-        Emit 'ignore:.' 'SKIP(not-a-git-install)' 'no .git in kit root (courier install)' 'Ignore state is not measurable without a git repository'
-        Emit 'ignore:PROMPTKIT.md' 'SKIP(not-a-git-install)' 'no .git in kit root (courier install)' '-'
-        Emit 'ignore:docs' 'SKIP(not-a-git-install)' 'no .git in kit root (courier install)' '-'
+    if (-not (Test-Path -LiteralPath (Join-Path $projectRoot '.git'))) {
+        Emit "ignore:$engineRelpath" 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' 'Ignore state is not measurable without a git repository'
+        Emit 'ignore:PROMPTKIT.md' 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' '-'
+        Emit 'ignore:docs' 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' '-'
         return
     }
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        Emit 'ignore:.' 'SKIP(git unavailable)' 'git unavailable' 'Install git to inspect ignore state'
+        Emit "ignore:$engineRelpath" 'SKIP(git unavailable)' 'git unavailable' 'Install git to inspect ignore state'
         return
     }
-    Test-IgnoreOne '.'
+    Test-IgnoreOne $engineRelpath
     Test-IgnoreOne 'PROMPTKIT.md'
     Test-IgnoreOne 'docs'
     foreach ($hrel in $installedHosts) { Test-IgnoreOne $hrel }
@@ -377,6 +404,23 @@ Check-IgnoreState
 # deliberately conservative: only fields present in both stores with
 # unambiguous, non-placeholder values are compared. Any absent store degrades
 # to SKIP(<reason>) and never fails the run.
+# Shared fields derived from the shipped state-tracker-template.md section 3A
+# and the shipped execution-task-record-template.md. Each entry is
+# "<3A label>|<Task Record label>"; Owner is projected as "Owner / Current
+# Actor" in 3A and "Owner / Actor" in the Task Record. No invented fields.
+$sharedProjectionFields = @(
+    'Task ID|Task ID',
+    'Execution State|Execution State',
+    'Active Task Pointer|Active Task Pointer',
+    'Next Action|Next Action',
+    'Owner / Current Actor|Owner / Actor',
+    'Ceremony Level|Ceremony Level',
+    'Specification|Specification',
+    'Execution Scope|Execution Scope',
+    'Start Time|Start Time',
+    'Mapped `pk:tasks` Status|Mapped `pk:tasks` Status'
+)
+
 function Get-ProjectionField {
     param([string]$Text, [string]$Label)
     $m = [regex]::Match($Text, "(?m)^- \*\*$([regex]::Escape($Label))\*\*:[ \t]*(.*)$")
@@ -409,7 +453,6 @@ function Check-DocsDrift {
     }
     $taskId = Get-ProjectionField $section 'Task ID'
     $taskRecord = Get-ProjectionField $section 'Task Record'
-    $stateExec = Get-ProjectionField $section 'Execution State'
     if ((Test-Placeholder $taskRecord) -and (Test-Placeholder $taskId)) {
         Emit 'docs-drift' 'SKIP(no task record)' 'no canonical Task Record referenced (no handoff.md and no Task Record)' 'Create docs/tasks/<task-id>.md for Controlled Work'
         return
@@ -426,18 +469,24 @@ function Check-DocsDrift {
         return
     }
     $recText = Get-Content -LiteralPath $recPath -Raw
-    $recId = Get-ProjectionField $recText 'Task ID'
-    $recExec = Get-ProjectionField $recText 'Execution State'
     $diffField = ''
-    if (-not (Test-Placeholder $taskId) -and -not (Test-Placeholder $recId) -and $taskId -ne $recId) {
-        $diffField = 'Task ID'
-    } elseif (-not (Test-Placeholder $stateExec) -and -not (Test-Placeholder $recExec) -and $stateExec -ne $recExec) {
-        $diffField = 'Execution State'
+    $compared = 0
+    foreach ($pair in $sharedProjectionFields) {
+        $parts = $pair.Split('|')
+        $pLabel = $parts[0]
+        $rLabel = $parts[1]
+        $pVal = Get-ProjectionField $section $pLabel
+        $rVal = Get-ProjectionField $recText $rLabel
+        if (Test-Placeholder $rVal) { continue }
+        if ((Test-Placeholder $pVal) -or ($pVal -ne $rVal)) { $diffField = $pLabel; break }
+        $compared++
     }
     if (-not [string]::IsNullOrEmpty($diffField)) {
         Emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $diffField)" "projection disagrees with the canonical Task Record on $diffField" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
-    } else {
+    } elseif ($compared -gt 0) {
         Emit 'docs-drift' 'OK' 'projection agrees with the canonical Task Record' '-'
+    } else {
+        Emit 'docs-drift' 'SKIP(no comparable field)' 'no shared field has concrete values in both stores' 'Populate the 3A projection and the Task Record with concrete, aligned values'
     }
 }
 

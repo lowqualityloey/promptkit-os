@@ -68,6 +68,20 @@ if [[ ! -d "$kit_root" ]]; then
 fi
 kit_root="$(builtin cd -- "$kit_root" && pwd -P)" || exit 2
 
+# Project root vs engine directory (Issue #547 FIX 1). KIT_ROOT is the project
+# root: PROMPTKIT.md, the host files, and docs/ live there. The installed engine
+# is the directory containing the running script's parent (e.g. <project>/.promptkit).
+# Version/ignore-rich git operations and path rendering must target the right one.
+project_root="$kit_root"
+engine_dir="$engine_root"
+if [[ "$engine_dir" == "$project_root" ]]; then
+    engine_relpath="."
+elif [[ "$engine_dir" == "$project_root"/* ]]; then
+    engine_relpath="${engine_dir#"$project_root"/}"
+else
+    engine_relpath="$(basename -- "$engine_dir")"
+fi
+
 # The kit root must carry PROMPTKIT.md; without it no check has a scope to run
 # against, so this is the exit-2 "could not run at all" prerequisite.
 if [[ ! -f "$kit_root/PROMPTKIT.md" || ! -r "$kit_root/PROMPTKIT.md" ]]; then
@@ -153,15 +167,15 @@ fi
 # Render the managed directive block exactly as init.sh does.
 render_directive() {
     local kit_dir_rel ver sha
-    kit_dir_rel="$(basename -- "$kit_root")"
+    kit_dir_rel="$engine_relpath"
     ver="$stamp_ver"
     [[ -n "$ver" ]] || ver="$state_ver"
     sha="$stamp_sha"
     [[ -n "$sha" ]] || sha="$state_sha"
     if [[ -z "$ver" || -z "$sha" ]]; then
         local d s
-        d="$(git -C "$kit_root" describe --tags --match 'v[0-9]*' 2>/dev/null || true)"
-        s="$(git -C "$kit_root" rev-parse --short HEAD 2>/dev/null || true)"
+        d="$(git -C "$engine_dir" describe --tags --match 'v[0-9]*' 2>/dev/null || true)"
+        s="$(git -C "$engine_dir" rev-parse --short HEAD 2>/dev/null || true)"
         [[ -n "$ver" ]] || ver="${d:-unknown}"
         [[ -n "$sha" ]] || sha="${s:-unknown}"
     fi
@@ -172,6 +186,12 @@ render_directive() {
     sed -e "s|\\\$KIT_DIR_REL|$sed_kit|g" \
         -e "s|\\\$ENGINE_VERSION|$sed_ver|g" \
         -e "s|\\\$ENGINE_SHA|$sed_sha|g" "$template"
+}
+
+# A re-emitted block is only usable if the engine path it embeds actually
+# resolves on disk; otherwise the host row is MISSING rather than OK.
+engine_directive_usable() {
+    [[ -f "$project_root/$engine_relpath/workflows/route.md" ]]
 }
 
 fix_host_block() {
@@ -196,7 +216,11 @@ for id in $HOST_IDS; do
     [[ -n "$rel" ]] || continue
     path="$kit_root/$rel"
     if [[ ! -e "$path" ]]; then
-        emit "host:$rel" 'SKIP(not installed)' 'host file not present' '-'
+        if [[ "$rel" == "AGENTS.md" ]]; then
+            emit "host:$rel" 'MISSING' 'universal host file absent' 'Re-run the installer to create AGENTS.md'
+        else
+            emit "host:$rel" 'SKIP(not installed)' 'host file not present' '-'
+        fi
         continue
     fi
     if [[ ! -f "$path" || ! -r "$path" ]]; then
@@ -207,10 +231,12 @@ for id in $HOST_IDS; do
     if has_block "$path"; then
         emit "host:$rel" 'OK' 'managed directive block present' '-'
     elif [[ "$fix" -eq 1 ]]; then
-        if fix_host_block "$path" && has_block "$path"; then
-            emit "host:$rel" 'OK' 'managed directive block re-emitted by --fix' '-'
-        else
+        if ! fix_host_block "$path" || ! has_block "$path"; then
             emit "host:$rel" 'MISSING' 'no PROMPTKIT_START block' 'Run the installer or pk:doctor --fix to re-emit the managed directive block'
+        elif ! engine_directive_usable; then
+            emit "host:$rel" 'MISSING' "repaired block references a missing engine path ($engine_relpath/workflows/route.md)" 'Restore the engine workflows/ directory or re-run the installer'
+        else
+            emit "host:$rel" 'OK' 'managed directive block re-emitted by --fix' '-'
         fi
     else
         emit "host:$rel" 'MISSING' 'no PROMPTKIT_START block' 'Run the installer or pk:doctor --fix to re-emit the managed directive block'
@@ -226,13 +252,13 @@ done
 # SKIP(not-a-git-install). Tests run top-to-bottom, first match wins.
 resolve_upstream() {
     local sym c
-    sym="$(git -C "$kit_root" -c core.fsmonitor=false symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null || true)"
-    if [[ -n "$sym" ]] && git -C "$kit_root" -c core.fsmonitor=false rev-parse --verify --quiet "$sym^{commit}" >/dev/null 2>&1; then
+    sym="$(git -C "$engine_dir" -c core.fsmonitor=false symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null || true)"
+    if [[ -n "$sym" ]] && git -C "$engine_dir" -c core.fsmonitor=false rev-parse --verify --quiet "$sym^{commit}" >/dev/null 2>&1; then
         printf '%s' "$sym"
         return 0
     fi
     for c in refs/remotes/origin/main refs/remotes/origin/master refs/remotes/upstream/main origin/main origin/master; do
-        if git -C "$kit_root" -c core.fsmonitor=false rev-parse --verify --quiet "$c^{commit}" >/dev/null 2>&1; then
+        if git -C "$engine_dir" -c core.fsmonitor=false rev-parse --verify --quiet "$c^{commit}" >/dev/null 2>&1; then
             printf '%s' "$c"
             return 0
         fi
@@ -245,8 +271,8 @@ check_version() {
         emit 'version' 'SKIP(no engine stamp)' 'no Engine: <ver> (<sha>) stamp in any installed host directive' 'Re-run the installer to stamp the engine identity'
         return 0
     fi
-    if [[ ! -e "$kit_root/.git" ]]; then
-        emit 'version' 'SKIP(not-a-git-install)' 'no .git in kit root (courier install)' 'Version comes from the release tarball; no git drift to measure'
+    if [[ ! -e "$engine_dir/.git" ]]; then
+        emit 'version' 'SKIP(not-a-git-install)' 'no .git in engine dir (courier install)' 'Version comes from the release tarball; no git drift to measure'
         return 0
     fi
     if ! command -v git >/dev/null 2>&1; then
@@ -254,7 +280,7 @@ check_version() {
         return 0
     fi
     local is_shallow upstream mb count
-    is_shallow="$(git -C "$kit_root" -c core.fsmonitor=false rev-parse --is-shallow-repository 2>/dev/null || true)"
+    is_shallow="$(git -C "$engine_dir" -c core.fsmonitor=false rev-parse --is-shallow-repository 2>/dev/null || true)"
     if [[ "$is_shallow" != "false" ]]; then
         emit 'version' 'SKIP(shallow-or-offline)' 'shallow or offline checkout' 'Fetch full history (git fetch --unshallow) to check drift'
         return 0
@@ -264,7 +290,7 @@ check_version() {
         emit 'version' 'SKIP(shallow-or-offline)' 'upstream ref unresolved' 'Resolve origin/main (or the engine default branch) to enable drift checks'
         return 0
     fi
-    if git -C "$kit_root" -c core.fsmonitor=false merge-base --is-ancestor HEAD "$upstream" >/dev/null 2>&1; then
+    if git -C "$engine_dir" -c core.fsmonitor=false merge-base --is-ancestor HEAD "$upstream" >/dev/null 2>&1; then
         mb=0
     else
         mb=$?
@@ -277,7 +303,7 @@ check_version() {
         emit 'version' 'SKIP(shallow-or-offline)' "merge-base returned unexpected status $mb" 'Resolve the upstream ref and re-run'
         return 0
     fi
-    count="$(git -C "$kit_root" -c core.fsmonitor=false rev-list --count "HEAD..$upstream" 2>/dev/null || true)"
+    count="$(git -C "$engine_dir" -c core.fsmonitor=false rev-list --count "HEAD..$upstream" 2>/dev/null || true)"
     if [[ -z "$count" ]]; then
         emit 'version' 'SKIP(shallow-or-offline)' 'rev-list failed' 'Resolve the upstream ref and re-run'
         return 0
@@ -320,17 +346,17 @@ check_ignore_one() {
 }
 
 check_ignore_state() {
-    if [[ ! -e "$kit_root/.git" ]]; then
-        emit 'ignore:.' 'SKIP(not-a-git-install)' 'no .git in kit root (courier install)' 'Ignore state is not measurable without a git repository'
-        emit 'ignore:PROMPTKIT.md' 'SKIP(not-a-git-install)' 'no .git in kit root (courier install)' '-'
-        emit 'ignore:docs' 'SKIP(not-a-git-install)' 'no .git in kit root (courier install)' '-'
+    if [[ ! -e "$project_root/.git" ]]; then
+        emit "ignore:$engine_relpath" 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' 'Ignore state is not measurable without a git repository'
+        emit 'ignore:PROMPTKIT.md' 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' '-'
+        emit 'ignore:docs' 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' '-'
         return 0
     fi
     if ! command -v git >/dev/null 2>&1; then
-        emit 'ignore:.' 'SKIP(git unavailable)' 'git unavailable' 'Install git to inspect ignore state'
+        emit "ignore:$engine_relpath" 'SKIP(git unavailable)' 'git unavailable' 'Install git to inspect ignore state'
         return 0
     fi
-    check_ignore_one '.'
+    check_ignore_one "$engine_relpath"
     check_ignore_one 'PROMPTKIT.md'
     check_ignore_one 'docs'
     # Explicit length guard: bash 3.2 errors on an empty array under `set -u`.
@@ -353,6 +379,23 @@ check_ignore_state
 # deliberately conservative: only fields present in both stores with
 # unambiguous, non-placeholder values are compared. Any absent store degrades
 # to SKIP(<reason>) and never fails the run.
+# Shared fields derived from the shipped state-tracker-template.md section 3A
+# and the shipped execution-task-record-template.md. Each entry is
+# "<3A label>|<Task Record label>"; Owner is projected as "Owner / Current
+# Actor" in 3A and "Owner / Actor" in the Task Record. No invented fields.
+SHARED_PROJECTION_FIELDS=(
+    'Task ID|Task ID'
+    'Execution State|Execution State'
+    'Active Task Pointer|Active Task Pointer'
+    'Next Action|Next Action'
+    'Owner / Current Actor|Owner / Actor'
+    'Ceremony Level|Ceremony Level'
+    'Specification|Specification'
+    'Execution Scope|Execution Scope'
+    'Start Time|Start Time'
+    'Mapped `pk:tasks` Status|Mapped `pk:tasks` Status'
+)
+
 proj_field() {
     local text="$1" label="$2" line val
     line="$(printf '%s\n' "$text" | grep -m1 -E "^- \*\*${label}\*\*:" 2>/dev/null || true)"
@@ -390,10 +433,9 @@ check_docs_drift() {
         emit 'docs-drift' 'SKIP(no execution-control projection)' 'docs/STATE.md has no 3A section' 'Populate 3A when using Controlled Work'
         return 0
     fi
-    local task_id task_record state_exec rec_rel rec_path rec_id rec_exec rec_text diff_field
+    local task_id task_record rec_rel rec_path rec_text pair p_label r_label p_val r_val diff_field compared
     task_id="$(proj_field "$section" 'Task ID')"
     task_record="$(proj_field "$section" 'Task Record')"
-    state_exec="$(proj_field "$section" 'Execution State')"
     if is_placeholder "$task_record" && is_placeholder "$task_id"; then
         emit 'docs-drift' 'SKIP(no task record)' 'no canonical Task Record referenced (no handoff.md and no Task Record)' 'Create docs/tasks/<task-id>.md for Controlled Work'
         return 0
@@ -412,18 +454,28 @@ check_docs_drift() {
         return 0
     fi
     rec_text="$(cat -- "$rec_path")"
-    rec_id="$(proj_field "$rec_text" 'Task ID')"
-    rec_exec="$(proj_field "$rec_text" 'Execution State')"
     diff_field=""
-    if ! is_placeholder "$task_id" && ! is_placeholder "$rec_id" && [[ "$task_id" != "$rec_id" ]]; then
-        diff_field='Task ID'
-    elif ! is_placeholder "$state_exec" && ! is_placeholder "$rec_exec" && [[ "$state_exec" != "$rec_exec" ]]; then
-        diff_field='Execution State'
-    fi
+    compared=0
+    for pair in "${SHARED_PROJECTION_FIELDS[@]}"; do
+        p_label="${pair%%|*}"
+        r_label="${pair#*|}"
+        p_val="$(proj_field "$section" "$p_label")"
+        r_val="$(proj_field "$rec_text" "$r_label")"
+        if is_placeholder "$r_val"; then
+            continue
+        fi
+        if is_placeholder "$p_val" || [[ "$p_val" != "$r_val" ]]; then
+            diff_field="$p_label"
+            break
+        fi
+        compared=$((compared + 1))
+    done
     if [[ -n "$diff_field" ]]; then
         emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $diff_field)" "projection disagrees with the canonical Task Record on $diff_field" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
-    else
+    elif [[ "$compared" -gt 0 ]]; then
         emit 'docs-drift' 'OK' 'projection agrees with the canonical Task Record' '-'
+    else
+        emit 'docs-drift' 'SKIP(no comparable field)' 'no shared field has concrete values in both stores' 'Populate the 3A projection and the Task Record with concrete, aligned values'
     fi
     return 0
 }

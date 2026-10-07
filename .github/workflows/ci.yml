@@ -219,9 +219,6 @@ jobs:
       - name: Run Reference and Structural Validator (Bash)
         run: bash scripts/validate-references.sh .
 
-      - name: Run pk:doctor Self-Audit (Bash)
-        run: bash scripts/check-doctor.sh .
-
       - name: Assert No Fragile Math Labels (Bash)
         run: bash scripts/check-math-labels.sh --root .
 

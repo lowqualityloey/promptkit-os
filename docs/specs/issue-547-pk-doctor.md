@@ -137,3 +137,27 @@ pwsh -NoProfile -File scripts/tests/run-behavioral-contract-tests.ps1
 > Correction from the previous draft: the script is `scripts/validate-references.sh`, not `scripts/tests/validate-references.sh` — no file exists at the latter path. It also requires the kit-root argument (`.` in-repo): it defaults to `.promptkit`, which does not exist in this repository, and exits 1 if that directory is absent. `.github/workflows/ci.yml` (anchor: `run: bash scripts/validate-references.sh .`) passes `.` explicitly.
 
 > When adding relative links from `workflows/doctor.md`, prefer targets already stubbed by `scripts/tests/run-reference-link-tests.sh` (it copies the real `workflows/` tree and stubs a fixed set of `docs/` targets) — `docs/WORKFLOW-MAP.md`, `docs/BENCHMARKS.md`, `docs/adrs/0002-*`, `notes/*` — or existing `protocols/` and sibling `workflows/*.md` files. `workflows/` is **not** exempt from link resolution.
+
+--------
+
+## Amendment: Review Findings (project root vs engine dir; shared docs-drift fields; deleted AGENTS.md)
+
+Applied after review of the `pk:doctor` detector. This amendment is normative and refines the checks above; it does not change the exit-code contract, the status vocabulary, or any published token figure.
+
+### Project root vs engine directory
+
+`KIT_ROOT` (the positional argument, default `.`) is the **project root**: `PROMPTKIT.md`, the host directive files, and `docs/` live there. The **installed engine** is the directory containing the running checker's parent — for a nested install, `<project-root>/.promptkit`. The checker derives `engine_relpath` as the engine path relative to the project root (`.` when they are the same directory, the relative suffix such as `.promptkit` when nested, otherwise the engine basename):
+
+* **version** — every git comparison (`.git` existence, `rev-parse --is-shallow-repository`, `symbolic-ref refs/remotes/origin/HEAD`, `merge-base --is-ancestor`, `rev-list --count`) runs against the **engine directory**, so a nested install audits its own engine repository and not the surrounding project repository. The engine stamp is still read from the installed host files at the project root.
+* **ignore-state** — runs in the **project root** (that is where the ignore rules and managed paths live), and the kit-directory path checked is `engine_relpath`, so an ignored nested engine reports `ignore:.promptkit`, never `ignore:.`.
+* **`--fix`** — renders the engine path as `engine_relpath`, mirroring `init.sh`'s `KIT_DIR_REL`, so the re-emitted block points at `<engine_relpath>/workflows/...`. After a repair the checker asserts `<project-root>/<engine-relpath>/workflows/route.md` exists; if it does not, the host row reports `MISSING`/`INCOMPLETE` rather than `OK`.
+
+When the engine and the project root are the same directory (self-hosted install), `engine_relpath` is `.` and every row is byte-for-byte unchanged.
+
+### docs-drift shared fields
+
+`docs-drift` compares every field that both the shipped `templates/state-tracker-template.md` §3A projection and the shipped `templates/execution-task-record-template.md` define under the same label (Task ID, Execution State, Active Task Pointer, Next Action, Owner / Current Actor ↔ Owner / Actor, Ceremony Level, Specification, Execution Scope, Start Time, Mapped `pk:tasks` Status). A concrete (non-placeholder) canonical Task Record value that the §3A projection leaves placeholder or contradicts is `DIVERGED(STATE 3A vs Task Record: <field>)`; a concrete §3A value against a placeholder record value is insufficient evidence and is skipped; `OK` is emitted only when at least one shared field was concretely compared and all compared fields agree, and `SKIP(<reason>)` when no shared field is comparable — never a bare `OK`.
+
+### Deleted universal host file
+
+`init.sh` unconditionally runs `ensure_target "AGENTS.md"`, so `AGENTS.md` is always an expected artifact. An absent `AGENTS.md` reports `MISSING` (remediation: re-run the installer), not `SKIP(not installed)`. Other absent host files remain `SKIP(not installed)` because the selected host set is unknown, and an existing host file without the managed marker remains `MISSING`.

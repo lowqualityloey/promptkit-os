@@ -1197,6 +1197,10 @@ D_MISSING="$DOCTOR_TMP/missing"
 mkdir -p "$D_MISSING"
 printf 'profile: balanced\n' > "$D_MISSING/PROMPTKIT.md"
 printf '# Agent notes without the managed block\n' > "$D_MISSING/AGENTS.md"
+# Deleted-AGENTS.md fixture: the universal host file is absent -> exit 1.
+D_DELETED="$DOCTOR_TMP/deleted-agents"
+mkdir -p "$D_DELETED"
+printf 'profile: balanced\n' > "$D_DELETED/PROMPTKIT.md"
 # No-prerequisite fixture: no PROMPTKIT.md at the kit root -> exit 2.
 D_NOPK="$DOCTOR_TMP/no-promptkit"
 mkdir -p "$D_NOPK"
@@ -1215,6 +1219,14 @@ if [ "$doctor_rc" -eq 1 ]; then
     PASS_COUNT=$((PASS_COUNT + 1))
 else
     echo "  ❌ FAIL: missing-block fixture should exit 1, got $doctor_rc"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+doctor_rc="$(doctor_exit_of "$D_DELETED")"
+if [ "$doctor_rc" -eq 1 ]; then
+    echo "  ✅ PASS: deleted universal AGENTS.md -> exit 1"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: deleted-AGENTS.md fixture should exit 1, got $doctor_rc"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 doctor_rc="$(doctor_exit_of "$D_NOPK")"

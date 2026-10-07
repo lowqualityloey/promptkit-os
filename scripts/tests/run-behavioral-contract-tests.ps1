@@ -1146,6 +1146,9 @@ $dMissing = Join-Path $DoctorTmp 'missing'
 New-Item -ItemType Directory -Path $dMissing -Force | Out-Null
 [System.IO.File]::WriteAllText((Join-Path $dMissing 'PROMPTKIT.md'), "profile: balanced`n")
 [System.IO.File]::WriteAllText((Join-Path $dMissing 'AGENTS.md'), "# Agent notes without the managed block`n")
+$dDeleted = Join-Path $DoctorTmp 'deleted-agents'
+New-Item -ItemType Directory -Path $dDeleted -Force | Out-Null
+[System.IO.File]::WriteAllText((Join-Path $dDeleted 'PROMPTKIT.md'), "profile: balanced`n")
 $dNoPk = Join-Path $DoctorTmp 'no-promptkit'
 New-Item -ItemType Directory -Path $dNoPk -Force | Out-Null
 
@@ -1163,6 +1166,14 @@ if ($doctorRc -eq 1) {
     $script:PassCount++
 } else {
     Write-Host "  ❌ FAIL: missing-block fixture should exit 1, got $doctorRc" -ForegroundColor Red
+    $script:FailCount++
+}
+$doctorRc = Get-DoctorExitCode $dDeleted
+if ($doctorRc -eq 1) {
+    Write-Host "  ✅ PASS: deleted universal AGENTS.md -> exit 1" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: deleted-AGENTS.md fixture should exit 1, got $doctorRc" -ForegroundColor Red
     $script:FailCount++
 }
 $doctorRc = Get-DoctorExitCode $dNoPk

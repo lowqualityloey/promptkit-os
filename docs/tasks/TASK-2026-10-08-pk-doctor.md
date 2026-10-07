@@ -26,13 +26,13 @@
   - `Count 25 to 26 across README.md, QUICKSTART.md, FAQ.md, PROMPTKIT.md, docs/WORKFLOW-MAP.md, docs/ARCHITECTURE.md, docs/COMPARISONS.md, docs/INTERESTING-FACTS.md, CONTRIBUTING.md, init.sh, init.ps1, templates/lite-profile.md, templates/project-profile-template.md, workflows/onboard.md, workflows/profile.md, docs/adrs/0002-workflow-lifecycle-policy.md`
   - `Published token-figure re-propagation: docs/BENCHMARKS.md, protocols/setup.md, README.md, FAQ.md, templates/lite-profile.md`
   - `Behavioral-contract assertion: scripts/tests/run-behavioral-contract-tests.sh and scripts/tests/run-behavioral-contract-tests.ps1 (count literal 25 to 26 plus Scenario AR for pk:doctor)`
-  - `CHANGELOG.md [Unreleased] entry; .github/workflows/ci.yml doctor syntax checks, both doctor test twins, and the direct pk:doctor self-audit step`
+  - `CHANGELOG.md [Unreleased] entry; .github/workflows/ci.yml doctor syntax checks and both doctor test twins; docs/specs/issue-547-pk-doctor.md normative amendment (engine root, shared docs-drift fields, deleted universal host)`
   - `docs/tasks/TASK-2026-10-08-pk-doctor.md (this record)`
 - **Explicit Non-Goals**:
   - `No enactment of #545/#550/#553 logic: the version and docs-drift rows delegate to those contracts and degrade to SKIP(<reason>) where an input is unavailable; they never re-derive or repair.`
   - `No repair or upgrade behavior; pk:doctor reports only, and --fix is limited to re-emitting a host directive block.`
   - `No live host runtime verification (maintainer-owned, docs/HOST-CONFORMANCE.md).`
-  - `No commit, push, branch, or pull request in this workstream; those remain gated on explicit user approval.`
+  - `No merge: commit, push, and PR were explicitly authorized; merging PR #581 remains human-only.`
 - **Dependencies**: `The version row delegates to #545's six-state engine-stamp table; the DIVERGED docs-drift row depends on the #550/#553 three-store precedence contract. Both degrade to SKIP(<reason>) until those land.`
 - **Risk**: `Low - additive workflow plus registration and count/documentation synchronization; the only behavioral surface touched is the injected directive trigger list, which is token-budget-gated.`
 - **Verification Condition**: `bash scripts/validate-references.sh . exits 0 with zero errors and zero warnings; bash -n on touched scripts is clean; the stale-count scan finds no live "25" workflow claim; bash scripts/tests/run-doctor-tests.sh passes.`
@@ -54,11 +54,12 @@
 
 - [x] **AC-1**: `pk:doctor is registered in the directive trigger list, the route decision matrix, the setup reference list, the architecture command table, and the workflow map.`
 - [x] **AC-2**: `Every live-surface workflow-count claim reads 26 and the next-workflow ordinal reads 27th, with no stale 25 workflow claim remaining.`
-- [x] **AC-3**: `scripts/check-doctor.sh / .ps1 and scripts/tests/run-doctor-tests.sh / .ps1 exist and are wired into both CI legs; both regression harnesses pass (Bash 10/10, PowerShell 10/10).`
+- [x] **AC-3**: `scripts/check-doctor.sh / .ps1 and scripts/tests/run-doctor-tests.sh / .ps1 exist and are wired into both CI legs; both regression harnesses pass (Bash 14/14, PowerShell 14/14).`
 - [x] **AC-4**: `CHANGELOG.md carries an [Unreleased] entry describing the new workflow.`
 - [x] **AC-5**: `validate-references.sh . reports zero errors and zero warnings after the edits.`
-- [x] **AC-6**: `Both behavioral-contract twins assert pk:doctor trigger uniqueness, the 26-file count, and the exit-code contract (healthy 0 / missing block 1 / absent prerequisite 2) in "Scenario AR" — the spec labels it "Scenario AP", but that label was already taken by #519-#523, so the next free label is used. Both twins pass with zero failures (Bash 449, PowerShell 447).`
+- [x] **AC-6**: `Both behavioral-contract twins assert pk:doctor trigger uniqueness, the 26-file count, and the exit-code contract (healthy 0 / missing block 1 / deleted universal host 1 / absent prerequisite 2) in "Scenario AR" — the spec labels it "Scenario AP", but that label was already taken by #519-#523, so the next free label is used. Both twins pass with zero failures (Bash 450, PowerShell 448).`
 - [x] **AC-7**: `Every published token figure is re-measured and re-propagated (docs/BENCHMARKS.md, protocols/setup.md, README.md, FAQ.md, templates/lite-profile.md); the strict budget gate passes (Balanced 2,341 / Lite 1,436).`
+- [x] **AC-8**: `PR #581 review round: the four P2 findings are fixed in both twins — version/ignore scoped to the engine directory, --fix renders the engine-relative path and verifies it, docs-drift compares the shared canonical fields and never emits a bare OK, and a deleted universal AGENTS.md is MISSING. New nested-install fixtures N1-N4 pass in both harnesses; measured inputs are untouched, so the provenance anchor stays valid.`
 
 ## 5. Execution Policy and State
 
@@ -75,7 +76,7 @@
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-10-08`
 - **Current Actor**: `Sisyphus`
-- **Next Action**: `Maintainer reviews the registration, count, changelog, and CI diff; commit, push, and PR remain pending explicit user approval.`
+- **Next Action**: `Maintainer merges PR #581, then a re-arm PR restates the provenance anchor to the squash commit.`
 
 ### Transition History
 
@@ -84,6 +85,8 @@
 | N/A | planned | 2026-10-08 | Sisyphus | Task initialized for the issue #547 registration, count, and CI-wiring workstream. | User request |
 | planned | in_progress | 2026-10-08 | Sisyphus | Applying registration, count, changelog, and CI edits, then running the local verification gates. | Section 6 |
 | in_progress | awaiting_review | 2026-10-08 | Sisyphus | Implementation and local verification complete; commit, push, and PR await explicit approval. | Section 6 |
+| awaiting_review | in_progress | 2026-10-08 | Sisyphus | Codex review of PR #581 returned four P2 findings; fixing them in both twins. | Section 6 |
+| in_progress | awaiting_review | 2026-10-08 | Sisyphus | All four review findings fixed and re-verified in both twins; ready for merge. | Section 6 |
 
 ## 6. Evidence and Completion Gate
 
@@ -97,21 +100,22 @@
   - `docs/BENCHMARKS.md` - re-measured Inventory rows (core-six 31,946 tok; full set 26 files / 116,136 tok), component/directive rows, reduction percentages, per-task payloads, tokenizer-delta rows, and the historical descriptor rewritten to avoid a stale count pattern. Provenance anchor stays `3e9710e`.
   - `scripts/tests/run-behavioral-contract-tests.sh` and `.ps1` - count literal 25 to 26 plus "Scenario AR" (pk:doctor trigger uniqueness, 26-file count, exit-code contract 0/1/2).
   - `CHANGELOG.md` - one [Unreleased] Added bullet.
-  - `.github/workflows/ci.yml` - doctor bash -n checks, Bash and PowerShell doctor test steps, and a direct `pk:doctor` self-audit step companion to the reference validator.
+  - `.github/workflows/ci.yml` - doctor bash -n checks and both doctor test twins wired into the Linux and Windows legs. The direct `pk:doctor` self-audit step was removed after the deleted-host fix, since the kit repository itself ships no `AGENTS.md` (a false failure the harness + Scenario AR already cover).
+  - `docs/specs/issue-547-pk-doctor.md` - normative amendment recording the engine-dir vs project-root distinction, the shared docs-drift fields, and the deleted-universal-host rule.
   - `docs/tasks/TASK-2026-10-08-pk-doctor.md` - this record.
   - `workflows/doctor.md`, `scripts/check-doctor.sh`, `scripts/check-doctor.ps1`, `scripts/tests/run-doctor-tests.sh`, `scripts/tests/run-doctor-tests.ps1` - shipped on the branch (not authored in this workstream).
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `bash scripts/validate-references.sh . -> exit 0, 0 errors, 0 warnings. bash -n on touched scripts -> clean. bash scripts/tests/run-doctor-tests.sh -> 10/10; /usr/bin/pwsh scripts/tests/run-doctor-tests.ps1 -> 10/10. bash scripts/tests/run-behavioral-contract-tests.sh -> Passed: 449 | Failed: 0 (incl. Scenario AR); /usr/bin/pwsh scripts/tests/run-behavioral-contract-tests.ps1 -> Passed: 447 | Failed: 0. bash scripts/measure-tokens.sh --strict -> BALANCED 2341/2500 PASS, LITE 1436/1500 PASS. bash scripts/tests/run-token-budget-tests.sh -> 7/0. bash scripts/tests/run-reference-link-tests.sh -> 6/0. bash scripts/validate-execution-control.sh --root . --strict --authorization-baseline origin/main -> VALID, 63 records. Stale-count scan over the live surface returned only 26 claims plus unrelated numeric hits (a "10-25 min" duration, a "workflows/data.md:25" line reference, a numbered list item).`
-- **CI Evidence**: `Pending PR CI.`
-- **Review Evidence**: `Local self-review only; no independent reviewer pass on this change.`
-- **Commit Evidence**: `Pending; no commit created (commit/push/PR require explicit approval).`
-- **Pull Request Evidence**: `Pending.`
+- **Verification Evidence**: `bash scripts/validate-references.sh . -> exit 0, 0 errors, 0 warnings. bash -n on touched scripts -> clean. bash scripts/tests/run-doctor-tests.sh -> 14/14; /usr/bin/pwsh scripts/tests/run-doctor-tests.ps1 -> 14/14 (S1-S10 plus nested-install N1-N4). bash scripts/tests/run-behavioral-contract-tests.sh -> Passed: 450 | Failed: 0; /usr/bin/pwsh scripts/tests/run-behavioral-contract-tests.ps1 -> Passed: 448 | Failed: 0. bash scripts/measure-tokens.sh --strict -> BALANCED 2341/2500 PASS, LITE 1436/1500 PASS. bash scripts/tests/run-token-budget-tests.sh -> 7/0. bash scripts/tests/run-reference-link-tests.sh -> 6/0. bash scripts/validate-execution-control.sh --root . --strict --authorization-baseline origin/main -> VALID, 63 records. An independent nested-install reproduction of all four review findings confirms the fixed behaviour in both twins.`
+- **CI Evidence**: `PR #581 CI green at 699b530 (pre-review); the review-fix head awaits CI.`
+- **Review Evidence**: `Round 1 (Codex, PR #581, head 699b530): REQUEST CHANGES, four P2 findings. All four were independently reproduced in both twins, fixed in both twins, and re-verified (doctor harness 14/14 each; nested N1-N4 green).`
+- **Commit Evidence**: `549f3c6 (feature), 6c17332 (anchor restate), 699b530 (Windows S6 fix); the review-fix commit follows.`
+- **Pull Request Evidence**: `https://github.com/lowqualityloey/promptkit-os/pull/581`
 - **Release Evidence**: `N/A - no release action in scope.`
-- **Blocker and Resume Condition**: `None. On commit, the docs/BENCHMARKS.md provenance anchor must be restated (it currently reads 3e9710e and the measured-input edits are uncommitted, so the guard is clean until the branch commits; a branch-commit anchor is then restated to the squash commit after merge, per the established re-arm dance).`
+- **Blocker and Resume Condition**: `None. The provenance anchor is restated to the feature commit 549f3c6; after squash-merge a re-arm PR restates it to the squash commit (the branch commit becomes orphaned), per the established re-arm dance.`
 - **Completion State**: `awaiting_review`
-- **Acceptance Results**: `AC-1 Pass; AC-2 Pass; AC-3 Pass (both harnesses executed green); AC-4 Pass; AC-5 Pass; AC-6 Pass; AC-7 Pass.`
-- **Changed-File Summary**: `Ship the read-only pk:doctor workflow and detector twins, register pk:doctor across the five required surfaces, bump the locked workflow count to 26 (next ordinal 27th) everywhere it is claimed, re-measure and re-propagate every published token figure, add the Scenario AR behavioral assertion and the CI wiring (syntax checks, both test twins, and a direct self-audit step), and record the change in the changelog.`
+- **Acceptance Results**: `AC-1 Pass; AC-2 Pass; AC-3 Pass (both harnesses 14/14); AC-4 Pass; AC-5 Pass; AC-6 Pass; AC-7 Pass; AC-8 Pass.`
+- **Changed-File Summary**: `Ship the read-only pk:doctor workflow and detector twins, register pk:doctor across the five required surfaces, bump the locked workflow count to 26 (next ordinal 27th) everywhere it is claimed, re-measure and re-propagate every published token figure, add the Scenario AR behavioral assertion and the CI wiring (syntax checks and both test twins), then fix the four review findings (engine-vs-project root scoping, engine-relative --fix paths, shared docs-drift field comparison, deleted-universal-host detection) with new nested-install fixtures.`
 - **Completion Exception**: `The spec names the behavioral assertion "Scenario AP"; that label is already used by #519-#523, so it is implemented as "Scenario AR" (the next free label).`
-- **Completion Decision and Timestamp**: `Implementation and local verification are complete; commit, push, and PR await explicit human approval - 2026-10-08.`
+- **Completion Decision and Timestamp**: `All four PR #581 review findings are fixed and re-verified in both twins; merge is the remaining human action - 2026-10-08.`

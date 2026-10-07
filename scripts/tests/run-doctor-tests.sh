@@ -2,16 +2,19 @@
 # Regression harness for the read-only pk:doctor detector (#547).
 # Run from repository root: bash scripts/tests/run-doctor-tests.sh
 #
-# Each scenario builds its own throwaway kit root under a temp dir; scenarios
-# that need git behavior `git init` a disposable repository inside that root.
-# S10 asserts the default (no --fix) run leaves the tree byte-identical.
+# Every fixture is a real nested install: the project root ($root) holds
+# PROMPTKIT.md, docs/, host files and the project git repo, while the engine
+# lives at $root/.promptkit (a copy of the real checker plus the templates and
+# workflows it references). Git-init the engine for version fixtures and the
+# project for ignore fixtures. S10 asserts the default (no --fix) run leaves the
+# tree byte-identical.
 
 set -uo pipefail
 export LC_ALL=C
 
 SCRIPT_DIR="$(builtin cd -- "$(dirname -- "$0")" && pwd -P)"
 REPO_ROOT="$(builtin cd -- "$SCRIPT_DIR/../.." && pwd -P)"
-CHECKER="$REPO_ROOT/scripts/check-doctor.sh"
+SRC_CHECKER="$REPO_ROOT/scripts/check-doctor.sh"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf -- "$TMP"' EXIT
@@ -44,27 +47,47 @@ OUT=""
 run_doctor() {
     local root="$1"
     shift
+    local checker="$root/.promptkit/scripts/check-doctor.sh"
+    [[ -f "$checker" ]] || checker="$SRC_CHECKER"
     STATUS=0
-    OUT="$(bash "$CHECKER" "$root" "$@" 2>&1)" || STATUS=$?
+    OUT="$(bash "$checker" "$root" "$@" 2>&1)" || STATUS=$?
 }
 
 snapshot_tree() { (builtin cd -- "$1" && tar --exclude=.git -cf - . 2>/dev/null | sha1sum); }
 
 HOST_RELS="AGENTS.md CLAUDE.md .opencode/rules.md .cursorrules GEMINI.md .windsurfrules .github/copilot-instructions.md .clinerules .traerules CONVENTIONS.md"
 
+# Lay down the engine copy at $dir/.promptkit: the real checker plus the
+# templates and the route workflow its rendered block references.
+install_engine() {
+    local dir="$1"
+    mkdir -p "$dir/.promptkit/scripts" "$dir/.promptkit/templates" "$dir/.promptkit/workflows"
+    cp "$SRC_CHECKER" "$dir/.promptkit/scripts/check-doctor.sh"
+    cp "$REPO_ROOT/templates/agent-directive-template.md" "$dir/.promptkit/templates/"
+    cp "$REPO_ROOT/templates/agent-directive-lite-template.md" "$dir/.promptkit/templates/"
+    cp "$REPO_ROOT/workflows/route.md" "$dir/.promptkit/workflows/"
+}
+
+init_engine_repo() {
+    local dir="$1"
+    git -C "$dir/.promptkit" init -q
+    git -C "$dir/.promptkit" config user.name Fixture
+    git -C "$dir/.promptkit" config user.email fixture@example.invalid
+    printf '# engine\n' > "$dir/.promptkit/ENGINE.md"
+    git -C "$dir/.promptkit" add -A
+    git -C "$dir/.promptkit" commit -qm 'engine base'
+    git -C "$dir/.promptkit" branch -M main 2>/dev/null || true
+    git -C "$dir/.promptkit" update-ref refs/remotes/origin/main HEAD
+}
+
 make_kit() {
     local name="$1" profile="${2:-balanced}"
     local dir="$TMP/$name"
     mkdir -p "$dir/docs/tasks" "$dir/.opencode" "$dir/.github"
     printf 'profile: %s\n' "$profile" > "$dir/PROMPTKIT.md"
+    install_engine "$dir"
+    init_engine_repo "$dir"
     git -C "$dir" init -q
-    git -C "$dir" config user.name Fixture
-    git -C "$dir" config user.email fixture@example.invalid
-    printf '# State\n' > "$dir/docs/STATE.md"
-    git -C "$dir" add -A
-    git -C "$dir" commit -qm 'base'
-    git -C "$dir" branch -M main 2>/dev/null || true
-    git -C "$dir" update-ref refs/remotes/origin/main HEAD
     printf '%s' "$dir"
 }
 
@@ -97,6 +120,7 @@ write_state() {
 - **Task ID**: \`$id\`
 - **Task Record**: \`docs/tasks/$id.md\`
 - **Execution State**: \`$exec_state\`
+- **Owner / Current Actor**: \`Implementor\`
 - **Ceremony Level**: \`Level 2 (Controlled)\`
 
 ---
@@ -123,7 +147,7 @@ make_healthy() {
     local name="$1" profile="${2:-balanced}"
     local dir sha
     dir="$(make_kit "$name" "$profile")"
-    sha="$(git -C "$dir" rev-parse --short HEAD)"
+    sha="$(git -C "$dir/.promptkit" rev-parse --short HEAD)"
     write_hosts "$dir" "$sha" "$profile"
     write_state "$dir" "$sha"
     write_task "$dir" "TASK-2026-01-01-fixture" "completed"
@@ -144,19 +168,19 @@ s1() {
 s2() {
     local root tip i sha
     root="$(make_healthy s2 balanced)"
-    git -C "$root" checkout -q -b stale
+    git -C "$root/.promptkit" checkout -q -b stale
     i=1
     while [[ "$i" -le 8 ]]; do
-        printf 'stale %s\n' "$i" >> "$root/stale.txt"
-        git -C "$root" add stale.txt
-        git -C "$root" commit -qm "stale $i"
+        printf 'stale %s\n' "$i" >> "$root/.promptkit/stale.txt"
+        git -C "$root/.promptkit" add stale.txt
+        git -C "$root/.promptkit" commit -qm "stale $i"
         i=$((i + 1))
     done
-    tip="$(git -C "$root" rev-parse HEAD)"
-    git -C "$root" checkout -q main
-    git -C "$root" update-ref refs/remotes/origin/main "$tip"
+    tip="$(git -C "$root/.promptkit" rev-parse HEAD)"
+    git -C "$root/.promptkit" checkout -q main
+    git -C "$root/.promptkit" update-ref refs/remotes/origin/main "$tip"
     printf 'docs/\n' > "$root/.gitignore"
-    sha="$(git -C "$root" rev-parse --short HEAD)"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
     write_state "$root" "$sha" "in_progress"
     run_doctor "$root"
     want_status 1
@@ -185,7 +209,7 @@ s3() {
 s4() {
     local root sha
     root="$(make_kit s4 balanced)"
-    sha="$(git -C "$root" rev-parse --short HEAD)"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
     write_hosts "$root" "$sha" balanced
     cat > "$root/docs/STATE.md" <<EOF
 # Project State
@@ -223,18 +247,18 @@ s6() {
     printf '#!/bin/sh\nexit 3\n' > "$fakebin/git"
     chmod +x "$fakebin/git"
     STATUS=0
-    OUT="$(PATH="$fakebin:$PATH" bash "$CHECKER" "$root" 2>&1)" || STATUS=$?
+    OUT="$(PATH="$fakebin:$PATH" bash "$root/.promptkit/scripts/check-doctor.sh" "$root" 2>&1)" || STATUS=$?
     want_status 1
-    want_contains $'ignore:.\tINCOMPLETE'
+    want_contains $'ignore:.promptkit\tINCOMPLETE'
     want_contains 'unexpected status 3'
-    want_not_contains 'ignore:.	OK'
+    want_not_contains $'ignore:.promptkit\tOK'
 }
 
 # S7 (Scenario 7): a host file present but missing the block is MISSING.
 s7() {
     local root sha
     root="$(make_kit s7 balanced)"
-    sha="$(git -C "$root" rev-parse --short HEAD)"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
     write_hosts "$root" "$sha" balanced
     printf '# Agent notes without the managed block\n' > "$root/AGENTS.md"
     run_doctor "$root"
@@ -257,7 +281,7 @@ s8() {
 s9() {
     local root sha
     root="$(make_kit s9 balanced)"
-    sha="$(git -C "$root" rev-parse --short HEAD)"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
     write_hosts "$root" "$sha" balanced
     printf '# Agent notes without the managed block\n' > "$root/AGENTS.md"
     run_doctor "$root"
@@ -283,6 +307,129 @@ s10() {
     scenario_check "$([[ "$before" == "$after" ]] && printf 1 || printf 0)" 'tree changed across a default (no --fix) run'
 }
 
+# N1: a nested engine one commit behind its OWN origin/main is STALE(+1), and a
+# project ignore rule on the engine directory is reported against .promptkit.
+n1() {
+    local root sha tip
+    root="$(make_healthy n1 balanced)"
+    printf 'engine +1\n' > "$root/.promptkit/extra.txt"
+    git -C "$root/.promptkit" add extra.txt
+    git -C "$root/.promptkit" commit -qm 'engine +1'
+    tip="$(git -C "$root/.promptkit" rev-parse HEAD)"
+    git -C "$root/.promptkit" reset -q --hard HEAD~1
+    git -C "$root/.promptkit" update-ref refs/remotes/origin/main "$tip"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
+    write_hosts "$root" "$sha" balanced
+    write_state "$root" "$sha"
+    printf '.promptkit/\n' > "$root/.gitignore"
+    run_doctor "$root"
+    want_status 1
+    want_contains $'version\tSTALE(+1)'
+    want_contains 'engine v1.2.3 is 1 commit(s) behind'
+    want_contains $'ignore:.promptkit\tIGNORED('
+    want_contains '.gitignore:1:.promptkit/'
+    want_not_contains $'ignore:.\t'
+}
+
+# N2: --fix renders <engine_relpath>/workflows/... and that path exists.
+n2() {
+    local root
+    root="$(make_kit n2 balanced)"
+    printf '# Agent notes without the managed block\n' > "$root/AGENTS.md"
+    run_doctor "$root" --fix
+    want_status 0
+    want_contains 're-emitted by --fix'
+    scenario_check "$([[ -f "$root/.promptkit/workflows/route.md" ]] && printf 1 || printf 0)" 'engine route.md missing before --fix check'
+    if ! grep -q '\.promptkit/workflows/route.md' "$root/AGENTS.md"; then
+        scenario_check 0 'rendered block does not reference .promptkit/workflows/route.md'
+    fi
+    if grep -q 'KIT_DIR_REL' "$root/AGENTS.md"; then
+        scenario_check 0 'rendered block left an unsubstituted $KIT_DIR_REL token'
+    fi
+}
+
+# N3: docs-drift compares every shared 3A/Task-Record field and never bare-OKs
+# without a concrete comparison.
+n3() {
+    local root sha
+    root="$(make_kit n3 balanced)"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
+    write_hosts "$root" "$sha" balanced
+
+    # (a) placeholder 3A vs concrete record -> DIVERGED
+    cat > "$root/docs/STATE.md" <<EOF
+# Project State
+- **Engine Version**: v1.2.3 @ $sha
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: \`TASK-<task-id>\`
+- **Task Record**: \`docs/tasks/TASK-2026-01-01-n3.md\`
+- **Execution State**: \`[planned]\`
+EOF
+    cat > "$root/docs/tasks/TASK-2026-01-01-n3.md" <<'EOF'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+EOF
+    run_doctor "$root"
+    want_status 1
+    want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Task ID)'
+
+    # (b) Next Action mismatch -> DIVERGED
+    cat > "$root/docs/STATE.md" <<EOF
+# Project State
+- **Engine Version**: v1.2.3 @ $sha
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: \`TASK-2026-01-01-n3\`
+- **Task Record**: \`docs/tasks/TASK-2026-01-01-n3.md\`
+- **Execution State**: \`in_progress\`
+- **Next Action**: \`Finalize the fixture\`
+EOF
+    cat > "$root/docs/tasks/TASK-2026-01-01-n3.md" <<'EOF'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Next Action**: `Ship the different action`
+EOF
+    run_doctor "$root"
+    want_status 1
+    want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Next Action)'
+
+    # (c) no shared field concrete on both sides -> SKIP, never OK
+    cat > "$root/docs/STATE.md" <<EOF
+# Project State
+- **Engine Version**: v1.2.3 @ $sha
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: \`TASK-<task-id>\`
+- **Task Record**: \`docs/tasks/TASK-2026-01-01-n3-ph.md\`
+- **Execution State**: \`[planned]\`
+EOF
+    cat > "$root/docs/tasks/TASK-2026-01-01-n3-ph.md" <<'EOF'
+# Task Record: n3-ph
+- **Task ID**: `TASK-<task-id>`
+- **Execution State**: `[planned]`
+- **Next Action**: `[action]`
+EOF
+    run_doctor "$root"
+    want_status 0
+    want_contains $'docs-drift\tSKIP(no comparable field)'
+    want_not_contains $'docs-drift\tOK'
+    want_not_contains 'DIVERGED'
+}
+
+# N4: a deleted universal AGENTS.md is MISSING (re-run the installer), exit 1.
+n4() {
+    local root
+    root="$(make_healthy n4 balanced)"
+    rm -f "$root/AGENTS.md"
+    run_doctor "$root"
+    want_status 1
+    want_contains $'host:AGENTS.md\tMISSING'
+    want_contains 'universal host file absent'
+}
+
 begin; s1; report 'S1 healthy Balanced install -> all OK, exit 0'
 begin; s2; report 'S2 stale engine + ignored path + diverged projection -> exit 1'
 begin; s3; report 'S3 intentional ignore alone -> IGNORED, exit 0'
@@ -293,6 +440,10 @@ begin; s7; report 'S7 host file missing the block -> MISSING'
 begin; s8; report 'S8 absent PROMPTKIT.md -> exit 2'
 begin; s9; report 'S9 --fix re-emits the missing block'
 begin; s10; report 'S10 default run is read-only (tree unchanged)'
+begin; n1; report 'N1 nested engine STALE(+1) against its own origin/main + engine ignore'
+begin; n2; report 'N2 --fix renders <engine_relpath>/workflows/... and path exists'
+begin; n3; report 'N3 docs-drift compares shared fields, DIVERGED/SKIP, never bare OK'
+begin; n4; report 'N4 deleted AGENTS.md -> MISSING, exit 1'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1
