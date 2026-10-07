@@ -64,6 +64,7 @@ jobs:
           bash -n scripts/tests/run-terminal-picker-tests.sh
           bash -n scripts/tests/release-records.examples.sh
           bash -n scripts/check-checkpoint-ignore.sh
+          bash -n scripts/check-setup-assert.sh
           bash -n scripts/tests/run-checkpoint-ignore-tests.sh
           echo "Bash scripts parsed with 0 syntax errors."
 
@@ -261,6 +262,7 @@ jobs:
             "scripts/tests/run-terminal-picker-tests.ps1",
             "scripts/tests/release-records.examples.ps1",
             "scripts/check-checkpoint-ignore.ps1",
+            "scripts/check-setup-assert.ps1",
             "scripts/tests/run-checkpoint-ignore-tests.ps1"
           )
           foreach ($file in $syntaxFiles) {

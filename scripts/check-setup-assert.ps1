@@ -9,7 +9,7 @@
 # success. It is read-only: it never stages, commits, mutates the index, or
 # touches the network.
 #
-# Doors: standalone | courier | direct-clone | submodule | partial-copy.
+# Doors: standalone | courier | direct-clone | submodule | partial-copy | tracked-content.
 # `partial-copy` is the incomplete-tree outcome: any install missing a required
 # engine file. A partial copy is never a passing door.
 #
