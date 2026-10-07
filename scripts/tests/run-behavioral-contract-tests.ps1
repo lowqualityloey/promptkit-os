@@ -447,7 +447,7 @@ function Check-BenchmarkFigure([string]$Description, [object]$Measured, [object]
 }
 
 # Provenance-anchor guard. Twin of the Bash guard: same rule, same measured
-# inputs, same SKIP-not-FAIL branch for an unresolvable anchor. See the Bash
+# inputs, same fail-closed branch for an unresolvable anchor. See the Bash
 # implementation for why ancestry is deliberately not asserted -- squash merges
 # orphan the source branch commits, so an anchor recorded on a PR branch is
 # legitimately not an ancestor of main.
@@ -467,7 +467,10 @@ function Test-ProvenanceAnchor([string]$Path) {
 
     git -C $RepoRoot rev-parse --verify --quiet "$anchor^{commit}" 2>$null
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  ⚠️ SKIP: provenance anchor $anchor does not resolve in this clone; cannot verify the measured-input tree is unchanged since it" -ForegroundColor Yellow
+        Write-Host "  ❌ FAIL: provenance anchor $anchor is unreachable (does not resolve to a commit in this clone); cannot verify the measured-input tree is unchanged since it" -ForegroundColor Red
+        Write-Host "           Restate the anchor in docs/BENCHMARKS.md to a commit reachable on main (a squash-merged PR-branch commit is orphaned and unresolvable)." -ForegroundColor Red
+        Write-Host "           A silent skip here would disable the provenance guard." -ForegroundColor Red
+        $script:FailCount++
         return
     }
 

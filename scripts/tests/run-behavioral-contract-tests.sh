@@ -410,7 +410,9 @@ static_metric() {
 #
 # The rule this enforces: if the anchor resolves, the measured-input tree must
 # be unchanged between it and HEAD. That makes the "measured at <anchor>" and
-# "unchanged since <anchor>" claims true by construction.
+# "unchanged since <anchor>" claims true by construction. An anchor that does
+# not resolve at all fails closed rather than skipping: an unverifiable anchor
+# must not silently disable the guard.
 #
 # Ancestry is deliberately NOT asserted. Squash merges orphan the source branch
 # commits, so an anchor recorded on a PR branch is legitimately not an ancestor
@@ -441,10 +443,15 @@ check_provenance_anchor() {
         return
     fi
     if ! git -C "$REPO_ROOT" cat-file -e "${anchor}^{commit}" 2>/dev/null; then
-        # An unresolvable anchor cannot be verified. Reported, not failed: after a
-        # squash merge and branch deletion the commit may exist only as a dangling
-        # object, and failing here would make the suite fail on correct content.
-        echo "  ⚠️ SKIP: provenance anchor $anchor does not resolve in this clone; cannot verify the measured-input tree is unchanged since it"
+        # Fail closed. An anchor that does not resolve cannot be verified, and
+        # treating that as a skip silently disables this guard: a squash merge
+        # orphans the PR-branch commit, so the anchor goes unresolvable exactly
+        # when it is most likely to have gone stale. CI clones with fetch-depth: 0,
+        # so a resolvable anchor is always available there.
+        echo "  ❌ FAIL: provenance anchor $anchor is unreachable (does not resolve to a commit in this clone); cannot verify the measured-input tree is unchanged since it"
+        echo "           Restate the anchor in docs/BENCHMARKS.md to a commit reachable on main (a squash-merged PR-branch commit is orphaned and unresolvable)."
+        echo "           A silent skip here would disable the provenance guard."
+        FAIL_COUNT=$((FAIL_COUNT + 1))
         return
     fi
     measured_input_paths
