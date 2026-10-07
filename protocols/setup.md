@@ -115,6 +115,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Subagent Delegation**: `<kit>/protocols/subagent-delegation.md`
 - **Discovery Intake**: `<kit>/protocols/discovery-intake.md`
 - **Telemetry Cards**: `<kit>/protocols/telemetry-cards.md`
+- **Checkpoint Ignore Policy**: `<kit>/protocols/checkpoint-ignore-policy.md`
 
 > Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md` and `rendered-ui-evidence.md`, which are lazy-loaded by their relevant workflows. This keeps the static directive under the 2500-token Balanced budget (currently 2312/2500).
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)

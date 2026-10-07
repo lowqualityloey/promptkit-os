@@ -266,6 +266,8 @@ Working on something complex? Use `pk:checkpoint` before ending:
 - Generates handover prompt for fresh chat
 - Locks architectural decisions
 
+`pk:checkpoint` reports checkpoint targets hidden behind a repository author's ignore policy (Mode A) via `scripts/check-checkpoint-ignore.sh` (PowerShell twin `pwsh -NoProfile -File scripts/check-checkpoint-ignore.ps1`); see [`protocols/checkpoint-ignore-policy.md`](./protocols/checkpoint-ignore-policy.md). It never stages, commits, force-adds, or edits `.gitignore` to bypass the rule.
+
 ### 4. **Visual Brand Identity** (Optional)
 Create `DESIGN.md` for UI projects (`cp .promptkit/templates/design-profile-template.md DESIGN.md` or ask your AI: `pk:design`):
 - Color tokens & anti-slop rules

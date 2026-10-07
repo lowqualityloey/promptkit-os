@@ -44,12 +44,15 @@ bash -n scripts/validate-release-records.sh
 bash -n scripts/validate-ci-triage.sh
 bash -n scripts/tests/run-behavioral-contract-tests.sh
 bash -n scripts/tests/run-init-safety-tests.sh
+bash -n scripts/check-checkpoint-ignore.sh
+bash -n scripts/tests/run-checkpoint-ignore-tests.sh
 
 # Run safety & contract test suites
 bash scripts/tests/run-init-safety-tests.sh
 bash scripts/tests/run-behavioral-contract-tests.sh
 bash scripts/tests/run-execution-control-fixtures.sh
 bash scripts/tests/run-ci-triage-fixtures.sh
+bash scripts/tests/run-checkpoint-ignore-tests.sh
 
 # Validate reference links and release records
 bash scripts/validate-references.sh .
@@ -75,7 +78,9 @@ $syntaxFiles = @(
   "scripts/validate-ci-triage.ps1",
   "scripts/tests/run-ci-triage-fixtures.ps1",
   "scripts/tests/run-behavioral-contract-tests.ps1",
-  "scripts/tests/run-init-safety-tests.ps1"
+  "scripts/tests/run-init-safety-tests.ps1",
+  "scripts/check-checkpoint-ignore.ps1",
+  "scripts/tests/run-checkpoint-ignore-tests.ps1"
 )
 foreach ($file in $syntaxFiles) {
   $errors = @()
@@ -88,6 +93,7 @@ pwsh -NoProfile -File .\scripts\tests\run-init-safety-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-behavioral-contract-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-execution-control-fixtures.ps1
 pwsh -NoProfile -File .\scripts\tests\run-ci-triage-fixtures.ps1
+pwsh -NoProfile -File .\scripts\tests\run-checkpoint-ignore-tests.ps1
 
 # Validate reference links and release records
 pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir .
