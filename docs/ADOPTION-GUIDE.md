@@ -361,6 +361,20 @@ $$\text{lsp-mcp (future)} \rightarrow \text{Native IDE tools} \rightarrow \text{
 
 ---
 
+### Scenario 8: Keep Narrative Files Off the Public Branch
+
+**Problem**: `handoff.md`, `memory.md`, and session notes narrate work — absolute local paths, machine names, and unreleased roadmaps. `.gitignore` protects only *untracked* files, so a tracked narrative file publishes everything it contains the moment it is pushed. A tracked `memory.md` leaking an absolute path, or a `handoff.md` narrating an unreleased plan, is invisible to a secrets-only scan.
+
+**Solution**: Treat narrative files as local-only unless their content is deliberately public, and let the staged scan catch what slips through. `pk:commit` runs `scripts/scan-staged-secrets.sh` (+ `.ps1` twin), which also flags tracked narrative surface on the **staged index only** (added lines), printing `file:line` and a remediation and exiting `3`. That tier is separate from credential findings (`1`) and scan failures (`2`).
+
+- **Keep it local**: add `handoff.md`, `memory.md`, and session notes to `.gitignore`, or keep them in a local-only directory. `docs/STATE.md` is intentionally tracked — keep its content project state, not session narration.
+- **Relativize paths**: replace an absolute workstation path with a `$HOME`-relative form or a `<placeholder>` before staging.
+- **Externalized rules**: detectors live in `scripts/narrative-surface-rules.txt` (`RULE|regex|severity`) and the allowlist in `scripts/narrative-surface-paths.txt` (`glob|kind`). A missing or unreadable file fails the scan closed (`2`) rather than passing silently.
+- **Project override**: supply your own hostname and roadmap patterns with `PROMPTKIT_NARRATIVE_RULES_EXTRA=/path/to/extra-rules.txt` and narrow the allowlist with `PROMPTKIT_NARRATIVE_PATHS_EXTRA=/path/to/extra-paths.txt` (both fail closed if unreadable) instead of editing the shipped files.
+- **No history rewrite**: the scan sees only staged additions. Already-published paths are the owner's decision — surface them as guidance, do not rewrite history here.
+
+---
+
 ## Handling Resistance & Common Objections
 
 ### "This Looks Like Bureaucracy"
