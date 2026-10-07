@@ -1,0 +1,6 @@
+# Foreign /handoff payload fixture: unresolved task identity.
+# The Task ID is well-formed but has no docs/tasks/<task-id>.md record.
+Branch: feature/issue-550-importer-fixtures
+Revision: REV-550-001
+Next Action: Wire the PowerShell twin harness section
+Task ID: TASK-2026-09-08-missing-record

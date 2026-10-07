@@ -1,11 +1,14 @@
 # Read-only Agent Execution Control validator.
-# Usage: .\scripts\validate-execution-control.ps1 [-Root PATH] [-Strict]
+# Usage: .\scripts\validate-execution-control.ps1 [-Root PATH] [-Strict] [-AuthorizationBaseline REF] [-Import PAYLOAD]
 
 [CmdletBinding()]
 param(
     [string]$Root = ".",
     [switch]$Strict,
-    [string]$AuthorizationBaseline = ""
+    [string]$AuthorizationBaseline = "",
+    [string]$Import = "",
+    [Alias('h')]
+    [switch]$Help
 )
 
 $ErrorCount = 0
@@ -315,6 +318,409 @@ function Remove-BacktickWrap {
         return $Value.Substring(1, $Value.Length - 2)
     }
     return $Value
+}
+
+# Best-effort importer for a foreign harness `/handoff` prose payload.
+# Emits a Checkpoint draft on stdout; verdict and diagnostics go to stderr so
+# callers can redirect stdout straight into a record file. Never writes records,
+# never synthesizes a Task ID, and grants no execution authority.
+function Show-Usage {
+    Write-Output 'Usage: validate-execution-control.ps1 [-Root PATH] [-Strict] [-AuthorizationBaseline REF] [-Import PAYLOAD]'
+    Write-Output ''
+    Write-Output 'Validate durable Agent Execution Control Markdown records without modifying'
+    Write-Output 'records, files, Git state, remotes, releases, or task state.'
+    Write-Output ''
+    Write-Output '  -Root PATH                   Repository root to scan (default: .)'
+    Write-Output '  -Strict                      Emit diagnostics for untyped records'
+    Write-Output '  -AuthorizationBaseline REF   Also run authorization-evidence validation'
+    Write-Output '  -Import PAYLOAD              Parse a foreign /handoff prose payload, print an'
+    Write-Output '                               imported Checkpoint draft (markdown) to stdout, and'
+    Write-Output '                               emit an IMPORT-DRAFT verdict on stderr (QUICK-VALID,'
+    Write-Output '                               FULL-VALID, DRAFT-INCOMPLETE, or REFUSED-L0). Exit'
+    Write-Output '                               status is 0 only for QUICK-VALID / FULL-VALID, 1 for'
+    Write-Output '                               DRAFT-INCOMPLETE or REFUSED-L0, 2 for usage errors.'
+    Write-Output '                               Grants no execution, commit, push, PR, or release'
+    Write-Output '                               authority.'
+    Write-Output '  -Help, -h                    Show this help'
+}
+
+function Test-ImportPlaceholder {
+    param([AllowEmptyString()][string]$Value)
+    $value = Trim-Value $Value
+    # Mirror Get-FieldValue: a value wrapped in backticks is read without them.
+    if ($value.Length -ge 2 -and $value.StartsWith('`') -and $value.EndsWith('`')) {
+        $value = Trim-Value $value.Substring(1, $value.Length - 2)
+    }
+    if (Test-Placeholder $value) { return $true }
+    switch -CaseSensitive ($value) {
+        'TBD' { return $true }
+        'tbd' { return $true }
+        'Tbd' { return $true }
+        'T.B.D.' { return $true }
+        'To be determined' { return $true }
+        'to be determined' { return $true }
+        'TO BE DETERMINED' { return $true }
+        'TODO' { return $true }
+        'todo' { return $true }
+    }
+    return $false
+}
+
+# Quick-tier required labels (workflows/checkpoint.md, Level 1). Membership is an
+# exact-match case so no padding or delimiter can break a label at either end, and
+# it is case-sensitive (-cin) to mirror the sh twin where -in is case-insensitive.
+function Test-ImportQuickRequired {
+    param([string]$Label)
+    return $Label -cin @('Record Type', 'Checkpoint ID', 'Created', 'Execution State', 'Objective', 'Remaining Work', 'Blockers', 'Next Action', 'Resume Condition', 'Recorded By')
+}
+
+function Write-ImportDiagnostic {
+    param(
+        [string]$Category,
+        [string]$RecordId,
+        [string]$Path,
+        [string]$Message,
+        [string]$Remediation
+    )
+    $safeMessage = ($Message -replace '[\r\n|]', ' ').Trim()
+    $safeRemediation = ($Remediation -replace '[\r\n|]', ' ').Trim()
+    [Console]::Error.WriteLine("$Category|$RecordId|$Path|$safeMessage|$safeRemediation")
+}
+
+function Get-ImportLevel {
+    param([AllowEmptyString()][string]$Norm)
+    switch -Wildcard ($Norm) {
+        'l0*' { return 'L0' }
+        'level 0*' { return 'L0' }
+        '0' { return 'L0' }
+        '*direct*' { return 'L0' }
+        '*informational*' { return 'L0' }
+        'l1*' { return 'L1' }
+        'level 1*' { return 'L1' }
+        '1' { return 'L1' }
+        '*standard*' { return 'L1' }
+        '*quick*' { return 'L1' }
+        'l2*' { return 'L2' }
+        'level 2*' { return 'L2' }
+        '2' { return 'L2' }
+        '*controlled*' { return 'L2' }
+        'l3*' { return 'L3' }
+        'level 3*' { return 'L3' }
+        '3' { return 'L3' }
+        '*release*' { return 'L3' }
+    }
+    return ''
+}
+
+function Invoke-ImportHandoff {
+    param([string]$Payload)
+
+    $script:ImportExitCode = 0
+    if (-not (Test-Path -LiteralPath $Payload -PathType Leaf)) {
+        [Console]::Error.WriteLine("USAGE|IMPORT|Payload file not found: $Payload")
+        $script:ImportExitCode = 2
+        return
+    }
+
+    if (Test-Path -LiteralPath $taskDir -PathType Container) {
+        $taskFiles = @(Get-ChildItem -LiteralPath $taskDir -Filter '*.md' -File | Sort-Object FullName)
+        foreach ($taskFile in $taskFiles) {
+            if ((Get-FieldValue $taskFile.FullName 'Record Type') -cne 'Task Record') { continue }
+            $tid = Get-FieldValue $taskFile.FullName 'Task ID'
+            if ([string]::IsNullOrEmpty($tid)) { continue }
+            $script:TaskById[$tid] = $taskFile.FullName
+        }
+    }
+
+    $labelOrder = @(
+        'Record Type', 'Checkpoint ID', 'Task ID', 'Specification', 'Created',
+        'Checkpoint Type', 'Execution State', 'Objective', 'Completed Work',
+        'Remaining Work', 'Changed Files', 'Branch / Revision',
+        'Locked Decisions and Invariants', 'Verification Evidence', 'CI Evidence',
+        'Blockers', 'Scope Changes', 'Next Action', 'Resume Condition', 'Recorded By'
+    )
+
+    $P = @{}
+    $branch = ''
+    $revision = ''
+    $ceremony = ''
+    foreach ($rawLine in (Get-Content -LiteralPath $Payload)) {
+        if ($null -eq $rawLine) { continue }
+        $stripped = Trim-Value $rawLine
+        if ([string]::IsNullOrEmpty($stripped)) { continue }
+        if ($stripped.StartsWith('- ', [System.StringComparison]::Ordinal)) {
+            $stripped = Trim-Value $stripped.Substring(2)
+        } elseif ($stripped.StartsWith('* ', [System.StringComparison]::Ordinal)) {
+            $stripped = Trim-Value $stripped.Substring(2)
+        }
+        $colon = $stripped.IndexOf(':')
+        if ($colon -lt 0) { continue }
+        $payloadLabel = $stripped.Substring(0, $colon)
+        $payloadValue = Trim-Value $stripped.Substring($colon + 1)
+        $payloadLabel = Trim-Value ($payloadLabel.Replace('*', ''))
+        $norm = ($payloadLabel.ToLowerInvariant() -replace ' +', ' ')
+        switch ($norm) {
+            'branch' { $branch = $payloadValue }
+            'revision' { $revision = $payloadValue }
+            'validated revision' { $revision = $payloadValue }
+            'branch / revision' { $P['Branch / Revision'] = $payloadValue }
+            'branch and revision' { $P['Branch / Revision'] = $payloadValue }
+            'task id' { $P['Task ID'] = $payloadValue }
+            'record type' { $P['Record Type'] = $payloadValue }
+            'checkpoint id' { $P['Checkpoint ID'] = $payloadValue }
+            'specification' { $P['Specification'] = $payloadValue }
+            'created' { $P['Created'] = $payloadValue }
+            'checkpoint type' { $P['Checkpoint Type'] = $payloadValue }
+            'execution state' { $P['Execution State'] = $payloadValue }
+            'objective' { $P['Objective'] = $payloadValue }
+            'completed work' { $P['Completed Work'] = $payloadValue }
+            'remaining work' { $P['Remaining Work'] = $payloadValue }
+            'changed files' { $P['Changed Files'] = $payloadValue }
+            'locked decisions and invariants' { $P['Locked Decisions and Invariants'] = $payloadValue }
+            'locked decisions' { $P['Locked Decisions and Invariants'] = $payloadValue }
+            'locked decisions / invariants' { $P['Locked Decisions and Invariants'] = $payloadValue }
+            'verification evidence' { $P['Verification Evidence'] = $payloadValue }
+            'ci evidence' { $P['CI Evidence'] = $payloadValue }
+            'blockers' { $P['Blockers'] = $payloadValue }
+            'blocker' { $P['Blockers'] = $payloadValue }
+            'scope changes' { $P['Scope Changes'] = $payloadValue }
+            'scope change' { $P['Scope Changes'] = $payloadValue }
+            'next action' { $P['Next Action'] = $payloadValue }
+            'resume condition' { $P['Resume Condition'] = $payloadValue }
+            'resume conditions' { $P['Resume Condition'] = $payloadValue }
+            'recorded by' { $P['Recorded By'] = $payloadValue }
+            'recorded by and timestamp' { $P['Recorded By'] = $payloadValue }
+            'ceremony level' { $ceremony = $payloadValue }
+            'level' { $ceremony = $payloadValue }
+            'work classification' { $ceremony = $payloadValue }
+            'ceremony' { $ceremony = $payloadValue }
+            'task ceremony' { $ceremony = $payloadValue }
+        }
+    }
+
+    if (Test-ImportPlaceholder $branch) { $branch = '' }
+    if (Test-ImportPlaceholder $revision) { $revision = '' }
+
+    $ceremonyNorm = ($ceremony.ToLowerInvariant() -replace ' +', ' ')
+    $level = Get-ImportLevel $ceremonyNorm
+    $levelExplicit = -not [string]::IsNullOrEmpty($level)
+    $recordTypeValue = if ($P.ContainsKey('Record Type')) { Trim-Value ([string]$P['Record Type']) } else { '' }
+    if ([string]::IsNullOrEmpty($level) -and -not [string]::IsNullOrEmpty($recordTypeValue)) {
+        $rtnorm = $recordTypeValue.ToLowerInvariant()
+        switch -Wildcard ($rtnorm) {
+            '*task record*' { $level = 'L2'; break }
+            '*checkpoint record*' { $level = 'L2'; break }
+            '*handoff record*' { $level = 'L2'; break }
+            '*scope change record*' { $level = 'L2'; break }
+            '*controlled*' { $level = 'L2'; break }
+            '*l2*' { $level = 'L2'; break }
+            '*l3*' { $level = 'L2'; break }
+            '*record*' { break }
+            default { $level = 'L1' }
+        }
+    }
+
+    $taskSupplied = $false
+    $taskId = ''
+    if ($P.ContainsKey('Task ID')) {
+        $candidate = Trim-Value ([string]$P['Task ID'])
+        if (-not [string]::IsNullOrEmpty($candidate) -and -not (Test-ImportPlaceholder $candidate)) {
+            $taskSupplied = $true
+            $taskId = $candidate
+        }
+    }
+
+    # A resolvable Task Record owns the ceremony level: the effective level is the
+    # higher of the payload claim and the record's classification (default Level 2,
+    # as validate_checkpoint does), and a lower payload claim is a flagged downgrade.
+    $taskLevel = ''
+    $downgradeNote = ''
+    if ($taskSupplied -and $TaskById.ContainsKey($taskId)) {
+        $linkedFile = $TaskById[$taskId]
+        $linkedCeremony = Get-FieldValue $linkedFile 'Ceremony Level'
+        if ([string]::IsNullOrEmpty($linkedCeremony)) { $linkedCeremony = Get-FieldValue $linkedFile 'Work Classification' }
+        if (-not [string]::IsNullOrEmpty($linkedCeremony)) {
+            $taskLevel = Get-ParsedCeremonyLevel $linkedCeremony
+            if ($taskLevel -eq 'invalid') { $taskLevel = '' }
+        }
+        if ([string]::IsNullOrEmpty($taskLevel)) { $taskLevel = '2' }
+        $payloadN = ''
+        switch -CaseSensitive ($level) {
+            'L1' { $payloadN = '1' }
+            'L2' { $payloadN = '2' }
+            'L3' { $payloadN = '3' }
+        }
+        if (-not [string]::IsNullOrEmpty($payloadN) -and [int]$payloadN -lt [int]$taskLevel) {
+            if ($levelExplicit) {
+                $downgradeNote = "Checkpoint cannot downgrade Ceremony Level from Level $taskLevel to Level $payloadN"
+            }
+            $level = "L$taskLevel"
+            $levelExplicit = $true
+        } elseif ([string]::IsNullOrEmpty($payloadN) -and $taskLevel -ceq '1') {
+            $level = 'L1'
+        } elseif ($taskLevel -ceq '0') {
+            $level = 'L0'
+        }
+    }
+
+    if ($level -eq 'L0') {
+        Write-ImportDiagnostic 'POLICY_LIMITATION' 'UNKNOWN' $Payload "Level 0 requests must not write execution-control records to docs/" "Do not import Level 0 handoffs into docs/tasks; no durable record is permitted at Level 0"
+        [Console]::Error.WriteLine('IMPORT-DRAFT|tier=none|unresolved=0|verdict=REFUSED-L0')
+        $script:ImportExitCode = 1
+        return
+    }
+
+    # L2, L3, and any unlabeled payload default fail-closed to the full tier;
+    # the tier never depends on which records the scanned repo happens to hold.
+    $tier = ''
+    if ($level -eq 'L1') { $tier = 'quick' } else { $tier = 'full' }
+
+    $checkpointId = ''
+    $checkpointIdValid = $true
+    if ($P.ContainsKey('Checkpoint ID') -and -not (Test-ImportPlaceholder ([string]$P['Checkpoint ID']))) {
+        $checkpointId = Trim-Value ([string]$P['Checkpoint ID'])
+        if (-not (Test-ChildId $checkpointId)) { $checkpointIdValid = $false }
+    } else {
+        $createdVal = if ($P.ContainsKey('Created')) { [string]$P['Created'] } else { '' }
+        $dateMatch = [regex]::Match($createdVal, '[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        $datePart = if ($dateMatch.Success) { $dateMatch.Value } else { Get-Date -Format 'yyyy-MM-dd' }
+        $slug = 'imported'
+        if (-not [string]::IsNullOrEmpty($taskId)) { $slug = ($taskId -replace '[^A-Za-z0-9._-]', '-') }
+        $checkpointId = "CHECKPOINT-$datePart-$slug-1"
+    }
+
+    $OUT = @{}
+    $RESOLVED = @{}
+
+    $OUT['Record Type'] = 'Checkpoint Record'
+    $RESOLVED['Record Type'] = $true
+    $OUT['Checkpoint ID'] = $checkpointId
+    if ($checkpointIdValid) { $RESOLVED['Checkpoint ID'] = $true }
+
+    $trace = 0
+    $traceMessage = ''
+    if ($taskSupplied) {
+        if ($TaskById.ContainsKey($taskId)) {
+            $OUT['Task ID'] = $taskId
+            $RESOLVED['Task ID'] = $true
+        } else {
+            $trace = 1
+            $traceMessage = "Checkpoint references unknown Task ID: $taskId"
+            $OUT['Task ID'] = $taskId
+        }
+    } elseif ($tier -eq 'quick') {
+        $OUT['Task ID'] = 'N/A — no Task Record (Level 0/1)'
+        $RESOLVED['Task ID'] = $true
+    } else {
+        $trace = 1
+        $traceMessage = 'Checkpoint references missing Task ID: no canonical Task Record linked'
+    }
+
+    $branchRevision = ''
+    $payloadBranchRevision = if ($P.ContainsKey('Branch / Revision')) { [string]$P['Branch / Revision'] } else { '' }
+    if (-not [string]::IsNullOrEmpty($payloadBranchRevision) -and -not (Test-ImportPlaceholder $payloadBranchRevision)) {
+        $branchRevision = Trim-Value $payloadBranchRevision
+    } elseif (-not [string]::IsNullOrEmpty($branch) -and -not [string]::IsNullOrEmpty($revision)) {
+        $branchRevision = "$branch @ $revision"
+    } elseif (-not [string]::IsNullOrEmpty($branch)) {
+        $branchRevision = $branch
+    } elseif (-not [string]::IsNullOrEmpty($revision)) {
+        $branchRevision = $revision
+    }
+    if (-not [string]::IsNullOrEmpty($branchRevision)) {
+        $OUT['Branch / Revision'] = $branchRevision
+        $RESOLVED['Branch / Revision'] = $true
+    }
+
+    foreach ($label in $labelOrder) {
+        if ($label -in @('Record Type', 'Checkpoint ID', 'Task ID', 'Branch / Revision')) { continue }
+        $value = if ($P.ContainsKey($label)) { [string]$P[$label] } else { '' }
+        $presenceOnly = $label -in @('Changed Files', 'Scope Changes')
+        if ($label -eq 'Blockers' -and $tier -eq 'full') { $presenceOnly = $true }
+        if (-not [string]::IsNullOrEmpty((Trim-Value $value))) {
+            if ($presenceOnly -or -not (Test-ImportPlaceholder $value) -or ($label -eq 'Blockers' -and (Trim-Value $value) -ceq 'None identified')) {
+                $OUT[$label] = Trim-Value $value
+                $RESOLVED[$label] = $true
+            }
+        }
+    }
+
+    # Quick tier: only the ten quick-required labels block the verdict; every
+    # unresolved full-only label degrades explicitly via POLICY_LIMITATION.
+    $unresolvedCount = 0
+    $unresolvedLabels = @()
+    $degradedLabels = @()
+    foreach ($label in $labelOrder) {
+        if (-not $RESOLVED.ContainsKey($label)) {
+            if ($tier -eq 'quick' -and -not (Test-ImportQuickRequired $label)) {
+                if ($label -ne 'Task ID') { $degradedLabels += $label }
+                continue
+            }
+            $unresolvedCount++
+            $unresolvedLabels += $label
+        }
+    }
+
+    if (-not [string]::IsNullOrEmpty($downgradeNote)) {
+        Write-ImportDiagnostic 'POLICY_LIMITATION' $checkpointId $Payload $downgradeNote 'Match the established task ceremony level'
+    }
+    if (-not $checkpointIdValid) {
+        Write-ImportDiagnostic 'INVALID_ID' $checkpointId $Payload "Checkpoint ID is not stable: $checkpointId" 'Use CHECKPOINT-YYYY-MM-DD-task-id-sequence'
+    }
+
+    foreach ($evidence in @('Verification Evidence', 'CI Evidence')) {
+        if (-not $RESOLVED.ContainsKey($evidence)) {
+            Write-ImportDiagnostic 'POLICY_LIMITATION' $checkpointId $Payload "Foreign /handoff payload cannot mechanically supply $evidence" "Run and record $evidence locally, then promote this draft into a canonical Checkpoint Record"
+        }
+    }
+
+    foreach ($degradedLabel in $degradedLabels) {
+        if ($degradedLabel -in @('Verification Evidence', 'CI Evidence')) { continue }
+        Write-ImportDiagnostic 'POLICY_LIMITATION' $checkpointId $Payload "Unresolved label for Level 1 quick checkpoint: $degradedLabel" "Full tier requires a resolved value; this quick draft is never full-valid"
+    }
+
+    if ($trace -eq 1) {
+        Write-ImportDiagnostic 'TRACEABILITY_MISSING' $checkpointId $Payload $traceMessage 'Link the checkpoint to an existing canonical Task Record'
+    }
+
+    Write-Output '# Checkpoint Record: Imported /handoff draft'
+    Write-Output ''
+    foreach ($label in $labelOrder) {
+        if ($label -eq 'Specification') {
+            switch ($level) {
+                'L1' { Write-Output '- **Ceremony Level**: Level 1 (Standard)' }
+                'L2' { if ($levelExplicit) { Write-Output '- **Ceremony Level**: Level 2 (Controlled)' } }
+                'L3' { Write-Output '- **Ceremony Level**: Level 3 (Release-Critical)' }
+            }
+        }
+        if (-not $RESOLVED.ContainsKey($label)) {
+            # Supplied but unresolved (unknown Task ID, malformed Checkpoint ID):
+            # keep the value so canonical re-validation reports the same failure.
+            if ($OUT.ContainsKey($label)) { Write-Output "- **${label}**: $($OUT[$label])" }
+            continue
+        }
+        if ($label -eq 'Changed Files') {
+            Write-Output '- **Changed Files**:'
+            foreach ($entry in ([string]$OUT[$label] -split ',')) {
+                $entryValue = Trim-Value $entry
+                if (-not [string]::IsNullOrEmpty($entryValue)) { Write-Output "  - $entryValue" }
+            }
+        } else {
+            Write-Output "- **$label**: $($OUT[$label])"
+        }
+    }
+    Write-Output ''
+
+    $verdict = 'DRAFT-INCOMPLETE'
+    if ($unresolvedCount -eq 0 -and $trace -eq 0) {
+        if ($tier -eq 'quick') { $verdict = 'QUICK-VALID' } else { $verdict = 'FULL-VALID' }
+    }
+    [Console]::Error.WriteLine("IMPORT-DRAFT|tier=$tier|unresolved=$unresolvedCount|verdict=$verdict")
+    if ($unresolvedCount -gt 0) {
+        [Console]::Error.WriteLine('IMPORT-UNRESOLVED|' + ($unresolvedLabels -join '|'))
+    }
+    # Exit status carries the verdict: 0 only for QUICK-VALID / FULL-VALID.
+    if ($verdict -eq 'DRAFT-INCOMPLETE') { $script:ImportExitCode = 1 }
 }
 
 function Test-Transitions {
@@ -644,6 +1050,11 @@ function Test-Handoff {
     }
 }
 
+if ($Help) {
+    Show-Usage
+    exit 0
+}
+
 try {
     # ProviderPath (not .Path): .Path can carry the provider qualifier prefix
     # (e.g. Microsoft.PowerShell.Core\FileSystem::\\wsl.localhost\...) while
@@ -656,6 +1067,11 @@ try {
 }
 
 $taskDir = Join-Path $RootPath 'docs/tasks'
+if (-not [string]::IsNullOrWhiteSpace($Import)) {
+    $script:ImportExitCode = 0
+    Invoke-ImportHandoff -Payload $Import
+    exit $script:ImportExitCode
+}
 if (-not (Test-Path -LiteralPath $taskDir -PathType Container)) {
     if ($Strict) { Add-Diagnostic 'MISSING_FIELD' 'REPOSITORY' 'docs/tasks' 'Canonical Task Source directory is missing' 'Create docs/tasks for Controlled Work or omit strict validation when no records are present' }
 } else {

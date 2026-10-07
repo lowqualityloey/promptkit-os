@@ -12,10 +12,12 @@ $validator = Join-Path $repoRoot "scripts/validate-execution-control.ps1"
 $validRoot = Join-Path $fixtureRoot "valid"
 $invalidRoot = Join-Path $fixtureRoot "invalid"
 $caseRoot = Join-Path $fixtureRoot "cases"
+$importRoot = Join-Path $fixtureRoot "imports"
 $expectedValid = Join-Path $fixtureRoot "expected-valid.txt"
 $expectedInvalid = Join-Path $fixtureRoot "expected-invalid.txt"
 $expectedInvalidSummary = Join-Path $fixtureRoot "expected-invalid-summary.txt"
 $expectedCases = Join-Path $fixtureRoot "expected/cases.tsv"
+$expectedImports = Join-Path $fixtureRoot "expected/imports.tsv"
 $tempBase = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } elseif ($env:TEMP) { $env:TEMP } else { [System.IO.Path]::GetTempPath() }
 $tempRoot = Join-Path $tempBase ("promptkit-execution-control-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
@@ -113,8 +115,83 @@ function Assert-MatrixCase {
     }
 }
 
+function Invoke-Import {
+    param([string]$CaseName, [string]$Root, [string]$Payload)
+    $capturePath = Join-Path $tempRoot "import-$CaseName.output.txt"
+    $rawLines = @(& pwsh -NoProfile -File $validator -Root $Root -Import $Payload 2>&1)
+    $exitCode = $LASTEXITCODE
+    $normalized = @(Normalize-Lines $rawLines)
+    $normalized | Set-Content -LiteralPath $capturePath -Encoding utf8
+    return [pscustomobject]@{ ExitCode = $exitCode; Lines = $normalized; CapturePath = $capturePath }
+}
+
+function Assert-ImportCase {
+    param([string]$Name, [string]$Root, [string]$ExpectTrace, [string]$ExpectTaskLine, [string]$DraftExpectedFile, [string]$UnresolvedExpectedFile)
+    $payload = Join-Path $importRoot "$Name.txt"
+    if (-not (Test-Path -LiteralPath $payload)) { Fail-Harness "Missing import payload: $payload" }
+    $result = Invoke-Import $Name $Root $payload
+
+    # Exit status carries the verdict: 0 for QUICK-VALID / FULL-VALID, 1 otherwise.
+    $expectedVerdictLine = (Get-Content -LiteralPath $DraftExpectedFile -Raw).TrimEnd("`r", "`n")
+    $expectedVerdict = $expectedVerdictLine -replace '^.*\|verdict=', ''
+    $expectedExit = if ($expectedVerdict.EndsWith('-VALID')) { 0 } else { 1 }
+    if ($result.ExitCode -ne $expectedExit) { Fail-Harness "import $Name expected exit $expectedExit but received $($result.ExitCode)" }
+
+    $expectedDraft = "IMPORT-DRAFT|" + (Get-Content -LiteralPath $DraftExpectedFile -Raw).TrimEnd("`r", "`n")
+    $actualDraft = (@($result.Lines | Where-Object { $_ -match '^IMPORT-DRAFT\|' } | Select-Object -Last 1) -join "")
+    if ($actualDraft -ne $expectedDraft) { Fail-Harness "import $Name draft mismatch: $actualDraft (expected $expectedDraft)" }
+
+    $traceCount = @($result.Lines | Where-Object { $_ -match '^TRACEABILITY_MISSING\|' }).Count
+    if ($ExpectTrace -eq "yes") {
+        if ($traceCount -lt 1) { Fail-Harness "import $Name expected TRACEABILITY_MISSING but none was emitted" }
+    } elseif ($traceCount -ne 0) {
+        Fail-Harness "import $Name expected no TRACEABILITY_MISSING but received $traceCount"
+    }
+
+    # No fabricated task identity: the draft only carries a Task ID line when the
+    # payload supplied one (kept even if unresolved, so re-validation also fails)
+    # or the quick tier states N/A.
+    $taskLineCount = @($result.Lines | Where-Object { $_ -match '^- \*\*Task ID\*\*:' }).Count
+    if ($ExpectTaskLine -eq "yes") {
+        if ($taskLineCount -ne 1) { Fail-Harness "import $Name expected one Task ID draft line but found $taskLineCount" }
+    } elseif ($taskLineCount -ne 0) {
+        Fail-Harness "import $Name emitted an unexpected Task ID draft line ($taskLineCount)"
+    }
+
+    if ($UnresolvedExpectedFile -ne "-") {
+        $expectedUnresolved = (Get-Content -LiteralPath $UnresolvedExpectedFile -Raw).TrimEnd("`r", "`n")
+        $actualUnresolved = (@($result.Lines | Where-Object { $_ -match '^IMPORT-UNRESOLVED\|' } | Select-Object -Last 1) -join "")
+        if ($actualUnresolved -ne $expectedUnresolved) { Fail-Harness "import $Name unresolved mismatch: $actualUnresolved (expected $expectedUnresolved)" }
+    }
+
+    # Round trip: the importer's verdict must agree with the canonical validator.
+    # Persist the draft into a copy of the fixture root and re-validate it. A
+    # QUICK-VALID / FULL-VALID draft must pass; a DRAFT-INCOMPLETE draft must not
+    # report VALID. A REFUSED-L0 import emits no draft and is not round-tripped.
+    if ($expectedVerdict -ne 'REFUSED-L0') {
+        $roundTripRoot = Join-Path $tempRoot "import-$Name-roundtrip"
+        $roundTripOutput = Join-Path $tempRoot "import-$Name-roundtrip.output.txt"
+        if (Test-Path -LiteralPath $roundTripRoot) { Remove-Item -LiteralPath $roundTripRoot -Recurse -Force }
+        Copy-Item -LiteralPath $Root -Destination $roundTripRoot -Recurse
+        $roundTripRecord = Join-Path $roundTripRoot "docs/tasks/$Name.checkpoint-001.md"
+        & pwsh -NoProfile -File $validator -Root $Root -Import $payload 2>$null | Set-Content -LiteralPath $roundTripRecord -Encoding utf8
+        $roundTripRaw = @(& pwsh -NoProfile -File $validator -Root $roundTripRoot 2>&1)
+        $roundTripExit = $LASTEXITCODE
+        $roundTripLines = @(Normalize-Lines $roundTripRaw)
+        $roundTripLines | Set-Content -LiteralPath $roundTripOutput -Encoding utf8
+        $validSummaries = @($roundTripLines | Where-Object { $_ -match '^VALID\|' })
+        if ($expectedExit -eq 0) {
+            if ($roundTripExit -ne 0) { Fail-Harness "import $Name ($expectedVerdict) draft failed canonical validation (exit $roundTripExit)" }
+            if ($validSummaries.Count -lt 1) { Fail-Harness "import $Name ($expectedVerdict) draft did not report VALID on re-validation" }
+        } else {
+            if ($roundTripExit -eq 0) { Fail-Harness "import $Name ($expectedVerdict) draft passed canonical validation (importer and validator disagree)" }
+            if ($validSummaries.Count -ge 1) { Fail-Harness "import $Name ($expectedVerdict) draft reported VALID on re-validation" }
+        }
+    }
+}
+
 try {
-    foreach ($required in @($validator, $validRoot, $invalidRoot, $caseRoot, $expectedValid, $expectedInvalid, $expectedInvalidSummary, $expectedCases)) {
+    foreach ($required in @($validator, $validRoot, $invalidRoot, $caseRoot, $importRoot, $expectedValid, $expectedInvalid, $expectedInvalidSummary, $expectedCases, $expectedImports)) {
         if (-not (Test-Path -LiteralPath $required)) { Fail-Harness "Missing harness input: $required" }
     }
 
@@ -148,6 +225,28 @@ try {
         $matrixCount++
     }
 
+    $importCount = 0
+    foreach ($importLine in (Get-Content -LiteralPath $expectedImports)) {
+        if ([string]::IsNullOrWhiteSpace($importLine) -or $importLine.StartsWith('#')) { continue }
+        $importParts = $importLine -split "`t", 6
+        if ($importParts.Count -ne 6) { Fail-Harness "Invalid import manifest row: $importLine" }
+        $importName = $importParts[0]
+        $importRootPath = Join-Path $fixtureRoot $importParts[1]
+        $expectTrace = $importParts[2]
+        $expectTaskLine = $importParts[3]
+        $draftPath = Join-Path $fixtureRoot "expected/$($importParts[4])"
+        $unresolvedPath = "-"
+        if ($importParts[5] -ne "-") { $unresolvedPath = Join-Path $fixtureRoot "expected/$($importParts[5])" }
+        if (-not (Test-Path -LiteralPath $importRootPath)) { Fail-Harness "Missing import fixture root: $importRootPath" }
+        if (-not (Test-Path -LiteralPath $draftPath)) { Fail-Harness "Missing import draft expectation: $draftPath" }
+        if ($unresolvedPath -ne "-" -and -not (Test-Path -LiteralPath $unresolvedPath)) { Fail-Harness "Missing import unresolved expectation: $unresolvedPath" }
+        $beforeImportFiles = @(Get-RepositorySnapshot)
+        $beforeImportStatus = @(Get-GitStatusSnapshot)
+        Assert-ImportCase $importName $importRootPath $expectTrace $expectTaskLine $draftPath $unresolvedPath
+        Assert-SnapshotUnchanged $beforeImportFiles $beforeImportStatus "import-$importName"
+        $importCount++
+    }
+
     $provider = if ($env:GITHUB_ACTIONS) { $env:GITHUB_ACTIONS } else { "local" }
     $workflow = if ($env:GITHUB_WORKFLOW) { $env:GITHUB_WORKFLOW } else { "local" }
     $job = if ($env:GITHUB_JOB) { $env:GITHUB_JOB } else { "local" }
@@ -155,6 +254,7 @@ try {
     $revision = if ($env:GITHUB_SHA) { $env:GITHUB_SHA } else { "local" }
     $timestamp = [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
     Write-Output "Execution-control PowerShell matrix cases passed: $matrixCount isolated contracts."
+    Write-Output "Execution-control PowerShell import cases passed: $importCount /handoff import-draft contracts (tier|unresolved|verdict pinned)."
     Write-Output "CI evidence: provider=$provider workflow=$workflow job=$job run=$run revision=$revision timestamp=$timestamp"
     Write-Output "Execution-control validation is durable evidence only; it cannot observe live chat duration or approve external actions."
     Write-Output "Execution-control PowerShell fixture harness passed: regression and isolated matrix contracts are stable and read-only."

@@ -1,0 +1,12 @@
+# Foreign /handoff payload fixture: quick-backtick-placeholder.
+# A backtick-wrapped TBD is read as TBD by the canonical validator and must not resolve.
+Ceremony Level: Level 1 (Standard)
+Created: 2026-10-07 09:00 UTC
+Execution State: in_progress
+Remaining Work: Run the spellcheck pass
+Blockers: None identified
+Next Action: Run the spellcheck pass
+Resume Condition: Spellcheck pass completes
+Recorded By: foreign-harness
+Checkpoint ID: CHECKPOINT-2026-10-07-backtick-1
+Objective: `TBD`

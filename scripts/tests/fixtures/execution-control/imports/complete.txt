@@ -1,0 +1,22 @@
+# Foreign /handoff payload fixture: complete.
+# Supplies every checkpoint label so import_handoff() resolves all 20 labels.
+Record Type: Checkpoint Record
+Checkpoint ID: CHECKPOINT-2026-09-08-validator-1
+Task ID: TASK-2026-09-08-validator
+Specification: docs/specs/issue-550-harness-importer.md
+Created: 2026-09-08 13:20 UTC
+Checkpoint Type: Progress
+Execution State: in_progress
+Objective: Add #550 importer fixtures to the execution-control fixture harness
+Completed Work: Authored the import payload fixtures and the expected manifest
+Remaining Work: Wire the PowerShell twin harness section
+Changed Files: scripts/tests/run-execution-control-fixtures.sh, scripts/tests/fixtures/execution-control/imports/complete.txt
+Branch / Revision: feature/issue-550-importer-fixtures @ REV-550-001
+Locked Decisions and Invariants: No synthesized Task ID; imports grant no execution authority
+Verification Evidence: bash scripts/tests/run-execution-control-fixtures.sh passed
+CI Evidence: Local CI-equivalent fixture run passed
+Blockers: None
+Scope Changes: None
+Next Action: Wire the PowerShell twin harness section
+Resume Condition: Re-run the fixtures locally on any failure
+Recorded By: Sisyphus-Junior

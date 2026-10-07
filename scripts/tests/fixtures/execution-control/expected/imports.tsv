@@ -1,0 +1,19 @@
+# Import-matrix manifest. Tab-separated: name<TAB>root<TAB>expect_trace<TAB>expect_task_line<TAB>draft_expected<TAB>unresolved_expected
+# root is resolved under scripts/tests/fixtures/execution-control/ (valid|invalid).
+# expect_trace: whether the import must emit at least one TRACEABILITY_MISSING line.
+# expect_task_line: whether the emitted draft stdout must contain exactly one Task ID label (present only when the payload supplied one, or the quick N/A line; never synthesized).
+# draft_expected holds "tier|unresolved|verdict"; unresolved_expected holds the
+# full IMPORT-UNRESOLVED line, or "-" when no unresolved row is asserted.
+complete	valid	no	yes	complete.import-draft.txt	-
+minimal-linked	valid	no	yes	minimal-linked.import-draft.txt	minimal-linked.import-unresolved.txt
+minimal-unlinked	valid	yes	no	minimal-unlinked.import-draft.txt	minimal-unlinked.import-unresolved.txt
+no-task-record	valid	yes	yes	no-task-record.import-draft.txt	no-task-record.import-unresolved.txt
+placeholder-rejection	valid	no	yes	placeholder-rejection.import-draft.txt	placeholder-rejection.import-unresolved.txt
+quick-complete	valid	no	yes	quick-complete.import-draft.txt	-
+quick-incomplete	valid	no	yes	quick-incomplete.import-draft.txt	quick-incomplete.import-unresolved.txt
+l0-refused	valid	no	no	l0-refused.import-draft.txt	-
+quick-downgrade-linked	valid	no	yes	quick-downgrade-linked.import-draft.txt	quick-downgrade-linked.import-unresolved.txt
+quick-unknown-task	valid	yes	yes	quick-unknown-task.import-draft.txt	-
+quick-missing-recorded-by	valid	no	yes	quick-missing-recorded-by.import-draft.txt	quick-missing-recorded-by.import-unresolved.txt
+quick-invalid-checkpoint-id	valid	no	yes	quick-invalid-checkpoint-id.import-draft.txt	quick-invalid-checkpoint-id.import-unresolved.txt
+quick-backtick-placeholder	valid	no	yes	quick-backtick-placeholder.import-draft.txt	quick-backtick-placeholder.import-unresolved.txt

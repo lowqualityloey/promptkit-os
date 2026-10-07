@@ -1,0 +1,12 @@
+# Foreign /handoff payload fixture: quick-complete.
+# Level 1 payload supplying all ten quick-required labels and no Task ID.
+Ceremony Level: Level 1 (Standard)
+Checkpoint ID: CHECKPOINT-2026-10-07-quick-1
+Created: 2026-10-07 09:00 UTC
+Execution State: in_progress
+Objective: Fix a typo in the README
+Remaining Work: Run the spellcheck pass
+Blockers: None identified
+Next Action: Run the spellcheck pass
+Resume Condition: Spellcheck pass completes
+Recorded By: foreign-harness

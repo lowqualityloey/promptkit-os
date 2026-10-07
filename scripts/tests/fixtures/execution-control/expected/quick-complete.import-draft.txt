@@ -1,0 +1,1 @@
+tier=quick|unresolved=0|verdict=QUICK-VALID

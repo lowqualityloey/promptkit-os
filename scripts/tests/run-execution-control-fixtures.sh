@@ -12,10 +12,12 @@ VALIDATOR="$REPO_ROOT/scripts/validate-execution-control.sh"
 VALID_ROOT="$FIXTURE_ROOT/valid"
 INVALID_ROOT="$FIXTURE_ROOT/invalid"
 CASE_ROOT="$FIXTURE_ROOT/cases"
+IMPORT_ROOT="$FIXTURE_ROOT/imports"
 EXPECTED_VALID="$FIXTURE_ROOT/expected-valid.txt"
 EXPECTED_INVALID="$FIXTURE_ROOT/expected-invalid.txt"
 EXPECTED_INVALID_SUMMARY="$FIXTURE_ROOT/expected-invalid-summary.txt"
 EXPECTED_CASES="$FIXTURE_ROOT/expected/cases.tsv"
+EXPECTED_IMPORTS="$FIXTURE_ROOT/expected/imports.tsv"
 TEMP_BASE="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 TEMP_ROOT="$(mktemp -d "$TEMP_BASE/promptkit-execution-control.XXXXXX")"
 
@@ -129,14 +131,101 @@ assert_matrix_case() {
     }
 }
 
+# Import-matrix case: run the foreign /handoff importer against a fixture root
+# and pin its IMPORT-DRAFT verdict plus the TRACEABILITY_MISSING / unresolved
+# contract. The importer must stay read-only and must never synthesize a Task ID.
+assert_import_case() {
+    local name="$1" root="$2" expect_trace="$3" expect_task_line="$4"
+    local draft_expected_file="$5" unresolved_expected_file="$6"
+    local payload_file="$IMPORT_ROOT/${name}.txt"
+    local output_file="$TEMP_ROOT/import-${name}.output"
+    local normalized_file="$TEMP_ROOT/import-${name}.normalized"
+    local actual_exit expected_exit expected_verdict
+
+    [ -f "$payload_file" ] || fail "Missing import payload: $payload_file"
+
+    # Exit status carries the verdict: 0 for QUICK-VALID / FULL-VALID, 1 otherwise.
+    expected_verdict="$(tr -d '\r\n' < "$draft_expected_file")"
+    expected_verdict="${expected_verdict##*|verdict=}"
+    case "$expected_verdict" in
+        *-VALID) expected_exit=0 ;;
+        *) expected_exit=1 ;;
+    esac
+
+    set +e
+    bash "$VALIDATOR" --root "$root" --import "$payload_file" > "$output_file" 2>&1
+    actual_exit=$?
+    set -e
+    [ "$actual_exit" -eq "$expected_exit" ] || fail "import $name expected exit $expected_exit but received $actual_exit"
+
+    normalize_output "$output_file" "$normalized_file"
+
+    local expected_draft actual_draft
+    expected_draft="$(tr -d '\r\n' < "$draft_expected_file")"
+    actual_draft="$(grep -E '^IMPORT-DRAFT\|' "$normalized_file" | tail -n 1 || true)"
+    [ "$actual_draft" = "IMPORT-DRAFT|$expected_draft" ] || fail "import $name draft mismatch: $actual_draft (expected IMPORT-DRAFT|$expected_draft)"
+
+    local trace_count
+    trace_count="$(grep -Ec '^TRACEABILITY_MISSING\|' "$normalized_file" || true)"
+    if [ "$expect_trace" = "yes" ]; then
+        [ "$trace_count" -ge 1 ] || fail "import $name expected TRACEABILITY_MISSING but none was emitted"
+    else
+        [ "$trace_count" -eq 0 ] || fail "import $name expected no TRACEABILITY_MISSING but received $trace_count"
+    fi
+
+    # No fabricated task identity: the draft only carries a Task ID line when the
+    # payload supplied one (kept even if unresolved, so re-validation also fails)
+    # or the quick tier states N/A.
+    local task_line_count
+    task_line_count="$(grep -Ec '^- \*\*Task ID\*\*:' "$normalized_file" || true)"
+    if [ "$expect_task_line" = "yes" ]; then
+        [ "$task_line_count" -eq 1 ] || fail "import $name expected one Task ID draft line but found $task_line_count"
+    else
+        [ "$task_line_count" -eq 0 ] || fail "import $name emitted an unexpected Task ID draft line ($task_line_count)"
+    fi
+
+    if [ "$unresolved_expected_file" != "-" ]; then
+        [ -f "$unresolved_expected_file" ] || fail "Missing import unresolved expectation: $unresolved_expected_file"
+        local expected_unresolved actual_unresolved
+        expected_unresolved="$(tr -d '\r\n' < "$unresolved_expected_file")"
+        actual_unresolved="$(grep -E '^IMPORT-UNRESOLVED\|' "$normalized_file" | tail -n 1 || true)"
+        [ "$actual_unresolved" = "$expected_unresolved" ] || fail "import $name unresolved mismatch: $actual_unresolved (expected $expected_unresolved)"
+    fi
+
+    # Round trip: the importer's verdict must agree with the canonical validator.
+    # Persist the draft into a copy of the fixture root and re-validate it. A
+    # QUICK-VALID / FULL-VALID draft must pass; a DRAFT-INCOMPLETE draft must not
+    # report VALID. A REFUSED-L0 import emits no draft and is not round-tripped.
+    if [ "$expected_verdict" != "REFUSED-L0" ]; then
+        local rt_root="$TEMP_ROOT/import-${name}-roundtrip"
+        local rt_output="$TEMP_ROOT/import-${name}-roundtrip.output"
+        rm -rf "$rt_root"
+        cp -R "$root" "$rt_root"
+        set +e
+        bash "$VALIDATOR" --root "$root" --import "$payload_file" > "$rt_root/docs/tasks/${name}.checkpoint-001.md" 2>/dev/null
+        bash "$VALIDATOR" --root "$rt_root" > "$rt_output" 2>&1
+        actual_exit=$?
+        set -e
+        if [ "$expected_exit" -eq 0 ]; then
+            [ "$actual_exit" -eq 0 ] || fail "import $name ($expected_verdict) draft failed canonical validation (exit $actual_exit)"
+            grep -Eq '^VALID\|' "$rt_output" || fail "import $name ($expected_verdict) draft did not report VALID on re-validation"
+        else
+            [ "$actual_exit" -ne 0 ] || fail "import $name ($expected_verdict) draft passed canonical validation (importer and validator disagree)"
+            ! grep -Eq '^VALID\|' "$rt_output" || fail "import $name ($expected_verdict) draft reported VALID on re-validation"
+        fi
+    fi
+}
+
 [ -x "$VALIDATOR" ] || fail "Bash validator is not executable: $VALIDATOR"
 [ -d "$VALID_ROOT" ] || fail "Missing valid fixture root: $VALID_ROOT"
 [ -d "$INVALID_ROOT" ] || fail "Missing invalid fixture root: $INVALID_ROOT"
 [ -d "$CASE_ROOT" ] || fail "Missing isolated case root: $CASE_ROOT"
+[ -d "$IMPORT_ROOT" ] || fail "Missing import payload root: $IMPORT_ROOT"
 [ -f "$EXPECTED_VALID" ] || fail "Missing expected valid result: $EXPECTED_VALID"
 [ -f "$EXPECTED_INVALID" ] || fail "Missing expected invalid diagnostics: $EXPECTED_INVALID"
 [ -f "$EXPECTED_INVALID_SUMMARY" ] || fail "Missing expected invalid summary: $EXPECTED_INVALID_SUMMARY"
 [ -f "$EXPECTED_CASES" ] || fail "Missing isolated case manifest: $EXPECTED_CASES"
+[ -f "$EXPECTED_IMPORTS" ] || fail "Missing import manifest: $EXPECTED_IMPORTS"
 
 before_files="$TEMP_ROOT/before-files.txt"
 before_status="$TEMP_ROOT/before-status.txt"
@@ -168,7 +257,30 @@ while IFS=$'\t' read -r name expected_exit expected_summary expected_diagnostics
     assert_snapshot_unchanged "$before_case_files" "$before_case_status" "$name"
 done < "$EXPECTED_CASES"
 
+import_count=0
+while IFS=$'\t' read -r name root expect_trace expect_task_line draft_expected unresolved_expected; do
+    [ -n "$name" ] || continue
+    case "$name" in \#*) continue ;; esac
+    import_root="$FIXTURE_ROOT/$root"
+    [ -d "$import_root" ] || fail "Missing import fixture root: $import_root"
+    draft_expected_file="$FIXTURE_ROOT/expected/$draft_expected"
+    [ -f "$draft_expected_file" ] || fail "Missing import draft expectation: $draft_expected_file"
+    if [ "$unresolved_expected" = "-" ]; then
+        unresolved_expected_file="-"
+    else
+        unresolved_expected_file="$FIXTURE_ROOT/expected/$unresolved_expected"
+    fi
+    before_import_files="$TEMP_ROOT/import-${name}-before-files.txt"
+    before_import_status="$TEMP_ROOT/import-${name}-before-status.txt"
+    snapshot_files "$before_import_files"
+    snapshot_git_status "$before_import_status"
+    assert_import_case "$name" "$import_root" "$expect_trace" "$expect_task_line" "$draft_expected_file" "$unresolved_expected_file"
+    assert_snapshot_unchanged "$before_import_files" "$before_import_status" "import-${name}"
+    import_count=$((import_count + 1))
+done < "$EXPECTED_IMPORTS"
+
 echo "Execution-control Bash matrix cases passed: $(grep -c '^[^#[:space:]]' "$EXPECTED_CASES") isolated contracts."
+echo "Execution-control Bash import cases passed: $import_count /handoff import-draft contracts (tier|unresolved|verdict pinned)."
 echo "CI evidence: provider=${GITHUB_ACTIONS:-local} workflow=${GITHUB_WORKFLOW:-local} job=${GITHUB_JOB:-local} run=${GITHUB_RUN_ID:-local} revision=${GITHUB_SHA:-local} timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 echo "Execution-control validation is durable evidence only; it cannot observe live chat duration or approve external actions."
 echo "Execution-control Bash fixture harness passed: regression and isolated matrix contracts are stable and read-only."

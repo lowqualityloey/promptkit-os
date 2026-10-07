@@ -61,6 +61,33 @@ Track tasks using atomic checklists (`[x]` Done, `[/]` In Progress, `[ ]` Queued
 - **Latest Handoff**: `[Record path or None]`
 - **Next Action**: `[Exactly one prioritized action]`
 
+#### Field-mapping (checkpoint labels)
+
+| Label | Quick (L1) required | From /handoff payload | Derivable from local git | Degrades to (when unmappable) |
+| :--- | :--- | :--- | :--- | :--- |
+| Record Type | yes | no | no | n/a |
+| Checkpoint ID | yes | no | no | n/a |
+| Task ID | no | yes | no | TRACEABILITY_MISSING (full); `N/A — no Task Record (Level 0/1)` (quick) |
+| Specification | no | yes | no | POLICY_LIMITATION |
+| Created | yes | partial | yes | n/a |
+| Checkpoint Type | no | no | no | POLICY_LIMITATION |
+| Execution State | yes | yes | no | not measured |
+| Objective | yes | yes | no | not measured |
+| Completed Work | no | partial | no | not measured |
+| Remaining Work | yes | partial | no | not measured |
+| Changed Files | no | yes | yes | not measured |
+| Branch / Revision | no | yes | yes | n/a |
+| Locked Decisions and Invariants | no | yes | no | not measured |
+| Verification Evidence | no | yes | no | not measured |
+| CI Evidence | no | partial | no | POLICY_LIMITATION |
+| Blockers | yes | partial | no | not measured |
+| Scope Changes | no | partial | no | not measured |
+| Next Action | yes | yes | no | not measured |
+| Resume Condition | yes | partial | no | not measured |
+| Recorded By | yes | no | no | POLICY_LIMITATION |
+
+The importer emits a `Ceremony Level` line in every draft whose level is known, so a `quick` draft re-validates at the quick tier. Level 0 payloads are refused (`REFUSED-L0`); unlabeled payloads default fail-closed to the `full` tier. Verdicts: `QUICK-VALID` (all ten quick labels resolve at Level 1; unresolved full-only labels degrade via `POLICY_LIMITATION` and are never reported as full-valid), `FULL-VALID` (all 20 labels and a resolvable Task ID), otherwise `DRAFT-INCOMPLETE`. The exit status is 0 only for `QUICK-VALID` or `FULL-VALID`. A resolvable linked Task Record owns the tier: a lower payload claim is flagged as a downgrade (`POLICY_LIMITATION`) and the draft takes the record's level. A supplied `Task ID` that does not resolve, or a `Checkpoint ID` that is not a stable canonical ID, stays visible in the draft and counts as unresolved, so canonical re-validation reports the same failure.
+
 ---
 
 ## 3B. Release-Evaluation Handoff (Optional)
