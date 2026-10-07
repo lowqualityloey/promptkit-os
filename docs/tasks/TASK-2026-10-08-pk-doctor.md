@@ -72,12 +72,12 @@
 - **Event-Driven Checkpoints**: `Milestone, scope change, handoff, or context drift.`
 - **Stop Conditions**: `Failed verification, scope expansion, missing authorization for a gated action, or developer stop.`
 - **Host Timer Capability**: `The host cannot mechanically enforce checkpoint deadlines; timing remains a manual protocol limitation.`
-- **Execution State**: `awaiting_review`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Execution State**: `completed`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-10-08`
 - **Current Actor**: `Sisyphus`
-- **Next Action**: `Maintainer merges PR #581, then a re-arm PR restates the provenance anchor to the squash commit.`
+- **Next Action**: `None - merged as 9e0d939; this re-arm PR restates the provenance anchor to the squash commit.`
 
 ### Transition History
 
@@ -90,6 +90,7 @@
 | in_progress | awaiting_review | 2026-10-08 | Sisyphus | All four review findings fixed and re-verified in both twins; ready for merge. | Section 6 |
 | awaiting_review | in_progress | 2026-10-08 | Sisyphus | Second review round (arena.ai): one required fix (self-audit claim) and three minors; resolving. | Section 6 |
 | in_progress | awaiting_review | 2026-10-08 | Sisyphus | Round-2 findings resolved and re-verified (15/15 both twins); ready for merge. | Section 6 |
+| awaiting_review | completed | 2026-10-08 | Sisyphus | PR #581 merged to main as 9e0d939; re-arm PR restates the provenance anchor to the squash commit. | Section 6, PR #581 |
 
 ## 6. Evidence and Completion Gate
 
@@ -112,14 +113,14 @@
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
 - **Verification Evidence**: `bash scripts/validate-references.sh . -> exit 0, 0 errors, 0 warnings. bash -n on touched scripts -> clean. bash scripts/tests/run-doctor-tests.sh -> 15/15; /usr/bin/pwsh scripts/tests/run-doctor-tests.ps1 -> 15/15 (S1-S10 plus nested-install N1-N5). bash scripts/tests/run-behavioral-contract-tests.sh -> Passed: 450 | Failed: 0; /usr/bin/pwsh scripts/tests/run-behavioral-contract-tests.ps1 -> Passed: 448 | Failed: 0. bash scripts/measure-tokens.sh --strict -> BALANCED 2341/2500 PASS, LITE 1436/1500 PASS. bash scripts/tests/run-token-budget-tests.sh -> 7/0. bash scripts/tests/run-reference-link-tests.sh -> 6/0. bash scripts/validate-execution-control.sh --root . --strict --authorization-baseline origin/main -> VALID, 63 records. Independent nested-install reproductions of every review finding confirm the fixed behaviour in both twins, and the CI self-audit step exits 0.`
-- **CI Evidence**: `PR #581 CI green at 699b530 (pre-review); the review-fix head awaits CI.`
+- **CI Evidence**: `PR #581 CI green at 1c242b9; merged to main as 9e0d939.`
 - **Review Evidence**: `Round 1 (Codex, PR #581, head 699b530): REQUEST CHANGES, four P2 findings. All four independently reproduced in both twins, fixed, and re-verified. Round 2 (arena.ai, head 2096717): APPROVE with one required fix plus three minors. Agreed with the stale "self-audit step" claim (made true via a safe nested fixture step rather than the unsafe TEST_DIR run, which would report DIVERGED), the ADR 25th/26th misattribution, the stale body numbers, and the phantom out-of-project ignore row; all resolved and re-verified.`
-- **Commit Evidence**: `549f3c6 (feature), 6c17332 (anchor restate), 699b530 (Windows S6 fix); the review-fix commit follows.`
+- **Commit Evidence**: `549f3c6 (feature), 6c17332 (anchor restate), 699b530 (Windows S6 fix), 2096717 (review round 1), 1c242b9 (review round 2); squashed to 9e0d939 on main.`
 - **Pull Request Evidence**: `https://github.com/lowqualityloey/promptkit-os/pull/581`
 - **Release Evidence**: `N/A - no release action in scope.`
-- **Blocker and Resume Condition**: `None. The provenance anchor is restated to the feature commit 549f3c6; after squash-merge a re-arm PR restates it to the squash commit (the branch commit becomes orphaned), per the established re-arm dance.`
-- **Completion State**: `awaiting_review`
+- **Blocker and Resume Condition**: `None. The provenance anchor is restated to the squash commit 9e0d939 by this re-arm PR.`
+- **Completion State**: `completed`
 - **Acceptance Results**: `AC-1 Pass; AC-2 Pass; AC-3 Pass (both harnesses 15/15); AC-4 Pass; AC-5 Pass; AC-6 Pass; AC-7 Pass; AC-8 Pass; AC-9 Pass.`
 - **Changed-File Summary**: `Ship the read-only pk:doctor workflow and detector twins, register pk:doctor across the five required surfaces, bump the locked workflow count to 26 (next ordinal 27th) everywhere it is claimed, re-measure and re-propagate every published token figure, add the Scenario AR behavioral assertion and the CI wiring (syntax checks and both test twins), then fix the four review findings (engine-vs-project root scoping, engine-relative --fix paths, shared docs-drift field comparison, deleted-universal-host detection) with new nested-install fixtures.`
 - **Completion Exception**: `The spec names the behavioral assertion "Scenario AP"; that label is already used by #519-#523, so it is implemented as "Scenario AR" (the next free label).`
-- **Completion Decision and Timestamp**: `Both PR #581 review rounds are resolved and re-verified in both twins; merge is the remaining human action - 2026-10-08.`
+- **Completion Decision and Timestamp**: `Merged via PR #581 as 9e0d939; both review rounds resolved; the provenance anchor is re-armed by this PR - 2026-10-08.`
