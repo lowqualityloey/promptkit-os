@@ -108,6 +108,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Checkpoint**: `<kit>/workflows/checkpoint.md`
 - **Profile**: `<kit>/workflows/profile.md`
 - **Verify-Bootstrap**: `<kit>/workflows/verify-bootstrap.md`
+- **Doctor**: `<kit>/workflows/doctor.md`
 - **Quality Gate (DoD)**: `<kit>/protocols/code-quality-gate.md`
 - **Rendered UI Evidence**: `<kit>/protocols/rendered-ui-evidence.md` (lazy-loaded by `<kit>/workflows/design-system.md` and the quality gate when the task changes browser-rendered UI)
 - **Context Economy**: `<kit>/protocols/context-economy.md`
@@ -117,7 +118,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Telemetry Cards**: `<kit>/protocols/telemetry-cards.md`
 - **Checkpoint Ignore Policy**: `<kit>/protocols/checkpoint-ignore-policy.md`
 
-> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md` and `rendered-ui-evidence.md`, which are lazy-loaded by their relevant workflows. This keeps the static directive under the 2500-token Balanced budget (currently 2312/2500).
+> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md` and `rendered-ui-evidence.md`, which are lazy-loaded by their relevant workflows. This keeps the static directive under the 2500-token Balanced budget (currently 2341/2500).
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)
 - **Visual Identity & Brand**: `./DESIGN.md` (if present)
 - **Living State & Tracker**: `./docs/STATE.md` (if present)

@@ -216,6 +216,7 @@ Find your current engineering context below and activate the corresponding workf
 | **Architecture Defense Drill**  | `pk:grill`  | Conversation / Notes | Staff Engineer Devil's Advocate stress-testing |
 | **Wrong Profile / Mode Upgrade**| `pk:profile` | `PROMPTKIT.md` + injected directive | Runtime Lite/Balanced/Turbo switching via the idempotent installer re-injection path |
 | **Unattended SDLC & Automation**| `pk:auto` | Verified diff / PR | Autonomous pipeline chaining (plan→tasks→code→test→review), default stop at review-ready |
+| **Installed Governance Health**| `pk:doctor` | Terminal report | Read-only audit of hosts × engine version × install-mode × ignore-state × docs-drift; reports rot, never upgrades |
 
 ---
 

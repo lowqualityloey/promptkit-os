@@ -570,7 +570,7 @@ PromptKit OS ships tested automated installers (`init.sh` and `init.ps1`) target
 ---
 
 **Want more?** Explore:
-- `workflows/` - 25 workflow files
+- `workflows/` - 26 workflow files
 - `examples/` - Realistic reference implementations:
   - `examples/saas-dashboard/` - B2B SaaS dashboard example
   - `examples/fullstack-feature/` - Narrative lifecycle reference for a full-stack feature (no artifacts; see `examples/saas-dashboard/` for a populated walkthrough)

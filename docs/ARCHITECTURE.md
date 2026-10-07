@@ -222,11 +222,12 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:ship` | [`workflows/ship.md`](../workflows/ship.md) | Core 🧪 | `docs/releases/` | Runtime env validation (project-native mechanism), migration ordering, and smoke tests. |
 | `pk:checkpoint` | [`workflows/checkpoint.md`](../workflows/checkpoint.md) | Core | `docs/STATE.md` | Session compaction, invariant locking, and fresh chat handover prompt. |
 | `pk:sync` | [`workflows/sync.md`](../workflows/sync.md) | Core 🧪 | Active context | Hot-reload protocols, purge stale memory, and synchronize with disk. |
+| `pk:doctor` | [`workflows/doctor.md`](../workflows/doctor.md) | New 🧪 | Terminal report | Read-only installed-governance audit (hosts × engine version × install-mode × ignore-state × docs-drift); reports rot, never upgrades. |
 | `pk:profile` | [`workflows/profile.md`](../workflows/profile.md) | New 🧪 | `PROMPTKIT.md` + directive | Switch Lite/Balanced/Turbo at runtime via the idempotent installer re-injection path. |
 | `pk:auto` | [`workflows/auto.md`](../workflows/auto.md) | New 🧪 | Verified diff / PR | Unattended SDLC meta-orchestration (plan→tasks→code→test→review) with circuit breakers and test immobility. |
 | `pk:retro` | [`workflows/reflect.md`](../workflows/reflect.md) | Core | `docs/adrs/` & journal | Post-feature retrospective: extracts decisions into standard MADRs. |
 
-*Status Legend: All 25 workflows pass CI structural link validation (`validate-references.sh`). Workflows marked with 🧪 also undergo automated documentation-contract testing (`run-behavioral-contract-tests.sh` — string-level prompt-contract assertions); sampled runtime compliance is measured separately by `scripts/run-behavioral-eval.sh` (see `docs/BEHAVIORAL-EVAL.md`).*
+*Status Legend: All 26 workflows pass CI structural link validation (`validate-references.sh`). Workflows marked with 🧪 also undergo automated documentation-contract testing (`run-behavioral-contract-tests.sh` — string-level prompt-contract assertions); sampled runtime compliance is measured separately by `scripts/run-behavioral-eval.sh` (see `docs/BEHAVIORAL-EVAL.md`).*
 
 ---
 
@@ -291,7 +292,7 @@ promptkit-os/
 │   ├── telemetry-cards.md       # Lazy-loaded status-card format spec & callout titles
 │   ├── code-quality-gate.md     # Non-negotiable definition-of-done & pre-commit gate
 │   └── subagent-delegation.md   # Subagent delegation, parallel execution & context preservation
-├── workflows/                   # Step-by-step engineering lifecycle procedures (25 workflows)
+├── workflows/                   # Step-by-step engineering lifecycle procedures (26 workflows)
 │   ├── route.md                 # Lifecycle decision matrix & workflow triage (pk:route)
 │   ├── tutor.md                 # Socratic mentorship & 3-tier progressive hints (pk:tutor, pk:grill)
 │   ├── plan.md                  # Spec-Driven Development & deep modular design (pk:plan)
@@ -316,6 +317,7 @@ promptkit-os/
 │   ├── reflect.md               # Engineering retrospectives & ADR generation (pk:retro)
 │   ├── auto.md                  # Autonomous SDLC meta-orchestration & leash control (pk:auto)
 │   ├── verify-bootstrap.md      # Project-local verification scaffolding (pk:verify-bootstrap)
+│   ├── doctor.md                # Read-only installed-governance audit (pk:doctor)
 │   └── checkpoint.md            # Session state compaction & handover prompt (pk:checkpoint)
 ├── templates/                   # Structured artifact schemas saved to project docs/
 │   ├── agent-directive-template.md # Canonical directive source template rendered during initialization

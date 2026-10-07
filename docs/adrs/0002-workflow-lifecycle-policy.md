@@ -52,4 +52,4 @@ v1.7.0 did this correctly ad hoc: `pk:profile` was retired as a `pk:perf` alias 
 
 ## Current Application (2026-09-30)
 
-The 24-workflow context and `pk:auto` worked example above are historical records of the policy's adoption; they are not the current inventory. After `workflows/verify-bootstrap.md` was admitted under this gate (#440), the live surface is 25 workflows. The same addition and retirement requirements remain in force, and the next proposed workflow is the 26th. The current inventory remains mechanically checked by both behavioral-contract test twins and the live profile documentation.
+The 24-workflow context and `pk:auto` worked example above are historical records of the policy's adoption; they are not the current inventory. After `workflows/verify-bootstrap.md` was admitted under this gate (#440), the live surface became 25 workflows; `workflows/doctor.md` was admitted as the 26th (#547). The same addition and retirement requirements remain in force, and the next proposed workflow is the 27th. The current inventory remains mechanically checked by both behavioral-contract test twins and the live profile documentation.

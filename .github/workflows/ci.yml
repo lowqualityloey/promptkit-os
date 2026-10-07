@@ -68,6 +68,8 @@ jobs:
           bash -n scripts/tests/run-checkpoint-ignore-tests.sh
           bash -n scripts/check-synthetic-base.sh
           bash -n scripts/tests/run-synthetic-base-tests.sh
+          bash -n scripts/check-doctor.sh
+          bash -n scripts/tests/run-doctor-tests.sh
           echo "Bash scripts parsed with 0 syntax errors."
 
       - name: Run Documentation-Contract Tests (Bash)
@@ -90,6 +92,9 @@ jobs:
 
       - name: Run Synthetic Base Tests (Bash)
         run: bash scripts/tests/run-synthetic-base-tests.sh
+
+      - name: Run Doctor Tests (Bash)
+        run: bash scripts/tests/run-doctor-tests.sh
 
       - name: Run init.sh Safety Regression Tests (Bash)
         run: bash scripts/tests/run-init-safety-tests.sh
@@ -214,6 +219,16 @@ jobs:
       - name: Run Reference and Structural Validator (Bash)
         run: bash scripts/validate-references.sh .
 
+      - name: Run pk:doctor Self-Audit (Bash)
+        run: |
+          audit_root="$(mktemp -d)"
+          mkdir -p "$audit_root/.promptkit/scripts" "$audit_root/.promptkit/templates"
+          cp scripts/check-doctor.sh "$audit_root/.promptkit/scripts/"
+          cp templates/agent-directive-template.md "$audit_root/.promptkit/templates/"
+          printf 'profile: balanced\n' > "$audit_root/PROMPTKIT.md"
+          printf '<!-- PROMPTKIT_START -->\nEngine: v0.0.0 (unverified)\n<!-- PROMPTKIT_END -->\n' > "$audit_root/AGENTS.md"
+          bash "$audit_root/.promptkit/scripts/check-doctor.sh" "$audit_root"
+
       - name: Assert No Fragile Math Labels (Bash)
         run: bash scripts/check-math-labels.sh --root .
 
@@ -271,6 +286,8 @@ jobs:
             "scripts/tests/run-checkpoint-ignore-tests.ps1",
             "scripts/check-synthetic-base.ps1",
             "scripts/tests/run-synthetic-base-tests.ps1",
+            "scripts/check-doctor.ps1",
+            "scripts/tests/run-doctor-tests.ps1",
             "scripts/tests/run-milestone-halt-evidence-fixtures.ps1"
           )
           foreach ($file in $syntaxFiles) {
@@ -310,6 +327,10 @@ jobs:
       - name: Run Synthetic Base Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-synthetic-base-tests.ps1
+
+      - name: Run Doctor Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-doctor-tests.ps1
 
       - name: Run init.ps1 Safety Regression Tests (PowerShell)
         shell: pwsh

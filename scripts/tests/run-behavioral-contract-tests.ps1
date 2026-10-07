@@ -203,11 +203,11 @@ foreach ($directive in @("templates/agent-directive-template.md", "templates/age
     }
 }
 $WfCount = @(Get-ChildItem (Join-Path $RepoRoot "workflows") -Filter "*.md").Count
-if ($WfCount -eq 25) {
-    Write-Host "  ✅ PASS: On-disk workflow file count is 25 (matches reconciled docs claims)" -ForegroundColor Green
+if ($WfCount -eq 26) {
+    Write-Host "  ✅ PASS: On-disk workflow file count is 26 (matches reconciled docs claims)" -ForegroundColor Green
     $script:PassCount++
 } else {
-    Write-Host "  ❌ FAIL: On-disk workflow count is $WfCount but shipped docs claim 25 — reconcile counts or update this drift guard" -ForegroundColor Red
+    Write-Host "  ❌ FAIL: On-disk workflow count is $WfCount but shipped docs claim 26 — reconcile counts or update this drift guard" -ForegroundColor Red
     $script:FailCount++
 }
 # Canonical-count drift guard (#347): every live workflow-count claim must state
@@ -1103,6 +1103,88 @@ Assert-Contains "scripts/run-behavioral-eval.ps1" "AsByteStream" "PowerShell rea
 Assert-Contains "scripts/run-behavioral-eval.sh" "grep -m1 '\^CHECKS" "Bash reads the side channel by prefix, not by position"
 
 Remove-Item -LiteralPath $BehavioralRoot -Recurse -Force -ErrorAction SilentlyContinue
+
+Write-Host "`n📌 Scenario AR: pk:doctor Contract & Exit Codes (Issue #547)" -ForegroundColor Yellow
+# The spec labels this "Scenario AP", but that label was already taken by the
+# #519-#523 stack-activation block above; AR is the next free label.
+
+# AR-1: pk:doctor appears exactly once as a trigger line in the Balanced directive.
+$doctorTriggers = @(Select-String -Path (Join-Path $RepoRoot "templates/agent-directive-template.md") -Pattern '^- `pk:doctor`').Count
+if ($doctorTriggers -eq 1) {
+    Write-Host "  ✅ PASS: pk:doctor is declared exactly once as a trigger line" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: expected exactly one '- ``pk:doctor``' trigger line, found $doctorTriggers" -ForegroundColor Red
+    $script:FailCount++
+}
+
+# AR-2: the on-disk workflow count is 26 (asserted in Scenario M above).
+Assert-Contains "workflows/doctor.md" "^# " "pk:doctor ships an H1 workflow file (the 26th on-disk workflow)"
+if ($WfCount -eq 26) {
+    Write-Host "  ✅ PASS: on-disk workflow count is 26 (the pk:doctor file is the 26th)" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: on-disk workflow count is $WfCount, expected 26" -ForegroundColor Red
+    $script:FailCount++
+}
+
+# AR-3: exercised exit-code contract over tiny throwaway kit roots. Read-only:
+# the checker never writes unless -Fix is passed, and these fixtures are removed.
+$DoctorPs1 = Join-Path $RepoRoot "scripts\check-doctor.ps1"
+$DoctorTmp = Join-Path ([System.IO.Path]::GetTempPath()) ("pk-doctor-" + [System.Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $DoctorTmp -Force | Out-Null
+function Get-DoctorExitCode {
+    param([string]$KitRoot)
+    & $DoctorPs1 -KitRoot $KitRoot *> $null
+    return $LASTEXITCODE
+}
+$dHealthy = Join-Path $DoctorTmp 'healthy'
+New-Item -ItemType Directory -Path $dHealthy -Force | Out-Null
+[System.IO.File]::WriteAllText((Join-Path $dHealthy 'PROMPTKIT.md'), "profile: balanced`n")
+[System.IO.File]::WriteAllText((Join-Path $dHealthy 'AGENTS.md'), "<!-- PROMPTKIT_START -->`n## PromptKit OS`n<!-- PROMPTKIT_END -->`n")
+$dMissing = Join-Path $DoctorTmp 'missing'
+New-Item -ItemType Directory -Path $dMissing -Force | Out-Null
+[System.IO.File]::WriteAllText((Join-Path $dMissing 'PROMPTKIT.md'), "profile: balanced`n")
+[System.IO.File]::WriteAllText((Join-Path $dMissing 'AGENTS.md'), "# Agent notes without the managed block`n")
+$dDeleted = Join-Path $DoctorTmp 'deleted-agents'
+New-Item -ItemType Directory -Path $dDeleted -Force | Out-Null
+[System.IO.File]::WriteAllText((Join-Path $dDeleted 'PROMPTKIT.md'), "profile: balanced`n")
+$dNoPk = Join-Path $DoctorTmp 'no-promptkit'
+New-Item -ItemType Directory -Path $dNoPk -Force | Out-Null
+
+$doctorRc = Get-DoctorExitCode $dHealthy
+if ($doctorRc -eq 0) {
+    Write-Host "  ✅ PASS: healthy fixture -> exit 0" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: healthy fixture should exit 0, got $doctorRc" -ForegroundColor Red
+    $script:FailCount++
+}
+$doctorRc = Get-DoctorExitCode $dMissing
+if ($doctorRc -eq 1) {
+    Write-Host "  ✅ PASS: host file missing the managed block -> exit 1" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: missing-block fixture should exit 1, got $doctorRc" -ForegroundColor Red
+    $script:FailCount++
+}
+$doctorRc = Get-DoctorExitCode $dDeleted
+if ($doctorRc -eq 1) {
+    Write-Host "  ✅ PASS: deleted universal AGENTS.md -> exit 1" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: deleted-AGENTS.md fixture should exit 1, got $doctorRc" -ForegroundColor Red
+    $script:FailCount++
+}
+$doctorRc = Get-DoctorExitCode $dNoPk
+if ($doctorRc -eq 2) {
+    Write-Host "  ✅ PASS: absent PROMPTKIT.md prerequisite -> exit 2" -ForegroundColor Green
+    $script:PassCount++
+} else {
+    Write-Host "  ❌ FAIL: no-PROMPTKIT.md fixture should exit 2, got $doctorRc" -ForegroundColor Red
+    $script:FailCount++
+}
+Remove-Item -LiteralPath $DoctorTmp -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

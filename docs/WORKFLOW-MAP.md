@@ -4,7 +4,7 @@ Visual guide to help you quickly find the right workflow for your current task.
 
 ## Lite Map (Onboarding — 5 Nodes)
 
-New users start here with an introductory 5-node mental model of the development lifecycle (distinct from the Lite installer profile subset: `pk:route`, `pk:debug`, `pk:test`, `pk:commit`, `pk:checkpoint`). Full 25-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
+New users start here with an introductory 5-node mental model of the development lifecycle (distinct from the Lite installer profile subset: `pk:route`, `pk:debug`, `pk:test`, `pk:commit`, `pk:checkpoint`). Full 26-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
 
 ```text
 pk:route → pk:plan / pk:tasks → pk:debug → pk:commit → pk:checkpoint
@@ -458,6 +458,7 @@ Visual guide to workflow depth and operational investment.
 |:---|:---|:---|:---|
 | `pk:route` | 10 sec | ⚪ Low | Every session |
 | `pk:sync` | 1-3 min | ⚪ Low | Milestone / session start |
+| `pk:doctor` | 1-3 min | ⚪ Low | Health check / drift suspicion |
 | `pk:commit` | 2 min | ⚪ Low | Multiple/day |
 | `pk:checkpoint` | 3 min | ⚪ Low | Session end |
 | `pk:fix` | 3-5 min | ⚪ Low | Surgical remediation |
@@ -613,6 +614,7 @@ Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycl
 > - `pk:auto`: Orchestrates unattended sequential lifecycle chaining (`plan` → `tasks` → code → `test` → `review`) with built-in circuit breakers, test immobility, and a default stop at review-ready.
 > - `pk:tutor` (Socratic mentorship & 3-tier progressive hints) and `pk:grill` (Staff Engineer architecture defense drills) operate perpendicularly across all lifecycle phases whenever conceptual guidance or invariant stress-testing is needed.
 > - `pk:sync` (hot-reload) and `pk:profile` (runtime Lite/Balanced/Turbo switching) are cross-cutting session utilities outside the lifecycle flow.
+> - `pk:doctor` (read-only installed-governance audit) runs outside the lifecycle flow: it checks hosts × engine version × install-mode × ignore-state × docs-drift and reports rot without ever upgrading or writing.
 
 ---
 
