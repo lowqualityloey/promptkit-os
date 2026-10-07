@@ -14,12 +14,17 @@
 #       ordinary and is not refused -- ownership must be evidence about the
 #       inspected commit itself.
 #   branch-namespace|<branch-prefix>
-#       The inspected commit is the TIP of a refs/heads/ branch under
-#       <branch-prefix>, and no ordinary branch carries it. A commit that merely
-#       precedes the branch tip (an ancestor) is ordinary. This is GitButler's real
-#       layout: its workspace commit is the tip of refs/heads/gitbutler/workspace,
-#       while refs/gitbutler/ holds no refs. Any ordinary carrying branch keeps the
-#       commit silent.
+#       The inspected commit is the TIP of a local (refs/heads/) or fetched
+#       remote-tracking (refs/remotes/<remote>/) branch that is tool-owned, and no
+#       ordinary branch carries it. A branch name is tool-owned only at a
+#       path-component boundary: it equals <branch-prefix> exactly or begins with
+#       <branch-prefix>/ (so gitbutler/workspace matches but
+#       gitbutler/workspace-backup does not). A commit that merely precedes the
+#       branch tip (an ancestor) is ordinary. This is GitButler's real layout: its
+#       workspace commit is the tip of refs/heads/gitbutler/workspace, or of the
+#       fetched refs/remotes/<remote>/gitbutler/workspace when no local branch
+#       exists, while refs/gitbutler/ holds no refs. Any ordinary carrying branch
+#       keeps the commit silent.
 #
 # Do NOT list ordinary work branches or a tool's whole namespace. This
 # repository's refs/heads/codex/* are real work branches, and GitButler's
