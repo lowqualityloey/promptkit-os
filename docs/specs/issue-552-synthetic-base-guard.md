@@ -30,6 +30,10 @@ The guard previously appeared in **two** issues with contradictory claims about 
 * **The base-deriving operations are enumerable and few.** Five consume a base, and all five must be guarded — a previous draft of this issue claimed three and omitted two, one of which runs in CI. `workflows/review.md` (anchor: `git rev-parse <fixed-point>`) (fixed-point diffs), `workflows/pr.md` (anchor: `BASE_REF="${BASE_REMOTE}/${TARGET_BASE}"`) (`BASE_REF`), `scripts/check-changelog-entry.sh` (anchor: `git diff --name-only "$BASE...$HEAD"`) (`BASE...HEAD` range), `workflows/sync.md` (anchor: `git merge-base --is-ancestor HEAD <upstream-ref>`) (Phase 1 drift audit against the upstream ref), and `scripts/check-milestone-halt-evidence.sh` (anchor: `merge-base --is-ancestor "$seed" HEAD`) (seed-to-head ancestry, which validates capture provenance and runs in CI). `workflows/review.md` (anchor: `produces an empty diff`) already documents the empty-diff stall that a synthetic base produces.
 * Detection is read-only by construction here: the preflight inspects Git state and reports. It never writes tool-managed state.
 
+### Amendment: tool-owned branch namespaces (#576)
+
+The original evidence model recognized only an owned **ref** namespace, and Scenario 1 forced any commit carried by a branch to be silent. GitButler's real workspace commit breaks that assumption: it is carried by the real local branch `refs/heads/gitbutler/workspace` (`refs/heads/gitbutler/target` also exists), while `refs/gitbutler/` holds **zero** refs — so the class-(a) signal never fires for the tool this guard names first. This issue adds a second positive class, `branch-namespace|<prefix>`: a commit whose **only** carrying branches lie in a tool-owned branch namespace is positively tool-owned and is refused. A commit carried by any ordinary branch stays silent, so Scenario 1 is preserved. Only `gitbutler/` ships as a branch namespace; tool branch names that are ordinary work branches in practice (e.g. this repository's `refs/heads/codex/*`) are deliberately **not** listed, because refusing them would break real work.
+
 ### Non-Negotiable Invariants
 
 * **[ ] Linkable invariant:** one maxim-grade line in `docs/MAXIMS.md` ("never derive a base from a synthetic workspace commit") that `PROMPTKIT.md` and error messages can cite. Follow the existing maxim format with a canonical link.
@@ -52,7 +56,7 @@ The guard previously appeared in **two** issues with contradictory claims about 
 
 * [ ] 1. Add the invariant to `PROMPTKIT.md` §7 and `docs/MAXIMS.md`, with canonical links matching the existing maxim format. Record the ADR 0002 non-overlap statement if the invariant changes workflow semantics.
 * [ ] 2. Implement a **read-only** synthetic-base detector. Establish what evidence is actually available and sufficient before coding:
-  * **Positive evidence is required to refuse.** A base is refused only when something positively identifies the commit as tool-owned — an owned namespace or reflog signature, a known workspace path pattern, or equivalent. Absence of evidence is never evidence of absence, so the following two signals are **corroborating only** and may never on their own trigger a refusal:
+  * **Positive evidence is required to refuse.** A base is refused only when something positively identifies the commit as tool-owned — an owned namespace or reflog signature, a known workspace path pattern, or equivalent. Two positive classes exist, both strictly validated against `scripts/synthetic-base-signals.txt`: class (a) `ref-namespace|<prefix>` (e.g. `refs/gitbutler/`), where the inspected commit is the **tip of** a ref under the owned namespace; and class (b) `branch-namespace|<prefix>` (e.g. `gitbutler/`), where **every** carrying branch of the inspected commit lies inside the owned branch namespace — so a commit carried only by `refs/heads/gitbutler/workspace` is tool-owned. A commit also carried by any branch **outside** the tool namespace is ordinary and stays silent (Scenario 1); a namespace refuses only when it is the *sole* thing carrying the commit. A project extends class (a) with `PROMPTKIT_SYNTHETIC_REFS_EXTRA` or either class with a custom `--signals-file`. Absence of evidence is never evidence of absence, so the following two signals are **corroborating only** and may never on their own trigger a refusal:
     * the current HEAD is not reachable from any carrying branch (`git branch --contains HEAD` is empty), and/or
     * the commit has no upstream and does not appear in any local branch tip.
   * **A detached HEAD satisfies both corroborating signals while being entirely legitimate**, so it must resolve to `UNKNOWN` and proceed (Scenario 6). A previous draft listed these two signals as sufficient evidence; read that way the guard refuses a healthy detached checkout, which the evidence-based-refusal invariant above forbids.
@@ -74,7 +78,7 @@ The guard previously appeared in **two** issues with contradictory claims about 
 
 ### Scenario 2: Synthetic base is refused with recovery
 
-* Given a HEAD that is a synthetic workspace commit with no carrying branch and no upstream,
+* Given a HEAD that is a synthetic workspace commit — the tip of a tool-namespace ref with no carrying branch, **or** carried only by branches inside a tool-owned branch namespace (e.g. `gitbutler/workspace`) — and with no ordinary carrying branch and no upstream,
 * When `pk:review` attempts to derive a diff base,
 * Then it refuses, cites the `docs/MAXIMS.md` invariant, and prints recovery steps. `pk:sync` reports the same finding.
 

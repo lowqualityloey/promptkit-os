@@ -21,22 +21,25 @@ if ($LASTEXITCODE -ne 0) {
 
 # Synthetic-base preflight: a base-deriving range is meaningless when either
 # endpoint is a tool-owned workspace commit. Read-only; refuses only on positive
-# evidence (exit 1) and fails closed when the preflight cannot measure (exit 2).
+# evidence (exit 1), fails closed when the preflight cannot measure (exit 2), and
+# fails closed when the preflight file is missing rather than silently skipping.
 $detector = Join-Path $PSScriptRoot 'check-synthetic-base.ps1'
-if (Test-Path -LiteralPath $detector -PathType Leaf) {
-    foreach ($endpoint in @($Base, $Head)) {
-        $sbOut = & $detector -Root '.' -Commit $endpoint 2>&1 | Out-String
-        $sbRc = $LASTEXITCODE
-        if ($sbRc -eq 1) {
-            Write-Host $sbOut.TrimEnd()
-            Write-Host "CHANGELOG_GATE|SYNTHETIC-BASE|refusing to derive $Base...$Head from a synthetic workspace commit ($endpoint)|Return to the carrying branch or rebase onto a real branch tip (docs/MAXIMS.md)"
-            exit 1
-        }
-        if ($sbRc -ne 0) {
-            Write-Host $sbOut.TrimEnd()
-            Write-Host "CHANGELOG_GATE|INCOMPLETE|synthetic-base preflight could not measure '$endpoint' (exit $sbRc)|Fix the preflight configuration or git state"
-            exit 2
-        }
+if (-not (Test-Path -LiteralPath $detector -PathType Leaf)) {
+    Write-Host "CHANGELOG_GATE|INCOMPLETE|synthetic-base preflight missing at '$detector'|Restore scripts/check-synthetic-base.ps1; the preflight must not be skipped"
+    exit 2
+}
+foreach ($endpoint in @($Base, $Head)) {
+    $sbOut = & $detector -Root '.' -Commit $endpoint 2>&1 | Out-String
+    $sbRc = $LASTEXITCODE
+    if ($sbRc -eq 1) {
+        Write-Host $sbOut.TrimEnd()
+        Write-Host "CHANGELOG_GATE|SYNTHETIC-BASE|refusing to derive $Base...$Head from a synthetic workspace commit ($endpoint)|Return to the carrying branch or rebase onto a real branch tip (docs/MAXIMS.md)"
+        exit 1
+    }
+    if ($sbRc -ne 0) {
+        Write-Host $sbOut.TrimEnd()
+        Write-Host "CHANGELOG_GATE|INCOMPLETE|synthetic-base preflight could not measure '$endpoint' (exit $sbRc)|Fix the preflight configuration or git state"
+        exit 2
     }
 }
 

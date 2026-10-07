@@ -36,25 +36,28 @@ fi
 
 # Synthetic-base preflight: a base-deriving range is meaningless when either
 # endpoint is a tool-owned workspace commit. Read-only; refuses only on positive
-# evidence (exit 1) and fails closed when the preflight cannot measure (exit 2).
+# evidence (exit 1), fails closed when the preflight cannot measure (exit 2), and
+# fails closed when the preflight file is missing rather than silently skipping.
 script_dir="$(builtin cd -- "$(dirname -- "$0")" && pwd -P)" || script_dir="."
 detector="$script_dir/check-synthetic-base.sh"
-if [ -f "$detector" ]; then
-    for endpoint in "$BASE" "$HEAD"; do
-        sb_rc=0
-        sb_out="$(bash "$detector" --root . --commit "$endpoint")" || sb_rc=$?
-        if [ "$sb_rc" -eq 1 ]; then
-            printf '%s\n' "$sb_out"
-            echo "CHANGELOG_GATE|SYNTHETIC-BASE|refusing to derive $BASE...$HEAD from a synthetic workspace commit ($endpoint)|Return to the carrying branch or rebase onto a real branch tip (docs/MAXIMS.md)"
-            exit 1
-        fi
-        if [ "$sb_rc" -ne 0 ]; then
-            printf '%s\n' "$sb_out"
-            echo "CHANGELOG_GATE|INCOMPLETE|synthetic-base preflight could not measure '$endpoint' (exit $sb_rc)|Fix the preflight configuration or git state"
-            exit 2
-        fi
-    done
+if [ ! -f "$detector" ]; then
+    echo "CHANGELOG_GATE|INCOMPLETE|synthetic-base preflight missing at '$detector'|Restore scripts/check-synthetic-base.sh; the preflight must not be skipped"
+    exit 2
 fi
+for endpoint in "$BASE" "$HEAD"; do
+    sb_rc=0
+    sb_out="$(bash "$detector" --root . --commit "$endpoint")" || sb_rc=$?
+    if [ "$sb_rc" -eq 1 ]; then
+        printf '%s\n' "$sb_out"
+        echo "CHANGELOG_GATE|SYNTHETIC-BASE|refusing to derive $BASE...$HEAD from a synthetic workspace commit ($endpoint)|Return to the carrying branch or rebase onto a real branch tip (docs/MAXIMS.md)"
+        exit 1
+    fi
+    if [ "$sb_rc" -ne 0 ]; then
+        printf '%s\n' "$sb_out"
+        echo "CHANGELOG_GATE|INCOMPLETE|synthetic-base preflight could not measure '$endpoint' (exit $sb_rc)|Fix the preflight configuration or git state"
+        exit 2
+    fi
+done
 
 files="$(git diff --name-only "$BASE...$HEAD" || true)"
 if [ -z "$files" ]; then

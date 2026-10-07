@@ -286,6 +286,60 @@ try {
     Want-Status 2
     Want-Contains 'CHANGELOG_GATE|INCOMPLETE|'
     Report-Scenario 'S15 changelog gate fails closed on an unmeasurable endpoint'
+
+    # S16: a commit carried only by a tool-owned branch namespace is refused.
+    Begin-Scenario
+    $root16 = New-DetachedRepo 's16'
+    & git -C $root16 update-ref refs/heads/gitbutler/workspace HEAD | Out-Null
+    Invoke-Checker -CheckerRoot $root16
+    Want-Status 1
+    Want-Contains 'SYNTHETIC_BASE|REFUSE|'
+    Want-Contains 'owned-branch=refs/heads/gitbutler/workspace'
+    Want-Contains 'SYNTHETIC_BASE|RECOVERY|'
+    Report-Scenario 'S16 tool-branch-only carrying -> REFUSE'
+
+    # S17: a tool-owned branch namespace plus an ordinary branch is ordinary.
+    Begin-Scenario
+    $root17 = New-Repo 's17'
+    [IO.File]::WriteAllText((Join-Path $root17 'work.txt'), "work`n", $utf8)
+    & git -C $root17 add work.txt | Out-Null
+    & git -C $root17 commit -qm 'work commit' | Out-Null
+    & git -C $root17 update-ref refs/heads/gitbutler/workspace HEAD | Out-Null
+    Invoke-Checker -CheckerRoot $root17
+    Want-Status 0
+    Want-Contains 'SYNTHETIC_BASE|OK|'
+    Want-NotContains 'REFUSE'
+    Report-Scenario 'S17 tool branch + ordinary branch -> OK'
+
+    # S18: a comments-only signals file yields empty namespaces and reports UNKNOWN.
+    Begin-Scenario
+    $root18 = New-DetachedRepo 's18'
+    $signals18 = Join-Path $tmp 's18.txt'
+    [IO.File]::WriteAllText($signals18, "# comments only, no rows`n", $utf8)
+    Invoke-Checker -CheckerRoot $root18 -ExtraArgs @('-SignalsFile', $signals18)
+    Want-Status 0
+    Want-Contains 'SYNTHETIC_BASE|UNKNOWN|'
+    Want-NotContains 'REFUSE'
+    Report-Scenario 'S18 comments-only signals (empty namespaces) -> UNKNOWN'
+
+    # S19: the changelog gate fails closed when the detector file is absent.
+    Begin-Scenario
+    $root19 = New-Repo 's19'
+    $gateDir19 = Join-Path $tmp 's19-gate'
+    New-Item -ItemType Directory -Path $gateDir19 -Force | Out-Null
+    Copy-Item -LiteralPath $changelogGate -Destination (Join-Path $gateDir19 'check-changelog-entry.ps1')
+    Push-Location $root19
+    try {
+        $raw19 = @(& pwsh -NoProfile -File (Join-Path $gateDir19 'check-changelog-entry.ps1') -Base HEAD -Head HEAD 2>&1)
+        $script:STATUS = $LASTEXITCODE
+    } finally {
+        Pop-Location
+    }
+    $script:OUT = ((@($raw19 | ForEach-Object { $_.ToString() }) -join "`n")).Replace("`r", '')
+    Want-Status 2
+    Want-Contains 'CHANGELOG_GATE|INCOMPLETE|'
+    Want-Contains 'preflight missing'
+    Report-Scenario 'S19 changelog gate fails closed when preflight is missing'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }

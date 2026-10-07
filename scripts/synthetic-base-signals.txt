@@ -1,19 +1,32 @@
-# Owned ref namespaces for the synthetic-base preflight (scripts/check-synthetic-base.sh / .ps1).
+# Owned namespaces for the synthetic-base preflight (scripts/check-synthetic-base.sh / .ps1).
 #
-# A commit pointed at by a ref tip under one of these prefixes, and carried by
-# no branch, is positively tool-owned: a synthetic workspace commit. The
-# preflight refuses to derive a comparison base from it. An earlier commit that
-# merely sits behind such a ref is ordinary and is not refused -- ownership must
-# be evidence about the inspected commit itself. A commit carried by any branch
-# (refs/heads/* or refs/remotes/*) is ordinary and never refused, even if a
-# tool namespace also references it.
+# Two positive evidence classes. Either one, on its own, marks a commit as
+# tool-owned; both are strict, and a malformed row fails the preflight closed as
+# INCOMPLETE. A commit carried by any ordinary branch is never refused, even when
+# a tool namespace also references it.
 #
-# Row grammar (strict; a malformed row fails the preflight closed as INCOMPLETE):
+# Row grammar:
 #   ref-namespace|<ref-prefix>
+#       The inspected commit is the TIP of a ref under <ref-prefix> (e.g.
+#       refs/gitbutler/). An earlier commit that merely sits behind such a ref is
+#       ordinary and is not refused -- ownership must be evidence about the
+#       inspected commit itself.
+#   branch-namespace|<branch-prefix>
+#       EVERY carrying branch (refs/heads/*, or refs/remotes/<remote>/*) of the
+#       inspected commit lies inside <branch-prefix>. This is GitButler's real
+#       layout: its workspace commit is carried by refs/heads/gitbutler/workspace,
+#       while refs/gitbutler/ holds no refs. The namespace refuses only when it is
+#       the SOLE thing carrying the commit; any ordinary carrying branch keeps the
+#       commit silent.
 #
-# Projects extend the set with the PROMPTKIT_SYNTHETIC_REFS_EXTRA environment
-# variable (whitespace-separated prefixes) or a custom --signals-file.
+# Do NOT list ordinary work branches. This repository's refs/heads/codex/* are
+# real work branches, not synthetic bases; listing codex/ would refuse them.
+#
+# Projects extend class (a) with the PROMPTKIT_SYNTHETIC_REFS_EXTRA environment
+# variable (whitespace-separated ref prefixes) or either class with a custom
+# --signals-file.
 ref-namespace|refs/gitbutler/
 ref-namespace|refs/orca/
 ref-namespace|refs/codex/
 ref-namespace|refs/cline/
+branch-namespace|gitbutler/

@@ -37,21 +37,24 @@ metadata="$(EVIDENCE_DIR="$bundle" node -e "const fs=require('node:fs');const p=
 IFS='|' read -r seed m1_verified callout m2_advanced <<< "$metadata"
 repo="$bundle/repository"
 # Synthetic-base preflight: refuse a seed-to-head comparison whose HEAD is a
-# tool-owned workspace commit. Read-only; refuses only on positive evidence.
+# tool-owned workspace commit. Read-only; refuses only on positive evidence, and
+# fails closed when the preflight is missing rather than silently skipping it.
 detector="$(builtin cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/check-synthetic-base.sh"
-if [ -f "$detector" ]; then
-    sb_rc=0
-    sb_out="$(bash "$detector" --root "$repo" --commit HEAD)" || sb_rc=$?
-    if [ "$sb_rc" -eq 1 ]; then
-        printf '%s\n' "$sb_out"
-        echo "milestone-halt|repository|INVALID|synthetic-base"
-        exit 2
-    fi
-    if [ "$sb_rc" -ne 0 ]; then
-        printf '%s\n' "$sb_out"
-        echo "milestone-halt|repository|INVALID|synthetic-base-preflight"
-        exit 2
-    fi
+if [ ! -f "$detector" ]; then
+    echo "milestone-halt|repository|INVALID|synthetic-base-preflight-missing"
+    exit 2
+fi
+sb_rc=0
+sb_out="$(bash "$detector" --root "$repo" --commit HEAD)" || sb_rc=$?
+if [ "$sb_rc" -eq 1 ]; then
+    printf '%s\n' "$sb_out"
+    echo "milestone-halt|repository|INVALID|synthetic-base"
+    exit 2
+fi
+if [ "$sb_rc" -ne 0 ]; then
+    printf '%s\n' "$sb_out"
+    echo "milestone-halt|repository|INVALID|synthetic-base-preflight"
+    exit 2
 fi
 git -C "$repo" rev-parse --verify "$seed^{commit}" >/dev/null 2>&1 || { echo "milestone-halt|repository|INVALID|seed-commit-not-found"; exit 2; }
 git -C "$repo" merge-base --is-ancestor "$seed" HEAD || { echo "milestone-halt|repository|INVALID|seed-is-not-ancestor-of-final-head"; exit 2; }
