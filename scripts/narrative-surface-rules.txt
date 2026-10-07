@@ -16,6 +16,10 @@
 # machine-name (and extra roadmap) rules through the documented override, which
 # appends additional RULE|regex|severity files to this one:
 #   PROMPTKIT_NARRATIVE_RULES_EXTRA=/absolute/path/to/extra-rules.txt
+#
+# Every non-blank, non-# row must be exactly NAME|regex|severity with non-empty
+# fields. A malformed row -- including a regex that contains `|` -- fails the
+# scan closed at exit 2 rather than silently narrowing coverage.
 HOME_ABSOLUTE_PATH|[/]home[/][A-Za-z0-9._-]|high
 MACOS_USERS_PATH|[/]Users[/][A-Za-z0-9._-]|high
 WSL_WINDOWS_PATH|[/]mnt[/]c[/]Users[/][A-Za-z0-9._-]|high

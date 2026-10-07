@@ -297,6 +297,29 @@ status=0
 output=$(bash "$isolated/scan-staged-secrets.sh" "$narrative_repo" 2>&1) || status=$?
 [[ "$status" -eq 2 ]] || fail 'a scanner without its shipped rules files should fail closed at exit 2'
 
+# Scenario 5b: malformed rules or allowlist rows fail closed, never silently narrow coverage.
+malformed_rules="$tmp/malformed-rules.txt"
+printf '%s\n' 'MALFORMED NO PIPES' >"$malformed_rules"
+status=0
+output=$(PROMPTKIT_NARRATIVE_RULES_EXTRA="$malformed_rules" bash "$scanner" "$narrative_repo" 2>&1) || status=$?
+[[ "$status" -eq 2 ]] || fail 'a malformed extra rules row should fail closed at exit 2'
+[[ "$output" == *'malformed narrative-surface rules row'* ]] ||
+    fail 'the malformed-rule failure did not name the row violation'
+
+piped_rules="$tmp/piped-rules.txt"
+printf '%s\n' 'HOSTNAME|foo|bar|high' >"$piped_rules"
+status=0
+output=$(PROMPTKIT_NARRATIVE_RULES_EXTRA="$piped_rules" bash "$scanner" "$narrative_repo" 2>&1) || status=$?
+[[ "$status" -eq 2 ]] || fail 'a rules row whose regex contains a pipe should fail closed at exit 2'
+
+malformed_paths="$tmp/malformed-paths.txt"
+printf '%s\n' 'docs/**' >"$malformed_paths"
+status=0
+output=$(PROMPTKIT_NARRATIVE_PATHS_EXTRA="$malformed_paths" bash "$scanner" "$narrative_repo" 2>&1) || status=$?
+[[ "$status" -eq 2 ]] || fail 'a malformed extra allowlist row should fail closed at exit 2'
+[[ "$output" == *'malformed narrative-surface allowlist row'* ]] ||
+    fail 'the malformed-allowlist failure did not name the row violation'
+
 # --- Probe Purge & Credential Filename Gate Tests ---
 hygiene_repo="$tmp/hygiene_repo"
 mkdir -p "$hygiene_repo"

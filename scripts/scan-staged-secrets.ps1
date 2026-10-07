@@ -87,9 +87,12 @@ $narrativeRules = @()
 foreach ($rulesFile in @($narrativeRulesPath, $narrativeRulesExtra)) {
     if (-not $rulesFile) { continue }
     foreach ($line in (Get-Content -LiteralPath $rulesFile)) {
+        $line = $line.TrimEnd([char]13)
         if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith('#')) { continue }
-        $fields = $line -split '\|', 3
-        if ($fields.Count -lt 3) { continue }
+        $fields = $line -split '\|'
+        if ($fields.Count -ne 3 -or [string]::IsNullOrWhiteSpace($fields[0]) -or [string]::IsNullOrWhiteSpace($fields[1]) -or [string]::IsNullOrWhiteSpace($fields[2])) {
+            Stop-Scan "Staged secret scan found a malformed narrative-surface rules row; stop before committing."
+        }
         $narrativeRules += [pscustomobject]@{ Rule = $fields[0]; Regex = $fields[1]; Severity = $fields[2] }
     }
 }
@@ -98,9 +101,12 @@ $narrativeAllow = @()
 foreach ($pathsFile in @($narrativePathsPath, $narrativePathsExtra)) {
     if (-not $pathsFile) { continue }
     foreach ($line in (Get-Content -LiteralPath $pathsFile)) {
+        $line = $line.TrimEnd([char]13)
         if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith('#')) { continue }
-        $fields = $line -split '\|', 2
-        if ($fields.Count -lt 2 -or $fields[1] -ne 'allow') { continue }
+        $fields = $line -split '\|'
+        if ($fields.Count -ne 2 -or [string]::IsNullOrWhiteSpace($fields[0]) -or $fields[1] -ne 'allow') {
+            Stop-Scan "Staged secret scan found a malformed narrative-surface allowlist row; stop before committing."
+        }
         $narrativeAllow += $fields[0]
     }
 }

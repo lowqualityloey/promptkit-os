@@ -286,6 +286,40 @@ try {
     $narrativeResult = Invoke-ScannerProcess $narrativeRepo (Join-Path $isolated "scan-staged-secrets.ps1")
     if ($narrativeResult.ExitCode -ne 2) { Fail "A scanner without its shipped rules files should fail closed at exit 2." }
 
+    # Scenario 5b: malformed rules or allowlist rows fail closed, never silently narrow coverage.
+    $malformedRules = Join-Path $tempRoot "malformed-rules.txt"
+    [System.IO.File]::WriteAllText($malformedRules, "MALFORMED NO PIPES`n", $utf8NoBom)
+    try {
+        $env:PROMPTKIT_NARRATIVE_RULES_EXTRA = $malformedRules
+        $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+        if ($narrativeResult.ExitCode -ne 2) { Fail "A malformed extra rules row should fail closed at exit 2." }
+        if (-not $narrativeResult.ErrorText.Contains("malformed narrative-surface rules row")) { Fail "The malformed-rule failure did not name the row violation." }
+    } finally {
+        $env:PROMPTKIT_NARRATIVE_RULES_EXTRA = $previousRulesExtra
+    }
+
+    $pipedRules = Join-Path $tempRoot "piped-rules.txt"
+    [System.IO.File]::WriteAllText($pipedRules, "HOSTNAME|foo|bar|high`n", $utf8NoBom)
+    try {
+        $env:PROMPTKIT_NARRATIVE_RULES_EXTRA = $pipedRules
+        $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+        if ($narrativeResult.ExitCode -ne 2) { Fail "A rules row whose regex contains a pipe should fail closed at exit 2." }
+    } finally {
+        $env:PROMPTKIT_NARRATIVE_RULES_EXTRA = $previousRulesExtra
+    }
+
+    $malformedPaths = Join-Path $tempRoot "malformed-paths.txt"
+    [System.IO.File]::WriteAllText($malformedPaths, "docs/**`n", $utf8NoBom)
+    $previousPathsExtra = $env:PROMPTKIT_NARRATIVE_PATHS_EXTRA
+    try {
+        $env:PROMPTKIT_NARRATIVE_PATHS_EXTRA = $malformedPaths
+        $narrativeResult = Invoke-ScannerProcess $narrativeRepo
+        if ($narrativeResult.ExitCode -ne 2) { Fail "A malformed extra allowlist row should fail closed at exit 2." }
+        if (-not $narrativeResult.ErrorText.Contains("malformed narrative-surface allowlist row")) { Fail "The malformed-allowlist failure did not name the row violation." }
+    } finally {
+        $env:PROMPTKIT_NARRATIVE_PATHS_EXTRA = $previousPathsExtra
+    }
+
     # --- Probe Purge & Credential Filename Gate Tests ---
     $hygieneRepo = Join-Path $tempRoot "hygiene_repo"
     New-Item -ItemType Directory -Path $hygieneRepo -Force | Out-Null

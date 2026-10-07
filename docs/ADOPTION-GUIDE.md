@@ -369,7 +369,7 @@ $$\text{lsp-mcp (future)} \rightarrow \text{Native IDE tools} \rightarrow \text{
 
 - **Keep it local**: add `handoff.md`, `memory.md`, and session notes to `.gitignore`, or keep them in a local-only directory. `docs/STATE.md` is intentionally tracked — keep its content project state, not session narration.
 - **Relativize paths**: replace an absolute workstation path with a `$HOME`-relative form or a `<placeholder>` before staging.
-- **Externalized rules**: detectors live in `scripts/narrative-surface-rules.txt` (`RULE|regex|severity`) and the allowlist in `scripts/narrative-surface-paths.txt` (`glob|kind`). A missing or unreadable file fails the scan closed (`2`) rather than passing silently.
+- **Externalized rules**: detectors live in `scripts/narrative-surface-rules.txt` (`RULE|regex|severity`) and the allowlist in `scripts/narrative-surface-paths.txt` (`glob|kind`). Rows are validated strictly — a missing, unreadable, or malformed row fails the scan closed (`2`) rather than passing silently, so a typo cannot narrow coverage. The `severity` field is reported for triage; every narrative finding shares the single `3` tier.
 - **Project override**: supply your own hostname and roadmap patterns with `PROMPTKIT_NARRATIVE_RULES_EXTRA=/path/to/extra-rules.txt` and narrow the allowlist with `PROMPTKIT_NARRATIVE_PATHS_EXTRA=/path/to/extra-paths.txt` (both fail closed if unreadable) instead of editing the shipped files.
 - **No history rewrite**: the scan sees only staged additions. Already-published paths are the owner's decision — surface them as guidance, do not rewrite history here.
 

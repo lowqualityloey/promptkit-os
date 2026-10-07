@@ -11,5 +11,8 @@
 # reported as a leak. Add consumer-specific exemptions through the documented
 # override instead of editing this shipped list:
 #   PROMPTKIT_NARRATIVE_PATHS_EXTRA=/absolute/path/to/extra-paths.txt
+#
+# Every non-blank, non-# row must be exactly `glob|allow`. A malformed row fails
+# the scan closed at exit 2 rather than silently widening or narrowing coverage.
 docs/reviews/2026-10-02-pr495-review.md|allow
 docs/reviews/2026-10-02-pr496-review.md|allow

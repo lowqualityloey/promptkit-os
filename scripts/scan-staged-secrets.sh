@@ -35,6 +35,52 @@ if [[ -n "$narrative_paths_extra" && ! -r "$narrative_paths_extra" ]]; then
     exit 2
 fi
 
+# Strict row validation, fail closed, mirroring scripts/check-checkpoint-ignore.sh:
+# a malformed row aborts before any diff is read, so a typo cannot silently narrow
+# detector coverage. Exactly two pipes for rules (NAME|regex|severity), one for
+# allowlist rows (glob|allow), with every field non-empty. A regex containing `|`
+# therefore fails closed instead of being silently truncated at the separator.
+validate_narrative_rules() {
+    local table=$1 line name regex severity
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line=${line%$'\r'}
+        [[ -n "$line" ]] || continue
+        [[ "$line" == '#'* ]] && continue
+        name=${line%%|*}
+        regex=${line#*|}
+        regex=${regex%%|*}
+        severity=${line##*|}
+        if [[ "${line//[!|]/}" != '||' || -z "$name" || -z "$regex" || -z "$severity" ]]; then
+            printf '%s\n' 'Staged secret scan found a malformed narrative-surface rules row; stop before committing.' >&2
+            exit 2
+        fi
+    done <"$table"
+}
+
+validate_narrative_paths() {
+    local table=$1 line glob kind
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line=${line%$'\r'}
+        [[ -n "$line" ]] || continue
+        [[ "$line" == '#'* ]] && continue
+        glob=${line%%|*}
+        kind=${line#*|}
+        if [[ "${line//[!|]/}" != '|' || -z "$glob" || "$kind" != allow ]]; then
+            printf '%s\n' 'Staged secret scan found a malformed narrative-surface allowlist row; stop before committing.' >&2
+            exit 2
+        fi
+    done <"$table"
+}
+
+validate_narrative_rules "$narrative_rules"
+validate_narrative_paths "$narrative_paths"
+if [[ -n "$narrative_rules_extra" ]]; then
+    validate_narrative_rules "$narrative_rules_extra"
+fi
+if [[ -n "$narrative_paths_extra" ]]; then
+    validate_narrative_paths "$narrative_paths_extra"
+fi
+
 paths_file=$(mktemp "${TMPDIR:-/tmp}/promptkit-staged-paths.XXXXXX" 2>/dev/null) || {
     printf '%s\n' 'Staged secret scan could not create its private path list.' >&2
     exit 2
