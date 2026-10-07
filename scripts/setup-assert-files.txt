@@ -1,0 +1,7 @@
+# Required engine files asserted by scripts/check-setup-assert.sh / .ps1.
+# Format: path|kind where kind is exactly `file` or `dir`, path is relative to
+# the kit root. Blank lines and `#` comments are ignored. A malformed row fails
+# closed as ASSERT|unknown|rules|INCOMPLETE.
+templates/project-profile-template.md|file
+workflows/route.md|file
+scripts|dir

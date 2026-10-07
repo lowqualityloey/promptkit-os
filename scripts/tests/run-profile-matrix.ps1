@@ -168,16 +168,25 @@ $fixtureKit = Join-Path $TestRoot "t11-kit"
 New-Item -ItemType Directory -Force -Path (Join-Path $fixtureKit "scripts") | Out-Null
 Copy-Item -LiteralPath (Join-Path $RepoRoot "templates") -Destination $fixtureKit -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $RepoRoot "scripts\terminal-picker.ps1") -Destination (Join-Path $fixtureKit "scripts") -Force -ErrorAction SilentlyContinue
-Copy-Item -LiteralPath (Join-Path $RepoRoot "init.ps1") -Destination $fixtureKit -Force
-& git -C $fixtureKit init -q 2>&1 | Out-Null
+    Copy-Item -LiteralPath (Join-Path $RepoRoot "init.ps1") -Destination $fixtureKit -Force
+    # The install-door assert (#549) needs its checker in the kit; this synthetic partial
+    # kit ships it and opts out, since its subject is adversarial-tag stamp robustness.
+    Copy-Item -LiteralPath (Join-Path $RepoRoot "scripts\check-setup-assert.ps1") -Destination (Join-Path $fixtureKit "scripts") -Force
+    & git -C $fixtureKit init -q 2>&1 | Out-Null
 & git -C $fixtureKit add -A 2>&1 | Out-Null
 & git -C $fixtureKit -c user.email=fixture@example.invalid -c user.name=fixture commit -qm fixture 2>&1 | Out-Null
 & git -C $fixtureKit tag ("v1.0.0-" + [char]36 + "1-" + [char]38 + "y") 2>&1 | Out-Null
 $d = Join-Path $TestRoot "t11-proj"
 New-Item -ItemType Directory -Force -Path $d | Out-Null
-& pwsh -NoProfile -File (Join-Path $fixtureKit "init.ps1") --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+    $env:PROMPTKIT_NO_PREFLIGHT = "1"
+    try {
+        & pwsh -NoProfile -File (Join-Path $fixtureKit "init.ps1") --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+        $t11Rc = $LASTEXITCODE
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+    }
 $t11Agents = (Get-Content (Join-Path $d "AGENTS.md") -ErrorAction SilentlyContinue -Raw) -replace "`r`n", "`n"
-if ($LASTEXITCODE -eq 0 -and $t11Agents -match "(?m)^Engine: [A-Za-z0-9._+-]+ \(([0-9a-f]{7,}|unknown)\) — stamped at install time" -and $t11Agents -notmatch '\$ENGINE_VERSION|\$ENGINE_SHA') {
+if ($t11Rc -eq 0 -and $t11Agents -match "(?m)^Engine: [A-Za-z0-9._+-]+ \(([0-9a-f]{7,}|unknown)\) — stamped at install time" -and $t11Agents -notmatch '\$ENGINE_VERSION|\$ENGINE_SHA') {
     Ok "adversarial git tag cannot abort or corrupt the install"
 } else {
     NotOk "adversarial git tag handling ($((($t11Agents -split "`n") | Where-Object { $_ -match '^Engine: ' }) -join ''))"
