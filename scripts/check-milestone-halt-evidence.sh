@@ -47,6 +47,11 @@ if [ -f "$detector" ]; then
         echo "milestone-halt|repository|INVALID|synthetic-base"
         exit 2
     fi
+    if [ "$sb_rc" -ne 0 ]; then
+        printf '%s\n' "$sb_out"
+        echo "milestone-halt|repository|INVALID|synthetic-base-preflight"
+        exit 2
+    fi
 fi
 git -C "$repo" rev-parse --verify "$seed^{commit}" >/dev/null 2>&1 || { echo "milestone-halt|repository|INVALID|seed-commit-not-found"; exit 2; }
 git -C "$repo" merge-base --is-ancestor "$seed" HEAD || { echo "milestone-halt|repository|INVALID|seed-is-not-ancestor-of-final-head"; exit 2; }

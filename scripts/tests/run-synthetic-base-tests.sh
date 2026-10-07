@@ -217,6 +217,54 @@ s12() {
     want_contains 'SYNTHETIC_BASE|REFUSE|'
 }
 
+# S13: an ordinary commit that merely sits behind an owned ref tip is not
+# refused — ownership is evidence about the inspected commit itself.
+s13() {
+    local root ancestor
+    root="$(make_repo s13)"
+    git -C "$root" checkout -q --detach HEAD
+    printf 'a\n' > "$root/a.txt"
+    git -C "$root" add a.txt
+    git -C "$root" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'ordinary A'
+    printf 'b\n' > "$root/b.txt"
+    git -C "$root" add b.txt
+    git -C "$root" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'owned B'
+    owned_ref "$root" refs/gitbutler/wt
+    ancestor="$(git -C "$root" rev-parse HEAD~1)"
+    run_checker "$root" --commit "$ancestor"
+    want_status 0
+    want_contains 'SYNTHETIC_BASE|UNKNOWN|'
+    want_not_contains 'REFUSE'
+}
+
+# S14: the changelog gate checks both endpoints, so a synthetic base with a
+# normal head is refused.
+s14() {
+    local root synthetic
+    root="$(make_repo s14)"
+    git -C "$root" checkout -q --detach HEAD
+    printf 's\n' > "$root/s.txt"
+    git -C "$root" add s.txt
+    git -C "$root" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'synthetic S'
+    synthetic="$(git -C "$root" rev-parse HEAD)"
+    owned_ref "$root" refs/gitbutler/wt
+    git -C "$root" checkout -q -
+    STATUS=0
+    OUT="$(cd "$root" && bash "$CHANGELOG_GATE" --base "$synthetic" --head HEAD 2>&1)" || STATUS=$?
+    want_status 1
+    want_contains 'CHANGELOG_GATE|SYNTHETIC-BASE|'
+}
+
+# S15: a preflight that cannot measure fails the gate closed instead of passing.
+s15() {
+    local root
+    root="$(make_repo s15)"
+    STATUS=0
+    OUT="$(cd "$root" && bash "$CHANGELOG_GATE" --base HEAD --head deadbeefdeadbeefdeadbeefdeadbeefdeadbeef 2>&1)" || STATUS=$?
+    want_status 2
+    want_contains 'CHANGELOG_GATE|INCOMPLETE|'
+}
+
 begin; s1; report 'S1 normal branch HEAD -> OK'
 begin; s2; report 'S2 owned ref, no carrying branch -> REFUSE'
 begin; s3; report 'S3 unpushed carrying branch -> OK'
@@ -229,6 +277,9 @@ begin; s9; report 'S9 unresolvable commit -> INCOMPLETE COMMIT'
 begin; s10; report 'S10 owned ref carried by a branch -> OK'
 begin; s11; report 'S11 scan leaves index/worktree unchanged'
 begin; s12; report 'S12 changelog gate refuses synthetic HEAD'
+begin; s13; report 'S13 ordinary ancestor of an owned ref tip -> UNKNOWN'
+begin; s14; report 'S14 changelog gate refuses a synthetic base with a normal head'
+begin; s15; report 'S15 changelog gate fails closed on an unmeasurable endpoint'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1

@@ -135,11 +135,14 @@ if [[ -n "$carrying" ]]; then
     exit 0
 fi
 
-# Positive evidence only: the commit is owned by a tool namespace. Absence of a
-# carrying branch is corroborating, never sufficient on its own -- a detached
-# real commit is exactly "no carrying branch" and must fall through to UNKNOWN.
+# Positive evidence only: the commit is the tip of a tool-namespace ref. The ref
+# must point AT the commit -- an earlier commit on the same reachable chain is an
+# ordinary commit, not a synthetic one, so --contains would falsely refuse it.
+# Absence of a carrying branch is corroborating, never sufficient on its own -- a
+# detached real commit is exactly "no carrying branch" and must fall through to
+# UNKNOWN.
 for ns in "${namespaces[@]}"; do
-    owned="$(local_git for-each-ref --contains "$sha" --format='%(refname)' "$ns")" || {
+    owned="$(local_git for-each-ref --points-at "$sha" --format='%(refname)' "$ns")" || {
         printf 'SYNTHETIC_BASE|INCOMPLETE|REFS|.\n'
         exit 2
     }

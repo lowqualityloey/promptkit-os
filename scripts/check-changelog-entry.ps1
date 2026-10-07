@@ -19,16 +19,24 @@ if ($LASTEXITCODE -ne 0) {
     exit 0
 }
 
-# Synthetic-base preflight: a base-deriving range is meaningless when HEAD is a
-# tool-owned workspace commit. Read-only; refuses only on positive evidence.
+# Synthetic-base preflight: a base-deriving range is meaningless when either
+# endpoint is a tool-owned workspace commit. Read-only; refuses only on positive
+# evidence (exit 1) and fails closed when the preflight cannot measure (exit 2).
 $detector = Join-Path $PSScriptRoot 'check-synthetic-base.ps1'
 if (Test-Path -LiteralPath $detector -PathType Leaf) {
-    $sbOut = & $detector -Root '.' -Commit $Head 2>&1 | Out-String
-    $sbRc = $LASTEXITCODE
-    if ($sbRc -eq 1) {
-        Write-Host $sbOut.TrimEnd()
-        Write-Host "CHANGELOG_GATE|SYNTHETIC-BASE|refusing to derive $Base...$Head from a synthetic workspace commit|Return to the carrying branch or rebase onto a real branch tip (docs/MAXIMS.md)"
-        exit 1
+    foreach ($endpoint in @($Base, $Head)) {
+        $sbOut = & $detector -Root '.' -Commit $endpoint 2>&1 | Out-String
+        $sbRc = $LASTEXITCODE
+        if ($sbRc -eq 1) {
+            Write-Host $sbOut.TrimEnd()
+            Write-Host "CHANGELOG_GATE|SYNTHETIC-BASE|refusing to derive $Base...$Head from a synthetic workspace commit ($endpoint)|Return to the carrying branch or rebase onto a real branch tip (docs/MAXIMS.md)"
+            exit 1
+        }
+        if ($sbRc -ne 0) {
+            Write-Host $sbOut.TrimEnd()
+            Write-Host "CHANGELOG_GATE|INCOMPLETE|synthetic-base preflight could not measure '$endpoint' (exit $sbRc)|Fix the preflight configuration or git state"
+            exit 2
+        }
     }
 }
 

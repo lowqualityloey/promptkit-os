@@ -231,6 +231,61 @@ try {
     Want-Contains 'CHANGELOG_GATE|SYNTHETIC-BASE|'
     Want-Contains 'SYNTHETIC_BASE|REFUSE|'
     Report-Scenario 'S12 changelog gate refuses synthetic HEAD'
+
+    # S13: an ordinary commit behind an owned ref tip is not refused.
+    Begin-Scenario
+    $root13 = New-Repo 's13'
+    & git -C $root13 checkout -q --detach HEAD | Out-Null
+    [IO.File]::WriteAllText((Join-Path $root13 'a.txt'), "a`n", $utf8)
+    & git -C $root13 add a.txt | Out-Null
+    & git -C $root13 commit -qm 'ordinary A' | Out-Null
+    [IO.File]::WriteAllText((Join-Path $root13 'b.txt'), "b`n", $utf8)
+    & git -C $root13 add b.txt | Out-Null
+    & git -C $root13 commit -qm 'owned B' | Out-Null
+    Add-OwnedRef $root13 'refs/gitbutler/wt'
+    $ancestor13 = (& git -C $root13 rev-parse HEAD~1).Trim()
+    Invoke-Checker -CheckerRoot $root13 -ExtraArgs @('-Commit', $ancestor13)
+    Want-Status 0
+    Want-Contains 'SYNTHETIC_BASE|UNKNOWN|'
+    Want-NotContains 'REFUSE'
+    Report-Scenario 'S13 ordinary ancestor of an owned ref tip -> UNKNOWN'
+
+    # S14: the changelog gate checks both endpoints (synthetic base, normal head).
+    Begin-Scenario
+    $root14 = New-Repo 's14'
+    & git -C $root14 checkout -q --detach HEAD | Out-Null
+    [IO.File]::WriteAllText((Join-Path $root14 's.txt'), "s`n", $utf8)
+    & git -C $root14 add s.txt | Out-Null
+    & git -C $root14 commit -qm 'synthetic S' | Out-Null
+    $synthetic14 = (& git -C $root14 rev-parse HEAD).Trim()
+    Add-OwnedRef $root14 'refs/gitbutler/wt'
+    & git -C $root14 checkout -q - | Out-Null
+    Push-Location $root14
+    try {
+        $raw14 = @(& pwsh -NoProfile -File $changelogGate -Base $synthetic14 -Head HEAD 2>&1)
+        $script:STATUS = $LASTEXITCODE
+    } finally {
+        Pop-Location
+    }
+    $script:OUT = ((@($raw14 | ForEach-Object { $_.ToString() }) -join "`n")).Replace("`r", '')
+    Want-Status 1
+    Want-Contains 'CHANGELOG_GATE|SYNTHETIC-BASE|'
+    Report-Scenario 'S14 changelog gate refuses a synthetic base with a normal head'
+
+    # S15: a preflight that cannot measure fails the gate closed.
+    Begin-Scenario
+    $root15 = New-Repo 's15'
+    Push-Location $root15
+    try {
+        $raw15 = @(& pwsh -NoProfile -File $changelogGate -Base HEAD -Head 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' 2>&1)
+        $script:STATUS = $LASTEXITCODE
+    } finally {
+        Pop-Location
+    }
+    $script:OUT = ((@($raw15 | ForEach-Object { $_.ToString() }) -join "`n")).Replace("`r", '')
+    Want-Status 2
+    Want-Contains 'CHANGELOG_GATE|INCOMPLETE|'
+    Report-Scenario 'S15 changelog gate fails closed on an unmeasurable endpoint'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }

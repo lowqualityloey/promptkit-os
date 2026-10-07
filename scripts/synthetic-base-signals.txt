@@ -1,8 +1,10 @@
 # Owned ref namespaces for the synthetic-base preflight (scripts/check-synthetic-base.sh / .ps1).
 #
-# A commit reachable from a ref under one of these prefixes, and carried by no
-# branch, is positively tool-owned: a synthetic workspace commit. The preflight
-# refuses to derive a comparison base from it. A commit carried by any branch
+# A commit pointed at by a ref tip under one of these prefixes, and carried by
+# no branch, is positively tool-owned: a synthetic workspace commit. The
+# preflight refuses to derive a comparison base from it. An earlier commit that
+# merely sits behind such a ref is ordinary and is not refused -- ownership must
+# be evidence about the inspected commit itself. A commit carried by any branch
 # (refs/heads/* or refs/remotes/*) is ordinary and never refused, even if a
 # tool namespace also references it.
 #

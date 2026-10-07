@@ -105,11 +105,14 @@ if ($carrying.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace([string]$carryi
     exit 0
 }
 
-# Positive evidence only: the commit is owned by a tool namespace. Absence of a
-# carrying branch is corroborating, never sufficient on its own -- a detached
-# real commit is exactly "no carrying branch" and must fall through to UNKNOWN.
+# Positive evidence only: the commit is the tip of a tool-namespace ref. The ref
+# must point AT the commit -- an earlier commit on the same reachable chain is an
+# ordinary commit, not a synthetic one, so --contains would falsely refuse it.
+# Absence of a carrying branch is corroborating, never sufficient on its own -- a
+# detached real commit is exactly "no carrying branch" and must fall through to
+# UNKNOWN.
 foreach ($ns in $namespaces) {
-    $owned = @(Invoke-LocalGit @('for-each-ref', '--contains', $sha, '--format=%(refname)', $ns))
+    $owned = @(Invoke-LocalGit @('for-each-ref', '--points-at', $sha, '--format=%(refname)', $ns))
     if ($script:gitStatus -ne 0) { Write-Output 'SYNTHETIC_BASE|INCOMPLETE|REFS|.'; exit 2 }
     if ($owned.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace([string]$owned[0])) {
         Write-Output ("SYNTHETIC_BASE|REFUSE|$sha|owned-ref=" + (ConvertTo-Sanitized ([string]$owned[0])))
