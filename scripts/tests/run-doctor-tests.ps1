@@ -245,9 +245,14 @@ try {
     $root6 = New-HealthyKit 's6' 'balanced'
     $fakebin6 = Join-Path $tmp 's6-bin'
     New-Item -ItemType Directory -Path $fakebin6 -Force | Out-Null
-    $fakeGit6 = Join-Path $fakebin6 'git'
-    [IO.File]::WriteAllText($fakeGit6, "#!/bin/sh`nexit 3`n", $utf8)
-    & chmod +x $fakeGit6 | Out-Null
+    # Windows PATH resolution ignores extensionless scripts, so ship a .cmd/.bat
+    # shim alongside the POSIX shell shim; each returns exit code 3.
+    [IO.File]::WriteAllText((Join-Path $fakebin6 'git'), "#!/bin/sh`nexit 3`n", $utf8)
+    [IO.File]::WriteAllText((Join-Path $fakebin6 'git.cmd'), "@echo off`nexit /b 3`n", $utf8)
+    [IO.File]::WriteAllText((Join-Path $fakebin6 'git.bat'), "@echo off`nexit /b 3`n", $utf8)
+    if (Get-Command chmod -ErrorAction SilentlyContinue) {
+        & chmod +x (Join-Path $fakebin6 'git') 2>$null | Out-Null
+    }
     $overridePath = $fakebin6 + [IO.Path]::PathSeparator + $env:PATH
     Invoke-Doctor -Root $root6 -EnvOverrides @{ PATH = $overridePath }
     Want-Status 1
