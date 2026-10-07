@@ -199,11 +199,11 @@ for directive_file in "templates/agent-directive-template.md" "templates/agent-d
     fi
 done
 WF_COUNT=$(ls "$REPO_ROOT"/workflows/*.md | wc -l | tr -d ' ')
-if [ "$WF_COUNT" -eq 25 ]; then
-    echo "  ✅ PASS: On-disk workflow file count is 25 (matches reconciled docs claims)"
+if [ "$WF_COUNT" -eq 26 ]; then
+    echo "  ✅ PASS: On-disk workflow file count is 26 (matches reconciled docs claims)"
     PASS_COUNT=$((PASS_COUNT + 1))
 else
-    echo "  ❌ FAIL: On-disk workflow count is $WF_COUNT but shipped docs claim 25 — reconcile counts or update this drift guard"
+    echo "  ❌ FAIL: On-disk workflow count is $WF_COUNT but shipped docs claim 26 — reconcile counts or update this drift guard"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 # Canonical-count drift guard (#347): every live workflow-count claim must state
@@ -1151,6 +1151,81 @@ assert_contains "scripts/run-behavioral-eval.sh" 'if ! file_has_bytes "\$bundle/
 assert_contains "scripts/run-behavioral-eval.ps1" "PathType Leaf" "PowerShell write-log lookup rejects a directory"
 assert_contains "scripts/run-behavioral-eval.ps1" "AsByteStream" "PowerShell reads the log as bytes, preserving a BOM"
 assert_contains "scripts/run-behavioral-eval.sh" "grep -m1 '\^CHECKS" "Bash reads the side channel by prefix, not by position"
+
+echo ""
+echo "📌 Scenario AR: pk:doctor Contract & Exit Codes (Issue #547)"
+# The spec labels this "Scenario AP", but that label was already taken by the
+# #519-#523 stack-activation block above; AR is the next free label.
+
+# AR-1: pk:doctor appears exactly once as a trigger line in the Balanced directive.
+DOCTOR_TRIGGERS=$(grep -c '^- `pk:doctor`' "$REPO_ROOT/templates/agent-directive-template.md" || true)
+if [ "$DOCTOR_TRIGGERS" -eq 1 ]; then
+    echo "  ✅ PASS: pk:doctor is declared exactly once as a trigger line"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: expected exactly one '- \`pk:doctor\`' trigger line, found $DOCTOR_TRIGGERS"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+# AR-2: the on-disk workflow count is 26. WF_COUNT (asserted in Scenario M above)
+# is the mechanical source of truth; restate it here so the scenario is self-contained.
+assert_contains "workflows/doctor.md" "^# " "pk:doctor ships an H1 workflow file (the 26th on-disk workflow)"
+if [ "$WF_COUNT" -eq 26 ]; then
+    echo "  ✅ PASS: on-disk workflow count is 26 (the pk:doctor file is the 26th)"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: on-disk workflow count is $WF_COUNT, expected 26"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+# AR-3: exercised exit-code contract over tiny throwaway kit roots. Read-only:
+# the checker never writes unless --fix is passed, and these fixtures are removed.
+DOCTOR_TMP="$(mktemp -d)"
+doctor_exit_of() {  # $1 = kit root; prints the checker's exit code
+    local rc=0
+    bash "$REPO_ROOT/scripts/check-doctor.sh" "$1" >/dev/null 2>&1 || rc=$?
+    printf '%s' "$rc"
+}
+# Healthy fixture: PROMPTKIT.md + one installed host carrying the block, no git,
+# no STATE.md -> every row is OK or SKIP -> exit 0.
+D_HEALTHY="$DOCTOR_TMP/healthy"
+mkdir -p "$D_HEALTHY"
+printf 'profile: balanced\n' > "$D_HEALTHY/PROMPTKIT.md"
+printf '<!-- PROMPTKIT_START -->\n## PromptKit OS\n<!-- PROMPTKIT_END -->\n' > "$D_HEALTHY/AGENTS.md"
+# Missing-block fixture: an installed host without the managed block -> exit 1.
+D_MISSING="$DOCTOR_TMP/missing"
+mkdir -p "$D_MISSING"
+printf 'profile: balanced\n' > "$D_MISSING/PROMPTKIT.md"
+printf '# Agent notes without the managed block\n' > "$D_MISSING/AGENTS.md"
+# No-prerequisite fixture: no PROMPTKIT.md at the kit root -> exit 2.
+D_NOPK="$DOCTOR_TMP/no-promptkit"
+mkdir -p "$D_NOPK"
+
+doctor_rc="$(doctor_exit_of "$D_HEALTHY")"
+if [ "$doctor_rc" -eq 0 ]; then
+    echo "  ✅ PASS: healthy fixture -> exit 0"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: healthy fixture should exit 0, got $doctor_rc"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+doctor_rc="$(doctor_exit_of "$D_MISSING")"
+if [ "$doctor_rc" -eq 1 ]; then
+    echo "  ✅ PASS: host file missing the managed block -> exit 1"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: missing-block fixture should exit 1, got $doctor_rc"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+doctor_rc="$(doctor_exit_of "$D_NOPK")"
+if [ "$doctor_rc" -eq 2 ]; then
+    echo "  ✅ PASS: absent PROMPTKIT.md prerequisite -> exit 2"
+    PASS_COUNT=$((PASS_COUNT + 1))
+else
+    echo "  ❌ FAIL: no-PROMPTKIT.md fixture should exit 2, got $doctor_rc"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+rm -rf -- "$DOCTOR_TMP"
 
 echo ""
 echo "📊 Behavioral Contract Verification Summary"

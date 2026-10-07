@@ -35,7 +35,7 @@ Profile is stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Switch an
 In CI or non-interactive environments, pass flags; the wizard does not block on redirected input. Set `PROMPTKIT_NO_INTERACTIVE=1` to skip it even in a terminal:
 
 ```bash
-# Balanced profile (full 25 workflows)
+# Balanced profile (full 26 workflows)
 ./.promptkit/init.sh --balanced
 
 # Lite profile (smallest footprint, 6 workflows)
@@ -303,7 +303,7 @@ Pick one:
 
 ### 2. **Explore More Workflows**
 ```
-pk:route          # See all 25 workflow files and their named aliases
+pk:route          # See all 26 workflow files and their named aliases
 pk:data           # Database design & migrations
 pk:auth           # Authentication & RBAC
 pk:api            # API contracts & types

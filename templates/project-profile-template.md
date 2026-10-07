@@ -8,7 +8,7 @@
 - **Engine**: `<kit>` (resolved kit root: `.promptkit/` recommended, `promptkit/` supported)
 - **Description**:
   - `lite`: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value — onboarding
-  - `balanced`: the full 25-workflow set, Level 0-3 adaptive ceremony (default) — teams, production
+  - `balanced`: the full 26-workflow set, Level 0-3 adaptive ceremony (default) — teams, production
   - `turbo`: experimental, Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval
 - **Upgrade Path**: From your resolved kit root, run `./init.sh --balanced` for full, `--lite` for minimal, `--turbo --experimental` for parallel waves — or switch in-session with `pk:profile`
 

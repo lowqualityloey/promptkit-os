@@ -1116,7 +1116,7 @@ if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok\033[0m"
     echo -e "   Upgrade anytime: .promptkit/init.sh --balanced for the full Balanced profile"
 elif [[ "$PROFILE" == "balanced" ]]; then
-    echo -e "   Balanced: 25 workflows, Level 0-3 adaptive ceremony — full power"
+    echo -e "   Balanced: 26 workflows, Level 0-3 adaptive ceremony — full power"
     echo -e "   For onboarding: .promptkit/init.sh --lite for minimal setup"
 else
     echo -e "   \033[0;33mTurbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost\033[0m"

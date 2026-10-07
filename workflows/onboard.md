@@ -168,7 +168,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
           - label: "Lite (Recommended for new users)"
             description: "6 utility workflows (route, debug, commit, checkpoint, sync, profile), 80% of value, fastest onboarding, fits the <1,500 tok lite budget"
           - label: "Balanced (default for teams/production)"
-            description: "Full 25-workflow set, Level 0-3 adaptive ceremony, teams/production, default"
+            description: "Full 26-workflow set, Level 0-3 adaptive ceremony, teams/production, default"
          - label: "Turbo (Experimental)"
            description: "Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval, needs --experimental acknowledgement"
        multiSelect: false

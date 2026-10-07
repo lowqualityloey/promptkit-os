@@ -96,7 +96,7 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 
 **Example (One-Command Setup — 2+1 Profiles)**:
 ```bash
-# macOS / Linux — Balanced profile (25 workflows, default)
+# macOS / Linux — Balanced profile (26 workflows, default)
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh --balanced
 
 # Lite profile (6 utility workflows, 1,436 tokens static overhead)
@@ -253,7 +253,7 @@ You: [Reviews, edits, commits]
 **Short Answer**: PromptKit OS measures static directive payloads and per-task payload savings mechanically in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md). Conversational scenario estimates and dollar examples are illustrative models based on workflow design assumptions, not production telemetry.
 
 **Mechanically Measured Benchmarks** (from `docs/BENCHMARKS.md`):
-- **Static Directives**: ~1,436 tokens (Lite) and ~2,312 tokens (Balanced) at bytes/4 convention, saving 91–95% vs inlining workflows statically.
+- **Static Directives**: ~1,436 tokens (Lite) and ~2,341 tokens (Balanced) at bytes/4 convention, saving 91–96% vs inlining workflows statically.
 - **Dynamic Per-Task Payloads**: JIT loading saves 22% to 37% (Balanced) and 26% to 41% (Lite) vs historical monolithic pre-load baselines across `pk:fix`, `pk:plan`, and `pk:ship`.
 
 **Illustrative Scenario Models** (modeled assumptions, not production telemetry):
@@ -447,7 +447,7 @@ Remember: **AI assistants aren't perfect**. PromptKit structures their reasoning
 
 | Dimension | `.cursorrules` / `CLAUDE.md` | Prompt Packs (spec-kit, BMad) | **PromptKit OS** |
 |:----------|:-----------------------------|:------------------------------|:-----------------|
-| **Scope** | Single instruction file for one tool | Workflow templates for one tool | 25 workflow files plus named aliases across all tools |
+| **Scope** | Single instruction file for one tool | Workflow templates for one tool | 26 workflow files plus named aliases across all tools |
 | **Persistence** | Dies with the chat session | Dies with the chat session | `docs/STATE.md` survives context resets |
 | **Database safety** | No schema guardrails | Varies | Expand-Contract only (phased migration) |
 | **Multi-agent** | Single agent | Single agent | Subagent delegation with compact synthesis |

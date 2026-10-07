@@ -90,10 +90,10 @@ It provides the engineering rules around them.
 
 ## Start Here: Most Work Is Level 1
 
-You do not need to learn all 25 workflows. Most everyday engineering tasks — bug fixes, small features, isolated component changes — are **Level 1 (Standard)** and need only `pk:route` or `pk:debug` to get started. Heavier ceremony kicks in only when the task warrants it.
+You do not need to learn all 26 workflows. Most everyday engineering tasks — bug fixes, small features, isolated component changes — are **Level 1 (Standard)** and need only `pk:route` or `pk:debug` to get started. Heavier ceremony kicks in only when the task warrants it.
 
 > [!TIP]
-> Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (preserves project state and active tasks across context compaction and resets). You do not need to learn all 25 before getting value.
+> Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (preserves project state and active tasks across context compaction and resets). You do not need to learn all 26 before getting value.
 
 ### Everyday Triggers Cheat-Sheet
 
@@ -140,8 +140,8 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 
 The core instruction layer stays small. Workflows, stack playbooks, and boundary recipes are loaded only when the task requires them.
 
-- **Balanced** profile: ~2,312 tok static footprint (~93% static saving vs. ~31.0k current core-subset baseline; 2,500 tok budget cap)
-- **Lite** profile: ~1,436 tok static footprint (~95% static saving vs. the current baseline; 1,500 tok budget cap)
+- **Balanced** profile: ~2,341 tok static footprint (~93% static saving vs. ~31.0k current core-subset baseline; 2,500 tok budget cap)
+- **Lite** profile: ~1,436 tok static footprint (~96% static saving vs. the current baseline; 1,500 tok budget cap)
 
 PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), enforcing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 task risk ceremony). Retrieval confidence is treated as evidence rather than authority, ensuring high-risk boundaries trigger mandatory zoom-outs.
 
@@ -170,7 +170,7 @@ PromptKit's quality gate protocols instruct the agent to execute real verificati
 ```
 .promptkit/
 ├── protocols/       # Core control — risk routing, evidence gates, context sync
-├── workflows/       # 25 engineering procedures (pk:route → pk:ship)
+├── workflows/       # 26 engineering procedures (pk:route → pk:ship)
 ├── docs/
 │   ├── stacks/      # JIT stack playbooks — Next.js, Supabase, Vercel, Expo, Flutter, Rust, Go, Python
 │   ├── recipes/     # Boundary contracts — auth sessions, form mutations, webhooks, env, test isolation
@@ -207,7 +207,7 @@ In an interactive terminal, use ↑/↓ and Enter for profile and task-tracker c
 Pass flags directly to bypass the interactive prompts in automated environments:
 
 ```bash
-# Balanced profile (full 25 workflows)
+# Balanced profile (full 26 workflows)
 ./.promptkit/init.sh --balanced
 # Lite profile (smallest footprint, 6 workflows)
 ./.promptkit/init.sh --lite
