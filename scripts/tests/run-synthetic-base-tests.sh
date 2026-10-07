@@ -388,6 +388,30 @@ s24() {
     want_contains 'owned-branch=refs/heads/gitbutler/workspace/snapshot'
 }
 
+# S25: Git ref names are case-sensitive, so a differently-cased local branch
+# (gitbutler/WORKSPACE) is NOT tool-owned -> ordinary -> OK (Bash/PowerShell parity).
+s25() {
+    local root
+    root="$(make_detached s25)"
+    git -C "$root" update-ref refs/heads/gitbutler/WORKSPACE HEAD
+    run_checker "$root"
+    want_status 0
+    want_contains 'SYNTHETIC_BASE|OK|'
+    want_not_contains 'REFUSE'
+}
+
+# S26: the same case-sensitivity holds for a remote-tracking branch
+# (refs/remotes/origin/gitbutler/WORKSPACE) -> OK.
+s26() {
+    local root
+    root="$(make_detached s26)"
+    git -C "$root" update-ref refs/remotes/origin/gitbutler/WORKSPACE HEAD
+    run_checker "$root"
+    want_status 0
+    want_contains 'SYNTHETIC_BASE|OK|'
+    want_not_contains 'REFUSE'
+}
+
 begin; s1; report 'S1 normal branch HEAD -> OK'
 begin; s2; report 'S2 owned ref, no carrying branch -> REFUSE'
 begin; s3; report 'S3 unpushed carrying branch -> OK'
@@ -412,6 +436,8 @@ begin; s21; report 'S21 ordinary ancestor of workspace tip -> UNKNOWN'
 begin; s22; report 'S22 remote-tracking workspace tip -> REFUSE'
 begin; s23; report 'S23 workspace-prefix name crossing a boundary -> OK'
 begin; s24; report 'S24 workspace-namespace subpath -> REFUSE'
+begin; s25; report 'S25 differently-cased local workspace branch -> OK'
+begin; s26; report 'S26 differently-cased remote workspace branch -> OK'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1

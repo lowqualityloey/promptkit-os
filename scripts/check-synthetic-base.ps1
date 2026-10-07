@@ -96,7 +96,8 @@ function Invoke-LocalGit {
     }
 }
 
-# Tool-owned at a path-component boundary only: the name equals a
+# Tool-owned at a path-component boundary only, matched case-sensitively (Git ref
+# names are case-sensitive, and the Bash twin's `==` is too): the name equals a
 # branch-namespace prefix exactly or begins with that prefix followed by a slash.
 # GitButler's gitbutler/workspace matches; gitbutler/workspace-backup does not,
 # matching how `for-each-ref` treats a ref pattern up to a slash.
@@ -115,7 +116,7 @@ function Get-BranchNameForRef {
 function Test-ToolOwnedBranch {
     param([string]$BranchName)
     foreach ($branchNs in $script:branchNamespaces) {
-        if ($BranchName -eq $branchNs -or $BranchName.StartsWith($branchNs + '/', [StringComparison]::Ordinal)) { return $true }
+        if ($BranchName -ceq $branchNs -or $BranchName.StartsWith($branchNs + '/', [StringComparison]::Ordinal)) { return $true }
     }
     return $false
 }

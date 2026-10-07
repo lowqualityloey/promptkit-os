@@ -395,6 +395,26 @@ try {
     Want-Contains 'SYNTHETIC_BASE|REFUSE|'
     Want-Contains 'owned-branch=refs/heads/gitbutler/workspace/snapshot'
     Report-Scenario 'S24 workspace-namespace subpath -> REFUSE'
+
+    # S25: case-sensitive local branch name matching -> OK.
+    Begin-Scenario
+    $root25 = New-DetachedRepo 's25'
+    & git -C $root25 update-ref refs/heads/gitbutler/WORKSPACE HEAD | Out-Null
+    Invoke-Checker -CheckerRoot $root25
+    Want-Status 0
+    Want-Contains 'SYNTHETIC_BASE|OK|'
+    Want-NotContains 'REFUSE'
+    Report-Scenario 'S25 differently-cased local workspace branch -> OK'
+
+    # S26: case-sensitive remote-tracking branch name matching -> OK.
+    Begin-Scenario
+    $root26 = New-DetachedRepo 's26'
+    & git -C $root26 update-ref refs/remotes/origin/gitbutler/WORKSPACE HEAD | Out-Null
+    Invoke-Checker -CheckerRoot $root26
+    Want-Status 0
+    Want-Contains 'SYNTHETIC_BASE|OK|'
+    Want-NotContains 'REFUSE'
+    Report-Scenario 'S26 differently-cased remote workspace branch -> OK'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
