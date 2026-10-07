@@ -265,6 +265,90 @@ s15() {
     want_contains 'CHANGELOG_GATE|INCOMPLETE|'
 }
 
+# S16: a commit carried ONLY by a tool-owned branch namespace (GitButler's
+# refs/heads/gitbutler/workspace) is positively tool-owned -> REFUSE.
+s16() {
+    local root
+    root="$(make_detached s16)"
+    git -C "$root" update-ref refs/heads/gitbutler/workspace HEAD
+    run_checker "$root"
+    want_status 1
+    want_contains 'SYNTHETIC_BASE|REFUSE|'
+    want_contains 'owned-branch=refs/heads/gitbutler/workspace'
+    want_contains 'SYNTHETIC_BASE|RECOVERY|'
+    want_contains 'docs/MAXIMS.md'
+}
+
+# S17: a tool-owned branch namespace PLUS an ordinary branch is ordinary -> OK
+# (a normal carrying branch always wins; Scenario 1).
+s17() {
+    local root
+    root="$(make_repo s17)"
+    printf 'work\n' > "$root/work.txt"
+    git -C "$root" add work.txt
+    git -C "$root" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'work commit'
+    git -C "$root" update-ref refs/heads/gitbutler/workspace HEAD
+    run_checker "$root"
+    want_status 0
+    want_contains 'SYNTHETIC_BASE|OK|'
+    want_not_contains 'REFUSE'
+}
+
+# S18: a comments-only signals file yields empty namespace arrays; the scan must
+# not error under set -u (bash 3.2 empty-array guard) and reports UNKNOWN.
+s18() {
+    local root
+    root="$(make_detached s18)"
+    printf '# comments only, no rows\n' > "$TMP/s18.txt"
+    run_checker "$root" --signals-file "$TMP/s18.txt"
+    want_status 0
+    want_contains 'SYNTHETIC_BASE|UNKNOWN|'
+    want_not_contains 'REFUSE'
+}
+
+# S19: the changelog gate fails closed when the detector file is absent instead
+# of silently skipping the preflight.
+s19() {
+    local root gate_dir
+    root="$(make_repo s19)"
+    gate_dir="$TMP/s19-gate"
+    mkdir -p "$gate_dir"
+    cp "$CHANGELOG_GATE" "$gate_dir/check-changelog-entry.sh"
+    STATUS=0
+    OUT="$(cd "$root" && bash "$gate_dir/check-changelog-entry.sh" --base HEAD --head HEAD 2>&1)" || STATUS=$?
+    want_status 2
+    want_contains 'CHANGELOG_GATE|INCOMPLETE|'
+    want_contains 'preflight missing'
+}
+
+# S20: a commit carried only by GitButler's ORDINARY target tracking branch is
+# not a synthetic workspace commit; the namespace must not match gitbutler/target.
+s20() {
+    local root
+    root="$(make_detached s20)"
+    git -C "$root" update-ref refs/heads/gitbutler/target HEAD
+    run_checker "$root"
+    want_status 0
+    want_contains 'SYNTHETIC_BASE|OK|'
+    want_not_contains 'REFUSE'
+}
+
+# S21: an ordinary detached commit that merely precedes the workspace-branch tip
+# is not refused — ownership is evidence about the inspected commit, not ancestry.
+s21() {
+    local root ancestor
+    root="$(make_detached s21)"
+    ancestor="$(git -C "$root" rev-parse HEAD)"
+    printf 's\n' > "$root/s.txt"
+    git -C "$root" add s.txt
+    git -C "$root" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'workspace snapshot'
+    git -C "$root" update-ref refs/heads/gitbutler/workspace HEAD
+    run_checker "$root" --commit "$ancestor"
+    want_status 0
+    want_contains 'SYNTHETIC_BASE|UNKNOWN|'
+    want_not_contains 'REFUSE'
+}
+
 begin; s1; report 'S1 normal branch HEAD -> OK'
 begin; s2; report 'S2 owned ref, no carrying branch -> REFUSE'
 begin; s3; report 'S3 unpushed carrying branch -> OK'
@@ -280,6 +364,12 @@ begin; s12; report 'S12 changelog gate refuses synthetic HEAD'
 begin; s13; report 'S13 ordinary ancestor of an owned ref tip -> UNKNOWN'
 begin; s14; report 'S14 changelog gate refuses a synthetic base with a normal head'
 begin; s15; report 'S15 changelog gate fails closed on an unmeasurable endpoint'
+begin; s16; report 'S16 tool-branch-only carrying -> REFUSE'
+begin; s17; report 'S17 tool branch + ordinary branch -> OK'
+begin; s18; report 'S18 comments-only signals (empty arrays) -> UNKNOWN, no shell error'
+begin; s19; report 'S19 changelog gate fails closed when preflight is missing'
+begin; s20; report 'S20 ordinary gitbutler/target-only carrying -> OK'
+begin; s21; report 'S21 ordinary ancestor of workspace tip -> UNKNOWN'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1
