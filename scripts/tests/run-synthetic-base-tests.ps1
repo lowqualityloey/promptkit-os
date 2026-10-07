@@ -340,6 +340,30 @@ try {
     Want-Contains 'CHANGELOG_GATE|INCOMPLETE|'
     Want-Contains 'preflight missing'
     Report-Scenario 'S19 changelog gate fails closed when preflight is missing'
+
+    # S20: a commit carried only by the ordinary target tracking branch is not refused.
+    Begin-Scenario
+    $root20 = New-DetachedRepo 's20'
+    & git -C $root20 update-ref refs/heads/gitbutler/target HEAD | Out-Null
+    Invoke-Checker -CheckerRoot $root20
+    Want-Status 0
+    Want-Contains 'SYNTHETIC_BASE|OK|'
+    Want-NotContains 'REFUSE'
+    Report-Scenario 'S20 ordinary gitbutler/target-only carrying -> OK'
+
+    # S21: an ordinary ancestor of the workspace-branch tip is not refused.
+    Begin-Scenario
+    $root21 = New-DetachedRepo 's21'
+    $ancestor21 = (& git -C $root21 rev-parse HEAD).Trim()
+    [IO.File]::WriteAllText((Join-Path $root21 's.txt'), "s`n", $utf8)
+    & git -C $root21 add s.txt | Out-Null
+    & git -C $root21 commit -qm 'workspace snapshot' | Out-Null
+    & git -C $root21 update-ref refs/heads/gitbutler/workspace HEAD | Out-Null
+    Invoke-Checker -CheckerRoot $root21 -ExtraArgs @('-Commit', $ancestor21)
+    Want-Status 0
+    Want-Contains 'SYNTHETIC_BASE|UNKNOWN|'
+    Want-NotContains 'REFUSE'
+    Report-Scenario 'S21 ordinary ancestor of workspace tip -> UNKNOWN'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }

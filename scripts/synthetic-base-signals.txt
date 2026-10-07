@@ -2,8 +2,10 @@
 #
 # Two positive evidence classes. Either one, on its own, marks a commit as
 # tool-owned; both are strict, and a malformed row fails the preflight closed as
-# INCOMPLETE. A commit carried by any ordinary branch is never refused, even when
-# a tool namespace also references it.
+# INCOMPLETE. Evidence must identify the INSPECTED COMMIT ITSELF, so both classes
+# test whether a ref points AT the commit (--points-at), never whether the commit
+# is merely reachable from one (--contains). A commit carried by any ordinary
+# branch is never refused, even when a tool namespace also references it.
 #
 # Row grammar:
 #   ref-namespace|<ref-prefix>
@@ -12,15 +14,19 @@
 #       ordinary and is not refused -- ownership must be evidence about the
 #       inspected commit itself.
 #   branch-namespace|<branch-prefix>
-#       EVERY carrying branch (refs/heads/*, or refs/remotes/<remote>/*) of the
-#       inspected commit lies inside <branch-prefix>. This is GitButler's real
-#       layout: its workspace commit is carried by refs/heads/gitbutler/workspace,
-#       while refs/gitbutler/ holds no refs. The namespace refuses only when it is
-#       the SOLE thing carrying the commit; any ordinary carrying branch keeps the
+#       The inspected commit is the TIP of a refs/heads/ branch under
+#       <branch-prefix>, and no ordinary branch carries it. A commit that merely
+#       precedes the branch tip (an ancestor) is ordinary. This is GitButler's real
+#       layout: its workspace commit is the tip of refs/heads/gitbutler/workspace,
+#       while refs/gitbutler/ holds no refs. Any ordinary carrying branch keeps the
 #       commit silent.
 #
-# Do NOT list ordinary work branches. This repository's refs/heads/codex/* are
-# real work branches, not synthetic bases; listing codex/ would refuse them.
+# Do NOT list ordinary work branches or a tool's whole namespace. This
+# repository's refs/heads/codex/* are real work branches, and GitButler's
+# refs/heads/gitbutler/target is an ordinary tracking branch whose tip is real
+# merged history (a single-parent commit, not a workspace snapshot) -- so
+# `gitbutler/` is too broad and `gitbutler/target` must not match. The row below
+# is the synthetic workspace identity specifically.
 #
 # Projects extend class (a) with the PROMPTKIT_SYNTHETIC_REFS_EXTRA environment
 # variable (whitespace-separated ref prefixes) or either class with a custom
@@ -29,4 +35,4 @@ ref-namespace|refs/gitbutler/
 ref-namespace|refs/orca/
 ref-namespace|refs/codex/
 ref-namespace|refs/cline/
-branch-namespace|gitbutler/
+branch-namespace|gitbutler/workspace

@@ -108,12 +108,11 @@ if ($script:gitStatus -ne 0 -or [string]::IsNullOrWhiteSpace($sha)) {
 $carrying = @(Invoke-LocalGit @('for-each-ref', '--contains', $sha, '--format=%(refname)', 'refs/heads', 'refs/remotes'))
 if ($script:gitStatus -ne 0) { Write-Output 'SYNTHETIC_BASE|INCOMPLETE|REFS|.'; exit 2 }
 
-# Partition the carrying refs. A commit carried by any ordinary branch is an
-# ordinary branch tip and is silent (Scenario 1), even when a tool-owned branch
-# namespace also carries it. A ref is tool-owned only when its branch name (after
-# refs/heads/ or refs/remotes/<remote>/) begins with a branch-namespace prefix.
+# Any ordinary branch containing the commit makes it an ordinary commit and it
+# is silent (Scenario 1), even when a tool-owned branch also contains it. A ref
+# is tool-owned only when its branch name (after refs/heads/ or
+# refs/remotes/<remote>/) begins with a branch-namespace prefix.
 $ordinaryCarrying = ''
-$toolBranch = ''
 foreach ($carryingRef in $carrying) {
     if ([string]::IsNullOrWhiteSpace([string]$carryingRef)) { continue }
     $refName = [string]$carryingRef
@@ -129,9 +128,7 @@ foreach ($carryingRef in $carrying) {
     foreach ($branchNs in $branchNamespaces) {
         if ($branchName.StartsWith($branchNs, [StringComparison]::Ordinal)) { $isToolBranch = $true; break }
     }
-    if ($isToolBranch) {
-        if ([string]::IsNullOrEmpty($toolBranch)) { $toolBranch = $refName }
-    } elseif ([string]::IsNullOrEmpty($ordinaryCarrying)) {
+    if (-not $isToolBranch -and [string]::IsNullOrEmpty($ordinaryCarrying)) {
         $ordinaryCarrying = $refName
     }
 }
@@ -141,10 +138,21 @@ if (-not [string]::IsNullOrEmpty($ordinaryCarrying)) {
     exit 0
 }
 
-# Positive class (b): the commit is carried only by tool-owned branch namespaces
-# (GitButler's refs/heads/gitbutler/workspace). Refuse.
-if (-not [string]::IsNullOrEmpty($toolBranch)) {
-    Write-Output ("SYNTHETIC_BASE|REFUSE|$sha|owned-branch=" + (ConvertTo-Sanitized $toolBranch))
+# Positive class (b): the inspected commit is the TIP of a tool-owned workspace
+# branch. Tip-only, never --contains: an ordinary commit that merely precedes a
+# workspace snapshot is not itself a workspace snapshot, and ownership must be
+# evidence about the inspected commit.
+$toolBranchTip = ''
+foreach ($branchNs in $branchNamespaces) {
+    $tip = @(Invoke-LocalGit @('for-each-ref', '--points-at', $sha, '--format=%(refname)', "refs/heads/$branchNs"))
+    if ($script:gitStatus -ne 0) { Write-Output 'SYNTHETIC_BASE|INCOMPLETE|REFS|.'; exit 2 }
+    if ($tip.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace([string]$tip[0])) {
+        $toolBranchTip = [string]$tip[0]
+        break
+    }
+}
+if (-not [string]::IsNullOrEmpty($toolBranchTip)) {
+    Write-Output ("SYNTHETIC_BASE|REFUSE|$sha|owned-branch=" + (ConvertTo-Sanitized $toolBranchTip))
     Write-Output 'SYNTHETIC_BASE|RECOVERY|Return to the carrying branch or rebase onto a real branch tip before deriving a base; never derive a base from a synthetic workspace commit (docs/MAXIMS.md)'
     exit 1
 }

@@ -137,12 +137,11 @@ carrying="$(local_git for-each-ref --contains "$sha" --format='%(refname)' refs/
     exit 2
 }
 
-# Partition the carrying refs. A commit carried by any ordinary branch is an
-# ordinary branch tip and is silent (Scenario 1), even when a tool-owned branch
-# namespace also carries it. A ref is tool-owned only when its branch name (after
-# refs/heads/ or refs/remotes/<remote>/) begins with a branch-namespace prefix.
+# Any ordinary branch containing the commit makes it an ordinary commit and it
+# is silent (Scenario 1), even when a tool-owned branch also contains it. A ref
+# is tool-owned only when its branch name (after refs/heads/ or
+# refs/remotes/<remote>/) begins with a branch-namespace prefix.
 ordinary_carrying=""
-tool_branch=""
 while IFS= read -r carrying_ref; do
     [[ -z "$carrying_ref" ]] && continue
     case "$carrying_ref" in
@@ -159,9 +158,7 @@ while IFS= read -r carrying_ref; do
             esac
         done
     fi
-    if [[ "$is_tool_branch" -eq 1 ]]; then
-        [[ -z "$tool_branch" ]] && tool_branch="$carrying_ref"
-    else
+    if [[ "$is_tool_branch" -eq 0 ]]; then
         [[ -z "$ordinary_carrying" ]] && ordinary_carrying="$carrying_ref"
     fi
 done <<< "$carrying"
@@ -171,10 +168,26 @@ if [[ -n "$ordinary_carrying" ]]; then
     exit 0
 fi
 
-# Positive class (b): the commit is carried only by tool-owned branch namespaces
-# (GitButler's refs/heads/gitbutler/workspace). Refuse.
-if [[ -n "$tool_branch" ]]; then
-    printf 'SYNTHETIC_BASE|REFUSE|%s|owned-branch=%s\n' "$sha" "$(sanitize "$tool_branch")"
+# Positive class (b): the inspected commit is the TIP of a tool-owned workspace
+# branch (GitButler's refs/heads/gitbutler/workspace). Tip-only, never --contains:
+# an ordinary commit that merely precedes a workspace snapshot is not itself a
+# workspace snapshot, and ownership must be evidence about the inspected commit.
+tool_branch_tip=""
+# Explicit length guard: bash 3.2 errors on an empty array under `set -u`.
+if [[ "${#branch_namespaces[@]}" -gt 0 ]]; then
+    for branch_ns in "${branch_namespaces[@]}"; do
+        tip="$(local_git for-each-ref --points-at "$sha" --format='%(refname)' "refs/heads/$branch_ns")" || {
+            printf 'SYNTHETIC_BASE|INCOMPLETE|REFS|.\n'
+            exit 2
+        }
+        if [[ -n "$tip" ]]; then
+            tool_branch_tip="${tip%%$'\n'*}"
+            break
+        fi
+    done
+fi
+if [[ -n "$tool_branch_tip" ]]; then
+    printf 'SYNTHETIC_BASE|REFUSE|%s|owned-branch=%s\n' "$sha" "$(sanitize "$tool_branch_tip")"
     printf 'SYNTHETIC_BASE|RECOVERY|Return to the carrying branch or rebase onto a real branch tip before deriving a base; never derive a base from a synthetic workspace commit (docs/MAXIMS.md)\n'
     exit 1
 fi

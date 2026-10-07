@@ -321,6 +321,34 @@ s19() {
     want_contains 'preflight missing'
 }
 
+# S20: a commit carried only by GitButler's ORDINARY target tracking branch is
+# not a synthetic workspace commit; the namespace must not match gitbutler/target.
+s20() {
+    local root
+    root="$(make_detached s20)"
+    git -C "$root" update-ref refs/heads/gitbutler/target HEAD
+    run_checker "$root"
+    want_status 0
+    want_contains 'SYNTHETIC_BASE|OK|'
+    want_not_contains 'REFUSE'
+}
+
+# S21: an ordinary detached commit that merely precedes the workspace-branch tip
+# is not refused — ownership is evidence about the inspected commit, not ancestry.
+s21() {
+    local root ancestor
+    root="$(make_detached s21)"
+    ancestor="$(git -C "$root" rev-parse HEAD)"
+    printf 's\n' > "$root/s.txt"
+    git -C "$root" add s.txt
+    git -C "$root" -c user.name=Fixture -c user.email=fixture@example.invalid commit -qm 'workspace snapshot'
+    git -C "$root" update-ref refs/heads/gitbutler/workspace HEAD
+    run_checker "$root" --commit "$ancestor"
+    want_status 0
+    want_contains 'SYNTHETIC_BASE|UNKNOWN|'
+    want_not_contains 'REFUSE'
+}
+
 begin; s1; report 'S1 normal branch HEAD -> OK'
 begin; s2; report 'S2 owned ref, no carrying branch -> REFUSE'
 begin; s3; report 'S3 unpushed carrying branch -> OK'
@@ -340,6 +368,8 @@ begin; s16; report 'S16 tool-branch-only carrying -> REFUSE'
 begin; s17; report 'S17 tool branch + ordinary branch -> OK'
 begin; s18; report 'S18 comments-only signals (empty arrays) -> UNKNOWN, no shell error'
 begin; s19; report 'S19 changelog gate fails closed when preflight is missing'
+begin; s20; report 'S20 ordinary gitbutler/target-only carrying -> OK'
+begin; s21; report 'S21 ordinary ancestor of workspace tip -> UNKNOWN'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1
