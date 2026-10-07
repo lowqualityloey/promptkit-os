@@ -139,7 +139,16 @@ try {
     Set-Content -LiteralPath (Join-Path $repo '.gitignore') -Value 'src/m2/ignored.ts'
     Set-Content -LiteralPath (Join-Path $repo 'src/m2/ignored.ts') -Value 'unauthorized'
     Assert-Case 'ignored untracked M2 file fails' $bundle 1 'repository|FAIL|m2-path=src/m2/ignored.ts'
-    Write-Output 'MILESTONE_EVIDENCE_FIXTURES|PASS|21 cases'
+
+    $bundle = New-Bundle 'synthetic-base'
+    $repo = Join-Path $bundle 'repository'
+    Invoke-Git $repo @('checkout', '-q', '--detach', 'HEAD')
+    Set-Content -LiteralPath (Join-Path $repo 'src/synthetic.ts') -Value 'synthetic'
+    Invoke-Git $repo @('add', 'src/synthetic.ts')
+    Invoke-Git $repo @('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'synthetic workspace commit')
+    Invoke-Git $repo @('update-ref', 'refs/gitbutler/wt', 'HEAD')
+    Assert-Case 'synthetic workspace HEAD is refused' $bundle 2 'repository|INVALID|synthetic-base'
+    Write-Output 'MILESTONE_EVIDENCE_FIXTURES|PASS|22 cases'
 } finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force
 }

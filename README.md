@@ -252,7 +252,7 @@ PromptKit routes the task to the appropriate ceremony level and workflow. Explic
 | **[docs/stacks/](./docs/stacks/)** | I want JIT stack playbooks (16 — Web, DB, Cloud, Mobile, Systems, CLI) |
 | **[docs/recipes/](./docs/recipes/)** | I want reusable boundary contracts (8 — Auth, Forms, Webhooks, Env, Testing + 3 pk:auto utilities) |
 | **[docs/ADOPTION-GUIDE.md](./docs/ADOPTION-GUIDE.md)** | I want to add it to an existing project gradually |
-| **[docs/MAXIMS.md](./docs/MAXIMS.md)** | I want the quotable invariants — 8 one-line maxims with canonical links |
+| **[docs/MAXIMS.md](./docs/MAXIMS.md)** | I want the quotable invariants — 9 one-line maxims with canonical links |
 | **[CONTRIBUTING.md](./CONTRIBUTING.md)** | I want to extend or contribute |
 
 ---

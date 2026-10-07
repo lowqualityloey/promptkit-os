@@ -48,6 +48,8 @@ Hosts that expose no compaction or continuation signal cannot reliably detect it
 
 Before responding, the AI assistant inspects the physical workspace. If the environment grants no workspace access, skip to the fallback: report which checks could not execute and emit `Quality Gate: not measured` — never a claim of "synced" (Provenance Invariant: no executed proof → no green claim).
 
+> **Synthetic-base preflight (read-only).** Before any base-deriving comparison in this workflow — the drift audit's `merge-base --is-ancestor HEAD <upstream-ref>`, a review fixed point, a PR base, or a changelog range — run `scripts/check-synthetic-base.sh` / `.ps1`. It refuses (exit 1) only when `HEAD` is positively tool-owned (reachable from a tool-namespace ref such as `refs/gitbutler/*` and carried by no branch); a detached real commit reports `UNKNOWN` and proceeds. On refusal, return to the carrying branch or rebase onto a real branch tip. Never derive a base from a synthetic workspace commit ([`docs/MAXIMS.md`](../docs/MAXIMS.md)).
+
 1. **Verify Root Directive Files**:
     Confirm that active host configuration files (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.github/copilot-instructions.md`) contain the latest `<!-- PROMPTKIT_START -->` block.
 2. **Backfill Missing `tracking:` Line (One-Time Migration)**:
