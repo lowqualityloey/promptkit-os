@@ -47,10 +47,12 @@ function Want-AllOk {
 }
 
 function Invoke-Doctor {
-    param([string]$Root, [string[]]$ExtraArgs = @(), [hashtable]$EnvOverrides = @{})
-    $checkerLocal = Join-Path $Root '.promptkit/scripts/check-doctor.ps1'
-    if (-not (Test-Path -LiteralPath $checkerLocal -PathType Leaf)) { $checkerLocal = $script:SrcChecker }
-    $arguments = @('-NoProfile', '-File', $checkerLocal, '-KitRoot', $Root) + $ExtraArgs
+    param([string]$Root, [string[]]$ExtraArgs = @(), [hashtable]$EnvOverrides = @{}, [string]$Checker = '')
+    if ([string]::IsNullOrEmpty($Checker)) {
+        $Checker = Join-Path $Root '.promptkit/scripts/check-doctor.ps1'
+        if (-not (Test-Path -LiteralPath $Checker -PathType Leaf)) { $Checker = $script:SrcChecker }
+    }
+    $arguments = @('-NoProfile', '-File', $Checker, '-KitRoot', $Root) + $ExtraArgs
     $saved = @{}
     foreach ($key in $EnvOverrides.Keys) {
         $saved[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
@@ -454,6 +456,43 @@ try {
     Want-Contains "host:AGENTS.md`tMISSING"
     Want-Contains 'universal host file absent'
     Report-Scenario 'N4 deleted AGENTS.md -> MISSING, exit 1'
+
+    # N5: the engine lives OUTSIDE the project root (a project that does not
+    # contain the running kit). The kit-directory ignore row must degrade to
+    # SKIP(engine outside project root); the phantom basename must never be OK.
+    Begin-Scenario
+    $rootN5 = Join-Path $tmp 'n5-project'
+    $engineN5 = Join-Path $tmp 'n5-engine'
+    New-Item -ItemType Directory -Path (Join-Path $rootN5 'docs/tasks') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $rootN5 '.opencode') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $rootN5 '.github') -Force | Out-Null
+    [IO.File]::WriteAllText((Join-Path $rootN5 'PROMPTKIT.md'), "profile: balanced`n", $utf8)
+    foreach ($sub in @('scripts', 'templates', 'workflows')) {
+        New-Item -ItemType Directory -Path (Join-Path $engineN5 $sub) -Force | Out-Null
+    }
+    Copy-Item -LiteralPath $script:SrcChecker -Destination (Join-Path $engineN5 'scripts/check-doctor.ps1')
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'templates/agent-directive-template.md') -Destination (Join-Path $engineN5 'templates/agent-directive-template.md')
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'templates/agent-directive-lite-template.md') -Destination (Join-Path $engineN5 'templates/agent-directive-lite-template.md')
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'workflows/route.md') -Destination (Join-Path $engineN5 'workflows/route.md')
+    Invoke-SetupGit $engineN5 @('init', '-q')
+    Invoke-SetupGit $engineN5 @('config', 'user.name', 'Fixture')
+    Invoke-SetupGit $engineN5 @('config', 'user.email', 'fixture@example.invalid')
+    [IO.File]::WriteAllText((Join-Path $engineN5 'ENGINE.md'), "# engine`n", $utf8)
+    Invoke-SetupGit $engineN5 @('add', '-A')
+    Invoke-SetupGit $engineN5 @('commit', '-qm', 'engine base')
+    Invoke-SetupGit $engineN5 @('branch', '-M', 'main')
+    Invoke-SetupGit $engineN5 @('update-ref', 'refs/remotes/origin/main', 'HEAD')
+    Invoke-SetupGit $rootN5 @('init', '-q')
+    $shaN5 = Get-ShortSha $engineN5
+    Write-Hosts $rootN5 $shaN5
+    Write-State $rootN5 $shaN5
+    Write-Task $rootN5 'TASK-2026-01-01-fixture' 'completed'
+    Invoke-Doctor -Root $rootN5 -Checker (Join-Path $engineN5 'scripts/check-doctor.ps1')
+    Want-Status 0
+    Want-Contains "ignore:n5-engine`tSKIP(engine outside project root)`t-`t-"
+    Want-NotContains "ignore:n5-engine`tOK"
+    Want-NotContains "ignore:n5-engine`tINCOMPLETE"
+    Report-Scenario 'N5 engine outside project root -> kit-dir ignore SKIP, no phantom OK'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }

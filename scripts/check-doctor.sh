@@ -74,12 +74,17 @@ kit_root="$(builtin cd -- "$kit_root" && pwd -P)" || exit 2
 # Version/ignore-rich git operations and path rendering must target the right one.
 project_root="$kit_root"
 engine_dir="$engine_root"
+engine_outside_project=0
 if [[ "$engine_dir" == "$project_root" ]]; then
     engine_relpath="."
 elif [[ "$engine_dir" == "$project_root"/* ]]; then
     engine_relpath="${engine_dir#"$project_root"/}"
 else
+    # Engine is neither the project root nor under it: engine_relpath is only a
+    # display fallback. The basename does not exist under the project, so the
+    # ignore-state check must not run git check-ignore on this phantom path.
     engine_relpath="$(basename -- "$engine_dir")"
+    engine_outside_project=1
 fi
 
 # The kit root must carry PROMPTKIT.md; without it no check has a scope to run
@@ -347,16 +352,28 @@ check_ignore_one() {
 
 check_ignore_state() {
     if [[ ! -e "$project_root/.git" ]]; then
-        emit "ignore:$engine_relpath" 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' 'Ignore state is not measurable without a git repository'
+        if [[ "$engine_outside_project" -eq 1 ]]; then
+            emit "ignore:$engine_relpath" 'SKIP(engine outside project root)' '-' '-'
+        else
+            emit "ignore:$engine_relpath" 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' 'Ignore state is not measurable without a git repository'
+        fi
         emit 'ignore:PROMPTKIT.md' 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' '-'
         emit 'ignore:docs' 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' '-'
         return 0
     fi
     if ! command -v git >/dev/null 2>&1; then
-        emit "ignore:$engine_relpath" 'SKIP(git unavailable)' 'git unavailable' 'Install git to inspect ignore state'
+        if [[ "$engine_outside_project" -eq 1 ]]; then
+            emit "ignore:$engine_relpath" 'SKIP(engine outside project root)' '-' '-'
+        else
+            emit "ignore:$engine_relpath" 'SKIP(git unavailable)' 'git unavailable' 'Install git to inspect ignore state'
+        fi
         return 0
     fi
-    check_ignore_one "$engine_relpath"
+    if [[ "$engine_outside_project" -eq 1 ]]; then
+        emit "ignore:$engine_relpath" 'SKIP(engine outside project root)' '-' '-'
+    else
+        check_ignore_one "$engine_relpath"
+    fi
     check_ignore_one 'PROMPTKIT.md'
     check_ignore_one 'docs'
     # Explicit length guard: bash 3.2 errors on an empty array under `set -u`.

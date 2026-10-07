@@ -105,12 +105,17 @@ $projectRoot = $kitRoot
 $scriptDir = $PSScriptRoot
 $engineDir = Split-Path -Parent $scriptDir
 $engineRelpath = '.'
+$engineOutsideProject = $false
 if ($engineDir -eq $projectRoot) {
     $engineRelpath = '.'
 } elseif ($engineDir.StartsWith($projectRoot + [IO.Path]::DirectorySeparatorChar) -or $engineDir.StartsWith($projectRoot + [IO.Path]::AltDirectorySeparatorChar)) {
     $engineRelpath = $engineDir.Substring($projectRoot.Length).TrimStart([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
 } else {
+    # Engine is neither the project root nor under it: engineRelpath is only a
+    # display fallback. The basename does not exist under the project, so the
+    # ignore-state check must not run git check-ignore on this phantom path.
     $engineRelpath = Split-Path -Leaf $engineDir
+    $engineOutsideProject = $true
 }
 $profilePath = Join-Path $kitRoot 'PROMPTKIT.md'
 
@@ -379,16 +384,28 @@ function Test-IgnoreOne {
 
 function Check-IgnoreState {
     if (-not (Test-Path -LiteralPath (Join-Path $projectRoot '.git'))) {
-        Emit "ignore:$engineRelpath" 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' 'Ignore state is not measurable without a git repository'
+        if ($engineOutsideProject) {
+            Emit "ignore:$engineRelpath" 'SKIP(engine outside project root)' '-' '-'
+        } else {
+            Emit "ignore:$engineRelpath" 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' 'Ignore state is not measurable without a git repository'
+        }
         Emit 'ignore:PROMPTKIT.md' 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' '-'
         Emit 'ignore:docs' 'SKIP(not-a-git-install)' 'no .git in project root (courier install)' '-'
         return
     }
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        Emit "ignore:$engineRelpath" 'SKIP(git unavailable)' 'git unavailable' 'Install git to inspect ignore state'
+        if ($engineOutsideProject) {
+            Emit "ignore:$engineRelpath" 'SKIP(engine outside project root)' '-' '-'
+        } else {
+            Emit "ignore:$engineRelpath" 'SKIP(git unavailable)' 'git unavailable' 'Install git to inspect ignore state'
+        }
         return
     }
-    Test-IgnoreOne $engineRelpath
+    if ($engineOutsideProject) {
+        Emit "ignore:$engineRelpath" 'SKIP(engine outside project root)' '-' '-'
+    } else {
+        Test-IgnoreOne $engineRelpath
+    }
     Test-IgnoreOne 'PROMPTKIT.md'
     Test-IgnoreOne 'docs'
     foreach ($hrel in $installedHosts) { Test-IgnoreOne $hrel }

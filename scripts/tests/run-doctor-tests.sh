@@ -430,6 +430,42 @@ n4() {
     want_contains 'universal host file absent'
 }
 
+# N5: the engine lives OUTSIDE the project root (a project that does not contain
+# the running kit). The kit-directory ignore row must degrade to
+# SKIP(engine outside project root); the phantom basename must never report OK.
+n5() {
+    local root engine sha base
+    root="$TMP/n5-project"
+    engine="$TMP/n5-engine"
+    base="$(basename -- "$engine")"
+    mkdir -p "$root/docs/tasks" "$root/.opencode" "$root/.github"
+    printf 'profile: balanced\n' > "$root/PROMPTKIT.md"
+    mkdir -p "$engine/scripts" "$engine/templates" "$engine/workflows"
+    cp "$SRC_CHECKER" "$engine/scripts/check-doctor.sh"
+    cp "$REPO_ROOT/templates/agent-directive-template.md" "$engine/templates/"
+    cp "$REPO_ROOT/templates/agent-directive-lite-template.md" "$engine/templates/"
+    cp "$REPO_ROOT/workflows/route.md" "$engine/workflows/"
+    git -C "$engine" init -q
+    git -C "$engine" config user.name Fixture
+    git -C "$engine" config user.email fixture@example.invalid
+    printf '# engine\n' > "$engine/ENGINE.md"
+    git -C "$engine" add -A
+    git -C "$engine" commit -qm 'engine base'
+    git -C "$engine" branch -M main 2>/dev/null || true
+    git -C "$engine" update-ref refs/remotes/origin/main HEAD
+    git -C "$root" init -q
+    sha="$(git -C "$engine" rev-parse --short HEAD)"
+    write_hosts "$root" "$sha"
+    write_state "$root" "$sha"
+    write_task "$root" "TASK-2026-01-01-fixture" "completed"
+    STATUS=0
+    OUT="$(bash "$engine/scripts/check-doctor.sh" "$root" 2>&1)" || STATUS=$?
+    want_status 0
+    want_contains "ignore:$base"$'\tSKIP(engine outside project root)\t-\t-'
+    want_not_contains "ignore:$base"$'\tOK'
+    want_not_contains "ignore:$base"$'\tINCOMPLETE'
+}
+
 begin; s1; report 'S1 healthy Balanced install -> all OK, exit 0'
 begin; s2; report 'S2 stale engine + ignored path + diverged projection -> exit 1'
 begin; s3; report 'S3 intentional ignore alone -> IGNORED, exit 0'
@@ -444,6 +480,7 @@ begin; n1; report 'N1 nested engine STALE(+1) against its own origin/main + engi
 begin; n2; report 'N2 --fix renders <engine_relpath>/workflows/... and path exists'
 begin; n3; report 'N3 docs-drift compares shared fields, DIVERGED/SKIP, never bare OK'
 begin; n4; report 'N4 deleted AGENTS.md -> MISSING, exit 1'
+begin; n5; report 'N5 engine outside project root -> kit-dir ignore SKIP, no phantom OK'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1
