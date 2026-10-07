@@ -179,12 +179,15 @@ FIXTURE="$TEST_ROOT/t12/kit"; mkdir -p "$FIXTURE/scripts"
 cp -R "$REPO_ROOT/templates" "$FIXTURE/"
 cp "$REPO_ROOT/scripts/terminal-picker.sh" "$FIXTURE/scripts/" 2>/dev/null || true
 cp "$REPO_ROOT/init.sh" "$FIXTURE/"
+# The install-door assert (#549) needs its checker in the kit; this synthetic partial
+# kit ships it and opts out, since its subject is adversarial-tag stamp robustness.
+cp "$REPO_ROOT/scripts/check-setup-assert.sh" "$FIXTURE/scripts/"
 git -C "$FIXTURE" init -q .
 git -C "$FIXTURE" add -A
 git -C "$FIXTURE" -c user.email=fixture@example.invalid -c user.name=fixture commit -qm "fixture"
 git -C "$FIXTURE" tag 'v1.0.0-x|y&z'
 D="$TEST_ROOT/t12/proj"; mkdir -p "$D"
-bash "$FIXTURE/init.sh" --balanced --engine-version=v9.8.7 --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1
+PROMPTKIT_NO_PREFLIGHT=1 bash "$FIXTURE/init.sh" --balanced --engine-version=v9.8.7 --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1
 if [[ -f "$D/AGENTS.md" ]] \
    && grep -Eq '^Engine: [A-Za-z0-9._+-]+ \([0-9a-f]{7,}\) — stamped at install time' "$D/AGENTS.md" \
    && ! grep -q '^Engine: v9.8.7 ' "$D/AGENTS.md" \
