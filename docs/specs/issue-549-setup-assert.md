@@ -44,7 +44,7 @@ Additionally, the kit directory may be `.promptkit/` **or** `promptkit/` (`proto
 * **[ ] Never print success on an unmeasured result:** an unexpected git exit status is `INCOMPLETE`, never `PASS`.
 * **[ ] Resolved kit path only:** all probes use `SCRIPT_DIR` / `KIT_DIR_REL` (`init.sh` (anchor: `KIT_DIR_REL="${SCRIPT_DIR#$PROJECT_ROOT/}"`)), so both `.promptkit/` and `promptkit/` layouts work.
 * **[ ] Advisory opt-out honored:** `PROMPTKIT_NO_PREFLIGHT=1` downgrades this check to advisory, consistent with the existing preflight.
-* **[ ] Token figures repropagated:** this issue adds a reference row to `workflows/route.md`, one of the six files summed into the core-six measurement. Run `bash scripts/measure-tokens.sh` (no `--strict`) and read its `Monolithic (core-6 subset derived)` and `Monolithic (full N-workflow set)` lines — even a prose-only addition moves the total. `scripts/tests/run-behavioral-contract-tests.sh` asserts the published cells equal measurement output, so re-measure and update `docs/BENCHMARKS.md` in the same PR (`docs/BENCHMARKS.md` (anchor: `| Core-six Lite subset | 6 | **30,966 tok** |`)).
+* **[ ] Installer-only scope:** implement and test the structural assert in the Bash and PowerShell installers without changing `workflows/route.md`, any other measured workflow or template, or `protocols/code-quality-gate.md`. The published token figures and provenance anchor in `docs/BENCHMARKS.md` remain unchanged.
 * **[ ] Twin parity:** identical behavior in `init.ps1` (`CONTRIBUTING.md` (anchor: `**Behavioral Contract & Parity**`); `PROMPTKIT.md` (anchor: `Bash/PowerShell twin parity`)).
 
 ### Out of Scope

@@ -585,7 +585,126 @@ try {
         throw "Failed Test 26: Explicit -Profile balanced failed to override installed profile: lite."
     }
 
-    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, and transaction rollback tests passed." -ForegroundColor Green
+    # Test 27-33: Install-door structural assert. init.ps1 calls
+    # scripts/check-setup-assert.ps1 after the rollback block and before the
+    # banner; a non-zero result exits without printing the success banner.
+    function New-AssertKitCopy {
+        param([string]$Destination)
+        New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+        Get-ChildItem -LiteralPath $RepoRoot -Force |
+            Where-Object { $_.Name -notin @('.git', '.codegraph') } |
+            ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force }
+    }
+
+    function Invoke-InitAssert {
+        param([string]$InitPath, [string]$ProjectPath)
+        $captured = & pwsh -NoProfile -File $InitPath -Profile balanced -ProjectRoot $ProjectPath 2>&1 | Out-String
+        return [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = $captured }
+    }
+
+    $savedNoInteractive = $env:PROMPTKIT_NO_INTERACTIVE
+    $savedNoPreflight = $env:PROMPTKIT_NO_PREFLIGHT
+    $env:PROMPTKIT_NO_INTERACTIVE = '1'
+    Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+    try {
+        # Test 27: Courier door - a complete kit copy with no .git asserts tree OK.
+        $courierKit = Join-Path $TestRoot 'assert-courier-kit'
+        New-AssertKitCopy $courierKit
+        $courierProj = Join-Path $TestRoot 'assert-courier-proj'
+        New-Item -ItemType Directory -Path $courierProj -Force | Out-Null
+        $courier = Invoke-InitAssert -InitPath (Join-Path $courierKit 'init.ps1') -ProjectPath $courierProj
+        if ($courier.ExitCode -ne 0) { throw "Failed Test 27 (courier): expected exit 0, got $($courier.ExitCode)." }
+        if (-not $courier.Output.Contains('ASSERT|courier|tree|OK')) { throw "Failed Test 27 (courier): missing ASSERT|courier|tree|OK." }
+        if (-not $courier.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 27 (courier): missing success banner." }
+
+        # Test 28: Partial-copy door - missing engine files FAIL, exit 1, no banner, no rollback.
+        $partialKit = Join-Path $TestRoot 'assert-partial-kit'
+        New-AssertKitCopy $partialKit
+        Remove-Item -LiteralPath (Join-Path $partialKit 'workflows/route.md') -Force
+        Remove-Item -LiteralPath (Join-Path $partialKit 'templates/project-profile-template.md') -Force
+        $partialProj = Join-Path $TestRoot 'assert-partial-proj'
+        New-Item -ItemType Directory -Path $partialProj -Force | Out-Null
+        $partial = Invoke-InitAssert -InitPath (Join-Path $partialKit 'init.ps1') -ProjectPath $partialProj
+        if ($partial.ExitCode -ne 1) { throw "Failed Test 28 (partial-copy): expected exit 1, got $($partial.ExitCode)." }
+        if (-not $partial.Output.Contains('ASSERT|partial-copy|missing:workflows/route.md|FAIL')) { throw "Failed Test 28 (partial-copy): missing route.md FAIL line." }
+        if (-not $partial.Output.Contains('ASSERT|partial-copy|missing:templates/project-profile-template.md|FAIL')) { throw "Failed Test 28 (partial-copy): missing template FAIL line." }
+        if (-not $partial.Output.Contains('ASSERT|partial-copy|remedy|')) { throw "Failed Test 28 (partial-copy): missing remedy line." }
+        if ($partial.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 28 (partial-copy): success banner printed on failure." }
+        if (-not (Test-Path -LiteralPath (Join-Path $partialProj 'PROMPTKIT.md'))) { throw "Failed Test 28 (partial-copy): install rolled back (PROMPTKIT.md missing)." }
+
+        # Test 29: Direct-clone door - the kit carries its own .git and resolves to itself.
+        $directKit = Join-Path $TestRoot 'assert-direct-kit'
+        New-AssertKitCopy $directKit
+        & git -C $directKit init -q
+        $directProj = Join-Path $TestRoot 'assert-direct-proj'
+        New-Item -ItemType Directory -Path $directProj -Force | Out-Null
+        $direct = Invoke-InitAssert -InitPath (Join-Path $directKit 'init.ps1') -ProjectPath $directProj
+        if ($direct.ExitCode -ne 0) { throw "Failed Test 29 (direct-clone): expected exit 0, got $($direct.ExitCode)." }
+        if (-not $direct.Output.Contains('ASSERT|direct-clone|repository|OK')) { throw "Failed Test 29 (direct-clone): missing ASSERT line." }
+        if (-not $direct.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 29 (direct-clone): missing banner." }
+
+        # Test 30: Submodule door - a real local-git submodule asserts status OK.
+        $subKitRepo = Join-Path $TestRoot 'assert-sub-kitrepo'
+        New-AssertKitCopy $subKitRepo
+        & git -C $subKitRepo init -q
+        & git -C $subKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $subKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        if ($LASTEXITCODE -ne 0) { throw "Failed Test 30 (submodule): kit repo commit failed with exit $LASTEXITCODE." }
+        $subHost = Join-Path $TestRoot 'assert-sub-host'
+        New-Item -ItemType Directory -Path $subHost -Force | Out-Null
+        & git -C $subHost init -q
+        $subKitUrl = $subKitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $subHost submodule add -q $subKitUrl .promptkit
+        if ($LASTEXITCODE -ne 0) { throw "Failed Test 30 (submodule): 'git submodule add' failed with exit $LASTEXITCODE." }
+        $sub = Invoke-InitAssert -InitPath (Join-Path $subHost '.promptkit/init.ps1') -ProjectPath $subHost
+        if ($sub.ExitCode -ne 0) { throw "Failed Test 30 (submodule): expected exit 0, got $($sub.ExitCode)." }
+        if (-not $sub.Output.Contains('ASSERT|submodule|status|OK')) { throw "Failed Test 30 (submodule): missing ASSERT line." }
+        if (-not $sub.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 30 (submodule): missing banner." }
+
+        # Test 31: Standalone door - the kit directory is the project root.
+        $standaloneKit = Join-Path $TestRoot 'standalone_kit'
+        New-AssertKitCopy $standaloneKit
+        $standalone = Invoke-InitAssert -InitPath (Join-Path $standaloneKit 'init.ps1') -ProjectPath $standaloneKit
+        if ($standalone.ExitCode -ne 0) { throw "Failed Test 31 (standalone): expected exit 0, got $($standalone.ExitCode)." }
+        if (-not $standalone.Output.Contains('ASSERT|standalone|tree|OK')) { throw "Failed Test 31 (standalone): missing ASSERT line." }
+        if (-not $standalone.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 31 (standalone): missing banner." }
+
+        # Test 32: Opt-out - PROMPTKIT_NO_PREFLIGHT=1 yields SKIP and proceeds.
+        $env:PROMPTKIT_NO_PREFLIGHT = '1'
+        $optout = Invoke-InitAssert -InitPath (Join-Path $courierKit 'init.ps1') -ProjectPath $courierProj
+        Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+        if ($optout.ExitCode -ne 0) { throw "Failed Test 32 (opt-out): expected exit 0, got $($optout.ExitCode)." }
+        if (-not $optout.Output.Contains('ASSERT|skipped|USER_OPT_OUT|SKIP')) { throw "Failed Test 32 (opt-out): missing SKIP line." }
+        if (-not $optout.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 32 (opt-out): missing banner." }
+
+        # Test 33: Unexpected git status is fail-closed to INCOMPLETE (exit 2, no banner).
+        $fakeGitDir = Join-Path $TestRoot 'assert-fakegit'
+        New-Item -ItemType Directory -Path $fakeGitDir -Force | Out-Null
+        if ($IsWindows) {
+            [System.IO.File]::WriteAllText((Join-Path $fakeGitDir 'git.cmd'), "@echo off`r`nexit /b 42`r`n", $utf8NoBom)
+        } else {
+            $fakeGit = Join-Path $fakeGitDir 'git'
+            [System.IO.File]::WriteAllText($fakeGit, "#!/usr/bin/env bash`nexit 42`n", $utf8NoBom)
+            & chmod +x $fakeGit
+        }
+        $gitfailProj = Join-Path $TestRoot 'assert-gitfail-proj'
+        New-Item -ItemType Directory -Path $gitfailProj -Force | Out-Null
+        $savedPath = $env:PATH
+        $env:PATH = $fakeGitDir + [System.IO.Path]::PathSeparator + $savedPath
+        try {
+            $gitfail = Invoke-InitAssert -InitPath (Join-Path $directKit 'init.ps1') -ProjectPath $gitfailProj
+        } finally {
+            $env:PATH = $savedPath
+        }
+        if ($gitfail.ExitCode -ne 2) { throw "Failed Test 33 (unexpected git): expected exit 2, got $($gitfail.ExitCode)." }
+        if (-not $gitfail.Output.Contains('ASSERT|unknown|host_git|INCOMPLETE')) { throw "Failed Test 33 (unexpected git): missing INCOMPLETE line." }
+        if ($gitfail.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 33 (unexpected git): banner printed on INCOMPLETE." }
+    } finally {
+        if ($null -eq $savedNoInteractive) { Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_INTERACTIVE = $savedNoInteractive }
+        if ($null -eq $savedNoPreflight) { Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_PREFLIGHT = $savedNoPreflight }
+    }
+
+    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, and install-door structural-assert tests passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

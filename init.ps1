@@ -1157,6 +1157,22 @@ try {
     }
 }
 
+# 8. Install-door structural assert (#549). Must stay after the rollback block
+# and before the banner: a non-zero result fails the install without rollback.
+$assertRc = 0
+try {
+    & (Join-Path $ScriptDir 'scripts/check-setup-assert.ps1') -ProjectRoot $ProjectRootPath -KitDir $ScriptDir -KitDirRel $KitDirRel
+    $assertRc = $LASTEXITCODE
+} catch {
+    Write-Output 'ASSERT|unknown|checker|INCOMPLETE'
+    exit 2
+}
+if ($assertRc -eq 1) { exit 1 }
+if ($assertRc -ne 0) {
+    if ($assertRc -ne 2) { Write-Output 'ASSERT|unknown|checker|INCOMPLETE' }
+    exit 2
+}
+
 Write-Host "`n✨ PromptKit OS successfully configured for $ProjectRoot! ($Profile profile)" -ForegroundColor Cyan
 if ($Profile -eq "lite") {
     Write-Host "   Lite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok" -ForegroundColor Green

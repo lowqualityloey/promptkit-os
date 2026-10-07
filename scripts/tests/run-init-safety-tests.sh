@@ -463,4 +463,131 @@ target_perm_after="$(stat -c '%a' "$PERM_ROOT/private_target.md" 2>/dev/null || 
 [[ "$perm_after" == "600" ]]
 [[ "$target_perm_after" == "600" ]]
 
-echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, and byte-idempotency tests passed."
+# --- Install-door structural assert (scripts/check-setup-assert.sh, #549) ---
+# A kit copy is a complete engine tree with no .git; each door differs only in
+# how that tree is presented. Every scenario asserts the exact ASSERT
+# classification line(s), the installer exit code, and the success banner.
+
+copy_kit() {
+    local dest="$1"
+    mkdir -p "$dest"
+    tar -C "$REPO_ROOT" --exclude=.git --exclude=.codegraph -cf - . | tar -C "$dest" -xf -
+}
+
+# Test 27: courier door — complete kit tree with no .git classifies as courier
+COURIER_PROJ="$TEST_ROOT/assert_courier_project"
+COURIER_KIT="$TEST_ROOT/assert_courier_kit"
+copy_kit "$COURIER_KIT"
+mkdir -p "$COURIER_PROJ"
+if courier_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$COURIER_KIT/init.sh" --balanced "$COURIER_PROJ" 2>&1)"; then
+    courier_rc=0
+else
+    courier_rc=$?
+fi
+[[ "$courier_rc" -eq 0 ]]
+grep -q '^ASSERT|courier|tree|OK$' <<<"$courier_out"
+grep -q 'PromptKit OS successfully configured' <<<"$courier_out"
+
+# Test 28: partial-copy door — missing manifest files FAIL loudly without rollback
+PARTIAL_PROJ="$TEST_ROOT/assert_partial_project"
+PARTIAL_KIT="$TEST_ROOT/assert_partial_kit"
+copy_kit "$PARTIAL_KIT"
+rm -f "$PARTIAL_KIT/workflows/route.md" "$PARTIAL_KIT/templates/project-profile-template.md"
+mkdir -p "$PARTIAL_PROJ"
+if partial_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$PARTIAL_KIT/init.sh" --balanced "$PARTIAL_PROJ" 2>&1)"; then
+    partial_rc=0
+else
+    partial_rc=$?
+fi
+[[ "$partial_rc" -eq 1 ]]
+grep -q '^ASSERT|partial-copy|missing:templates/project-profile-template.md|FAIL$' <<<"$partial_out"
+grep -q '^ASSERT|partial-copy|missing:workflows/route.md|FAIL$' <<<"$partial_out"
+grep -q '^ASSERT|partial-copy|remedy|' <<<"$partial_out"
+if grep -q 'PromptKit OS successfully configured' <<<"$partial_out"; then
+    echo "Expected no success banner on partial-copy failure." >&2
+    exit 1
+fi
+[[ -f "$PARTIAL_PROJ/PROMPTKIT.md" ]]
+
+# Test 29: direct-clone door — kit carrying its own .git resolves to itself
+DIRECT_PROJ="$TEST_ROOT/assert_direct_project"
+DIRECT_KIT="$TEST_ROOT/assert_direct_kit"
+copy_kit "$DIRECT_KIT"
+git -C "$DIRECT_KIT" init -q
+mkdir -p "$DIRECT_PROJ"
+if direct_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$DIRECT_KIT/init.sh" --balanced "$DIRECT_PROJ" 2>&1)"; then
+    direct_rc=0
+else
+    direct_rc=$?
+fi
+[[ "$direct_rc" -eq 0 ]]
+grep -q '^ASSERT|direct-clone|repository|OK$' <<<"$direct_out"
+grep -q 'PromptKit OS successfully configured' <<<"$direct_out"
+
+# Test 30: submodule door — host repo with a real .promptkit git submodule
+SUB_KITREPO="$TEST_ROOT/assert_sub_kitrepo"
+SUB_HOST="$TEST_ROOT/assert_sub_host"
+copy_kit "$SUB_KITREPO"
+git -C "$SUB_KITREPO" init -q
+git -C "$SUB_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$SUB_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$SUB_HOST"
+git -C "$SUB_HOST" init -q
+git -C "$SUB_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$SUB_KITREPO" .promptkit
+if sub_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$SUB_HOST/.promptkit/init.sh" --balanced "$SUB_HOST" 2>&1)"; then
+    sub_rc=0
+else
+    sub_rc=$?
+fi
+[[ "$sub_rc" -eq 0 ]]
+grep -q '^ASSERT|submodule|status|OK$' <<<"$sub_out"
+grep -q 'PromptKit OS successfully configured' <<<"$sub_out"
+
+# Test 31: standalone door — kit run in place with PROJECT_ROOT == SCRIPT_DIR
+STANDALONE_KIT="$TEST_ROOT/standalone_kit"
+copy_kit "$STANDALONE_KIT"
+if standalone_out="$(cd "$STANDALONE_KIT" && PROMPTKIT_NO_INTERACTIVE=1 bash ./init.sh --balanced 2>&1)"; then
+    standalone_rc=0
+else
+    standalone_rc=$?
+fi
+[[ "$standalone_rc" -eq 0 ]]
+grep -q '^ASSERT|standalone|tree|OK$' <<<"$standalone_out"
+grep -q 'PromptKit OS successfully configured' <<<"$standalone_out"
+
+# Test 32: explicit opt-out — PROMPTKIT_NO_PREFLIGHT=1 skips the assert
+OPTOUT_PROJ="$TEST_ROOT/assert_optout_project"
+OPTOUT_KIT="$TEST_ROOT/assert_optout_kit"
+copy_kit "$OPTOUT_KIT"
+mkdir -p "$OPTOUT_PROJ"
+if optout_out="$(PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash "$OPTOUT_KIT/init.sh" --balanced "$OPTOUT_PROJ" 2>&1)"; then
+    optout_rc=0
+else
+    optout_rc=$?
+fi
+[[ "$optout_rc" -eq 0 ]]
+grep -q '^ASSERT|skipped|USER_OPT_OUT|SKIP$' <<<"$optout_out"
+grep -q 'PromptKit OS successfully configured' <<<"$optout_out"
+
+# Test 33: unexpected git status — a failing git probe is INCOMPLETE, not OK
+GITFAIL_FAKE="$TEST_ROOT/assert_fake_git_bin"
+GITFAIL_PROJ="$TEST_ROOT/assert_gitfail_project"
+GITFAIL_KIT="$TEST_ROOT/assert_gitfail_kit"
+copy_kit "$GITFAIL_KIT"
+git -C "$GITFAIL_KIT" init -q
+mkdir -p "$GITFAIL_FAKE" "$GITFAIL_PROJ"
+printf '#!/usr/bin/env bash\nexit 42\n' > "$GITFAIL_FAKE/git"
+chmod +x "$GITFAIL_FAKE/git"
+if gitfail_out="$(PATH="$GITFAIL_FAKE:$PATH" PROMPTKIT_NO_INTERACTIVE=1 bash "$GITFAIL_KIT/init.sh" --balanced "$GITFAIL_PROJ" 2>&1)"; then
+    gitfail_rc=0
+else
+    gitfail_rc=$?
+fi
+[[ "$gitfail_rc" -eq 2 ]]
+grep -q '^ASSERT|unknown|host_git|INCOMPLETE$' <<<"$gitfail_out"
+if grep -q 'PromptKit OS successfully configured' <<<"$gitfail_out"; then
+    echo "Expected no success banner on INCOMPLETE assert." >&2
+    exit 1
+fi
+
+echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."

@@ -1097,6 +1097,20 @@ done
 
 COMMIT_SUCCESS=1
 
+# 8. Install-door structural assert (#549). Must stay after COMMIT_SUCCESS=1 and
+# before the banner: a non-zero result fails the install without rolling back.
+ASSERT_RC=0
+bash "$SCRIPT_DIR/scripts/check-setup-assert.sh" "$PROJECT_ROOT" "$SCRIPT_DIR" "$KIT_DIR_REL" || ASSERT_RC=$?
+if [[ "$ASSERT_RC" -eq 1 ]]; then
+    exit 1
+fi
+if [[ "$ASSERT_RC" -ne 0 ]]; then
+    if [[ "$ASSERT_RC" -ne 2 ]]; then
+        printf 'ASSERT|unknown|checker|INCOMPLETE\n'
+    fi
+    exit 2
+fi
+
 echo -e "\n\033[0;36m✨ PromptKit OS successfully configured for $PROJECT_ROOT! ($PROFILE profile)\033[0m"
 if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok\033[0m"
