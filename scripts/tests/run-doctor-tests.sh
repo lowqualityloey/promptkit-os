@@ -344,7 +344,7 @@ n2() {
         scenario_check 0 'rendered block does not reference .promptkit/workflows/route.md'
     fi
     if grep -q 'KIT_DIR_REL' "$root/AGENTS.md"; then
-        scenario_check 0 'rendered block left an unsubstituted $KIT_DIR_REL token'
+        scenario_check 0 "rendered block left an unsubstituted \$KIT_DIR_REL token"
     fi
 }
 

@@ -31,8 +31,7 @@ if [ ! -d "$ROOT" ]; then
     exit 1
 fi
 
-findings="$(find "$ROOT" -type f -name '*.md' -not -path '*/.git/*' -print0 2>/dev/null \
-  | xargs -0 awk '
+findings="$(find "$ROOT" -type f -name '*.md' -not -path '*/.git/*' -exec awk '
     FNR == 1 {
         path = FILENAME
         exempt = (path ~ /(^|\/)docs\/releases\//) || (path ~ /(^|\/)docs\/archive\//) \
@@ -47,14 +46,14 @@ findings="$(find "$ROOT" -type f -name '*.md' -not -path '*/.git/*' -print0 2>/d
         if (index(rest, "\\_") == 0) next
         printf "%s:%d:%s\n", path, FNR, $0
     }
-  ' || true)"
+  ' {} + 2>/dev/null || true)"
 
 if [ -n "$findings" ]; then
-    echo "MATH_LABEL_GATE|FAIL|backslash-escaped underscore inside \\text{} label:"
+    printf '%s\n' "MATH_LABEL_GATE|FAIL|backslash-escaped underscore inside \\text{} label:"
     printf '%s\n' "$findings" | sed "s|$ROOT/||; s/^/  - /"
-    echo "MATH_LABEL_GATE|REMEDIATION|Use a hyphen or space in \\text{} labels (e.g. \\text{dev-hourly}); \\_ is a markdown escape and breaks text-mode math on some renderers"
+    printf '%s\n' "MATH_LABEL_GATE|REMEDIATION|Use a hyphen or space in \\text{} labels (e.g. \\text{dev-hourly}); \\_ is a markdown escape and breaks text-mode math on some renderers"
     exit 1
 fi
 
-echo "MATH_LABEL_GATE|PASS|no fragile \\_ inside \\text{} labels"
+printf '%s\n' "MATH_LABEL_GATE|PASS|no fragile \\_ inside \\text{} labels"
 exit 0

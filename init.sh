@@ -734,7 +734,7 @@ if [[ "$FRESH" -eq 1 ]]; then
     fi
     created=""
     for t in "${TARGETS_FOUND[@]}"; do
-        created="$created ${t#$PROJECT_ROOT/}"
+        created="$created ${t#"$PROJECT_ROOT"/}"
     done
     echo -e "  \033[0;32m[+]\\033[0m Created default agent configurations:$created"
 fi
@@ -743,7 +743,7 @@ fi
 ALL_DESTINATIONS=("$PROJECT_PROFILE" "$STATE_TRACKER" "$PR_TEMPLATE_TARGET" "$TASK_TEMPLATE_TARGET" "${TARGETS_FOUND[@]}")
 for dest in "${ALL_DESTINATIONS[@]}"; do
     if ! is_path_contained "$PROJECT_ROOT" "$dest"; then
-        rel_dest="${dest#$PROJECT_ROOT/}"
+        rel_dest="${dest#"$PROJECT_ROOT"/}"
         echo "Error: Target destination escapes project root: $rel_dest" >&2
         exit 1
     fi
@@ -752,7 +752,7 @@ done
 # 5. Directive Block Template Preparation
 KIT_DIR_REL=".promptkit"
 if [[ "$SCRIPT_DIR" == "$PROJECT_ROOT"* ]]; then
-    KIT_DIR_REL="${SCRIPT_DIR#$PROJECT_ROOT/}"
+    KIT_DIR_REL="${SCRIPT_DIR#"$PROJECT_ROOT"/}"
 fi
 
 if [[ "$PROFILE" == "lite" ]]; then
@@ -791,7 +791,7 @@ declare -a STAGED_TARGET_MODES=()
 
 target_idx=0
 for target in "${TARGETS_FOUND[@]}"; do
-    REL_TARGET="${target#$PROJECT_ROOT/}"
+    REL_TARGET="${target#"$PROJECT_ROOT"/}"
     CR=$'\r'
     has_start=0
     has_end=0
@@ -1076,7 +1076,7 @@ for (( i=0; i<${#TARGETS_FOUND[@]}; i++ )); do
     target="${TARGETS_FOUND[i]}"
     staged_file="${STAGED_TARGET_PATHS[i]}"
     mode="${STAGED_TARGET_MODES[i]}"
-    REL_TARGET="${target#$PROJECT_ROOT/}"
+    REL_TARGET="${target#"$PROJECT_ROOT"/}"
 
     mkdir -p "$(dirname "$target")"
     if [[ -f "$target" || -L "$target" ]]; then

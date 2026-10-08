@@ -11,7 +11,6 @@ ERROR_COUNT=0
 RECORD_COUNT=0
 DIAGNOSTICS=()
 SEEN_IDS=()
-CURRENT_FILE=""
 CURRENT_RELATIVE=""
 CURRENT_ID="UNKNOWN"
 ANCHOR_ID=""
@@ -59,8 +58,8 @@ CI_DIR="$ROOT/docs/releases/ci-triage"
 
 trim() {
     local value="$1"
-    value="${value#${value%%[![:space:]]*}}"
-    value="${value%${value##*[![:space:]]}}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
     printf '%s' "$value"
 }
 
@@ -79,7 +78,7 @@ normalize_label() {
 
 relative_path() {
     local file="$1"
-    printf '%s' "${file#"$ROOT"/}" | tr '\\' '/'
+    printf '%s' "${file#"$ROOT"/}" | tr "\\\\" "/"
 }
 
 field_exists() { [ -n "${FIELDS[$1]+present}" ]; }
@@ -301,7 +300,7 @@ validate_release_link() {
 
 validate_record() {
     local file="$1" state history_text token i from to previous release_candidate classification rank action_count=0 active_action_count=0 has_pending=0 has_confirmed=0 has_declined=0 any_declined=0 current_epoch=0 max_action_epoch=0 max_declined_epoch=0 remote target prior_state require_rank plan_reached=0 action_prefix action_value_text action_epoch_text action_epoch action_lifecycle label action_heading_count other_action
-    CURRENT_FILE="$file"; CURRENT_RELATIVE="$(relative_path "$file")"; parse_record "$file"
+    CURRENT_RELATIVE="$(relative_path "$file")"; parse_record "$file"
     CURRENT_ID="$(field_value 'CI ID')"; [ -n "$CURRENT_ID" ] || CURRENT_ID=UNKNOWN
     RECORD_COUNT=$((RECORD_COUNT + 1))
     for key in "${!DUPLICATES[@]}"; do add_diagnostic "INVALID_STATE" "$CURRENT_ID" "$CURRENT_RELATIVE" "Duplicate field: $key" "Keep one canonical field label per record"; done

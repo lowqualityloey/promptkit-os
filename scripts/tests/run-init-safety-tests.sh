@@ -153,7 +153,7 @@ CRLF_ROOT="$TEST_ROOT/crlf"
 mkdir -p "$CRLF_ROOT"
 printf "Header with \$1 literal dollar reference\r\n\r\nKeep content before.\r\n\r\n<!-- PROMPTKIT_START -->\r\nold directive\r\n<!-- PROMPTKIT_END -->\r\n\r\nKeep content after.\r\n" > "$CRLF_ROOT/AGENTS.md"
 bash "$REPO_ROOT/init.sh" "$CRLF_ROOT" >/dev/null
-grep -q 'Header with $1 literal dollar reference' "$CRLF_ROOT/AGENTS.md"
+grep -q "Header with \$1 literal dollar reference" "$CRLF_ROOT/AGENTS.md"
 grep -q 'Keep content before\.' "$CRLF_ROOT/AGENTS.md"
 grep -q 'Keep content after\.' "$CRLF_ROOT/AGENTS.md"
 grep -q '## PromptKit OS: Engineering Operating System' "$CRLF_ROOT/AGENTS.md"

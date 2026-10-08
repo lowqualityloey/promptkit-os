@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+export PK_PICKER_RESULT PK_PICKER_ACTION
+
 pk_picker_clear() {
     printf '\033[2J\033[H'
     if [[ "${PK_PICKER_BANNER_ACTIVE:-0}" == 1 ]]; then
