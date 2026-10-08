@@ -71,7 +71,6 @@ fi
 summary_count=0
 summary_type=""
 summary_errors=0
-summary_records=0
 diagnostic_count=0
 invalid_lines=()
 non_grandfathered=()
@@ -85,7 +84,6 @@ for line in "${raw_lines[@]}"; do
   if [[ "$line" =~ ^VALID\|RECORDS=([0-9]+)\|ROOT=(.*)$ ]]; then
     summary_count=$((summary_count + 1))
     summary_type="VALID"
-    summary_records="${BASH_REMATCH[1]}"
     continue
   fi
 
@@ -93,16 +91,12 @@ for line in "${raw_lines[@]}"; do
     summary_count=$((summary_count + 1))
     summary_type="FAILED"
     summary_errors="${BASH_REMATCH[1]}"
-    summary_records="${BASH_REMATCH[2]}"
     continue
   fi
 
   # 5 pipe-delimited fields: CATEGORY|EVAL_ID|RECORD_PATH|MESSAGE|REMEDY
   if [[ "$line" =~ ^([A-Z_]+)\|([^|]+)\|([^|]+)\|([^|]+)\|(.*)$ ]]; then
-    category="${BASH_REMATCH[1]}"
-    eval_id="${BASH_REMATCH[2]}"
     rec_path="${BASH_REMATCH[3]}"
-    msg="${BASH_REMATCH[4]}"
     remedy="${BASH_REMATCH[5]}"
 
     if [ -z "$remedy" ]; then

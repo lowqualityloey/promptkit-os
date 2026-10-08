@@ -81,6 +81,11 @@ if ($SelfTest) {
     Run-SelfTest
 }
 
+if ($TargetPath) {
+    [Console]::Error.WriteLine("Telemetry file input is not supported yet: $TargetPath")
+    exit 2
+}
+
 Write-Host "`n📊 PromptKit OS Benchmark Scorecard (Simulated Comparison)" -ForegroundColor Cyan
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
 "{0,-22} | {1,-16} | {2,-16}" -f "Dimension", "Condition A: Vanilla", "Condition B: PromptKit"

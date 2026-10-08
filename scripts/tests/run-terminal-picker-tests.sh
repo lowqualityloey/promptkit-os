@@ -2,6 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source-path=SCRIPTDIR
+# shellcheck source=../terminal-picker.sh
 source "$SCRIPT_DIR/terminal-picker.sh"
 
 pk_picker_clear() { :; }

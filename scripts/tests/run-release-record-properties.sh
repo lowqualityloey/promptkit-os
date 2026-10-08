@@ -38,7 +38,8 @@ case_field() {
 }
 
 load_fixture() {
-    local property="$1" file="$FIXTURE_ROOT/$property.tsv"
+    local property="$1" file
+    file="$FIXTURE_ROOT/$property.tsv"
     local case_id entity field value key case_key
     [[ -f "$file" ]] || fail_harness "Missing fixture: $file"
     while IFS=$'\t' read -r case_id entity field value || [[ -n "$case_id" ]]; do
@@ -111,7 +112,7 @@ classify_evidence() {
         done
         case "$impact" in
             additive) expected_proposed=minor ;;
-            corrective) expected_proposed=patch ;;
+            corrective) expected_proposed="patch" ;;
             breaking) expected_proposed=major; [[ "$guidance" != NONE ]] || complete=0 ;;
             *) complete=0; expected_proposed=none ;;
         esac
@@ -216,12 +217,12 @@ property_two() {
 resolve_latest_approved() {
     local records="$1"
     local -a items=()
-    local record record_id status version commit evaluation sequence
+    local record status version commit evaluation sequence
     local highest=-1
     RESULT_BASELINE=NONE
     IFS=';' read -r -a items <<< "$records"
     for record in "${items[@]}"; do
-        IFS=',' read -r record_id status version commit evaluation sequence <<< "$record"
+        IFS=',' read -r _ status version commit evaluation sequence <<< "$record"
         if [[ "${status,,}" == approved && "$sequence" =~ ^[0-9]+$ && "$sequence" -gt "$highest" ]]; then
             highest="$sequence"
             RESULT_BASELINE="$evaluation|$version|$commit"
@@ -250,7 +251,7 @@ classify_impact() {
     local impact="$1" guidance="$2" proposed="$3" derived
     case "$impact" in
         additive) derived=minor ;;
-        corrective) derived=patch ;;
+        corrective) derived="patch" ;;
         breaking) [[ "$guidance" != NONE ]] && derived=major || derived=blocked ;;
         none) derived=none ;;
         *) derived=blocked ;;
@@ -318,7 +319,7 @@ derive_candidate() {
             patch)
                 if (( rank < 1 )); then
                     rank=1
-                    RESULT_IMPACT=patch
+                    RESULT_IMPACT="patch"
                 fi
                 ;;
             none) ;;
@@ -524,19 +525,15 @@ effective_impacts() {
 }
 
 derive_candidate_from_effective() {
-    local snapshot="$1" record id shape kind impact contract before after guidance evidence rank=0
+    local snapshot="$1" record id shape kind impact contract before after guidance evidence
     local -a records=()
     CANDIDATE_INPUT_SNAPSHOT="$snapshot"
     CANDIDATE_SOURCES=()
-    CANDIDATE_IMPACT=none
     IFS=',' read -r -a records <<< "$snapshot"
     for record in "${records[@]}"; do
         IFS='~' read -r id shape kind impact contract before after guidance evidence <<< "$record"
         case "$impact" in
-            major) if (( rank < 3 )); then rank=3; CANDIDATE_IMPACT=major; fi ;;
-            minor) if (( rank < 2 )); then rank=2; CANDIDATE_IMPACT=minor; fi ;;
-            patch) if (( rank < 1 )); then rank=1; CANDIDATE_IMPACT=patch; fi ;;
-            blocked) CANDIDATE_IMPACT=blocked; CANDIDATE_SOURCES+=("$id"); return ;;
+            blocked) CANDIDATE_SOURCES+=("$id"); return ;;
             none) ;;
         esac
         if [[ "$impact" != none && "$kind" != excluded ]]; then CANDIDATE_SOURCES+=("$id"); fi
@@ -603,11 +600,11 @@ property_eight() {
 }
 
 evaluate_empty_range() {
-    local impacts="$1" decision="$2" rationale="$3" trigger="$4" qa="$5" consistency="$6" impact
+    local impact_list="$1" decision="$2" rationale="$3" trigger="$4" qa="$5" consistency="$6" impact
     EMPTY_STATUS=BLOCKED
     EMPTY_CANDIDATE_IMPACT=none
     EMPTY_RESULT=FAIL
-    IFS=',' read -r -a empty_impacts <<< "$impacts"
+    IFS=',' read -r -a empty_impacts <<< "$impact_list"
     for impact in "${empty_impacts[@]}"; do
         if [[ "$impact" != none ]]; then EMPTY_STATUS=NOT_EMPTY; EMPTY_CANDIDATE_IMPACT="$impact"; EMPTY_RESULT=PASS; return; fi
     done
@@ -691,7 +688,7 @@ record_action_request() {
 }
 
 validate_consistency() {
-    local property="$1" case_id="$2" eval_id candidate_eval qa_eval notes_eval approval_eval consistency_eval candidate commit approved_candidate range occurrences at_end version tag prior candidate_version rationale qa notes action_request item last_index
+    local property="$1" case_id="$2" eval_id candidate_eval qa_eval notes_eval approval_eval consistency_eval candidate commit range occurrences at_end version tag prior candidate_version rationale qa notes action_request item last_index
     local actual_occurrences=0 actual_at_end=0 approved_major approved_minor approved_patch prior_major prior_minor prior_patch
     local -a range_items=()
     CONSISTENCY_RESULT=PASS; CONSISTENCY_DIAGNOSTIC=NONE; CONSISTENCY_ACTION_LOG=NONE; CONSISTENCY_SHARED_EVALUATION_ID=; CONSISTENCY_NON_REGRESSING=0; CONSISTENCY_CANDIDATE_AT_RANGE_END=0
@@ -730,8 +727,8 @@ property_twelve() {
     echo "PROPERTY|cross-record-read-only-consistency|SEED=$SEED|ITERATIONS=$ITERATIONS|PASS"
 }
 
-for property in property-01 property-02 property-03 property-04 property-05 property-06 property-07 property-08 property-09 property-10 property-11 property-12; do
-    load_fixture "$property"
+for fixture_property in property-01 property-02 property-03 property-04 property-05 property-06 property-07 property-08 property-09 property-10 property-11 property-12; do
+    load_fixture "$fixture_property"
 done
 
 property_one

@@ -207,7 +207,7 @@ fi
 
 # --- Narrative-Surface Staged Scan Tests ---
 slash='/'
-backslash='\'
+backslash="\\"
 narrative_posix="${slash}home${slash}narrative-fixture${slash}project"
 narrative_macos="${slash}Users${slash}narrative-fixture${slash}project"
 narrative_windows="C:${backslash}Users${backslash}narrative-fixture"
@@ -335,8 +335,8 @@ git -C "$hygiene_repo" commit -q -m "initial commit with debug"
 run_probe_check() {
     local target_repo="$1"
     git -C "$target_repo" diff --cached -U0 --no-ext-diff --no-textconv | awk '/^@@ / { h = 1; next } h && /^\+/ { if (substr($0, 2) ~ /\[DEBUG-|console\.log\("DEBUG|dbg!\(/) p = 1 } END { if (p) exit 10 }'
-    local s=(${PIPESTATUS[@]})
-    if [ ${s[1]} -eq 10 ]; then echo "PROBES_FOUND"; elif [ ${s[0]} -ne 0 ]; then echo "DIFF_FAILED"; else echo "CLEAN"; fi
+    local -a s=("${PIPESTATUS[@]}")
+    if [ "${s[1]}" -eq 10 ]; then echo "PROBES_FOUND"; elif [ "${s[0]}" -ne 0 ]; then echo "DIFF_FAILED"; else echo "CLEAN"; fi
 }
 
 # Case 1: Removing the debug statement (deleted line only)

@@ -10,10 +10,8 @@ ERROR_COUNT=0
 RECORD_COUNT=0
 
 declare -a DIAGNOSTICS=()
-declare -a RECORD_PATH=()
 declare -a RECORD_RELATIVE=()
 declare -a RECORD_ID=()
-declare -a RECORD_TYPE=()
 declare -a RECORD_CANONICAL=()
 declare -a RECORD_LABELS=()
 declare -A FIELDS=()
@@ -89,8 +87,8 @@ RELEASE_DIR="$ROOT/docs/releases"
 
 trim() {
     local value="$1"
-    value="${value#${value%%[![:space:]]*}}"
-    value="${value%${value##*[![:space:]]}}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
     printf '%s' "$value"
 }
 
@@ -157,7 +155,7 @@ parse_file() {
                 fi
             else
                 FIELDS[$key]="$value"
-                RECORD_LABELS[$index]+="${label}"$'\t'
+                RECORD_LABELS[index]+="${label}"$'\t'
             fi
         fi
     done < "$file"
@@ -174,35 +172,6 @@ canonical_type() {
         "release notes record") printf 'Release Notes Record' ;;
         *) printf '' ;;
     esac
-}
-
-add_record() {
-    local index="$1" file="$2" type id canonical label
-    parse_file "$index" "$file"
-    type="$(field_value "$index" 'Record Type')"
-    id="$(field_value "$index" 'Evaluation ID')"
-    is_placeholder "$id" && id="UNKNOWN"
-
-    if [ -z "$type" ]; then
-        if [ "$STRICT" -eq 1 ]; then
-            diagnostic "INVALID_STATE" "UNKNOWN" "$(relative_path "$file")" "Missing Record Type" "Use a supported canonical release-record type"
-        fi
-        return 0
-    fi
-    canonical="$(canonical_type "$type")"
-    if [ -z "$canonical" ]; then
-        if [ "$STRICT" -eq 1 ]; then
-            diagnostic "INVALID_STATE" "$id" "$(relative_path "$file")" "Unknown Record Type: $type" "Use Release Evaluation, SemVer Candidate Record, QA Review Record, Release Notes Record, or Approved Release Record"
-        fi
-        return 0
-    fi
-
-    RECORD_PATH[$index]="$file"
-    RECORD_RELATIVE[$index]="$(relative_path "$file")"
-    RECORD_ID[$index]="$id"
-    RECORD_TYPE[$index]="$type"
-    RECORD_CANONICAL[$index]="$canonical"
-    RECORD_COUNT=$((RECORD_COUNT + 1))
 }
 
 require_label() {
@@ -677,11 +646,9 @@ else
             index=$((index + 1))
             continue
         fi
-        RECORD_PATH[$index]="$file"
-        RECORD_RELATIVE[$index]="$(relative_path "$file")"
-        RECORD_ID[$index]="$id"
-        RECORD_TYPE[$index]="$type"
-        RECORD_CANONICAL[$index]="$canonical"
+        RECORD_RELATIVE[index]="$(relative_path "$file")"
+        RECORD_ID[index]="$id"
+        RECORD_CANONICAL[index]="$canonical"
         RECORD_COUNT=$((RECORD_COUNT + 1))
         validate_record "$index"
         [ "$canonical" = 'Release Evaluation' ] && EVALUATION_INDICES+=("$index")

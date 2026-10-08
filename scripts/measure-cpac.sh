@@ -111,6 +111,11 @@ if [[ "$SELF_TEST" -eq 1 ]]; then
     exit 0
 fi
 
+if [[ -n "$TARGET_FILE" ]]; then
+    printf 'Telemetry file input is not supported yet: %s\n' "$TARGET_FILE" >&2
+    exit 2
+fi
+
 # Fallback demo scorecard if no target file is provided
 echo ""
 echo "📊 PromptKit OS Benchmark Scorecard (Simulated Comparison)"

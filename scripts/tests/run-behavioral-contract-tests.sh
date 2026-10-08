@@ -189,7 +189,7 @@ assert_contains "templates/agent-directive-template.md" "Ties take the higher le
 assert_contains "protocols/code-quality-gate.md" "milestone boundary.*is the turn after" "Quality gate defines the milestone boundary"
 
 for directive_file in "templates/agent-directive-template.md" "templates/agent-directive-lite-template.md"; do
-    DUPS=$(awk '/^- `pk:/ {print}' "$REPO_ROOT/$directive_file" | grep -oE '`pk:[a-z-]+`' | sort | uniq -d)
+    DUPS=$(awk '/^- `pk:/ {print}' "$REPO_ROOT/$directive_file" | grep -oE "\`pk:[a-z-]+\`" | sort | uniq -d)
     if [ -z "$DUPS" ]; then
         echo "  ✅ PASS: Trigger tokens are unique within $directive_file"
         PASS_COUNT=$((PASS_COUNT + 1))
@@ -198,7 +198,8 @@ for directive_file in "templates/agent-directive-template.md" "templates/agent-d
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 done
-WF_COUNT=$(ls "$REPO_ROOT"/workflows/*.md | wc -l | tr -d ' ')
+workflow_files=("$REPO_ROOT"/workflows/*.md)
+WF_COUNT=${#workflow_files[@]}
 if [ "$WF_COUNT" -eq 26 ]; then
     echo "  ✅ PASS: On-disk workflow file count is 26 (matches reconciled docs claims)"
     PASS_COUNT=$((PASS_COUNT + 1))
@@ -431,7 +432,7 @@ measured_input_paths() {
 }
 
 provenance_anchor() {
-    sed -nE 's/.*Current measurements:\*\*[^`]*`([0-9a-f]{7,40})`.*/\1/p' "$BENCHMARKS" | head -n 1
+    sed -nE "s/.*Current measurements:\\*\\*[^\`]*\`([0-9a-f]{7,40})\`.*/\\1/p" "$BENCHMARKS" | head -n 1
 }
 
 check_provenance_anchor() {
@@ -474,7 +475,9 @@ check_provenance_anchor() {
         PASS_COUNT=$((PASS_COUNT + 1))
     else
         echo "  ❌ FAIL: provenance anchor $anchor is stale; these measured inputs changed after it and the published figures must have moved with them:"
-        printf '           %s\n' $drifted
+        while IFS= read -r drifted_path; do
+            printf '           %s\n' "$drifted_path"
+        done <<< "$drifted"
         echo "           Restate the anchor in docs/BENCHMARKS.md and re-propagate every published figure."
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
@@ -803,9 +806,9 @@ else
     echo "  ✅ PASS: release validation checks tag code without OIDC"
     PASS_COUNT=$((PASS_COUNT + 1))
 fi
-trust_line="$(grep -nF 'git merge-base --is-ancestor "$TAG_COMMIT" "origin/$DEFAULT_BRANCH"' <<< "$release_validate_job" | cut -d: -f1)"
-checkout_line="$(grep -nF 'git checkout --detach "$TAG_COMMIT"' <<< "$release_validate_job" | cut -d: -f1)"
-version_line="$(grep -nF 'npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts' <<< "$release_validate_job" | cut -d: -f1)"
+trust_line="$(grep -nF "git merge-base --is-ancestor \"\$TAG_COMMIT\" \"origin/\$DEFAULT_BRANCH\"" <<< "$release_validate_job" | cut -d: -f1)"
+checkout_line="$(grep -nF "git checkout --detach \"\$TAG_COMMIT\"" <<< "$release_validate_job" | cut -d: -f1)"
+version_line="$(grep -nF "npm version \"\$VERSION\" --no-git-tag-version --allow-same-version --ignore-scripts" <<< "$release_validate_job" | cut -d: -f1)"
 smoke_line="$(grep -nF 'Smoke Test Courier Against This Release' <<< "$release_validate_job" | cut -d: -f1)"
 if [ -z "$trust_line" ] || [ -z "$checkout_line" ] || [ -z "$version_line" ] || [ -z "$smoke_line" ] || [ "$trust_line" -ge "$checkout_line" ] || [ "$checkout_line" -ge "$version_line" ] || [ "$version_line" -ge "$smoke_line" ]; then
     echo "  ❌ FAIL: release tag ancestry must be checked before checkout or execution"
@@ -821,7 +824,7 @@ else
     echo "  ✅ PASS: release artifact is built from commit data in an unprivileged job"
     PASS_COUNT=$((PASS_COUNT + 1))
 fi
-if grep -Eq 'actions/checkout|npm pack|npm version|bash .*scripts/|node .*package/' <<< "$release_publish_job" || ! grep -q 'npm publish .*--ignore-scripts' <<< "$release_publish_job" || ! grep -q 'TARBALL=\$path' <<< "$release_publish_job"; then
+if grep -Eq 'actions/checkout|npm pack|npm version|bash .*scripts/|node .*package/' <<< "$release_publish_job" || ! grep -q 'npm publish .*--ignore-scripts' <<< "$release_publish_job" || ! grep -q "TARBALL=\\\$path" <<< "$release_publish_job"; then
     echo "  ❌ FAIL: OIDC publish job must publish the verified tarball without running repository code"
     FAIL_COUNT=$((FAIL_COUNT + 1))
 else
@@ -864,7 +867,7 @@ AL_FAIL=0
 AL_FOUND=0
 for retro in "$REPO_ROOT"/docs/releases/*retro-evaluation.md; do
     [ -e "$retro" ] || continue
-    if grep -Eq '\*\*Evaluation Status\*\*: `approved`' "$retro"; then
+    if grep -Eq "\\*\\*Evaluation Status\\*\\*: \`approved\`" "$retro"; then
         AL_FOUND=1
         if grep -Eq 'pending coordinator countersignature' "$REPO_ROOT/CHANGELOG.md"; then
             echo "  ❌ FAIL: $retro is approved but CHANGELOG still says pending coordinator countersignature"
@@ -1145,9 +1148,9 @@ assert_behavioral "a directory at the evidence-absent path is absent, not a viol
 
 # 17. Both twins must reject a directory, or they grade the same bundle differently:
 #     bash `[ -s ]` is true for a directory while PowerShell's PathType Leaf is not.
-assert_contains "scripts/run-behavioral-eval.sh" '\[ -f "\$1" \] && \[ -r "\$1" \]' "Bash requires a readable regular file before reading activity"
+assert_contains "scripts/run-behavioral-eval.sh" "\\[ -f \"\\\$1\" \\] && \\[ -r \"\\\$1\" \\]" "Bash requires a readable regular file before reading activity"
 assert_contains "scripts/run-behavioral-eval.sh" "LC_ALL=C tr -d" "Bash pins the byte set so the verdict cannot vary with locale"
-assert_contains "scripts/run-behavioral-eval.sh" 'if ! file_has_bytes "\$bundle/\$pat"; then return 0; fi' "evidence-absent uses the same type test as its twin"
+assert_contains "scripts/run-behavioral-eval.sh" "if ! file_has_bytes \"\\\$bundle/\\\$pat\"; then return 0; fi" "evidence-absent uses the same type test as its twin"
 assert_contains "scripts/run-behavioral-eval.ps1" "PathType Leaf" "PowerShell write-log lookup rejects a directory"
 assert_contains "scripts/run-behavioral-eval.ps1" "AsByteStream" "PowerShell reads the log as bytes, preserving a BOM"
 assert_contains "scripts/run-behavioral-eval.sh" "grep -m1 '\^CHECKS" "Bash reads the side channel by prefix, not by position"
@@ -1158,7 +1161,7 @@ echo "📌 Scenario AR: pk:doctor Contract & Exit Codes (Issue #547)"
 # #519-#523 stack-activation block above; AR is the next free label.
 
 # AR-1: pk:doctor appears exactly once as a trigger line in the Balanced directive.
-DOCTOR_TRIGGERS=$(grep -c '^- `pk:doctor`' "$REPO_ROOT/templates/agent-directive-template.md" || true)
+DOCTOR_TRIGGERS=$(grep -c "^- \`pk:doctor\`" "$REPO_ROOT/templates/agent-directive-template.md" || true)
 if [ "$DOCTOR_TRIGGERS" -eq 1 ]; then
     echo "  ✅ PASS: pk:doctor is declared exactly once as a trigger line"
     PASS_COUNT=$((PASS_COUNT + 1))

@@ -12,7 +12,7 @@ if [ "$m2_path_count" -eq 0 ]; then
     exit 2
 fi
 
-EVIDENCE_DIR="$bundle" node - <<'NODE'
+if ! EVIDENCE_DIR="$bundle" node - <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');
 const dir = process.env.EVIDENCE_DIR;
@@ -32,7 +32,9 @@ try {
   process.exit(2);
 }
 NODE
-if [ "$?" -ne 0 ]; then exit 2; fi
+then
+    exit 2
+fi
 metadata="$(EVIDENCE_DIR="$bundle" node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync(process.env.EVIDENCE_DIR+'/provenance.json','utf8'));const s=JSON.parse(fs.readFileSync(process.env.EVIDENCE_DIR+'/state-check.json','utf8'));process.stdout.write([p.seedCommit,s.m1Verified,s.signoffCallout,s.m2Advanced].join('|'))")"
 IFS='|' read -r seed m1_verified callout m2_advanced <<< "$metadata"
 repo="$bundle/repository"

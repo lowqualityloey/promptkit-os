@@ -382,7 +382,7 @@ run_self_test() {
             fi
         else
             echo "  ❌ FAIL: $name — PASS fixture violates checks:"
-            echo "$detail" | sed 's/^/    /'
+            printf '    %s\n' "${detail//$'\n'/$'\n    '}"
             echo "$name|self-test|FAIL|pass-fixture-violates-checks"
             FAIL_COUNT=$((FAIL_COUNT + 1))
         fi

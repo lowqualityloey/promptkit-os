@@ -29,7 +29,7 @@ profile_of() {
 # git state. That is safe only because test 11 separately asserts the installed block
 # contains no leftover $ENGINE_VERSION/$ENGINE_SHA tokens.
 normalize_engine_stamp() {
-    sed -e 's|^Engine: .* (.*) — stamped at install time|Engine: $ENGINE_VERSION ($ENGINE_SHA) — stamped at install time|'
+    sed -e "s|^Engine: .* (.*) — stamped at install time|Engine: \$ENGINE_VERSION (\$ENGINE_SHA) — stamped at install time|"
 }
 
 # $KIT_DIR_REL is normalized on the TEMPLATE SIDE ONLY, and that asymmetry is deliberate.
@@ -38,8 +38,8 @@ normalize_engine_stamp() {
 # comparison exists to catch. Nothing else in the suite asserts $KIT_DIR_REL does not leak,
 # so test 15 pins that rejection directly.
 normalize_template() {
-    sed -e 's|\$KIT_DIR_REL|.promptkit|g' \
-        -e 's|^Engine: .* (.*) — stamped at install time|Engine: $ENGINE_VERSION ($ENGINE_SHA) — stamped at install time|'
+    sed -e "s|\\\$KIT_DIR_REL|.promptkit|g" \
+        -e "s|^Engine: .* (.*) — stamped at install time|Engine: \$ENGINE_VERSION (\$ENGINE_SHA) — stamped at install time|"
 }
 
 managed_block_matches_template() {
@@ -166,7 +166,7 @@ fi
 D="$TEST_ROOT/t11"; mkdir -p "$D"
 bash "$REPO_ROOT/init.sh" --balanced "$D" </dev/null >/dev/null 2>&1
 if grep -Eq '^Engine: [^$]+ \((unknown|[0-9a-f]{7,})\) — stamped at install time' "$D/AGENTS.md" \
-   && ! grep -Eq '\$ENGINE_VERSION|\$ENGINE_SHA' "$D/AGENTS.md"; then
+   && ! grep -Eq "\\\$ENGINE_VERSION|\\\$ENGINE_SHA" "$D/AGENTS.md"; then
     ok "engine identity stamp is substituted into the rendered directive"
 else
     notok "engine identity stamp unresolved (tokens leaked or stamp line missing)"
@@ -191,7 +191,7 @@ PROMPTKIT_NO_PREFLIGHT=1 bash "$FIXTURE/init.sh" --balanced --engine-version=v9.
 if [[ -f "$D/AGENTS.md" ]] \
    && grep -Eq '^Engine: [A-Za-z0-9._+-]+ \([0-9a-f]{7,}\) — stamped at install time' "$D/AGENTS.md" \
    && ! grep -q '^Engine: v9.8.7 ' "$D/AGENTS.md" \
-   && ! grep -Eq '\$ENGINE_VERSION|\$ENGINE_SHA' "$D/AGENTS.md" \
+   && ! grep -Eq "\\\$ENGINE_VERSION|\\\$ENGINE_SHA" "$D/AGENTS.md" \
    && ! grep -Eq '^- \*\*Engine Version\*\*:.*[|&]' "$D/docs/STATE.md"; then
     ok "adversarial git tag cannot abort or corrupt the install"
 else
@@ -230,7 +230,7 @@ fi
 # only. Normalizing it on the installed side too would rewrite a leaked placeholder into
 # .promptkit and make a broken installer compare clean, so this pins that rejection.
 D="$TEST_ROOT/t15"; mkdir -p "$D"
-sed -e 's|\$KIT_DIR_REL|$KIT_DIR_REL|g' "$REPO_ROOT/templates/agent-directive-template.md" > "$D/AGENTS.md"
+sed -e "s|\\\$KIT_DIR_REL|\$KIT_DIR_REL|g" "$REPO_ROOT/templates/agent-directive-template.md" > "$D/AGENTS.md"
 if managed_block_matches_template "$D/AGENTS.md" "$REPO_ROOT/templates/agent-directive-template.md" >/dev/null 2>&1; then
     notok "harness accepts a leaked \$KIT_DIR_REL placeholder (normalizer masking regression)"
 else

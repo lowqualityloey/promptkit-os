@@ -61,7 +61,8 @@ echo 'PASS|missing marker rejected with a clear error'
 for tag in v1.2.3 v2.0.0-rc.1 v3.4.5+build.6; do
     [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]
 done
-if [[ v1.2-unsafe =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+invalid_tag=v1.2-unsafe
+if [[ "$invalid_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
     echo 'FAIL|malformed tag accepted' >&2
     exit 1
 fi
@@ -70,11 +71,12 @@ echo 'PASS|marker-compatible release tags validated'
 grep -Fq 'default: true' "$WORKFLOW"
 grep -Fq "if: github.event_name == 'release' || (inputs.dry_run == false && github.ref == 'refs/heads/main')" "$WORKFLOW"
 grep -Fq "if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true" "$WORKFLOW"
-grep -Fq 'archive/refs/tags/$TAG.tar.gz' "$WORKFLOW"
+grep -Fq "archive/refs/tags/\$TAG.tar.gz" "$WORKFLOW"
 grep -Fq 'Confirm Release Tag Still Targets Checked-Out Commit' "$WORKFLOW"
 grep -Fq 'Reject Manual Publish Outside Main' "$WORKFLOW"
 grep -Fq '(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?' "$WORKFLOW"
-if [[ v3.4.5+build.6 =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+build_metadata_tag=v3.4.5+build.6
+if [[ "$build_metadata_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
     echo 'FAIL|workflow release-tag validation rejects SemVer build metadata' >&2
     exit 1
 fi
