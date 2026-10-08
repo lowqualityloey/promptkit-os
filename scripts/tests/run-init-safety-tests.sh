@@ -211,6 +211,29 @@ HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=opencode
 [[ ! -f "$HOSTSEL_ROOT/CLAUDE.md" ]]
 grep -q '## PromptKit OS: Engineering Operating System' "$HOSTSEL_ROOT/.opencode/rules.md"
 
+# Host selection: --host=cursor writes the managed block into .cursorrules (Scenario 4)
+CURSOR_ROOT="$TEST_ROOT/cursorhost"
+mkdir -p "$CURSOR_ROOT"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=cursor --balanced "$CURSOR_ROOT" >/dev/null
+[[ -f "$CURSOR_ROOT/.cursorrules" ]]
+[[ "$(grep -c 'PROMPTKIT_START' "$CURSOR_ROOT/.cursorrules")" -eq 1 ]]
+grep -q '## PromptKit OS: Engineering Operating System' "$CURSOR_ROOT/.cursorrules"
+
+# Host coverage: a multi-host install carries the block in every host file (Scenario 3)
+MULTIHOST_ROOT="$TEST_ROOT/multihost"
+mkdir -p "$MULTIHOST_ROOT"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=claude,cursor,opencode,gemini,windsurf,copilot,cline,trae,aider --balanced "$MULTIHOST_ROOT" >/dev/null
+for rel in CLAUDE.md .cursorrules .opencode/rules.md GEMINI.md .windsurfrules .github/copilot-instructions.md .clinerules/promptkit.md .traerules CONVENTIONS.md; do
+    if [[ ! -f "$MULTIHOST_ROOT/$rel" ]]; then
+        echo "multi-host install missing $rel" >&2
+        exit 1
+    fi
+    if [[ "$(grep -c 'PROMPTKIT_START' "$MULTIHOST_ROOT/$rel")" -ne 1 ]]; then
+        echo "managed block missing or duplicated in $rel" >&2
+        exit 1
+    fi
+done
+
 # Host probing: single unambiguous hit wins without flags (fake opencode only)
 PROBE_ROOT="$TEST_ROOT/probehit"
 FAKE_BIN="$TEST_ROOT/fakebin"

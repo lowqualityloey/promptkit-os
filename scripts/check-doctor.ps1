@@ -50,7 +50,11 @@ function Emit {
     if ($base -in @('STALE', 'MISSING', 'DIVERGED', 'INCOMPLETE')) { $script:fail = $true }
 }
 
-# Known host -> directive file map, verbatim from init.ps1 host_file().
+# Known host -> directive file map. Most ids mirror init.ps1 host_file(); cline
+# and cursor resolve to the variant the installer actually writes (its
+# ensure_target/probe logic), so a healthy directory-form cline
+# (.clinerules/promptkit.md) or mdc-form cursor (.cursor/rules/promptkit.mdc)
+# install is not misread as an unreadable directory or a missing host.
 $hostIds = @('agents', 'claude', 'opencode', 'cursor', 'gemini', 'windsurf', 'copilot', 'cline', 'trae', 'aider')
 function Get-HostRelpath {
     param([string]$Id)
@@ -58,11 +62,20 @@ function Get-HostRelpath {
         'agents' { return 'AGENTS.md' }
         'claude' { return 'CLAUDE.md' }
         'opencode' { return '.opencode/rules.md' }
-        'cursor' { return '.cursorrules' }
+        'cursor' {
+            if (Test-Path -LiteralPath (Join-Path $KitRoot '.cursorrules') -PathType Leaf) { return '.cursorrules' }
+            if (Test-Path -LiteralPath (Join-Path $KitRoot '.cursor/rules/promptkit.mdc') -PathType Leaf) { return '.cursor/rules/promptkit.mdc' }
+            return '.cursorrules'
+        }
         'gemini' { return 'GEMINI.md' }
         'windsurf' { return '.windsurfrules' }
         'copilot' { return '.github/copilot-instructions.md' }
-        'cline' { return '.clinerules' }
+        'cline' {
+            if (Test-Path -LiteralPath (Join-Path $KitRoot '.clinerules') -PathType Leaf) { return '.clinerules' }
+            if ((Test-Path -LiteralPath (Join-Path $KitRoot '.clinerules') -PathType Container) -or
+                (Test-Path -LiteralPath (Join-Path $KitRoot '.clinerules/promptkit.md') -PathType Leaf)) { return '.clinerules/promptkit.md' }
+            return '.clinerules'
+        }
         'trae' { return '.traerules' }
         'aider' { return 'CONVENTIONS.md' }
         default { return '' }

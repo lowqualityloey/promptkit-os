@@ -68,10 +68,10 @@ Install PromptKit OS using the OpenCode host target so its generated `.opencode/
    echo ".promptkit/" >> .git/info/exclude  # Personal gitignore
    ```
 
-2. Configure your AI assistant only:
-   - **Claude Code**: Create `CLAUDE.md` (add to `.gitignore`)
-   - **Cursor**: Create `.cursorrules` (add to `.gitignore`)
-   - **Or**: Keep directives in a personal note file
+2. Configure your AI assistant. Commit the universal `AGENTS.md` as the **tracked default** so a fresh clone receives working rules; per-host files are optional local overrides and may stay untracked:
+   - **Claude Code**: `CLAUDE.md` (optional override)
+   - **Cursor**: `.cursorrules` or `.cursor/rules/promptkit.mdc` (optional override)
+   - **Or**: keep per-host files untracked and rely on the committed `AGENTS.md`
 
 3. Use workflows in your local branches:
    ```bash
@@ -385,9 +385,9 @@ $$\text{lsp-mcp (future)} \rightarrow \text{Native IDE tools} \rightarrow \text{
 bash scripts/check-synthetic-base.sh          # or scripts/check-synthetic-base.ps1
 ```
 
-- **Evidence-based, never fail-closed on a healthy repo**: the preflight refuses (`exit 1`) only when the inspected commit is positively tool-owned — it is the **tip of** a tool-namespace ref (e.g. `refs/gitbutler/*`, `refs/orca/*`, `refs/codex/*`, `refs/cline/*`) and carried by no branch, **or** it is the **tip of** a tool-owned workspace branch (e.g. GitButler's `refs/heads/gitbutler/workspace`, matched by the `gitbutler/workspace` prefix; the ordinary `gitbutler/target` tracking branch is deliberately not matched). An earlier commit that merely sits behind such a tip, and any commit with an ordinary carrying branch, are ordinary and are not refused. A detached real commit, an unpushed branch, and an ordinary branch tip all report `UNKNOWN` or `OK` and proceed; "unpushed" alone is never a fault. The changelog gate inspects both range endpoints, and any preflight that cannot measure — or is missing — fails the caller closed rather than passing silently.
+- **Evidence-based, never fail-closed on a healthy repo**: the preflight refuses (`exit 1`) only when the inspected commit is positively tool-owned — it is the **tip of** a tool-namespace ref (e.g. `refs/gitbutler/*`, `refs/orca/*`, `refs/codex/*`, `refs/cline/*`) and carried by no branch, **or** it is the **tip of** a tool-owned workspace branch (e.g. GitButler's `refs/heads/gitbutler/workspace`, or its fetched `refs/remotes/<remote>/gitbutler/workspace`; the name is matched only at a path-component boundary, so the ordinary `gitbutler/target` and `gitbutler/workspace-backup` names are deliberately not matched). An earlier commit that merely sits behind such a tip, and any commit with an ordinary carrying branch, are ordinary and are not refused. A detached real commit, an unpushed branch, and an ordinary branch tip all report `UNKNOWN` or `OK` and proceed; "unpushed" alone is never a fault. The changelog gate inspects both range endpoints, and any preflight that cannot measure — or is missing — fails the caller closed rather than passing silently.
 - **Recovery on refusal**: return to the carrying branch or rebase onto a real branch tip. The preflight never stages, commits, fetches, rebases, or writes tool-managed state.
-- **Externalized namespaces**: the recognized tool namespaces live in `scripts/synthetic-base-signals.txt` — `ref-namespace|<prefix>` (the inspected commit is the tip of that ref) and `branch-namespace|<prefix>` (the inspected commit is the tip of that workspace branch and no ordinary branch carries it); a malformed row fails the preflight closed (`2`). Extend the ref set with `PROMPTKIT_SYNTHETIC_REFS_EXTRA` or either set with a custom `--signals-file`.
+- **Externalized namespaces**: the recognized tool namespaces live in `scripts/synthetic-base-signals.txt` — `ref-namespace|<prefix>` (the inspected commit is the tip of that ref) and `branch-namespace|<prefix>` (the inspected commit is the tip of that workspace branch — local or fetched remote-tracking, matched at a path-component boundary — and no ordinary branch carries it); a malformed row fails the preflight closed (`2`). Extend the ref set with `PROMPTKIT_SYNTHETIC_REFS_EXTRA` or either set with a custom `--signals-file`.
 - **Where it runs**: the guard is wired into the changelog range gate and the milestone-halt seed-ancestry check, and `pk:sync`, `pk:review`, and `pk:pr` instruct it before deriving their base. It never gates committing or staging.
 
 See [`docs/MAXIMS.md`](./MAXIMS.md).

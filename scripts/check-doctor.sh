@@ -98,17 +98,37 @@ fi
 profile="$(grep -E '^profile:' "$kit_root/PROMPTKIT.md" 2>/dev/null | tail -n 1 | awk '{print $2}' || true)"
 [[ -n "$profile" ]] || profile="balanced"
 
-# Known host -> directive file map, verbatim from init.sh host_file().
+# Known host -> directive file map. Most ids mirror init.sh host_file(); cline
+# and cursor resolve to the variant init.sh actually installs (its ensure_target
+# and probe logic), so a healthy directory-form cline (.clinerules/promptkit.md)
+# or mdc-form cursor (.cursor/rules/promptkit.mdc) install is not misread as an
+# unreadable directory or a missing host.
 host_relpath() {
     case "$1" in
         agents) printf 'AGENTS.md' ;;
         claude) printf 'CLAUDE.md' ;;
         opencode) printf '.opencode/rules.md' ;;
-        cursor) printf '.cursorrules' ;;
+        cursor)
+            if [[ -f "$kit_root/.cursorrules" ]]; then
+                printf '.cursorrules'
+            elif [[ -f "$kit_root/.cursor/rules/promptkit.mdc" ]]; then
+                printf '.cursor/rules/promptkit.mdc'
+            else
+                printf '.cursorrules'
+            fi
+            ;;
         gemini) printf 'GEMINI.md' ;;
         windsurf) printf '.windsurfrules' ;;
         copilot) printf '.github/copilot-instructions.md' ;;
-        cline) printf '.clinerules' ;;
+        cline)
+            if [[ -f "$kit_root/.clinerules" ]]; then
+                printf '.clinerules'
+            elif [[ -d "$kit_root/.clinerules" || -f "$kit_root/.clinerules/promptkit.md" ]]; then
+                printf '.clinerules/promptkit.md'
+            else
+                printf '.clinerules'
+            fi
+            ;;
         trae) printf '.traerules' ;;
         aider) printf 'CONVENTIONS.md' ;;
         *) printf '' ;;

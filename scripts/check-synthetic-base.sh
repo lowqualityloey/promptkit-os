@@ -4,9 +4,10 @@
 #
 # Refuses to let a caller derive a comparison base from a commit that is
 # positively tool-owned: either the tip of a tool-namespace ref (ref-namespace|
-# rows, e.g. refs/gitbutler/) or carried only by tool-owned branch namespaces
-# (branch-namespace| rows, e.g. GitButler's refs/heads/gitbutler/workspace). A
-# commit carried by any ordinary branch is silent.
+# rows, e.g. refs/gitbutler/) or carried only by a tool-owned branch namespace
+# (branch-namespace| rows, e.g. GitButler's refs/heads/gitbutler/workspace or its
+# fetched refs/remotes/<remote>/gitbutler/workspace). A commit carried by any
+# ordinary branch is silent.
 # Read-only by construction: rev-parse/for-each-ref only. It never stages,
 # commits, fetches, rebases, invokes a vendor CLI, or writes any file.
 
@@ -140,25 +141,38 @@ carrying="$(local_git for-each-ref --contains "$sha" --format='%(refname)' refs/
 # Any ordinary branch containing the commit makes it an ordinary commit and it
 # is silent (Scenario 1), even when a tool-owned branch also contains it. A ref
 # is tool-owned only when its branch name (after refs/heads/ or
-# refs/remotes/<remote>/) begins with a branch-namespace prefix.
-ordinary_carrying=""
-while IFS= read -r carrying_ref; do
-    [[ -z "$carrying_ref" ]] && continue
-    case "$carrying_ref" in
-        refs/heads/*) branch_name="${carrying_ref#refs/heads/}" ;;
-        refs/remotes/*) remote_rest="${carrying_ref#refs/remotes/}"; branch_name="${remote_rest#*/}" ;;
-        *) branch_name="$carrying_ref" ;;
+# refs/remotes/<remote>/) is a tool-owned branch name; the carrier classifier and
+# the tip lookup below share the predicate so they cannot disagree at a boundary.
+branch_name_for_ref() {
+    case "$1" in
+        refs/heads/*) printf '%s' "${1#refs/heads/}" ;;
+        refs/remotes/*) local remote_rest="${1#refs/remotes/}"; printf '%s' "${remote_rest#*/}" ;;
+        *) printf '%s' "$1" ;;
     esac
-    is_tool_branch=0
+}
+
+# Tool-owned at a path-component boundary only: the name equals a
+# branch-namespace prefix exactly or begins with that prefix followed by a slash.
+# GitButler's gitbutler/workspace matches; gitbutler/workspace-backup does not,
+# matching how `for-each-ref` treats a ref pattern up to a slash.
+is_tool_owned_branch_name() {
+    local branch_name="$1" branch_ns
     # Explicit length guard: bash 3.2 errors on an empty array under `set -u`.
     if [[ "${#branch_namespaces[@]}" -gt 0 ]]; then
         for branch_ns in "${branch_namespaces[@]}"; do
-            case "$branch_name" in
-                "$branch_ns"*) is_tool_branch=1; break ;;
-            esac
+            if [[ "$branch_name" == "$branch_ns" || "$branch_name" == "$branch_ns"/* ]]; then
+                return 0
+            fi
         done
     fi
-    if [[ "$is_tool_branch" -eq 0 ]]; then
+    return 1
+}
+
+ordinary_carrying=""
+while IFS= read -r carrying_ref; do
+    [[ -z "$carrying_ref" ]] && continue
+    branch_name="$(branch_name_for_ref "$carrying_ref")"
+    if ! is_tool_owned_branch_name "$branch_name"; then
         [[ -z "$ordinary_carrying" ]] && ordinary_carrying="$carrying_ref"
     fi
 done <<< "$carrying"
@@ -169,22 +183,26 @@ if [[ -n "$ordinary_carrying" ]]; then
 fi
 
 # Positive class (b): the inspected commit is the TIP of a tool-owned workspace
-# branch (GitButler's refs/heads/gitbutler/workspace). Tip-only, never --contains:
-# an ordinary commit that merely precedes a workspace snapshot is not itself a
-# workspace snapshot, and ownership must be evidence about the inspected commit.
+# branch -- GitButler's refs/heads/gitbutler/workspace, or its fetched
+# refs/remotes/<remote>/gitbutler/workspace when no local branch exists. Tip-only,
+# never --contains: an ordinary commit that merely precedes a workspace snapshot is
+# not itself a workspace snapshot, and ownership must be evidence about the
+# inspected commit. The tip set is classified with the same predicate as the
+# carrier loop above, so the two passes share one definition of tool-owned.
 tool_branch_tip=""
 # Explicit length guard: bash 3.2 errors on an empty array under `set -u`.
 if [[ "${#branch_namespaces[@]}" -gt 0 ]]; then
-    for branch_ns in "${branch_namespaces[@]}"; do
-        tip="$(local_git for-each-ref --points-at "$sha" --format='%(refname)' "refs/heads/$branch_ns")" || {
-            printf 'SYNTHETIC_BASE|INCOMPLETE|REFS|.\n'
-            exit 2
-        }
-        if [[ -n "$tip" ]]; then
-            tool_branch_tip="${tip%%$'\n'*}"
+    tip_refs="$(local_git for-each-ref --points-at "$sha" --format='%(refname)' refs/heads refs/remotes)" || {
+        printf 'SYNTHETIC_BASE|INCOMPLETE|REFS|.\n'
+        exit 2
+    }
+    while IFS= read -r tip_ref; do
+        [[ -z "$tip_ref" ]] && continue
+        if is_tool_owned_branch_name "$(branch_name_for_ref "$tip_ref")"; then
+            tool_branch_tip="$tip_ref"
             break
         fi
-    done
+    done <<< "$tip_refs"
 fi
 if [[ -n "$tool_branch_tip" ]]; then
     printf 'SYNTHETIC_BASE|REFUSE|%s|owned-branch=%s\n' "$sha" "$(sanitize "$tool_branch_tip")"
