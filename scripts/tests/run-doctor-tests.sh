@@ -466,6 +466,45 @@ n5() {
     want_not_contains "ignore:$base"$'\tINCOMPLETE'
 }
 
+# S11: a directory-form cline install (.clinerules/promptkit.md, the shape
+# init.sh ensure_target writes) is OK, not INCOMPLETE host file unreadable.
+s11() {
+    local root sha
+    root="$(make_healthy s11 balanced)"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
+    rm -f "$root/.clinerules"
+    mkdir -p "$root/.clinerules"
+    {
+        printf '<!-- PROMPTKIT_START -->\n'
+        printf '## PromptKit OS\n'
+        printf 'Engine: v1.2.3 (%s) - stamped at install time\n' "$sha"
+        printf '<!-- PROMPTKIT_END -->\n'
+    } > "$root/.clinerules/promptkit.md"
+    run_doctor "$root"
+    want_status 0
+    want_contains $'host:.clinerules/promptkit.md\tOK'
+    want_not_contains 'host file unreadable'
+}
+
+# S12: a cursor mdc-only install (.cursor/rules/promptkit.mdc, no .cursorrules)
+# is OK, not SKIP(not installed).
+s12() {
+    local root sha
+    root="$(make_healthy s12 balanced)"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
+    rm -f "$root/.cursorrules"
+    mkdir -p "$root/.cursor/rules"
+    {
+        printf '<!-- PROMPTKIT_START -->\n'
+        printf '## PromptKit OS\n'
+        printf 'Engine: v1.2.3 (%s) - stamped at install time\n' "$sha"
+        printf '<!-- PROMPTKIT_END -->\n'
+    } > "$root/.cursor/rules/promptkit.mdc"
+    run_doctor "$root"
+    want_status 0
+    want_contains $'host:.cursor/rules/promptkit.mdc\tOK'
+}
+
 begin; s1; report 'S1 healthy Balanced install -> all OK, exit 0'
 begin; s2; report 'S2 stale engine + ignored path + diverged projection -> exit 1'
 begin; s3; report 'S3 intentional ignore alone -> IGNORED, exit 0'
@@ -481,6 +520,8 @@ begin; n2; report 'N2 --fix renders <engine_relpath>/workflows/... and path exis
 begin; n3; report 'N3 docs-drift compares shared fields, DIVERGED/SKIP, never bare OK'
 begin; n4; report 'N4 deleted AGENTS.md -> MISSING, exit 1'
 begin; n5; report 'N5 engine outside project root -> kit-dir ignore SKIP, no phantom OK'
+begin; s11; report 'S11 cline directory-form install -> host OK'
+begin; s12; report 'S12 cursor mdc-only install -> host OK'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1
