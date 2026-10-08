@@ -7,7 +7,9 @@
 #
 # Non-negotiable safety floor:
 # 1. Obvious/hard-risk triggers deterministically override lower recommendations.
-# 2. Unsafe Underclassification Rate must be 0%.
+# 2. Unsafe Underclassification Rate must be 0% across the tested fixture set
+#    (see scripts/tests/run-pk-route-tests.sh) — a safety objective measured on
+#    those fixtures, not a proven property over unrestricted input.
 # 3. Missing key, timeout (>2s), or API failure gracefully falls back to offline
 #    deterministic routing without blocking or failing.
 # ==============================================================================
@@ -372,7 +374,7 @@ fi
 FINAL_LEVEL="$JEV_LEVEL"
 JUSTIFICATION="Jev System One recommendation"
 
-# Enforce deterministic hard safety floor (0% Unsafe Underclassifications)
+# Enforce deterministic hard safety floor (0% Unsafe Underclassifications on the tested fixture set)
 if detect_hard_l3 "$PROMPT_INPUT"; then
   if [[ "$JEV_LEVEL" != *"Level 3"* ]]; then
     FINAL_LEVEL="Level 3 (Release-Critical)"

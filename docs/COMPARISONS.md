@@ -82,8 +82,8 @@ While rigid methodologies force heavy specification and testing loops on every l
 
 - **Level 0**: Single-line typo, string update, documentation touch. Zero ceremony, no Task Records.
 - **Level 1 (Standard)**: Localized component tweak, bug fix, isolated utility. Socratic focus, minimum workflow, no Task Record.
-- **Level 2 (Controlled)**: Multi-file feature, internal contract change, new route. Mandatory Task Record, architecture check, Bounded Oracle verification.
-- **Level 3 (Release-Critical)**: Public API contract, database schema migration, authentication/authorization, production release. Strict Expand-Contract phased migrations, human sign-off, full verification evidence.
+- **Level 2 (Controlled)**: Multi-file feature, database schema migration, authentication/authorization, public API contracts, new route. Mandatory Task Record, architecture check, Bounded Oracle verification.
+- **Level 3 (Release-Critical)**: Release candidates, production deployments, tag generation, high-impact contract changes. Strict Expand-Contract phased migrations, human sign-off, full verification evidence.
 
 ---
 
