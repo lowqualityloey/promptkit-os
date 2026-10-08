@@ -43,8 +43,10 @@ meaningful_batch_field() {
     normalized="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
     [ -n "$normalized" ] && [[ ! "$normalized" =~ ^(n/?a|none|null|tbd|todo|not[[:space:]]+applicable|\[\])$ ]]
 }
-diff_output="$(git -C "$ROOT" diff --unified=0 "$BASELINE" -- docs/tasks 2>&1)"
-if [ "$?" -ne 0 ]; then echo "INVALID|AUTHORIZATION_DIFF|Unable to compare docs/tasks with the declared baseline"; exit 2; fi
+if ! diff_output="$(git -C "$ROOT" diff --unified=0 "$BASELINE" -- docs/tasks 2>&1)"; then
+    echo "INVALID|AUTHORIZATION_DIFF|Unable to compare docs/tasks with the declared baseline"
+    exit 2
+fi
 while IFS= read -r untracked; do
     [ -z "$untracked" ] && continue
     diff_output+=$'\n+++ b/'"$untracked"
@@ -78,11 +80,11 @@ while IFS= read -r line; do
             errors=$((errors + 1))
         fi
     done
-    boundary="$(printf '%s\n' "$section" | sed -n 's/.*\*\*Declared Boundary\*\*:[[:space:]]*`\([^`]*\)`.*/\1/p' | head -n1)"
+    boundary="$(printf '%s\n' "$section" | sed -n "s/.*\\*\\*Declared Boundary\\*\\*:[[:space:]]*\`\\([^\`]*\\)\`.*/\\1/p" | head -n1)"
     if [[ ! "$boundary" =~ ^(review|pr|full)$ ]]; then echo "INVALID_AUTHORIZATION_BOUNDARY|$record|Checkpoint $id must declare review, pr, or full"; errors=$((errors + 1)); fi
     mode="$(grep -E '^-[[:space:]]+\*\*Mode\*\*:' "$ROOT/$record" | tail -n1 | grep -oE 'Approved Batch Mode' || true)"
     if [ -n "$mode" ]; then
-        batch="$(grep -E '^-[[:space:]]+\*\*Batch Authorization\*\*:' "$ROOT/$record" | tail -n1 | grep -oE '`[^`]+`' | tr -d '`' || true)"
+        batch="$(grep -E '^-[[:space:]]+\*\*Batch Authorization\*\*:' "$ROOT/$record" | tail -n1 | grep -oE "\`[^\`]+\`" | tr -d '`' || true)"
         batch_file="$(resolve_batch_authorization "$batch" || true)"
         if [ -z "$batch_file" ]; then
             echo "MISSING_BATCH_AUTHORIZATION|$record|Approved Batch Mode link does not resolve"
@@ -95,7 +97,7 @@ while IFS= read -r line; do
                 fi
             done
             checkpoint_boundary="$boundary"
-            batch_boundary="$(grep -E '^[-*]?[[:space:]]*\*\*Declared Boundary\*\*:' "$batch_file" | sed -nE 's/.*`(review|pr|full)`[[:space:]]*$/\1/p' | head -n1)"
+            batch_boundary="$(grep -E '^[-*]?[[:space:]]*\*\*Declared Boundary\*\*:' "$batch_file" | sed -nE "s/.*\`(review|pr|full)\`[[:space:]]*\$/\\1/p" | head -n1)"
             if [ -z "$batch_boundary" ]; then
                 echo "INVALID_AUTHORIZATION_BOUNDARY|$record|Batch Authorization must declare review, pr, or full in backticks"
                 errors=$((errors + 1))
@@ -114,7 +116,7 @@ validate_changed_batch_record() {
         candidate_diff="$(sed 's/^/+/g' "$ROOT/$candidate")"
     fi
     if [ -n "$(grep -E '^-[[:space:]]+\*\*Mode\*\*:' "$ROOT/$candidate" | grep -F 'Approved Batch Mode' || true)" ] && [ -n "$(grep -E '^\+[^+][[:space:]]+\*\*(Mode|Batch Authorization)\*\*:' <<< "$candidate_diff" | head -n1)" ]; then
-            batch="$(grep -E '^-[[:space:]]+\*\*Batch Authorization\*\*:' "$ROOT/$candidate" | tail -n1 | grep -oE '`[^`]+`' | tr -d '`' || true)"
+            batch="$(grep -E '^-[[:space:]]+\*\*Batch Authorization\*\*:' "$ROOT/$candidate" | tail -n1 | grep -oE "\`[^\`]+\`" | tr -d '`' || true)"
             batch_file="$(resolve_batch_authorization "$batch" || true)"
             if [ -z "$batch_file" ]; then
                 echo "MISSING_BATCH_AUTHORIZATION|$candidate|Approved Batch Mode link does not resolve"
@@ -126,8 +128,8 @@ validate_changed_batch_record() {
                         errors=$((errors + 1))
                     fi
                 done
-                batch_boundary="$(grep -E '^[-*]?[[:space:]]*\*\*Declared Boundary\*\*:' "$batch_file" | sed -nE 's/.*`(review|pr|full)`[[:space:]]*$/\1/p' | head -n1)"
-                checkpoint_boundary="$(grep -E '^-[[:space:]]+\*\*Declared Boundary\*\*:' "$ROOT/$candidate" | sed -nE 's/.*`(review|pr|full)`[[:space:]]*$/\1/p' | head -n1)"
+                batch_boundary="$(grep -E '^[-*]?[[:space:]]*\*\*Declared Boundary\*\*:' "$batch_file" | sed -nE "s/.*\`(review|pr|full)\`[[:space:]]*\$/\\1/p" | head -n1)"
+                checkpoint_boundary="$(grep -E '^-[[:space:]]+\*\*Declared Boundary\*\*:' "$ROOT/$candidate" | sed -nE "s/.*\`(review|pr|full)\`[[:space:]]*\$/\\1/p" | head -n1)"
                 if [ -z "$batch_boundary" ]; then
                     echo "INVALID_AUTHORIZATION_BOUNDARY|$candidate|Batch Authorization must declare review, pr, or full in backticks"
                     errors=$((errors + 1))

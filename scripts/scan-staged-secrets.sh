@@ -170,7 +170,7 @@ while IFS= read -r -d '' path; do
     if ! detections=$(
         printf '%s\n' "$staged_diff" |
             "$awk_bin" -v q="'" -v rules_file="$narrative_rules" \
-                -v rules_extra="$narrative_rules_extra" -v skip_narrative="$skip_narrative" '
+                -v rules_extra="$narrative_rules_extra" -v skip_narrative="$skip_narrative" -f /dev/fd/3 3<<'AWK'
                 BEGIN {
                     rule_count = 0
                     for (source_index = 0; source_index < 2; source_index++) {
@@ -274,7 +274,7 @@ while IFS= read -r -d '' path; do
                     }
                     next_line++
                 }
-            '
+AWK
     ); then
         printf '%s\n' 'Staged secret scan failed while checking additions; stop before committing.' >&2
         exit 2
@@ -284,7 +284,7 @@ while IFS= read -r -d '' path; do
     while IFS='|' read -r line_number category detail severity; do
         [[ -n "$line_number" ]] || continue
         if [[ "$category" == NARRATIVE ]]; then
-            printf 'Narrative surface %s (%s) in staged additions: %s:%s (relativize the path to a $HOME-relative form, or untrack the file).\n' \
+            printf "Narrative surface %s (%s) in staged additions: %s:%s (relativize the path to a \$HOME-relative form, or untrack the file).\\n" \
                 "$detail" "$severity" "$escaped_path" "$line_number"
             narrative_found=1
         else

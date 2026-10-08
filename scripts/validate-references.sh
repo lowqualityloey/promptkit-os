@@ -77,7 +77,7 @@ check_file_reference() {
     local full_path="$PROMPTKIT_ROOT/$ref_path"
     
     if [ ! -f "$full_path" ]; then
-        local rel_source="${source_file#$PROMPTKIT_ROOT/}"
+        local rel_source="${source_file#"$PROMPTKIT_ROOT"/}"
         echo "  ❌ BROKEN: $rel_source:$line_num"
         echo "     Type: $ref_type"
         echo "     Missing: $ref_path"
@@ -141,7 +141,7 @@ check_markdown_links() {
         line_content="${hit#*:}"
 
         # Drop inline code spans so example links written inside backticks are ignored.
-        sanitized="$(printf '%s' "$line_content" | sed 's/`[^`]*`//g')"
+        sanitized="$(printf '%s' "$line_content" | sed "s/\`[^\`]*\`//g")"
         targets="$(printf '%s\n' "$sanitized" | grep -oE '\]\([^)]+\.md(#[^)]*)?\)' | sed -E 's/^\]\(//; s/\)$//; s/#.*$//')" || true
         [ -z "$targets" ] && continue
 
@@ -165,7 +165,7 @@ check_markdown_links() {
 
 # Scan each file
 for file in "${ALL_MD_FILES[@]}"; do
-    rel_path="${file#$PROMPTKIT_ROOT/}"
+    rel_path="${file#"$PROMPTKIT_ROOT"/}"
     file_has_issues=false
     
     line_num=0
@@ -203,7 +203,7 @@ for file in "${ALL_MD_FILES[@]}"; do
                 file_has_issues=true
             fi
         fi
-    done < "$file"
+    done < <(cat -- "$file")
 
     # Check generic markdown links (reader-facing 404 guard). Historical records
     # are exempt, matching the canonical-count drift guard's exemption policy.

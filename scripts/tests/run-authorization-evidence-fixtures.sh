@@ -78,10 +78,10 @@ cat > "$FIXTURE/docs/tasks/batch-example.md" <<'EOF'
 - **Permitted Actions**: `local commits`
 - **Milestone Scope**: `M1`
 EOF
-sed -i 's/`Gated Mode`/`Approved Batch Mode`/' "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
+sed -i "s/\`Gated Mode\`/\`Approved Batch Mode\`/" "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
 assert_result "missing checkpoint fields fail" 1
 write_checkpoint review docs/tasks/batch-example.md
-sed -i 's/`Gated Mode`/`Approved Batch Mode`/' "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
+sed -i "s/\`Gated Mode\`/\`Approved Batch Mode\`/" "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
 rm -f "$FIXTURE/docs/tasks/batch-example.md"
 assert_result "missing batch record fails" 1
 cat > "$FIXTURE/docs/tasks/batch-example.md" <<'EOF'
@@ -91,17 +91,17 @@ cat > "$FIXTURE/docs/tasks/batch-example.md" <<'EOF'
 - **Milestone Scope**: `M1`
 EOF
 assert_result "conflicting run and batch boundary fails" 1
-sed -i 's/`pr`/`review`/' "$FIXTURE/docs/tasks/batch-example.md"
+sed -i "s/\`pr\`/\`review\`/" "$FIXTURE/docs/tasks/batch-example.md"
 assert_result "valid batch authorization link passes" 0
-sed -i 's/`review`/review/' "$FIXTURE/docs/tasks/batch-example.md"
+sed -i "s/\`review\`/review/" "$FIXTURE/docs/tasks/batch-example.md"
 assert_result "batch boundary without required markup fails" 1
-sed -i 's/Declared Boundary\*\*: review/Declared Boundary**: `final`/' "$FIXTURE/docs/tasks/batch-example.md"
+sed -i "s/Declared Boundary\\*\\*: review/Declared Boundary**: \`final\`/" "$FIXTURE/docs/tasks/batch-example.md"
 assert_result "unsupported batch boundary fails" 1
-sed -i 's/`final`/`review`/' "$FIXTURE/docs/tasks/batch-example.md"
+sed -i "s/\`final\`/\`review\`/" "$FIXTURE/docs/tasks/batch-example.md"
 assert_result "restored valid batch boundary passes" 0
 ln -s batch-example.md "$FIXTURE/docs/tasks/batch-link.md"
 write_checkpoint review docs/tasks/batch-link.md
-sed -i 's/`Gated Mode`/`Approved Batch Mode`/' "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
+sed -i "s/\`Gated Mode\`/\`Approved Batch Mode\`/" "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
 assert_result "symlinked batch authorization is rejected" 1 "MISSING_BATCH_AUTHORIZATION"
 rm "$FIXTURE/docs/tasks/batch-link.md"
 
@@ -146,7 +146,7 @@ cat > "$TEMP_ROOT/outside-batch.md" <<'EOF'
 - **Milestone Scope**: `M1`
 EOF
 write_checkpoint review ../outside-batch.md
-sed -i 's/`Gated Mode`/`Approved Batch Mode`/' "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
+sed -i "s/\`Gated Mode\`/\`Approved Batch Mode\`/" "$FIXTURE/docs/tasks/TASK-2026-01-01-example.md"
 assert_result "batch authorization cannot escape repository root" 1 "MISSING_BATCH_AUTHORIZATION"
 
 echo "AUTHORIZATION_FIXTURES|PASS|18 cases"

@@ -123,8 +123,8 @@ degradation() {
 trim() {
     local value="$1"
     value="${value%$'\r'}"
-    value="${value#${value%%[![:space:]]*}}"
-    value="${value%${value##*[![:space:]]}}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
     printf '%s' "$value"
 }
 
@@ -397,7 +397,9 @@ revision_token() {
 validate_transitions() {
     local file="$1" id="$2" state="$3"
     local count=0 last_new="" in_section=0 line heading
-    while IFS= read -r line; do
+    local -a transition_lines=()
+    mapfile -t transition_lines < "$file"
+    for line in "${transition_lines[@]}"; do
         if [[ "$line" =~ ^[[:space:]]*#{1,6}[[:space:]]+(.*)$ ]]; then
             heading="$(trim "${BASH_REMATCH[1]}")"
             if [ "$heading" = "Transition History" ]; then
@@ -428,7 +430,7 @@ validate_transitions() {
             diagnostic INVALID_TRANSITION "$id" "$(relative_path "$file")" "Illegal transition: $previous -> $new" "Use the documented execution-state transition graph"
         fi
         last_new="$new"
-    done < "$file"
+    done
     if [ "$count" -eq 0 ]; then
         diagnostic INVALID_TRANSITION "$id" "$(relative_path "$file")" "No concrete transition history found" "Record at least the initial transition and current state"
     elif [ "$last_new" != "$state" ]; then
@@ -479,7 +481,8 @@ check_structured_evidence() {
 }
 
 validate_task() {
-    local file="$1" id="$(field_value "$1" "Task ID")" path profile id_profile="legacy" profile_remediation
+    local file="$1" id path profile id_profile="legacy" profile_remediation
+    id="$(field_value "$1" "Task ID")"
     path="$(relative_path "$file")"
     profile="$(field_value "$file" "PromptKit Adaptation Profile")"
     [ -z "$id" ] && id="UNKNOWN"
@@ -534,8 +537,11 @@ validate_task() {
     require_value "$file" "$id" "Mode" "READINESS_FAILURE"
     require_value "$file" "$id" "Host Timer Capability" "POLICY_LIMITATION"
 
-    local in_scope="$(list_items "$file" "In Scope")"
-    local non_goals="$(list_items "$file" "Explicit Non-Goals")"
+    local in_scope
+
+    in_scope="$(list_items "$file" "In Scope")"
+    local non_goals
+    non_goals="$(list_items "$file" "Explicit Non-Goals")"
     if [ -z "$(trim "$in_scope")" ] || [[ "$in_scope" == *"[File"* ]]; then
         diagnostic READINESS_FAILURE "$id" "$path" "In Scope must contain at least one concrete item" "List the bounded files, behaviors, or deliverables"
     fi
@@ -546,11 +552,16 @@ validate_task() {
         diagnostic POLICY_LIMITATION "$id" "$path" "Host timer capability does not record an enforcement limitation" "State that live host timing or forced termination is unavailable or limited"
     fi
 
-    local state="$(field_value "$file" "Execution State")"
-    local mapped="$(field_value "$file" "Mapped \`pk:tasks\` Status")"
-    local active="$(field_value "$file" "Active Task Pointer")"
+    local state
+
+    state="$(field_value "$file" "Execution State")"
+    local mapped
+    mapped="$(field_value "$file" "Mapped \`pk:tasks\` Status")"
+    local active
+    active="$(field_value "$file" "Active Task Pointer")"
     TASK_STATE_BY_ID["$id"]="$state"
-    local expected="$(expected_status "$state")"
+    local expected
+    expected="$(expected_status "$state")"
     case "$state" in
         planned|ready|in_progress|checkpoint_due|blocked|paused|handoff_ready|awaiting_review|completed|aborted) ;;
         *) diagnostic INVALID_STATE "$id" "$path" "Unknown execution state: $state" "Use one of the documented execution states" ;;
@@ -574,25 +585,32 @@ validate_task() {
         diagnostic READINESS_FAILURE "$id" "$path" "No stable acceptance criterion ID found" "Add at least one AC-* acceptance criterion"
     fi
 
-    local revision="$(field_value "$file" "Branch / Revision")"
+    local revision
+
+    revision="$(field_value "$file" "Branch / Revision")"
     [ -z "$revision" ] && revision="$(field_value "$file" "Validated Revision")"
     TASK_REVISION_BY_ID["$id"]="$(revision_token "$revision")"
 
     if [[ "$state" =~ ^(blocked|paused|aborted)$ ]]; then
-        local blocker="$(field_value "$file" "Blocker and Resume Condition")"
+        local blocker
+        blocker="$(field_value "$file" "Blocker and Resume Condition")"
         if is_placeholder "$blocker"; then
             diagnostic BLOCKER_UNRESOLVED "$id" "$path" "Stop state lacks a blocker or resume condition" "Record the owner, evidence, and precise resume condition"
         fi
     fi
     if [ "$state" = "checkpoint_due" ]; then
-        local cp="$(field_value "$file" "Checkpoint Records")"
+        local cp
+        cp="$(field_value "$file" "Checkpoint Records")"
         if is_placeholder "$cp"; then
             diagnostic CHECKPOINT_INCOMPLETE "$id" "$path" "checkpoint_due task has no checkpoint record reference" "Create and link a checkpoint record before resuming"
         fi
     fi
 
-    local changed_items="$(list_items "$file" "Changed Files")"
-    local scope_change="$(field_value "$file" "Scope Change Records")"
+    local changed_items
+
+    changed_items="$(list_items "$file" "Changed Files")"
+    local scope_change
+    scope_change="$(field_value "$file" "Scope Change Records")"
     if [ "$state" = "completed" ]; then
         if [ -z "$(trim "$changed_items")" ] || [[ "$changed_items" == *"[path]"* ]]; then
             diagnostic COMPLETION_EVIDENCE_MISSING "$id" "$path" "Completed task has no concrete Changed Files evidence" "List the changed files and summaries"
@@ -608,14 +626,15 @@ validate_task() {
                 diagnostic COMPLETION_EVIDENCE_MISSING "$id" "$path" "Completed task lacks usable $completion_label" "Record observable completion evidence or an explicit approved exception"
             fi
         done
-        local completion_state="$(field_value "$file" "Completion State")"
+        local completion_state
+        completion_state="$(field_value "$file" "Completion State")"
         [ "$completion_state" = "completed" ] || diagnostic COMPLETION_EVIDENCE_MISSING "$id" "$path" "Completion State does not confirm completed" "Set the completion gate only after evidence is linked"
     fi
 
     if [ -n "$(trim "$changed_items")" ]; then
         while IFS= read -r item; do
             [ -z "$(trim "$item")" ] && continue
-            changed_path="$(printf '%s' "$item" | grep -oE '`[^`]+`' | head -n 1 | tr -d '`' || true)"
+            changed_path="$(printf '%s' "$item" | grep -oE "\`[^\`]+\`" | head -n 1 | tr -d '`' || true)"
             [ -z "$changed_path" ] && continue
             if [[ "$in_scope" != *"$changed_path"* ]]; then
                 if is_placeholder "$scope_change" || ! printf '%s' "$scope_change" | grep -Eiq 'scope-'; then
@@ -629,7 +648,8 @@ validate_task() {
 }
 
 validate_scope_change() {
-    local file="$1" id="$(field_value "$1" "Scope Change ID")" path
+    local file="$1" id path
+    id="$(field_value "$1" "Scope Change ID")"
     path="$(relative_path "$file")"; [ -z "$id" ] && id="UNKNOWN"; RECORD_COUNT=$((RECORD_COUNT + 1))
     is_valid_child_id "$id" || diagnostic INVALID_ID "$id" "$path" "Scope Change ID is not stable: $id" "Use SCOPE-YYYY-MM-DD-task-id-sequence"
     local labels=("Record Type" "Scope Change ID" "Task ID" "Specification" "Proposer / Actor" "Created" "Approval Boundary" "Reason or Discovery" "Current Task Value" "Proposed Value" "Affected Objective" "Affected Files or Artifacts" "Affected Acceptance Criteria" "Affected Dependencies" "New or Changed Non-Goals" "Risk / Estimate Impact" "Changed Verification Condition" "Disposition" "Independent Work Discovered" "Required Human Confirmation" "Required New Task Record" "Block Until Resolved" "Decision" "Approver" "Decision Timestamp" "Approval Evidence" "Related Checkpoint" "Related Handoff" "Branch / Revision" "Verification Plan or Result" "Blocker and Resume Condition" "Previous Task State" "Resulting Task State" "Task Record Updated" "New Task / Exception Links" "Changed Scope Summary" "Next Action" "Recorded By and Timestamp")
@@ -638,11 +658,13 @@ validate_scope_change() {
     local value_labels=("Reason or Discovery" "Current Task Value" "Proposed Value" "Affected Objective" "Affected Files or Artifacts" "Affected Acceptance Criteria" "Risk / Estimate Impact" "Changed Verification Condition" "Disposition" "Required Human Confirmation" "Block Until Resolved" "Decision" "Decision Timestamp" "Branch / Revision" "Verification Plan or Result" "Changed Scope Summary" "Next Action" "Recorded By and Timestamp")
     for label in "${value_labels[@]}"; do require_value "$file" "$id" "$label"; done
     [ "$(field_value "$file" "Record Type")" = "Scope Change Record" ] || diagnostic INVALID_STATE "$id" "$path" "Record Type is not Scope Change Record" "Use the canonical Scope Change Record type"
-    local task_id="$(field_value "$file" "Task ID")"
+    local task_id
+    task_id="$(field_value "$file" "Task ID")"
     if [ -z "${TASK_FILE_BY_ID[${task_id:-}]+set}" ]; then
         diagnostic TRACEABILITY_MISSING "$id" "$path" "Scope Change Record references unknown Task ID: $task_id" "Link the record to an existing canonical Task Record"
     fi
-    local decision="$(field_value "$file" "Decision")"
+    local decision
+    decision="$(field_value "$file" "Decision")"
     if [ "$decision" = "Approved" ]; then
         require_value "$file" "$id" "Approver"
         require_value "$file" "$id" "Approval Evidence"
@@ -651,11 +673,14 @@ validate_scope_change() {
 }
 
 validate_checkpoint() {
-    local file="$1" id="$(field_value "$1" "Checkpoint ID")" path
+    local file="$1" id path
+    id="$(field_value "$1" "Checkpoint ID")"
     path="$(relative_path "$file")"; [ -z "$id" ] && id="UNKNOWN"; RECORD_COUNT=$((RECORD_COUNT + 1))
     is_valid_child_id "$id" || diagnostic INVALID_ID "$id" "$path" "Checkpoint ID is not stable: $id" "Use CHECKPOINT-YYYY-MM-DD-task-id-sequence"
 
-    local ceremony_level="$(field_value "$file" "Ceremony Level")"
+    local ceremony_level
+
+    ceremony_level="$(field_value "$file" "Ceremony Level")"
     local parsed_level=""
     if [ -n "$ceremony_level" ]; then
         parsed_level="$(parse_ceremony_level "$ceremony_level")"
@@ -665,11 +690,14 @@ validate_checkpoint() {
         fi
     fi
 
-    local task_id="$(field_value "$file" "Task ID")"
+    local task_id
+
+    task_id="$(field_value "$file" "Task ID")"
     local task_level=""
     if [ -n "$task_id" ] && [ -n "${TASK_FILE_BY_ID[${task_id:-}]+set}" ]; then
         local task_file="${TASK_FILE_BY_ID[$task_id]}"
-        local task_ceremony="$(field_value "$task_file" "Ceremony Level")"
+        local task_ceremony
+        task_ceremony="$(field_value "$task_file" "Ceremony Level")"
         [ -z "$task_ceremony" ] && task_ceremony="$(field_value "$task_file" "Work Classification")"
         if [ -n "$task_ceremony" ]; then
             task_level="$(parse_ceremony_level "$task_ceremony")"
@@ -711,7 +739,8 @@ validate_checkpoint() {
         if ! field_exists "$file" "Blockers"; then
             diagnostic CHECKPOINT_INCOMPLETE "$id" "$path" "Missing field: Blockers" "Add the labeled field to the canonical record"
         else
-            local blockers_val="$(field_value "$file" "Blockers")"
+            local blockers_val
+            blockers_val="$(field_value "$file" "Blockers")"
             if [ "$blockers_val" != "None identified" ] && is_quick_placeholder "$blockers_val"; then
                 diagnostic CHECKPOINT_INCOMPLETE "$id" "$path" "Missing usable value: Blockers" "Provide a concrete value or 'None identified' for Blockers"
             fi
@@ -753,12 +782,14 @@ validate_checkpoint() {
         fi
     done
     [ "$(field_value "$file" "Record Type")" = "Checkpoint Record" ] || diagnostic CHECKPOINT_INCOMPLETE "$id" "$path" "Record Type is not Checkpoint Record" "Use the canonical Checkpoint Record type"
-    local task_id="$(field_value "$file" "Task ID")"
+    local task_id
+    task_id="$(field_value "$file" "Task ID")"
     [ -n "$task_id" ] && [ -n "${TASK_FILE_BY_ID[$task_id]+set}" ] || diagnostic TRACEABILITY_MISSING "$id" "$path" "Checkpoint references unknown Task ID: $task_id" "Link the checkpoint to an existing Task Record"
 }
 
 validate_handoff() {
-    local file="$1" id="$(field_value "$1" "Handoff ID")" path
+    local file="$1" id path
+    id="$(field_value "$1" "Handoff ID")"
     path="$(relative_path "$file")"; [ -z "$id" ] && id="UNKNOWN"; RECORD_COUNT=$((RECORD_COUNT + 1))
     is_valid_child_id "$id" || diagnostic INVALID_ID "$id" "$path" "Handoff ID is not stable: $id" "Use HANDOFF-YYYY-MM-DD-task-id-sequence"
     local labels=("Record Type" "Handoff ID" "Task ID" "Specification" "Created" "Sender / Current Owner" "Intended Receiver" "Approval Boundary" "Execution State" "Execution Scope" "Objective" "Completed Milestones" "Remaining Acceptance Criteria" "Blockers and Resume Conditions" "Next Action" "Branch" "Validated Revision" "Changed Files" "Task Record" "Related Scope Changes" "Related Checkpoints" "Related Exceptions" "Verification Commands and Results" "CI Evidence" "Review / Commit / PR Evidence" "Release Evidence" "Locked Decisions" "Non-Negotiable Invariants" "Rejected Approaches" "Scope and Approval Constraints" "Host or Timer Limitations" "Receiver" "Acceptance Decision" "Acceptance Timestamp" "Receiver-Validated Revision" "Validation Evidence" "Scope Changed During Acceptance" "Acceptance Blocker and Resume Condition" "Resulting Execution State" "Task Record Updated" "Handoff Closed By" "Closed Timestamp" "Next Action")
@@ -767,11 +798,13 @@ validate_handoff() {
     local value_labels=("Record Type" "Handoff ID" "Task ID" "Specification" "Created" "Sender / Current Owner" "Intended Receiver" "Approval Boundary" "Execution State" "Execution Scope" "Objective" "Next Action" "Branch" "Validated Revision" "Task Record" "Verification Commands and Results" "Host or Timer Limitations" "Receiver" "Acceptance Decision" "Acceptance Timestamp" "Resulting Execution State" "Task Record Updated" "Handoff Closed By" "Closed Timestamp")
     for label in "${value_labels[@]}"; do require_value "$file" "$id" "$label" "HANDOFF_INCOMPLETE"; done
     [ "$(field_value "$file" "Record Type")" = "Handoff Record" ] || diagnostic HANDOFF_INCOMPLETE "$id" "$path" "Record Type is not Handoff Record" "Use the canonical Handoff Record type"
-    local task_id="$(field_value "$file" "Task ID")"
+    local task_id
+    task_id="$(field_value "$file" "Task ID")"
     [ -n "${TASK_FILE_BY_ID[${task_id:-}]+set}" ] || diagnostic TRACEABILITY_MISSING "$id" "$path" "Handoff references unknown Task ID: $task_id" "Link the handoff to an existing Task Record"
     require_value "$file" "$id" "Next Action" "HANDOFF_INCOMPLETE"
     require_value "$file" "$id" "Host or Timer Limitations" "POLICY_LIMITATION"
-    local decision="$(field_value "$file" "Acceptance Decision")"
+    local decision
+    decision="$(field_value "$file" "Acceptance Decision")"
     if [ "$decision" = "Accepted" ]; then
         require_value "$file" "$id" "Receiver-Validated Revision" "HANDOFF_INCOMPLETE"
         require_value "$file" "$id" "Validation Evidence" "HANDOFF_INCOMPLETE"

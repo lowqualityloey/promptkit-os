@@ -9,6 +9,14 @@ import tarfile
 from pathlib import PurePosixPath
 
 
+class ArchiveArguments(argparse.Namespace):
+    def __init__(self) -> None:
+        super().__init__()
+        self.archive: str = ""
+        self.commit: str = ""
+        self.repository: str = "."
+
+
 def archive_entries(archive: tarfile.TarFile, *, strip_root: bool) -> dict[str, tuple[str, int, bytes | str]]:
     entries: dict[str, tuple[str, int, bytes | str]] = {}
     root: str | None = None
@@ -44,10 +52,10 @@ def archive_entries(archive: tarfile.TarFile, *, strip_root: bool) -> dict[str, 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--archive", required=True, help="Downloaded GitHub .tar.gz archive")
-    parser.add_argument("--commit", required=True, help="Resolved commit SHA")
-    parser.add_argument("--repository", default=".", help="Git repository containing the commit")
-    args = parser.parse_args()
+    _ = parser.add_argument("--archive", required=True, help="Downloaded GitHub .tar.gz archive")
+    _ = parser.add_argument("--commit", required=True, help="Resolved commit SHA")
+    _ = parser.add_argument("--repository", default=".", help="Git repository containing the commit")
+    args = parser.parse_args(namespace=ArchiveArguments())
 
     try:
         downloaded = tarfile.open(args.archive, mode="r:gz")
@@ -74,8 +82,7 @@ def main() -> int:
             if expected_entries[name] != downloaded_entries[name]
         )
         print(
-            "archive does not match commit "
-            f"{args.commit}: missing={missing}, extra={extra}, changed={changed}",
+            f"archive does not match commit {args.commit}: missing={missing}, extra={extra}, changed={changed}",
             file=sys.stderr,
         )
         return 1

@@ -430,7 +430,7 @@ SHARED_PROJECTION_FIELDS=(
     'Specification|Specification'
     'Execution Scope|Execution Scope'
     'Start Time|Start Time'
-    'Mapped `pk:tasks` Status|Mapped `pk:tasks` Status'
+    "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status"
 )
 
 proj_field() {
