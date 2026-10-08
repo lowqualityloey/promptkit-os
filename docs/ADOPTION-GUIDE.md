@@ -394,6 +394,20 @@ See [`docs/MAXIMS.md`](./MAXIMS.md).
 
 ---
 
+### Scenario 10: Control AI Attribution in Commits, PRs, and Issues
+
+**Problem**: unsolicited AI co-author trailers and promotional footers ("Generated with …") appear in commits, PRs, and issues, and their presence depends on the harness and version rather than on the model.
+
+**Solution**: declare `ai-attribution: off` in `PROMPTKIT.md`. A missing line means `host-default`, so nothing is newly blocked.
+
+- **Read-only detector**: `bash scripts/check-ai-attribution.sh --message-file <draft>` (commit) or `--body-file <pr-body.md>` (PR/issue). Exit `1` names the matched prohibited rule and remediation; `2` fails closed on a malformed rules file or unreadable payload. The `.ps1` twin is equivalent.
+- **Preserves humans**: human co-authors, authorship identity, required notices, and ordinary discussion of AI tools do not match; only unsolicited AI trailers and generated-by footers do.
+- **Externalized rules**: `scripts/ai-attribution-patterns.txt` (`RULE|regex|tier`); extend per project with `PROMPTKIT_AI_ATTRIBUTION_RULES_EXTRA=/path/to/extra-rules.txt`.
+- **Opt-in enforcement**: install the reversible `commit-msg` hook with `bash scripts/install-attribution-hook.sh` (or `.ps1`), and remove it with `--remove`. Existing hook content is preserved and still runs (chained); `pk:commit` and `pk:pr` run the same check on the prepared payload.
+- **Honest limits**: a repository instruction cannot override higher-priority harness rules or control publication paths PromptKit does not manage; those are surfaced as limitations, never as guaranteed protection. No history is rewritten.
+
+---
+
 ## Handling Resistance & Common Objections
 
 ### "This Looks Like Bureaucracy"

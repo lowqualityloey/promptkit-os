@@ -23,6 +23,7 @@ Per [Issue #436](https://github.com/lowqualityloey/promptkit-os/issues/436), the
 - **Untested Boundaries Are Never Implied**: Hosts without published, verified live session transcripts are explicitly registered as **Untested for live runtime fidelity**. Offline sample fixtures validate the mechanical scoring rubric only; they do not establish live runtime fidelity for any host. Compatibility is unknown and must never be implied or assumed.
 - **Mechanical Scoring**: Grades are assigned strictly by the behavioral evaluation harness ([`scripts/run-behavioral-eval.sh`](../scripts/run-behavioral-eval.sh) `--score`), not by human impression or improvised criteria.
 - **Entry Point Is Also Install-Time**: `pk:route` now has a real shell entry point — `pk route "<text>"` (`scripts/pk` / `.ps1`) classifies and prints with an exit code, and the installer regression harness asserts every installed host file carries the managed block. Both remain install-time claims; neither moves a host in the Untested registry.
+- **Attribution Enforcement Is Layered**: with `ai-attribution: off`, PromptKit supplies policy guidance (`pk:commit` / `pk:pr`), a deterministic read-only detector (`scripts/check-ai-attribution.{sh,ps1}`), and an opt-in `commit-msg` hook (`scripts/install-attribution-hook.{sh,ps1}`). Only the installed hook is verified enforcement; hosts that bypass hooks, add content after submission, or carry higher-priority rules are reported as limitations, never as guaranteed protection.
 
 ---
 

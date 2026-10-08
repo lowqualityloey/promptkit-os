@@ -106,6 +106,7 @@ Structure the PR description using `templates/pull-request-template.md`:
 5. **Testing Evidence**: Paste test runner pass counts (when automated tests apply; for documentation or non-test changes, cite the executed validator or verification command results), and, when human interaction is required to establish acceptance evidence, provide numbered manual verification steps (otherwise `N/A — no manual verification applicable`).
 6. **Rollback Strategy**: Document whether this PR is zero-state reversible or requires step-by-step database rollbacks (when persistence exists).
 7. **Reviewer Focus**: Point reviewers to the most load-bearing lines or complex logic.
+8. **AI attribution gate** (only when `PROMPTKIT.md` declares `ai-attribution: off`): validate the exact final title and body before submission with `bash scripts/check-ai-attribution.sh --body-file <pr-body.md>` (or `.ps1`). Exit `1` names the matched prohibited AI signature and remediation — rewrite the payload, or surface the conflict rather than silently dropping required attribution. Read-only; a missing or `host-default` preference skips the gate.
 
 ---
 
