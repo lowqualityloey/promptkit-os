@@ -42,7 +42,11 @@ switch ($subcommand) {
     'route' {
         $rest = @()
         if ($CommandArgs.Count -gt 1) { $rest = $CommandArgs[1..($CommandArgs.Count - 1)] }
-        & (Join-Path $scriptDir 'pk-route.ps1') @rest
+        # A fresh pwsh re-parses $rest, so router switches (-Offline, -Help,
+        # -TimeoutSec, -DryRun) bind as named parameters. In-process array
+        # splatting would forward them positionally and swallow them into the
+        # prompt, diverging from the Bash twin that execs a fresh process.
+        & pwsh -NoProfile -File (Join-Path $scriptDir 'pk-route.ps1') @rest
         exit $LASTEXITCODE
     }
     { $_ -in '--help', '-h', 'help' } {

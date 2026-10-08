@@ -84,6 +84,20 @@ try {
     Invoke-Pk -ExtraArgs @()
     Assert-Scenario ($script:STATUS -eq 2) "no-args expected exit 2, got $($script:STATUS)"
     Report-Scenario 'E4 --help exits 0; no arguments exits 2'
+
+    # E5: the router switch -Offline is forwarded, not swallowed as task text.
+    Begin-Scenario
+    Invoke-Pk -ExtraArgs @('route', '-Offline', 'the checkout endpoint returns 500')
+    Assert-Scenario ($script:STATUS -eq 0) "expected exit 0, got $($script:STATUS)"
+    Assert-Scenario ($script:OUT.Contains('Forced offline deterministic routing')) '-Offline was not forwarded to the router'
+    Report-Scenario 'E5 route -Offline is forwarded to the router'
+
+    # E6: -Help is forwarded and shows the router usage instead of classifying.
+    Begin-Scenario
+    Invoke-Pk -ExtraArgs @('route', '-Help')
+    Assert-Scenario ($script:STATUS -eq 0) "expected exit 0, got $($script:STATUS)"
+    Assert-Scenario ($script:OUT.Contains('Usage:')) '-Help was not forwarded to the router'
+    Report-Scenario 'E6 route -Help is forwarded to the router'
 } finally {
     Remove-Item -LiteralPath $probe -Recurse -Force -ErrorAction SilentlyContinue
 }

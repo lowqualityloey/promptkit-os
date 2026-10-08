@@ -81,10 +81,26 @@ e4() {
     scenario_check "$([[ "$STATUS" -eq 2 ]] && printf 1 || printf 0)" "no-args expected exit 2, got $STATUS"
 }
 
+# E5: the router option --offline is forwarded, not swallowed as task text.
+e5() {
+    run_pk route --offline "the checkout endpoint returns 500"
+    scenario_check "$([[ "$STATUS" -eq 0 ]] && printf 1 || printf 0)" "expected exit 0, got $STATUS"
+    scenario_check "$([[ "$OUT" == *"Forced offline deterministic routing"* ]] && printf 1 || printf 0)" "--offline was not forwarded to the router"
+}
+
+# E6: --help is forwarded and shows the router usage instead of classifying.
+e6() {
+    run_pk route --help
+    scenario_check "$([[ "$STATUS" -eq 0 ]] && printf 1 || printf 0)" "expected exit 0, got $STATUS"
+    scenario_check "$([[ "$OUT" == *"Usage:"* ]] && printf 1 || printf 0)" "--help was not forwarded to the router"
+}
+
 begin; e1; report 'E1 pk route classifies and exits 0 without side effects'
 begin; e2; report 'E2 unknown subcommand exits 2 naming workflows/<cmd>.md'
 begin; e3; report 'E3 route output matches the shared Bash/PowerShell parity literal'
 begin; e4; report 'E4 --help exits 0; no arguments exits 2'
+begin; e5; report 'E5 route --offline is forwarded to the router'
+begin; e6; report 'E6 route --help is forwarded to the router'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1
