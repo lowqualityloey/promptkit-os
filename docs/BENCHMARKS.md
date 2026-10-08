@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [26 Inlined Workflows (116,394 tok) + Templates + Protocols] │
+│ Every Turn: [26 Inlined Workflows (116,558 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -40,8 +40,8 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **32,089 tok** |
-| Full workflow set | 26 | **116,394 tok** |
+| Core-six Lite subset | 6 | **32,253 tok** |
+| Full workflow set | 26 | **116,558 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -233,16 +233,16 @@ The figures in this section use the `bytes/4` proxy. Issue #194 validated that c
 > [!IMPORTANT]
 > This section is **ungated** — `scripts/measure-tokenizer-delta.sh` always exits 0 and prints `SKIPPED` when `tiktoken` is unavailable, so no CI job fails when these rows go stale. That is a deliberate trade (the check needs network-free BPE data and is validation-only), but it means staleness is caught by review, not by a gate. Re-run it in the same change that touches a measured input, and treat a stale row here as a documentation defect. See `CONTRIBUTING.md` item 4.
 
-**Current measurement:** The tokenizer comparison below was re-measured 2026-10-08 on the current source tree, superseding the 2026-10-06 snapshot, the 2026-10-05 `401cc9e` one, the 2026-10-02 `2b6c9e9` one, the 2026-10-01 `e159c70` one, and the earlier 2026-09-28 `b7e9c8c` one. Validation only — `bytes/4` remains the gated convention and no published budget figure changed. Two rows moved again and are corrected here: the Balanced directive moved on the #547 `pk:doctor` trigger (2,312 → 2,341) and `workflows/route.md` moved with the same growth (9,263 → 9,310). The remaining rows still match the 2026-10-05 snapshot.
+**Current measurement:** The tokenizer comparison below was re-measured 2026-10-09 on the current source tree, superseding the 2026-10-08 snapshot, the 2026-10-06 snapshot, the 2026-10-05 `401cc9e` one, the 2026-10-02 `2b6c9e9` one, the 2026-10-01 `e159c70` one, and the earlier 2026-09-28 `b7e9c8c` one. Validation only — `bytes/4` remains the gated convention and no published budget figure changed. One row moved again and is corrected here: `workflows/route.md` grew with the router-coverage documentation (9,310 → 9,474 `bytes/4`; CL100K 8,080 → 8,221; O200K 8,054 → 8,193), leaving its RATIO unchanged at 0.868. The remaining rows still match the 2026-10-08 snapshot.
 
-**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-10-08 on the current source tree (prior: 2026-10-06, 2026-10-05 at `401cc9e`, 2026-10-02 at `2b6c9e9`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4. This table is **not** gated and never fails the build, so unlike the sections above it has no CI guard against going stale: re-run it whenever a measured input changes, which is every release that touches `workflows/`, `protocols/code-quality-gate.md`, or a measured template.
+**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-10-09 on the current source tree (prior: 2026-10-08, 2026-10-06, 2026-10-05 at `401cc9e`, 2026-10-02 at `2b6c9e9`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4. This table is **not** gated and never fails the build, so unlike the sections above it has no CI guard against going stale: re-run it whenever a measured input changes, which is every release that touches `workflows/`, `protocols/code-quality-gate.md`, or a measured template.
 
 | File | BYTES4 | CL100K | O200K | RATIO |
 | :--- | ---: | ---: | ---: | ---: |
 | `templates/agent-directive-template.md` | 2,341 | 2,376 | 2,366 | 1.015 |
 | `templates/agent-directive-lite-template.md` | 1,436 | 1,482 | 1,477 | 1.032 |
 | `workflows/plan.md` | 7,602 | 6,165 | 6,153 | 0.811 |
-| `workflows/route.md` | 9,310 | 8,080 | 8,054 | 0.868 |
+| `workflows/route.md` | 9,474 | 8,221 | 8,193 | 0.868 |
 | `workflows/fix.md` | 3,582 | 3,055 | 3,041 | 0.853 |
 | `workflows/ship.md` | 5,947 | 4,653 | 4,654 | 0.782 |
 | `protocols/discovery-intake.md` | 3,938 | 3,458 | 3,446 | 0.878 |

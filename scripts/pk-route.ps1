@@ -3,16 +3,17 @@
   PromptKit OS Fast Route & Ceremony Classifier (PowerShell 7 Twin)
 
 .DESCRIPTION
-  Powered by TypeSafe AI's Jev (System One) as an evidentiary decision primitive.
-  Architectural Axiom: "Jev Recommends, PromptKit Decides."
+  Fully offline and deterministic: the ceremony level (L0-L3) and workflow are
+  computed locally from the prompt. There is no network transport, no external
+  service, and no credential read.
 
   Non-negotiable safety floor:
   1. Obvious/hard-risk triggers deterministically override lower recommendations.
   2. Unsafe Underclassification Rate must be 0% across the tested fixture set
      (see scripts/tests/run-pk-route-tests.ps1) — a safety objective measured on
      those fixtures, not a proven property over unrestricted input.
-  3. Missing key, timeout (>2s), or API failure gracefully falls back to offline
-     deterministic routing without blocking or failing.
+  3. Classification never blocks or fails: routing is always available and
+     deterministic, regardless of environment.
 #>
 
 [CmdletBinding()]
@@ -43,26 +44,20 @@ if ($Help) {
 Usage: pk-route.ps1 [-Prompt] "YOUR TASK PROMPT" [-TimeoutSec 2] [-Offline] [-DryRun]
 
 Fast PromptKit ceremony level (L0-L3) classifier and workflow router.
-Queries TypeSafe AI Jev (System One) with deterministic safety arbitration.
 
-Transport fallback hierarchy (see #343):
-  1. AI_GATEWAY_API_KEY -> Vercel AI Gateway evaluation route
-  2. TYPESAFE_API_KEY   -> Direct TypeSafe endpoint
-  3. Neither set         -> deterministic offline route
-  4. Any transport failure (timeout / 4xx / 5xx / malformed)
-                         -> deterministic offline route
-Transport failure never changes PromptKit's safety policy.
+This router is fully offline and deterministic. It classifies the prompt with
+local pattern rules only: no network transport, no external service, and no
+credentials. The same prompt always yields the same level and workflow.
 
 Parameters:
   -Prompt <string>     Task or user prompt to classify
-  -TimeoutSec <int>    Maximum API wait time before fallback (default: 2)
   -Offline             Force offline deterministic classification
-  -DryRun              Print payload and plan without executing network request
+  -TimeoutSec <int>    Deprecated compatibility no-op; accepted and ignored
+  -DryRun              Deprecated compatibility no-op; accepted and ignored
   -Help                Show this help message
 
-Environment:
-  $env:AI_GATEWAY_API_KEY  Vercel AI Gateway key (preferred; Jev is Free/free-tier eligible)
-  $env:TYPESAFE_API_KEY    TypeSafe direct API key (fallback; offline routing if neither set)
+Zero-Lock-In Contract:
+  Never halts or blocks. Classification is a pure local function of the prompt.
 "@
   exit 0
 }
@@ -81,14 +76,58 @@ $inputPrompt = if (-not [string]::IsNullOrWhiteSpace($Prompt)) {
 # 1. Deterministic Hard-Trigger & Pattern Classifiers
 # ------------------------------------------------------------------------------
 
+function Test-ActionMarkerApplies ([string]$text) {
+  # Explicit work verbs. fix/patch/update are deliberately ABSENT here because
+  # they are verb-ambiguous; they are handled by the rule below.
+  if ($text -match '(?i)\b(apply|applied|applying|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|return|remove|delete|need\s+to|required|must|should|roll\s+out)\b') {
+    return $true
+  }
+
+  # fix/patch/update are accepted only when the security phrase is the DIRECT
+  # OBJECT ("fix the security patch"), not when they modify something else
+  # ("fix a typo in the security patch README").
+  if ($text -match '(?i)\b(fix|patch|update)s?\s+(a|an|the|this|that|our)?\s+(critical\s+)?security\s+(patch|fix|update|advisory|hotfix)\b') {
+    return $true
+  }
+
+  # Conceptual question or documentation edit: never escalate on a topic keyword.
+  if ($text -match '(?i)\b(what\s+is|how\s+does|explain|describe|tell\s+me\s+about|syntax|lookup|typo|spelling|rename|readme|doc|changelog|formatting)\b') {
+    return $false
+  }
+
+  return $false
+}
+
 function Test-HardL3 ([string]$text) {
   # Release, deploy, publish, tag candidate, production push (#345: live
   # publication now tolerates ordinary modifiers, e.g. "make the app live",
   # "turn this on for everyone").
+  #
+  # #594 (F-3) restructures L3 into three tiers:
+  #   1. l3_core — the pre-#594 alternations only (release/deploy/publish verbs
+  #      and live-publication phrases). Kept UNGATED so the established safety
+  #      floor and offline behaviour are untouched.
+  #   2. named-CVE — an unconditional CVE identifier check: naming a CVE is work
+  #      by definition (workflows/route.md:64 lists critical security updates as
+  #      Level 3).
+  #   3. action-marker gate — the security-update / high-impact phrases added by
+  #      #594 are ACTION markers, not topic keywords, so they escalate only when
+  #      Test-ActionMarkerApplies reads the request as work on that subject.
   $corePattern = '(?i)\b(deploy|release|publish|tag\s+candidate|make\s+(this|it|that|everything)(\s+[a-z]+)?\s+(live|public)|make\s+the\s+[a-z]+\s+(live|public)|turn\s+(this|it|that|everything)\s+on|production\s+deploy|hotfix\s+prod|ship\s+release|v\d+\.\d+)'
   if ($text -match $corePattern) {
     return $true
   }
+
+  # Named CVE is unconditionally release-critical.
+  if ($text -match '(?i)cve-\d{4}-\d+') {
+    return $true
+  }
+
+  # Gated #594 additions: security-update and high-impact action markers.
+  if (($text -match '(?i)\b(security\s+(patch|fix|update|advisory|hotfix|release)|critical\s+security|high[-\s]impact)\b') -and (Test-ActionMarkerApplies $text)) {
+    return $true
+  }
+
   # Bare "ship" (#345): a release verb on its own is release-critical, but when
   # a controlled-change (L2) trigger coexists, the L2 trigger claims the input.
   # This keeps "change the migration and ship it" at Level 2 while
@@ -107,7 +146,19 @@ function Test-HardL2 ([string]$text) {
   # production database (#345: extended auth vocabulary and API-contract
   # synonyms: login, sign in/sign-in, signup, SSO, password; API response
   # format, API payload, API endpoint, bare endpoint).
-  $pattern = '(?i)\b(alter\s+table|migration|migrate|drop\s+table|create\s+table|schema|database|production\s+database|auth|login|sign[-\s]?in|signup|sso|password|token|session|jwt|oauth|credentials|secret|api\s+(contract|response\s+format|payload|endpoint)|endpoint|breaking)'
+  # #594: added public-contract/response synonyms, and qualified the former bare
+  # `breaking` term with action context so a definitional mention such as
+  # "what is a breaking change?" no longer matches. Canonical L2/L3 mapping:
+  # workflows/route.md:89.
+  # #594 (F-3): the `public (api|contract|interface|rest|response)` term is now
+  # GATED by Test-ActionMarkerApplies: a bare topical mention such as "explain
+  # the public response format" must not escalate, so it fires only when the
+  # request reads as work on the public contract.
+  if (($text -match '(?i)\bpublic\s+(api|contract|interface|rest|response)\b') -and (Test-ActionMarkerApplies $text)) {
+    return $true
+  }
+
+  $pattern = '(?i)\b(alter\s+table|migration|migrate|drop\s+table|create\s+table|schema|database|production\s+database|auth|login|sign[-\s]?in|signup|sso|password|token|session|jwt|oauth|credentials|secret|api\s+(contract|response\s+format|payload|endpoint)|endpoint|(introduce|introduces|introducing|make|makes|making|create|creates|creating|cause|causes|causing|avoid|avoids|avoiding|ship|ships|shipping|publish|publishes|publishing|release|releases|releasing|update|updates|updating|convert|converts|converting)\s+([a-z]+\s+){0,3}breaking)'
   return ($text -match $pattern)
 }
 
@@ -142,7 +193,7 @@ function Get-DeterministicWorkflow ([string]$text) {
 }
 
 # ------------------------------------------------------------------------------
-# 2. Deterministic Offline Fallback Router
+# 2. Deterministic Offline Router
 # ------------------------------------------------------------------------------
 
 function Emit-DeterministicRoute ([string]$text, [string]$reason = "Deterministic offline policy classification") {
@@ -164,170 +215,15 @@ function Emit-DeterministicRoute ([string]$text, [string]$reason = "Deterministi
 }
 
 # ------------------------------------------------------------------------------
-# 3. Dry-Run / Offline Handling
+# 3. Routing
 # ------------------------------------------------------------------------------
 
+# -Offline forces deterministic routing; the default path routes identically
+# because classification is already fully local and deterministic.
 if ($Offline) {
   Emit-DeterministicRoute $inputPrompt "Forced offline deterministic routing"
   exit 0
 }
 
-$transport = "none"
-$jevUrl = ""
-$apiKey = $env:AI_GATEWAY_API_KEY
-if (-not [string]::IsNullOrWhiteSpace($apiKey)) {
-  $transport = "gateway"
-  $jevUrl = "https://ai-gateway.vercel.sh/v4/ai/evaluation-model"
-} else {
-  $apiKey = $env:TYPESAFE_API_KEY
-  if (-not [string]::IsNullOrWhiteSpace($apiKey)) {
-    $transport = "direct"
-    $jevUrl = "https://api.typesafe.ai/v1/systemone"
-  } else {
-    # Scenario 1: No credential for any transport
-    Emit-DeterministicRoute $inputPrompt "Offline fallback (no AI_GATEWAY_API_KEY nor TYPESAFE_API_KEY)"
-    exit 0
-  }
-}
-
-if ($DryRun) {
-  Write-Output "[DryRun] Would query Jev via $transport at $jevUrl (Timeout: ${TimeoutSec}s)"
-  Emit-DeterministicRoute $inputPrompt "Dry-run deterministic projection"
-  exit 0
-}
-
-# ------------------------------------------------------------------------------
-# 4. Jev System One API Call
-# ------------------------------------------------------------------------------
-
-$payloadObj = @{
-  state = $inputPrompt
-  questions = @{
-    ceremony = @{
-      type = "choice"
-      instructions = "Classify this developer task into PromptKit ceremony level (Level 0 Direct, Level 1 Standard, Level 2 Controlled, Level 3 Release-Critical)"
-      criteria = @{
-        "Level 0 (Direct)" = "Typo, simple syntax query, explanation, formatting tweak. Zero overhead."
-        "Level 1 (Standard)" = "Localized bug fix, small self-contained feature, isolated test. Normal unit testing."
-        "Level 2 (Controlled)" = "Database migration, schema, auth, API contract, multi-component scope. Task Record required."
-        "Level 3 (Release-Critical)" = "Production deployment, release tag, critical security fix, live publication. Full evaluation."
-      }
-    }
-    workflow = @{
-      type = "choice"
-      instructions = "Select the primary matching PromptKit workflow"
-      criteria = @{
-        "pk:debug" = "Investigating unexpected errors, regressions, or stack traces"
-        "pk:fix" = "Applying a known bug fix or code correction"
-        "pk:plan" = "Architectural design, new feature specification"
-        "pk:test" = "Adding or modifying test fixtures and suites"
-        "pk:review" = "Two-axis code and architecture review"
-        "pk:ship" = "Preparing release artifacts or deployment tags"
-        "pk:checkpoint" = "Syncing docs/STATE.md or resetting context"
-      }
-    }
-  }
-}
-
-$jsonBody = $payloadObj | ConvertTo-Json -Depth 5 -Compress
-
-$headers = @{
-  "Authorization" = "Bearer $apiKey"
-  "Content-Type"  = "application/json"
-}
-# Gateway transport (see #343) requires the evaluation-protocol headers.
-if ($transport -eq "gateway") {
-  $headers["ai-gateway-protocol-version"] = "0.0.1"
-  $headers["ai-gateway-auth-method"] = "api-key"
-  $headers["ai-evaluation-model-specification-version"] = "4"
-  $headers["ai-model-id"] = "typesafe-ai/jev"
-}
-
-$response = $null
-try {
-  $response = Invoke-RestMethod -Uri $jevUrl `
-    -Method Post `
-    -Headers $headers `
-    -Body $jsonBody `
-    -TimeoutSec $TimeoutSec `
-    -ErrorAction Stop
-} catch {
-  # Scenario 3: Jev unavailable / timeout
-  [Console]::Error.WriteLine("[pk-route] Warning: Jev API request failed or timed out (${TimeoutSec}s). Falling back to deterministic routing.")
-  Emit-DeterministicRoute $inputPrompt "Deterministic offline fallback (API timeout/unreachable)"
-  exit 0
-}
-
-# ------------------------------------------------------------------------------
-# 5. Response Parsing & Validation (Scenario 5: Malformed Output Rejection)
-# ------------------------------------------------------------------------------
-
-$jevLevel = $null
-$jevWorkflow = $null
-
-try {
-  if ($response -and $response.answers) {
-    if ($response.answers.ceremony -and $response.answers.ceremony.choice) {
-      $jevLevel = [string]$response.answers.ceremony.choice
-    }
-    if ($response.answers.workflow -and $response.answers.workflow.choice) {
-      $jevWorkflow = [string]$response.answers.workflow.choice
-    }
-  }
-} catch {
-  $jevLevel = $null
-}
-
-if ([string]::IsNullOrWhiteSpace($jevLevel)) {
-  # Scenario 5: Malformed response
-  [Console]::Error.WriteLine("[pk-route] Warning: Failed to parse valid ceremony choice from Jev response. Falling back to deterministic routing.")
-  Emit-DeterministicRoute $inputPrompt "Deterministic offline fallback (Malformed Jev schema)"
-  exit 0
-}
-
-if ([string]::IsNullOrWhiteSpace($jevWorkflow)) {
-  $jevWorkflow = Get-DeterministicWorkflow $inputPrompt
-}
-
-# ------------------------------------------------------------------------------
-# 6. PromptKit Policy Arbitrator (Scenario 4: Hard Safety Floor Override)
-# ------------------------------------------------------------------------------
-
-$finalLevel = $jevLevel
-$justification = "Jev System One recommendation"
-
-# Enforce deterministic hard safety floor (0% Unsafe Underclassifications on the tested fixture set)
-if (Test-HardL3 $inputPrompt) {
-  if ($jevLevel -notmatch 'Level 3') {
-    $finalLevel = "Level 3 (Release-Critical)"
-    $justification = "Hard safety floor override: release/deployment trigger detected"
-  }
-} elseif (Test-HardL2 $inputPrompt) {
-  if ($jevLevel -match 'Level 0' -or $jevLevel -match 'Level 1') {
-    $finalLevel = "Level 2 (Controlled)"
-    $justification = "Hard safety floor override: schema/auth/state trigger detected"
-  }
-}
-
-# Format output banner
-switch -Regex ($finalLevel) {
-  'Level 0' {
-    Write-Output "[PromptKit OS: Level 0 (Direct) — $justification. Zero overhead.]"
-  }
-  'Level 1' {
-    Write-Output "[PromptKit OS: Level 1 (Standard) — $justification. No Task Record required.]"
-  }
-  'Level 2' {
-    Write-Output "[PromptKit OS: Level 2 (Controlled) — $justification. Task Record required.]"
-  }
-  'Level 3' {
-    Write-Output "[PromptKit OS: Level 3 (Release-Critical) — $justification. Full evaluation required.]"
-  }
-  default {
-    Emit-DeterministicRoute $inputPrompt "Fallback: unexpected level output"
-    exit 0
-  }
-}
-
-Write-Output "Recommended Workflow: $jevWorkflow"
+Emit-DeterministicRoute $inputPrompt
 exit 0
