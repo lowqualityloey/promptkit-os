@@ -89,14 +89,14 @@ function Test-ActionMarkerApplies ([string]$text) {
   # Pattern note: no \b is used anywhere below, so this twin and the Bash original are
   # both plain unanchored substring matches. Bash ERE supports neither \b nor \s, so
   # the Bash twin spells spaces as "\ "; the alternations are otherwise identical.
-  if ($text -match '(?i)(what is|what does|how to|how does|explain|describe|tell me about|syntax|lookup|typo|spelling|rename|readme|doc|changelog|formatting)' `
-      -and $text -notmatch '(?i)(then|after that|finally) (apply|applied|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|remove|delete|revert|roll out|roll back|update|fix|patch|migrate)') {
+  if ($text -match '(?i)(what is|what does|how to|how does|explain|describe|tell me about|syntax|lookup|typo|spelling|readme|docs|documentation|changelog|formatting)' `
+      -and $text -notmatch '(?i)(then|after that|finally|also|plus|and) (apply|applied|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|remove|delete|revert|roll out|roll back|update|fix|patch|migrate|write|document|rename|refactor)') {
     return $false
   }
 
   # Explicit work verbs. fix/patch/update are deliberately ABSENT here because
   # they are verb-ambiguous; they are handled by the rule below.
-  if ($text -match '(?i)(apply|applied|applying|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|return|remove|delete|revert|roll out|roll back|need to|required|must|should)') {
+  if ($text -match '(?i)(apply|applied|applying|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|return|remove|delete|rename|write|revert|roll out|roll back|need to|required|must|should)') {
     return $true
   }
 

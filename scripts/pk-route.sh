@@ -110,15 +110,19 @@ action_marker_applies() {
   local t="$1"
 
   # Informational frame: a question or documentation edit ABOUT the subject never
-  # escalates on a topical marker, whatever verb it also contains.
-  if [[ "$t" =~ (what\ is|what\ does|how\ to|how\ does|explain|describe|tell\ me\ about|syntax|lookup|typo|spelling|rename|readme|doc|changelog|formatting) ]] \
-     && ! [[ "$t" =~ (then|after\ that|finally)\ (apply|applied|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|remove|delete|revert|roll\ out|roll\ back|update|fix|patch|migrate) ]]; then
+  # escalates on a topical marker, whatever verb it also contains. "doc" is
+  # deliberately NOT a marker on its own -- it is a substring of "Docker" and
+  # would suppress a real containerised contract change; "docs" and
+  # "documentation" carry the same intent without that false hit. "rename" is a
+  # work verb, not a frame marker.
+  if [[ "$t" =~ (what\ is|what\ does|how\ to|how\ does|explain|describe|tell\ me\ about|syntax|lookup|typo|spelling|readme|docs|documentation|changelog|formatting) ]] \
+     && ! [[ "$t" =~ (then|after\ that|finally|also|plus|and)\ (apply|applied|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|remove|delete|revert|roll\ out|roll\ back|update|fix|patch|migrate|write|document|rename|refactor) ]]; then
     return 1
   fi
 
   # Explicit work verbs. fix/patch/update are deliberately ABSENT here because
   # they are verb-ambiguous; they are handled by the rule below.
-  if [[ "$t" =~ (apply|applied|applying|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|return|remove|delete|revert|roll\ out|roll\ back|need\ to|required|must|should) ]]; then
+  if [[ "$t" =~ (apply|applied|applying|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|return|remove|delete|rename|write|revert|roll\ out|roll\ back|need\ to|required|must|should) ]]; then
     return 0
   fi
 

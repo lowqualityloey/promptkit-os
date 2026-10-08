@@ -459,6 +459,40 @@ $aCveOut = Invoke-Route "Apply a critical security patch for CVE-2026-1234."
 Assert-Contains $aCveOut "Level 3" "'Apply a critical security patch for CVE-2026-1234.' -> Level 3"
 
 # ------------------------------------------------------------------------------
+# Test 15: Issue #594 follow-up - the veto must not swallow a real action
+# ------------------------------------------------------------------------------
+Write-Host "Test 15: #594 follow-up: incidental informational words must not suppress action"
+
+# REGRESSION: "and implement" is a second action clause; only "then" was recognised,
+# so the veto suppressed a genuine high-impact contract change.
+$bAndImplementOut = Invoke-Route "Explain the high-impact public API change, and implement it."
+Assert-Contains $bAndImplementOut "Level 3" "'Explain ... and implement it.' -> Level 3"
+
+# REGRESSION: "Docker" contains the substring "doc", so the old frame marker treated a
+# containerised contract change as a documentation edit.
+$bDockerOut = Invoke-Route "Implement the high-impact public API in Docker."
+Assert-Contains $bDockerOut "Level 3" "'Implement the high-impact public API in Docker.' -> Level 3"
+
+# REGRESSION: "rename" was listed as an informational frame marker, so a real rename
+# of a high-impact contract was demoted to Level 1.
+$bRenameOut = Invoke-Route "Rename the high-impact public API."
+Assert-Contains $bRenameOut "Level 3" "'Rename the high-impact public API.' -> Level 3"
+
+# OPPOSITE DIRECTION: documentation and question frames must still suppress, so the
+# fixes above cannot be "solved" by simply deleting the veto.
+$bDocQuestionOut = Invoke-Route "What does the documentation say about the high-impact API change?"
+Assert-Contains $bDocQuestionOut "Level 0" "'What does the documentation say ...' -> Level 0"
+Assert-NotContains $bDocQuestionOut "Level 3" "a documentation question is not Level 3"
+
+$bDocsExplainOut = Invoke-Route "Explain the docs for the high-impact public API change."
+Assert-Contains $bDocsExplainOut "Level 0" "'Explain the docs for ...' -> Level 0"
+Assert-NotContains $bDocsExplainOut "Level 3" "'Explain the docs for ...' is not Level 3"
+
+# A documentation clause attached to a real action must still escalate.
+$bActionWithDocsOut = Invoke-Route "Add the high-impact public API contract and update the documentation."
+Assert-Contains $bActionWithDocsOut "Level 3" "'Add ... and update the documentation.' -> Level 3"
+
+# ------------------------------------------------------------------------------
 # #594 FP/FN Report
 # ------------------------------------------------------------------------------
 # Bounded, table-driven classification report over the #594 fixture set only.

@@ -443,6 +443,40 @@ A_CVE_OUT=$(route_prompt "Apply a critical security patch for CVE-2026-1234.")
 assert_contains "$A_CVE_OUT" "Level 3" "'Apply a critical security patch for CVE-2026-1234.' -> Level 3"
 
 # ------------------------------------------------------------------------------
+# Test 15: Issue #594 follow-up - the veto must not swallow a real action
+# ------------------------------------------------------------------------------
+echo "Test 15: #594 follow-up: incidental informational words must not suppress action"
+
+# REGRESSION: "and implement" is a second action clause; only "then" was recognised,
+# so the veto suppressed a genuine high-impact contract change.
+B_AND_IMPLEMENT_OUT=$(route_prompt "Explain the high-impact public API change, and implement it.")
+assert_contains "$B_AND_IMPLEMENT_OUT" "Level 3" "'Explain ... and implement it.' -> Level 3"
+
+# REGRESSION: "Docker" contains the substring "doc", so the old frame marker treated a
+# containerised contract change as a documentation edit.
+B_DOCKER_OUT=$(route_prompt "Implement the high-impact public API in Docker.")
+assert_contains "$B_DOCKER_OUT" "Level 3" "'Implement the high-impact public API in Docker.' -> Level 3"
+
+# REGRESSION: "rename" was listed as an informational frame marker, so a real rename
+# of a high-impact contract was demoted to Level 1.
+B_RENAME_OUT=$(route_prompt "Rename the high-impact public API.")
+assert_contains "$B_RENAME_OUT" "Level 3" "'Rename the high-impact public API.' -> Level 3"
+
+# OPPOSITE DIRECTION: documentation and question frames must still suppress, so the
+# fixes above cannot be "solved" by simply deleting the veto.
+B_DOC_QUESTION_OUT=$(route_prompt "What does the documentation say about the high-impact API change?")
+assert_contains "$B_DOC_QUESTION_OUT" "Level 0" "'What does the documentation say ...' -> Level 0"
+assert_not_contains "$B_DOC_QUESTION_OUT" "Level 3" "a documentation question is not Level 3"
+
+B_DOCS_EXPLAIN_OUT=$(route_prompt "Explain the docs for the high-impact public API change.")
+assert_contains "$B_DOCS_EXPLAIN_OUT" "Level 0" "'Explain the docs for ...' -> Level 0"
+assert_not_contains "$B_DOCS_EXPLAIN_OUT" "Level 3" "'Explain the docs for ...' is not Level 3"
+
+# A documentation clause attached to a real action must still escalate.
+B_ACTION_WITH_DOCS_OUT=$(route_prompt "Add the high-impact public API contract and update the documentation.")
+assert_contains "$B_ACTION_WITH_DOCS_OUT" "Level 3" "'Add ... and update the documentation.' -> Level 3"
+
+# ------------------------------------------------------------------------------
 # #594 FP/FN Report
 # ------------------------------------------------------------------------------
 # Bounded, table-driven classification report over the #594 fixture set only.
