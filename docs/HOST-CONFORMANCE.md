@@ -22,6 +22,7 @@ Per [Issue #436](https://github.com/lowqualityloey/promptkit-os/issues/436), the
 - **Confound Control (Model Pinned)**: When evaluating cross-host differences, the underlying foundation model must be held constant across tested hosts (using an active provider model available across all selected targets) so that recorded differences isolate **host environment integration behavior** rather than model intelligence deltas.
 - **Untested Boundaries Are Never Implied**: Hosts without published, verified live session transcripts are explicitly registered as **Untested for live runtime fidelity**. Offline sample fixtures validate the mechanical scoring rubric only; they do not establish live runtime fidelity for any host. Compatibility is unknown and must never be implied or assumed.
 - **Mechanical Scoring**: Grades are assigned strictly by the behavioral evaluation harness ([`scripts/run-behavioral-eval.sh`](../scripts/run-behavioral-eval.sh) `--score`), not by human impression or improvised criteria.
+- **Entry Point Is Also Install-Time**: `pk:route` now has a real shell entry point — `pk route "<text>"` (`scripts/pk` / `.ps1`) classifies and prints with an exit code, and the installer regression harness asserts every installed host file carries the managed block. Both remain install-time claims; neither moves a host in the Untested registry.
 
 ---
 

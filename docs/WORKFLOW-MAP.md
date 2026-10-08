@@ -36,7 +36,7 @@ The Adaptation adds evidence and planning guidance without creating a competing 
 
 | Evidence or decision | Primary owner | Boundary |
 | :--- | :--- | :--- |
-| Work classification and lifecycle navigation | `pk:route` | Solely classifies requests into the canonical 4-level task ceremony model (Level 0 Direct, Level 1 Standard, Level 2 Controlled, Level 3 Release-Critical) and routes to existing workflows; planning depth cannot override it. |
+| Work classification and lifecycle navigation | `pk:route` | Solely classifies requests into the canonical 4-level task ceremony model (Level 0 Direct, Level 1 Standard, Level 2 Controlled, Level 3 Release-Critical) and routes to existing workflows; planning depth cannot override it. It is also the one trigger with a real shell entry point — `pk route "<text>"` (`scripts/pk` / `.ps1`) classifies and prints, executing nothing; every other `pk:*` trigger remains a file-level prompt contract. |
 | Planning depth, planning inputs, assumptions, and material decision provenance | `pk:plan` | Supplies architecture and planning evidence; does not set execution state or approve implementation/release. |
 | Task decomposition, acceptance criteria, and stable task identity | `pk:tasks` | Creates task inputs and links; does not replace the Local Task Record’s readiness or completion authority. |
 | Controlled readiness, execution state, active ownership, and completion | Canonical Local Task Record | Sole execution authority for Controlled Work; external trackers and projections cannot override it. |
