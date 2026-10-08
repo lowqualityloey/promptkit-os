@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# scripts/pk — thin PromptKit OS entry-point router shim.
+#
+# Not a workflow executor: it classifies and prints. `pk route "<text>"` runs the
+# ceremony classifier (scripts/pk-route.sh) verbatim and propagates its exit code.
+# Every other trigger is a file-level prompt contract, not a shell executable, so
+# an unknown subcommand fails loudly (exit 2) and names workflows/<cmd>.md.
+#
+# Zero-Lock-In (PROMPTKIT.md §7): a hand-written shim — not a binary, not an npm
+# dependency, not a daemon; no build step and no committed generated artifact.
+set -uo pipefail
+
+script_dir=$(builtin cd -- "$(dirname -- "$0")" && pwd -P) || exit 2
+
+usage() {
+    cat <<'EOF'
+Usage: pk route "<task text>"     classify a task (delegates to scripts/pk-route.sh)
+       pk --help                  show this message
+
+Only `route` is a shell entry point. Other pk:* triggers are file-level prompt
+contracts under workflows/<name>.md; read the named file in your host agent.
+EOF
+}
+
+if [[ "$#" -eq 0 ]]; then
+    usage >&2
+    exit 2
+fi
+
+case "$1" in
+    route)
+        shift
+        exec bash "$script_dir/pk-route.sh" "$@"
+        ;;
+    --help|-h|help)
+        usage
+        exit 0
+        ;;
+    *)
+        subcommand="$1"
+        printf 'pk: unknown subcommand: %s\n' "$subcommand" >&2
+        printf 'File-level contract: workflows/%s.md\n' "$subcommand" >&2
+        printf 'Only `route` is an executable entry point; the other pk:* triggers are file-level prompt contracts, not shell commands.\n' >&2
+        exit 2
+        ;;
+esac

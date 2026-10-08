@@ -15,6 +15,7 @@ Ensure any modern AI coding assistant or CLI (Antigravity, Claude Code, Gemini C
 | **Windsurf IDE** | `.windsurfrules` |
 | **GitHub Copilot** | `.github/copilot-instructions.md` |
 | **Aider / Open-Source Agents** | `CONVENTIONS.md` or `AGENTS.md` |
+| **Codex CLI** | `AGENTS.md` |
 
 ---
 

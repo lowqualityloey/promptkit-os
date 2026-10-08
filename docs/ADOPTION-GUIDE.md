@@ -68,10 +68,10 @@ Install PromptKit OS using the OpenCode host target so its generated `.opencode/
    echo ".promptkit/" >> .git/info/exclude  # Personal gitignore
    ```
 
-2. Configure your AI assistant only:
-   - **Claude Code**: Create `CLAUDE.md` (add to `.gitignore`)
-   - **Cursor**: Create `.cursorrules` (add to `.gitignore`)
-   - **Or**: Keep directives in a personal note file
+2. Configure your AI assistant. Commit the universal `AGENTS.md` as the **tracked default** so a fresh clone receives working rules; per-host files are optional local overrides and may stay untracked:
+   - **Claude Code**: `CLAUDE.md` (optional override)
+   - **Cursor**: `.cursorrules` or `.cursor/rules/promptkit.mdc` (optional override)
+   - **Or**: keep per-host files untracked and rely on the committed `AGENTS.md`
 
 3. Use workflows in your local branches:
    ```bash
