@@ -22,6 +22,11 @@ rules_file=""
 preference_file=""
 payload_file=""
 use_stdin=0
+payload_source=""
+tmp_payload=""
+
+cleanup() { [[ -n "$tmp_payload" ]] && rm -f -- "$tmp_payload"; }
+trap cleanup EXIT
 
 usage() {
     cat >&2 <<'EOF'
@@ -78,9 +83,21 @@ if [[ ! -f "$rules_file" || ! -r "$rules_file" ]]; then
     exit 2
 fi
 
-payload=""
+# Resolve the payload to an on-disk file and scan it in place. Multi-megabyte
+# payloads must not round-trip through a shell variable piped into `grep -q`:
+# when grep matches early it exits, the writer takes SIGPIPE, and `pipefail`
+# reports the pipeline as a failed (non-)match. `--stdin` is spilled to a temp
+# file for the same reason.
 if [[ "$use_stdin" -eq 1 ]]; then
-    payload="$(cat || true)"
+    tmp_payload="$(mktemp "${TMPDIR:-/tmp}/ai-attribution-payload.XXXXXX" 2>/dev/null)" || {
+        printf 'AI_ATTRIBUTION|INCOMPLETE|PAYLOAD|%s\n' "$(sanitize "$payload_file")"
+        exit 2
+    }
+    if ! cat > "$tmp_payload"; then
+        printf 'AI_ATTRIBUTION|INCOMPLETE|PAYLOAD|%s\n' "$(sanitize "$payload_file")"
+        exit 2
+    fi
+    payload_source="$tmp_payload"
 elif [[ -n "$payload_file" ]]; then
     if [[ ! -e "$payload_file" ]]; then
         printf 'AI_ATTRIBUTION|INCOMPLETE|PAYLOAD|%s\n' "$(sanitize "$payload_file")"
@@ -90,7 +107,7 @@ elif [[ -n "$payload_file" ]]; then
         printf 'AI_ATTRIBUTION|INCOMPLETE|PAYLOAD|%s\n' "$(sanitize "$payload_file")"
         exit 2
     fi
-    payload="$(cat -- "$payload_file" 2>/dev/null || true)"
+    payload_source="$payload_file"
 else
     usage
     exit 2
@@ -126,11 +143,18 @@ for rf in "${rules_files[@]}"; do
             printf 'AI_ATTRIBUTION|INCOMPLETE|RULES|%s\n' "$(sanitize "$raw")"
             exit 2
         fi
-        if printf '%s\n' "$payload" | grep -Eq -- "$rule_regex"; then
+        # grep 0 = match, 1 = no match (continue), >=2 = invalid regex or read
+        # error -> fail closed instead of mistaking the error for no match.
+        match_line="$(grep -Enm 1 -- "$rule_regex" "$payload_source" 2>/dev/null)"
+        grep_status=$?
+        if [[ "$grep_status" -eq 0 ]]; then
             matched_rule="$rule_id"
             matched_tier="$rule_tier"
-            matched_line="$(printf '%s\n' "$payload" | grep -En -- "$rule_regex" | head -n 1)"
+            matched_line="$match_line"
             break 2
+        elif [[ "$grep_status" -ge 2 ]]; then
+            printf 'AI_ATTRIBUTION|INCOMPLETE|RULES|%s\n' "$(sanitize "$raw")"
+            exit 2
         fi
     done < "$rf"
 done

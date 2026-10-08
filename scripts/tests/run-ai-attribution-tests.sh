@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Regression harness for the AI-attribution policy (issue #554).
 # Covers the read-only detector (preference gating, prohibited trailers/footers,
-# human co-authors, discussion, fail-closed rules/payload) and the opt-in
-# commit-msg hook (install, reject, allow, coexistence, idempotency, removal).
+# human co-authors, discussion, fail-closed rules/payload including invalid
+# regexes and multi-megabyte payloads) and the opt-in commit-msg hook (install,
+# reject, allow, coexistence, idempotency, removal, core.hooksPath, non-shell
+# hook preservation, and executable-bit restoration).
 # Run from repository root: bash scripts/tests/run-ai-attribution-tests.sh
 
 set -uo pipefail
@@ -163,6 +165,111 @@ h4() {
     scenario_check "$([[ "$(grep -cF 'PROMPTKIT_AI_ATTRIBUTION >>>' "$root/.git/hooks/commit-msg")" -eq 0 ]] && printf 1 || printf 0)" "remove left the managed block"
 }
 
+# D6: an invalid-regex rules row fails closed (exit 2, not OK/0), and a
+# multi-megabyte payload whose first line is an AI trailer is still prohibited;
+# the payload is scanned as a file, so early grep exits cannot SIGPIPE a writer.
+d6() {
+    local root
+    root="$(make_repo d6 off)"
+    printf 'BADREGEX|[|trailer\n' > "$TMP/d6-badrules.txt"
+    printf 'feat: x\n' > "$TMP/d6-msg.txt"
+    run_det --root "$root" --rules-file "$TMP/d6-badrules.txt" --message-file "$TMP/d6-msg.txt"
+    scenario_check "$([[ "$STATUS" -eq 2 ]] && printf 1 || printf 0)" "invalid regex expected exit 2, got $STATUS"
+    scenario_check "$([[ "$OUT" == *"AI_ATTRIBUTION|INCOMPLETE|RULES"* ]] && printf 1 || printf 0)" "invalid regex did not fail closed as RULES"
+    { printf 'Co-authored-by: Claude <n@x>\n'; head -c 3000000 /dev/zero | tr '\0' 'a'; printf '\n'; } > "$TMP/d6-big.txt"
+    run_det --root "$root" --message-file "$TMP/d6-big.txt"
+    scenario_check "$([[ "$STATUS" -eq 1 ]] && printf 1 || printf 0)" "multi-MB payload expected exit 1, got $STATUS"
+    scenario_check "$([[ "$OUT" == *"AI_ATTRIBUTION|PROHIBITED|COAUTHORED_AI_CLAUDE|trailer"* ]] && printf 1 || printf 0)" "multi-MB payload did not report the leading AI trailer"
+}
+
+# D7: a human "Claude Martin" co-author passes, while the bot "Claude <...>" and
+# product "Claude Code <...>" trailers remain prohibited.
+d7() {
+    local root
+    root="$(make_repo d7 off)"
+    printf 'feat: x\n\nCo-authored-by: Claude Martin <martin@example.com>\n' > "$TMP/d7-human.txt"
+    run_det --root "$root" --message-file "$TMP/d7-human.txt"
+    scenario_check "$([[ "$STATUS" -eq 0 ]] && printf 1 || printf 0)" "human Claude Martin was blocked (exit $STATUS)"
+    printf 'feat: x\n\nCo-authored-by: Claude <n@x>\n' > "$TMP/d7-bot.txt"
+    run_det --root "$root" --message-file "$TMP/d7-bot.txt"
+    scenario_check "$([[ "$STATUS" -eq 1 ]] && printf 1 || printf 0)" "bot Claude trailer was not prohibited (exit $STATUS)"
+    scenario_check "$([[ "$OUT" == *"AI_ATTRIBUTION|PROHIBITED|COAUTHORED_AI_CLAUDE|trailer"* ]] && printf 1 || printf 0)" "missing COAUTHORED_AI_CLAUDE rule"
+    printf 'feat: x\n\nCo-authored-by: Claude Code <n@x>\n' > "$TMP/d7-code.txt"
+    run_det --root "$root" --message-file "$TMP/d7-code.txt"
+    scenario_check "$([[ "$STATUS" -eq 1 ]] && printf 1 || printf 0)" "Claude Code trailer was not prohibited (exit $STATUS)"
+    scenario_check "$([[ "$OUT" == *"AI_ATTRIBUTION|PROHIBITED|COAUTHORED_AI_CLAUDE_CODE|trailer"* ]] && printf 1 || printf 0)" "missing COAUTHORED_AI_CLAUDE_CODE rule"
+}
+
+# H5: --remove restores the hook's executable bit; the original hook still fires
+# and Git no longer reports it as an ignored (non-executable) hook.
+h5() {
+    local root mode_before mode_after err
+    root="$(make_repo h5 off)"
+    printf '#!/bin/sh\ntouch "$(git rev-parse --show-toplevel)/.restored-ran"\nexit 0\n' > "$root/.git/hooks/commit-msg"
+    chmod 755 "$root/.git/hooks/commit-msg"
+    mode_before="$(stat -c '%a' "$root/.git/hooks/commit-msg")"
+    bash "$HOOK_INSTALLER" --root "$root" >/dev/null
+    bash "$HOOK_INSTALLER" --root "$root" --remove >/dev/null
+    mode_after="$(stat -c '%a' "$root/.git/hooks/commit-msg")"
+    scenario_check "$([[ "$mode_before" == "755" && "$mode_after" == "755" ]] && printf 1 || printf 0)" "exec bit not preserved 755: before=$mode_before after=$mode_after"
+    printf 'y\n' > "$root/f.txt"
+    git -C "$root" add f.txt
+    err="$( { git -C "$root" commit -m 'feat: restored hook' >/dev/null; } 2>&1 )"
+    scenario_check "$([[ -f "$root/.restored-ran" ]] && printf 1 || printf 0)" "restored hook did not run"
+    scenario_check "$([[ "$err" != *"was ignored"* ]] && printf 1 || printf 0)" "git reported the restored hook as ignored: $err"
+}
+
+# H6: install honors core.hooksPath (hook lands at the effective git-path and
+# blocks an AI-trailer commit there instead of the default .git/hooks).
+h6() {
+    local root head_before
+    root="$(make_repo h6 off)"
+    git -C "$root" config core.hooksPath .githooks
+    bash "$HOOK_INSTALLER" --root "$root" >/dev/null
+    scenario_check "$([[ -f "$(git -C "$root" rev-parse --path-format=absolute --git-path hooks)/commit-msg" ]] && printf 1 || printf 0)" "hook not installed at the effective git-path"
+    scenario_check "$([[ -f "$root/.githooks/commit-msg" ]] && printf 1 || printf 0)" "hook not placed under core.hooksPath"
+    scenario_check "$([[ ! -f "$root/.git/hooks/commit-msg" ]] && printf 1 || printf 0)" "hook leaked into the default .git/hooks"
+    head_before="$(git -C "$root" rev-parse HEAD)"
+    printf 'y\n' > "$root/f.txt"
+    git -C "$root" add f.txt
+    commit_msg "$root" "Co-authored-by: Claude <n@x>"
+    scenario_check "$([[ "$(git -C "$root" rev-parse HEAD)" == "$head_before" ]] && printf 1 || printf 0)" "AI trailer commit was not blocked at core.hooksPath"
+}
+
+# H7: a pre-existing non-shell python hook survives install. The original is
+# preserved verbatim, a sh wrapper chains to it so ordinary commits still run
+# it, and the AI check still blocks an AI-trailer commit. A tiny python3 shim on
+# PATH keeps the fixture hermetic and free of any real interpreter dependency.
+h7() {
+    local root shim marker head_before old_path
+    root="$(make_repo h7 off)"
+    shim="$TMP/py-shim"
+    marker="$TMP/h7-py-ran"
+    mkdir -p "$shim"
+    printf '#!/bin/sh\n[ -n "$PK_PY_MARKER" ] && : > "$PK_PY_MARKER"\nexit 0\n' > "$shim/python3"
+    chmod 755 "$shim/python3"
+    old_path="$PATH"
+    PATH="$shim:$PATH"
+    export PK_PY_MARKER="$marker"
+    printf '#!/usr/bin/env python3\n# pre-existing python hook\n' > "$root/.git/hooks/commit-msg"
+    chmod 755 "$root/.git/hooks/commit-msg"
+    bash "$HOOK_INSTALLER" --root "$root" >/dev/null
+    scenario_check "$([[ -f "$root/.git/hooks/commit-msg.promptkit-orig" ]] && printf 1 || printf 0)" "python original was not preserved as .promptkit-orig"
+    scenario_check "$([[ "$(grep -c '#!/usr/bin/env python3' "$root/.git/hooks/commit-msg.promptkit-orig")" -eq 1 ]] && printf 1 || printf 0)" "python original lost its shebang"
+    scenario_check "$([[ "$(head -n 1 "$root/.git/hooks/commit-msg")" == "#!/bin/sh" ]] && printf 1 || printf 0)" "non-shell hook was not wrapped in sh"
+    printf 'y\n' > "$root/f.txt"
+    git -C "$root" add f.txt
+    commit_msg "$root" "Co-authored-by: Jane <jane@example.com>"
+    scenario_check "$([[ -f "$marker" ]] && printf 1 || printf 0)" "preserved python hook did not run on an ordinary commit"
+    head_before="$(git -C "$root" rev-parse HEAD)"
+    printf 'z\n' > "$root/f.txt"
+    git -C "$root" add f.txt
+    commit_msg "$root" "Co-authored-by: Claude <n@x>"
+    scenario_check "$([[ "$(git -C "$root" rev-parse HEAD)" == "$head_before" ]] && printf 1 || printf 0)" "AI trailer was not blocked through the wrapper"
+    PATH="$old_path"
+    unset PK_PY_MARKER
+}
+
 begin; d1; report 'D1 host-default/missing preference never newly blocks'
 begin; d2; report 'D2 off: AI co-author trailer prohibited with diagnostics'
 begin; d3; report 'D3 off: AI promotional footer prohibited'
@@ -172,6 +279,11 @@ begin; h1; report 'H1 install blocks an AI-trailer commit'
 begin; h2; report 'H2 human co-author commit passes the hook'
 begin; h3; report 'H3 pre-existing hook preserved and chained'
 begin; h4; report 'H4 idempotent install; remove strips only the block'
+begin; d6; report 'D6 invalid regex fails closed; multi-MB payload prohibited'
+begin; d7; report 'D7 human Claude Martin passes; bot Claude trailers prohibited'
+begin; h5; report 'H5 remove preserves exec bit; restored hook runs without warning'
+begin; h6; report 'H6 install honors core.hooksPath'
+begin; h7; report 'H7 non-shell python hook preserved, chained, and enforced'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1

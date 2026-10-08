@@ -164,6 +164,124 @@ try {
     Assert-Scenario ($h4after.Contains('keep-me')) 'remove dropped pre-existing content'
     Assert-Scenario (-not $h4after.Contains('# >>> PROMPTKIT_AI_ATTRIBUTION >>>')) 'remove left the managed block'
     Report-Scenario 'H4 idempotent install; remove strips only the block'
+
+    # D6: an invalid-regex rules row fails closed; a multi-MB payload with a
+    # leading AI trailer is still prohibited.
+    Begin-Scenario
+    $rootD6 = New-Repo 'd6' 'off'
+    $d6bad = Join-Path $tmp 'd6-badrules.txt'
+    [IO.File]::WriteAllText($d6bad, "BADREGEX|[|trailer`n", $utf8)
+    $d6msg = Join-Path $tmp 'd6.txt'
+    [IO.File]::WriteAllText($d6msg, "feat: x`n", $utf8)
+    Invoke-Det -ExtraArgs @('-Root', $rootD6, '-RulesFile', $d6bad, '-MessageFile', $d6msg)
+    Assert-Scenario ($script:STATUS -eq 2) "invalid regex expected exit 2, got $($script:STATUS)"
+    Assert-Scenario ($script:OUT.Contains('AI_ATTRIBUTION|INCOMPLETE|RULES')) 'invalid regex did not fail closed as RULES'
+    $d6big = Join-Path $tmp 'd6-big.txt'
+    [IO.File]::WriteAllText($d6big, ("Co-authored-by: Claude <n@x>`n" + ('a' * 3000000) + "`n"), $utf8)
+    Invoke-Det -ExtraArgs @('-Root', $rootD6, '-MessageFile', $d6big)
+    Assert-Scenario ($script:STATUS -eq 1) "multi-MB payload expected exit 1, got $($script:STATUS)"
+    Assert-Scenario ($script:OUT.Contains('AI_ATTRIBUTION|PROHIBITED|COAUTHORED_AI_CLAUDE|trailer')) 'multi-MB payload did not report the leading AI trailer'
+    Report-Scenario 'D6 invalid regex fails closed; multi-MB payload prohibited'
+
+    # D7: a human "Claude Martin" co-author passes; bot trailers stay prohibited.
+    Begin-Scenario
+    $rootD7 = New-Repo 'd7' 'off'
+    $d7human = Join-Path $tmp 'd7-human.txt'
+    [IO.File]::WriteAllText($d7human, "feat: x`n`nCo-authored-by: Claude Martin <martin@example.com>`n", $utf8)
+    Invoke-Det -ExtraArgs @('-Root', $rootD7, '-MessageFile', $d7human)
+    Assert-Scenario ($script:STATUS -eq 0) "human Claude Martin was blocked (exit $($script:STATUS))"
+    $d7bot = Join-Path $tmp 'd7-bot.txt'
+    [IO.File]::WriteAllText($d7bot, "feat: x`n`nCo-authored-by: Claude <n@x>`n", $utf8)
+    Invoke-Det -ExtraArgs @('-Root', $rootD7, '-MessageFile', $d7bot)
+    Assert-Scenario ($script:STATUS -eq 1) "bot Claude trailer was not prohibited (exit $($script:STATUS))"
+    Assert-Scenario ($script:OUT.Contains('AI_ATTRIBUTION|PROHIBITED|COAUTHORED_AI_CLAUDE|trailer')) 'missing COAUTHORED_AI_CLAUDE rule'
+    $d7code = Join-Path $tmp 'd7-code.txt'
+    [IO.File]::WriteAllText($d7code, "feat: x`n`nCo-authored-by: Claude Code <n@x>`n", $utf8)
+    Invoke-Det -ExtraArgs @('-Root', $rootD7, '-MessageFile', $d7code)
+    Assert-Scenario ($script:STATUS -eq 1) "Claude Code trailer was not prohibited (exit $($script:STATUS))"
+    Assert-Scenario ($script:OUT.Contains('AI_ATTRIBUTION|PROHIBITED|COAUTHORED_AI_CLAUDE_CODE|trailer')) 'missing COAUTHORED_AI_CLAUDE_CODE rule'
+    Report-Scenario 'D7 human Claude Martin passes; bot Claude trailers prohibited'
+
+    # H5: -Remove preserves the exec bit; the restored hook still runs and Git
+    # no longer reports it as ignored.
+    Begin-Scenario
+    $rootH5 = New-Repo 'h5' 'off'
+    $h5Hook = Join-Path $rootH5 '.git/hooks/commit-msg'
+    [IO.File]::WriteAllText($h5Hook, "#!/bin/sh`ntouch `"`$(git rev-parse --show-toplevel)/.restored-ran`"`nexit 0`n", $utf8)
+    try { & chmod 755 $h5Hook 2>$null } catch { }
+    $h5ModeBefore = 0
+    if (-not $IsWindows) { $h5ModeBefore = [int](Get-Item -LiteralPath $h5Hook).UnixFileMode }
+    & pwsh -NoProfile -File $hookInstaller -Root $rootH5 | Out-Null
+    & pwsh -NoProfile -File $hookInstaller -Root $rootH5 -Remove | Out-Null
+    if (-not $IsWindows) {
+        $h5ModeAfter = 0
+        if (Test-Path -LiteralPath $h5Hook) { $h5ModeAfter = [int](Get-Item -LiteralPath $h5Hook).UnixFileMode }
+        Assert-Scenario ($h5ModeBefore -eq 493 -and $h5ModeAfter -eq 493) "exec bit not preserved 755: before=$h5ModeBefore after=$h5ModeAfter"
+    }
+    [IO.File]::WriteAllText((Join-Path $rootH5 'f.txt'), "y`n", $utf8)
+    & git -C $rootH5 add f.txt | Out-Null
+    $h5out = ((& git -C $rootH5 commit -m 'feat: restored hook' 2>&1 | Out-String))
+    Assert-Scenario (Test-Path -LiteralPath (Join-Path $rootH5 '.restored-ran')) 'restored hook did not run'
+    Assert-Scenario (-not $h5out.Contains('was ignored')) "git reported the restored hook as ignored: $h5out"
+    Report-Scenario 'H5 remove preserves exec bit; restored hook runs'
+
+    # H6: install honors core.hooksPath.
+    Begin-Scenario
+    $rootH6 = New-Repo 'h6' 'off'
+    & git -C $rootH6 config core.hooksPath .githooks | Out-Null
+    & pwsh -NoProfile -File $hookInstaller -Root $rootH6 | Out-Null
+    $h6Hook = Join-Path $rootH6 '.githooks/commit-msg'
+    Assert-Scenario (Test-Path -LiteralPath $h6Hook -PathType Leaf) "hook not installed at core.hooksPath ($h6Hook)"
+    Assert-Scenario (-not (Test-Path -LiteralPath (Join-Path $rootH6 '.git/hooks/commit-msg') -PathType Leaf)) 'hook leaked into the default .git/hooks'
+    $h6before = ((& git -C $rootH6 rev-parse HEAD | Out-String)).Trim()
+    [IO.File]::WriteAllText((Join-Path $rootH6 'f.txt'), "y`n", $utf8)
+    & git -C $rootH6 add f.txt | Out-Null
+    & git -C $rootH6 commit -qm 'feat: change' -m 'Co-authored-by: Claude <n@x>' 2>&1 | Out-Null
+    $h6after = ((& git -C $rootH6 rev-parse HEAD | Out-String)).Trim()
+    Assert-Scenario ($h6before -eq $h6after) 'AI trailer commit was not blocked at hooksPath'
+    Report-Scenario 'H6 install honors core.hooksPath'
+
+    # H7: a pre-existing python hook survives install, chains on ordinary
+    # commits, and still blocks an AI-trailer commit (a tiny python3 shim keeps
+    # the fixture hermetic).
+    Begin-Scenario
+    $rootH7 = New-Repo 'h7' 'off'
+    $h7ShimDir = Join-Path $tmp 'shim'
+    New-Item -ItemType Directory -Path $h7ShimDir -Force | Out-Null
+    $h7Shim = Join-Path $h7ShimDir 'python3'
+    [IO.File]::WriteAllText($h7Shim, "#!/bin/sh`n[ -n `"`$PK_PY_MARKER`" ] && : > `"`$PK_PY_MARKER`"`nexit 0`n", $utf8)
+    try { & chmod +x $h7Shim 2>$null } catch { }
+    $h7Marker = Join-Path $tmp 'h7.py-ran'
+    $h7OldPath = $env:PATH
+    $env:PATH = $h7ShimDir + [IO.Path]::PathSeparator + $env:PATH
+    $env:PK_PY_MARKER = $h7Marker
+    try {
+        $h7Hook = Join-Path $rootH7 '.git/hooks/commit-msg'
+        [IO.File]::WriteAllText($h7Hook, "#!/usr/bin/env python3`n# pre-existing python hook`n", $utf8)
+        try { & chmod +x $h7Hook 2>$null } catch { }
+        & pwsh -NoProfile -File $hookInstaller -Root $rootH7 | Out-Null
+        $h7Orig = "$h7Hook.promptkit-orig"
+        $h7OrigText = ''
+        if (Test-Path -LiteralPath $h7Orig -PathType Leaf) { $h7OrigText = Get-Content -LiteralPath $h7Orig -Raw }
+        Assert-Scenario ($h7OrigText.Contains('#!/usr/bin/env python3')) 'python original was not preserved with its shebang'
+        $h7First = ''
+        if (Test-Path -LiteralPath $h7Hook -PathType Leaf) { $h7First = @(Get-Content -LiteralPath $h7Hook)[0] }
+        Assert-Scenario ($h7First -ceq '#!/bin/sh') 'non-shell hook was not wrapped in sh'
+        [IO.File]::WriteAllText((Join-Path $rootH7 'f.txt'), "y`n", $utf8)
+        & git -C $rootH7 add f.txt | Out-Null
+        & git -C $rootH7 commit -qm 'feat: change' -m 'Co-authored-by: Jane <jane@example.com>' 2>&1 | Out-Null
+        Assert-Scenario (Test-Path -LiteralPath $h7Marker) 'preserved python hook did not run on an ordinary commit'
+        $h7before = ((& git -C $rootH7 rev-parse HEAD | Out-String)).Trim()
+        [IO.File]::WriteAllText((Join-Path $rootH7 'f.txt'), "z`n", $utf8)
+        & git -C $rootH7 add f.txt | Out-Null
+        & git -C $rootH7 commit -qm 'feat: change' -m 'Co-authored-by: Claude <n@x>' 2>&1 | Out-Null
+        $h7after = ((& git -C $rootH7 rev-parse HEAD | Out-String)).Trim()
+        Assert-Scenario ($h7before -eq $h7after) 'AI trailer was not blocked through the wrapper'
+    } finally {
+        $env:PATH = $h7OldPath
+        Remove-Item Env:PK_PY_MARKER -ErrorAction SilentlyContinue
+    }
+    Report-Scenario 'H7 non-shell python hook preserved, chained, and enforced'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
