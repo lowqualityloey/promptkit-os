@@ -39,7 +39,7 @@ run_pk() {
 }
 
 # Scenario 5 parity lock: the PowerShell harness asserts this identical literal.
-EXPECTED='[PromptKit OS: Level 2 (Controlled) — Offline fallback (no AI_GATEWAY_API_KEY nor TYPESAFE_API_KEY). Task Record required.]
+EXPECTED='[PromptKit OS: Level 2 (Controlled) — Deterministic offline policy classification. Task Record required.]
 Recommended Workflow: pk:route'
 
 # E1 (Scenario 1): `pk route "<text>"` classifies offline, exits 0, executes nothing.

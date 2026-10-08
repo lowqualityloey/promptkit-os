@@ -71,7 +71,9 @@ jobs:
           bash -n scripts/check-doctor.sh
           bash -n scripts/tests/run-doctor-tests.sh
           bash -n scripts/pk
+          bash -n scripts/pk-route.sh
           bash -n scripts/tests/run-pk-entry-points-tests.sh
+          bash -n scripts/tests/run-pk-route-tests.sh
           bash -n scripts/check-ai-attribution.sh
           bash -n scripts/install-attribution-hook.sh
           bash -n scripts/tests/run-ai-attribution-tests.sh
@@ -103,6 +105,9 @@ jobs:
 
       - name: Run pk Entry-Point Tests (Bash)
         run: bash scripts/tests/run-pk-entry-points-tests.sh
+
+      - name: Run pk Route Tests (Bash)
+        run: bash scripts/tests/run-pk-route-tests.sh
 
       - name: Run AI Attribution Tests (Bash)
         run: bash scripts/tests/run-ai-attribution-tests.sh
@@ -300,7 +305,9 @@ jobs:
             "scripts/check-doctor.ps1",
             "scripts/tests/run-doctor-tests.ps1",
             "scripts/pk.ps1",
+            "scripts/pk-route.ps1",
             "scripts/tests/run-pk-entry-points-tests.ps1",
+            "scripts/tests/run-pk-route-tests.ps1",
             "scripts/check-ai-attribution.ps1",
             "scripts/install-attribution-hook.ps1",
             "scripts/tests/run-ai-attribution-tests.ps1",
@@ -351,6 +358,10 @@ jobs:
       - name: Run pk Entry-Point Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-pk-entry-points-tests.ps1
+
+      - name: Run pk Route Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-pk-route-tests.ps1
 
       - name: Run AI Attribution Tests (PowerShell)
         shell: pwsh

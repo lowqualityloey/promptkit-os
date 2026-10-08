@@ -2,22 +2,21 @@
 # ==============================================================================
 # scripts/pk-route.sh — PromptKit OS Fast Route & Ceremony Classifier
 #
-# Powered by TypeSafe AI's Jev (System One) as an evidentiary decision primitive.
-# Architectural Axiom: "Jev Recommends, PromptKit Decides."
+# Fully offline and deterministic: the ceremony level (L0-L3) and workflow are
+# computed locally from the prompt. There is no network transport, no external
+# service, and no credential read.
 #
 # Non-negotiable safety floor:
 # 1. Obvious/hard-risk triggers deterministically override lower recommendations.
 # 2. Unsafe Underclassification Rate must be 0% across the tested fixture set
 #    (see scripts/tests/run-pk-route-tests.sh) — a safety objective measured on
 #    those fixtures, not a proven property over unrestricted input.
-# 3. Missing key, timeout (>2s), or API failure gracefully falls back to offline
-#    deterministic routing without blocking or failing.
+# 3. Classification never blocks or fails: routing is always available and
+#    deterministic, regardless of environment.
 # ==============================================================================
 
 set -euo pipefail
 
-TIMEOUT_SEC=2
-DRY_RUN=0
 OFFLINE=0
 PROMPT_INPUT=""
 
@@ -26,30 +25,20 @@ print_help() {
 Usage: pk-route.sh [OPTIONS] "YOUR TASK PROMPT"
 
 Fast PromptKit ceremony level (L0-L3) classifier and workflow router.
-Queries TypeSafe AI Jev (System One) with deterministic safety arbitration.
 
-Transport fallback hierarchy (see #343):
-  1. AI_GATEWAY_API_KEY -> Vercel AI Gateway evaluation route
-  2. TYPESAFE_API_KEY   -> Direct TypeSafe endpoint
-  3. Neither set         -> deterministic offline route
-  4. Any transport failure (timeout / 4xx / 5xx / malformed)
-                         -> deterministic offline route
-Transport failure never changes PromptKit's safety policy.
+This router is fully offline and deterministic. It classifies the prompt with
+local pattern rules only: no network transport, no external service, and no
+credentials. The same prompt always yields the same level and workflow.
 
 Options:
   --prompt <text>     Task or user prompt to classify
-  --timeout <sec>     Maximum API wait time before fallback (default: 2)
   --offline           Force offline deterministic classification
-  --dry-run           Print payload and plan without executing network request
+  --timeout <sec>     Deprecated compatibility no-op; accepted and ignored
+  --dry-run           Deprecated compatibility no-op; accepted and ignored
   --help, -h          Show this help message
 
-Environment:
-  AI_GATEWAY_API_KEY  Vercel AI Gateway key (preferred; Jev is Free/free-tier eligible)
-  TYPESAFE_API_KEY    TypeSafe direct API key (fallback; offline routing if neither set)
-
 Zero-Lock-In Contract:
-  Never halts or blocks. If the API is unreachable, times out, or fails,
-  PromptKit policy immediately falls back to deterministic offline routing.
+  Never halts or blocks. Classification is a pure local function of the prompt.
 EOF
 }
 
@@ -65,7 +54,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --timeout)
-      TIMEOUT_SEC="$2"
+      # Accepted for backward compatibility; ignored (there is no transport).
       shift 2
       ;;
     --offline)
@@ -73,7 +62,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --dry-run)
-      DRY_RUN=1
+      # Accepted for backward compatibility; ignored (there is no request).
       shift
       ;;
     *)
@@ -97,6 +86,56 @@ fi
 # 1. Deterministic Hard-Trigger & Pattern Classifiers
 # ------------------------------------------------------------------------------
 
+# #594 (F-3): the security / high-impact / public-contract terms added by this
+# batch are ACTION markers, not topic keywords. A bare mention must not escalate:
+# "explain what a critical security patch is" is a question, and "fix a typo in
+# the security patch README" is a documentation edit. They escalate only when the
+# request reads as work on that subject. A named CVE stays unconditional
+# (workflows/route.md:64 lists critical security updates as Level 3).
+#
+# #594 follow-up: a request can be ABOUT an action without BEING one. "Explain how
+# to change the public API" and "What is a high-impact contract change?" are
+# questions, and in both the token "change" is a NOUN, so a bare work-verb scan
+# escalated them to Level 3. An informational frame therefore vetoes the topical
+# markers even when a work verb is present. A coordination marker followed by its
+# own action verb is a genuine second clause and does still escalate
+# ("explain ... then implement it"), so mixed-intent requests keep reaching the
+# hard-risk floor. Release/deploy/publish language is ungated and unaffected.
+#
+# Pattern note: bash ERE in [[ =~ ]] supports neither \b nor \s, so this file uses
+# escaped literal spaces. The PowerShell twin carries the same alternation with
+# unescaped spaces under (?i) and no \b, so both classifiers are unanchored
+# substring matches and stay in step.
+action_marker_applies() {
+  local t="$1"
+
+  # Informational frame: a question or documentation edit ABOUT the subject never
+  # escalates on a topical marker, whatever verb it also contains. "doc" is
+  # deliberately NOT a marker on its own -- it is a substring of "Docker" and
+  # would suppress a real containerised contract change; "docs" and
+  # "documentation" carry the same intent without that false hit. "rename" is a
+  # work verb, not a frame marker.
+  if [[ "$t" =~ (what\ is|what\ does|how\ to|how\ does|explain|describe|tell\ me\ about|syntax|lookup|typo|spelling|readme|docs|documentation|changelog|formatting) ]] \
+     && ! [[ "$t" =~ (then|after\ that|finally|also|plus|and)\ (apply|applied|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|remove|delete|revert|roll\ out|roll\ back|update|fix|patch|migrate|write|document|rename|refactor) ]]; then
+    return 1
+  fi
+
+  # Explicit work verbs. fix/patch/update are deliberately ABSENT here because
+  # they are verb-ambiguous; they are handled by the rule below.
+  if [[ "$t" =~ (apply|applied|applying|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|return|remove|delete|rename|write|revert|roll\ out|roll\ back|need\ to|required|must|should) ]]; then
+    return 0
+  fi
+
+  # fix/patch/update are accepted only when the security phrase is the DIRECT
+  # OBJECT ("fix the security patch"), not when they modify something else
+  # ("fix a typo in the security patch README").
+  if [[ "$t" =~ (fix|patch|update)s?\ (a|an|the|this|that|our)?\ (critical\ )?security\ (patch|fix|update|advisory|hotfix) ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
 detect_hard_l3() {
   local input_lower
   input_lower=$(echo "$1" | tr '[:upper:]' '[:lower:]')
@@ -104,10 +143,33 @@ detect_hard_l3() {
   # Release, deploy, publish, tag candidate, production push (#345: live
   # publication now tolerates ordinary modifiers, e.g. "make the app live",
   # "turn this on for everyone").
+  #
+  # #594 (F-3) restructures L3 into three tiers:
+  #   1. l3_core — the pre-#594 alternations only (release/deploy/publish verbs
+  #      and live-publication phrases). Kept UNGATED so the established safety
+  #      floor and offline behaviour are untouched.
+  #   2. named-CVE — an unconditional CVE identifier check: naming a CVE is work
+  #      by definition (workflows/route.md:64 lists critical security updates as
+  #      Level 3).
+  #   3. action-marker gate — the security-update / high-impact phrases added by
+  #      #594 are ACTION markers, not topic keywords, so they escalate only when
+  #      action_marker_applies() reads the request as work on that subject.
   local l3_core='(deploy|release|publish|tag candidate|make (this|it|that|everything)( [a-z]+)? (live|public)|make the [a-z]+ (live|public)|turn (this|it|that|everything) on|production deploy|hotfix prod|ship release|v[0-9]+\.[0-9]+)'
   if [[ "$input_lower" =~ $l3_core ]]; then
     return 0
   fi
+
+  # Named CVE is unconditionally release-critical.
+  if [[ "$input_lower" =~ cve-[0-9]{4}-[0-9]+ ]]; then
+    return 0
+  fi
+
+  # Gated #594 additions: security-update and high-impact action markers.
+  if [[ "$input_lower" =~ (security\ (patch|fix|update|advisory|hotfix|release)|critical\ security|high[ -]impact) ]] \
+     && action_marker_applies "$input_lower"; then
+    return 0
+  fi
+
   # Bare "ship" (#345): a release verb on its own is release-critical, but when
   # a controlled-change (L2) trigger coexists, the L2 trigger claims the input.
   # This keeps "change the migration and ship it" at Level 2 while
@@ -130,7 +192,20 @@ detect_hard_l2() {
   # production database (#345: extended auth vocabulary and API-contract
   # synonyms: login, sign in/sign-in, signup, SSO, password; API response
   # format, API payload, API endpoint, bare endpoint).
-  if [[ "$input_lower" =~ (alter\ table|migration|migrate|drop\ table|create\ table|schema|database|production\ database|auth|login|sign[-\ ]?in|signup|sso|password|token|session|jwt|oauth|credentials|secret|api\ (contract|response\ format|payload|endpoint)|endpoint|breaking) ]]; then
+  # #594: added public-contract/response synonyms, and qualified the former bare
+  # `breaking` term with action context so a definitional mention such as
+  # "what is a breaking change?" no longer matches. Canonical L2/L3 mapping:
+  # workflows/route.md:89.
+  # #594 (F-3): the `public (api|contract|interface|rest|response)` term is now
+  # GATED by action_marker_applies(): a bare topical mention such as "explain
+  # the public response format" must not escalate, so it fires only when the
+  # request reads as work on the public contract.
+  if [[ "$input_lower" =~ public\ (api|contract|interface|rest|response) ]] \
+     && action_marker_applies "$input_lower"; then
+    return 0
+  fi
+
+  if [[ "$input_lower" =~ (alter\ table|migration|migrate|drop\ table|create\ table|schema|database|production\ database|auth|login|sign[-\ ]?in|signup|sso|password|token|session|jwt|oauth|credentials|secret|api\ (contract|response\ format|payload|endpoint)|endpoint|(introduce|introduces|introducing|make|makes|making|create|creates|creating|cause|causes|causing|avoid|avoids|avoiding|ship|ships|shipping|publish|publishes|publishing|release|releases|releasing|update|updates|updating|convert|converts|converting)\ ([a-z]+\ ){0,3}breaking) ]]; then
     return 0
   fi
   return 1
@@ -141,7 +216,9 @@ detect_obvious_l0() {
   input_lower=$(echo "$1" | tr '[:upper:]' '[:lower:]')
   
   # Conceptual question, syntax lookup, typo fix, formatting
-  if [[ "$input_lower" =~ (what\ is|how\ does|explain|syntax|lookup|typo|fix\ typo|formatting|format\ this|where\ is|where\ do\ we) ]]; then
+  # #594 follow-up: "what does ..." is a conceptual question too (route.md:46), and
+  # without it a definitional prompt that also trips an action frame falls to L1.
+  if [[ "$input_lower" =~ (what\ is|what\ does|how\ does|explain|syntax|lookup|typo|fix\ typo|formatting|format\ this|where\ is|where\ do\ we) ]]; then
     if ! detect_hard_l2 "$input_lower" && ! detect_hard_l3 "$input_lower"; then
       return 0
     fi
@@ -173,7 +250,7 @@ detect_workflow() {
 }
 
 # ------------------------------------------------------------------------------
-# 2. Deterministic Offline Fallback Router
+# 2. Deterministic Offline Router
 # ------------------------------------------------------------------------------
 
 emit_deterministic_route() {
@@ -198,215 +275,15 @@ emit_deterministic_route() {
 }
 
 # ------------------------------------------------------------------------------
-# 3. Dry-Run / Offline Handling
+# 3. Routing
 # ------------------------------------------------------------------------------
 
+# --offline forces deterministic routing; the default path routes identically
+# because classification is already fully local and deterministic.
 if [[ "$OFFLINE" -eq 1 ]]; then
   emit_deterministic_route "$PROMPT_INPUT" "Forced offline deterministic routing"
   exit 0
 fi
 
-if [[ -n "${AI_GATEWAY_API_KEY:-}" ]]; then
-  JEV_TRANSPORT="gateway"
-  JEV_URL="https://ai-gateway.vercel.sh/v4/ai/evaluation-model"
-  JEV_KEY="$AI_GATEWAY_API_KEY"
-elif [[ -n "${TYPESAFE_API_KEY:-}" ]]; then
-  JEV_TRANSPORT="direct"
-  JEV_URL="https://api.typesafe.ai/v1/systemone"
-  JEV_KEY="$TYPESAFE_API_KEY"
-else
-  # Scenario 1: No credential for any transport
-  emit_deterministic_route "$PROMPT_INPUT" "Offline fallback (no AI_GATEWAY_API_KEY nor TYPESAFE_API_KEY)"
-  exit 0
-fi
-
-if [[ "$DRY_RUN" -eq 1 ]]; then
-  echo "[DryRun] Would query Jev via $JEV_TRANSPORT at $JEV_URL (Timeout: ${TIMEOUT_SEC}s)"
-  emit_deterministic_route "$PROMPT_INPUT" "Dry-run deterministic projection"
-  exit 0
-fi
-
-# ------------------------------------------------------------------------------
-# 4. Jev System One API Call
-# ------------------------------------------------------------------------------
-
-# Escape JSON string safely
-escape_json() {
-  local string="$1"
-  string="${string//\\/\\\\}"
-  string="${string//\"/\\\"}"
-  string="${string//$'\n'/\\n}"
-  string="${string//$'\r'/\\r}"
-  string="${string//$'\t'/\\t}"
-  echo "$string"
-}
-
-ESCAPED_PROMPT=$(escape_json "$PROMPT_INPUT")
-
-PAYLOAD=$(cat <<EOF
-{
-  "state": "$ESCAPED_PROMPT",
-  "questions": {
-    "ceremony": {
-      "type": "choice",
-      "instructions": "Classify this developer task into PromptKit ceremony level (Level 0 Direct, Level 1 Standard, Level 2 Controlled, Level 3 Release-Critical)",
-      "criteria": {
-        "Level 0 (Direct)": "Typo, simple syntax query, explanation, formatting tweak. Zero overhead.",
-        "Level 1 (Standard)": "Localized bug fix, small self-contained feature, isolated test. Normal unit testing.",
-        "Level 2 (Controlled)": "Database migration, schema, auth, API contract, multi-component scope. Task Record required.",
-        "Level 3 (Release-Critical)": "Production deployment, release tag, critical security fix, live publication. Full evaluation."
-      }
-    },
-    "workflow": {
-      "type": "choice",
-      "instructions": "Select the primary matching PromptKit workflow",
-      "criteria": {
-        "pk:debug": "Investigating unexpected errors, regressions, or stack traces",
-        "pk:fix": "Applying a known bug fix or code correction",
-        "pk:plan": "Architectural design, new feature specification",
-        "pk:test": "Adding or modifying test fixtures and suites",
-        "pk:review": "Two-axis code and architecture review",
-        "pk:ship": "Preparing release artifacts or deployment tags",
-        "pk:checkpoint": "Syncing docs/STATE.md or resetting context"
-      }
-    }
-  }
-}
-EOF
-)
-
-# Execute API call with strict timeout.
-# Gateway transport (see #343) requires the evaluation-protocol headers;
-# direct transport uses plain auth. Fail-open: any failure falls through
-# to deterministic routing below — transport never changes safety policy.
-CURL_OUTPUT=""
-HTTP_STATUS=0
-CURL_EXIT=0
-CURL_ARGS=(
-  -sS --max-time "$TIMEOUT_SEC"
-  -H "Authorization: Bearer $JEV_KEY"
-  -H "Content-Type: application/json"
-)
-if [[ "$JEV_TRANSPORT" == "gateway" ]]; then
-  CURL_ARGS+=(
-    -H "ai-gateway-protocol-version: 0.0.1"
-    -H "ai-gateway-auth-method: api-key"
-    -H "ai-evaluation-model-specification-version: 4"
-    -H "ai-model-id: typesafe-ai/jev"
-  )
-fi
-
-if ! CURL_OUTPUT=$(curl "${CURL_ARGS[@]}" \
-  -w "\n%{http_code}" \
-  -d "$PAYLOAD" \
-  "$JEV_URL" 2>&1); then
-  CURL_EXIT=$?
-fi
-
-if [[ $CURL_EXIT -ne 0 ]]; then
-  # Scenario 3: Jev unavailable / timeout
-  echo "[pk-route] Warning: Jev API request failed or timed out (${TIMEOUT_SEC}s). Falling back to deterministic routing." >&2
-  emit_deterministic_route "$PROMPT_INPUT" "Deterministic offline fallback (API timeout/unreachable)"
-  exit 0
-fi
-
-# Extract HTTP status code from last line
-HTTP_STATUS=$(echo "$CURL_OUTPUT" | tail -n 1)
-RESPONSE_BODY=$(echo "$CURL_OUTPUT" | sed '$d')
-
-if [[ "$HTTP_STATUS" -ne 200 ]]; then
-  # Scenario 3: HTTP Error (4xx/5xx)
-  echo "[pk-route] Warning: Jev API returned HTTP $HTTP_STATUS. Falling back to deterministic routing." >&2
-  emit_deterministic_route "$PROMPT_INPUT" "Deterministic offline fallback (API HTTP $HTTP_STATUS)"
-  exit 0
-fi
-
-# ------------------------------------------------------------------------------
-# 5. Response Parsing & Validation (Scenario 5: Malformed Output Rejection)
-# ------------------------------------------------------------------------------
-
-JEV_LEVEL=""
-JEV_WORKFLOW=""
-
-# Attempt extraction using python or awk/grep
-if command -v python3 >/dev/null 2>&1; then
-  JEV_LEVEL=$(python3 -c "
-import sys, json
-try:
-  data = json.loads(sys.stdin.read())
-  print(data['answers']['ceremony']['choice'])
-except Exception:
-  pass
-" <<< "$RESPONSE_BODY" 2>/dev/null || true)
-
-  JEV_WORKFLOW=$(python3 -c "
-import sys, json
-try:
-  data = json.loads(sys.stdin.read())
-  print(data['answers']['workflow']['choice'])
-except Exception:
-  pass
-" <<< "$RESPONSE_BODY" 2>/dev/null || true)
-elif command -v jq >/dev/null 2>&1; then
-  JEV_LEVEL=$(echo "$RESPONSE_BODY" | jq -r '.answers.ceremony.choice // empty' 2>/dev/null || true)
-  JEV_WORKFLOW=$(echo "$RESPONSE_BODY" | jq -r '.answers.workflow.choice // empty' 2>/dev/null || true)
-else
-  # Minimal fallback regex extraction
-  JEV_LEVEL=$(echo "$RESPONSE_BODY" | grep -o '"choice":[ ]*"Level [0-3] [^"]*"' | head -n 1 | cut -d'"' -f4 || true)
-  JEV_WORKFLOW=$(echo "$RESPONSE_BODY" | grep -o '"choice":[ ]*"pk:[^"]*"' | head -n 1 | cut -d'"' -f4 || true)
-fi
-
-if [[ -z "$JEV_LEVEL" ]]; then
-  # Scenario 5: Malformed response
-  echo "[pk-route] Warning: Failed to parse valid ceremony choice from Jev response. Falling back to deterministic routing." >&2
-  emit_deterministic_route "$PROMPT_INPUT" "Deterministic offline fallback (Malformed Jev schema)"
-  exit 0
-fi
-
-if [[ -z "$JEV_WORKFLOW" ]]; then
-  JEV_WORKFLOW=$(detect_workflow "$PROMPT_INPUT")
-fi
-
-# ------------------------------------------------------------------------------
-# 6. PromptKit Policy Arbitrator (Scenario 4: Hard Safety Floor Override)
-# ------------------------------------------------------------------------------
-
-FINAL_LEVEL="$JEV_LEVEL"
-JUSTIFICATION="Jev System One recommendation"
-
-# Enforce deterministic hard safety floor (0% Unsafe Underclassifications on the tested fixture set)
-if detect_hard_l3 "$PROMPT_INPUT"; then
-  if [[ "$JEV_LEVEL" != *"Level 3"* ]]; then
-    FINAL_LEVEL="Level 3 (Release-Critical)"
-    JUSTIFICATION="Hard safety floor override: release/deployment trigger detected"
-  fi
-elif detect_hard_l2 "$PROMPT_INPUT"; then
-  if [[ "$JEV_LEVEL" == *"Level 0"* || "$JEV_LEVEL" == *"Level 1"* ]]; then
-    FINAL_LEVEL="Level 2 (Controlled)"
-    JUSTIFICATION="Hard safety floor override: schema/auth/state trigger detected"
-  fi
-fi
-
-# Format output banner
-case "$FINAL_LEVEL" in
-  *"Level 0"*)
-    echo "[PromptKit OS: Level 0 (Direct) — ${JUSTIFICATION}. Zero overhead.]"
-    ;;
-  *"Level 1"*)
-    echo "[PromptKit OS: Level 1 (Standard) — ${JUSTIFICATION}. No Task Record required.]"
-    ;;
-  *"Level 2"*)
-    echo "[PromptKit OS: Level 2 (Controlled) — ${JUSTIFICATION}. Task Record required.]"
-    ;;
-  *"Level 3"*)
-    echo "[PromptKit OS: Level 3 (Release-Critical) — ${JUSTIFICATION}. Full evaluation required.]"
-    ;;
-  *)
-    # Unknown level string fallback
-    emit_deterministic_route "$PROMPT_INPUT" "Fallback: unexpected level output"
-    exit 0
-    ;;
-esac
-
-echo "Recommended Workflow: ${JEV_WORKFLOW}"
+emit_deterministic_route "$PROMPT_INPUT"
 exit 0

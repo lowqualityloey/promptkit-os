@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Historical baseline:** 2026-09-14 on `main` (v1.6.0 with 2+1 profiles) · **Current measurements:** 2026-10-08 at `0d5336c`, regenerated from the source tree (rerun the commands below after input changes) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 lifecycle subset 19,794 tok / full workflow set 75,505 tok.
+**Historical baseline:** 2026-09-14 on `main` (v1.6.0 with 2+1 profiles) · **Current measurements:** 2026-10-09 at `e50d2bb`, regenerated from the source tree (rerun the commands below after input changes) · **Method:** `bytes / 4` convention via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 lifecycle subset 19,794 tok / full workflow set 75,505 tok.
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [26 Inlined Workflows (116,394 tok) + Templates + Protocols] │
+│ Every Turn: [26 Inlined Workflows (116,558 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -40,14 +40,14 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **32,089 tok** |
-| Full workflow set | 26 | **116,394 tok** |
+| Core-six Lite subset | 6 | **32,253 tok** |
+| Full workflow set | 26 | **116,558 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
 > **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (93% Balanced, 96% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (12–31% Balanced, 19–35% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
 
-Component rows are measured per section at `0d5336c` (the enforced banner anchor) with the repo's own convention (`(bytes + 2) / 4`, the same formula `scripts/measure-tokens.sh` applies to the whole directive). Each row is a contiguous line range of `templates/agent-directive-template.md`: lines 1-4, 6-33, 35-52, 54-60, 62-68, and 70-72. Those cover **67 of the file's 72 lines**; the five omitted lines (5, 34, 53, 61, and 69) are blank separators between sections and carry no content. The rows sum to 2,340 against the 2,341-token figure `scripts/measure-tokens.sh` reports for the same file, and the 1-token gap is fully accounted for in bytes: the six ranges total 9,359 B (2,340.25 tokens unrounded), so rounding each range independently and adding the parts lands at 2,340. The five omitted blank lines add 5 B for 9,364 B, the file's full byte count, which `measure-tokens.sh` rounds to 2,341. The component rows are a decomposition for orientation; the `Total Baseline Static Overhead` row below is the gated figure and carries the tool value. The `Total Baseline Static Overhead` rows are the CI-gated cells (`scripts/tests/run-behavioral-contract-tests.sh` looks up `Component (Balanced)` / `Approx. Token Weight` / `Total Baseline Static Overhead (Balanced)` by exact string equality) and must continue to match `measure-tokens.sh` output; the component rows are explanatory and are not gated.
+Component rows are measured per section at `e50d2bb` (the enforced banner anchor) with the repo's own convention (`(bytes + 2) / 4`, the same formula `scripts/measure-tokens.sh` applies to the whole directive). Each row is a contiguous line range of `templates/agent-directive-template.md`: lines 1-4, 6-33, 35-52, 54-60, 62-68, and 70-72. Those cover **67 of the file's 72 lines**; the five omitted lines (5, 34, 53, 61, and 69) are blank separators between sections and carry no content. The rows sum to 2,340 against the 2,341-token figure `scripts/measure-tokens.sh` reports for the same file, and the 1-token gap is fully accounted for in bytes: the six ranges total 9,359 B (2,340.25 tokens unrounded), so rounding each range independently and adding the parts lands at 2,340. The five omitted blank lines add 5 B for 9,364 B, the file's full byte count, which `measure-tokens.sh` rounds to 2,341. The component rows are a decomposition for orientation; the `Total Baseline Static Overhead` row below is the gated figure and carries the tool value. The `Total Baseline Static Overhead` rows are the CI-gated cells (`scripts/tests/run-behavioral-contract-tests.sh` looks up `Component (Balanced)` / `Approx. Token Weight` / `Total Baseline Static Overhead (Balanced)` by exact string equality) and must continue to match `measure-tokens.sh` output; the component rows are explanatory and are not gated.
 
 | Component (Balanced) | Lines | Approx. Token Weight | Purpose |
 | :--- | :---: | :---: | :--- |
@@ -233,16 +233,16 @@ The figures in this section use the `bytes/4` proxy. Issue #194 validated that c
 > [!IMPORTANT]
 > This section is **ungated** — `scripts/measure-tokenizer-delta.sh` always exits 0 and prints `SKIPPED` when `tiktoken` is unavailable, so no CI job fails when these rows go stale. That is a deliberate trade (the check needs network-free BPE data and is validation-only), but it means staleness is caught by review, not by a gate. Re-run it in the same change that touches a measured input, and treat a stale row here as a documentation defect. See `CONTRIBUTING.md` item 4.
 
-**Current measurement:** The tokenizer comparison below was re-measured 2026-10-08 on the current source tree, superseding the 2026-10-06 snapshot, the 2026-10-05 `401cc9e` one, the 2026-10-02 `2b6c9e9` one, the 2026-10-01 `e159c70` one, and the earlier 2026-09-28 `b7e9c8c` one. Validation only — `bytes/4` remains the gated convention and no published budget figure changed. Two rows moved again and are corrected here: the Balanced directive moved on the #547 `pk:doctor` trigger (2,312 → 2,341) and `workflows/route.md` moved with the same growth (9,263 → 9,310). The remaining rows still match the 2026-10-05 snapshot.
+**Current measurement:** The tokenizer comparison below was re-measured 2026-10-09 on the current source tree, superseding the 2026-10-08 snapshot, the 2026-10-06 snapshot, the 2026-10-05 `401cc9e` one, the 2026-10-02 `2b6c9e9` one, the 2026-10-01 `e159c70` one, and the earlier 2026-09-28 `b7e9c8c` one. Validation only — `bytes/4` remains the gated convention and no published budget figure changed. One row moved again and is corrected here: `workflows/route.md` grew with the router-coverage documentation (9,310 → 9,474 `bytes/4`; CL100K 8,080 → 8,221; O200K 8,054 → 8,193), leaving its RATIO unchanged at 0.868. The remaining rows still match the 2026-10-08 snapshot.
 
-**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-10-08 on the current source tree (prior: 2026-10-06, 2026-10-05 at `401cc9e`, 2026-10-02 at `2b6c9e9`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4. This table is **not** gated and never fails the build, so unlike the sections above it has no CI guard against going stale: re-run it whenever a measured input changes, which is every release that touches `workflows/`, `protocols/code-quality-gate.md`, or a measured template.
+**Provenance:** `tiktoken 0.14.0`, encodings `cl100k_base` + `o200k_base`, measured 2026-10-09 on the current source tree (prior: 2026-10-08, 2026-10-06, 2026-10-05 at `401cc9e`, 2026-10-02 at `2b6c9e9`). Reproduce with `bash scripts/measure-tokenizer-delta.sh` (offline-safe: prints `SKIPPED`, exits 0 without network). RATIO = CL100K / BYTES4. This table is **not** gated and never fails the build, so unlike the sections above it has no CI guard against going stale: re-run it whenever a measured input changes, which is every release that touches `workflows/`, `protocols/code-quality-gate.md`, or a measured template.
 
 | File | BYTES4 | CL100K | O200K | RATIO |
 | :--- | ---: | ---: | ---: | ---: |
 | `templates/agent-directive-template.md` | 2,341 | 2,376 | 2,366 | 1.015 |
 | `templates/agent-directive-lite-template.md` | 1,436 | 1,482 | 1,477 | 1.032 |
 | `workflows/plan.md` | 7,602 | 6,165 | 6,153 | 0.811 |
-| `workflows/route.md` | 9,310 | 8,080 | 8,054 | 0.868 |
+| `workflows/route.md` | 9,474 | 8,221 | 8,193 | 0.868 |
 | `workflows/fix.md` | 3,582 | 3,055 | 3,041 | 0.853 |
 | `workflows/ship.md` | 5,947 | 4,653 | 4,654 | 0.782 |
 | `protocols/discovery-intake.md` | 3,938 | 3,458 | 3,446 | 0.878 |

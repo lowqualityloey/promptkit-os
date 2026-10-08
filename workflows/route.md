@@ -6,7 +6,7 @@ Trigger anytime with: `pk:route` (or `/pk-route`)
 ### Fast Companion Scripts (Optional Sub-150ms Routing)
 - **Bash**: `bash scripts/pk-route.sh "YOUR PROMPT"`
 - **PowerShell**: `pwsh -NoProfile -File scripts/pk-route.ps1 "YOUR PROMPT"`
-- **Axiom**: *"Jev Recommends, PromptKit Decides."* Powered by TypeSafe AI's Jev (System One) with deterministic PromptKit policy arbitration. Hard safety triggers strictly enforce a 0% Unsafe Underclassification floor, falling back cleanly to offline deterministic routing if the API key is missing or the endpoint is unreachable.
+- **Axiom**: *"PromptKit Routes Offline."* The router is fully offline and deterministic: hard safety triggers strictly enforce a low Unsafe Underclassification floor across the tested fixture set, and no network, external model, or API key is involved.
 
 ## Mission
 Quickly orient the developer and AI agent to the right workflow, template, and quality gate based on the current engineering state.
@@ -217,6 +217,13 @@ Find your current engineering context below and activate the corresponding workf
 | **Wrong Profile / Mode Upgrade**| `pk:profile` | `PROMPTKIT.md` + injected directive | Runtime Lite/Balanced/Turbo switching via the idempotent installer re-injection path |
 | **Unattended SDLC & Automation**| `pk:auto` | Verified diff / PR | Autonomous pipeline chaining (plan→tasks→code→test→review), default stop at review-ready |
 | **Installed Governance Health**| `pk:doctor` | Terminal report | Read-only audit of hosts × engine version × install-mode × ignore-state × docs-drift; reports rot, never upgrades |
+
+### Workflow Recommendation Coverage
+
+The risk classification (the L0-L3 ceremony level) and the workflow recommendation are two separate concerns, decided independently of each other.
+
+- **Trigger-to-file aliases** (the convention alone would misresolve these): `pk:design` -> `workflows/design-system.md`, `pk:spike` -> `workflows/research.md`, `pk:retro` -> `workflows/reflect.md`, `pk:grill` -> `workflows/tutor.md`. These are documented aliases, not missing workflows: each alias target listed above exists on disk. A prior audit wrongly suspected missing files; every target was always present under its aliased name.
+- **Safe fallback**: Requests with no confident signal fall back safely rather than guessing at a workflow.
 
 ---
 

@@ -44,7 +44,7 @@ function Invoke-Pk {
 }
 
 # Scenario 5 parity lock: run-pk-entry-points-tests.sh asserts this identical literal.
-$expected = "[PromptKit OS: Level 2 (Controlled) — Offline fallback (no AI_GATEWAY_API_KEY nor TYPESAFE_API_KEY). Task Record required.]`nRecommended Workflow: pk:route"
+$expected = "[PromptKit OS: Level 2 (Controlled) — Deterministic offline policy classification. Task Record required.]`nRecommended Workflow: pk:route"
 
 $probe = Join-Path ([IO.Path]::GetTempPath()) ('pk-entry-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $probe -Force | Out-Null
