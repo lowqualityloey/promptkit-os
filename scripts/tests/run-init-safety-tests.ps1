@@ -244,6 +244,46 @@ try {
         throw "Failed Test 13: .opencode/rules.md does not contain the injected directive."
     }
 
+    # Test 13b: --host=cursor writes the managed block into .cursorrules (Scenario 4)
+    $CursorRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "cursorhost") -Force).FullName
+    $env:PROMPTKIT_NO_INTERACTIVE = "1"
+    try {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CursorRoot --host=cursor --balanced | Out-Null
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
+    }
+    $cursorRules = Join-Path $CursorRoot ".cursorrules"
+    if (-not (Test-Path $cursorRules)) {
+        throw "Failed Test 13b: .cursorrules was not created for --host=cursor."
+    }
+    $cursorContent = [System.IO.File]::ReadAllText($cursorRules, [System.Text.Encoding]::UTF8)
+    if (-not $cursorContent.Contains('<!-- PROMPTKIT_START -->')) {
+        throw "Failed Test 13b: .cursorrules does not contain the managed block."
+    }
+
+    # Test 13c: a multi-host install carries the managed block in every host file (Scenario 3)
+    $MultiHostRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "multihost") -Force).FullName
+    $env:PROMPTKIT_NO_INTERACTIVE = "1"
+    try {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $MultiHostRoot --host=claude,cursor,opencode,gemini,windsurf,copilot,cline,trae,aider --balanced | Out-Null
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
+    }
+    $multiHostFiles = @(
+        "CLAUDE.md", ".cursorrules", ".opencode/rules.md", "GEMINI.md", ".windsurfrules",
+        ".github/copilot-instructions.md", ".clinerules/promptkit.md", ".traerules", "CONVENTIONS.md"
+    )
+    foreach ($rel in $multiHostFiles) {
+        $path = Join-Path $MultiHostRoot $rel
+        if (-not (Test-Path $path)) {
+            throw "Failed Test 13c: multi-host install missing $rel."
+        }
+        $content = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+        if (($content.Split('<!-- PROMPTKIT_START -->').Count - 1) -ne 1) {
+            throw "Failed Test 13c: managed block missing or duplicated in $rel."
+        }
+    }
+
     # Test 14: --add-host injects exactly once; pre-existing content preserved
     $AddHostRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "addhost") -Force).FullName
     [System.IO.File]::WriteAllText((Join-Path $AddHostRoot "AGENTS.md"), "# Mine`n", $utf8NoBom)
