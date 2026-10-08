@@ -20,6 +20,9 @@ status-cards: on
 card-style: framed
 > `card-style: framed` (default) formats human callouts with ceiling-and-floor box borders (`╔═ ... ╚═`); `markdown` uses GFM blockquotes (`> [!TIP]`); `off` disables decorative framing while preserving text.
 
+ai-attribution: host-default
+> `ai-attribution: host-default` (default, and the behavior when the line is missing) leaves attribution to the host harness. `off` instructs PromptKit to omit unsolicited AI co-author trailers, generated-by signatures, and promotional footers from newly prepared commit messages and PR/issue bodies — while preserving legitimate human co-authors, authorship identity, required notices, and repository-mandated disclosures. A conflict between `off` and a required notice is surfaced, never silently resolved. This preference is a PromptKit policy instruction only: it cannot override higher-priority harness instructions, and it does not control publication paths PromptKit does not manage.
+
 size: [small | medium | large]
 intake-status: [unanswered | partial | legacy-partial | complete]
 > `size:` and `intake-status:` are written by `pk:onboard` (greenfield Phase 0 interview, or a brownfield estimate marked `legacy-partial` when fields predate intake). `unanswered` or `partial` instructs `pk:plan` Step 0 to run the bounded intake in `protocols/discovery-intake.md` before proposing architecture. Never guess these values.

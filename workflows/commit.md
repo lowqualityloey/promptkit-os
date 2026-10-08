@@ -215,6 +215,8 @@ docs(adrs): record decision to adopt UUIDv7 for primary keys
     git commit -m "<subject>" -m "<body-paragraphs>"
     ```
     Exception: inside an explicitly authorized `pk:auto` run (`--until pr` / `--full`), the declared run boundary satisfies the confirmation requirement for commits within that run; commit evidence is recorded and the draft PR serves as the human review checkpoint (see Action Authority Model in `protocols/code-quality-gate.md`).
+
+    **AI attribution gate** (only when `PROMPTKIT.md` declares `ai-attribution: off`): before committing, validate the exact message with `bash scripts/check-ai-attribution.sh --root . --message-file <draft>` (or `.ps1`). Exit `1` names the matched prohibited AI signature and remediation — rewrite the message, or surface the conflict with a required notice rather than silently dropping it. Read-only; the opt-in `commit-msg` hook (`scripts/install-attribution-hook.sh`) enforces the same check at commit time. A missing or `host-default` preference skips this gate.
 4. Confirm commit creation with `git log -n 1 --stat`.
 5. **Dual-Compatible Telemetry Status Card & Interactive Handoff**: Conclude the turn by displaying the status card and invoking the native interactive selection tool (skip the decorative card only when PROMPTKIT.md declares `status-cards: off`; halts still fire):
    > 📊 **Milestone**: `M2: Core Features` `[■■■■■□□□□□]` 42% (5/12)  

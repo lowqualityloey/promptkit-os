@@ -48,6 +48,9 @@ bash -n scripts/check-checkpoint-ignore.sh
 bash -n scripts/tests/run-checkpoint-ignore-tests.sh
 bash -n scripts/pk
 bash -n scripts/tests/run-pk-entry-points-tests.sh
+bash -n scripts/check-ai-attribution.sh
+bash -n scripts/install-attribution-hook.sh
+bash -n scripts/tests/run-ai-attribution-tests.sh
 
 # Run safety & contract test suites
 bash scripts/tests/run-init-safety-tests.sh
@@ -56,6 +59,7 @@ bash scripts/tests/run-execution-control-fixtures.sh
 bash scripts/tests/run-ci-triage-fixtures.sh
 bash scripts/tests/run-checkpoint-ignore-tests.sh
 bash scripts/tests/run-pk-entry-points-tests.sh
+bash scripts/tests/run-ai-attribution-tests.sh
 
 # Validate reference links and release records
 bash scripts/validate-references.sh .
@@ -85,7 +89,10 @@ $syntaxFiles = @(
   "scripts/check-checkpoint-ignore.ps1",
   "scripts/tests/run-checkpoint-ignore-tests.ps1",
   "scripts/pk.ps1",
-  "scripts/tests/run-pk-entry-points-tests.ps1"
+  "scripts/tests/run-pk-entry-points-tests.ps1",
+  "scripts/check-ai-attribution.ps1",
+  "scripts/install-attribution-hook.ps1",
+  "scripts/tests/run-ai-attribution-tests.ps1"
 )
 foreach ($file in $syntaxFiles) {
   $errors = @()
@@ -100,6 +107,7 @@ pwsh -NoProfile -File .\scripts\tests\run-execution-control-fixtures.ps1
 pwsh -NoProfile -File .\scripts\tests\run-ci-triage-fixtures.ps1
 pwsh -NoProfile -File .\scripts\tests\run-checkpoint-ignore-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-pk-entry-points-tests.ps1
+pwsh -NoProfile -File .\scripts\tests\run-ai-attribution-tests.ps1
 
 # Validate reference links and release records
 pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir .
