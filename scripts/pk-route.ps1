@@ -77,22 +77,34 @@ $inputPrompt = if (-not [string]::IsNullOrWhiteSpace($Prompt)) {
 # ------------------------------------------------------------------------------
 
 function Test-ActionMarkerApplies ([string]$text) {
+  # #594 follow-up: a request can be ABOUT an action without BEING one. "Explain how
+  # to change the public API" and "What is a high-impact contract change?" are
+  # questions, and in both the token "change" is a NOUN, so a bare work-verb scan
+  # escalated them to Level 3. An informational frame therefore vetoes the topical
+  # markers even when a work verb is present. A coordination marker followed by its
+  # own action verb is a genuine second clause and does still escalate
+  # ("explain ... then implement it"), so mixed-intent requests keep reaching the
+  # hard-risk floor. Release/deploy/publish language is ungated and unaffected.
+  #
+  # Pattern note: no \b is used anywhere below, so this twin and the Bash original are
+  # both plain unanchored substring matches. Bash ERE supports neither \b nor \s, so
+  # the Bash twin spells spaces as "\ "; the alternations are otherwise identical.
+  if ($text -match '(?i)(what is|what does|how to|how does|explain|describe|tell me about|syntax|lookup|typo|spelling|rename|readme|doc|changelog|formatting)' `
+      -and $text -notmatch '(?i)(then|after that|finally) (apply|applied|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|remove|delete|revert|roll out|roll back|update|fix|patch|migrate)') {
+    return $false
+  }
+
   # Explicit work verbs. fix/patch/update are deliberately ABSENT here because
   # they are verb-ambiguous; they are handled by the rule below.
-  if ($text -match '(?i)\b(apply|applied|applying|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|return|remove|delete|need\s+to|required|must|should|roll\s+out)\b') {
+  if ($text -match '(?i)(apply|applied|applying|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|return|remove|delete|revert|roll out|roll back|need to|required|must|should)') {
     return $true
   }
 
   # fix/patch/update are accepted only when the security phrase is the DIRECT
   # OBJECT ("fix the security patch"), not when they modify something else
   # ("fix a typo in the security patch README").
-  if ($text -match '(?i)\b(fix|patch|update)s?\s+(a|an|the|this|that|our)?\s+(critical\s+)?security\s+(patch|fix|update|advisory|hotfix)\b') {
+  if ($text -match '(?i)(fix|patch|update)s? (a|an|the|this|that|our)? (critical )?security (patch|fix|update|advisory|hotfix)') {
     return $true
-  }
-
-  # Conceptual question or documentation edit: never escalate on a topic keyword.
-  if ($text -match '(?i)\b(what\s+is|how\s+does|explain|describe|tell\s+me\s+about|syntax|lookup|typo|spelling|rename|readme|doc|changelog|formatting)\b') {
-    return $false
   }
 
   return $false
@@ -163,7 +175,9 @@ function Test-HardL2 ([string]$text) {
 }
 
 function Test-ObviousL0 ([string]$text) {
-  $pattern = '(?i)\b(what\s+is|how\s+does|explain|syntax|lookup|typo|fix\s+typo|formatting|format\s+this|where\s+is|where\s+do\s+we)'
+  # #594 follow-up: "what does ..." is a conceptual question too (route.md:46), and
+  # without it a definitional prompt that also trips an action frame falls to L1.
+  $pattern = '(?i)\b(what\s+is|what\s+does|how\s+does|explain|syntax|lookup|typo|fix\s+typo|formatting|format\s+this|where\s+is|where\s+do\s+we)'
   if ($text -match $pattern) {
     if (-not (Test-HardL2 $text) -and -not (Test-HardL3 $text)) {
       return $true

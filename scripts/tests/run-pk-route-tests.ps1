@@ -404,6 +404,61 @@ $mixedReleaseDeployOut = Invoke-Route "Explain the release process, then deploy.
 Assert-Contains $mixedReleaseDeployOut "Level 3" "'Explain the release process, then deploy.' -> Level 3"
 
 # ------------------------------------------------------------------------------
+# Test 14: Issue #594 follow-up - action intent vs question ABOUT an action
+# ------------------------------------------------------------------------------
+Write-Host "Test 14: #594 follow-up: question about an action must not escalate"
+
+# NEGATIVE: an informational frame suppresses the topical markers even when the
+# sentence also contains an action verb (here "change"/"revert" used as a NOUN).
+$qHighimpactContractOut = Invoke-Route "Explain the high-impact contract change."
+Assert-Contains $qHighimpactContractOut "Level 0" "'Explain the high-impact contract change.' -> Level 0"
+Assert-NotContains $qHighimpactContractOut "Level 3" "question about a high-impact contract change is not Level 3"
+
+$qHighimpactWhatOut = Invoke-Route "What is a high-impact contract change?"
+Assert-Contains $qHighimpactWhatOut "Level 0" "'What is a high-impact contract change?' -> Level 0"
+Assert-NotContains $qHighimpactWhatOut "Level 3" "'What is a high-impact contract change?' is not Level 3"
+
+$qHighimpactPublicOut = Invoke-Route "Explain the high-impact public API change."
+Assert-Contains $qHighimpactPublicOut "Level 0" "'Explain the high-impact public API change.' -> Level 0"
+Assert-NotContains $qHighimpactPublicOut "Level 3" "'Explain the high-impact public API change.' is not Level 3"
+
+$qHowtoChangeOut = Invoke-Route "Explain how to change the high-impact public API."
+Assert-Contains $qHowtoChangeOut "Level 0" "'Explain how to change the high-impact public API.' -> Level 0"
+Assert-NotContains $qHowtoChangeOut "Level 3" "'Explain how to change ...' is not Level 3"
+
+$qMeaningOut = Invoke-Route "What does it mean to change a high-impact API?"
+Assert-Contains $qMeaningOut "Level 0" "'What does it mean to change a high-impact API?' -> Level 0"
+Assert-NotContains $qMeaningOut "Level 3" "'What does it mean to change ...' is not Level 3"
+
+$qHowtoRevertOut = Invoke-Route "Explain how to revert the high-impact API change."
+Assert-Contains $qHowtoRevertOut "Level 0" "'Explain how to revert the high-impact API change.' -> Level 0"
+Assert-NotContains $qHowtoRevertOut "Level 3" "'Explain how to revert ...' is not Level 3"
+
+$qTypoReadmeOut = Invoke-Route "Fix a typo in the high-impact API change README."
+Assert-Contains $qTypoReadmeOut "Level 0" "'Fix a typo in the high-impact API change README.' -> Level 0"
+Assert-NotContains $qTypoReadmeOut "Level 3" "a README typo fix is not Level 3"
+
+# POSITIVE: a real high-impact contract change still escalates, including when the
+# action verb is merely implied by a polite question or leads the sentence.
+$aImplementOut = Invoke-Route "Implement the high-impact public API change."
+Assert-Contains $aImplementOut "Level 3" "'Implement the high-impact public API change.' -> Level 3"
+
+$aChangeLeadOut = Invoke-Route "Change the high-impact public API."
+Assert-Contains $aChangeLeadOut "Level 3" "'Change the high-impact public API.' -> Level 3"
+
+$aCouldYouOut = Invoke-Route "Could you change the high-impact public API?"
+Assert-Contains $aCouldYouOut "Level 3" "'Could you change the high-impact public API?' -> Level 3"
+
+$aRevertOut = Invoke-Route "Revert the high-impact public API change."
+Assert-Contains $aRevertOut "Level 3" "'Revert the high-impact public API change.' -> Level 3"
+
+$aMixedThenOut = Invoke-Route "Explain the high-impact API change, then implement it."
+Assert-Contains $aMixedThenOut "Level 3" "'Explain ... then implement it.' -> Level 3 (mixed intent preserved)"
+
+$aCveOut = Invoke-Route "Apply a critical security patch for CVE-2026-1234."
+Assert-Contains $aCveOut "Level 3" "'Apply a critical security patch for CVE-2026-1234.' -> Level 3"
+
+# ------------------------------------------------------------------------------
 # #594 FP/FN Report
 # ------------------------------------------------------------------------------
 # Bounded, table-driven classification report over the #594 fixture set only.

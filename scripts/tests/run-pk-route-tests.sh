@@ -388,6 +388,61 @@ MIXED_RELEASE_DEPLOY_OUT=$(route_prompt "Explain the release process, then deplo
 assert_contains "$MIXED_RELEASE_DEPLOY_OUT" "Level 3" "'Explain the release process, then deploy.' -> Level 3"
 
 # ------------------------------------------------------------------------------
+# Test 14: Issue #594 follow-up - action intent vs question ABOUT an action
+# ------------------------------------------------------------------------------
+echo "Test 14: #594 follow-up: question about an action must not escalate"
+
+# NEGATIVE: an informational frame suppresses the topical markers even when the
+# sentence also contains an action verb (here "change"/"revert" used as a NOUN).
+Q_HIGHIMPACT_CONTRACT_OUT=$(route_prompt "Explain the high-impact contract change.")
+assert_contains "$Q_HIGHIMPACT_CONTRACT_OUT" "Level 0" "'Explain the high-impact contract change.' -> Level 0"
+assert_not_contains "$Q_HIGHIMPACT_CONTRACT_OUT" "Level 3" "question about a high-impact contract change is not Level 3"
+
+Q_HIGHIMPACT_WHAT_OUT=$(route_prompt "What is a high-impact contract change?")
+assert_contains "$Q_HIGHIMPACT_WHAT_OUT" "Level 0" "'What is a high-impact contract change?' -> Level 0"
+assert_not_contains "$Q_HIGHIMPACT_WHAT_OUT" "Level 3" "'What is a high-impact contract change?' is not Level 3"
+
+Q_HIGHIMPACT_PUBLIC_OUT=$(route_prompt "Explain the high-impact public API change.")
+assert_contains "$Q_HIGHIMPACT_PUBLIC_OUT" "Level 0" "'Explain the high-impact public API change.' -> Level 0"
+assert_not_contains "$Q_HIGHIMPACT_PUBLIC_OUT" "Level 3" "'Explain the high-impact public API change.' is not Level 3"
+
+Q_HOWTO_CHANGE_OUT=$(route_prompt "Explain how to change the high-impact public API.")
+assert_contains "$Q_HOWTO_CHANGE_OUT" "Level 0" "'Explain how to change the high-impact public API.' -> Level 0"
+assert_not_contains "$Q_HOWTO_CHANGE_OUT" "Level 3" "'Explain how to change ...' is not Level 3"
+
+Q_MEANING_OUT=$(route_prompt "What does it mean to change a high-impact API?")
+assert_contains "$Q_MEANING_OUT" "Level 0" "'What does it mean to change a high-impact API?' -> Level 0"
+assert_not_contains "$Q_MEANING_OUT" "Level 3" "'What does it mean to change ...' is not Level 3"
+
+Q_HOWTO_REVERT_OUT=$(route_prompt "Explain how to revert the high-impact API change.")
+assert_contains "$Q_HOWTO_REVERT_OUT" "Level 0" "'Explain how to revert the high-impact API change.' -> Level 0"
+assert_not_contains "$Q_HOWTO_REVERT_OUT" "Level 3" "'Explain how to revert ...' is not Level 3"
+
+Q_TYPO_README_OUT=$(route_prompt "Fix a typo in the high-impact API change README.")
+assert_contains "$Q_TYPO_README_OUT" "Level 0" "'Fix a typo in the high-impact API change README.' -> Level 0"
+assert_not_contains "$Q_TYPO_README_OUT" "Level 3" "a README typo fix is not Level 3"
+
+# POSITIVE: a real high-impact contract change still escalates, including when the
+# action verb is merely implied by a polite question or leads the sentence.
+A_IMPLEMENT_OUT=$(route_prompt "Implement the high-impact public API change.")
+assert_contains "$A_IMPLEMENT_OUT" "Level 3" "'Implement the high-impact public API change.' -> Level 3"
+
+A_CHANGE_LEAD_OUT=$(route_prompt "Change the high-impact public API.")
+assert_contains "$A_CHANGE_LEAD_OUT" "Level 3" "'Change the high-impact public API.' -> Level 3"
+
+A_COULD_YOU_OUT=$(route_prompt "Could you change the high-impact public API?")
+assert_contains "$A_COULD_YOU_OUT" "Level 3" "'Could you change the high-impact public API?' -> Level 3"
+
+A_REVERT_OUT=$(route_prompt "Revert the high-impact public API change.")
+assert_contains "$A_REVERT_OUT" "Level 3" "'Revert the high-impact public API change.' -> Level 3"
+
+A_MIXED_THEN_OUT=$(route_prompt "Explain the high-impact API change, then implement it.")
+assert_contains "$A_MIXED_THEN_OUT" "Level 3" "'Explain ... then implement it.' -> Level 3 (mixed intent preserved)"
+
+A_CVE_OUT=$(route_prompt "Apply a critical security patch for CVE-2026-1234.")
+assert_contains "$A_CVE_OUT" "Level 3" "'Apply a critical security patch for CVE-2026-1234.' -> Level 3"
+
+# ------------------------------------------------------------------------------
 # #594 FP/FN Report
 # ------------------------------------------------------------------------------
 # Bounded, table-driven classification report over the #594 fixture set only.

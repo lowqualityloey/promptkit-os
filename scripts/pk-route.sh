@@ -92,12 +92,33 @@ fi
 # the security patch README" is a documentation edit. They escalate only when the
 # request reads as work on that subject. A named CVE stays unconditional
 # (workflows/route.md:64 lists critical security updates as Level 3).
+#
+# #594 follow-up: a request can be ABOUT an action without BEING one. "Explain how
+# to change the public API" and "What is a high-impact contract change?" are
+# questions, and in both the token "change" is a NOUN, so a bare work-verb scan
+# escalated them to Level 3. An informational frame therefore vetoes the topical
+# markers even when a work verb is present. A coordination marker followed by its
+# own action verb is a genuine second clause and does still escalate
+# ("explain ... then implement it"), so mixed-intent requests keep reaching the
+# hard-risk floor. Release/deploy/publish language is ungated and unaffected.
+#
+# Pattern note: bash ERE in [[ =~ ]] supports neither \b nor \s, so this file uses
+# escaped literal spaces. The PowerShell twin carries the same alternation with
+# unescaped spaces under (?i) and no \b, so both classifiers are unanchored
+# substring matches and stay in step.
 action_marker_applies() {
   local t="$1"
 
+  # Informational frame: a question or documentation edit ABOUT the subject never
+  # escalates on a topical marker, whatever verb it also contains.
+  if [[ "$t" =~ (what\ is|what\ does|how\ to|how\ does|explain|describe|tell\ me\ about|syntax|lookup|typo|spelling|rename|readme|doc|changelog|formatting) ]] \
+     && ! [[ "$t" =~ (then|after\ that|finally)\ (apply|applied|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|remove|delete|revert|roll\ out|roll\ back|update|fix|patch|migrate) ]]; then
+    return 1
+  fi
+
   # Explicit work verbs. fix/patch/update are deliberately ABSENT here because
   # they are verb-ambiguous; they are handled by the rule below.
-  if [[ "$t" =~ (apply|applied|applying|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|return|remove|delete|need\ to|required|must|should|roll\ out) ]]; then
+  if [[ "$t" =~ (apply|applied|applying|backport|deploy|deploying|ship|shipped|shipping|release|releasing|publish|published|push|upgrade|upgraded|perform|conduct|mitigate|remediate|implement|add|added|create|created|introduce|modify|change|changed|extend|expose|return|remove|delete|revert|roll\ out|roll\ back|need\ to|required|must|should) ]]; then
     return 0
   fi
 
@@ -106,11 +127,6 @@ action_marker_applies() {
   # ("fix a typo in the security patch README").
   if [[ "$t" =~ (fix|patch|update)s?\ (a|an|the|this|that|our)?\ (critical\ )?security\ (patch|fix|update|advisory|hotfix) ]]; then
     return 0
-  fi
-
-  # Conceptual question or documentation edit: never escalate on a topic keyword.
-  if [[ "$t" =~ (what\ is|how\ does|explain|describe|tell\ me\ about|syntax|lookup|typo|spelling|rename|readme|doc|changelog|formatting) ]]; then
-    return 1
   fi
 
   return 1
@@ -196,7 +212,9 @@ detect_obvious_l0() {
   input_lower=$(echo "$1" | tr '[:upper:]' '[:lower:]')
   
   # Conceptual question, syntax lookup, typo fix, formatting
-  if [[ "$input_lower" =~ (what\ is|how\ does|explain|syntax|lookup|typo|fix\ typo|formatting|format\ this|where\ is|where\ do\ we) ]]; then
+  # #594 follow-up: "what does ..." is a conceptual question too (route.md:46), and
+  # without it a definitional prompt that also trips an action frame falls to L1.
+  if [[ "$input_lower" =~ (what\ is|what\ does|how\ does|explain|syntax|lookup|typo|fix\ typo|formatting|format\ this|where\ is|where\ do\ we) ]]; then
     if ! detect_hard_l2 "$input_lower" && ! detect_hard_l3 "$input_lower"; then
       return 0
     fi
