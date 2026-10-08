@@ -493,6 +493,33 @@ try {
     Want-NotContains "ignore:n5-engine`tOK"
     Want-NotContains "ignore:n5-engine`tINCOMPLETE"
     Report-Scenario 'N5 engine outside project root -> kit-dir ignore SKIP, no phantom OK'
+
+    # S11: a directory-form cline install (.clinerules/promptkit.md) is OK.
+    Begin-Scenario
+    $root11 = New-HealthyKit 's11' 'balanced'
+    $sha11 = Get-ShortSha (Join-Path $root11 '.promptkit')
+    Remove-Item -LiteralPath (Join-Path $root11 '.clinerules') -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path (Join-Path $root11 '.clinerules') -Force | Out-Null
+    $block11 = "<!-- PROMPTKIT_START -->`n## PromptKit OS`nEngine: v1.2.3 ($sha11) - stamped at install time`n<!-- PROMPTKIT_END -->`n"
+    [IO.File]::WriteAllText((Join-Path $root11 '.clinerules/promptkit.md'), $block11, $utf8)
+    Invoke-Doctor -Root $root11
+    Want-Status 0
+    Want-Contains "host:.clinerules/promptkit.md`tOK"
+    Want-NotContains 'host file unreadable'
+    Report-Scenario 'S11 cline directory-form install -> host OK'
+
+    # S12: a cursor mdc-only install (.cursor/rules/promptkit.mdc) is OK.
+    Begin-Scenario
+    $root12 = New-HealthyKit 's12' 'balanced'
+    $sha12 = Get-ShortSha (Join-Path $root12 '.promptkit')
+    Remove-Item -LiteralPath (Join-Path $root12 '.cursorrules') -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path (Join-Path $root12 '.cursor/rules') -Force | Out-Null
+    $block12 = "<!-- PROMPTKIT_START -->`n## PromptKit OS`nEngine: v1.2.3 ($sha12) - stamped at install time`n<!-- PROMPTKIT_END -->`n"
+    [IO.File]::WriteAllText((Join-Path $root12 '.cursor/rules/promptkit.mdc'), $block12, $utf8)
+    Invoke-Doctor -Root $root12
+    Want-Status 0
+    Want-Contains "host:.cursor/rules/promptkit.mdc`tOK"
+    Report-Scenario 'S12 cursor mdc-only install -> host OK'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
