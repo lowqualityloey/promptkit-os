@@ -2,6 +2,8 @@
 
 This document establishes the canonical **Context Economy & Progressive Zoom Protocol** for PromptKit OS. It defines how AI coding agents within PromptKit acquire, validate, and constrain the context they consume, ensuring maximum safety and accuracy without wasting token budgets or causing information starvation.
 
+> **Enforcement boundary — read this first.** This protocol is an **advisory agent instruction**, not a runtime control. Its `MUST` / `MUST NOT` / `mandated` statements are obligations the agent is directed to follow; PromptKit OS contains no mechanism that executes or enforces them. The automated CI checks only assert that this file still contains the required invariant text and that directive token budgets hold — they observe no agent behavior. Whether these instructions are followed therefore depends on the host assistant. See §11 for the full boundary and for the current discovery route to this file.
+
 ## 1. Purpose & Core Philosophy
 
 **Minimum Sufficient Context**
@@ -85,7 +87,7 @@ Before executing any write operation (file edit, delete, etc.) in an L2 or L3 co
 3.  *What contract or invariant governs it?*
 4.  *What evidence confirms this is sufficiently understood?*
 
-If any question remains unanswered, editing is blocked until context is appropriately escalated.
+If any question remains unanswered, the agent must not proceed with the write until the context has been appropriately escalated. PromptKit OS does not mechanically block the edit — this is an obligation on the agent, and violating it is a governance failure, not a prevented action.
 
 ## 8. Evidence-Driven Diagnostic Zoom
 
@@ -121,3 +123,19 @@ context_provider:
 ### Provider Adaptation
 1. **Minimal Provider (Native CLI)**: Uses `grep`, `find_by_name`, and bounded reads. Satisfies all required capabilities with zero external dependencies. Z0 may be satisfied through native text/search capabilities when semantic symbol extraction is unavailable; `symbol_search` is an optimization, not a prerequisite.
 2. **Rich Provider (MCP / Indexing Engine)**: When an active MCP server (such as Code Context Engine or ACE) is detected in the host environment, PromptKit leverages its optional capabilities (e.g., `symbol_search` for Z0/Z1, `graph_expansion` for Z3) while strictly holding PromptKit's Governance, Anti-Starvation, and Hard Escalation Triggers authoritative.
+
+---
+
+## 11. Enforcement Boundary & Discovery Route
+
+Three authorities are easy to conflate here, and they are not interchangeable:
+
+| Layer | What it is | What it actually does |
+| :--- | :--- | :--- |
+| **Advisory agent instruction** | This document, plus the injected directive | Directs agent behavior. There is no executor: the `MUST` / `MUST NOT` / `mandated` statements above are obligations addressed to the agent, not guarantees about what happens. |
+| **Automated CI checks** | `scripts/tests/run-behavioral-contract-tests.sh` and its `.ps1` twin | Assert that this file still contains the required invariant text (`Minimum Sufficient Context`, `Anti-Starvation`, `Hard Escalation Triggers`, `Context Sufficiency Check Gate`, `4D Context Framework`, `Z0–Z4 Taxonomy`, `Context Provider Capability Contract`, `Retrieval Confidence is Evidence, Not Authority`, `Provider Freshness & Stale-Index Fallback`, `required_capabilities`) and that the directive token budgets hold. Text presence is not behavioral compliance, and the suite observes no agent behavior. |
+| **Host / runtime enforcement** | The host assistant | Determines whether the directive is actually followed. PromptKit OS ships no daemon, hook, or interceptor that can block an edit, abort a turn, or force a zoom-out; capability varies by host. |
+
+The claim this protocol makes is that the agent is **directed** to escalate and **directed** not to proceed on insufficient evidence. The claim it does not make is that PromptKit OS can prevent an agent from doing otherwise.
+
+**Discovery route (current; not validated as live behavior).** This file is not named in the protocol line of the Balanced or Lite directive — that line lists `setup`, `context-sync`, `code-quality-gate`, and `subagent-delegation`. The route to this file is **transitive**: the directive points at `protocols/setup.md`, whose *Workflows & Protocols Reference* lists `context-economy.md`, and `docs/WORKFLOW-MAP.md` also links it directly. Discovery through that route has **not** been validated with recorded live transcripts, and no automated check exercises it. Balanced/Lite discoverability and sufficiency remain **open acceptance evidence**: documenting the route is not evidence that it works.

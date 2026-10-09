@@ -264,8 +264,11 @@ promptkit-os/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml               # Maintainer CI (script syntax, initialization dry-run/idempotency, workflow structure, reference validation, fixture harnesses, and behavioral-contract tests)
+├── README.md                    # Project overview, quick start, and documentation index
 ├── CHANGELOG.md                 # Official release provenance adhering to Keep a Changelog
+├── CONTRIBUTING.md              # Contribution guide, review standards, and release rules
 ├── FAQ.md                       # The 20 questions every developer asks before adopting
+├── PROMPTKIT.md                 # This repository's own project profile and engineering invariants
 ├── QUICKSTART.md                # 5-minute introduction with core workflows & 1-line setup
 ├── init.ps1                     # Setup script for Windows (PowerShell)
 ├── init.sh                      # Setup script for Linux/macOS (Bash)
@@ -291,6 +294,9 @@ promptkit-os/
 │   ├── discovery-intake.md      # Bounded greenfield intake protocol (size classes S/M/L + product-shape questions)
 │   ├── telemetry-cards.md       # Lazy-loaded status-card format spec & callout titles
 │   ├── code-quality-gate.md     # Non-negotiable definition-of-done & pre-commit gate
+│   ├── context-economy.md       # Context Economy, Z0–Z4 progressive zoom & provider capability contract
+│   ├── checkpoint-ignore-policy.md # Checkpoint ignore-state policy for intentionally uncommitted files
+│   ├── rendered-ui-evidence.md  # Evidence requirements for browser-rendered UI changes (lazy-loaded)
 │   └── subagent-delegation.md   # Subagent delegation, parallel execution & context preservation
 ├── workflows/                   # Step-by-step engineering lifecycle procedures (26 workflows)
 │   ├── route.md                 # Lifecycle decision matrix & workflow triage (pk:route)
@@ -321,6 +327,7 @@ promptkit-os/
 │   └── checkpoint.md            # Session state compaction & handover prompt (pk:checkpoint)
 ├── templates/                   # Structured artifact schemas saved to project docs/
 │   ├── agent-directive-template.md # Canonical directive source template rendered during initialization
+│   ├── agent-directive-lite-template.md # Canonical Lite directive source template rendered during initialization
 │   ├── project-profile-template.md # Scaffolds PROMPTKIT.md for project guardrails & monorepo topology
 │   ├── design-profile-template.md  # Scaffolds DESIGN.md for brand identity & visual tokens
 │   ├── state-tracker-template.md   # Scaffolds docs/STATE.md as a synchronized projection
@@ -346,6 +353,7 @@ promptkit-os/
 │   ├── rca-postmortem-template.md  # Blameless Post-Mortem & Incident RCA
 │   ├── code-review-checklist.md    # Senior Developer PR Review Checklist
 │   ├── design-tokens-spec.md       # Design System & Token Specification
+│   ├── lite-profile.md          # Lite/Balanced/Turbo profile comparison, token measurements and upgrade path
 │   └── spike-template.md           # Technical Spike & Benchmark Evaluation Template
 ├── examples/                    # Real-world production examples
 │   ├── README.md                       # Example catalog and usage guide

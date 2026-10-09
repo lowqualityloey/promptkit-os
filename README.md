@@ -11,7 +11,7 @@ A lightweight, repository-native system for risk, context, state, autonomy, and 
 
 No runtime. No daemon. No model lock-in. No required API.
 
-Generates native instructions and directives for Claude Code, Gemini CLI, Cursor, Windsurf, GitHub Copilot, Cline, Roo Code, Trae, OpenCode, Aider, and Antigravity (see [docs/HOST-CONFORMANCE.md](./docs/HOST-CONFORMANCE.md)).
+Generates native instructions and directives for nine installer targets — `claude`, `gemini`, `cursor`, `windsurf`, `copilot`, `cline`, `trae`, `opencode`, `aider` (Claude Code, Gemini CLI/Antigravity, Cursor, Windsurf, GitHub Copilot, Cline/Roo Code, Trae IDE, OpenCode, and Aider) — with `AGENTS.md` created as the universal fallback for any other AGENTS.md-reading host, such as Codex CLI. See [docs/HOST-CONFORMANCE.md](./docs/HOST-CONFORMANCE.md) for the host matrix and its runtime-validated status.
 
 ---
 
@@ -143,7 +143,7 @@ The core instruction layer stays small. Workflows, stack playbooks, and boundary
 - **Balanced** profile: ~2,341 tok static footprint (~93% static saving vs. ~32.0k current core-subset baseline; 2,500 tok budget cap)
 - **Lite** profile: ~1,436 tok static footprint (~96% static saving vs. the current baseline; 1,500 tok budget cap)
 
-PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), enforcing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 task risk ceremony). Retrieval confidence is treated as evidence rather than authority, ensuring high-risk boundaries trigger mandatory zoom-outs.
+PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), governing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 task risk ceremony). Retrieval confidence is treated as evidence rather than authority, and high-risk boundaries direct the agent to zoom out. These are advisory agent instructions: CI asserts that the invariant text is present and that the directive token budgets hold, but PromptKit does not enforce this protocol at runtime — see the enforcement boundary recorded in that file.
 
 Full workflows are read from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md) and [`docs/BENCHMARK-METHODOLOGY.md`](./docs/BENCHMARK-METHODOLOGY.md) for Cost Per Accepted Change (CPAC) methodology.
 
@@ -175,7 +175,7 @@ PromptKit's quality gate protocols instruct the agent to execute real verificati
 │   ├── stacks/      # JIT stack playbooks — Next.js, Supabase, Vercel, Expo, Flutter, Rust, Go, Python
 │   ├── recipes/     # Boundary contracts — auth sessions, form mutations, webhooks, env, test isolation
 │   └── adrs/        # Architecture decisions
-├── templates/       # 28 durable engineering artifact schemas
+├── templates/       # 29 durable engineering artifact schemas (.md files; the one non-schema asset, `terminal-banner.txt`, is excluded)
 ├── scripts/         # Validation, token measurement, CPAC benchmarking (.sh + .ps1 twins)
 └── examples/        # Reference implementations
 ```
@@ -249,8 +249,8 @@ PromptKit routes the task to the appropriate ceremony level and workflow. Explic
 | **[docs/BENCHMARKS.md](./docs/BENCHMARKS.md)** | I want static token budget evidence |
 | **[docs/BENCHMARK-METHODOLOGY.md](./docs/BENCHMARK-METHODOLOGY.md)** | I want the CPAC engineering benchmark methodology |
 | **[docs/COMPARISONS.md](./docs/COMPARISONS.md)** | I want to compare it with other tools |
-| **[docs/stacks/](./docs/stacks/)** | I want JIT stack playbooks (16 — Web, DB, Cloud, Mobile, Systems, CLI) |
-| **[docs/recipes/](./docs/recipes/)** | I want reusable boundary contracts (8 — Auth, Forms, Webhooks, Env, Testing + 3 pk:auto utilities) |
+| **[docs/stacks/](./docs/stacks/)** | I want JIT stack playbooks (23 — Web, DB, Cloud, Mobile, Systems, CLI) |
+| **[docs/recipes/](./docs/recipes/)** | I want reusable boundary contracts (10 — Auth, Forms, Webhooks, Env, Testing, State, Realtime + 3 pk:auto utilities) |
 | **[docs/ADOPTION-GUIDE.md](./docs/ADOPTION-GUIDE.md)** | I want to add it to an existing project gradually |
 | **[docs/MAXIMS.md](./docs/MAXIMS.md)** | I want the quotable invariants — 9 one-line maxims with canonical links |
 | **[CONTRIBUTING.md](./CONTRIBUTING.md)** | I want to extend or contribute |
@@ -264,7 +264,7 @@ PromptKit's own CI validates on every PR across Linux and Windows:
 - Workflow and documentation reference integrity (`validate-references.sh`)
 - Static token budget gates — Balanced ≤ 2,500 tok, Lite ≤ 1,500 tok (`measure-tokens.sh --strict`)
 - Behavioral contract compliance — all behavioral contract tests pass (live count in CI) (`run-behavioral-contract-tests.sh`)
-- Playbook & recipe contracts — 24/24 (16 stack playbooks + 8 boundary recipes) (`run-playbook-contract-tests.sh`)
+- Playbook & recipe contracts — 33/33 (23 stack playbooks + 10 boundary recipes) (`run-playbook-contract-tests.sh`)
 
 PromptKit applies its own engineering principles to itself.
 
