@@ -175,7 +175,7 @@ PromptKit's quality gate protocols instruct the agent to execute real verificati
 │   ├── stacks/      # JIT stack playbooks — Next.js, Supabase, Vercel, Expo, Flutter, Rust, Go, Python
 │   ├── recipes/     # Boundary contracts — auth sessions, form mutations, webhooks, env, test isolation
 │   └── adrs/        # Architecture decisions
-├── templates/       # 29 durable engineering artifact schemas (.md files; the one non-schema asset, `terminal-banner.txt`, is excluded)
+├── templates/       # 29 durable engineering templates (.md; artifact schemas plus the directive and profile sources — the one non-Markdown asset, `terminal-banner.txt`, is excluded)
 ├── scripts/         # Validation, token measurement, CPAC benchmarking (.sh + .ps1 twins)
 └── examples/        # Reference implementations
 ```
