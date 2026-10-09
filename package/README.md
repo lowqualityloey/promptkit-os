@@ -28,7 +28,7 @@ If `.promptkit/` already exists and is not empty, the courier **refuses to overl
 # git-submodule install
 git submodule update --remote --merge .promptkit && bash .promptkit/init.sh
 
-# courier install (tarball is pinned per version — replace it)
+# courier install (replace the existing tree; new couriers verify the archive)
 rm -rf .promptkit
 npx promptkit-os@latest --balanced
 ```
@@ -37,7 +37,11 @@ The courier detects which case applies (a submodule install has `.promptkit/.git
 
 ## Version pinning
 
-`npx promptkit-os@X.Y.Z` fetches release tag `vX.Y.Z` and never a moving ref, so a given install is reproducible forever.
+`npx promptkit-os@X.Y.Z` fetches the GitHub archive for tag `vX.Y.Z`, not a branch head. New couriers require a valid SHA-256 digest for their own version before download and verify the archive **before** creating `.promptkit/`, extracting files, or running the installer. The release workflow independently checks the tagged archive, injects the digest, and checks the actual npm-packed courier before publication. A missing or mismatched digest stops installation; it is not a warning-only path.
+
+**Historical exception:** the already-published immutable npm courier `promptkit-os@1.11.0` did not contain its own archive pin and warns/proceeds by default. npm package integrity/provenance authenticates that npm tarball, **not** the second-stage GitHub archive it downloads. Existing installed files are not retroactively checked or changed by the new policy. For `1.11.0`, an operator can independently obtain a trusted archive SHA-256 and set both `PROMPTKIT_TARBALL_SHA256=<trusted-64-hex-sha256>` and `PROMPTKIT_REQUIRE_INTEGRITY_PIN=1` (in PowerShell, set `$env:PROMPTKIT_TARBALL_SHA256` and `$env:PROMPTKIT_REQUIRE_INTEGRITY_PIN`); the published courier verifies the override before extraction. New couriers also accept an explicitly supplied trusted `PROMPTKIT_TARBALL_SHA256` for archive rotation. The override is an **operator-controlled trust input**: do not derive it from the same untrusted download, and investigate a mismatch rather than disabling verification.
+
+GitHub-generated tag archives are not guaranteed byte-for-byte immutable forever. A legitimate archive-regeneration change may require a separately verified override or a new courier release; a fixed tag name alone does not guarantee reproducible archive bytes.
 
 ## Removal
 

@@ -25,10 +25,10 @@ const KIT_DIR = ".promptkit";
 // require a workflow change to allowlist.
 //
 // Release pins are inserted and checked by the repository release workflow after
-// it checks out the tag and before npm publication. Do not mint pins by hand. If
-// no pin exists for the running version, the courier warns and continues (pins can
-// only be minted after the tag exists); set PROMPTKIT_REQUIRE_INTEGRITY_PIN=1 to
-// fail closed. PROMPTKIT_TARBALL_SHA256 overrides the map for testing or rotation.
+// it checks out the tag and before npm publication. Do not mint pins by hand. A
+// missing or invalid own-version pin fails closed before download. An explicitly
+// supplied PROMPTKIT_TARBALL_SHA256 overrides the map as an operator-controlled
+// trust input for testing or archive rotation.
 //
 // CAVEAT: these digests pin GitHub's *generated* archive for a tag. That archive
 // is reproducible today (verified by double download when each pin was minted)
@@ -103,20 +103,28 @@ function projectRootFrom(args) {
   return path.resolve(positional[0] || process.cwd());
 }
 
+function normalizedDigest(digest, version) {
+  if (typeof digest !== "string" || !/^[0-9a-fA-F]{64}$/.test(digest)) {
+    die(`invalid SHA-256 digest for v${version} — expected exactly 64 hexadecimal characters; refusing to download, extract or execute`);
+  }
+  return digest.toLowerCase();
+}
+
 function expectedTarballDigest(version) {
   const override = process.env.PROMPTKIT_TARBALL_SHA256;
-  if (override !== undefined && override !== "") return override;
-  return TARBALL_SHA256_BY_VERSION[version];
+  const digest = override === undefined ? TARBALL_SHA256_BY_VERSION[version] : override;
+  if (digest === undefined) {
+    die(`no integrity pin for v${version} — refusing to download, extract or execute; supply a trusted PROMPTKIT_TARBALL_SHA256`);
+  }
+  return normalizedDigest(digest, version);
 }
 
 // Aborts (non-zero exit, no extract, no exec) unless `tarball` hashes to
-// `expectedHex`. Comparison is constant-time so a MITM learns nothing about the
-// pin from timing. Must be called after download() and before extract().
+// `expectedHex`. Comparison is constant-time. Must be called after download()
+// and before extract().
 function verifyTarballIntegrity(tarball, expectedHex, version) {
+  const expected = Buffer.from(normalizedDigest(expectedHex, version), "hex");
   const actual = crypto.createHash("sha256").update(tarball).digest();
-  const expected = Buffer.from(String(expectedHex), "hex");
-  // Buffer.from(hex) never throws on bad input — it truncates — so the length
-  // check below is what turns a malformed pin into a mismatch (fail closed).
   if (expected.length !== actual.length || !crypto.timingSafeEqual(actual, expected)) {
     die(
       `tarball integrity mismatch for v${version} ` +
@@ -201,22 +209,10 @@ async function main() {
   const kitDir = path.join(root, KIT_DIR);
   assertInstallTargetIsClean(kitDir, force);
 
-  const tarball = await download(url);
   const expectedDigest = expectedTarballDigest(version);
-  if (expectedDigest) {
-    verifyTarballIntegrity(tarball, expectedDigest, version);
-    process.stderr.write(`[promptkit-os] verified release tarball integrity (sha256) for v${version}\n`);
-  } else if (process.env.PROMPTKIT_REQUIRE_INTEGRITY_PIN === "1") {
-    die(
-      `no integrity pin for v${version} — refusing to extract or execute. ` +
-        "Add the sha256 of the release tarball to TARBALL_SHA256_BY_VERSION (see above)."
-    );
-  } else {
-    process.stderr.write(
-      `[promptkit-os] warning: no integrity pin for v${version}; ` +
-        "proceeding unverified — set PROMPTKIT_REQUIRE_INTEGRITY_PIN=1 to fail closed.\n"
-    );
-  }
+  const tarball = await download(url);
+  verifyTarballIntegrity(tarball, expectedDigest, version);
+  process.stderr.write(`[promptkit-os] verified release tarball integrity (sha256) for v${version}\n`);
   fs.mkdirSync(kitDir, { recursive: true });
   await extract(tarball, kitDir);
   process.stderr.write(`[promptkit-os] extracted release v${version} into ${KIT_DIR}/\n`);
