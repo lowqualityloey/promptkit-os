@@ -99,7 +99,7 @@ printf "  %-10s Balanced: %5d tok | Lite: %5d tok | Baseline: %5d tok | Saving B
 
 echo ""
 echo "Key Insights:"
-echo "  - Historical Change A measurement: removing the 6,962-token route load, less 47 tokens of directive growth, modeled a 6,915-token saving at fc98f2f; current payloads are measured above."
+echo "  - Historical Change A modeled saving: 6,915 tokens = the 6,962-token route measurement at review source 258cf8c minus the later 47-token directive increase recorded for Change A; current payloads are measured above."
 echo "  - Lite vs Balanced saves additional $((FULL_TOK - LITE_TOK)) tok of current static directive overhead (-$(( (FULL_TOK - LITE_TOK)*100/FULL_TOK ))%)."
 echo "  - Static-overhead reductions and per-task payload reductions use different scopes; see docs/BENCHMARKS.md for the current denominator and measured task table."
 echo ""
