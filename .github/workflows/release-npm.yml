@@ -266,6 +266,28 @@ jobs:
               if manifest.get("name") != "promptkit-os" or manifest.get("version") != expected_version:
                   raise SystemExit("courier tarball manifest does not match the release name and version")
           PY
+          # Check executable bytes inside the npm tarball, not just pre-pack source.
+          packed_dir="$(mktemp -d "$RUNNER_TEMP/packed-courier.XXXXXX")"
+          tar -xzf "$path" -C "$packed_dir" package/package.json package/bin/promptkit-os.js
+          archive_digest="$(sha256sum "$RUNNER_TEMP/release.tar.gz" | cut -d' ' -f1)"
+          EXPECTED_ARCHIVE_DIGEST="$archive_digest" node - "$packed_dir/package/bin/promptkit-os.js" "$VERSION" <<'NODE'
+          const path = require('node:path');
+          const manifest = require(path.join(path.dirname(process.argv[2]), '../package.json'));
+          const version = process.argv[3];
+          const expected = process.env.EXPECTED_ARCHIVE_DIGEST;
+          if (manifest.name !== 'promptkit-os' || manifest.version !== version) throw new Error('packed courier version mismatch');
+          if (!/^[0-9a-f]{64}$/.test(expected)) throw new Error('invalid verified release archive digest');
+          delete process.env.PROMPTKIT_TARBALL_SHA256;
+          const courier = require(process.argv[2]);
+          const pinned = courier.TARBALL_SHA256_BY_VERSION?.[version];
+          if (typeof pinned !== 'string' || !/^[0-9a-f]{64}$/.test(pinned) || pinned !== expected) {
+            throw new Error(`missing, invalid or incorrect packed courier integrity pin for ${version}`);
+          }
+          if (courier.expectedTarballDigest(version) !== expected) {
+            throw new Error(`packed courier does not resolve its own archive digest for ${version}`);
+          }
+          console.log(`Verified packed courier own-version archive digest ${version}: ${expected}`);
+          NODE
           digest="$(sha256sum "$path" | cut -d' ' -f1)"
           echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
           echo "sha256=$digest" >> "$GITHUB_OUTPUT"
