@@ -46,16 +46,20 @@ So Turbo is experimental, behind `--experimental` flag, warns about cost, still 
 
 Machine-readable line for agent parsing: `profile: lite|balanced|turbo` at bottom of PROMPTKIT.md
 
-## Token Measurements (measured 2026-09-14, bytes/4)
+## Token Measurements
 
-- Lite directive: 4,237 chars → 1,059 tok (95% reduction vs ~19.8k derived core-subset); 98.7% vs full 75.5k set
-- Balanced directive: 9,985 chars → 2,496 tok (87% reduction)
-- Saving Lite vs Balanced: 1,358 tok (-59%)
+Current static-directive figures, and the current per-task payloads, are published in `docs/BENCHMARKS.md` and are deliberately **not duplicated here** — the Overview and Profile Comparison tables above carry the current Lite/Balanced static values, and `docs/BENCHMARKS.md` is the canonical source for the per-task breakdown.
 
-Per-task payload after Change A (route.md no longer mandatory):
-- pk:fix: 5,946 tok (was 12,861 before)
-- pk:plan: 17,751 tok
-- pk:ship: 17,846 tok (will drop to ~14,546 after ship.md extraction already done)
+> **Historical snapshot (2026-09-14, `bytes/4`) — superseded; retained for provenance only.** The figures below were measured on that date and are *not* current:
+>
+> - Lite directive: 4,237 chars → 1,059 tok (95% reduction vs ~19.8k derived core-subset); 98.7% vs full 75.5k set
+> - Balanced directive: 9,985 chars → 2,496 tok (87% reduction)
+> - Saving Lite vs Balanced: 1,358 tok (-59%)
+>
+> Per-task payload after Change A (route.md no longer mandatory):
+> - pk:fix: 5,946 tok (was 12,861 before)
+> - pk:plan: 17,751 tok
+> - pk:ship: 17,846 tok (will drop to ~14,546 after ship.md extraction already done)
 
 ## Upgrade Path
 

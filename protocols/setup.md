@@ -1,21 +1,31 @@
 # Universal Agent Setup Protocol
 
 ## Purpose
-Ensure any modern AI coding assistant or CLI (Antigravity, Claude Code, Gemini CLI, Cursor, Windsurf, GitHub Copilot, Aider, Roo Code) is equipped with PromptKit OS workflows, protocols, and senior engineering standards by updating the appropriate root briefing configuration file.
+Ensure any modern AI coding assistant or CLI (Claude Code, Gemini CLI, Antigravity, Cursor, Windsurf, GitHub Copilot, Cline, Roo Code, Trae, OpenCode, Aider, and any other `AGENTS.md`-reading host) is equipped with PromptKit OS workflows, protocols, and senior engineering standards by updating the appropriate root briefing configuration file.
 
 ---
 
 ## Supported AI Ecosystem Files
 
-| Assistant / Environment | Configuration Target File |
-| :--- | :--- |
-| **Claude Code** | `CLAUDE.md` |
-| **Gemini CLI / Antigravity** | `GEMINI.md` or `AGENTS.md` |
-| **Cursor IDE** | `.cursorrules` or `.cursor/rules/promptkit.mdc` |
-| **Windsurf IDE** | `.windsurfrules` |
-| **GitHub Copilot** | `.github/copilot-instructions.md` |
-| **Aider / Open-Source Agents** | `CONVENTIONS.md` or `AGENTS.md` |
-| **Codex CLI** | `AGENTS.md` |
+Three different things are easy to conflate, so they are listed separately here: what the installer can write to, the universal fallback, and what has actually been validated at runtime.
+
+**1. Supported installation targets.** The host ids accepted by `init.sh --host=...` / `init.ps1 -Host ...` — the `KNOWN_HOSTS` set in `init.sh` and `$KnownHostsList` in `init.ps1`. Installer support means the managed block is written to the mapped file; it is **not** a claim that the host has been runtime-validated.
+
+| Installer id | Assistant / Environment | Configuration Target File |
+| :--- | :--- | :--- |
+| `claude` | Claude Code | `CLAUDE.md` |
+| `gemini` | Gemini CLI / Antigravity | `GEMINI.md` |
+| `cursor` | Cursor IDE | `.cursorrules` |
+| `windsurf` | Windsurf IDE | `.windsurfrules` |
+| `copilot` | GitHub Copilot | `.github/copilot-instructions.md` |
+| `cline` | Cline / Roo Code | `.clinerules` |
+| `trae` | Trae IDE | `.traerules` |
+| `opencode` | OpenCode | `.opencode/rules.md` |
+| `aider` | Aider | `CONVENTIONS.md` |
+
+**2. Universal fallback.** The `agents` target, which maps to `AGENTS.md`. Assistants that read `AGENTS.md` but have no dedicated installer id — Codex CLI, for example — are served through this fallback, and `AGENTS.md` is the file created when no known host configuration exists (see Preconditions below).
+
+**3. Runtime-validated hosts.** A separate question from installer support. Per-host live fidelity is tracked in `docs/HOST-CONFORMANCE.md`; as of that matrix only OpenCode carries any recorded live capture (`PARTIAL`, 1 of 5 probes) and every other host is `Untested`. This section documents install targets only — it is not evidence of validated runtime behavior.
 
 ---
 
@@ -119,7 +129,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Telemetry Cards**: `<kit>/protocols/telemetry-cards.md`
 - **Checkpoint Ignore Policy**: `<kit>/protocols/checkpoint-ignore-policy.md`
 
-> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols and omits `discovery-intake.md` and `rendered-ui-evidence.md`, which are lazy-loaded by their relevant workflows. This keeps the static directive under the 2500-token Balanced budget (currently 2341/2500).
+> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols (`setup`, `context-sync`, `code-quality-gate`, `subagent-delegation`); the remaining protocols stay out of the static directive to keep it under the 2500-token Balanced budget (currently 2341/2500). `telemetry-cards.md` is referenced inline by the directive, `discovery-intake.md` and `rendered-ui-evidence.md` are lazy-loaded by their relevant workflows, and `context-economy.md` is reached transitively through the reference list above. Unlisted therefore means "not in the static directive", not "unreachable".
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)
 - **Visual Identity & Brand**: `./DESIGN.md` (if present)
 - **Living State & Tracker**: `./docs/STATE.md` (if present)
@@ -140,7 +150,6 @@ All generated project documentation must be saved to the host project:
 - Performance Audits: `docs/perf/`
 - Releases: `docs/releases/`
 <!-- PROMPTKIT_END -->
-```
 
 ### 5. Initialize Context & Welcome Developer
 After updating configuration:

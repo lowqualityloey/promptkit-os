@@ -254,7 +254,9 @@ You: [Reviews, edits, commits]
 
 **Mechanically Measured Benchmarks** (from `docs/BENCHMARKS.md`):
 - **Static Directives**: ~1,436 tokens (Lite) and ~2,341 tokens (Balanced) at bytes/4 convention, saving 91–96% vs inlining workflows statically.
-- **Dynamic Per-Task Payloads**: JIT loading saves 22% to 37% (Balanced) and 26% to 41% (Lite) vs historical monolithic pre-load baselines across `pk:fix`, `pk:plan`, and `pk:ship`.
+- **Dynamic Per-Task Payloads**: the current per-task reductions for `pk:fix`, `pk:plan`, and `pk:ship`
+  are published in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) under *Measured Per-Task Context Breakdown*.
+  They are referenced there rather than restated here so the two cannot drift apart.
 
 **Illustrative Scenario Models** (modeled assumptions, not production telemetry):
 The table below illustrates potential token reduction when structured workflows eliminate multi-turn guess-and-patch loops or repetitive context re-explanations:

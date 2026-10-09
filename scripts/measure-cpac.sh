@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # PromptKit OS Cost Per Accepted Change (CPAC) Measurement Utility
-# Computes empirical telemetry metrics, token economics, and rework costs.
+# Provides offline self-tests for the CPAC formula and prints a SIMULATED
+# demonstration scorecard. Live telemetry ingestion is NOT implemented:
+# passing a telemetry path is rejected with exit 2.
 set -euo pipefail
 
 # Standard Pricing Constants (USD)
@@ -17,7 +19,9 @@ for arg in "$@"; do
         --self-test) SELF_TEST=1 ;;
         -h|--help)
             echo "Usage: measure-cpac.sh [--self-test] [telemetry.json]"
-            echo "Computes Cost Per Accepted Change (CPAC) scorecard from execution telemetry."
+            echo "Runs the CPAC formula self-tests (--self-test), or prints a SIMULATED"
+            echo "demonstration scorecard. Live telemetry ingestion is NOT implemented:"
+            echo "a telemetry path argument is rejected with exit 2."
             exit 0
             ;;
         *) TARGET_FILE="$arg" ;;
@@ -119,6 +123,7 @@ fi
 # Fallback demo scorecard if no target file is provided
 echo ""
 echo "📊 PromptKit OS Benchmark Scorecard (Simulated Comparison)"
+echo "   ⚠️  SIMULATED demonstration values — no telemetry was read; live ingestion is not implemented."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 printf "%-22s | %-16s | %-16s\n" "Dimension" "Condition A: Vanilla" "Condition B: PromptKit"
 echo "-----------------------|------------------|------------------"

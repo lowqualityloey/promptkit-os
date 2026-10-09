@@ -39,7 +39,12 @@ $$\text{CPAC} = \frac{C_{\text{inference}} + C_{\text{rework}} + C_{\text{human}
 
 Where:
 
-> **Implementation note:** `scripts/measure-cpac.sh` and its `.ps1` twin accept successful-turn tokens ($T_{\text{successful-in}}$, $T_{\text{successful-out}}$) for direct inference calculations, isolating failed iterations to the rework penalty ($C_{\text{rework}}$) and avoiding double-counting failed-loop inference.
+> **Implementation note:** the formula below isolates failed iterations to the rework penalty
+> ($C_{\text{rework}}$) so they are not double-counted in inference, and it is the formula exercised by
+> the self-tests in `scripts/measure-cpac.sh` / `.ps1`. **The shipped CLI has no telemetry ingestion
+> path:** it reads no transcript or telemetry file (a path argument is rejected with exit `2`) and
+> prints a SIMULATED demonstration scorecard. The self-tests verify the arithmetic, not an empirical
+> result.
 
 ### A. Direct Inference Cost ($C_{\text{inference}}$)
 The raw LLM API consumption across all successful conversation turns. Note that inference costs from failed rework loops are accounted for in $C_{\text{rework}}$ instead of here, to avoid double counting:
@@ -107,7 +112,12 @@ To ensure rigorous comparison without confounding variables, every evaluation ru
 1. **Identical Model Parameters**: Both conditions execute on the identical foundation model (same snapshot, temperature, and tool calling interface).
 2. **Zero Prior Context**: Both runs begin from a clean checkout at the designated commit fixture.
 3. **Identical Task Prompt**: The user request text must be verbatim identical.
-4. **Mechanical Evaluation**: Telemetry is extracted mechanically from transcript logs via `scripts/measure-cpac.sh` rather than qualitative subjective rating.
+4. **Mechanical Evaluation**: this protocol requires telemetry to be extracted mechanically from
+   transcript logs rather than scored by qualitative subjective rating. **That extraction is specified
+   here but not implemented in the shipped tooling:** `scripts/measure-cpac.sh` and its `.ps1` twin
+   currently provide formula self-tests and a simulated demonstration only, and they reject a telemetry
+   path with exit `2`. Producing an empirical CPAC result therefore requires an authorized
+   telemetry-ingestion implementation first.
 
 ---
 
@@ -152,4 +162,6 @@ Execution logs must export a standardized JSON telemetry record conforming to th
 - [`BENCHMARKS.md`](./BENCHMARKS.md) — Static directive token weights and context window analysis.
 - [`BEHAVIORAL-EVAL.md`](./BEHAVIORAL-EVAL.md) — Qualitative prompt-compliance evaluation results.
 - [`specs/SPEC-empirical-benchmark.md`](./specs/SPEC-empirical-benchmark.md) — Detailed benchmark task definitions and assertion rubrics.
-- [`../scripts/measure-cpac.sh`](../scripts/measure-cpac.sh) — Telemetry extraction and scorecard generator.
+- [`../scripts/measure-cpac.sh`](../scripts/measure-cpac.sh) — CPAC formula self-tests and a simulated
+  scorecard generator. Telemetry extraction is **not implemented** in the shipped utility; a telemetry
+  path argument exits `2`.

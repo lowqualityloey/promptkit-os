@@ -2,7 +2,9 @@
 .SYNOPSIS
     PromptKit OS Cost Per Accepted Change (CPAC) Measurement Utility (PowerShell)
 .DESCRIPTION
-    Computes empirical telemetry metrics, token economics, and rework costs.
+    Provides offline self-tests for the CPAC formula and prints a SIMULATED
+    demonstration scorecard. Live telemetry ingestion is NOT implemented:
+    a -TargetPath argument is rejected with exit 2.
 #>
 [CmdletBinding()]
 param (
@@ -87,6 +89,7 @@ if ($TargetPath) {
 }
 
 Write-Host "`n📊 PromptKit OS Benchmark Scorecard (Simulated Comparison)" -ForegroundColor Cyan
+Write-Host "   ⚠️  SIMULATED demonstration values — no telemetry was read; live ingestion is not implemented." -ForegroundColor Yellow
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
 "{0,-22} | {1,-16} | {2,-16}" -f "Dimension", "Condition A: Vanilla", "Condition B: PromptKit"
 Write-Host "-----------------------|------------------|------------------" -ForegroundColor Gray

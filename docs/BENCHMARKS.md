@@ -271,7 +271,7 @@ PromptKit OS bounds this waste by coupling JIT Stack Playbooks (`docs/stacks/`),
 For full mathematical definitions, pricing constants, and the A/B evaluation protocol:
 - [`BENCHMARK-METHODOLOGY.md`](./BENCHMARK-METHODOLOGY.md) — Formal CPAC mathematical model and telemetry schema.
 - [`specs/SPEC-empirical-benchmark.md`](./specs/SPEC-empirical-benchmark.md) — Multi-ecosystem benchmark scenarios (`WEB-01`, `SYS-02`, `DATA-03`).
-- [`../scripts/measure-cpac.sh`](../scripts/measure-cpac.sh) — Telemetry parsing and automated CPAC scorecard generation utility.
+- [`../scripts/measure-cpac.sh`](../scripts/measure-cpac.sh) — CPAC formula self-tests plus a SIMULATED demonstration scorecard. Live telemetry ingestion is **not implemented**: a telemetry path argument is rejected with exit `2`, so this utility produces no empirical CPAC result.
 
 ---
 
