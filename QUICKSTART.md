@@ -86,6 +86,7 @@ git -C .promptkit pull origin main && bash .promptkit/init.sh
 ```
 
 Then run `pk:sync` in your next session so the agent hot-reloads the updated rules.
+Migrating from the pre-2.0.0 Jev/System One assisted router? See the [migration and upgrade guide](docs/MIGRATION.md).
 
 ---
 
