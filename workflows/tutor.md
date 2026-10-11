@@ -92,6 +92,7 @@ Activate whenever the developer self-identifies as a beginner, is new to the top
    - Clearly distinguish between "needed for today's task" vs. "optional deep dive for curiosity".
 10. **Assisted Journaling & Micro-Wins**:
     - Celebrate breakthroughs and draft the 2-sentence summary ready for [`notes/learning-plan.md`](../notes/learning-plan.md) and [`notes/progress-journal.md`](../notes/progress-journal.md).
+    - **Kit reference vs host-owned notes:** kit-relative `../notes/…` links point to the kit's read-only reference examples. File personal records in the host project's `./notes/…` files — never write into `<kit>/notes/` (storage modes: `protocols/setup.md`).
 
 ---
 
@@ -119,7 +120,7 @@ Activate when the developer understands core language fundamentals and is buildi
 8. **Curated Senior Pattern References**:
    - Provide 1–2 authoritative links to established architecture patterns (e.g. transactional outbox, repository boundaries, optimistic concurrency).
 9. **Progress Matrix Alignment**:
-   - Prompt the developer to map newly demonstrated skills against L2 competencies in [`notes/skill-matrix.md`](../notes/skill-matrix.md) and log key learnings in [`notes/progress-journal.md`](../notes/progress-journal.md).
+   - Prompt the developer to map newly demonstrated skills against L2 competencies in [`notes/skill-matrix.md`](../notes/skill-matrix.md) and log key learnings in [`notes/progress-journal.md`](../notes/progress-journal.md) (kit-side reference — record personal updates in host `./notes/…`).
 
 ---
 

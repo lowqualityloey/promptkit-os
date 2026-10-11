@@ -290,7 +290,9 @@ $ExpectedTemplates = @(
     "code-review-checklist.md",
     "design-tokens-spec.md",
     "spike-template.md",
-    "ci-triage-template.md"
+    "ci-triage-template.md",
+    "execution-scope-change-template.md",
+    "friction-evaluation-template.md"
 )
 
 foreach ($template in $ExpectedTemplates) {

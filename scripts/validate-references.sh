@@ -273,6 +273,8 @@ EXPECTED_TEMPLATES=(
     "design-tokens-spec.md"
     "spike-template.md"
     "ci-triage-template.md"
+    "execution-scope-change-template.md"
+    "friction-evaluation-template.md"
 )
 
 for template in "${EXPECTED_TEMPLATES[@]}"; do

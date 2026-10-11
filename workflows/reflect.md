@@ -51,6 +51,7 @@ Ask exactly one round of 3-4 targeted reflective questions (no follow-up rounds 
 2. **Trade-Offs**: *"What trade-offs (e.g., speed vs. flexibility, memory vs. compute, simplicity vs. extensibility) did you make in your solution?"*
 3. **Resilience & Edge Cases**: *"Where is the weakest point in this implementation under extreme load, network failure, or corrupted input?"*
 4. **Tooling / DX**: *"What slowed you down during this session, and how can tooling or automation eliminate that friction next time?"*
+   - When the developer requests an actual evaluation, optionally scaffold it with [`templates/friction-evaluation-template.md`](../templates/friction-evaluation-template.md) (measurement record only — never compulsory).
 
 If the developer does not answer (non-interactive session or no response), proceed with agent-drafted observations explicitly marked unconfirmed and continue to Step 3. If the developer does not review the draft, save it as a pending draft under a `## Pending Review` heading instead: do not append it to the journal table, do not advance the skill matrix, and leave the Completion Criteria below unmet until review occurs.
 
