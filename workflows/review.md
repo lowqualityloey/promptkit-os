@@ -156,6 +156,8 @@ Review the diff against the originating specification, issue description, or PR 
 
 ### Axis 2: Standards & Code Quality Review
 
+Use [`templates/code-review-checklist.md`](../templates/code-review-checklist.md) (Spec Fidelity + Technical Standards checklist) as the review pass aid — it guides the pass without replacing the two-axis verdict or the report format below.
+
 Audit the diff against documented project standards (`PROMPTKIT.md`, `CODING_STANDARDS.md`), plus the universal **Martin Fowler Code Smell Baseline**:
 
 #### Martin Fowler Code Smell Baseline

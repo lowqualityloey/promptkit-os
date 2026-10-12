@@ -133,7 +133,7 @@ Use release-specific rollback thresholds defined before deployment and recorded 
 
 ### Evidence-First CI Failure Triage and Release Linkage
 
-When a CI Failure is reported for a release candidate or a candidate under evaluation, use the shared [`Canonical Artifact Contract`](../docs/WORKFLOW-MAP.md#canonical-artifact-contract) and create or link the canonical CI Triage Record at `docs/releases/ci-triage/<ci-failure-id>.md`. The record exposes the immutable identity `CI-<provider>-<run-id>` and is owned by the CI triage owner. This section adds evidence and release linkage guidance to `pk:ship`; it does not create a second release authority or replace `pk:debug`, the Local Task Record, human approval, or existing rollback ownership.
+When a CI Failure is reported for a release candidate or a candidate under evaluation, use the shared [`Canonical Artifact Contract`](../docs/WORKFLOW-MAP.md#canonical-artifact-contract) and create or link the canonical CI Triage Record at `docs/releases/ci-triage/<ci-failure-id>.md`. Scaffold the record from [`templates/ci-triage-template.md`](../templates/ci-triage-template.md). The record exposes the immutable identity `CI-<provider>-<run-id>` and is owned by the CI triage owner. This section adds evidence and release linkage guidance to `pk:ship`; it does not create a second release authority or replace `pk:debug`, the Local Task Record, human approval, or existing rollback ownership.
 
 #### 1. Collect evidence before classification or remediation
 

@@ -126,6 +126,15 @@ cat > "$FIXTURE_ROOT/docs/link-fixture.md" <<'MD'
 MD
 run_case "External and anchor-only targets are skipped" "pass" ""
 
+# Case 7: removing a newly required template from the completeness list must fail.
+rm -f "$FIXTURE_ROOT/templates/execution-scope-change-template.md"
+run_case "Missing execution-scope-change template fails closed" "fail" "MISSING"
+
+# Case 8: removing the other newly required template must fail.
+cp "$REPO_ROOT/templates/execution-scope-change-template.md" "$FIXTURE_ROOT/templates/execution-scope-change-template.md"
+rm -f "$FIXTURE_ROOT/templates/friction-evaluation-template.md"
+run_case "Missing friction-evaluation template fails closed" "fail" "MISSING"
+
 echo ""
 echo "==========================================================="
 echo "Reference-Link Harness Summary"

@@ -101,6 +101,15 @@ try {
     Set-Content -Path $fixtureFile -Value "# Link Fixture`n`n- Absolute target: [site](https://example.com/docs/page.md)`n- Anchor-only target: [top](#link-fixture)"
     Invoke-Case "External and anchor-only targets are skipped" "pass" ""
 
+    # Case 7: removing a newly required template from the completeness list must fail.
+    Remove-Item -Path (Join-Path $FixtureRoot "templates/execution-scope-change-template.md") -Force
+    Invoke-Case "Missing execution-scope-change template fails closed" "fail" "MISSING"
+
+    # Case 8: removing the other newly required template must fail.
+    Copy-Item -Path (Join-Path $RepoRoot "templates/execution-scope-change-template.md") -Destination (Join-Path $FixtureRoot "templates/execution-scope-change-template.md") -Force
+    Remove-Item -Path (Join-Path $FixtureRoot "templates/friction-evaluation-template.md") -Force
+    Invoke-Case "Missing friction-evaluation template fails closed" "fail" "MISSING"
+
     Write-Host "`n==========================================================="
     Write-Host "Reference-Link Harness Summary"
     Write-Host "Passed: $script:PassCount | Failed: $script:FailCount"

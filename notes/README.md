@@ -2,6 +2,8 @@
 
 Welcome to your personal engineering knowledge base. This workspace operates as your **Second Brain**, structured to retain high-leverage mental models, architectural decisions, technical research, and deliberate practice goals.
 
+> `notes/` ships as an optional read-only kit reference. The installer (`init.sh`/`init.ps1`) never copies it and the published npm package excludes it. In consumer/installed mode file personal records in host `./notes/` (never `<kit>/notes/`); in standalone vault mode the repo-root `notes/` is host-owned and writable. See [protocols/setup.md](../protocols/setup.md). Combined `notes/` + `activities/` measured cost: 32,012 B across 12 tracked files (no token/latency claim).
+
 ---
 
 ## Workspace Structure
