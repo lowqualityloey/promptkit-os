@@ -62,6 +62,11 @@ COURIER_DIR="$WORK/courier"
 mkdir -p "$COURIER_DIR"
 INSTALL_OUTPUT="$(cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 node "$COURIER_BIN" --balanced "$COURIER_DIR" 2>&1)"
 printf '%s\n' "$INSTALL_OUTPUT"
+# Regression guard for the v2.0.0 smoke failure: the courier path must stamp the
+# release version. The canonical path asserts the same stamp below; section 3 keeps
+# strict full-file equality (no row filtering) so both halves must agree byte-for-byte.
+grep -q "^- \*\*Engine Version\*\*: v$VERSION @ " "$COURIER_DIR/docs/STATE.md" || { echo "FAIL: courier Engine Version stamp missing v$VERSION"; exit 1; }
+echo "  ok: courier Engine Version stamp carries v$VERSION"
 if [ "${PROMPTKIT_REQUIRE_INTEGRITY_PIN:-}" = "1" ]; then
     printf '%s' "$INSTALL_OUTPUT" | grep -q "verified release tarball integrity" || { echo "FAIL: courier did not verify release tarball integrity"; exit 1; }
     if printf '%s' "$INSTALL_OUTPUT" | grep -q "no integrity pin"; then echo "FAIL: courier warned about a missing integrity pin"; exit 1; fi
@@ -109,7 +114,12 @@ mkdir -p "$CANON_DIR/.promptkit"
 # two doors comparable: tracked files only, exec bit preserved, no VCS metadata to strip.
 git -C "$REPO_ROOT" archive "v$VERSION" | tar -x -C "$CANON_DIR/.promptkit"
 chmod +x "$CANON_DIR/.promptkit/init.sh"
-(cd "$CANON_DIR" && PROMPTKIT_NO_INTERACTIVE=1 bash .promptkit/init.sh --balanced "$CANON_DIR")
+# The canonical tree must carry the same release version the courier stamps:
+# without it init.sh defaults to "unknown @ unknown" while the courier stamps
+# "v$VERSION", failing the strict section-3 equality below (v2.0.0 smoke failure).
+(cd "$CANON_DIR" && PROMPTKIT_NO_INTERACTIVE=1 bash .promptkit/init.sh --balanced "$CANON_DIR" "--engine-version=v$VERSION")
+grep -q "^- \*\*Engine Version\*\*: v$VERSION @ " "$CANON_DIR/docs/STATE.md" || { echo "FAIL: canonical Engine Version stamp missing v$VERSION"; exit 1; }
+echo "  ok: canonical Engine Version stamp carries v$VERSION"
 
 echo "== 3. equivalence: generated artifacts must match =="
 for f in PROMPTKIT.md docs/STATE.md; do
