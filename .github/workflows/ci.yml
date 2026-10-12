@@ -16,6 +16,48 @@ concurrency:
 jobs:
   validate-linux:
     name: Lint & Validate (Linux)
+    if: ${{ always() }}
+    needs: [linux-validate-core, linux-shard-exec-control]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify all Linux shards succeeded
+        env:
+          SHARD_RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          failed=0
+          for result in $SHARD_RESULTS; do
+            if [ "$result" != "success" ]; then
+              echo "::error::Dependent Linux shard '$result' did not succeed."
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "All Linux shards succeeded."
+
+  validate-windows:
+    name: Lint & Validate (Windows)
+    if: ${{ always() }}
+    needs: [windows-validate-core, windows-shard-init-safety, windows-shard-doc-contract]
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify all Windows shards succeeded
+        shell: pwsh
+        env:
+          SHARD_RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          $failed = @($env:SHARD_RESULTS -split '\s+' | Where-Object { $_ -and $_ -ne 'success' })
+          if ($failed.Count -gt 0) {
+            Write-Error "Dependent Windows shard(s) did not succeed: $($failed -join ', ')"
+            exit 1
+          }
+          Write-Host "All Windows shards succeeded."
+
+  linux-validate-core:
+    name: Linux Validate (Core)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -123,9 +165,6 @@ jobs:
 
       - name: Run Installer Terminal Picker Tests (Bash)
         run: bash scripts/tests/run-terminal-picker-tests.sh
-
-      - name: Run Agent Execution Control Fixture Harness (Bash)
-        run: bash scripts/tests/run-execution-control-fixtures.sh
 
       - name: Run Authorization Evidence Fixture Harness (Bash)
         run: bash scripts/tests/run-authorization-evidence-fixtures.sh
@@ -254,8 +293,22 @@ jobs:
           git rev-parse --verify --quiet origin/main
           bash scripts/check-changelog-entry.sh
 
-  validate-windows:
-    name: Lint & Validate (Windows)
+  linux-shard-exec-control:
+    name: Linux Shard - Execution Control Fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Run Agent Execution Control Fixture Harness (Bash)
+        run: bash scripts/tests/run-execution-control-fixtures.sh
+
+  windows-validate-core:
+    name: Windows Validate (Core)
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -323,10 +376,6 @@ jobs:
           }
           Write-Host "PowerShell scripts parsed with 0 syntax errors."
 
-      - name: Run Documentation-Contract Tests (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-behavioral-contract-tests.ps1
-
       - name: Run Staged Secret Scan Regression Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-staged-secret-scan-tests.ps1
@@ -366,10 +415,6 @@ jobs:
       - name: Run AI Attribution Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-ai-attribution-tests.ps1
-
-      - name: Run init.ps1 Safety Regression Tests (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-init-safety-tests.ps1
 
       - name: Run Worktree Isolation Regression Tests (PowerShell)
         shell: pwsh
@@ -505,6 +550,36 @@ jobs:
             throw "Directive duplicated: expected 1 occurrence, found $($matches.Count)"
           }
           Write-Host "Windows setup dry-run and idempotency verified successfully."
+
+  windows-shard-init-safety:
+    name: Windows Shard - Init Safety
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Run init.ps1 Safety Regression Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-init-safety-tests.ps1
+
+  windows-shard-doc-contract:
+    name: Windows Shard - Documentation Contract
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Run Documentation-Contract Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-behavioral-contract-tests.ps1
 
   staged-secret-scan:
     name: Staged Secret Scan (PR Diff)
