@@ -85,6 +85,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Workflow Template Discoverability and Notes-Ownership Clarification (#609, #610)**: `workflows/tutor.md` now states that kit-relative `notes/…` links are read-only reference examples in *consumer/installed* mode, that personal records belong in the host project's `./notes/…` files, and that in *standalone vault* mode the repo-root `notes/` is host-owned and writable in place. `workflows/ship.md`, `workflows/review.md`, `workflows/checkpoint.md`, and `workflows/reflect.md` link directly to their canonical templates (`ci-triage-template.md`, `code-review-checklist.md`, `execution-scope-change-template.md`, `friction-evaluation-template.md`) instead of naming them as bare paths. The two previously omitted templates join the `EXPECTED_TEMPLATES` completeness lists in `scripts/validate-references.{sh,ps1}`, and both reference-link harnesses gain missing-template fail-closed regression cases. A missing expected template is reported as MISSING, increments the validator's error count, and forces a non-zero exit; the new harness cases assert exactly that fail-closed behavior. No validator policy, whitelist entry, or failure semantics changed. Documentation and template references only: no installer, packaging, runtime, or ceremony change. Current token measurements were refreshed in `docs/BENCHMARKS.md`; the full-workflow-set total is re-propagated at the mode-aware correction's commit, while measurement methodology, budget limits, and all per-task payloads remain unchanged.
 
+## [2.0.0] - UNPUBLISHED DRAFT (not released, not published)
+
+Proposed changelog text only: one entry per reviewed note from the 72 unpublished draft entries in `docs/releases/2026-10-10-v2.0.0-release-notes.md` (N-MAJOR-01, N-PATCH-01..16, N-MINOR-01..13, M01..M42), each carrying its D-* traceability id. Publication approval is pending; this draft authorizes no release, no GitHub Release, and no npm publication.
+
+### Breaking
+
+- Retired Jev/System One assisted routing: `scripts/pk-route.{sh,ps1}` are now fully offline and deterministic with no network, no external service, and no credential read; `--timeout/--dry-run` are accepted but ignored; timeout fallback and external-model classification are removed; levels L0 through L3 are corrected. Migration required, see `docs/MIGRATION.md`. Coordinator content sufficiency was accepted 2026-10-11 with independent QA attestation pending, and that coordinator acceptance is not independent reviewer attestation or release approval. (N-MAJOR-01, D-N-MAJOR-01)
+
+### Fixed
+
+- New npm couriers fail closed: pin resolved before download, missing or invalid pin refuses with no side effects, and verification runs before target creation; new downloads only, published 1.11.0 unchanged. (N-PATCH-01, D-N-PATCH-01)
+- Canonical recovery procedure after interruptions required instead of ad-hoc resume state. (N-PATCH-02, D-N-PATCH-02)
+- Halt/checkpoint grading now grades from evidence instead of keyword phrasing. (N-PATCH-03, D-N-PATCH-03)
+- Empty captures grade as non-compliant instead of full compliance. (N-PATCH-04, D-N-PATCH-04)
+- Courier release version stamped consistently across init, courier, and matrix. (N-PATCH-05, D-N-PATCH-05)
+- Reconciled checkpoint ceremony documentation, template shapes, and bash empty-array guard. (N-PATCH-06, D-N-PATCH-06)
+- Closed remote-tracking workspace tip false-negatives and aligned branch-namespace boundary matching. (N-PATCH-07, D-N-PATCH-07)
+- `pk:doctor` recognizes init.sh host-file variants (cline-dir, cursor-mdc) instead of false INCOMPLETE. (N-PATCH-08, D-N-PATCH-08)
+- COMPARISONS L2/L3 aligned with the canonical router; the 0%-underclassification figure scoped to the tested fixture set. (N-PATCH-09, D-N-PATCH-09)
+- Questions about an action no longer escalate; escalation requires action intent. (N-PATCH-10, D-N-PATCH-10)
+- Narrowed the informational-frame veto so real actions escalate correctly. (N-PATCH-11, D-N-PATCH-11)
+- Reconciled context, CPAC, inventory, and setup claims with implementation. (N-PATCH-12, D-N-PATCH-12)
+- Corrected workspace tooling diagnostics (init.sh quoting, CPAC exit codes, validator gaps). (N-PATCH-13, D-N-PATCH-13)
+- Reference validation completeness fails closed when either shipped template is missing. (N-PATCH-14, D-N-PATCH-14)
+- Setup contract documents notes/activities ownership as an optional kit-side reference. (N-PATCH-15, D-N-PATCH-15)
+- Tutor notes-ownership rule is mode-aware for consumer/installed and standalone-vault modes. (N-PATCH-16, D-N-PATCH-16)
+
+### Added
+
+- Release, harness, and stack playbooks with state/websocket recipes and host-conformance captures (`docs/stacks/*`). (N-MINOR-01, D-N-MINOR-01)
+- Checkpoint handover carries identity, authority, and stop-condition fields. (N-MINOR-02, D-N-MINOR-02)
+- Engine version stamp and drift detection in pk:sync. (N-MINOR-03, D-N-MINOR-03)
+- Progressive L1 checkpoint compliance. (N-MINOR-04, D-N-MINOR-04)
+- `/handoff` importer for foreign harnesses with explicit degradation. (N-MINOR-05, D-N-MINOR-05)
+- Read-only gitignore preflight for checkpoint targets. (N-MINOR-06, D-N-MINOR-06)
+- Install-door structural assert in the installers. (N-MINOR-07, D-N-MINOR-07)
+- Tracked narrative surface scanned in the staged gate. (N-MINOR-08, D-N-MINOR-08)
+- Synthetic workspace commits refused as bases. (N-MINOR-09, D-N-MINOR-09)
+- Branch-namespace synthetic detection. (N-MINOR-10, D-N-MINOR-10)
+- `pk:doctor` installed-governance audit. (N-MINOR-11, D-N-MINOR-11)
+- `pk` entry-point shim with `pk route` delegation and exit-2 unknown-command handling. (N-MINOR-12, D-N-MINOR-12)
+- Configurable AI attribution policy for commits, PRs, and issues plus hooks. (N-MINOR-13, D-N-MINOR-13)
+
+### Maintenance (internal only, no user action)
+
+- v1.11.0 record completeness repairs (docs-only). (M01, D-M01)
+- v1.11.0 QA and approval records (docs-only). (M02, D-M02)
+- v1.11.0 pin minted in later source only; published npm 1.11.0 bytes unchanged. (M03, D-M03)
+- Publish guard for already-fetched tags (CI). (M04, D-M04)
+- Workflow actions pinned to SHAs (CI hardening). (M05, D-M05)
+- Post-merge task evidence (docs/tasks). (M06, D-M06)
+- Trigger-description compression (budget headroom). (M07, D-M07)
+- Published-figures provenance anchor enforcement. (M08, D-M08)
+- Tokenizer-delta table refresh plus per-release requirement. (M09, D-M09)
+- First live OpenCode and OmO capture (PARTIAL, single-host). (M10, D-M10)
+- Specs for #546-553 with content-anchored citations. (M11, D-M11)
+- Disabled-guard test fix (#556 guards). (M12, D-M12)
+- Durability contract and help-wanted gaps. (M13, D-M13)
+- Anchor-unreachable fail-closed test. (M14, D-M14)
+- Router suites CI wiring. (M15, D-M15)
+- Templates wording (templates/ as templates). (M16, D-M16)
+- Per-task benchmark methodology clarification. (M17, D-M17)
+- Modeled Change A saving distinction. (M18, D-M18)
+- Benchmark provenance re-arm `e36622c` to `6351fe7`, no equivalence claimed. (M19, D-M19)
+- Benchmark provenance re-arm `54464c4` to `2b8d990`, no equivalence claimed. (M20, D-M20)
+- Benchmark provenance re-arm `1da9aaf` to `fcdf90a`, no equivalence claimed. (M21, D-M21)
+- Benchmark provenance re-arm `8b3ee56` to `044c557`, no equivalence claimed. (M22, D-M22)
+- Benchmark provenance re-arm `5940c1e` to `3e9710e`, no equivalence claimed. (M23, D-M23)
+- Benchmark provenance re-arm `263da2c` to `9e0d939`, no equivalence claimed. (M24, D-M24)
+- Benchmark provenance re-arm `3c71f55` to `0d5336c`, no equivalence claimed. (M25, D-M25)
+- Benchmark provenance re-arm `e193011` to `e50d2bb`, no equivalence claimed. (M26, D-M26)
+- Draft blocked v2.0.0 evaluation records (docs-only). (M27, D-M27)
+- v2 predecessor correction in draft records (docs-only). (M28, D-M28)
+- Blocked v2.0.0 draft records validation (docs-only). (M29, D-M29)
+- Blocked v2.0.0 QA and PR status clarification (docs-only). (M30, D-M30)
+- v2.0.0 migration and upgrade guide for offline routing (docs-only; QUICKSTART link plus `docs/MIGRATION.md`). (M31, D-M31)
+- 64-commit snapshot record reconciliation (docs-only; 4 v2.0.0 record files). (M32, D-M32)
+- Post-publication reconciliation evidence wording (docs-only). (M33, D-M33)
+- Coordinator-decisions reconciliation (docs-only; 4 v2.0.0 record files). (M34, D-M34)
+- B5 token-measurement provenance anchor (docs-only; BENCHMARKS.md; no performance claims). (M35, D-M35)
+- B5 notes and template corrections CHANGELOG record (docs-only; Unreleased entry, no v2.0.0 section). (M36, D-M36)
+- B5 measurement wording correction (docs-only; CHANGELOG). (M37, D-M37)
+- Benchmark re-anchor at mode-aware notes-ownership commit (docs-only; no performance claims). (M38, D-M38)
+- Notes inventory provenance and consumers correction (docs-only follow-up to the N-PATCH-15 surface). (M39, D-M39)
+- Post-snapshot evidence reconciliation (docs-only; 4 v2.0.0 record files). (M40, D-M40)
+- T2B documentation-correction CHANGELOG record (docs-only; Unreleased entry, no v2.0.0 section). (M41, D-M41)
+- Post-snapshot provenance wording correction (docs-only; 4 v2.0.0 record files). (M42, D-M42)
+
+### Overlap disclosure
+
+The `[Unreleased]` section above (lines 10-87) is retained byte-identical to its prior revision, so the overlap between it and this draft is disclosed here rather than resolved by editing it. Each row below was re-verified in this session with `git blame HEAD -L <line>,<line> -- CHANGELOG.md`; a pair is marked `duplicate` only when the authoring commit and the surface agree, and is marked `related` when the theme matches but the commit or surface differs.
+
+| `[Unreleased]` line | Authoring commit | Draft entry | Relation |
+| --- | --- | --- | --- |
+| line 70 | `e88b301` | `D-N-PATCH-05` | duplicate: same commit |
+| line 40 | `d42007a` | `D-N-PATCH-01` | duplicate: same commit |
+| line 43 | `e50d2bb` | `D-N-MAJOR-01` | duplicate: same commit |
+| line 51 | `73ace1b` | `D-M39` (content), `D-M41` (line author) | content-duplicate of `D-M39`; the line itself is an artifact of `D-M41` |
+| line 86 | `a9147ba` | `D-N-PATCH-14`, `D-N-PATCH-16` (content), `D-M38` (trailing sentence) | content-duplicate of `D-N-PATCH-14` and `D-N-PATCH-16`; the trailing token-measurement sentence is a third overlap, with `D-M38` |
+| line 39 | `43b47b6` | `D-N-PATCH-05` | related: same version-stamp theme, different commit and surface; the genuine same-commit duplicate of `D-N-PATCH-05` is line 70 |
+
+The citations `#603` (line 40), `#592`, `#594`, `#595` (line 43), and dry-run `38233996404` (line 39) name the specific changes the rows refer to.
+
+This disclosure is bounded rather than exhaustive. Beyond the rows above, `[Unreleased]` contains further entries authored by the same commits as other draft entries; those are same-change duplicates by construction, since both texts were written when each change landed, and this section does not assert that every such pair has been identified.
+
+`[Unreleased]` is preserved byte-identical. Pruning or relocating these entries into the version section at publication time is a separate coordinator decision. The draft section is proposed text only and authorizes no release, no GitHub Release, and no npm publication.
+
 ## [1.11.0] - 2026-10-02
 
 Release candidate — pending human approval, tag creation, and npm publish. Evidence chain: `docs/releases/2026-10-02-v1.11.0-*.md` (`REL-2026-10-02-V1.11.0-001`) · Candidate commit `956acac` — minor release delivering the standardized verification-evidence contract, 3-layer Policy/Harness/Execution positioning, tiered cognition guidance, fail-closed validation gates, courier tarball integrity verification, and a CI hardening pass.
