@@ -2,6 +2,8 @@
 
 Welcome to the Senior Developer Activity Suite. These simulations are designed to challenge and hone your capabilities in real-world software engineering domains, including distributed system design, clean architectural refactoring, subtle concurrency debugging, and modern accessible design systems.
 
+> `activities/` is optional read-only exercise material in all modes (installer never copies it; npm package excludes it). See [protocols/setup.md](../protocols/setup.md). Combined `notes/` + `activities/` measured cost: 32,012 B across 12 tracked files (no token/latency claim).
+
 ---
 
 ## Simulation Catalog

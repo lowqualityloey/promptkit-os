@@ -39,8 +39,17 @@ If no known agent configuration file exists in the repository root, create `AGEN
 All workflows, protocols, templates, and activities use these definitions — never assume one install layout:
 - **Resolved kit root (`<kit>`)**: the directory containing the installed kit — `.promptkit/` (recommended) or `promptkit/` relative to the workspace root, resolved at setup. In the standalone PromptKit OS repository itself, `<kit>` is the repo root (`.`).
 - **Kit templates and scripts are read-only sources**: reference them as `<kit>/templates/<name>` and `<kit>/scripts/<name>` (both shells accept forward slashes). Never write project records into kit paths.
-- **Host-project records are host-owned**: ADRs, specs, RCAs, spikes, and Task Records go to host paths (`./docs/...`, `./docs/tasks/`); personal notes (progress journal, skill matrix, learning plan) go to host `./notes/...` — never `<kit>/notes/`.
-- **Storage modes**: *consumer/installed* (kit lives in `.promptkit/` or `promptkit/`; all writes land in host paths) vs *standalone vault* (repo root is both kit and host, so `notes/` and `./docs/` need no prefix).
+- **Host-project records are host-owned**: ADRs, specs, RCAs, spikes, and Task Records go to host paths (`./docs/...`, `./docs/tasks/`); personal notes (progress journal, skill matrix, learning plan) go to host `./notes/...`. In *consumer/installed* mode the kit's own `notes/` copy is a read-only reference — never write there; in *standalone vault* mode the repo-root `notes/` is the host directory itself (see Storage modes).
+- **Storage modes**: *consumer/installed* (kit lives in `.promptkit/` or `promptkit/`; all writes land in host paths) vs *standalone vault* (repo root is both kit and host, so the repo-root `notes/` and `./docs/` are host-owned and need no prefix — the kit-shipped `notes/` files are starter references the user may keep and edit in place; `activities/` remains read-only exercise material).
+
+#### Notes & Activities: Optional Kit-Side Reference
+
+- **Purpose**: `notes/` is a starter personal knowledge base (`learning-plan.md`, `progress-journal.md`, `skill-matrix.md`, plus `adrs/` and `spikes/` indexes); `activities/` holds self-guided simulation katas from `01-system-design-spike.md` through `05-auto-orchestration.md`.
+- **Consumers**: `workflows/tutor.md`, `workflows/reflect.md`, and `workflows/debug.md` read the kit-side reference and direct personal records to host `./notes/`; `scripts/validate-references.sh` and `scripts/validate-references.ps1`, plus `scripts/tests/run-reference-link-tests.sh` and `scripts/tests/run-reference-link-tests.ps1`, scan them for resolvable links; `docs/ARCHITECTURE.md` documents the trees.
+- **Core vs. optional**: both directories are optional kit-side reference material and are NOT part of the installer required core of four `docs/` dirs.
+- **Delivery**: submodule installs carry them read-only at `<kit>/notes/` and `<kit>/activities/`; courier tarball installs carry them in the fetched release tarball extracted to `./.promptkit/`, while the published npm package excludes them because its `files` allowlist ships only `package.json`, `README.md`, and `bin/promptkit-os.js`; standalone vault installs make the repo-root `notes/` host-owned and writable while `activities/` stays read-only; the installers `init.sh` and `init.ps1` never copy either directory, and neither shell references them.
+- **Measured cost**: **32,012 B across 12 tracked files**, the sum of per-file Git blob sizes. This is a file-size measurement only; no token, latency, or runtime claim is made.
+- **Disposition**: **retain and clarify**. Keep both directories as optional read-only reference; no extraction, no deletion.
 
 ---
 
