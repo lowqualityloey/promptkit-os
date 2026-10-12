@@ -92,7 +92,7 @@ Activate whenever the developer self-identifies as a beginner, is new to the top
    - Clearly distinguish between "needed for today's task" vs. "optional deep dive for curiosity".
 10. **Assisted Journaling & Micro-Wins**:
     - Celebrate breakthroughs and draft the 2-sentence summary ready for [`notes/learning-plan.md`](../notes/learning-plan.md) and [`notes/progress-journal.md`](../notes/progress-journal.md).
-    - **Kit reference vs host-owned notes:** kit-relative `../notes/…` links point to the kit's read-only reference examples. File personal records in the host project's `./notes/…` files — never write into `<kit>/notes/` (storage modes: `protocols/setup.md`).
+    - **Kit reference vs host-owned notes:** kit-relative `../notes/…` links are the kit's read-only reference examples. In *consumer/installed* mode, file personal records in the host project's `./notes/…` and never write into `<kit>/notes/`; in *standalone vault* mode the repo-root `notes/` is the host directory itself and is writable in place (storage modes: `protocols/setup.md`).
 
 ---
 
