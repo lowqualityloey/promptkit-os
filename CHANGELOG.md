@@ -12,9 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Release Courier Smoke Version-Stamp Equivalence (v2.0.0)**: `package/test/smoke.sh` now passes `--engine-version=v$VERSION` to the git-archive canonical installer, matching the courier's version stamp. Explicitly asserts the release version in both generated `docs/STATE.md` files while preserving strict byte-for-byte `PROMPTKIT.md` and `docs/STATE.md` comparisons. Addresses the failure observed in non-publishing dry-run `38233996404`; the tag-specific post-merge dry-run `38241203892` passed and supersedes that failed run, and the existing `v2.0.0` tag is unchanged.
 
-## [2.0.0] - UNPUBLISHED DRAFT (not released, not published)
+## [2.0.0] - 2026-10-12
 
-Proposed changelog text only: one entry per reviewed note from the 72 unpublished draft entries in `docs/releases/2026-10-10-v2.0.0-release-notes.md` (N-MAJOR-01, N-PATCH-01..16, N-MINOR-01..13, M01..M42), each carrying its D-* traceability id. Publication approval is pending; this draft authorizes no release, no GitHub Release, and no npm publication.
+Published release 2026-10-12 (GitHub Release at `2026-10-12T19:11:28Z`, 2026-10-13 NZDT; npm `promptkit-os@2.0.0` via workflow `38295984725`; tag `v2.0.0` object `c5193857ee84a9acf21d125b5d643e55bc336320`): one entry per reviewed note from the 72 draft entries in `docs/releases/2026-10-10-v2.0.0-release-notes.md` (N-MAJOR-01, N-PATCH-01..16, N-MINOR-01..13, M01..M42), each carrying its D-* traceability id. Historically this section was drafted as proposed text only with publication approval pending and authorizing no release; that draft status is superseded by the completed publication recorded here.
 
 ### Breaking
 
@@ -178,7 +178,7 @@ Retained `[Unreleased]` content (post-tag class) and relocated pre-tag content:
 - **Post-tag** (authored above the tag boundary). The Release Courier smoke version-stamp entry, authored by `43b47b6`, which is **not** an ancestor of `e2ca0ebe`, remains under `[Unreleased]`. Its stale "full release dry-run remains pending" wording is corrected to record that the tag-specific post-merge dry-run `38241203892` passed and supersedes the failed run `38233996404`. This supersedes the earlier `related` disposition of this line, which the prior revision of this disclosure recorded before the passing dry-run existed.
 - **Pre-tag, previously unresolved** (authored at or below the tag boundary, but no `[2.0.0]` draft entry represents the change). Nine entries (#517, #518, #516, #528, #529, #530, #546, #556, #550) were previously retained and flagged rather than pruned, and are now relocated, content preserved rather than pruned, into the supplementary historical-notes subsection within the `[2.0.0]` draft section above. They remain supplementary historical detail relocated from `[Unreleased]`, not new classified `[2.0.0]` notes, and carry no `D-*` ids. Whether any of these belongs in a future version section is a separate coordinator decision.
 
-The `[2.0.0]` draft entries above, including all 72 distinct `D-*` traceability ids, are unchanged by this reconciliation; the version section remains explicitly UNPUBLISHED DRAFT. This draft is proposed text only and authorizes no release, no GitHub Release, and no npm publication.
+The `[2.0.0]` entries above, including all 72 distinct `D-*` traceability ids, were unchanged by that 2026-10-13 reconciliation, which left the version section as UNPUBLISHED DRAFT at that time. That draft-only status is retained here as historical fact and is superseded by the 2026-10-12 publication recorded in the version heading and introduction above; no entries, order, or classifications were altered by this status correction.
 
 ## [1.11.0] - 2026-10-02
 
