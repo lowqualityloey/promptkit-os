@@ -444,8 +444,8 @@ pk:debug - [Describe the bug]
 **Response**: PromptKit is used by solo devs and 50-person teams.
 
 **Scaling Strategy**:
-- **Solo/Small (1-5)**: Levels 1-3, informal adoption
-- **Medium (5-20)**: Levels 2-4, opt-in workflows
+- **Solo/Small (1-5)**: Adoption Stages 1–3, informal adoption
+- **Medium (5-20)**: Adoption Stages 2–4, opt-in workflows
 - **Large (20+)**: Adoption Stage 2 (standards), Adoption Stage 3 (docs), optional Adoption Stage 4 per-team
 
 ---
@@ -562,7 +562,7 @@ git commit -m "chore: remove promptkit-os"
 
 ---
 
-## Next Steps Based on Your Level
+## Next Steps Based on Your Adoption Stage
 
 ### Currently at Adoption Stage 0 (Trying it out)?
 → **Action**: Use pk:debug or pk:tutor once this week  
