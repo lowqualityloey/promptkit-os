@@ -117,38 +117,40 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit;
 
 **Short Answer**: Extremely gradual. Start with one workflow, expand when you're ready.
 
-**5 Adoption Levels** (choose your starting point):
+**5 Adoption Stages (0–4)** (choose your starting point):
 
-**Level 0: Zero Installation** (5 minutes)
+These are organizational rollout stages, not task-risk Levels 0–3.
+
+**Adoption Stage 0: Zero Installation** (5 minutes)
 - Try workflows in your AI assistant without installing
 - Just paste: "Use pk:debug methodology for this bug"
 - No commitment, immediate value
 
-**Level 1: Personal Usage** (10 minutes)
+**Adoption Stage 1: Personal Usage** (10 minutes)
 - Install locally (don't commit to team repo yet)
 - Use workflows for your own work
 - Team doesn't even know you're using it
 
-**Level 2: Team Standards** (30 minutes)
+**Adoption Stage 2: Team Standards** (30 minutes)
 - Commit `.promptkit/` and `PROMPTKIT.md`
 - Document existing practices (not changing them)
 - Team members opt-in to workflows
 
-**Level 3: Living Documentation** (1 hour)
+**Adoption Stage 3: Living Documentation** (1 hour)
 - Track new decisions in `docs/specs/` and `docs/adrs/`
 - Don't backfill old documentation
 - Only for new work going forward
 
-**Level 4: Full Integration** (2 hours)
+**Adoption Stage 4: Full Integration** (2 hours)
 - Active `docs/STATE.md` tracking
 - Milestone-based planning
 - Team operating system
 
-**Most teams**: Start at Level 1, reach Level 2 in 2 weeks, Level 3 in 2 months.
+**Most teams**: Start at Adoption Stage 1, reach Adoption Stage 2 in 2 weeks, Adoption Stage 3 in 2 months.
 
-**What's the minimum?** Just use `pk:debug` and `pk:checkpoint` (Level 1). That alone delivers 80% of the value.
+**What's the minimum?** Just use `pk:debug` and `pk:checkpoint` (Adoption Stage 1). That alone delivers 80% of the value.
 
-**Related**: [docs/ADOPTION-GUIDE.md](docs/ADOPTION-GUIDE.md) for detailed level breakdowns
+**Related**: [docs/ADOPTION-GUIDE.md](docs/ADOPTION-GUIDE.md) for detailed adoption-stage breakdowns
 
 ---
 
@@ -196,7 +198,7 @@ Team of 8:
 
 **Bottom line**: PromptKit works at individual level. Team adoption amplifies benefits but isn't required.
 
-**Related**: [docs/ADOPTION-GUIDE.md](docs/ADOPTION-GUIDE.md) Level 1 (Personal Usage)
+**Related**: [docs/ADOPTION-GUIDE.md](docs/ADOPTION-GUIDE.md) Adoption Stage 1 (Personal Usage)
 
 ---
 
@@ -279,7 +281,7 @@ For verifiable, reproducible measurements, see [`docs/BENCHMARKS.md`](docs/BENCH
 
 **Short Answer**: Just 2 workflows: `pk:debug` and `pk:checkpoint`. That's it.
 
-**Absolute Minimum** (Level 1 adoption):
+**Absolute Minimum** (Adoption Stage 1):
 
 ```bash
 # 1. Install (One-line setup)
@@ -305,7 +307,7 @@ pk:checkpoint
 - Week 3: Add `pk:review` (self-review before PR)
 - Week 4: Add `pk:plan` (plan before building)
 
-**Even simpler?** Level 0 (zero installation):
+**Even simpler?** Adoption Stage 0 (zero installation):
 ```
 # Just tell your AI assistant:
 "Use hypothesis-driven debugging (pk:debug methodology) for this bug"
@@ -320,7 +322,7 @@ pk:checkpoint
 3. Add `pk:checkpoint` to your routine (end of day)
 4. Expand to other workflows as needed
 
-**Related**: [docs/ADOPTION-GUIDE.md](docs/ADOPTION-GUIDE.md) Level 1
+**Related**: [docs/ADOPTION-GUIDE.md](docs/ADOPTION-GUIDE.md) Adoption Stage 1
 
 ---
 
@@ -556,6 +558,8 @@ Run `pk:onboard` first. On an empty repo it skips the brownfield scan and runs a
 ## 19. Can I use PromptKit OS alongside other prompt packs, external skill libraries, or domain-specific tools?
 
 **Short Answer**: Yes. PromptKit OS acts as the **Engineering Control Plane (Layer 2)**, governing task risk, Git boundaries, and verification done-gates, while external skills, linters, and prompt packs plug in cleanly as **Subordinate Helpers (Layer 3)**.
+
+**Taxonomy boundary:** Task-risk Levels 0–3 remain authoritative for workflow and approval gates. D0–D3 describes design procedure, not execution permission; T1–T4 describes engineer competency; Adoption Stages 0–4 describe rollout maturity. These taxonomy labels do not grant or deny workflow authority to any model family.
 
 ### How to Compose Multiple Tools Safely:
 1. **The Single Control Owner Principle**: If two independent systems both attempt to govern the planning, task decomposition, and verification lifecycle simultaneously, the agent enters a *Control Loop Collision* (conflicting prompts, recursive loops, and massive context bloat). Always let one system own the engineering control plane and verification done-gates.

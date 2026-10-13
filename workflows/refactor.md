@@ -22,7 +22,9 @@ Refactoring changes the **internal structure** of software without changing its 
 
 ---
 
-## Level 0–3 Task Ceremony Alignment
+## Task Ceremony Scope: Levels 1–3 (Level 0 Boundary)
+
+This workflow covers code-changing structural refactors at Levels 1–3. Level 0 is the informational/no-code or proportionally small-edit path defined by [route.md](route.md); actual source-code refactoring does not qualify as Level 0.
 
 - **Level 1 — Localized Refactor (Standard)**: Self-contained module or function cleanup, extracting helpers, or removing local duplication without touching public interfaces, database schemas, or authentication boundaries. Does **not** require a Task Record file (`docs/tasks/<task-id>.md`).
 - **Level 2 — Architectural Refactor (Controlled)**: Cross-module decoupling and migrating to Clean/Hexagonal Architecture (Ports and Adapters), including structural preparation for a separately authorized contract or schema migration. Requires an explicit RFC spec (`pk:plan`) and a canonical Task Record in `docs/tasks/`. The contract or schema change itself is not a refactor: it intentionally changes behavior or contract and belongs to its owning workflow (`pk:plan`, `pk:data`, `pk:api`) with its own Task Record and evidence.
