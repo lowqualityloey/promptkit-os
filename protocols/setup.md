@@ -90,6 +90,43 @@ Never use `describe --abbrev=0`; it discards the commit distance and understates
 
 **Stamp `docs/STATE.md` too.** `<kit>/templates/state-tracker-template.md` ships with an honest placeholder row, `- **Engine Version**: [vX.Y.Z @ short-sha | not stamped — re-run installer]`. When the installer ran, it already replaced that row. When you hand-rendered the directive, stamp the same row with the same `$ENGINE_VERSION` / `$ENGINE_SHA` values, inserting the row if the file predates the engine stamp. Leaving the placeholder untouched is acceptable; leaving a literal `$ENGINE_VERSION` token is not.
 
+### Installed-Instruction Integrity Boundary
+
+PromptKit OS provides governance protocols and workflows read directly by host AI tools. It is a file-based operating framework with no resident daemon, background supervisor, or runtime execution hook. To evaluate integrity protections accurately, distinctions must be maintained across four distinct lifecycle stages:
+
+1. **Distribution & Archive Verification**:
+   - **npm courier (`npx promptkit-os@latest`)**: Published couriers (`v2.0.0+`) resolve a version-pinned SHA-256 digest (`TARBALL_SHA256_BY_VERSION` in `package/bin/promptkit-os.js`) before downloading. Missing or malformed pins fail closed (`exit 1`) before network fetch, extraction, or target creation. The downloaded archive buffer is verified via constant-time comparison before extraction. An operator may supply `PROMPTKIT_TARBALL_SHA256` (strictly 64 hexadecimal characters) as a trusted override. Integrity pins detect archive mismatches relative to an expected digest, but do not independently establish publisher trust: a compromised publisher, malicious package release, tampered courier binary, or compromised pin source defeats the trust assumption. Historical `promptkit-os@1.11.0` remains fail-open and immutable on npm.
+   - **Git submodule (`git submodule add ... .promptkit`)**: The superproject gitlink (`mode 160000`) records the exact commit hash of `.promptkit`. Git object hashing (commit, tree, blob DAG) cryptographically anchors kit content to the superproject history.
+2. **Transport Protection**:
+   - Courier downloads use TLS (HTTPS) to the npm registry and GitHub releases, backed by pre-extraction SHA-256 digest verification.
+   - Submodule updates use standard SSH or HTTPS transport with Git packfile checksum verification.
+3. **Installed-Tree Verification**:
+   - **Submodule mode**: Running `git submodule status` reports `+` when the checked-out submodule commit differs from the commit recorded in the superproject index (commit drift). The `+` indicator does **not** detect uncommitted local modifications inside the submodule working tree. To inspect the submodule working tree for local edits, operators must explicitly invoke `git -C .promptkit status --porcelain` (or configure superproject dirty-submodule tracking).
+   - **Courier mode**: Once extracted into `.promptkit/`, the kit tree carries no `.git/`. Re-running the courier refuses to overlay a non-empty directory to prevent stale merges, but it never re-verifies the on-disk tree.
+   - **Standalone / direct-clone mode**: When PromptKit OS is cloned directly or operated in standalone mode, changes to tracked files can be inspected through Git (`git status`, `git diff`), but runtime instruction integrity is not automatically established or enforced prior to host reads.
+   - **Structural assert (`scripts/check-setup-assert.sh`)**: Asserts structural presence for core files (`setup-assert-files.txt`), not cryptographic file hashes.
+   - **Health auditor (`scripts/check-doctor.sh` / `pk:doctor`)**: Detects engine commit drift against upstream Git, missing host directive blocks, and state-store sync. It does not hash or sign installed markdown workflows.
+4. **Host Runtime-Loaded Instruction Verification**:
+   - **Passive ingestion**: When an AI assistant executes, the host application (Claude Code, Cursor, Windsurf, Copilot, etc.) reads workspace files (`AGENTS.md`, `CLAUDE.md`, `.promptkit/workflows/*.md`) directly via standard OS system calls.
+   - **No pre-load runtime gate**: PromptKit OS has no mechanism to intercept host filesystem reads, enforce pre-load hashing, or prove which instruction bytes the model ingested into context.
+
+#### Threat Model & Residual Boundaries
+
+- **Accidental local drift**: Mitigated when explicitly audited via `pk:doctor` and `git status`.
+- **Authorized customization**: Supported by design. The installer preserves user content outside `<!-- PROMPTKIT_START -->` / `<!-- PROMPTKIT_END -->` markers; `PROMPTKIT.md` is host-owned. Authorized customizations must not be treated as tampering.
+- **Malicious post-install file tampering**: Unmitigated at runtime. If an unprivileged local process or compromised build script alters `.promptkit/workflows/*.md` or `AGENTS.md`, PromptKit OS cannot prevent the host AI from ingesting the modified instructions.
+- **Compromised distribution / trust root**: Archive pins and gitlinks detect payload mismatches against an expected reference at install time, but depend on the integrity of upstream registries, repository tags, and published courier binaries. A compromised trusted publisher or distribution channel defeats these protections.
+- **Compromised AI host or execution environment**: Unmitigated; out of scope for any repository-local file toolkit.
+- **Self-referential local manifests**: A checksum manifest stored inside the same repository tree does not create an independent trust root against an attacker with local write access, as the attacker can modify both instructions and the manifest or verification script. While local manifests can assist in diagnosing non-adversarial accidental corruption or partial file copies, they do not constitute a security boundary.
+
+#### Optional Environmental Hardening
+
+Operators requiring defense-in-depth against unauthorized local file modifications may apply environmental controls outside PromptKit OS:
+- **Discretionary file permissions**: Setting permissions such as `chmod -R a-w .promptkit` prevents accidental edits, but is **not a security boundary** against malicious code executing under the same user account, which can invoke `chmod +w` or unlink and replace files.
+- **Read-only filesystem mounts**: Mounting `.promptkit/` from a read-only volume or container layer provides stronger immutability for kit files, provided the process lacks root/superuser privileges to remount the filesystem. However, a read-only `.promptkit/` mount restricts modifications strictly to that mounted kit directory; it does not automatically protect separate writable host directives (`AGENTS.md`, `CLAUDE.md`, etc.) or project records (`PROMPTKIT.md`, `docs/STATE.md`).
+- **Operational tradeoffs**: Updating the kit tree itself (e.g. replacing `.promptkit/` or advancing a submodule) is distinct from running `init.sh`. Running `init.sh` reads the kit and updates or injects directives into those separate writable host-owned files. Read-only kit mounts block in-place kit updates and `pk:sync` repairs until remounted writable.
+- These controls are environmental host configurations, not guarantees enforced by PromptKit OS.
+
 ### Progressive Loading Policy
 To optimize context window efficiency and minimize token overhead, agents must follow this progressive loading sequence:
 1. **Initial context**: Load setup/entry guidance. Classify the task using the Task Ceremony Levels table in the injected directive — do not load `<kit>/workflows/route.md` for classification. Load `route.md` only when routing is genuinely ambiguous, or when Level 3 escalation / downgrade guardrails are needed.
