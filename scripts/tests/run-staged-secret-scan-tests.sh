@@ -46,6 +46,13 @@ server_token="ghs_$(printf '%036d' 4)"
 refresh_token="ghr_$(printf '%036d' 5)"
 slack_token="xoxb-$(printf '%012d' 6)-$(printf '%020d' 7)"
 google_key="AIza$(printf '%035d' 8)"
+openai_project_token="sk-proj-$(printf '%044d' 0)"
+anthropic_token="sk-ant-$(printf '%050d' 0)"
+npm_token="npm_$(printf '%036d' 0)"
+stripe_test_key="sk_test_$(printf '%024d' 0)"
+stripe_restricted_key="rk_live_$(printf '%024d' 0)"
+openai_classic_key="sk-$(printf '%048d' 0)"
+below_threshold_classic="sk-$(printf '%047d' 0)"
 entropy_value='dGhpcyBpcyBhIHN5bnRoZXRpYyB0b2tlbg=='
 entropy_assignment="deploy_token = \"$entropy_value\""
 aws_key_on_later_line="AKIA$(printf '%016d' 1)"
@@ -65,7 +72,13 @@ printf '%s\n' \
     "$refresh_token" \
     "$slack_token" \
     "$google_key" \
-    "$entropy_assignment" >"$positive/ordinary.txt"
+    "$entropy_assignment" \
+    "$openai_project_token" \
+    "$anthropic_token" \
+    "$npm_token" \
+    "$stripe_test_key" \
+    "$stripe_restricted_key" \
+    "$openai_classic_key" >"$positive/ordinary.txt"
 
 newline_path=$(printf 'staged\ncredential.txt')
 printf '%s\n' "$classic_token" >"$positive/$newline_path"
@@ -75,6 +88,8 @@ credential_path="credential-${classic_token}.txt"
 printf '%s\n' "$classic_token" >"$positive/$credential_path"
 password_path='credential-password=synthetic-value.txt'
 printf '%s\n' "$classic_token" >"$positive/$password_path"
+npm_path="npmcred-${npm_token}.txt"
+printf '%s\n' "$npm_token" >"$positive/$npm_path"
 printf '%s\n' "$aws_key" >"$positive/masked.fixture"
 git -C "$positive" add -- .
 masked_diff=$(git -C "$positive" diff --cached --no-ext-diff --unified=0 -- masked.fixture)
@@ -90,7 +105,28 @@ git -C "$clean" config user.email "scanner-fixture@example.invalid"
 printf '%s\n' 'ordinary staged content' >"$clean/README.md"
 # Bracketed placeholders must stay silent (template-marker exemption).
 printf '%s\n' 'password: [ask-your-admin]' 'token: <rotate-me>' >>"$clean/README.md"
-git -C "$clean" add -- README.md
+printf '%s\n' "$below_threshold_classic" >"$clean/examples.md"
+printf '%s\n' \
+    'Set your OpenAI project key to sk-proj-<your-key> in the dashboard.' \
+    'Anthropic keys look like sk-ant-api03-short in the docs.' \
+    'sk-proj-test' 'sk-ant-short' 'npm_ci' 'sk_test_abc' 'rk_live_abc' 'sk-short' \
+    'task-sk-follow-up risk-management-report disk-space-summary npm_install' \
+    >>"$clean/examples.md"
+git -C "$clean" add -- README.md examples.md
+
+negative="$tmp/negative"
+mkdir -p "$negative"
+git -C "$negative" init -q
+git -C "$negative" config user.name "PromptKit scanner fixture"
+git -C "$negative" config user.email "scanner-fixture@example.invalid"
+printf '%s\n' "$openai_classic_key" >"$negative/todelete.txt"
+printf '%s\n' 'ordinary baseline' >"$negative/keep.txt"
+git -C "$negative" add -- todelete.txt keep.txt
+git -C "$negative" commit -q -m baseline
+printf '%s\n' 'harmless documentation text' >"$negative/notes.md"
+git -C "$negative" add -- notes.md
+printf '%s\n' "$openai_project_token" >"$negative/unstaged.txt"
+git -C "$negative" rm -q todelete.txt
 
 invalid_root="$tmp/not-a-git-repository-$aws_key"
 
@@ -133,6 +169,12 @@ run_engine() {
         'Google API key pattern' \
         'Stripe live-key pattern' \
         'JWT-like token pattern' \
+        'OpenAI project-token pattern' \
+        'Anthropic API-key pattern' \
+        'npm access-token pattern' \
+        'Stripe test-key pattern' \
+        'Stripe restricted-key pattern' \
+        'OpenAI classic-key pattern' \
         'password-assignment pattern' \
         'high-entropy secret-assignment pattern'; do
         [[ "$output" == *"$category"* ]] || fail "$awk_bin missed the $category detector"
@@ -152,20 +194,24 @@ run_engine() {
         fail "$awk_bin exposed a credential-shaped filename instead of redacting it"
     [[ "$output" == *"credential-REDACTED:1"* && "$output" != *'synthetic-value'* ]] ||
         fail "$awk_bin exposed a password-shaped value in a staged filename"
+    [[ "$output" == *"npmcred-REDACTED.txt:1"* && "$output" != *"$npm_token"* ]] ||
+        fail "$awk_bin did not redact an extended-family token in a staged filename"
 
-    for expected in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+    for expected in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21; do
         [[ "$output" == *"ordinary.txt:$expected"* ]] ||
             fail "$awk_bin reported an incorrect line number for ordinary.txt"
     done
 
-    [[ $(grep -c '^Potential ' <<< "$output") -eq 21 ]] ||
+    [[ $(grep -c '^Potential ' <<< "$output") -eq 28 ]] ||
         fail "$awk_bin returned an unexpected detection count"
 
     for escaped_value in \
         "$private_marker" "$aws_key" "$classic_token" "$fine_token" \
         "$stripe_key" "$jwt" "$password_assignment" "$aws_key_on_later_line" \
         "$unquoted_assignment" "$oauth_token" "$user_token" "$server_token" \
-        "$refresh_token" "$slack_token" "$google_key" "$entropy_assignment"; do
+        "$refresh_token" "$slack_token" "$google_key" "$entropy_assignment" \
+        "$openai_project_token" "$anthropic_token" "$npm_token" \
+        "$stripe_test_key" "$stripe_restricted_key" "$openai_classic_key"; do
         [[ "$output" != *"$escaped_value"* ]] || fail "$awk_bin leaked a matching value"
     done
 
@@ -173,6 +219,11 @@ run_engine() {
     output=$(PROMPTKIT_AWK="$awk_bin" bash "$scanner" "$clean") || status=$?
     [[ "$status" -eq 0 && -z "$output" ]] ||
         fail "$awk_bin should pass clean staged content without output"
+
+    status=0
+    output=$(PROMPTKIT_AWK="$awk_bin" bash "$scanner" "$negative") || status=$?
+    [[ "$status" -eq 0 && -z "$output" ]] ||
+        fail "$awk_bin should ignore unstaged and removed-only credential content"
 
     status=0
     output=$(PROMPTKIT_AWK="$awk_bin" bash "$scanner" "$invalid_root" 2>&1) || status=$?
@@ -192,7 +243,7 @@ run_engine() {
             fail "$awk_bin did not fail closed without exposing binary staged content from $path"
     done
 
-    printf 'PASS: %s detected twenty-one redacted matches, ignored textconv, handled tricky paths and modified-file lines; clean input passed and scan errors and binary-classified diffs failed closed.\n' "$awk_bin"
+    printf 'PASS: %s detected twenty-eight redacted matches, ignored textconv, handled tricky paths and modified-file lines; clean and unstaged/removed-only input passed and scan errors and binary-classified diffs failed closed.\n' "$awk_bin"
 }
 
 run_engine awk

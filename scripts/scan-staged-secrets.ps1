@@ -124,6 +124,12 @@ $detectors = @(
     [pscustomobject]@{ Pattern = 'ghr_[A-Za-z0-9]+'; Category = 'GitHub refresh token pattern' },
     [pscustomobject]@{ Pattern = 'xox[baprs]-[A-Za-z0-9-]+'; Category = 'Slack token pattern' },
     [pscustomobject]@{ Pattern = 'AIza[0-9A-Za-z_-]+'; Category = 'Google API key pattern' },
+    [pscustomobject]@{ Pattern = 'sk-proj-[A-Za-z0-9_-]{20,}'; Category = 'OpenAI project-token pattern' },
+    [pscustomobject]@{ Pattern = 'sk-ant-[A-Za-z0-9_-]{20,}'; Category = 'Anthropic API-key pattern' },
+    [pscustomobject]@{ Pattern = 'npm_[A-Za-z0-9]{30,}'; Category = 'npm access-token pattern' },
+    [pscustomobject]@{ Pattern = 'sk_test_[A-Za-z0-9]{24,}'; Category = 'Stripe test-key pattern' },
+    [pscustomobject]@{ Pattern = 'rk_live_[A-Za-z0-9]{24,}'; Category = 'Stripe restricted-key pattern' },
+    [pscustomobject]@{ Pattern = 'sk-[A-Za-z0-9]{48,}'; Category = 'OpenAI classic-key pattern' },
     [pscustomobject]@{ Pattern = 'password\s*[:=]\s*["''][^"'']+["'']'; Category = 'password-assignment pattern' }
 )
 
