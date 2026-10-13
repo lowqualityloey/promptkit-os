@@ -101,12 +101,20 @@ try {
     $passwordName = 'pass' + 'word'
     $passwordAssignment = $passwordName + '="synthetic-value-only"'
     $awsKeyOnLaterLine = 'AKIA' + ('1' * 16)
+    $openaiProjectToken = 'sk' + '-proj-' + ('0' * 44)
+    $anthropicToken = 'sk' + '-ant-' + ('0' * 50)
+    $npmToken = 'npm' + '_' + ('0' * 36)
+    $stripeTestKey = 'sk' + '_test_' + ('0' * 24)
+    $stripeRestrictedKey = 'rk' + '_live_' + ('0' * 24)
+    $openaiClassicKey = 'sk' + '-' + ('0' * 48)
+    $belowThresholdClassic = 'sk' + '-' + ('0' * 47)
     [System.IO.File]::WriteAllLines((Join-Path $positive "context.txt"), @("one", "two", "three", "four", $awsKeyOnLaterLine, "six", "seven"), $utf8NoBom)
-    $ordinaryLines = @($privateMarker, $awsKey, $classicToken, $fineToken, $stripeKey, $jwt, $passwordAssignment)
+    $ordinaryLines = @($privateMarker, $awsKey, $classicToken, $fineToken, $stripeKey, $jwt, $passwordAssignment, $openaiProjectToken, $anthropicToken, $npmToken, $stripeTestKey, $stripeRestrictedKey, $openaiClassicKey)
     [System.IO.File]::WriteAllLines((Join-Path $positive "ordinary.txt"), $ordinaryLines, $utf8NoBom)
     [System.IO.File]::WriteAllText((Join-Path $positive "path[credential].txt"), ($classicToken + "`n"), $utf8NoBom)
     [System.IO.File]::WriteAllText((Join-Path $positive ("credential-" + $classicToken + ".txt")), ($classicToken + "`n"), $utf8NoBom)
     [System.IO.File]::WriteAllText((Join-Path $positive "credential-password=synthetic-value.txt"), ($classicToken + "`n"), $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $positive ("npmcred-" + $npmToken + ".txt")), ($npmToken + "`n"), $utf8NoBom)
     [System.IO.File]::WriteAllText((Join-Path $positive "masked.fixture"), ($awsKey + "`n"), $utf8NoBom)
     Invoke-GitSetup $positive @("add", "--", ".")
 
@@ -137,7 +145,15 @@ try {
     }
 
     [System.IO.File]::WriteAllText((Join-Path $clean "README.md"), "ordinary staged content`n", $utf8NoBom)
-    Invoke-GitSetup $clean @("add", "--", "README.md")
+    $cleanExamples = @(
+        $belowThresholdClassic,
+        'Set your OpenAI project key to sk-proj-<your-key> in the dashboard.',
+        'Anthropic keys look like sk-ant-api03-short in the docs.',
+        'sk-proj-test', 'sk-ant-short', 'npm_ci', 'sk_test_abc', 'rk_live_abc', 'sk-short',
+        'task-sk-follow-up risk-management-report disk-space-summary npm_install'
+    )
+    [System.IO.File]::WriteAllLines((Join-Path $clean "examples.md"), $cleanExamples, $utf8NoBom)
+    Invoke-GitSetup $clean @("add", "--", "README.md", "examples.md")
 
     $positiveResult = Invoke-ScannerProcess $positive
     if ($positiveResult.ExitCode -ne 1) { Fail "Scanner should return 1 when supported patterns are found." }
@@ -148,6 +164,12 @@ try {
         "GitHub fine-grained token pattern",
         "Stripe live-key pattern",
         "JWT-like token pattern",
+        "OpenAI project-token pattern",
+        "Anthropic API-key pattern",
+        "npm access-token pattern",
+        "Stripe test-key pattern",
+        "Stripe restricted-key pattern",
+        "OpenAI classic-key pattern",
         "password-assignment pattern"
     )) {
         if (-not $positiveResult.Output.Contains($category)) { Fail "Scanner missed the $category detector." }
@@ -158,12 +180,13 @@ try {
     if ($supportsNewlinePath -and -not $positiveResult.Output.Contains('"staged\ncredential.txt":1')) { Fail "Scanner did not preserve the NUL-delimited newline path." }
     if (-not $positiveResult.Output.Contains('credential-REDACTED.txt":1')) { Fail "Scanner exposed a credential-shaped filename instead of redacting it." }
     if (-not $positiveResult.Output.Contains('credential-REDACTED":1') -or $positiveResult.Output.Contains("synthetic-value")) { Fail "Scanner exposed a password-shaped value in a staged filename." }
-    foreach ($lineNumber in 1..7) {
+    if (-not $positiveResult.Output.Contains('npmcred-REDACTED.txt":1') -or $positiveResult.Output.Contains($npmToken)) { Fail "Scanner did not redact an extended-family token in a staged filename." }
+    foreach ($lineNumber in 1..13) {
         if (-not $positiveResult.Output.Contains("ordinary.txt`":$lineNumber")) { Fail "Scanner reported an incorrect ordinary.txt line number." }
     }
     if (-not $positiveResult.Output.Contains('context.txt":5')) { Fail "Scanner reported an incorrect line number for a modified file." }
     if (-not $positiveResult.Output.Contains('masked.fixture":1')) { Fail "Scanner let Git textconv hide a staged credential." }
-    $expectedDetectionCount = if ($supportsNewlinePath) { 13 } else { 12 }
+    $expectedDetectionCount = if ($supportsNewlinePath) { 20 } else { 19 }
     if (($positiveResult.Output -split "`n" | Where-Object { $_ -like "Potential *" }).Count -ne $expectedDetectionCount) {
         Fail "Scanner returned an unexpected detection count."
     }
@@ -174,6 +197,24 @@ try {
 
     $cleanResult = Invoke-ScannerProcess $clean
     if ($cleanResult.ExitCode -ne 0 -or $cleanResult.Output.Length -ne 0) { Fail "Clean staged content should pass without output." }
+
+    $negative = Join-Path $tempRoot "negative"
+    New-Item -ItemType Directory -Path $negative -Force | Out-Null
+    Invoke-GitSetup $negative @("init", "-q")
+    Invoke-GitSetup $negative @("config", "user.name", "PromptKit scanner fixture")
+    Invoke-GitSetup $negative @("config", "user.email", "scanner-fixture@example.invalid")
+    [System.IO.File]::WriteAllText((Join-Path $negative "todelete.txt"), ($openaiClassicKey + "`n"), $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $negative "keep.txt"), "ordinary baseline`n", $utf8NoBom)
+    Invoke-GitSetup $negative @("add", "--", "todelete.txt", "keep.txt")
+    Invoke-GitSetup $negative @("commit", "-q", "-m", "baseline")
+    [System.IO.File]::WriteAllText((Join-Path $negative "notes.md"), "harmless documentation text`n", $utf8NoBom)
+    Invoke-GitSetup $negative @("add", "--", "notes.md")
+    [System.IO.File]::WriteAllText((Join-Path $negative "unstaged.txt"), ($openaiProjectToken + "`n"), $utf8NoBom)
+    Invoke-GitSetup $negative @("rm", "-q", "todelete.txt")
+    $negativeResult = Invoke-ScannerProcess $negative
+    if ($negativeResult.ExitCode -ne 0 -or $negativeResult.Output.Length -ne 0) {
+        Fail "Unstaged and removed-only credential content should be ignored."
+    }
 
     $invalidResult = Invoke-ScannerProcess $invalid
     if ($invalidResult.ExitCode -ne 2) { Fail "Scanner should fail closed when the repository cannot be scanned." }
@@ -417,7 +458,7 @@ try {
     if ($flagged -contains ".env.sample") { Fail ".env.sample should be exempted" }
     if ($flagged -contains ".env.dist") { Fail ".env.dist should be exempted" }
 
-    Write-Host "PASS: PowerShell scanner detected thirteen redacted matches, ignored textconv, handled NUL-delimited/tricky paths and line numbers, passed clean input, and failed closed on scan errors and binary-classified diffs."
+    Write-Host "PASS: PowerShell scanner detected twenty redacted matches, ignored textconv, handled NUL-delimited/tricky paths and line numbers, passed clean and unstaged/removed-only input, and failed closed on scan errors and binary-classified diffs."
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) { Remove-Item -LiteralPath $tempRoot -Recurse -Force }

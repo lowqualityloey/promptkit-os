@@ -100,7 +100,8 @@ escape_redacted_path() {
         'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'
     )
     sensitive_patterns+=("$password_pattern" "$password_unquoted_pattern")
-    # Extended issuer prefixes (kept in detection parity with the awk block).
+    # Extended issuer prefixes (kept in detection parity with the awk block);
+    # specific prefixes precede the generic sk- form so family tokens redact whole.
     sensitive_patterns+=(
         'gho_[A-Za-z0-9]+'
         'ghu_[A-Za-z0-9]+'
@@ -108,6 +109,12 @@ escape_redacted_path() {
         'ghr_[A-Za-z0-9]+'
         'xox[baprs]-[A-Za-z0-9-]+'
         'AIza[0-9A-Za-z_-]+'
+        'sk-proj-[A-Za-z0-9_-]{20,}'
+        'sk-ant-[A-Za-z0-9_-]{20,}'
+        'npm_[A-Za-z0-9]{30,}'
+        'sk_test_[A-Za-z0-9]{24,}'
+        'rk_live_[A-Za-z0-9]{24,}'
+        'sk-[A-Za-z0-9]{48,}'
     )
 
     for pattern in "${sensitive_patterns[@]}"; do
@@ -236,6 +243,58 @@ while IFS= read -r -d '' path; do
                     }
                     if (content ~ /AIza[0-9A-Za-z_-]+/) {
                         printf "%d|Google API key pattern\n", next_line
+                    }
+                    # Extended credential families. Intervals are avoided (mawk
+                    # -W traditional rejects them): match prefix+body, gate on
+                    # body length via RLENGTH. The loop mirrors the PowerShell
+                    # twin when several candidates share one added line.
+                    scan_work = content
+                    while (match(scan_work, /sk-proj-[A-Za-z0-9_-]+/)) {
+                        if (RLENGTH - 8 >= 20) {
+                            printf "%d|OpenAI project-token pattern\n", next_line
+                            break
+                        }
+                        scan_work = substr(scan_work, RSTART + RLENGTH)
+                    }
+                    scan_work = content
+                    while (match(scan_work, /sk-ant-[A-Za-z0-9_-]+/)) {
+                        if (RLENGTH - 7 >= 20) {
+                            printf "%d|Anthropic API-key pattern\n", next_line
+                            break
+                        }
+                        scan_work = substr(scan_work, RSTART + RLENGTH)
+                    }
+                    scan_work = content
+                    while (match(scan_work, /npm_[A-Za-z0-9]+/)) {
+                        if (RLENGTH - 4 >= 30) {
+                            printf "%d|npm access-token pattern\n", next_line
+                            break
+                        }
+                        scan_work = substr(scan_work, RSTART + RLENGTH)
+                    }
+                    scan_work = content
+                    while (match(scan_work, /sk_test_[A-Za-z0-9]+/)) {
+                        if (RLENGTH - 8 >= 24) {
+                            printf "%d|Stripe test-key pattern\n", next_line
+                            break
+                        }
+                        scan_work = substr(scan_work, RSTART + RLENGTH)
+                    }
+                    scan_work = content
+                    while (match(scan_work, /rk_live_[A-Za-z0-9]+/)) {
+                        if (RLENGTH - 8 >= 24) {
+                            printf "%d|Stripe restricted-key pattern\n", next_line
+                            break
+                        }
+                        scan_work = substr(scan_work, RSTART + RLENGTH)
+                    }
+                    scan_work = content
+                    while (match(scan_work, /sk-[A-Za-z0-9]+/)) {
+                        if (RLENGTH - 3 >= 48) {
+                            printf "%d|OpenAI classic-key pattern\n", next_line
+                            break
+                        }
+                        scan_work = substr(scan_work, RSTART + RLENGTH)
                     }
                     # Bare assignments with no quotes are just as exfiltrating;
                     # bracketed placeholders (e.g. <change-me>) stay silent.
