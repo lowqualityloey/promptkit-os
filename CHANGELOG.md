@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Terminology consistency (issue #605)**: Clarify Adoption Stages 0–4, task-ceremony Levels 0–3, and the refactor workflow’s Level 0 boundary.
+- **Installed-instruction integrity boundary (issue #602)**: Document the trust boundaries, guarantees, and residual risk across Git submodule, npm courier, and host-directive installation modes in `protocols/setup.md` and `docs/MIGRATION.md`, distinguishing archive/transport verification from post-install and host runtime execution.
 
 ### Fixed
 - **Staged-secret scanner coverage (issue #604)**: the staged-index secret scan (`scripts/scan-staged-secrets.sh` and its `.ps1` twin) now also flags OpenAI project (`sk-proj-`) and classic (`sk-`) keys, Anthropic (`sk-ant-`) keys, npm (`npm_`) access tokens, and Stripe test/restricted keys (`sk_test_`, `rk_live_`) on staged additions, reporting redacted `file:line` diagnostics under the existing exit-1 tier. The new detectors are conservative prefix-plus-minimum-length shapes applied to staged additions only; they are a candidate signal and not proof that no secret exists, and unstaged or removed-only content is not scanned.

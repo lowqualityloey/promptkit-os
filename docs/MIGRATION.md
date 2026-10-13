@@ -163,6 +163,7 @@ The npm package is a courier, not a dependency (`package/README.md`, `package/bi
 - `PROMPTKIT_TARBALL_SHA256` is an operator-trusted override: exactly 64 hexadecimal characters, and a defined-but-invalid value fails closed. Use only a digest obtained independently; never derive it from the download you are verifying.
 - A non-empty `.promptkit/` is refused so a tarball cannot merge over an existing tree. `--force` overlays anyway and is not recommended; it can leave stale files behind.
 - The already-published immutable `promptkit-os@1.11.0` predates the pin policy and still warns and proceeds by default. Publishing is not retroactive: that package's bytes do not change, and re-running any courier never verifies an already-installed tree.
+- For the complete trust boundary across archive, transport, installed-tree, and runtime loading layers, see [Installed-Instruction Integrity Boundary](../protocols/setup.md#installed-instruction-integrity-boundary).
 
 ### Git submodule installs
 
