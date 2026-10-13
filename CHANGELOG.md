@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Terminology consistency (issue #605)**: Clarify Adoption Stages 0–4, task-ceremony Levels 0–3, and the refactor workflow’s Level 0 boundary.
+
 ### Fixed
 - **Staged-secret scanner coverage (issue #604)**: the staged-index secret scan (`scripts/scan-staged-secrets.sh` and its `.ps1` twin) now also flags OpenAI project (`sk-proj-`) and classic (`sk-`) keys, Anthropic (`sk-ant-`) keys, npm (`npm_`) access tokens, and Stripe test/restricted keys (`sk_test_`, `rk_live_`) on staged additions, reporting redacted `file:line` diagnostics under the existing exit-1 tier. The new detectors are conservative prefix-plus-minimum-length shapes applied to staged additions only; they are a candidate signal and not proof that no secret exists, and unstaged or removed-only content is not scanned.
 - **Release Courier Smoke Version-Stamp Equivalence (v2.0.0)**: `package/test/smoke.sh` now passes `--engine-version=v$VERSION` to the git-archive canonical installer, matching the courier's version stamp. Explicitly asserts the release version in both generated `docs/STATE.md` files while preserving strict byte-for-byte `PROMPTKIT.md` and `docs/STATE.md` comparisons. Addresses the failure observed in non-publishing dry-run `38233996404`; the tag-specific post-merge dry-run `38241203892` passed and supersedes that failed run, and the existing `v2.0.0` tag is unchanged.

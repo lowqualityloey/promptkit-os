@@ -16,7 +16,9 @@ PromptKit OS is designed for **gradual adoption**. You don't need to:
 
 ---
 
-## Adoption Levels (Choose Your Starting Point)
+## Adoption Stages 0–4 (Choose Your Starting Point)
+
+These are organizational rollout stages, not task-ceremony Levels 0–3; the model recommendations below concern task-ceremony levels.
 
 ### OpenCode + OmO install-time setup
 
@@ -24,12 +26,12 @@ Install PromptKit OS using the OpenCode host target so its generated `.opencode/
 
 ### Model Floor Guidance Note
 
-- **Level 0 (Direct) & Level 1 (Standard)**: Fast-tier / smaller models (e.g. Flash, Haiku, GPT-4o-mini, local models) are adequate for direct execution, exploratory debugging, and minimal `quick`-tier checkpoint projections without Task Record files.
-- **Level 2 (Controlled) & Level 3 (Release-Critical)**: Frontier reasoning models are recommended to satisfy the complete 20-label checkpoint gate, maintain multi-step traceability, invariant tracking, and release evidence.
+- **Task Ceremony Level 0 (Direct) & Task Ceremony Level 1 (Standard)**: Fast-tier / smaller models (e.g. Flash, Haiku, GPT-4o-mini, local models) are adequate for direct execution, exploratory debugging, and minimal `quick`-tier checkpoint projections without Task Record files.
+- **Task Ceremony Level 2 (Controlled) & Task Ceremony Level 3 (Release-Critical)**: Frontier reasoning models are recommended to satisfy the complete 20-label checkpoint gate, maintain multi-step traceability, invariant tracking, and release evidence.
 - *Note*: This is operational guidance, not an automated runtime restriction; PromptKit OS does not enforce runtime model gating.
 
 
-### Level 0: Zero Installation (Try Before You Buy)
+### Adoption Stage 0: Zero Installation (Try Before You Buy)
 **Time**: 5 minutes  
 **Commitment**: None  
 **Goal**: Experience PromptKit workflows without touching your codebase
@@ -52,11 +54,11 @@ Install PromptKit OS using the OpenCode host target so its generated `.opencode/
    ```
 
 **Value Delivered**: Structured workflows without configuration  
-**Next Step**: If helpful, move to Level 1
+**Next Step**: If helpful, move to Adoption Stage 1
 
 ---
 
-### Level 1: Personal Usage (One Developer)
+### Adoption Stage 1: Personal Usage (One Developer)
 **Time**: 10 minutes  
 **Commitment**: Optional `.promptkit/` submodule (can be personal, not tracked)  
 **Goal**: Use PromptKit for your own work without affecting team
@@ -86,11 +88,11 @@ Install PromptKit OS using the OpenCode host target so its generated `.opencode/
 - Cleaner commits (atomic, conventional)
 - Self-code reviews before teammates see code
 
-**When to Advance**: After 1-2 weeks, if you find it valuable, propose Level 2 to your team
+**When to Advance**: After 1-2 weeks, if you find it valuable, propose Adoption Stage 2 to your team
 
 ---
 
-### Level 2: Team-Shared Standards (Whole Team)
+### Adoption Stage 2: Team-Shared Standards (Whole Team)
 **Time**: 30 minutes  
 **Commitment**: Commit `.promptkit/` and `PROMPTKIT.md`  
 **Goal**: Align team on standards without disrupting existing workflows
@@ -139,11 +141,11 @@ Install PromptKit OS using the OpenCode host target so its generated `.opencode/
 - **Opt-in**: Team members can use workflows (pk:debug, pk:review) but aren't required to
 - **Passive benefit**: Even non-users benefit from improved AI context
 
-**When to Advance**: After 1 month, if team wants deeper integration, move to Level 3
+**When to Advance**: After 1 month, if team wants deeper integration, move to Adoption Stage 3
 
 ---
 
-### Level 3: Living Documentation (docs/ artifacts)
+### Adoption Stage 3: Living Documentation (docs/ artifacts)
 **Time**: 1 hour initial + ongoing  
 **Commitment**: Track planning artifacts in `docs/`  
 **Goal**: Replace scattered Notion/Confluence docs with git-tracked specs
@@ -176,11 +178,11 @@ Install PromptKit OS using the OpenCode host target so its generated `.opencode/
 - Onboarding docs that stay up-to-date
 - Audit trail for compliance (SOC2, ISO)
 
-**When to Advance**: After 2-3 months, if team wants full process integration, move to Level 4
+**When to Advance**: After 2-3 months, if team wants full process integration, move to Adoption Stage 4
 
 ---
 
-### Level 4: Full Process Integration (STATE.md + Milestones)
+### Adoption Stage 4: Full Process Integration (STATE.md + Milestones)
 **Time**: 2 hours initial + weekly updates  
 **Commitment**: Active `docs/STATE.md` tracking  
 **Goal**: PromptKit OS becomes your team's operating system
@@ -413,7 +415,7 @@ See [`docs/MAXIMS.md`](./MAXIMS.md).
 ## Handling Resistance & Common Objections
 
 ### "This Looks Like Bureaucracy"
-**Response**: Start at Level 1 (personal usage). Show value through results, not mandates.
+**Response**: Start at Adoption Stage 1 (personal usage). Show value through results, not mandates.
 
 **Evidence**:
 - "My bug fixes are 40% faster now with pk:debug"
@@ -431,12 +433,12 @@ pk:debug - [Describe the bug]
 ```
 
 ### "Our Process Is Already Working"
-**Response**: PromptKit documents your existing process (Level 2) before changing anything.
+**Response**: PromptKit documents your existing process (Adoption Stage 2) before changing anything.
 
 **Safe First Step**:
 1. Create `PROMPTKIT.md` documenting current state
 2. Use for 2 weeks
-3. Decide if you want Level 3
+3. Decide if you want Adoption Stage 3
 
 ### "This Won't Scale to Our Team Size"
 **Response**: PromptKit is used by solo devs and 50-person teams.
@@ -444,28 +446,28 @@ pk:debug - [Describe the bug]
 **Scaling Strategy**:
 - **Solo/Small (1-5)**: Levels 1-3, informal adoption
 - **Medium (5-20)**: Levels 2-4, opt-in workflows
-- **Large (20+)**: Level 2 (standards), Level 3 (docs), optional Level 4 per-team
+- **Large (20+)**: Adoption Stage 2 (standards), Adoption Stage 3 (docs), optional Adoption Stage 4 per-team
 
 ---
 
 ## Success Metrics to Track
 
-### Level 1 (Personal)
+### Adoption Stage 1 (Personal)
 - Bugs fixed per day (before/after pk:debug)
 - Time to isolate root cause (average)
 - Commits reverted due to issues (count)
 
-### Level 2 (Team Standards)
+### Adoption Stage 2 (Team Standards)
 - New developer onboarding time (days)
 - Code review cycle time (submission → approval)
 - Production incidents per month (trending)
 
-### Level 3 (Living Docs)
+### Adoption Stage 3 (Living Docs)
 - Architecture decisions documented (count)
 - Time spent searching for "why did we choose X?" (minutes)
 - Spec-to-implementation alignment (% of features with specs)
 
-### Level 4 (Full Integration)
+### Adoption Stage 4 (Full Integration)
 - Context handover success rate (smooth vs. restart-from-scratch)
 - Sprint predictability (planned vs. completed tasks)
 - Technical debt reduction (tracked via STATE.md)
@@ -562,21 +564,21 @@ git commit -m "chore: remove promptkit-os"
 
 ## Next Steps Based on Your Level
 
-### Currently at Level 0 (Trying it out)?
+### Currently at Adoption Stage 0 (Trying it out)?
 → **Action**: Use pk:debug or pk:tutor once this week  
-→ **If valuable**: Move to Level 1 (personal usage)
+→ **If valuable**: Move to Adoption Stage 1 (personal usage)
 
-### Currently at Level 1 (Personal)?
+### Currently at Adoption Stage 1 (Personal)?
 → **Action**: Show 1-2 teammates a workflow in action  
-→ **If interested**: Propose Level 2 (team standards)
+→ **If interested**: Propose Adoption Stage 2 (team standards)
 
-### Currently at Level 2 (Team standards)?
+### Currently at Adoption Stage 2 (Team standards)?
 → **Action**: Generate 1 ADR or spec using pk:plan or pk:retro  
-→ **If useful**: Expand to Level 3 (living docs)
+→ **If useful**: Expand to Adoption Stage 3 (living docs)
 
-### Currently at Level 3 (Living docs)?
+### Currently at Adoption Stage 3 (Living docs)?
 → **Action**: Initialize docs/STATE.md and track 1 milestone  
-→ **If helpful**: Full integration at Level 4
+→ **If helpful**: Full integration at Adoption Stage 4
 
 ---
 
