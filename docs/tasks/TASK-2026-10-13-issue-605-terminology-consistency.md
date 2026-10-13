@@ -54,12 +54,12 @@
 - **Host Timer Capability**: Limitation — no task-wide live timer is enforced; individual tool calls have bounded timeouts only.
 
 ## 5. State and Active Ownership
-- **Execution State**: in_progress
-- **Mapped `pk:tasks` Status**: In Progress
-- **Active Task Pointer**: TASK-2026-10-13-issue-605-terminology-consistency
+- **Execution State**: completed
+- **Mapped `pk:tasks` Status**: `Done`
+- **Active Task Pointer**: `None`
 - **Start Time**: 2026-10-13T02:07:00Z
 - **Current Actor**: Local coding agent
-- **Next Action**: Reconcile the measured full-workflow total, prepare Commit A, anchor the benchmark to Commit A in Commit B if required, then run the final local verification without publication.
+- **Next Action**: Local verification finished; stop and await separate publication authorization.
 
 ### Transition History
 
@@ -67,25 +67,32 @@
 |---|---|---|---|---|---|
 | N/A | planned | 2026-10-13 02:07 UTC | Local coding agent | Accepted bounded Issue #605 scope and verified baseline/worktree | User request and baseline results |
 | planned | in_progress | 2026-10-13 02:07 UTC | Local coding agent | Authority inventory complete; began authorized documentation pass | This Task Record |
+| in_progress | completed | 2026-10-13 18:18 UTC | Local coding agent | Option 2 reconciliation complete; two local provenance commits created and final checks passed | Six-file scope, independent 116,906 measurements, and no measured-input drift from Commit A |
 
 ## 6. Evidence and Completion Gate
-- **Changed Files**: Exactly the six authorized files: FAQ.md, docs/ADOPTION-GUIDE.md, workflows/refactor.md, CHANGELOG.md, this Task Record, and docs/BENCHMARKS.md.
+- **Changed Files**:
+  - `FAQ.md` — adoption-stage terminology and the taxonomy boundary.
+  - `docs/ADOPTION-GUIDE.md` — adoption stages separated from task-ceremony model guidance.
+  - `workflows/refactor.md` — Levels 1–3 scope with the explicit Level 0 boundary.
+  - `CHANGELOG.md` — `[Unreleased]` Changed entry for the terminology work.
+  - `docs/BENCHMARKS.md` — current full-workflow total corrected to 116,906 and provenance anchored to Commit A.
+  - `docs/tasks/TASK-2026-10-13-issue-605-terminology-consistency.md` — this record.
 - **Scope Change Records**: Coordinator Option 2 decision authorizes only docs/BENCHMARKS.md current measurement/provenance reconciliation, the existing terminology changes, up to two local commits, and final verification.
 - **Checkpoint Records**: None
 - **Handoff Records**: None
-- **Verification Evidence**: Previously recorded baseline behavioral suites: Bash 450/0 and PowerShell 448/0. Before reconciliation, Bash and PowerShell measurement scripts independently reported 116,906 (exit 0), while the published current value was 116,842; the prior post-edit contract suites therefore each had one full-workflow assertion failure. Final suite, validator, changelog-range, and diff-check evidence is pending completion of both local commits.
+- **Verification Evidence**: Bash behavioral contracts 450/0 (exit 0); PowerShell behavioral contracts 448/0 (exit 0); Bash and PowerShell token measurers each independently report the full 26-workflow total as 116,906 (exit 0); reference-link suites 8/0 each (exit 0); Bash and PowerShell reference validators exit 0; Bash and PowerShell execution-control validators each report `VALID|RECORDS=65|ROOT=.` (exit 0); Bash and PowerShell CHANGELOG gates both `PASS` for base `d8f8936c768d3acbbd4402cb732377b3f23fbb66...HEAD` (exit 0); base-to-HEAD and worktree `git diff --check` both exit 0. The benchmark provenance anchor resolves to Commit A `998fc1ca347eb118ec4f81a3e779a5303e3577db`, and the measured-input diff from Commit A to final HEAD is empty.
 - **Behavior IDs**: N/A
 - **TDD Intent Register**: N/A
 - **TDD Execution Evidence**: N/A
 - **TDD Exception Verification**: Documentation-only; unchanged existing contract/link tests and docs validators; no test assets changed.
 - **CI Evidence**: N/A — local only, no commit or PR
 - **Review Evidence**: Scoped diff reviewed; Option 2 authorized the benchmark reconciliation. Terminology-only edits preserve model recommendations, adoption timing/estimates, routing, risk, authorization, and verification boundaries; no independent review requested
-- **Commit Evidence**: Local Commit A is authorized for the six-file approved scope; Commit B is authorized only if needed to reference Commit A immutably. Full SHAs, parents, and trees will be reported after creation.
+- **Commit Evidence**: Commit A `998fc1ca347eb118ec4f81a3e779a5303e3577db` has parent `d8f8936c768d3acbbd4402cb732377b3f23fbb66` and tree `f04e83299fcbcd1f02e2d8ed008d0a12660fa77e`; it carries the approved six-file scope and the corrected full-workflow total. Commit B anchors `docs/BENCHMARKS.md` to Commit A and records this closeout; it is parented on Commit A and its full SHA and tree are reported in the final session report. No third commit was created.
 - **Pull Request Evidence**: N/A — explicitly prohibited for this pass
 - **Release Evidence**: N/A — no release authorized
 - **Blocker and Resume Condition**: None. The user approved Option 2 and explicitly authorized benchmark reconciliation and local provenance commits; continue within the six-file scope.
-- **Completion State**: in_progress; acceptance is not complete
-- **Acceptance Results**: AC-1 through AC-5 PASS on scoped content review; AC-6 and AC-7 pending final suites, validators, changelog range, diff check, and provenance verification.
+- **Completion State**: `completed`
+- **Acceptance Results**: AC-1 PASS; AC-2 PASS; AC-3 PASS; AC-4 PASS; AC-5 PASS; AC-6 PASS; AC-7 PASS.
 - **Changed-File Summary**: The authorized final inventory is exactly six files: FAQ.md, docs/ADOPTION-GUIDE.md, workflows/refactor.md, CHANGELOG.md, docs/tasks/TASK-2026-10-13-issue-605-terminology-consistency.md, and docs/BENCHMARKS.md. No other tracked files are authorized.
-- **Completion Exception**: None. Completion requires Commit A/B provenance evidence and all requested final checks to pass.
-- **Completion Decision and Timestamp**: No completion decision or completion timestamp; awaiting the scope decision above.
+- **Completion Exception**: None; every authorized check passed without an exception.
+- **Completion Decision and Timestamp**: Completed local reconciliation and verification on 2026-10-13; no push, PR, merge, issue update, release, tag, or publication action taken.
