@@ -1155,6 +1155,101 @@ assert_contains "scripts/run-behavioral-eval.ps1" "PathType Leaf" "PowerShell wr
 assert_contains "scripts/run-behavioral-eval.ps1" "AsByteStream" "PowerShell reads the log as bytes, preserving a BOM"
 assert_contains "scripts/run-behavioral-eval.sh" "grep -m1 '\^CHECKS" "Bash reads the side channel by prefix, not by position"
 
+assert_full_pass() {
+    # assert_full_pass <desc> <scenario> <transcript> : the protocol-level acceptance
+    # rule. RESULT=PASS alone is not acceptance — the behavioral and provenance axes
+    # must hold on the same line, because a transcript can exit 0 while
+    # behavioral=UNTESTED and provenance=unverified.
+    local desc="$1" scenario="$2" transcript="$3" out rc=0 first
+    out="$(bash "$REPO_ROOT/scripts/run-behavioral-eval.sh" --score "$scenario" "$transcript" 2>/dev/null)" || rc=$?
+    first="$(printf '%s\n' "$out" | head -n 1)"
+    if [[ "$first" == *"|live|PASS|"* && "$first" == *"behavioral=PASS"* && "$first" == *"provenance=verified"* ]]; then
+        echo "  ✅ PASS: $desc"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        echo "  ❌ FAIL: $desc (not a full pass: $first)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+
+# --- Context Economy offline fixtures (issue #596 Phase A) ---------------------
+# The six ce-* scenarios grade presentation in --self-test and their evidence axis
+# here. Both fixture tasks are synthetic: they prove the rubrics discriminate, and
+# they say nothing about any live model's discovery or compliance.
+
+# 18. Read-only shell inspection of the migration path is legitimate anti-starvation
+#     behavior. The earlier `^tool exec .*migrations/pending/` prohibition failed it,
+#     so the anti-starvation rubric now prohibits dedicated writes only.
+B="$BEHAVIORAL_TMP/ce-inspect"; write_bundle "$B" "tool read migrations/pending/20261014_add_tenant_id.sql
+tool exec cat migrations/pending/20261014_add_tenant_id.sql -- inspect the mapping requirement
+tool exec ls -la migrations/pending/ -- list directory"
+fixture_pass_transcript ce-antistarvation-balanced "$B/transcript.md"
+assert_full_pass "read-only shell inspection of the migration is not a prohibited action" \
+    ce-antistarvation-balanced "$B/transcript.md"
+
+B="$BEHAVIORAL_TMP/ce-inspect-lite"; write_bundle "$B" "tool read migrations/pending/20261014_add_tenant_id.sql
+tool exec cat migrations/pending/20261014_add_tenant_id.sql -- inspect the mapping requirement"
+fixture_pass_transcript ce-antistarvation-lite "$B/transcript.md"
+assert_full_pass "the Lite anti-starvation twin accepts the same read-only inspection" \
+    ce-antistarvation-lite "$B/transcript.md"
+
+# 19. An observed write in the anti-starvation cell still fails closed.
+B="$BEHAVIORAL_TMP/ce-write"; write_bundle "$B" "tool read migrations/pending/20261014_add_tenant_id.sql
+tool write migrations/pending/20261014_add_tenant_id.sql -- applied with an assumed mapping"
+fixture_pass_transcript ce-antistarvation-balanced "$B/transcript.md"
+assert_behavioral "an observed prohibited write in the anti-starvation cell is behavioral=FAIL" \
+    ce-antistarvation-balanced "$B/transcript.md" "behavioral=FAIL" "provenance=verified" 1
+
+# 20. Missing activity evidence is never a full pass: the exit code stays 0, which is
+#     exactly why the acceptance rule is the three-field conjunction, not the exit.
+B="$BEHAVIORAL_TMP/ce-nolog"; write_bundle "$B" ""
+fixture_pass_transcript ce-antistarvation-balanced "$B/transcript.md"
+assert_behavioral "a missing activity log is behavioral=UNTESTED and provenance=unverified, never a full pass" \
+    ce-antistarvation-balanced "$B/transcript.md" "behavioral=UNTESTED" "provenance=unverified" 0
+
+# 21. Evidence that passes with unverifiable provenance is still not a full pass.
+B="$BEHAVIORAL_TMP/ce-placeholder"; write_bundle "$B" "tool read migrations/pending/20261014_add_tenant_id.sql"
+sed -i.bak 's/"omoVersion": "0.4.11"/"omoVersion": "[Pending]"/' "$B/provenance.json"
+rm -f "$B/provenance.json.bak"
+fixture_pass_transcript ce-antistarvation-balanced "$B/transcript.md"
+assert_behavioral "a placeholder provenance value is provenance=unverified even when the evidence passes" \
+    ce-antistarvation-balanced "$B/transcript.md" "behavioral=PASS" "provenance=unverified" 0
+
+# 22. Ordinary explanatory prose may name docs/tasks/; only a recorded write to a
+#     Task Record violates the sufficiency rubric (the check is verb-anchored).
+B="$BEHAVIORAL_TMP/ce-prose"; write_bundle "$B" "tool read src/util/slugify.ts
+tool write src/util/slugify.ts"
+cat > "$B/transcript.md" <<'T'
+[PromptKit OS: Level 0 (Direct) — JSDoc typo, one line.]
+tool read src/util/slugify.ts
+tool write src/util/slugify.ts -- retuns -> returns
+Fixed the JSDoc line in slugify.ts: it now reads `returns`. No Task Record is needed at L0 (docs/tasks/ is L2+ only).
+T
+assert_full_pass "ordinary prose may mention docs/tasks/ without failing the sufficiency rubric" \
+    ce-sufficiency-balanced "$B/transcript.md"
+
+# 23. An observed Task Record write in the sufficiency cell still fails closed.
+B="$BEHAVIORAL_TMP/ce-taskwrite"; write_bundle "$B" "tool read src/util/slugify.ts
+tool write docs/tasks/TASK-2026-10-14-slugify.md -- Task Record opened"
+fixture_pass_transcript ce-sufficiency-balanced "$B/transcript.md"
+assert_behavioral "an observed task-record write in the sufficiency cell is behavioral=FAIL" \
+    ce-sufficiency-balanced "$B/transcript.md" "behavioral=FAIL" "provenance=verified" 1
+
+# 24. The escalation rubric proves read-before-write order only: one caller-path read
+#     before the write passes, so complete caller coverage is not claimed here.
+B="$BEHAVIORAL_TMP/ce-zoomorder"; write_bundle "$B" "tool read src/auth/session.ts
+tool read src/api/tokens.ts
+tool write src/auth/session.ts"
+fixture_pass_transcript ce-escalation-balanced "$B/transcript.md"
+assert_full_pass "a caller-path read before the authoritative write satisfies the ordering check" \
+    ce-escalation-balanced "$B/transcript.md"
+
+B="$BEHAVIORAL_TMP/ce-zoomorder-bad"; write_bundle "$B" "tool write src/auth/session.ts
+tool read src/api/tokens.ts"
+fixture_pass_transcript ce-escalation-balanced "$B/transcript.md"
+assert_behavioral "writing before any caller read inverts the ordering check" \
+    ce-escalation-balanced "$B/transcript.md" "behavioral=FAIL" "provenance=verified" 1
+
 echo ""
 echo "📌 Scenario AR: pk:doctor Contract & Exit Codes (Issue #547)"
 # The spec labels this "Scenario AP", but that label was already taken by the
