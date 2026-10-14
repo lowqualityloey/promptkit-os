@@ -33,8 +33,8 @@ PromptKit OS separates operational guidance into three distinct tiers:
 ├───────────────────┬──────────────────────┬─────────────────────────────┤
 │ Tier              │ Location             │ Activation & Scope          │
 ├───────────────────┼──────────────────────┼─────────────────────────────┤
-│ 1. Rules          │ rules/*.md           │ Global, non-negotiable      │
-│                   │                      │ invariants in directives    │
+│ 1. Policy         │ templates/           │ Universal guidance injected │
+│                   │                      │ into host instructions      │
 ├───────────────────┼──────────────────────┼─────────────────────────────┤
 │ 2. Playbooks      │ docs/stacks/*.md     │ Stack-specific; activated   │
 │                   │                      │ JIT by project manifests    │
@@ -44,11 +44,12 @@ PromptKit OS separates operational guidance into three distinct tiers:
 └───────────────────┴──────────────────────┴─────────────────────────────┘
 ```
 
-### When to Write a Recipe vs. Playbook vs. Rule
+### When to Write a Recipe vs. Playbook vs. Universal Policy
 
-- **Write a Rule** (`rules/`):
+- **Write Universal Policy** (`templates/`):
   - When the invariant is **universal** across every interaction, file, and tool execution (e.g. secret redaction, accidental data loss prevention, non-destructive file operations).
-  - Rules are permanently present or referenced in agent directives.
+  - The Balanced and Lite directive templates (`templates/agent-directive-template.md` and `templates/agent-directive-lite-template.md`) are injected into supported host instructions by `init.sh` or `init.ps1`.
+  - Additional `protocols/` are referenced and loaded only when required; no blanket preload or extra mandatory read.
 - **Write a Stack Playbook** (`docs/stacks/*.md`):
   - When the guidance is **technology stack-specific** and triggered by repository manifests (e.g. `package.json` $\rightarrow$ `fullstack-nextjs.md`, `Cargo.toml` $\rightarrow$ `systems-rust.md`).
   - Playbooks declare manifest triggers, three-tier verification commands (`fast`, `required`, `extended`), and stack anti-patterns.
