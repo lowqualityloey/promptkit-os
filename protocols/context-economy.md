@@ -103,7 +103,7 @@ PromptKit OS defines a vendor-neutral, capability-based interface for context re
 
 ```yaml
 context_provider:
-  # Mandatory baseline satisfied by standard shell tools (grep, fd, bounded reads)
+  # Mandatory baseline satisfied by standard shell tools (grep, find, bounded reads)
   required_capabilities:
     - text_search       # Exact keyword or regex match
     - bounded_read      # Line/offset-bounded file slice
@@ -123,6 +123,8 @@ context_provider:
 ### Provider Adaptation
 1. **Minimal Provider (Native CLI)**: Uses `grep`, `find_by_name`, and bounded reads. Satisfies all required capabilities with zero external dependencies. Z0 may be satisfied through native text/search capabilities when semantic symbol extraction is unavailable; `symbol_search` is an optimization, not a prerequisite.
 2. **Rich Provider (MCP / Indexing Engine)**: When an active MCP server (such as Code Context Engine or ACE) is detected in the host environment, PromptKit leverages its optional capabilities (e.g., `symbol_search` for Z0/Z1, `graph_expansion` for Z3) while strictly holding PromptKit's Governance, Anti-Starvation, and Hard Escalation Triggers authoritative.
+
+**Semantics are part of the capability, not a property of the tool.** Satisfying a `required_capabilities` entry means returning the evidence the request actually asked for, not merely invoking a tool that resembles one. When a rich provider is unavailable and the minimal provider answers instead — or when one CLI utility stands in for another — preserve the request's scope for hidden and ignored paths, its symlink handling, its pattern dialect and case sensitivity, and its no-match versus command-failure exit status. A fallback that changes the result set is a different retrieval, not a degradation; if no available provider can preserve the requested semantics, surface that rather than returning differently-scoped evidence. This is an obligation on the agent, not a runtime control (see §11).
 
 ---
 
