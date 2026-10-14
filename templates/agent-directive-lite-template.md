@@ -25,7 +25,7 @@ Engine: $ENGINE_VERSION ($ENGINE_SHA) — stamped at install time; run `pk:sync`
 - **Context Recovery**: After handover, compaction/continuation, task-invariant loss, or status interruption that displaced active work, pause writes; read `$KIT_DIR_REL/workflows/sync.md` before resuming.
 - **Pre-Response Check**: Before replying, confirm stop state, the highest-priority unresolved human action with its concrete action + `👉 Reply:` hint, retained suppressed actions, honest evidence, and TL;DR on substantive turns (L0 exempt); see `$KIT_DIR_REL/protocols/telemetry-cards.md`.
 - **DB Isolation**: Use project-scoped containers, never foreign DBs.
-- **Git Boundaries**: Never start new milestone with dirty tree. At milestone end: verify, `pk:commit`, update `docs/STATE.md`, request sign-off.
+- **Git Boundaries**: Never cross a milestone with this task's uncommitted changes. Surface pre-existing dirt; never alter or stall on it. At milestone end: verify, atomic `pk:commit`, sync `docs/STATE.md`, request sign-off.
 
 ### Workflows & Protocols Reference (Lite)
 Load lazily by convention — never preload:

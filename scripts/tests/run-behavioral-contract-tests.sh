@@ -188,6 +188,31 @@ assert_contains "workflows/route.md" "Tie-Break" "Router defines the mixed-level
 assert_contains "templates/agent-directive-template.md" "Ties take the higher level" "Directive carries the tie-break rule"
 assert_contains "protocols/code-quality-gate.md" "milestone boundary.*is the turn after" "Quality gate defines the milestone boundary"
 
+echo ""
+echo "📌 Scenario AS: Guidance-Tier Catalog Truthfulness & Lite Git Boundaries (Issue #606)"
+# Minimal corrections: tier-1 policy lives in templates/ — the directive templates
+# actually installed into supported host instructions — not a nonexistent rules/
+# directory; additional protocols/ are referenced and loaded only when required.
+# The three-tier diagram and each catalog's own authoring contract are retained.
+for tier_catalog in "docs/stacks/README.md" "docs/recipes/README.md"; do
+    assert_contains "$tier_catalog" '1\. Policy.*templates/' "Tier 1 policy points at the installed directive templates directory"
+    assert_contains "$tier_catalog" 'PROMPTKIT GUIDANCE TIERS' "Three-tier guidance diagram is retained"
+    assert_contains "$tier_catalog" 'Durability Contract for (Playbook|Recipe) Authors' "Catalog keeps its own authoring durability contract"
+    assert_contains "$tier_catalog" 'directive templates?.*(installed|injected).*host instructions?' "Policy bullet states directive templates are installed into supported host instructions"
+    assert_contains "$tier_catalog" 'protocols.*(referenced|loaded).*(when required|on demand|when needed)' "Policy bullet states protocols are referenced or loaded only when required"
+    assert_not_contains "$tier_catalog" '(^|[^A-Za-z0-9_./-])rules/\*\.md' "Catalog no longer routes tier-1 policy at rules/*.md"
+    assert_not_contains "$tier_catalog" 'Write a Rule|permanently (mounted|present|referenced)' "Catalog drops the permanently-mounted rules authoring claim"
+done
+assert_contains "templates/agent-directive-lite-template.md" 'Never cross a milestone.*this task.s.*uncommitted changes' "Lite forbids crossing a milestone with this task's uncommitted changes"
+assert_contains "templates/agent-directive-lite-template.md" 'Surface pre-existing dirt.*never alter or stall' "Lite surfaces pre-existing dirt without altering or stalling"
+assert_contains "templates/agent-directive-lite-template.md" 'milestone end:.*verify.*atomic .pk:commit.' "Lite retains verification and atomic pk:commit at milestone end"
+assert_contains "templates/agent-directive-lite-template.md" 'sync .docs/STATE\.md.' "Lite retains docs/STATE.md synchronization at milestone end"
+assert_contains "templates/agent-directive-lite-template.md" 'request sign-off' "Lite retains the human sign-off request"
+assert_contains "templates/agent-directive-template.md" 'this task.s.*uncommitted changes' "Balanced directive retains the task-scoped milestone boundary"
+assert_contains "templates/agent-directive-template.md" 'pre-existing dirt.*surfaced.*never a stall reason' "Balanced directive retains the pre-existing-dirt exception"
+assert_contains "protocols/code-quality-gate.md" 'produced.*by the current task' "Quality gate retains the substantive task-scope qualification"
+assert_contains "protocols/code-quality-gate.md" 'documented exception.*do not stall' "Quality gate retains the pre-existing-dirt exception"
+
 for directive_file in "templates/agent-directive-template.md" "templates/agent-directive-lite-template.md"; do
     DUPS=$(awk '/^- `pk:/ {print}' "$REPO_ROOT/$directive_file" | grep -oE "\`pk:[a-z-]+\`" | sort | uniq -d)
     if [ -z "$DUPS" ]; then

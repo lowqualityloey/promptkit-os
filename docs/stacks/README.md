@@ -46,8 +46,8 @@ PromptKit OS organizes technical guidance into three complementary tiers:
 ├───────────────────┬──────────────────────┬─────────────────────────────┤
 │ Tier              │ Location             │ Activation & Scope          │
 ├───────────────────┼──────────────────────┼─────────────────────────────┤
-│ 1. Rules          │ rules/*.md           │ Global, non-negotiable      │
-│                   │                      │ invariants in directives    │
+│ 1. Policy         │ templates/           │ Universal guidance injected │
+│                   │                      │ into host instructions      │
 ├───────────────────┼──────────────────────┼─────────────────────────────┤
 │ 2. Playbooks      │ docs/stacks/*.md     │ Stack-specific; activated   │
 │                   │                      │ JIT by project manifests    │
@@ -57,11 +57,12 @@ PromptKit OS organizes technical guidance into three complementary tiers:
 └───────────────────┴──────────────────────┴─────────────────────────────┘
 ```
 
-### When to Write a Playbook vs. Recipe vs. Workflow vs. Rule
+### When to Write a Playbook vs. Recipe vs. Workflow vs. Universal Policy
 
-- **Write a Rule** (`rules/`):
+- **Write Universal Policy** (`templates/`):
   - When the invariant is **universal and binding across all tasks, repositories, and languages** (e.g. secret redaction, accidental data loss prevention, non-destructive file operations).
-  - Rules are permanently mounted in agent setup directives.
+  - The Balanced and Lite directive templates (`templates/agent-directive-template.md` and `templates/agent-directive-lite-template.md`) are injected into supported host instructions by `init.sh` or `init.ps1`.
+  - Additional `protocols/` are referenced and loaded only when required; no blanket preload or extra mandatory read.
 - **Write a Stack Playbook** (`docs/stacks/*.md`):
   - When guidance is **bound to a specific technology stack or framework ecosystem** (Next.js, Astro, Rust, Go, Expo, Supabase).
   - Must have **deterministic manifest triggers** (files like `astro.config.mjs`, `go.mod`, `Cargo.toml`).

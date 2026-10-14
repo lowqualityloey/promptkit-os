@@ -189,6 +189,30 @@ Assert-Contains "workflows/route.md" "Tie-Break" "Router defines the mixed-level
 Assert-Contains "templates/agent-directive-template.md" "Ties take the higher level" "Directive carries the tie-break rule"
 Assert-Contains "protocols/code-quality-gate.md" "milestone boundary.*is the turn after" "Quality gate defines the milestone boundary"
 
+Write-Host "`n📌 Scenario AS: Guidance-Tier Catalog Truthfulness & Lite Git Boundaries (Issue #606)" -ForegroundColor Yellow
+# Minimal corrections: tier-1 policy lives in templates/ — the directive templates
+# actually installed into supported host instructions — not a nonexistent rules/
+# directory; additional protocols/ are referenced and loaded only when required.
+# The three-tier diagram and each catalog's own authoring contract are retained.
+foreach ($tierCatalog in @('docs/stacks/README.md', 'docs/recipes/README.md')) {
+    Assert-Contains $tierCatalog '1\. Policy.*templates/' "Tier 1 policy points at the installed directive templates directory"
+    Assert-Contains $tierCatalog 'PROMPTKIT GUIDANCE TIERS' "Three-tier guidance diagram is retained"
+    Assert-Contains $tierCatalog 'Durability Contract for (Playbook|Recipe) Authors' "Catalog keeps its own authoring durability contract"
+    Assert-Contains $tierCatalog 'directive templates?.*(installed|injected).*host instructions?' "Policy bullet states directive templates are installed into supported host instructions"
+    Assert-Contains $tierCatalog 'protocols.*(referenced|loaded).*(when required|on demand|when needed)' "Policy bullet states protocols are referenced or loaded only when required"
+    Assert-NotContains $tierCatalog '(^|[^A-Za-z0-9_./-])rules/\*\.md' "Catalog no longer routes tier-1 policy at rules/*.md"
+    Assert-NotContains $tierCatalog 'Write a Rule|permanently (mounted|present|referenced)' "Catalog drops the permanently-mounted rules authoring claim"
+}
+Assert-Contains "templates/agent-directive-lite-template.md" 'Never cross a milestone.*this task.s.*uncommitted changes' "Lite forbids crossing a milestone with this task's uncommitted changes"
+Assert-Contains "templates/agent-directive-lite-template.md" 'Surface pre-existing dirt.*never alter or stall' "Lite surfaces pre-existing dirt without altering or stalling"
+Assert-Contains "templates/agent-directive-lite-template.md" 'milestone end:.*verify.*atomic .pk:commit.' "Lite retains verification and atomic pk:commit at milestone end"
+Assert-Contains "templates/agent-directive-lite-template.md" 'sync .docs/STATE\.md.' "Lite retains docs/STATE.md synchronization at milestone end"
+Assert-Contains "templates/agent-directive-lite-template.md" 'request sign-off' "Lite retains the human sign-off request"
+Assert-Contains "templates/agent-directive-template.md" 'this task.s.*uncommitted changes' "Balanced directive retains the task-scoped milestone boundary"
+Assert-Contains "templates/agent-directive-template.md" 'pre-existing dirt.*surfaced.*never a stall reason' "Balanced directive retains the pre-existing-dirt exception"
+Assert-Contains "protocols/code-quality-gate.md" 'produced.*by the current task' "Quality gate retains the substantive task-scope qualification"
+Assert-Contains "protocols/code-quality-gate.md" 'documented exception.*do not stall' "Quality gate retains the pre-existing-dirt exception"
+
 foreach ($directive in @("templates/agent-directive-template.md", "templates/agent-directive-lite-template.md")) {
     $tokens = Select-String -Path (Join-Path $RepoRoot $directive) -Pattern '^- `pk:' |
         ForEach-Object { [regex]::Matches($_.Line, '`pk:[a-z-]+`') } |
