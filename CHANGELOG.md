@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Bounded CLI capability discovery — documentation only (issue #555)**: Clarify portable CLI selection in `protocols/setup.md` and the dependency-free provider baseline in `protocols/context-economy.md`: `grep`/`find` on POSIX-compatible shells and `Select-String`/`Get-ChildItem` on native Windows PowerShell are the environment-specific baselines, `rg`/`fd`/`bat` (and the `fdfind`/`batcat` binary names) are optional accelerators selectable on their effective flags, and any fallback preserves hidden/ignored-path, symlink, case, regex, and exit-status semantics with non-interactive, bounded output that never silently omits evidence needed for correctness, security, or verification. Documentation only: no executable capability detector, runtime enforcement, capability cache, or measured efficiency improvement is added.
 - **Terminology consistency (issue #605)**: Clarify Adoption Stages 0–4, task-ceremony Levels 0–3, and the refactor workflow’s Level 0 boundary.
 - **Installed-instruction integrity boundary (issue #602)**: Document the trust boundaries, guarantees, and residual risk across Git submodule, npm courier, and host-directive installation modes in `protocols/setup.md` and `docs/MIGRATION.md`, distinguishing archive/transport verification from post-install and host runtime execution.
 
