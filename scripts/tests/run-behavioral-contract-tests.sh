@@ -343,6 +343,12 @@ assert_not_contains "templates/project-profile-template.md" "never a stall reaso
 assert_contains "templates/state-tracker-template.md" "source:" "State template requires an inline source for locked invariants"
 assert_contains "docs/WORKFLOW-MAP.md" "onboarding artifacts" "WORKFLOW-MAP records the onboarding artifacts' projection authority"
 
+# Issue #647: intake-record in the profile authority projection (static documentation contract).
+assert_contains "protocols/discovery-intake.md" "size:.*intake-status:.*intake-record:" "Authority table names intake-record alongside size and intake-status"
+assert_contains "protocols/discovery-intake.md" "not a second source of interview or decision authority" "Profile intake-record is a path reference, not a second decision authority"
+assert_contains "protocols/discovery-intake.md" "non-fatal compatibility advisory" "Doctor treats an absent intake-record line as a non-fatal advisory"
+assert_contains "protocols/discovery-intake.md" "missing line is valid for profiles created before" "Missing intake-record lines stay valid for pre-field profiles"
+
 echo ""
 echo "📌 Scenario O: Protocol registry & FAQ count drift guards"
 PROTO_FAIL=0
