@@ -38,6 +38,72 @@ assert_not_contains() {
     fi
 }
 
+# Onboard write-gate verdict (Issue #642): the first Phase 3 managed-artifact write
+# must be conditioned on exactly one pre-write artifact -- the Phase 2 findings
+# summary -- defined inside Phase 2 (before the Phase 3 heading), with the scorecard
+# never paired into the precondition and its Phase 4 emit appearing exactly once.
+# Prints PASS or FAIL:<reason,...>; always exits 0.
+onboard_write_gate_verdict() {
+    local file="$1"
+    local verdict=""
+    if [ ! -f "$file" ]; then
+        printf 'FAIL:missing-file\n'
+        return 0
+    fi
+    verdict="$(awk '
+        {
+            if (/^### Phase 3:/) { if (ph3 == 0) ph3 = NR }
+            if (/End-of-Phase-2 Findings Summary/) { if (sum == 0) sum = NR }
+            if (/only after explicit human confirmation of the Phase 2 findings summary/) named = 1
+            if (/Executive Architecture Scorecard is not this precondition/) excluded = 1
+            cnt = gsub(/Emit Executive Architecture Scorecard/, "&&")
+            emit += cnt
+            if (/following the findings summary \// || /findings summary \/ [Ee]xecutive/ || /findings summary \/ [Ss]corecard/) legacy = 1
+        }
+        END {
+            reasons = ""
+            if (sum == 0 || (ph3 != 0 && sum > ph3)) reasons = reasons "summary-not-defined-before-phase-3,"
+            if (!named || !excluded) reasons = reasons "guardrail-names-wrong-or-extra-artifact,"
+            if (legacy) reasons = reasons "legacy-summary-scorecard-pairing,"
+            if (emit != 1) reasons = reasons "scorecard-emit-count-" emit ","
+            if (reasons == "") {
+                print "PASS"
+            } else {
+                sub(/,$/, "", reasons)
+                print "FAIL:" reasons
+            }
+        }
+    ' "$file" 2>/dev/null)" || verdict="FAIL:awk-error"
+    if [ -z "$verdict" ]; then
+        verdict="FAIL:empty-verdict"
+    fi
+    printf '%s\n' "$verdict"
+    return 0
+}
+
+assert_onboard_write_gate() {
+    local file="$1"
+    local expected="$2"
+    local desc="$3"
+    local path="$file"
+    local actual=""
+    local status=""
+
+    if [ "${path#/}" = "$path" ]; then
+        path="$REPO_ROOT/$file"
+    fi
+    actual="$(onboard_write_gate_verdict "$path")"
+    status="${actual%%:*}"
+
+    if [ "$status" = "$expected" ]; then
+        echo "  ✅ PASS: $desc"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        echo "  ❌ FAIL: $desc (expected $expected, got $actual)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+
 # §4 structural verdict (Issue #648): inside "## 4. Locked Technical Invariants" the
 # two source shapes must be fenced, explicitly illustrative syntax -- never bare
 # entries -- and the empty state must be marked as not an invariant entry. The check
@@ -445,6 +511,29 @@ assert_contains "workflows/onboard.md" "human overrides take precedence" "Onboar
 assert_contains "workflows/onboard.md" "strictly preserves existing confirmed values" "Onboard preserves existing confirmed size and intake-status on brownfield runs"
 assert_contains "workflows/onboard.md" "never overwrite an existing.*DESIGN.*without explicit human confirmation" "Onboard preserves existing DESIGN.md without explicit human confirmation"
 assert_contains "workflows/onboard.md" "unverified until executed" "Onboard labels discovered commands as unverified until executed"
+# Issue #642: the pre-write gate names exactly one artifact -- the Phase 2 findings summary.
+assert_contains "workflows/onboard.md" "Phase 2 findings summary" "Onboard names the Phase 2 findings summary as the pre-write artifact"
+assert_contains "workflows/onboard.md" "only after explicit human confirmation of the Phase 2 findings summary" "Onboard guardrail conditions Phase 3 writes on confirming the Phase 2 findings summary"
+assert_contains "workflows/onboard.md" "End-of-Phase-2 Findings Summary" "Onboard defines the findings summary inside Phase 2, before the first Phase 3 write"
+assert_contains "workflows/onboard.md" "presents the Phase 2 findings summary and halts to request explicit human confirmation" "Onboard Phase 1 directive names the same single artifact"
+assert_contains "workflows/onboard.md" "absent confirmation is not approval" "Onboard rejects adjustment, ambiguous, and absent replies as approval"
+assert_contains "workflows/onboard.md" "authorizes only the managed-artifact generation scope" "Onboard confirmation scope excludes host application source"
+assert_not_contains "workflows/onboard.md" "following the findings summary / Executive Scorecard" "Onboard no longer pairs the summary with the Phase 4 scorecard in the write precondition"
+assert_not_contains "workflows/onboard.md" "findings summary / scorecard" "Onboard Phase 1 directive no longer names an undefined scorecard"
+assert_onboard_write_gate "workflows/onboard.md" "PASS" "Onboard write gate: summary defined before Phase 3, single-artifact condition, one scorecard emit"
+ONBOARD_LEGACY_TMP="$(mktemp "${TMPDIR:-/tmp}/pk-onboard-legacy.XXXXXX")"
+cat > "$ONBOARD_LEGACY_TMP" <<'ONBOARD_LEGACY_EOF'
+## Non-Negotiable Guardrail: Passive Discovery, Human-Authorized Generation
+Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESIGN.md`, `docs/STATE.md`) only after explicit human confirmation following the findings summary / Executive Scorecard. Host application source/configuration remains untouched without authorization.
+
+### Phase 3: Profile & Guardrail Generation
+
+### Phase 4: Architecture Health Scorecard & Backlog Ingestion
+
+1. **Emit Executive Architecture Scorecard**:
+ONBOARD_LEGACY_EOF
+assert_onboard_write_gate "$ONBOARD_LEGACY_TMP" "FAIL" "Onboard write-gate guard rejects the original defective wording (legacy sample)"
+rm -f -- "$ONBOARD_LEGACY_TMP"
 assert_contains "protocols/discovery-intake.md" "close_reason" "Intake protocol records why the interview closed"
 assert_contains "protocols/discovery-intake.md" "Later ledger" "Intake protocol routes AI-suggested scope to the Later ledger"
 assert_contains "protocols/discovery-intake.md" "Product-Shape Cover Questions" "Intake asks product-shape (SaaS-class) decision questions before any stack is named"

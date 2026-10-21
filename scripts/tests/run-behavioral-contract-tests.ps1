@@ -52,6 +52,82 @@ function Assert-NotContains {
     $script:PassCount++
 }
 
+function Get-OnboardWriteGateVerdict {
+    param([string]$Path)
+
+    $content = $null
+    try {
+        $content = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop
+    } catch {
+        return 'FAIL:file-unreadable'
+    }
+    if ($null -eq $content) { return 'FAIL:file-unreadable' }
+
+    $lines = ($content -replace "`r", '') -split "`n"
+    $phase3Line = 0
+    $summaryLine = 0
+    $namedArtifact = $false
+    $excludedScorecard = $false
+    $emitCount = 0
+    $legacyPairing = $false
+
+    for ($i = 0; $i -lt $lines.Length; $i++) {
+        $line = $lines[$i]
+        if ($line -match '^### Phase 3:' -and $phase3Line -eq 0) { $phase3Line = $i + 1 }
+        if ($line -match 'End-of-Phase-2 Findings Summary' -and $summaryLine -eq 0) { $summaryLine = $i + 1 }
+        if ($line -match 'only after explicit human confirmation of the Phase 2 findings summary') { $namedArtifact = $true }
+        if ($line -match 'Executive Architecture Scorecard is not this precondition') { $excludedScorecard = $true }
+        $emitCount += ([regex]::Matches($line, 'Emit Executive Architecture Scorecard')).Count
+        if (($line -match 'following the findings summary /') -or ($line -match 'findings summary / [Ee]xecutive') -or ($line -match 'findings summary / [Ss]corecard')) {
+            $legacyPairing = $true
+        }
+    }
+
+    $reasons = @()
+    if ($summaryLine -eq 0 -or ($phase3Line -ne 0 -and $summaryLine -gt $phase3Line)) { $reasons += 'summary-not-defined-before-phase-3' }
+    if (-not $namedArtifact -or -not $excludedScorecard) { $reasons += 'guardrail-names-wrong-or-extra-artifact' }
+    if ($legacyPairing) { $reasons += 'legacy-summary-scorecard-pairing' }
+    if ($emitCount -ne 1) { $reasons += 'scorecard-emit-count-' + $emitCount }
+
+    if ($reasons.Count -eq 0) {
+        return 'PASS'
+    }
+    return 'FAIL:' + ($reasons -join ',')
+}
+
+function Assert-OnboardWriteGate {
+    param(
+        [string]$File,
+        [string]$Expected,
+        [string]$Description
+    )
+
+    if ([System.IO.Path]::IsPathRooted($File)) {
+        $fullPath = $File
+    } else {
+        $fullPath = Join-Path $RepoRoot $File
+    }
+
+    $verdict = Get-OnboardWriteGateVerdict $fullPath
+
+    if ($Expected -eq 'PASS') {
+        $matched = ($verdict -eq 'PASS')
+    } elseif ($Expected -eq 'FAIL') {
+        $matched = $verdict.StartsWith('FAIL')
+    } else {
+        $matched = ($verdict -eq $Expected)
+    }
+
+    if ($matched) {
+        Write-Host "  ✅ PASS: $Description" -ForegroundColor Green
+        $script:PassCount++
+        return
+    }
+    Write-Host "  ❌ FAIL: $Description (expected $Expected, got $verdict)" -ForegroundColor Red
+    $script:FailCount++
+}
+
+# §4 structural verdict (Issue #648): inside "## 4. Locked Technical Invariants" the
 function Get-InvariantSectionVerdict {
     param([string]$Path)
 
@@ -471,6 +547,33 @@ Assert-Contains "workflows/onboard.md" "human overrides take precedence" "Onboar
 Assert-Contains "workflows/onboard.md" "strictly preserves existing confirmed values" "Onboard preserves existing confirmed size and intake-status on brownfield runs"
 Assert-Contains "workflows/onboard.md" "never overwrite an existing.*DESIGN.*without explicit human confirmation" "Onboard preserves existing DESIGN.md without explicit human confirmation"
 Assert-Contains "workflows/onboard.md" "unverified until executed" "Onboard labels discovered commands as unverified until executed"
+# Issue #642: the pre-write gate names exactly one artifact -- the Phase 2 findings summary.
+Assert-Contains "workflows/onboard.md" "Phase 2 findings summary" "Onboard names the Phase 2 findings summary as the pre-write artifact"
+Assert-Contains "workflows/onboard.md" "only after explicit human confirmation of the Phase 2 findings summary" "Onboard guardrail conditions Phase 3 writes on confirming the Phase 2 findings summary"
+Assert-Contains "workflows/onboard.md" "End-of-Phase-2 Findings Summary" "Onboard defines the findings summary inside Phase 2, before the first Phase 3 write"
+Assert-Contains "workflows/onboard.md" "presents the Phase 2 findings summary and halts to request explicit human confirmation" "Onboard Phase 1 directive names the same single artifact"
+Assert-Contains "workflows/onboard.md" "absent confirmation is not approval" "Onboard rejects adjustment, ambiguous, and absent replies as approval"
+Assert-Contains "workflows/onboard.md" "authorizes only the managed-artifact generation scope" "Onboard confirmation scope excludes host application source"
+Assert-NotContains "workflows/onboard.md" "following the findings summary / Executive Scorecard" "Onboard no longer pairs the summary with the Phase 4 scorecard in the write precondition"
+Assert-NotContains "workflows/onboard.md" "findings summary / scorecard" "Onboard Phase 1 directive no longer names an undefined scorecard"
+Assert-OnboardWriteGate "workflows/onboard.md" "PASS" "Onboard write gate: summary defined before Phase 3, single-artifact condition, one scorecard emit"
+$onboardLegacySample = @'
+## Non-Negotiable Guardrail: Passive Discovery, Human-Authorized Generation
+Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESIGN.md`, `docs/STATE.md`) only after explicit human confirmation following the findings summary / Executive Scorecard. Host application source/configuration remains untouched without authorization.
+
+### Phase 3: Profile & Guardrail Generation
+
+### Phase 4: Architecture Health Scorecard & Backlog Ingestion
+
+1. **Emit Executive Architecture Scorecard**:
+'@
+$onboardLegacyPath = Join-Path ([System.IO.Path]::GetTempPath()) ("pk642-onboard-legacy-" + [System.Guid]::NewGuid().ToString('N') + ".md")
+try {
+    Set-Content -LiteralPath $onboardLegacyPath -Value $onboardLegacySample -Encoding utf8
+    Assert-OnboardWriteGate $onboardLegacyPath "FAIL" "Onboard write-gate guard rejects the original defective wording (legacy sample)"
+} finally {
+    Remove-Item -LiteralPath $onboardLegacyPath -Force -ErrorAction SilentlyContinue
+}
 Assert-Contains "protocols/discovery-intake.md" "close_reason" "Intake protocol records why the interview closed"
 Assert-Contains "protocols/discovery-intake.md" "Later ledger" "Intake protocol routes AI-suggested scope to the Later ledger"
 Assert-Contains "protocols/discovery-intake.md" "Product-Shape Cover Questions" "Intake asks product-shape (SaaS-class) decision questions before any stack is named"

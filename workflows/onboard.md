@@ -21,7 +21,7 @@ The assistant must perform the investigative heavy lifting: reading manifests, c
 ## Non-Negotiable Guardrail: Passive Discovery, Human-Authorized Generation
 Phases 0–2 perform passive non-destructive discovery: scanning manifests, tooling, and directory structures without modifying host application source or configuration files. The assistant must **never** create, modify, or delete host application source files unprompted.
 
-Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESIGN.md`, `docs/STATE.md`) only after explicit human confirmation following the findings summary / Executive Scorecard. Host application source/configuration remains untouched without authorization.
+Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESIGN.md`, `docs/STATE.md`) only after explicit human confirmation of the Phase 2 findings summary — the single pre-write authorization artifact, presented at the end of Phase 2. A refusal, an adjustment request, an ambiguous reply, or absent confirmation is not approval. Explicit confirmation authorizes only the managed-artifact generation scope above; it never authorizes host application source/configuration changes, which remain untouched without separate authorization. The Executive Architecture Scorecard is not this precondition: it is a Phase 4 deliverable, emitted after the artifacts it evaluates.
 
 ---
 
@@ -68,7 +68,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
 ### Phase 1: Manifest & Tooling Discovery
 
 > [!IMPORTANT]
-> **Passive Inspection Directive**: Phases 1 & 2 are strictly read-only scanning operations. The AI assistant must not create, edit, or delete any host application source files. After scanning manifests and architecture, the assistant presents its findings summary / scorecard and halts to request human confirmation before proceeding to file generation: `👉 Reply: Type 'proceed' or 'yes' to continue, or describe adjustments.`
+> **Passive Inspection Directive**: Phases 1 & 2 are strictly read-only scanning operations. The AI assistant must not create, edit, or delete any host application source files. After Phases 1 and 2 scan manifests and architecture, the assistant presents the Phase 2 findings summary and halts to request explicit human confirmation of that summary before any Phase 3 file generation: `👉 Reply: Type 'proceed' or 'yes' to continue, or describe adjustments.` No managed artifact is written before that confirmation; an adjustment request or an ambiguous reply is not approval.
 
 1. **Package Manager & Ecosystem Detection**:
    Inspect the repository root for lockfiles and manifests:
@@ -149,6 +149,9 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
 
 6. **Environment & Configuration Validation**:
    Passively detect configuration schema files (`.env.example`, `env.ts`, `t3-env`, `pydantic-settings`). For fail-fast boot validation and client vs. server secret isolation patterns, see `docs/recipes/env-validation.md`.
+
+7. **End-of-Phase-2 Findings Summary (single pre-write authorization artifact)**:
+   Present a concise findings summary in the conversation — detected manifests and tooling, extracted commands (marked *unverified until executed*), architecture/boundary patterns, data, auth, and API conventions, standard root documentation, and environment-config observations — then halt for explicit human confirmation of that summary before any Phase 3 managed-artifact write. This summary is the only artifact Phase 3 confirmation covers; the Executive Architecture Scorecard stays a Phase 4 deliverable and is never the pre-write precondition.
 
 ---
 
