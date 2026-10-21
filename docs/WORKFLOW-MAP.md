@@ -58,6 +58,8 @@ This matrix is the shared authority reference for `pk:route`, `pk:plan`, and Ada
 
 This section is the single Phase 3 contract for artifact locations, identities, fields, lifecycle states, links, ownership, and validator boundaries. Workflows and templates may explain the contract, but they must not create a competing schema or authority.
 
+The onboarding artifacts are projections, never competing authorities: the Intake Record (`docs/specs/YYYY-MM-DD-intake-<project>.md`) owns the interview answers; `PROMPTKIT.md` and `DESIGN.md` project those answers and remain overlays of the underlying project documents; `docs/STATE.md` is the `pk:checkpoint` projection. Their authority classes — human-confirmed decision, accepted default, agent-owned assumption, derived PromptKit baseline, pending verification obligation, and resolved or superseded assumption — are defined once in `protocols/discovery-intake.md` §G. Validators check record-path health and projection consistency only; they never infer human approval.
+
 ### Identity and Link Rules
 
 - All Adaptation artifact IDs are immutable. Slugs use lowercase kebab-case. `<nnn>` is a zero-padded three-digit sequence. `behavior-seq` is the corresponding zero-padded Behavior ID sequence.

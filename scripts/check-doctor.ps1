@@ -3,11 +3,12 @@
 # Usage: scripts/check-doctor.ps1 [-KitRoot <path>] [-Fix]
 #
 # Reports host directive blocks, engine version/drift, managed-path ignore
-# state, and docs state-store drift. Read-only by default: it never stages,
-# commits, edits, or runs an upgrade. The only permitted write is -Fix, which
-# re-emits a MISSING managed directive block into an installed host file (the
-# profile-appropriate template with $ENGINE_VERSION/$ENGINE_SHA substituted
-# exactly as init.ps1 does). No other write ever happens.
+# state, docs state-store drift, and intake record-path health. Read-only by
+# default: it never stages, commits, edits, or runs an upgrade. The only
+# permitted write is -Fix, which re-emits a MISSING managed directive block
+# into an installed host file (the profile-appropriate template with
+# $ENGINE_VERSION/$ENGINE_SHA substituted exactly as init.ps1 does). No other
+# write ever happens.
 #
 # Machine-readable output: exactly one TAB-separated row per check, stable field
 # order `<scope>\t<STATUS>\t<detail>\t<remediation>`. STATUS is the base token,
@@ -132,9 +133,25 @@ if ($engineDir -eq $projectRoot) {
 }
 $profilePath = Join-Path $kitRoot 'PROMPTKIT.md'
 
-# The kit root must carry PROMPTKIT.md; without it no check has a scope to run
-# against, so this is the exit-2 "could not run at all" prerequisite.
-if (-not (Test-Path -LiteralPath $profilePath -PathType Leaf)) {
+# Readability probe shared by the exit-2 prerequisite and the provenance check.
+# The bash twin requires `-f && -r`, so an existing but unreadable file must not
+# reach the checks: they would otherwise read empty content and report a
+# misleading verdict. Never throws.
+function Test-FileReadable {
+    param([string]$Path)
+    try {
+        $stream = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, ([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+        $stream.Dispose()
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+# The kit root must carry a readable PROMPTKIT.md; without it no check has a
+# scope to run against, so this is the exit-2 "could not run at all" prerequisite.
+# Readability is part of the prerequisite because the bash twin gates on it.
+if (-not (Test-Path -LiteralPath $profilePath -PathType Leaf) -or -not (Test-FileReadable $profilePath)) {
     Emit 'prereq' 'INCOMPLETE' 'no PROMPTKIT.md at KIT_ROOT' 'Run pk:doctor from the project root that contains PROMPTKIT.md'
     exit 2
 }
@@ -521,6 +538,202 @@ function Check-DocsDrift {
 }
 
 Check-DocsDrift
+
+# --- Check 5: intake provenance (record-path health only, Issue #641) ------
+# Deliberately narrow: it verifies that a completed intake names a resolvable
+# project-relative Intake Record. It does not verify human approval, assumption
+# transitions, or default scope; those remain manual review obligations in
+# protocols/discovery-intake.md.
+function Get-MachineField {
+    param([string]$Text, [string]$Key)
+    $found = [regex]::Matches($Text, "(?m)^$([regex]::Escape($Key)):[ \t]*(.*?)[ \t\r]*$")
+    if ($found.Count -eq 0) { return '' }
+    return $found[$found.Count - 1].Groups[1].Value
+}
+
+function Test-IntakePlaceholder {
+    param([string]$Value)
+    if (Test-Placeholder $Value) { return $true }
+    return $Value -in @('N/A', 'n/a', 'None', 'none', 'Not applicable', 'not applicable')
+}
+
+# Containment probe. Never throws: an unparseable path is not inside the root,
+# and callers must fail closed rather than abort the report.
+function Test-PathInsideRoot {
+    param([string]$Path)
+    try {
+        $rootFull = [IO.Path]::GetFullPath($kitRoot).TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+        $full = [IO.Path]::GetFullPath($Path)
+        $cmp = if ($IsWindows) { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
+        return $full.Equals($rootFull, $cmp) -or
+            $full.StartsWith($rootFull + [IO.Path]::DirectorySeparatorChar, $cmp) -or
+            $full.StartsWith($rootFull + [IO.Path]::AltDirectorySeparatorChar, $cmp)
+    } catch {
+        return $false
+    }
+}
+
+# Filesystem probes that never abort the doctor. A path that cannot be inspected
+# is not healthy: callers classify these as not-verified rather than OK.
+function Get-ItemSafe {
+    param([string]$Path)
+    try {
+        return (Get-Item -LiteralPath $Path -Force -ErrorAction Stop)
+    } catch {
+        return $null
+    }
+}
+
+function Test-LeafSafe {
+    param([string]$Path)
+    try {
+        return (Test-Path -LiteralPath $Path -PathType Leaf -ErrorAction Stop)
+    } catch {
+        return $false
+    }
+}
+
+function Test-ContainerSafe {
+    param([string]$Path)
+    try {
+        return (Test-Path -LiteralPath $Path -PathType Container -ErrorAction Stop)
+    } catch {
+        return $false
+    }
+}
+
+# Resolve an existing path to its physical location, following parent-directory
+# links and final-file reparse points. Throws when a component cannot be
+# resolved so callers fail closed instead of treating an unverifiable path as
+# inside the project root.
+function Resolve-PhysicalItemPath {
+    param([string]$Path)
+    $full = [IO.Path]::GetFullPath($Path)
+    $rootPart = [IO.Path]::GetPathRoot($full)
+    $separators = [char[]]@([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+    $segments = $full.Substring($rootPart.Length).Split($separators, [StringSplitOptions]::RemoveEmptyEntries)
+    $current = $rootPart
+    foreach ($segment in $segments) {
+        $current = Join-Path $current $segment
+        $item = Get-Item -LiteralPath $current -Force -ErrorAction Stop
+        if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+            $linkTarget = $item.ResolveLinkTarget($true)
+            if ($null -eq $linkTarget) { throw "unresolvable reparse point: $current" }
+            $current = [IO.Path]::GetFullPath($linkTarget.FullName)
+        }
+    }
+    return [IO.Path]::GetFullPath($current)
+}
+
+function Check-Provenance {
+    $profilePath = Join-Path $kitRoot 'PROMPTKIT.md'
+    try {
+        $profileText = [IO.File]::ReadAllText($profilePath)
+    } catch {
+        # The exit-2 prerequisite normally rejects an unreadable profile first.
+        # If it becomes unreadable between that check and this read, fail closed
+        # rather than reporting a verdict derived from missing content.
+        Emit 'provenance' 'INCOMPLETE' 'intake profile could not be read' 'Make PROMPTKIT.md readable and re-run pk:doctor'
+        return
+    }
+    $statusRaw = Get-MachineField $profileText 'intake-status'
+    if ([string]::IsNullOrWhiteSpace($statusRaw)) {
+        Emit 'provenance' 'SKIP(no intake-status line)' 'no intake-status declared; resolves to legacy-partial and is never re-interviewed' '-'
+        return
+    }
+    if (Test-IntakePlaceholder $statusRaw) {
+        Emit 'provenance' 'SKIP(placeholder intake-status)' 'intake-status is an unfilled placeholder; treated as incomplete' 'Replace the placeholder with a confirmed status'
+        return
+    }
+    $status = $statusRaw.ToLowerInvariant()
+    if ($status -eq 'complete') {
+        # proceed
+    } elseif ($status -in @('unanswered', 'partial', 'legacy-partial')) {
+        Emit 'provenance' "SKIP(intake-status: $status)" "intake is $status; not a completed intake" '-'
+        return
+    } else {
+        Emit 'provenance' "SKIP(unrecognized intake-status: $status)" 'unrecognized intake-status resolves to legacy-partial; nothing to verify' 'Use unanswered, partial, legacy-partial, or complete'
+        return
+    }
+    $recRaw = Get-MachineField $profileText 'intake-record'
+    if ([string]::IsNullOrWhiteSpace($recRaw)) {
+        Emit 'provenance' 'SKIP(no intake-record line)' 'intake-status is complete but intake-record is absent; compatibility advisory for pre-#641 profiles' 'Add intake-record: <project-relative path> and point it at the Intake Record'
+        return
+    }
+    if (Test-IntakePlaceholder $recRaw) {
+        Emit 'provenance' 'SKIP(placeholder intake-record)' 'intake-record is an unfilled placeholder' 'Replace it with the project-relative path to the Intake Record'
+        return
+    }
+    # Canonical wrapping: strip exactly one backtick pair. Any other backtick
+    # usage is left intact and fails resolution, matching the bash twin.
+    $rel = $recRaw.Replace('\', '/')
+    if ($rel.Length -ge 2 -and $rel.StartsWith('`') -and $rel.EndsWith('`')) {
+        $rel = $rel.Substring(1, $rel.Length - 2)
+    }
+    # Absolute, drive-qualified, and traversal forms are rejected before the
+    # trailing-separator normalization so `/` stays INCOMPLETE instead of
+    # degrading to an empty, "not found" value.
+    if ($rel.StartsWith('/') -or $rel -match '^[A-Za-z]:' -or $rel.Contains('..')) {
+        Emit 'provenance' 'INCOMPLETE' "intake-record is not a project-relative path: $recRaw" 'Use a project-relative path such as docs/specs/YYYY-MM-DD-intake-<project>.md'
+        return
+    }
+    # Trailing separators are not part of a canonical record path; normalize
+    # them so `docs/specs/x.md/` and `docs/specs/x.md` classify identically.
+    $rel = $rel.TrimEnd('/')
+    if ([string]::IsNullOrEmpty($rel)) {
+        Emit 'provenance' 'MISSING' "intake-record not found at $rel" 'Create the Intake Record or fix the intake-record path'
+        return
+    }
+    $candidate = $null
+    try {
+        $candidate = [IO.Path]::GetFullPath((Join-Path $kitRoot $rel))
+    } catch {
+        $candidate = $null
+    }
+    if ($null -eq $candidate) {
+        Emit 'provenance' 'MISSING' "intake-record not found at $rel" 'Create the Intake Record or fix the intake-record path'
+        return
+    }
+    if (-not (Test-PathInsideRoot $candidate)) {
+        Emit 'provenance' 'INCOMPLETE' "intake-record resolves outside the project root: $recRaw" 'Use a project-relative path inside the project root'
+        return
+    }
+    $candidateItem = Get-ItemSafe $candidate
+    $resolvedCandidate = $candidate
+    if ($null -ne $candidateItem) {
+        try {
+            $resolvedCandidate = Resolve-PhysicalItemPath $candidate
+        } catch {
+            Emit 'provenance' 'INCOMPLETE' "intake-record could not be resolved: $recRaw" 'Use a project-relative path that resolves inside the project root'
+            return
+        }
+        if (-not (Test-PathInsideRoot $resolvedCandidate)) {
+            Emit 'provenance' 'INCOMPLETE' "intake-record resolves outside the project root: $recRaw" 'Use a project-relative path inside the project root'
+            return
+        }
+        $resolvedParent = Split-Path -Parent $resolvedCandidate
+        if ([string]::IsNullOrEmpty($resolvedParent) -or -not (Test-ContainerSafe $resolvedParent)) {
+            Emit 'provenance' 'INCOMPLETE' "intake-record could not be resolved: $recRaw" 'Use a project-relative path that resolves inside the project root'
+            return
+        }
+    }
+    # An uninspectable path (permission denial, component beyond the platform
+    # limit) cannot be verified, so it must never be OK. It classifies as
+    # MISSING to match the bash twin's -e/-f outcome.
+    if (-not (Test-LeafSafe $resolvedCandidate)) {
+        Emit 'provenance' 'MISSING' "intake-record not found at $rel" 'Create the Intake Record or fix the intake-record path'
+        return
+    }
+    # Readability is part of record-path health: a record no tool can read is
+    # not a usable provenance link. Bash gates on -r, so this mirrors it.
+    if (-not (Test-FileReadable $resolvedCandidate)) {
+        Emit 'provenance' 'MISSING' "intake-record is not readable at $rel" 'Make the Intake Record readable or fix the intake-record path'
+        return
+    }
+    Emit 'provenance' 'OK' "intake-record resolves to $rel" '-'
+}
+
+Check-Provenance
 
 if ($script:fail) { exit 1 }
 exit 0
