@@ -734,7 +734,7 @@ check_provenance_anchor() {
         # when it is most likely to have gone stale. CI clones with fetch-depth: 0,
         # so a resolvable anchor is always available there.
         echo "  ❌ FAIL: provenance anchor $anchor is unreachable (does not resolve to a commit in this clone); cannot verify the measured-input tree is unchanged since it"
-        echo "           Restate the anchor in docs/BENCHMARKS.md to a commit reachable on main (a squash-merged PR-branch commit is orphaned and unresolvable)."
+        echo "           Restate the anchor in docs/BENCHMARKS.md to a commit that resolves in this clone; the guard checks clone-resolvability, not ancestry, so an orphaned squash-merged PR-branch commit is unresolvable in a clone that never fetched it."
         echo "           A silent skip here would disable the provenance guard."
         FAIL_COUNT=$((FAIL_COUNT + 1))
         return
@@ -767,7 +767,71 @@ check_provenance_anchor() {
     fi
 }
 
+# Provenance-advisory verdict (follow-up to the #642 anchor remediation).
+#
+# The guard above enforces two things: the anchor resolves in the clone, and the
+# measured-input tree is unchanged since it. It deliberately does not assert
+# ancestry (see the block at the top of this section). Its remediation advice
+# must therefore describe the check that actually runs: advice telling a
+# maintainer to pick a commit reachable on the main branch names a property the
+# guard never tests, and it is wrong for a squash-merged PR-branch commit that
+# is a perfectly valid anchor. This verdict pins the advice to the mechanism.
+#
+# The marker and the legacy sample are assembled from fragments so this scanner
+# cannot match its own source text instead of the emitted advice.
+provenance_advisory_verdict() {
+    local file="$1"
+    local path="$file"
+    local marker advice
+    [ "${path#/}" = "$path" ] && path="$REPO_ROOT/$file"
+    if [ ! -f "$path" ]; then
+        printf 'FAIL:missing-file\n'
+        return 0
+    fi
+    marker="Restate the ""anchor in docs/BENCHMARKS.md"
+    advice="$(grep -F "$marker" "$path" 2>/dev/null || true)"
+    if [ -z "$advice" ]; then
+        printf 'FAIL:missing-advisory\n'
+        return 0
+    fi
+    if printf '%s\n' "$advice" | grep -Fqi 'reachable on main'; then
+        printf 'FAIL:claims-main-ancestry\n'
+        return 0
+    fi
+    if ! printf '%s\n' "$advice" | grep -Fqi 'resolves in this clone'; then
+        printf 'FAIL:no-clone-resolvability\n'
+        return 0
+    fi
+    if ! printf '%s\n' "$advice" | grep -Fqi 'not ancestry'; then
+        printf 'FAIL:no-ancestry-disclaimer\n'
+        return 0
+    fi
+    printf 'PASS\n'
+}
+
+assert_provenance_advisory() {
+    local file="$1"
+    local expected="$2"
+    local desc="$3"
+    local actual
+    actual="$(provenance_advisory_verdict "$file")"
+    if [ "$actual" = "$expected" ]; then
+        echo "  ✅ PASS: $desc"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        echo "  ❌ FAIL: $desc (expected $expected, got $actual)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+
 check_provenance_anchor
+assert_provenance_advisory "scripts/tests/run-behavioral-contract-tests.sh" "PASS" "Provenance-anchor advice is clone-scoped, not ancestry-scoped (Bash twin)"
+assert_provenance_advisory "scripts/tests/run-behavioral-contract-tests.ps1" "PASS" "Provenance-anchor advice is clone-scoped, not ancestry-scoped (PowerShell twin parity)"
+PROVENANCE_LEGACY_ADVICE="Restate the ""anchor in docs/BENCHMARKS.md to a commit reachable on main (a squash-merged PR-branch commit is orphaned and unresolvable)."
+PROVENANCE_LEGACY_TMP="$(mktemp "${TMPDIR:-/tmp}/pk-provenance-advisory-legacy.XXXXXX")"
+printf '%s\n' "$PROVENANCE_LEGACY_ADVICE" > "$PROVENANCE_LEGACY_TMP"
+assert_provenance_advisory "$PROVENANCE_LEGACY_TMP" "FAIL:claims-main-ancestry" "Provenance-advisory guard rejects the legacy main-ancestry wording (negative control)"
+rm -f "$PROVENANCE_LEGACY_TMP"
 per_task_metric() {
     local task="$1" field="$2"
     printf '%s\n' "$PER_TASK_OUT" | awk -F'|' -v task="$task" -v field="$field" '

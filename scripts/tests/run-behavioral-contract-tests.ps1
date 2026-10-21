@@ -789,7 +789,7 @@ function Test-ProvenanceAnchor([string]$Path) {
     git -C $RepoRoot rev-parse --verify --quiet "$anchor^{commit}" 2>$null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  ❌ FAIL: provenance anchor $anchor is unreachable (does not resolve to a commit in this clone); cannot verify the measured-input tree is unchanged since it" -ForegroundColor Red
-        Write-Host "           Restate the anchor in docs/BENCHMARKS.md to a commit reachable on main (a squash-merged PR-branch commit is orphaned and unresolvable)." -ForegroundColor Red
+        Write-Host "           Restate the anchor in docs/BENCHMARKS.md to a commit that resolves in this clone; the guard checks clone-resolvability, not ancestry, so an orphaned squash-merged PR-branch commit is unresolvable in a clone that never fetched it." -ForegroundColor Red
         Write-Host "           A silent skip here would disable the provenance guard." -ForegroundColor Red
         $script:FailCount++
         return
@@ -817,6 +817,57 @@ function Test-ProvenanceAnchor([string]$Path) {
 }
 
 Test-ProvenanceAnchor (Join-Path $RepoRoot "docs/BENCHMARKS.md")
+
+# Provenance-advisory verdict (follow-up to the #642 anchor remediation).
+# Twin of the Bash verdict: the guard resolves the anchor in the clone and diffs
+# the measured-input tree, and it deliberately does not assert ancestry, so the
+# remediation advice must not claim main-branch ancestry. The marker and the
+# legacy sample are assembled from fragments so this scanner cannot match its
+# own source text instead of the emitted advice.
+function Get-ProvenanceAdvisoryVerdict {
+    param([string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) { return 'FAIL:missing-file' }
+    $content = Get-Content -LiteralPath $Path -Raw -ErrorAction SilentlyContinue
+    if ($null -eq $content) { return 'FAIL:file-unreadable' }
+
+    $marker = 'Restate the ' + 'anchor in docs/BENCHMARKS.md'
+    $advice = @((($content -replace "`r", '') -split "`n") | Where-Object { $_.Contains($marker) })
+    if ($advice.Count -eq 0) { return 'FAIL:missing-advisory' }
+    $joined = ($advice -join "`n")
+    if ($joined -match '(?i)reachable on main') { return 'FAIL:claims-main-ancestry' }
+    if ($joined -notmatch '(?i)resolves in this clone') { return 'FAIL:no-clone-resolvability' }
+    if ($joined -notmatch '(?i)not ancestry') { return 'FAIL:no-ancestry-disclaimer' }
+    return 'PASS'
+}
+
+function Assert-ProvenanceAdvisory {
+    param(
+        [string]$Path,
+        [string]$Expected,
+        [string]$Description
+    )
+
+    $actual = Get-ProvenanceAdvisoryVerdict $Path
+    if ($actual -eq $Expected) {
+        Write-Host "  ✅ PASS: $Description" -ForegroundColor Green
+        $script:PassCount++
+    } else {
+        Write-Host "  ❌ FAIL: $Description (expected $Expected, got $actual)" -ForegroundColor Red
+        $script:FailCount++
+    }
+}
+
+Assert-ProvenanceAdvisory (Join-Path $RepoRoot "scripts/tests/run-behavioral-contract-tests.sh") "PASS" "Provenance-anchor advice is clone-scoped, not ancestry-scoped (Bash twin parity)"
+Assert-ProvenanceAdvisory (Join-Path $RepoRoot "scripts/tests/run-behavioral-contract-tests.ps1") "PASS" "Provenance-anchor advice is clone-scoped, not ancestry-scoped (PowerShell twin)"
+$legacyProvenanceAdvice = 'Restate the ' + 'anchor in docs/BENCHMARKS.md to a commit reachable on main (a squash-merged PR-branch commit is orphaned and unresolvable).'
+$legacyProvenancePath = Join-Path ([System.IO.Path]::GetTempPath()) ("pk-provenance-advisory-legacy-" + [System.Guid]::NewGuid().ToString('N') + ".txt")
+try {
+    Set-Content -LiteralPath $legacyProvenancePath -Value $legacyProvenanceAdvice -Encoding utf8
+    Assert-ProvenanceAdvisory $legacyProvenancePath "FAIL:claims-main-ancestry" "Provenance-advisory guard rejects the legacy main-ancestry wording (negative control)"
+} finally {
+    Remove-Item -LiteralPath $legacyProvenancePath -Force -ErrorAction SilentlyContinue
+}
 
 Check-BenchmarkFigure "Balanced static directive" (Get-StaticMeasurement 'BALANCED' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Balanced)')
 Check-BenchmarkFigure "Lite static directive" (Get-StaticMeasurement 'LITE' $staticOutput) (Get-BenchmarkMetric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')
