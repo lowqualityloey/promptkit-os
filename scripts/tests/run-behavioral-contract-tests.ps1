@@ -52,6 +52,176 @@ function Assert-NotContains {
     $script:PassCount++
 }
 
+function Get-InvariantSectionVerdict {
+    param([string]$Path)
+
+    $content = $null
+    try {
+        $content = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop
+    } catch {
+        return 'FAIL:file-unreadable'
+    }
+    if ($null -eq $content) {
+        return 'FAIL:file-unreadable'
+    }
+
+    $lines = ($content -replace "`r", '') -split "`n"
+
+    $inSection = $false
+    $inFence = $false
+    $fenceChar = ''
+    $fenceLen = 0
+    $sectionFound = $false
+    $fenceOk = $true
+
+    $label = $false
+    $decIn = 0
+    $polIn = 0
+    $decOut = 0
+    $polOut = 0
+    $reqDec = $false
+    $reqPol = $false
+    $emptyMarker = $false
+    $emptySource = $false
+    $emptyBullet = $false
+    $legacyBullet = $false
+
+    $decisionShape = 'source: DECISION-<spec-slug>-<nnn>'
+    $policyShape = 'source: policy: <project-relative path>'
+
+    for ($i = 0; $i -lt $lines.Length; $i++) {
+        $line = $lines[$i]
+        $trimmed = $line.Trim()
+
+        if ($inFence) {
+            $run = 0
+            while ($run -lt $trimmed.Length -and $trimmed[$run] -eq $fenceChar) {
+                $run++
+            }
+            if ($run -ge $fenceLen -and $trimmed.Substring($run).Trim() -eq '') {
+                $inFence = $false
+                $fenceChar = ''
+                $fenceLen = 0
+                continue
+            }
+            if ($inSection) {
+                if ($line.Contains($decisionShape)) { $decIn++ }
+                if ($line.Contains($policyShape)) { $polIn++ }
+            }
+            continue
+        }
+
+        if ($trimmed.Length -ge 3) {
+            $fenceCandidate = $trimmed[0]
+            if (($fenceCandidate -eq '`') -or ($fenceCandidate -eq '~')) {
+                $run = 0
+                while ($run -lt $trimmed.Length -and $trimmed[$run] -eq $fenceCandidate) {
+                    $run++
+                }
+                if ($run -ge 3) {
+                    $inFence = $true
+                    $fenceChar = $fenceCandidate
+                    $fenceLen = $run
+                    continue
+                }
+            }
+        }
+
+        if ($line -match '^## 4\.') {
+            $inSection = $true
+            $sectionFound = $true
+            continue
+        }
+        if ($inSection -and ($line -match '^## ')) {
+            $inSection = $false
+            continue
+        }
+        if (-not $inSection) {
+            continue
+        }
+
+        $lower = $line.ToLowerInvariant()
+        if ($lower.Contains('illustrative syntax') -and $lower.Contains('not invariant entries')) {
+            $label = $true
+        }
+        if ($line.Contains($decisionShape)) { $decOut++ }
+        if ($line.Contains($policyShape)) { $polOut++ }
+        if ($line.Contains('DECISION-*') -and $line.Contains('policy:')) {
+            $reqDec = $true
+            $reqPol = $true
+        }
+        if ($line -match '^\s*-\s*not tracked') {
+            $legacyBullet = $true
+        }
+        if ($lower.Contains('empty state') -and $lower.Contains('not an invariant entry')) {
+            $emptyMarker = $true
+            if ($line -match '^\s*-') { $emptyBullet = $true }
+            $j = $i
+            while ($j -lt $lines.Length) {
+                $next = $lines[$j]
+                if ($next.Trim() -eq '') { break }
+                if ($next.Contains('source:')) { $emptySource = $true }
+                $j++
+            }
+        }
+    }
+
+    if ($inSection -and $inFence) { $fenceOk = $false }
+
+    $reasons = @()
+    if (-not $sectionFound) {
+        $reasons += 'no-section-4'
+    } else {
+        if (-not $fenceOk) { $reasons += 'unclosed-fence' }
+        if (-not $label) { $reasons += 'no-illustrative-label' }
+        if ($decIn -lt 1) { $reasons += 'no-decision-example' }
+        if ($polIn -lt 1) { $reasons += 'no-policy-example' }
+        if (($decOut -gt 0) -or ($polOut -gt 0)) { $reasons += 'example-outside-fence' }
+        if ((-not $reqDec) -or (-not $reqPol)) { $reasons += 'missing-required-source-syntax' }
+        if (-not $emptyMarker) { $reasons += 'no-empty-state-marker' }
+        if ($emptySource) { $reasons += 'empty-state-carries-source' }
+        if ($emptyBullet) { $reasons += 'empty-state-bullet' }
+        if ($legacyBullet) { $reasons += 'legacy-not-tracked-bullet' }
+    }
+
+    if ($reasons.Count -eq 0) {
+        return 'PASS'
+    }
+    return 'FAIL:' + ($reasons -join ',')
+}
+
+function Assert-InvariantSectionVerdict {
+    param(
+        [string]$File,
+        [string]$Expected,
+        [string]$Description
+    )
+
+    if ([System.IO.Path]::IsPathRooted($File)) {
+        $fullPath = $File
+    } else {
+        $fullPath = Join-Path $RepoRoot $File
+    }
+
+    $verdict = Get-InvariantSectionVerdict $fullPath
+
+    if ($Expected -eq 'PASS') {
+        $matched = ($verdict -eq 'PASS')
+    } elseif ($Expected -eq 'FAIL') {
+        $matched = $verdict.StartsWith('FAIL')
+    } else {
+        $matched = ($verdict -eq $Expected)
+    }
+
+    if ($matched) {
+        Write-Host "  ✅ PASS: $Description" -ForegroundColor Green
+        $script:PassCount++
+        return
+    }
+    Write-Host "  ❌ FAIL: $Description (expected $Expected, got '$verdict')" -ForegroundColor Red
+    $script:FailCount++
+}
+
 Write-Host "`n🧪 Running PromptKit OS Behavioral Prompt-Contract Tests" -ForegroundColor Cyan
 Write-Host "===========================================================" -ForegroundColor DarkGray
 
@@ -615,6 +785,26 @@ Assert-Contains "workflows/onboard.md" 'observations belong only in Section 4A' 
 Assert-Contains "protocols/context-sync.md" 'Rejected or deferred candidates remain non-authoritative; changed scope or wording requires fresh approval' "Rejected and changed candidates cannot inherit approval"
 Assert-Contains "protocols/setup.md" 'setup and reinjection must not import session learnings as project rules' "Setup preserves the promotion boundary"
 Assert-Contains "templates/state-tracker-template.md" 'approver, date, evidence reference, and destination' "Candidate promotion records decision provenance"
+Assert-InvariantSectionVerdict "templates/state-tracker-template.md" "PASS" "State template marks invariant source shapes as illustrative, not entries"
+$legacyInvariantSample = @'
+## 4. Locked Technical Invariants (Do Not Undo)
+Document non-negotiable architectural decisions agreed upon during pairing sessions. Carry an inline source on every entry:
+
+- `<invariant> — source: DECISION-<spec-slug>-<nnn>` for a confirmed decision
+- `<invariant> — source: policy: <project-relative path>` for an explicit pre-existing policy
+- not tracked — invariants are recorded here as pairing sessions lock them in, never pre-filled
+
+A candidate learning, derived PromptKit baseline, or unverified recommendation is never human-approved or locked without one of those sources. Keep it in §4A until the human decision is recorded (`protocols/context-sync.md` §3.1).
+
+## 4A. Candidate Learnings (Unpromoted)
+'@
+$legacyInvariantPath = Join-Path ([System.IO.Path]::GetTempPath()) ("pk648-invariant-" + [System.Guid]::NewGuid().ToString('N') + ".md")
+try {
+    Set-Content -LiteralPath $legacyInvariantPath -Value $legacyInvariantSample -Encoding utf8
+    Assert-InvariantSectionVerdict $legacyInvariantPath "FAIL" "Invariant-example guard rejects bare examples and the legacy not-tracked bullet"
+} finally {
+    Remove-Item -LiteralPath $legacyInvariantPath -Force -ErrorAction SilentlyContinue
+}
 
 Write-Host "`n📌 Scenario S: Dual-Mode Telemetry & Single-Callout Invariants" -ForegroundColor Yellow
 Assert-Contains "protocols/telemetry-cards.md" "The Single-Callout Invariant" "Telemetry protocol defines Single-Callout Invariant"

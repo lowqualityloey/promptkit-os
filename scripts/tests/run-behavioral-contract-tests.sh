@@ -38,6 +38,152 @@ assert_not_contains() {
     fi
 }
 
+# §4 structural verdict (Issue #648): inside "## 4. Locked Technical Invariants" the
+# two source shapes must be fenced, explicitly illustrative syntax -- never bare
+# entries -- and the empty state must be marked as not an invariant entry. The check
+# is section-scoped and fence-aware, so the same text inside a fence passes while a
+# leaked copy outside one fails. Prints PASS or FAIL:<reason,...>; always exits 0.
+invariant_section_verdict() {
+    local file="$1"
+    local verdict=""
+
+    if [ ! -f "$file" ]; then
+        printf 'FAIL:missing-file\n'
+        return 0
+    fi
+
+    verdict="$(awk '
+        function trim(s) {
+            sub(/^[[:space:]]+/, "", s)
+            sub(/[[:space:]]+$/, "", s)
+            return s
+        }
+        {
+            line = $0
+            gsub(/\r/, "", line)
+            L[NR] = line
+        }
+        END {
+            in_s4 = 0; section_found = 0; fence_ok = 1
+            in_fence = 0; fence_ch = ""; fence_len = 0
+            label = 0; dec_in = 0; pol_in = 0; dec_out = 0; pol_out = 0
+            req_dec = 0; req_pol = 0
+            empty_marker = 0; empty_source = 0; empty_bullet = 0
+            legacy_bullet = 0
+
+            for (i = 1; i <= NR; i++) {
+                raw = L[i]
+                t = trim(raw)
+
+                if (in_fence) {
+                    ch = substr(t, 1, 1)
+                    if (ch == fence_ch) {
+                        m = 0
+                        while (substr(t, m + 1, 1) == fence_ch) m++
+                        rest = substr(t, m + 1)
+                        if (m >= fence_len && rest ~ /^[[:space:]]*$/) {
+                            in_fence = 0; fence_ch = ""; fence_len = 0
+                            continue
+                        }
+                    }
+                    if (in_s4) {
+                        if (index(raw, "source: DECISION-<spec-slug>-<nnn>") > 0) dec_in++
+                        if (index(raw, "source: policy: <project-relative path>") > 0) pol_in++
+                    }
+                    continue
+                }
+
+                ch = substr(t, 1, 1)
+                if (ch == "`" || ch == "~") {
+                    m = 0
+                    while (substr(t, m + 1, 1) == ch) m++
+                    if (m >= 3) {
+                        in_fence = 1; fence_ch = ch; fence_len = m
+                        continue
+                    }
+                }
+
+                if (!in_s4) {
+                    if (raw ~ /^## 4\./) { in_s4 = 1; section_found = 1 }
+                    continue
+                }
+
+                if (raw ~ /^## /) { in_s4 = 0; continue }
+
+                low = tolower(raw)
+                if (index(low, "illustrative syntax") > 0 && index(low, "not invariant entries") > 0) label = 1
+                if (index(raw, "source: DECISION-<spec-slug>-<nnn>") > 0) dec_out++
+                if (index(raw, "source: policy: <project-relative path>") > 0) pol_out++
+                if (index(raw, "DECISION-*") > 0 && index(raw, "policy:") > 0) {
+                    req_dec = 1
+                    req_pol = 1
+                }
+                if (index(low, "empty state") > 0 && index(low, "not an invariant entry") > 0) {
+                    empty_marker = 1
+                    if (raw ~ /^[[:space:]]*-/) empty_bullet = 1
+                    for (j = i; j <= NR && L[j] !~ /^[[:space:]]*$/; j++) {
+                        if (index(L[j], "source:") > 0) empty_source = 1
+                    }
+                }
+                if (raw ~ /^[[:space:]]*-[[:space:]]*not tracked/) legacy_bullet = 1
+            }
+
+            if (in_s4 && in_fence) fence_ok = 0
+
+            reasons = ""
+            if (!section_found) {
+                reasons = ",no-section-4"
+            } else {
+                if (!fence_ok) reasons = reasons ",unclosed-fence"
+                if (!label) reasons = reasons ",no-illustrative-label"
+                if (dec_in < 1) reasons = reasons ",no-decision-example"
+                if (pol_in < 1) reasons = reasons ",no-policy-example"
+                if (dec_out > 0 || pol_out > 0) reasons = reasons ",example-outside-fence"
+                if (!req_dec || !req_pol) reasons = reasons ",missing-required-source-syntax"
+                if (!empty_marker) reasons = reasons ",no-empty-state-marker"
+                if (empty_source) reasons = reasons ",empty-state-carries-source"
+                if (empty_bullet) reasons = reasons ",empty-state-bullet"
+                if (legacy_bullet) reasons = reasons ",legacy-not-tracked-bullet"
+            }
+            if (reasons == "") {
+                print "PASS"
+            } else {
+                sub(/^,/, "", reasons)
+                print "FAIL:" reasons
+            }
+        }
+    ' "$file" 2>/dev/null)" || verdict="FAIL:awk-error"
+
+    if [ -z "$verdict" ]; then
+        verdict="FAIL:empty-verdict"
+    fi
+    printf '%s\n' "$verdict"
+    return 0
+}
+
+assert_invariant_section_verdict() {
+    local file="$1"
+    local expected="$2"
+    local desc="$3"
+    local path="$file"
+    local actual=""
+    local status=""
+
+    if [ "${path#/}" = "$path" ]; then
+        path="$REPO_ROOT/$file"
+    fi
+    actual="$(invariant_section_verdict "$path")"
+    status="${actual%%:*}"
+
+    if [ "$status" = "$expected" ]; then
+        echo "  ✅ PASS: $desc"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        echo "  ❌ FAIL: $desc (expected $expected, got $actual)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+
 echo ""
 echo "🧪 Running PromptKit OS Behavioral Prompt-Contract Tests"
 echo "==========================================================="
@@ -643,6 +789,26 @@ assert_contains "workflows/onboard.md" 'observations belong only in Section 4A' 
 assert_contains "protocols/context-sync.md" 'Rejected or deferred candidates remain non-authoritative; changed scope or wording requires fresh approval' "Rejected and changed candidates cannot inherit approval"
 assert_contains "protocols/setup.md" 'setup and reinjection must not import session learnings as project rules' "Setup preserves the promotion boundary"
 assert_contains "templates/state-tracker-template.md" 'approver, date, evidence reference, and destination' "Candidate promotion records decision provenance"
+assert_invariant_section_verdict "templates/state-tracker-template.md" "PASS" "State template marks invariant source shapes as illustrative, not entries"
+LEGACY_INVARIANT_TMP="$(mktemp "${TMPDIR:-/tmp}/pk-invariant-legacy.XXXXXX")"
+cat > "$LEGACY_INVARIANT_TMP" <<'LEGACY_INVARIANT_EOF'
+## 4. Locked Technical Invariants (Do Not Undo)
+Document non-negotiable architectural decisions agreed upon during pairing sessions. Carry an inline source on every entry:
+
+- `<invariant> — source: DECISION-<spec-slug>-<nnn>` for a confirmed decision
+- `<invariant> — source: policy: <project-relative path>` for an explicit pre-existing policy
+- not tracked — invariants are recorded here as pairing sessions lock them in, never pre-filled
+
+A candidate learning, derived PromptKit baseline, or unverified recommendation is never human-approved or locked without one of those sources. Keep it in §4A until the human decision is recorded (`protocols/context-sync.md` §3.1).
+
+---
+
+## 4A. Candidate Learnings (Unpromoted)
+
+Staging area for rules observed during sessions but not yet approved as invariants. Promotion requires a recorded human decision (`approved` / `rejected` / `deferred`) with approver, date, evidence reference, and destination (see `protocols/context-sync.md` §3.1).
+LEGACY_INVARIANT_EOF
+assert_invariant_section_verdict "$LEGACY_INVARIANT_TMP" "FAIL" "Invariant-example guard rejects bare examples and the legacy not-tracked bullet"
+rm -f -- "$LEGACY_INVARIANT_TMP"
 
 echo ""
 echo "📌 Scenario S: Dual-Mode Telemetry & Single-Callout Invariants"
