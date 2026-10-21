@@ -1170,6 +1170,10 @@ if ($WfCount -eq 26) {
     $script:FailCount++
 }
 
+# AR-2b: the workflow documents the five-check contract the engine actually runs (#646).
+Assert-Contains "workflows/doctor.md" "### Phase 2: The Five Checks" "doctor Phase 2 heading declares five checks"
+Assert-NotContains "workflows/doctor.md" "Four Checks" "doctor carries no stale four-check claim"
+
 # AR-3: exercised exit-code contract over tiny throwaway kit roots. Read-only:
 # the checker never writes unless -Fix is passed, and these fixtures are removed.
 $DoctorPs1 = Join-Path $RepoRoot "scripts\check-doctor.ps1"

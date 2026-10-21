@@ -616,7 +616,7 @@ Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycl
 > - `pk:auto`: Orchestrates unattended sequential lifecycle chaining (`plan` → `tasks` → code → `test` → `review`) with built-in circuit breakers, test immobility, and a default stop at review-ready.
 > - `pk:tutor` (Socratic mentorship & 3-tier progressive hints) and `pk:grill` (Staff Engineer architecture defense drills) operate perpendicularly across all lifecycle phases whenever conceptual guidance or invariant stress-testing is needed.
 > - `pk:sync` (hot-reload) and `pk:profile` (runtime Lite/Balanced/Turbo switching) are cross-cutting session utilities outside the lifecycle flow.
-> - `pk:doctor` (read-only installed-governance audit) runs outside the lifecycle flow: it checks hosts × engine version × install-mode × ignore-state × docs-drift and reports rot without ever upgrading or writing.
+> - `pk:doctor` (read-only installed-governance audit) runs outside the lifecycle flow: it checks hosts × engine version × ignore-state × docs-drift × intake-record provenance, scoped by install-mode, and reports rot without ever upgrading or writing.
 
 ---
 

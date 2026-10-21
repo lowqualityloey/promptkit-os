@@ -222,7 +222,7 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:ship` | [`workflows/ship.md`](../workflows/ship.md) | Core 🧪 | `docs/releases/` | Runtime env validation (project-native mechanism), migration ordering, and smoke tests. |
 | `pk:checkpoint` | [`workflows/checkpoint.md`](../workflows/checkpoint.md) | Core | `docs/STATE.md` | Session compaction, invariant locking, and fresh chat handover prompt. |
 | `pk:sync` | [`workflows/sync.md`](../workflows/sync.md) | Core 🧪 | Active context | Hot-reload protocols, purge stale memory, and synchronize with disk. |
-| `pk:doctor` | [`workflows/doctor.md`](../workflows/doctor.md) | New 🧪 | Terminal report | Read-only installed-governance audit (hosts × engine version × install-mode × ignore-state × docs-drift); reports rot, never upgrades. |
+| `pk:doctor` | [`workflows/doctor.md`](../workflows/doctor.md) | New 🧪 | Terminal report | Read-only installed-governance audit (hosts × engine version × ignore-state × docs-drift × intake-record provenance, scoped by install-mode); reports rot, never upgrades. |
 | `pk:profile` | [`workflows/profile.md`](../workflows/profile.md) | New 🧪 | `PROMPTKIT.md` + directive | Switch Lite/Balanced/Turbo at runtime via the idempotent installer re-injection path. |
 | `pk:auto` | [`workflows/auto.md`](../workflows/auto.md) | New 🧪 | Verified diff / PR | Unattended SDLC meta-orchestration (plan→tasks→code→test→review) with circuit breakers and test immobility. |
 | `pk:retro` | [`workflows/reflect.md`](../workflows/reflect.md) | Core | `docs/adrs/` & journal | Post-feature retrospective: extracts decisions into standard MADRs. |
