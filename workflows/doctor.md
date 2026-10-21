@@ -6,14 +6,14 @@ Trigger anytime with: `pk:doctor`
 No aliases: the spec registers none, and any bare `pk:` alias would first have to join the alias allowlist in `scripts/validate-references.sh` (and its `.ps1` twin) plus the orphan-trigger check, which requires zero warnings.
 
 ## Mission
-One command checks hosts × engine version × install-mode × ignore-state × docs-drift and reports exactly what rotted: a stale engine, missing host directive blocks, unexpectedly ignored managed paths, diverged state stores. "pk stopped working and nobody noticed" becomes impossible. `pk:doctor` diagnoses; it never repairs.
+One command checks hosts × engine version × ignore-state × docs-drift × intake-record provenance, scoped by install-mode, and reports exactly what rotted: a stale engine, missing host directive blocks, unexpectedly ignored managed paths, diverged state stores, an unresolvable intake record. "pk stopped working and nobody noticed" becomes impossible. `pk:doctor` diagnoses; it never repairs.
 
 ## Level
 **Level 2 (Controlled).** A new workflow is a public contract surface under [`docs/adrs/0002-workflow-lifecycle-policy.md`](../docs/adrs/0002-workflow-lifecycle-policy.md) (proposed SemVer impact `minor`). The workflow is **read-only**: it observes and reports, following the Phase 1 framing of [`workflows/sync.md`](./sync.md).
 
 ## Non-Overlap (ADR 0002 Gate Record)
 - [`workflows/sync.md`](./sync.md) **repairs/updates** the engine (disk re-read, directive re-injection, upgrade execution per #545); `pk:doctor` only *reports* drift and never fetches, pulls, upgrades, or rewrites a directive.
-- [`workflows/verify-bootstrap.md`](./verify-bootstrap.md) generates a verification surface for the *host application* (greenfield `verify/` scaffolding); `pk:doctor` audits *PromptKit's own installed governance* (engine, host directive files, ignore rules, state stores), not the host app's test coverage.
+- [`workflows/verify-bootstrap.md`](./verify-bootstrap.md) generates a verification surface for the *host application* (greenfield `verify/` scaffolding); `pk:doctor` audits *PromptKit's own installed governance* (engine, host directive files, ignore rules, state stores, intake record paths), not the host app's test coverage.
 - [`workflows/route.md`](./route.md) classifies a task and routes to a workflow and ceremony level; `pk:doctor` performs no routing and never reclassifies work.
 - `scripts/validate-references.sh` checks markdown reference integrity (files, links, triggers) and runs only in CI; `pk:doctor` runs in-session and audits installation health, not link targets.
 
@@ -33,14 +33,14 @@ One command checks hosts × engine version × install-mode × ignore-state × do
 ## 3-Phase Diagnostic Protocol
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                    PK:DOCTOR LIFECYCLE                      │
-├──────────────────────────────┬──────────────────────────────┤
-│ Phase 1: Scope & Install     │ Phase 2: Four Checks         │
-│ Mode                         │ (hosts/version/ignore/docs)  │
-├──────────────────────────────┴──────────────────────────────┤
-│ Phase 3: Machine-Readable Report & Exit Code                │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│                          PK:DOCTOR LIFECYCLE                          │
+├──────────────────────────────┬────────────────────────────────────────┤
+│ Phase 1: Scope & Install     │ Phase 2: Five Checks                   │
+│ Mode                         │ (hosts/version/ignore/docs/provenance) │
+├───────────────────────────────────────────────────────────────────────┤
+│ Phase 3: Machine-Readable Report & Exit Code                          │
+└───────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Phase 1: Scope & Install Mode
@@ -48,7 +48,7 @@ One command checks hosts × engine version × install-mode × ignore-state × do
 2. Classify the install door from the courier's own discriminator, exactly as `package/bin/promptkit-os.js` tests it: `<kit>/.git` exists → submodule/clone; absent → npx courier tarball.
 3. Enumerate expected host files and workflows **from the declared mode**: a Lite install expects only its 6 workflows, so no row may report `MISSING` for a Balanced-only workflow (mode-scoping is a correctness rule, not a cosmetic one).
 
-### Phase 2: The Four Checks
+### Phase 2: The Five Checks
 
 **1. hosts**: enumerate the expected host directive files from the declared profile; report `OK` when `<!-- PROMPTKIT_START -->` is present in each, `MISSING` when absent (remediation: re-run the installer). Scope by declared mode per Phase 1.
 
@@ -66,6 +66,10 @@ One command checks hosts × engine version × install-mode × ignore-state × do
 **3. ignore-state**: run `git check-ignore -v` on the kit directory, `PROMPTKIT.md`, `docs/`, and the installed host files, using the three-way status branch pattern from `scripts/check-harness-security.sh`; report `IGNORED(<rule source>)` (naming the rule and its source line) or `OK`. An unexpected git exit status → `INCOMPLETE`, never `OK`.
 
 **4. docs-drift**: compare `docs/STATE.md` §3A ↔ the latest canonical Task Record ↔ the harness handoff store. Agreement → `OK`; disagreement → `DIVERGED(<pair>)` with the exact differing field (e.g. `DIVERGED(STATE §3A vs Task Record): milestone`); a missing store or the unsettled three-store precedence contract (#550/#553) → `SKIP(<reason>)`.
+
+**5. provenance**: read the `intake-status` and `intake-record` machine fields in `PROMPTKIT.md` and report the intake record's *path health*. `SKIP(<reason>)` when `intake-status` is absent, an unfilled placeholder, unrecognized, or anything other than `complete`, and when the `intake-record` value is absent or an unfilled placeholder; `INCOMPLETE` when the declared path is absolute, drive-qualified, or contains a traversal segment, when the path or its symlink chain resolves outside the project root, or when an existing path or symlink chain cannot be resolved; `MISSING` when the record is absent, is not a regular file, or is not readable; `OK` when `intake-record` resolves to a readable project-relative file inside the project root.
+
+**What the provenance row does not prove.** `OK` means only that the declared record path resolves. It is not evidence that a human approved the intake, that assumption transitions were recorded, or that accepted defaults stayed in scope; those remain manual review obligations in [`protocols/discovery-intake.md`](../protocols/discovery-intake.md). A resolved record cites an intake artifact; it does not certify one. This is a different guarantee from the **Provenance Invariant** below, which governs whether *any* row may read `OK`.
 
 **Degradation rule.** When an input is absent or a tool is missing (`handoff.md`, Task Records, `git`, `jq`), the owning check reports `SKIP(<reason>)` and does not affect the exit code. Never report `OK` for a check that did not run.
 
