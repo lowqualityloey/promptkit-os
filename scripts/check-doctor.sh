@@ -4,11 +4,12 @@
 # Usage: scripts/check-doctor.sh [KIT_ROOT] [--fix]
 #
 # Reports host directive blocks, engine version/drift, managed-path ignore
-# state, and docs state-store drift. Read-only by default: it never stages,
-# commits, edits, or runs an upgrade. The only permitted write is `--fix`,
-# which re-emits a MISSING managed directive block into an installed host file
-# (the profile-appropriate template with $ENGINE_VERSION/$ENGINE_SHA substituted
-# exactly as init.sh does). No other write ever happens.
+# state, docs state-store drift, and intake record-path health. Read-only by
+# default: it never stages, commits, edits, or runs an upgrade. The only
+# permitted write is `--fix`, which re-emits a MISSING managed directive block
+# into an installed host file (the profile-appropriate template with
+# $ENGINE_VERSION/$ENGINE_SHA substituted exactly as init.sh does). No other
+# write ever happens.
 #
 # Machine-readable output: exactly one TAB-separated row per check, stable field
 # order `<scope>\t<STATUS>\t<detail>\t<remediation>`. STATUS is the base token,
@@ -518,6 +519,143 @@ check_docs_drift() {
 }
 
 check_docs_drift
+
+# --- Check 5: intake provenance (record-path health only, Issue #641) ------
+# Deliberately narrow: it verifies that a completed intake names a resolvable
+# project-relative Intake Record. It does not verify human approval, assumption
+# transitions, or default scope; those remain manual review obligations in
+# protocols/discovery-intake.md.
+machine_field() {
+    local file="$1" key="$2" line
+    line="$(grep -E "^${key}:" -- "$file" 2>/dev/null | tail -n 1 || true)"
+    printf '%s' "$line" | tr -d '\r' | sed -E "s/^${key}:[[:space:]]*//; s/[[:space:]]+$//"
+}
+
+is_intake_placeholder() {
+    local v="$1"
+    if is_placeholder "$v"; then return 0; fi
+    case "$v" in
+        'N/A'|'n/a'|'None'|'none'|'Not applicable'|'not applicable') return 0 ;;
+    esac
+    return 1
+}
+
+# Resolve an existing path to its physical location, following parent-directory
+# links and final-file link chains. Returns non-zero when a component cannot be
+# resolved so callers can fail closed rather than treat an unverifiable path as
+# inside the project root.
+resolve_physical() {
+    local p="$1" dir target hops=0
+    dir="$(builtin cd -- "$(dirname -- "$p")" 2>/dev/null && pwd -P)" || return 1
+    p="$dir/$(basename -- "$p")"
+    while [[ -L "$p" ]]; do
+        hops=$((hops + 1))
+        [[ "$hops" -le 40 ]] || return 1
+        target="$(readlink -- "$p" 2>/dev/null)" || return 1
+        case "$target" in
+            /*) p="$target" ;;
+            *)  p="$dir/$target" ;;
+        esac
+        dir="$(builtin cd -- "$(dirname -- "$p")" 2>/dev/null && pwd -P)" || return 1
+        p="$dir/$(basename -- "$p")"
+    done
+    # Canonicalize away trailing separators so a path that resolves to the root
+    # itself compares equal to kit_root instead of looking outside it.
+    while [[ "$p" == */ && "$p" != "/" ]]; do
+        p="${p%/}"
+    done
+    printf '%s' "$p"
+}
+
+check_provenance() {
+    local status_raw status rec_raw rel candidate parent_real
+    status_raw="$(machine_field "$kit_root/PROMPTKIT.md" 'intake-status')"
+    if [[ -z "$status_raw" ]]; then
+        emit 'provenance' 'SKIP(no intake-status line)' 'no intake-status declared; resolves to legacy-partial and is never re-interviewed' '-'
+        return 0
+    fi
+    if is_intake_placeholder "$status_raw"; then
+        emit 'provenance' 'SKIP(placeholder intake-status)' 'intake-status is an unfilled placeholder; treated as incomplete' 'Replace the placeholder with a confirmed status'
+        return 0
+    fi
+    status="$(printf '%s' "$status_raw" | tr '[:upper:]' '[:lower:]')"
+    case "$status" in
+        complete) ;;
+        unanswered|partial|legacy-partial)
+            emit 'provenance' "SKIP(intake-status: $status)" "intake is $status; not a completed intake" '-'
+            return 0
+            ;;
+        *)
+            emit 'provenance' "SKIP(unrecognized intake-status: $status)" 'unrecognized intake-status resolves to legacy-partial; nothing to verify' 'Use unanswered, partial, legacy-partial, or complete'
+            return 0
+            ;;
+    esac
+    rec_raw="$(machine_field "$kit_root/PROMPTKIT.md" 'intake-record')"
+    if [[ -z "$rec_raw" ]]; then
+        emit 'provenance' 'SKIP(no intake-record line)' 'intake-status is complete but intake-record is absent; compatibility advisory for pre-#641 profiles' 'Add intake-record: <project-relative path> and point it at the Intake Record'
+        return 0
+    fi
+    if is_intake_placeholder "$rec_raw"; then
+        emit 'provenance' 'SKIP(placeholder intake-record)' 'intake-record is an unfilled placeholder' 'Replace it with the project-relative path to the Intake Record'
+        return 0
+    fi
+    rel="${rec_raw//\\//}"
+    # Canonical wrapping: strip exactly one backtick pair. Any other backtick
+    # usage is left intact and fails resolution, matching the PowerShell twin.
+    if [[ "$rel" == '`'*'`' && "${#rel}" -ge 2 ]]; then
+        rel="${rel#\`}"
+        rel="${rel%\`}"
+    fi
+    # Absolute, drive-qualified, and traversal forms are rejected before the
+    # trailing-separator normalization so `/` stays INCOMPLETE instead of
+    # degrading to an empty, "not found" value.
+    case "$rel" in
+        /*|[A-Za-z]:*|*'..'*)
+            emit 'provenance' 'INCOMPLETE' "intake-record is not a project-relative path: $rec_raw" 'Use a project-relative path such as docs/specs/YYYY-MM-DD-intake-<project>.md'
+            return 0
+            ;;
+    esac
+    # Trailing separators are not part of a canonical record path; normalize
+    # them so `docs/specs/x.md/` and `docs/specs/x.md` classify identically.
+    while [[ "$rel" == */ ]]; do
+        rel="${rel%/}"
+    done
+    if [[ -z "$rel" ]]; then
+        emit 'provenance' 'MISSING' "intake-record not found at $rel" 'Create the Intake Record or fix the intake-record path'
+        return 0
+    fi
+    candidate="$kit_root/$rel"
+    parent_real="$(builtin cd -- "$(dirname -- "$candidate")" 2>/dev/null && pwd -P || true)"
+    if [[ -n "$parent_real" && "$parent_real" != "$kit_root" && "$parent_real" != "$kit_root"/* ]]; then
+        emit 'provenance' 'INCOMPLETE' "intake-record resolves outside the project root: $rec_raw" 'Use a project-relative path inside the project root'
+        return 0
+    fi
+    if [[ -e "$candidate" || -L "$candidate" ]]; then
+        local resolved_real
+        if ! resolved_real="$(resolve_physical "$candidate")"; then
+            emit 'provenance' 'INCOMPLETE' "intake-record could not be resolved: $rec_raw" 'Use a project-relative path that resolves inside the project root'
+            return 0
+        fi
+        if [[ "$resolved_real" != "$kit_root" && "$resolved_real" != "$kit_root"/* ]]; then
+            emit 'provenance' 'INCOMPLETE' "intake-record resolves outside the project root: $rec_raw" 'Use a project-relative path inside the project root'
+            return 0
+        fi
+    fi
+    if [[ ! -f "$candidate" ]]; then
+        emit 'provenance' 'MISSING' "intake-record not found at $rel" 'Create the Intake Record or fix the intake-record path'
+        return 0
+    fi
+    # Readability is part of record-path health: a record no tool can read is
+    # not a usable provenance link. The PowerShell twin mirrors this gate.
+    if [[ ! -r "$candidate" ]]; then
+        emit 'provenance' 'MISSING' "intake-record is not readable at $rel" 'Make the Intake Record readable or fix the intake-record path'
+        return 0
+    fi
+    emit 'provenance' 'OK' "intake-record resolves to $rel" '-'
+    return 0
+}
+
+check_provenance
 
 if [[ "$fail" -ne 0 ]]; then
     exit 1

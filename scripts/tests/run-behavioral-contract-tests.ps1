@@ -327,6 +327,24 @@ Assert-Contains "workflows/commit.md" "closed-set operational choices" "Blanket 
 Assert-Contains "workflows/perf.md" "Frontend & Core Web Vitals Layer" "Perf workflow defines Core Web Vitals audit protocol"
 Assert-Contains "workflows/refactor.md" "Code Simplification Pass" "Refactor workflow defines Code Simplification Pass and deflation heuristics"
 
+# Issue #641: onboarding artifact provenance contract (static documentation contract).
+Assert-NotContains "protocols/discovery-intake.md" "Intake Status:" "Intake protocol uses only the canonical hyphenated machine-line spelling"
+Assert-Contains "protocols/discovery-intake.md" "Artifact Provenance Contract" "Intake protocol owns the onboarding artifact-provenance contract"
+Assert-Contains "protocols/discovery-intake.md" "human-confirmed decision" "Provenance contract separates human-confirmed decisions"
+Assert-Contains "protocols/discovery-intake.md" "accepted default" "Provenance contract separates accepted defaults with bounded scope"
+Assert-Contains "protocols/discovery-intake.md" "agent-owned assumption" "Provenance contract separates agent-owned assumptions"
+Assert-Contains "protocols/discovery-intake.md" "derived PromptKit baseline" "Provenance contract separates derived PromptKit baselines"
+Assert-Contains "protocols/discovery-intake.md" "pending verification obligation" "Provenance contract separates pending verification obligations"
+Assert-Contains "protocols/discovery-intake.md" "resolved or superseded assumption" "Provenance contract separates resolved or superseded assumptions"
+Assert-Contains "protocols/discovery-intake.md" "residual operational risk" "Provenance contract preserves residual operational risk on resolution"
+Assert-Contains "protocols/discovery-intake.md" "Round, Turn, and Question Counting" "Provenance contract defines round, turn, and question counting"
+Assert-Contains "protocols/discovery-intake.md" "human-review checklist" "Provenance contract bounds the subjective remainder to a checklist"
+Assert-Contains "templates/project-profile-template.md" "(?m)^intake-record:" "Project profile template carries the intake-record machine line"
+Assert-Contains "templates/project-profile-template.md" "derived PromptKit baseline" "Seeded profile baselines are labelled derived, not human-approved"
+Assert-NotContains "templates/project-profile-template.md" "never a stall reason\)\. working tree\." "Milestone-boundary wording carries no dangling working-tree fragment"
+Assert-Contains "templates/state-tracker-template.md" "source:" "State template requires an inline source for locked invariants"
+Assert-Contains "docs/WORKFLOW-MAP.md" "onboarding artifacts" "WORKFLOW-MAP records the onboarding artifacts' projection authority"
+
 Write-Host "`n📌 Scenario O: Protocol registry & FAQ count drift guards" -ForegroundColor Yellow
 $protoFail = $false
 $setupContent = Get-Content -Path (Join-Path $RepoRoot "protocols/setup.md") -Raw

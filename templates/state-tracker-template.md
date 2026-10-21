@@ -107,8 +107,13 @@ The importer emits a `Ceremony Level` line in every draft whose level is known, 
 ---
 
 ## 4. Locked Technical Invariants (Do Not Undo)
-Document non-negotiable architectural decisions agreed upon during pairing sessions:
+Document non-negotiable architectural decisions agreed upon during pairing sessions. Carry an inline source on every entry:
+
+- `<invariant> — source: DECISION-<spec-slug>-<nnn>` for a confirmed decision
+- `<invariant> — source: policy: <project-relative path>` for an explicit pre-existing policy
 - not tracked — invariants are recorded here as pairing sessions lock them in, never pre-filled
+
+A candidate learning, derived PromptKit baseline, or unverified recommendation is never human-approved or locked without one of those sources. Keep it in §4A until the human decision is recorded (`protocols/context-sync.md` §3.1).
 
 ---
 

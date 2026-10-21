@@ -14,15 +14,15 @@ Run this protocol when **any** of the following is true:
 
 - The repository is greenfield: no manifest, no source directory, no commit history describing shipped behavior.
 - The project profile contains unresolved `[e.g. ...]` placeholders in the sections that describe the product, the stack, or the commands.
-- The project profile has no `Intake Status:` line and the project has no recorded planning record.
+- The project profile has no `intake-status:` line and the project has no recorded planning record.
 
 **Do not run this protocol** when:
 
-- `Intake Status: complete` is recorded and scope has not changed.
+- `intake-status: complete` is recorded and scope has not changed.
 - The task is Level 0 (Direct) or Level 1 (Standard) work on an existing project.
 - The human explicitly declines and accepts the recorded assumptions path (see §C).
 
-Brownfield repositories with an existing filled profile and git history are **not** greenfield. A missing `Intake Status:` line alone never triggers a full interview; it resolves to `legacy-partial`.
+Brownfield repositories with an existing filled profile and git history are **not** greenfield. A missing `intake-status:` line alone never triggers a full interview; it resolves to `legacy-partial`.
 
 ---
 
@@ -40,6 +40,13 @@ Rules:
 2. Persist the confirmed value as `size: small | medium | large` in the project profile, using the same machine-readable convention as `profile:` and `tracking:`.
 3. The budget is a **ceiling, not a target**. Stop as soon as the coverage slots in §B are satisfied. Never pad a round to reach the budget.
 4. If the budget is exhausted with slots still open, close the intake and record the remaining slots as owned assumptions (§C).
+
+### Round, Turn, and Question Counting
+
+- A **turn** is one assistant message. A **round** is one complete pass over the unanswered slots, closed by the single "Anything to add?" invitation in §C.
+- The `Rounds` column is a ceiling on rounds. The `Max questions` column is a ceiling on **total questions across the whole intake**, not per round.
+- The per-turn band in §C bounds how many questions one message may carry; it never raises the total. When the remaining total is smaller than three, ask only what remains and close.
+- Counts are asserted only when the Intake Record actually tracks them. If it does not record rounds used or questions asked, report `not tracked` and do not validate arithmetic against invented numbers.
 
 ---
 
@@ -197,12 +204,49 @@ Write `docs/specs/YYYY-MM-DD-intake-<project>.md` using the existing specificati
 | Artifact | Owns |
 | :--- | :--- |
 | Intake Record | The interview answers and the unknown list |
-| Project profile (`PROMPTKIT.md`) | The derived projection of those answers (`size:`, `Intake Status:`, stack, commands) |
+| Project profile (`PROMPTKIT.md`) | The derived projection of those answers (`size:`, `intake-status:`, stack, commands) |
 | Planning record (`docs/specs/`) | Architecture, contracts, migration, failure modes, and milestones |
 | Task Record (`docs/tasks/`) | Execution authority: scope, acceptance criteria, state, and approval |
 | `docs/STATE.md` | Execution projection owned by `pk:checkpoint` |
 
 No new authority is created and no second task database is introduced.
+
+### Artifact Provenance Contract
+
+The four onboarding artifacts — the Intake Record, `PROMPTKIT.md`, `DESIGN.md`, and `docs/STATE.md` — must keep authority categories distinguishable. Every statement that claims authority carries exactly one class:
+
+| Class | Minimum evidence | May be described as |
+| :--- | :--- | :--- |
+| **human-confirmed decision** | A stable `DECISION-<spec-slug>-<nnn>` ID, or an explicit reference to pre-existing documented policy | agreed, approved, locked — only with that evidence |
+| **accepted default** | The exact accepted value and its bounded scope; adjacent choices stay open | accepted for this scope |
+| **agent-owned assumption** | `ASSUMPTION-<spec-slug>-<nnn>`, named owner, and validation action | provisional |
+| **derived PromptKit baseline** | No human approval; marked `Source: derived PromptKit baseline` | PromptKit baseline |
+| **pending verification obligation** | Named owner, status, and tracking destination | unverified |
+| **resolved or superseded assumption** | Successor `DECISION-*`/`ASSUMPTION-*` link plus the residual operational risk it leaves behind | resolved, superseded |
+
+Rules:
+
+1. **No implied promotion.** A template default, a checklist item, repeated use, or an agent recommendation is never human-approved by position. Memory-to-policy promotion follows `protocols/context-sync.md` §3.1; this contract adds no second promotion path.
+2. **Traceable locks.** `docs/STATE.md` §4 and any "locked" or "human-approved" statement in `PROMPTKIT.md` or `DESIGN.md` cites a `DECISION-*` ID or an explicit policy path. Untraceable recommendations stay candidates.
+3. **Bounded defaults.** Accepting one default resolves only that decision. It never settles an adjacent decision — accepting a disposable database container does not choose a test runner or a managed vendor.
+4. **Assumption lifecycle.** When a confirmed decision answers an assumption's unanswered decision, mark the assumption `superseded` (or `accepted` when the decision adopts the provisional answer) and record the decision link. Do not delete the assumption and do not leave it listed as open.
+5. **Residual operational risk survives resolution.** Resolution retires the unknown, not the risk. Re-home residual operational risk to `docs/STATE.md` §5 (Known Blockers, Risks & Open Questions) or to a pending verification obligation before closing the assumption.
+6. **Obligations stay owned and tracked.** Every pending verification obligation names an owner, a status, and a destination (`docs/STATE.md` §5/§7 or a Task Record). An obligation missing any of the three is untracked.
+7. **No arithmetic without a count.** Question and round counts are asserted only when the Intake Record records them (§A).
+
+### Human-review checklist
+
+Static checks cannot establish intent, authority, or adequacy. Before declaring greenfield onboarding complete, the reviewer confirms:
+
+- [ ] Every locked or human-approved invariant cites a `DECISION-*` ID or an explicit policy.
+- [ ] No assumption remains listed as open after the decision that answered it was confirmed.
+- [ ] Each resolved assumption's residual operational risk is still visible in §5 or in an obligation.
+- [ ] Human decisions, agent assumptions, accepted defaults, and derived baselines are labelled, not blended.
+- [ ] Each accepted default states its exact scope and has not resolved adjacent choices.
+- [ ] Every pending verification obligation has an owner, a status, and a destination.
+- [ ] Derived PromptKit baselines in `PROMPTKIT.md` §7 are still marked derived, not approved.
+
+These checks are manual by design. A green static suite does not prove live-agent compliance.
 
 ---
 

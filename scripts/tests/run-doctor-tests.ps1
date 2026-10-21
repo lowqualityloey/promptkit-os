@@ -26,9 +26,61 @@ $utf8 = [Text.UTF8Encoding]::new($false)
 
 $script:PASS = 0
 $script:FAIL = 0
+$script:SKIPPED = 0
 $script:SCENARIO_OK = $true
 $script:STATUS = 0
 $script:OUT = ''
+
+function Skip-Scenario { param([string]$Label) Write-Output "SKIP: $Label"; $script:SKIPPED++ }
+
+function Test-ReadableFile {
+    param([string]$Path)
+    try {
+        $stream = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+        $stream.Dispose()
+        return $true
+    } catch { return $false }
+}
+
+function Test-AccessDenied {
+    param([string]$Path, [switch]$Directory)
+    if ($Directory) {
+        try {
+            $null = Get-Item -LiteralPath (Join-Path $Path '2026-01-01-intake-fixture.md') -Force -ErrorAction Stop
+            return $false
+        } catch { return $true }
+    }
+    return (-not (Test-ReadableFile $Path))
+}
+
+# Runs one doctor invocation while the target genuinely cannot be read, then
+# always restores access. Returns $false when this platform/user cannot deny
+# read, so callers report an explicit capability skip instead of a false pass.
+function Invoke-DoctorWithoutRead {
+    param([string]$Root, [string]$Path, [switch]$Directory)
+    if ($IsWindows) {
+        $user = if ($env:USERDOMAIN) { "$env:USERDOMAIN\$env:USERNAME" } elseif ($env:USERNAME) { $env:USERNAME } else { [Environment]::UserName }
+        $right = if ($Directory) { '(X)' } else { '(RD)' }
+        & icacls $Path /deny "${user}:$right" *> $null
+        if ($LASTEXITCODE -ne 0) { return $false }
+        try {
+            if (-not (Test-AccessDenied $Path -Directory:$Directory)) { return $false }
+            Invoke-Doctor -Root $Root
+        } finally {
+            & icacls $Path /remove:d $user *> $null
+        }
+        return $true
+    }
+    $orig = [IO.File]::GetUnixFileMode($Path)
+    try {
+        [IO.File]::SetUnixFileMode($Path, [IO.UnixFileMode]::None)
+        if (-not (Test-AccessDenied $Path -Directory:$Directory)) { return $false }
+        Invoke-Doctor -Root $Root
+    } finally {
+        [IO.File]::SetUnixFileMode($Path, $orig)
+    }
+    return $true
+}
 
 function Write-Pass { param([string]$Label) Write-Output "PASS: $Label"; $script:PASS++ }
 function Write-Fail { param([string]$Label) Write-Output "FAIL: $Label"; $script:FAIL++ }
@@ -185,6 +237,23 @@ function Write-Task {
     [IO.File]::WriteAllText((Join-Path $Dir "docs/tasks/$Id.md"), $content, $utf8)
 }
 
+$script:IntakeRecordRel = 'docs/specs/2026-01-01-intake-fixture.md'
+
+function Write-IntakeComplete {
+    param([string]$Dir)
+    New-Item -ItemType Directory -Path (Join-Path $Dir 'docs/specs') -Force | Out-Null
+    [IO.File]::WriteAllText((Join-Path $Dir $script:IntakeRecordRel), "# Intake Record`n`n- **close_reason**: complete`n", $utf8)
+    [IO.File]::AppendAllText((Join-Path $Dir 'PROMPTKIT.md'), "intake-status: complete`nintake-record: $($script:IntakeRecordRel)`n", $utf8)
+}
+
+function Set-IntakeLines {
+    param([string]$Dir, [string]$Status = '', [string]$Record = '')
+    $content = "profile: balanced`n"
+    if (-not [string]::IsNullOrEmpty($Status)) { $content += "intake-status: $Status`n" }
+    if (-not [string]::IsNullOrEmpty($Record)) { $content += "intake-record: $Record`n" }
+    [IO.File]::WriteAllText((Join-Path $Dir 'PROMPTKIT.md'), $content, $utf8)
+}
+
 function New-HealthyKit {
     param([string]$Name, [string]$Profile = 'balanced')
     $dir = New-Kit $Name $Profile
@@ -192,7 +261,19 @@ function New-HealthyKit {
     Write-Hosts $dir $sha
     Write-State $dir $sha
     Write-Task $dir 'TASK-2026-01-01-fixture' 'completed'
+    Write-IntakeComplete $dir
     return $dir
+}
+
+$script:SymlinkCapable = $false
+try {
+    $probeRoot = Join-Path $tmp 'symlink-probe'
+    New-Item -ItemType Directory -Path (Join-Path $probeRoot 'target') -Force | Out-Null
+    $probeLink = Join-Path $probeRoot 'link'
+    New-Item -ItemType SymbolicLink -Path $probeLink -Target (Join-Path $probeRoot 'target') -ErrorAction Stop | Out-Null
+    $script:SymlinkCapable = $null -ne (Get-Item -LiteralPath $probeLink -Force -ErrorAction SilentlyContinue)
+} catch {
+    $script:SymlinkCapable = $false
 }
 
 try {
@@ -520,10 +601,301 @@ try {
     Want-Status 0
     Want-Contains "host:.cursor/rules/promptkit.mdc`tOK"
     Report-Scenario 'S12 cursor mdc-only install -> host OK'
+
+    # P1: a completed intake with a resolvable record path is OK.
+    Begin-Scenario
+    $rootP1 = New-HealthyKit 'p1' 'balanced'
+    Invoke-Doctor -Root $rootP1
+    Want-Status 0
+    Want-Contains "provenance`tOK"
+    Want-Contains 'intake-record resolves to'
+    Report-Scenario 'P1 completed intake with resolvable record -> provenance OK'
+
+    # P2: complete without intake-record is a non-fatal compatibility advisory (#641).
+    Begin-Scenario
+    $rootP2 = New-HealthyKit 'p2' 'balanced'
+    Set-IntakeLines $rootP2 'complete'
+    Invoke-Doctor -Root $rootP2
+    Want-Status 0
+    Want-Contains "provenance`tSKIP(no intake-record line)"
+    Report-Scenario 'P2 complete without intake-record -> non-fatal advisory'
+
+    # P3: a placeholder record path is an advisory, never a completed-intake OK.
+    Begin-Scenario
+    $rootP3 = New-HealthyKit 'p3' 'balanced'
+    Set-IntakeLines $rootP3 'complete' '[docs/specs/YYYY-MM-DD-intake-<project>.md]'
+    Invoke-Doctor -Root $rootP3
+    Want-Status 0
+    Want-Contains "provenance`tSKIP(placeholder intake-record)"
+    Report-Scenario 'P3 placeholder intake-record -> non-fatal advisory'
+
+    # P4: a record path that does not exist is MISSING, exit 1.
+    Begin-Scenario
+    $rootP4 = New-HealthyKit 'p4' 'balanced'
+    Set-IntakeLines $rootP4 'complete' 'docs/specs/missing.md'
+    Invoke-Doctor -Root $rootP4
+    Want-Status 1
+    Want-Contains "provenance`tMISSING"
+    Want-Contains 'intake-record not found at docs/specs/missing.md'
+    Report-Scenario 'P4 nonexistent intake-record -> MISSING, exit 1'
+
+    # P5: parent-directory traversal is rejected as INCOMPLETE, exit 1.
+    Begin-Scenario
+    $rootP5 = New-HealthyKit 'p5' 'balanced'
+    Set-IntakeLines $rootP5 'complete' '../../outside.md'
+    Invoke-Doctor -Root $rootP5
+    Want-Status 1
+    Want-Contains "provenance`tINCOMPLETE"
+    Want-Contains 'not a project-relative path'
+    Report-Scenario 'P5 parent-traversal intake-record -> INCOMPLETE, exit 1'
+
+    # P6: an absolute path is rejected as INCOMPLETE, exit 1.
+    Begin-Scenario
+    $rootP6 = New-HealthyKit 'p6' 'balanced'
+    Set-IntakeLines $rootP6 'complete' '/etc/passwd'
+    Invoke-Doctor -Root $rootP6
+    Want-Status 1
+    Want-Contains "provenance`tINCOMPLETE"
+    Report-Scenario 'P6 absolute intake-record -> INCOMPLETE, exit 1'
+
+    # P7: every non-complete status stays compatible and is never treated as complete.
+    Begin-Scenario
+    $rootP7 = New-HealthyKit 'p7' 'balanced'
+    foreach ($st in @('unanswered', 'partial', 'legacy-partial', 'invented-value')) {
+        Set-IntakeLines $rootP7 $st
+        Invoke-Doctor -Root $rootP7
+        Want-Status 0
+        Want-Contains "provenance`tSKIP("
+        Want-NotContains "provenance`tOK"
+    }
+    Set-IntakeLines $rootP7 ''
+    Invoke-Doctor -Root $rootP7
+    Want-Status 0
+    Want-Contains "provenance`tSKIP(no intake-status line)"
+    Report-Scenario 'P7 non-complete intake statuses -> SKIP, never OK'
+
+    # P8: a Windows-separator record path resolves on both twins.
+    Begin-Scenario
+    $rootP8 = New-HealthyKit 'p8' 'balanced'
+    New-Item -ItemType Directory -Path (Join-Path $rootP8 'docs/specs') -Force | Out-Null
+    [IO.File]::WriteAllText((Join-Path $rootP8 'docs/specs/2026-01-01-intake-fixture.md'), "# Intake Record`n", $utf8)
+    Set-IntakeLines $rootP8 'complete' 'docs\specs\2026-01-01-intake-fixture.md'
+    Invoke-Doctor -Root $rootP8
+    Want-Status 0
+    Want-Contains "provenance`tOK"
+    Report-Scenario 'P8 Windows-separator intake-record -> OK on both twins'
+
+    # P9: trailing spaces on intake-status are trimmed, not reclassified.
+    Begin-Scenario
+    $rootP9 = New-HealthyKit 'p9' 'balanced'
+    Set-IntakeLines $rootP9 'complete   ' 'docs/specs/2026-01-01-intake-fixture.md'
+    Invoke-Doctor -Root $rootP9
+    Want-Status 0
+    Want-Contains "provenance`tOK"
+    Report-Scenario 'P9 trailing spaces on intake-status -> OK'
+
+    # P10: trailing spaces on intake-record are trimmed.
+    Begin-Scenario
+    $rootP10 = New-HealthyKit 'p10' 'balanced'
+    Set-IntakeLines $rootP10 'complete' 'docs/specs/2026-01-01-intake-fixture.md   '
+    Invoke-Doctor -Root $rootP10
+    Want-Status 0
+    Want-Contains "provenance`tOK"
+    Report-Scenario 'P10 trailing spaces on intake-record -> OK'
+
+    # P11: trailing tabs on intake-record are trimmed.
+    Begin-Scenario
+    $rootP11 = New-HealthyKit 'p11' 'balanced'
+    Set-IntakeLines $rootP11 'complete' ("docs/specs/2026-01-01-intake-fixture.md" + "`t`t")
+    Invoke-Doctor -Root $rootP11
+    Want-Status 0
+    Want-Contains "provenance`tOK"
+    Report-Scenario 'P11 trailing tabs on intake-record -> OK'
+
+    # P12: a parent-directory symlink that escapes the root is rejected.
+    if ($script:SymlinkCapable) {
+        Begin-Scenario
+        $rootP12 = New-HealthyKit 'p12' 'balanced'
+        $outsideP12 = Join-Path $tmp 'p12-outside'
+        New-Item -ItemType Directory -Path $outsideP12 -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $outsideP12 'rec.md'), "# outside record`n", $utf8)
+        New-Item -ItemType SymbolicLink -Path (Join-Path $rootP12 'linked') -Target $outsideP12 -ErrorAction Stop | Out-Null
+        Set-IntakeLines $rootP12 'complete' 'linked/rec.md'
+        Invoke-Doctor -Root $rootP12
+        Want-Status 1
+        Want-Contains "provenance`tINCOMPLETE"
+        Want-Contains 'outside the project root'
+        Report-Scenario 'P12 parent-directory symlink escape -> INCOMPLETE, exit 1'
+    } else {
+        Skip-Scenario 'P12 parent-directory symlink escape (symlink creation unavailable on this platform)'
+    }
+
+    # P13: a final-file symlink that escapes the root is rejected.
+    if ($script:SymlinkCapable) {
+        Begin-Scenario
+        $rootP13 = New-HealthyKit 'p13' 'balanced'
+        $outsideP13 = Join-Path $tmp 'p13-outside'
+        New-Item -ItemType Directory -Path $outsideP13 -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $outsideP13 'rec.md'), "# outside record`n", $utf8)
+        New-Item -ItemType SymbolicLink -Path (Join-Path $rootP13 'docs/specs/outlink.md') -Target (Join-Path $outsideP13 'rec.md') -ErrorAction Stop | Out-Null
+        Set-IntakeLines $rootP13 'complete' 'docs/specs/outlink.md'
+        Invoke-Doctor -Root $rootP13
+        Want-Status 1
+        Want-Contains "provenance`tINCOMPLETE"
+        Want-Contains 'outside the project root'
+        Report-Scenario 'P13 final-file symlink escape -> INCOMPLETE, exit 1'
+    } else {
+        Skip-Scenario 'P13 final-file symlink escape (symlink creation unavailable on this platform)'
+    }
+
+    # P14: an in-root final-file symlink resolves and stays OK.
+    if ($script:SymlinkCapable) {
+        Begin-Scenario
+        $rootP14 = New-HealthyKit 'p14' 'balanced'
+        New-Item -ItemType SymbolicLink -Path (Join-Path $rootP14 'docs/specs/inlink.md') -Target (Join-Path $rootP14 'docs/specs/2026-01-01-intake-fixture.md') -ErrorAction Stop | Out-Null
+        Set-IntakeLines $rootP14 'complete' 'docs/specs/inlink.md'
+        Invoke-Doctor -Root $rootP14
+        Want-Status 0
+        Want-Contains "provenance`tOK"
+        Report-Scenario 'P14 in-root final-file symlink -> OK'
+    } else {
+        Skip-Scenario 'P14 in-root final-file symlink (symlink creation unavailable on this platform)'
+    }
+
+    # P15: an in-root parent-directory symlink stays OK.
+    if ($script:SymlinkCapable) {
+        Begin-Scenario
+        $rootP15 = New-HealthyKit 'p15' 'balanced'
+        $aliasTarget = Join-Path $rootP15 'docs/alias-target'
+        New-Item -ItemType Directory -Path $aliasTarget -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $aliasTarget 'rec.md'), "# intake`n", $utf8)
+        New-Item -ItemType SymbolicLink -Path (Join-Path $rootP15 'docs/alias-parent') -Target $aliasTarget -ErrorAction Stop | Out-Null
+        Set-IntakeLines $rootP15 'complete' 'docs/alias-parent/rec.md'
+        Invoke-Doctor -Root $rootP15
+        Want-Status 0
+        Want-Contains "provenance`tOK"
+        Report-Scenario 'P15 in-root parent-directory symlink -> OK'
+    } else {
+        Skip-Scenario 'P15 in-root parent-directory symlink (symlink creation unavailable on this platform)'
+    }
+
+    # P16: a dangling link to a missing in-root target is MISSING, exit 1.
+    if ($script:SymlinkCapable) {
+        Begin-Scenario
+        $rootP16 = New-HealthyKit 'p16' 'balanced'
+        New-Item -ItemType SymbolicLink -Path (Join-Path $rootP16 'docs/specs/dangling-in.md') -Target (Join-Path $rootP16 'docs/specs/ghost.md') -ErrorAction Stop | Out-Null
+        Set-IntakeLines $rootP16 'complete' 'docs/specs/dangling-in.md'
+        Invoke-Doctor -Root $rootP16
+        Want-Status 1
+        Want-Contains "provenance`tMISSING"
+        Report-Scenario 'P16 dangling in-root link -> MISSING, exit 1'
+    } else {
+        Skip-Scenario 'P16 dangling in-root link (symlink creation unavailable on this platform)'
+    }
+
+    # P17: a link whose target directory does not exist fails closed, exit 1.
+    if ($script:SymlinkCapable) {
+        Begin-Scenario
+        $rootP17 = New-HealthyKit 'p17' 'balanced'
+        New-Item -ItemType SymbolicLink -Path (Join-Path $rootP17 'docs/specs/dangling-noparent.md') -Target (Join-Path $rootP17 'no-such-dir/ghost.md') -ErrorAction Stop | Out-Null
+        Set-IntakeLines $rootP17 'complete' 'docs/specs/dangling-noparent.md'
+        Invoke-Doctor -Root $rootP17
+        Want-Status 1
+        Want-Contains "provenance`tINCOMPLETE"
+        Want-Contains 'could not be resolved'
+        Report-Scenario 'P17 link with missing target directory -> INCOMPLETE, exit 1'
+    } else {
+        Skip-Scenario 'P17 link with missing target directory (symlink creation unavailable on this platform)'
+    }
+
+    # P18: the scaffold's own placeholder intake-status is an advisory skip.
+    Begin-Scenario
+    $rootP18 = New-HealthyKit 'p18' 'balanced'
+    Set-IntakeLines $rootP18 '[unanswered | partial | legacy-partial | complete]' $script:IntakeRecordRel
+    Invoke-Doctor -Root $rootP18
+    Want-Status 0
+    Want-Contains "provenance`tSKIP(placeholder intake-status)"
+    Want-NotContains "provenance`tOK"
+    Report-Scenario 'P18 scaffold placeholder intake-status -> SKIP, exit 0'
+
+    # P19: an unreadable PROMPTKIT.md is the exit-2 prerequisite, never a partial report.
+    Begin-Scenario
+    $rootP19 = New-HealthyKit 'p19' 'balanced'
+    if (Invoke-DoctorWithoutRead -Root $rootP19 -Path (Join-Path $rootP19 'PROMPTKIT.md')) {
+        Want-Status 2
+        Want-Contains "prereq`tINCOMPLETE"
+        Want-NotContains "provenance`tOK"
+        Report-Scenario 'P19 unreadable PROMPTKIT.md -> exit 2 prerequisite'
+    } else {
+        Skip-Scenario 'P19 unreadable PROMPTKIT.md (cannot deny read on this platform/user)'
+    }
+
+    # P20: an inaccessible record directory fails closed, never healthy.
+    Begin-Scenario
+    $rootP20 = New-HealthyKit 'p20' 'balanced'
+    if (Invoke-DoctorWithoutRead -Root $rootP20 -Path (Join-Path $rootP20 'docs/specs') -Directory) {
+        Want-Status 1
+        Want-Contains "provenance`tMISSING"
+        Want-NotContains "provenance`tOK"
+        Report-Scenario 'P20 inaccessible docs/specs -> MISSING, exit 1'
+    } else {
+        Skip-Scenario 'P20 inaccessible docs/specs (cannot deny read on this platform/user)'
+    }
+
+    # P21: a component beyond the platform name limit cannot exist -> MISSING.
+    Begin-Scenario
+    $rootP21 = New-HealthyKit 'p21' 'balanced'
+    Set-IntakeLines $rootP21 'complete' ('a' * 260)
+    Invoke-Doctor -Root $rootP21
+    Want-Status 1
+    Want-Contains "provenance`tMISSING"
+    Report-Scenario 'P21 overlong record component -> MISSING, exit 1'
+
+    # P22: canonical single-backtick wrapping is unwrapped, matching the bash twin.
+    Begin-Scenario
+    $rootP22 = New-HealthyKit 'p22' 'balanced'
+    $bt = [char]96
+    Set-IntakeLines $rootP22 'complete' ($bt + $script:IntakeRecordRel + $bt)
+    Invoke-Doctor -Root $rootP22
+    Want-Status 0
+    Want-Contains "provenance`tOK"
+    Report-Scenario 'P22 single-backtick wrapping -> OK'
+
+    # P23: non-canonical double-backtick wrapping resolves to nothing -> MISSING.
+    Begin-Scenario
+    $rootP23 = New-HealthyKit 'p23' 'balanced'
+    Set-IntakeLines $rootP23 'complete' ($bt + $bt + $script:IntakeRecordRel + $bt + $bt)
+    Invoke-Doctor -Root $rootP23
+    Want-Status 1
+    Want-Contains "provenance`tMISSING"
+    Want-NotContains "provenance`tOK"
+    Report-Scenario 'P23 double-backtick wrapping -> MISSING, exit 1'
+
+    # P24: a trailing separator is normalized instead of changing the classification.
+    Begin-Scenario
+    $rootP24 = New-HealthyKit 'p24' 'balanced'
+    Set-IntakeLines $rootP24 'complete' ($script:IntakeRecordRel + '/')
+    Invoke-Doctor -Root $rootP24
+    Want-Status 0
+    Want-Contains "provenance`tOK"
+    Report-Scenario 'P24 trailing-separator record -> OK'
+
+    # P25: an existing but unreadable record is not path-healthy.
+    Begin-Scenario
+    $rootP25 = New-HealthyKit 'p25' 'balanced'
+    if (Invoke-DoctorWithoutRead -Root $rootP25 -Path (Join-Path $rootP25 $script:IntakeRecordRel)) {
+        Want-Status 1
+        Want-Contains "provenance`tMISSING"
+        Want-Contains 'is not readable at'
+        Want-NotContains "provenance`tOK"
+        Report-Scenario 'P25 unreadable record file -> MISSING, exit 1'
+    } else {
+        Skip-Scenario 'P25 unreadable record file (cannot deny read on this platform/user)'
+    }
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-Write-Output "Passed: $($script:PASS) | Failed: $($script:FAIL)"
+Write-Output "Passed: $($script:PASS) | Failed: $($script:FAIL) | Skipped: $($script:SKIPPED)"
 if ($script:FAIL -ne 0) { exit 1 }
 exit 0
