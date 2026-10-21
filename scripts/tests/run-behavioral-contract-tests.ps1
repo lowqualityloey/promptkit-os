@@ -345,6 +345,12 @@ Assert-NotContains "templates/project-profile-template.md" "never a stall reason
 Assert-Contains "templates/state-tracker-template.md" "source:" "State template requires an inline source for locked invariants"
 Assert-Contains "docs/WORKFLOW-MAP.md" "onboarding artifacts" "WORKFLOW-MAP records the onboarding artifacts' projection authority"
 
+# Issue #647: intake-record in the profile authority projection (static documentation contract).
+Assert-Contains "protocols/discovery-intake.md" "size:.*intake-status:.*intake-record:" "Authority table names intake-record alongside size and intake-status"
+Assert-Contains "protocols/discovery-intake.md" "not a second source of interview or decision authority" "Profile intake-record is a path reference, not a second decision authority"
+Assert-Contains "protocols/discovery-intake.md" "non-fatal compatibility advisory" "Doctor treats an absent intake-record line as a non-fatal advisory"
+Assert-Contains "protocols/discovery-intake.md" "missing line is valid for profiles created before" "Missing intake-record lines stay valid for pre-field profiles"
+
 Write-Host "`n📌 Scenario O: Protocol registry & FAQ count drift guards" -ForegroundColor Yellow
 $protoFail = $false
 $setupContent = Get-Content -Path (Join-Path $RepoRoot "protocols/setup.md") -Raw

@@ -204,12 +204,14 @@ Write `docs/specs/YYYY-MM-DD-intake-<project>.md` using the existing specificati
 | Artifact | Owns |
 | :--- | :--- |
 | Intake Record | The interview answers and the unknown list |
-| Project profile (`PROMPTKIT.md`) | The derived projection of those answers (`size:`, `intake-status:`, stack, commands) |
+| Project profile (`PROMPTKIT.md`) | The derived projection of those answers (`size:`, `intake-status:`, `intake-record:`, stack, commands) |
 | Planning record (`docs/specs/`) | Architecture, contracts, migration, failure modes, and milestones |
 | Task Record (`docs/tasks/`) | Execution authority: scope, acceptance criteria, state, and approval |
 | `docs/STATE.md` | Execution projection owned by `pk:checkpoint` |
 
 No new authority is created and no second task database is introduced.
+
+`intake-record:` is a project-relative path reference to the Intake Record under `docs/specs/` by convention — it makes that record discoverable; it is not a second source of interview or decision authority. The Intake Record it names remains the owner of the interview answers and the unknown list. `pk:doctor` verifies the reference only when `intake-status:` is `complete`: an absent or placeholder line is a non-fatal compatibility advisory, while a line that does not resolve to a readable project-relative file inside the project root is reported as `INCOMPLETE` or `MISSING` (exit 1). A missing line is valid for profiles created before this field existed; a completed intake should reference an existing record. Never guess this value.
 
 ### Artifact Provenance Contract
 
