@@ -81,6 +81,7 @@ jobs:
           bash -n scripts/check-milestone-halt-evidence.sh
           bash -n scripts/tests/run-authorization-evidence-fixtures.sh
           bash -n scripts/tests/run-milestone-halt-evidence-fixtures.sh
+          bash -n scripts/tests/run-onboarding-provenance-fixtures.sh
           bash -n scripts/tests/run-courier-integrity-pin-fixtures.sh
           bash -n scripts/tests/run-execution-control-fixtures.sh
           bash -n scripts/tests/run-execution-control-properties.sh
@@ -194,6 +195,9 @@ jobs:
 
       - name: Run Onboarding Divergence Fixture Harness (Bash)
         run: bash scripts/tests/run-onboard-divergence-fixtures.sh
+
+      - name: Run Onboarding Provenance Fixture Harness (Bash)
+        run: bash scripts/tests/run-onboarding-provenance-fixtures.sh
 
       - name: Run LSP Evidence Fixture Harness (Bash)
         run: bash scripts/tests/run-lsp-evidence-fixtures.sh
@@ -367,7 +371,8 @@ jobs:
             "scripts/check-ai-attribution.ps1",
             "scripts/install-attribution-hook.ps1",
             "scripts/tests/run-ai-attribution-tests.ps1",
-            "scripts/tests/run-milestone-halt-evidence-fixtures.ps1"
+            "scripts/tests/run-milestone-halt-evidence-fixtures.ps1",
+            "scripts/tests/run-onboarding-provenance-fixtures.ps1"
           )
           foreach ($file in $syntaxFiles) {
             $errors = @()
@@ -467,6 +472,10 @@ jobs:
       - name: Run Onboarding Divergence Fixture Harness (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-onboard-divergence-fixtures.ps1
+
+      - name: Run Onboarding Provenance Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-onboarding-provenance-fixtures.ps1
 
       - name: Run Reference-Link Harness (PowerShell)
         run: pwsh -NoProfile -File .\scripts\tests\run-reference-link-tests.ps1
