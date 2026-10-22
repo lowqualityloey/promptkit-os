@@ -198,6 +198,37 @@ Write `docs/specs/YYYY-MM-DD-intake-<project>.md` using the existing specificati
 - **Later ledger**
 - **`close_reason`** and the explicit unknown list
 - **Assumption records** for unknown slots that affect architecture, using the existing `ASSUMPTION-*` convention with owners and validation actions
+- **Host Documentation Divergence** rows for every detected pre-existing project document statement that contradicts a confirmed decision (see *Host Documentation Divergence* below)
+
+#### Host Documentation Divergence
+
+A detected pre-existing project document (`ARCHITECTURE.md`, `ROADMAP.md`, `RUNBOOK.md`/`OPERATIONS.md`, `STYLE.md`/`STYLEGUIDE.md`) sometimes states what a confirmed intake decision contradicts. The Intake Record owns one divergence row per contradiction. It is the only registry: no second ledger is created, and `docs/STATE.md` never becomes a competing source of truth.
+
+| Field | Required value |
+| :--- | :--- |
+| **Divergence ID** | `DIVERGENCE-<spec-slug>-<nnn>` - one stable ID per contradiction |
+| **Document** | Project-relative path of the contradicted document, exactly as it was read |
+| **Line** | One-based line number of the contradicted statement inside that document |
+| **Decision ID** | The `DECISION-<spec-slug>-<nnn>` that contradicts it |
+| **Precedence** | Exactly one of `host-doc-authority`, `decision-authority`, `unresolved` |
+| **Designated By** | `not designated`, or the designating human, the date, and the record path |
+| **Owner** | The named person or role accountable for resolving the contradiction |
+| **Next Action** | The concrete next step that closes it |
+
+The Intake Record stores these rows as one Markdown table with exactly these eight columns, in this order: `Divergence ID`, `Document`, `Line`, `Decision ID`, `Precedence`, `Designated By`, `Owner`, `Next Action`.
+
+Precedence is never implied:
+
+- `unresolved` is the default and the only value an agent may assign. A confirmed decision is not by itself evidence that a statement in an existing project document has been superseded; the `DIVERGENCE-*` row stays `unresolved` until a human designates it.
+- `host-doc-authority` and `decision-authority` may be recorded only from an explicit human designation captured in this Intake Record, naming the approver, the date, and the record path.
+- One contradiction produces exactly one row. A second row for the same document, line, and decision is a duplicate, not a second conflict.
+
+Rules:
+
+1. **Host documents are immutable.** Onboarding records the contradiction; it never rewrites, reformats, normalizes, or otherwise edits a pre-existing project document. Resolution happens in the document that owns the statement, under separate human authorization.
+2. **Every precedence claim is traceable.** A precedence statement in `PROMPTKIT.md`, `DESIGN.md`, or `docs/STATE.md` cites its `DIVERGENCE-*` row, its `DECISION-*` ID, an explicit policy path, or the Intake Record path. An unsupported override claim is not policy and must not be emitted.
+3. **The divergence record does not re-decide architecture.** The Intake Record owns the interview answers, the unknown list, and these rows; it does not silently revise what a project document already states.
+4. **Residual risk stays owned.** An unresolved row keeps its owner and next action in the Intake Record. Onboarding does not widen its `docs/STATE.md` write envelope to Section 5; a later `pk:checkpoint` or `pk:tasks` run may re-home the open question there under the State Mutation Contract.
 
 ### Authority Model
 
@@ -235,6 +266,7 @@ Rules:
 5. **Residual operational risk survives resolution.** Resolution retires the unknown, not the risk. Re-home residual operational risk to `docs/STATE.md` §5 (Known Blockers, Risks & Open Questions) or to a pending verification obligation before closing the assumption.
 6. **Obligations stay owned and tracked.** Every pending verification obligation names an owner, a status, and a destination (`docs/STATE.md` §5/§7 or a Task Record). An obligation missing any of the three is untracked.
 7. **No arithmetic without a count.** Question and round counts are asserted only when the Intake Record records them (§A).
+8. **Precedence is designated, never implied.** A statement that asserts how a pre-existing project document relates to a confirmed decision carries a precedence designation and its source (a `DIVERGENCE-*` row, a `DECISION-*` ID, an explicit policy path, or the Intake Record path). A confirmed decision alone never supersedes a document statement.
 
 ### Human-review checklist
 
@@ -247,6 +279,7 @@ Static checks cannot establish intent, authority, or adequacy. Before declaring 
 - [ ] Each accepted default states its exact scope and has not resolved adjacent choices.
 - [ ] Every pending verification obligation has an owner, a status, and a destination.
 - [ ] Derived PromptKit baselines in `PROMPTKIT.md` §7 are still marked derived, not approved.
+- [ ] Every host-document divergence row names its document, line, decision, precedence, designation, owner, and next action, and no generated artifact states a precedence claim without a source reference.
 
 These checks are manual by design. A green static suite does not prove live-agent compliance.
 

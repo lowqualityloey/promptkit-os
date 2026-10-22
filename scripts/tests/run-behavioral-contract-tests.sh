@@ -674,6 +674,28 @@ assert_contains "protocols/discovery-intake.md" "not a second source of intervie
 assert_contains "protocols/discovery-intake.md" "non-fatal compatibility advisory" "Doctor treats an absent intake-record line as a non-fatal advisory"
 assert_contains "protocols/discovery-intake.md" "missing line is valid for profiles created before" "Missing intake-record lines stay valid for pre-field profiles"
 
+# Issue #644: host-documentation divergence record (static documentation contract).
+assert_contains "protocols/discovery-intake.md" "Host Documentation Divergence" "Intake protocol owns the host-documentation divergence record"
+assert_contains "protocols/discovery-intake.md" "Divergence ID.*Document.*Line.*Decision ID.*Precedence.*Designated By.*Owner.*Next Action" "Divergence row pins the eight required reconciliation fields in a fixed column order"
+assert_contains "protocols/discovery-intake.md" "host-doc-authority.*decision-authority.*unresolved" "Precedence is an explicit three-value designation, never implied"
+assert_contains "protocols/discovery-intake.md" "DIVERGENCE-" "Divergence rows carry a stable DIVERGENCE-* identifier"
+assert_contains "protocols/discovery-intake.md" "Precedence is designated, never implied" "Provenance contract forbids implied precedence promotion"
+assert_contains "workflows/onboard.md" "Host Documentation Divergence" "Onboarding records host-document contradictions in the Intake Record"
+assert_contains "workflows/onboard.md" "never authorizes a rewrite of a detected project document" "Phase 3 write envelope excludes host-document rewrites"
+assert_contains "workflows/onboard.md" "byte-identical" "Onboarding states that a detected project document stays byte-identical"
+assert_contains "templates/project-profile-template.md" "Host Documentation Divergence" "Project profile points at the divergence record"
+assert_contains "templates/project-profile-template.md" "DIVERGENCE-" "Project profile cites the divergence identifier instead of restating precedence"
+assert_contains "templates/state-tracker-template.md" "DIVERGENCE-" "State template requires a traceable source for host-document precedence claims"
+assert_contains "scripts/tests/fixtures/onboard-divergence/expected/cases.tsv" "designated-precedence" "Divergence fixture matrix pins the designated-precedence case"
+assert_contains "scripts/tests/fixtures/onboard-divergence/expected/cases.tsv" "VALID\|DIVERGENCES=1\|HOST_DOC_UNCHANGED=1" "Divergence fixture matrix pins the exact divergence-row and host-integrity summary"
+assert_contains "scripts/tests/fixtures/onboard-divergence/expected/cases.tsv" "MISSING_HUMAN_DESIGNATION" "Divergence fixture matrix pins the missing-human-designation diagnostic"
+assert_contains "scripts/tests/fixtures/onboard-divergence/expected/cases.tsv" "UNTRACEABLE_PRECEDENCE_CLAIM" "Divergence fixture matrix pins the untraceable-precedence-claim diagnostic"
+assert_contains "scripts/tests/fixtures/onboard-divergence/cases/one-conflicting-architecture/project/ARCHITECTURE.md" "^# Architecture$" "Divergence fixture host document is the three-line architecture blueprint"
+assert_contains "scripts/tests/fixtures/onboard-divergence/cases/one-conflicting-architecture/project/ARCHITECTURE.md" "Event dispatch MUST be synchronous and in-process" "Divergence fixture host document contradicts the confirmed durable-queue decision"
+assert_contains "scripts/tests/run-onboard-divergence-fixtures.sh" "ROW_COUNT_MISMATCH" "Bash divergence harness pins the exact divergence-row count"
+assert_contains "scripts/tests/run-onboard-divergence-fixtures.sh" "HOST_DOCUMENT_MUTATED" "Bash divergence harness pins the host-document immutability check"
+assert_contains "scripts/tests/run-onboard-divergence-fixtures.ps1" "HOST_DOCUMENT_MUTATED" "PowerShell divergence harness pins the host-document immutability check"
+
 echo ""
 echo "📌 Scenario O: Protocol registry & FAQ count drift guards"
 PROTO_FAIL=0

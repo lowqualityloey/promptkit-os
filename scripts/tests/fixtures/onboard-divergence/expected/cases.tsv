@@ -1,0 +1,6 @@
+# case name	expected exit	exact summary	complete normalized diagnostics separated by ;; (or - for valid)
+designated-precedence	0	VALID|DIVERGENCES=1|HOST_DOC_UNCHANGED=1	-
+one-conflicting-architecture	0	VALID|DIVERGENCES=1|HOST_DOC_UNCHANGED=1	-
+precedence-without-designation	1	FAILED|ERRORS=1|DIVERGENCES=1|HOST_DOC_UNCHANGED=1	MISSING_HUMAN_DESIGNATION|row 1 precedence decision-authority has no explicit human designation (approver, date, record path)
+untraceable-precedence-claim	1	FAILED|ERRORS=1|DIVERGENCES=1|HOST_DOC_UNCHANGED=1	UNTRACEABLE_PRECEDENCE_CLAIM|PROMPTKIT.md|Entries here override `./ARCHITECTURE.md` wherever the two disagree.
+# End of complete onboarding divergence fixture matrix.

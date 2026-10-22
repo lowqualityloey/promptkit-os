@@ -43,6 +43,7 @@ bash -n scripts/validate-execution-control.sh
 bash -n scripts/validate-release-records.sh
 bash -n scripts/validate-ci-triage.sh
 bash -n scripts/tests/run-behavioral-contract-tests.sh
+bash -n scripts/tests/run-onboard-divergence-fixtures.sh
 bash -n scripts/tests/run-init-safety-tests.sh
 bash -n scripts/check-checkpoint-ignore.sh
 bash -n scripts/tests/run-checkpoint-ignore-tests.sh
@@ -57,6 +58,7 @@ bash scripts/tests/run-init-safety-tests.sh
 bash scripts/tests/run-behavioral-contract-tests.sh
 bash scripts/tests/run-execution-control-fixtures.sh
 bash scripts/tests/run-ci-triage-fixtures.sh
+bash scripts/tests/run-onboard-divergence-fixtures.sh
 bash scripts/tests/run-checkpoint-ignore-tests.sh
 bash scripts/tests/run-pk-entry-points-tests.sh
 bash scripts/tests/run-ai-attribution-tests.sh
@@ -85,6 +87,7 @@ $syntaxFiles = @(
   "scripts/validate-ci-triage.ps1",
   "scripts/tests/run-ci-triage-fixtures.ps1",
   "scripts/tests/run-behavioral-contract-tests.ps1",
+  "scripts/tests/run-onboard-divergence-fixtures.ps1",
   "scripts/tests/run-init-safety-tests.ps1",
   "scripts/check-checkpoint-ignore.ps1",
   "scripts/tests/run-checkpoint-ignore-tests.ps1",
@@ -105,6 +108,7 @@ pwsh -NoProfile -File .\scripts\tests\run-init-safety-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-behavioral-contract-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-execution-control-fixtures.ps1
 pwsh -NoProfile -File .\scripts\tests\run-ci-triage-fixtures.ps1
+pwsh -NoProfile -File .\scripts\tests\run-onboard-divergence-fixtures.ps1
 pwsh -NoProfile -File .\scripts\tests\run-checkpoint-ignore-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-pk-entry-points-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-ai-attribution-tests.ps1
