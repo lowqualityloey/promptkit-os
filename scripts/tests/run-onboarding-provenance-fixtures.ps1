@@ -114,70 +114,8 @@ function Invoke-AnalyseIntake([string]$Path) {
     $sepSeen = @{}
     $columnCount = @{}
     $headerCells = @{}
-
-    foreach ($line in (Get-Content -LiteralPath $Path)) {
-        if ($line -match '^##\s+(.*)$') {
-            $section = $Matches[1].Trim()
-            $seenSections[$section] = $true
-            continue
-        }
-        if ($line -notmatch '^\|') { continue }
-        if ($section -eq '') { continue }
-        $cells = Get-TrimmedCells $line
-        if ($cells.Count -eq 0) { continue }
-        if (-not $headerSeen.ContainsKey($section)) {
-            $headerSeen[$section] = $true
-            $columnCount[$section] = $cells.Count
-            $headerCells[$section] = @($cells)
-            continue
-        }
-        if (-not $sepSeen.ContainsKey($section)) {
-            $isSeparator = $true
-            foreach ($cell in $cells) { if ($cell -notmatch '^:?-+:?$') { $isSeparator = $false; break } }
-            if ($isSeparator -and $cells.Count -eq $columnCount[$section]) { $sepSeen[$section] = $true }
-            continue
-        }
-        if ($cells[0] -match '^:?-+:?$') { continue }
-        switch ($section) {
-            'Decisions' {
-                if ($cells.Count -ge 4) {
-                    $decisions.Add($cells[0])
-                    $decStatus[$cells[0]] = $cells[1].ToLowerInvariant()
-                    $decProv[$cells[0]] = $cells[3]
-                }
-            }
-            'Accepted defaults' {
-                if ($cells.Count -ge 6) {
-                    $defaults.Add($cells[0])
-                    $defResolves[$cells[0]] = $cells[4]
-                }
-            }
-            'Assumption records' {
-                if ($cells.Count -ge 8) {
-                    $assumptions.Add($cells[0])
-                    $asmStatus[$cells[0]] = $cells[4].ToLowerInvariant()
-                    $asmLink[$cells[0]] = $cells[5]
-                    $asmRisk[$cells[0]] = $cells[6]
-                    $asmDest[$cells[0]] = $cells[7]
-                }
-            }
-            'Verification obligations' {
-                if ($cells.Count -ge 5) {
-                    $obligations.Add($cells[0])
-                    $oblOwner[$cells[0]] = $cells[2]
-                    $oblStatus[$cells[0]] = $cells[3]
-                    $oblDest[$cells[0]] = $cells[4]
-                }
-            }
-            'Intake metadata' {
-                if ($cells.Count -ge 2) { $meta[$cells[0]] = $cells[1] }
-            }
-            'Round log' {
-                $rounds = $rounds + 1
-                if ($cells.Count -ge 2 -and $cells[1] -match '^[0-9]+$') { $qsum = $qsum + [int]$cells[1] }
-            }
-        }
-    }
+    $registerCanonical = @{}
+    $registerClean = @{}
 
     $out = New-Object System.Collections.Generic.List[string]
 
@@ -200,31 +138,122 @@ function Invoke-AnalyseIntake([string]$Path) {
         'Verification obligations' = @('Obligation ID', 'Statement', 'Owner', 'Status', 'Destination')
         'Round log' = @('Round', 'Questions', 'Closed by')
     }
-    $registerOk = @{}
+
+    foreach ($line in (Get-Content -LiteralPath $Path)) {
+        if ($line -match '^##\s+(.*)$') {
+            $section = $Matches[1].Trim()
+            $seenSections[$section] = $true
+            continue
+        }
+        if ($line -notmatch '^\|') { continue }
+        if ($section -eq '') { continue }
+        $cells = Get-TrimmedCells $line
+        if ($cells.Count -eq 0) { continue }
+        if (-not $headerSeen.ContainsKey($section)) {
+            $headerSeen[$section] = $true
+            $columnCount[$section] = $cells.Count
+            $headerCells[$section] = @($cells)
+            continue
+        }
+        if (-not $sepSeen.ContainsKey($section)) {
+            $isSeparator = $true
+            foreach ($cell in $cells) { if ($cell -notmatch '^:?-+:?$') { $isSeparator = $false; break } }
+            if ($isSeparator -and $cells.Count -eq $columnCount[$section]) {
+                $sepSeen[$section] = $true
+                # The register is canonical only when its complete ordered
+                # header row and declared width both match the contract.
+                $actualHeader = (@($headerCells[$section]) -join '|')
+                $expectedHeaderText = (@($expectedHeader[$section]) -join '|')
+                if ($cells.Count -eq $expectedColumns[$section] -and $actualHeader -ceq $expectedHeaderText) {
+                    $registerCanonical[$section] = $true
+                    $registerClean[$section] = $true
+                }
+            }
+            continue
+        }
+        if ($cells[0] -match '^:?-+:?$') { continue }
+        if (-not ($registerCanonical.ContainsKey($section) -and $registerCanonical[$section])) { continue }
+        # One documented malformed-row convention: the register name, the
+        # declared and observed widths, and the row's leading identifying
+        # value. A short or over-wide row is reported and skipped, never
+        # truncated or padded, and the register is marked incomplete so
+        # dependent checks do not cascade.
+        if ($cells.Count -ne $expectedColumns[$section]) {
+            $rowId = [string]$cells[0]
+            if ([string]::IsNullOrWhiteSpace($rowId)) { $rowId = 'none' }
+            $out.Add('ROW_WIDTH|' + $section + '|expected=' + $expectedColumns[$section] + '|actual=' + $cells.Count + '|row=' + $rowId)
+            $registerClean[$section] = $false
+            continue
+        }
+        # Width was validated above, so every parsed row indexes safely.
+        switch ($section) {
+            'Decisions' {
+                $decisions.Add($cells[0])
+                $decStatus[$cells[0]] = $cells[1].ToLowerInvariant()
+                $decProv[$cells[0]] = $cells[3]
+            }
+            'Accepted defaults' {
+                $defaults.Add($cells[0])
+                $defResolves[$cells[0]] = $cells[4]
+            }
+            'Assumption records' {
+                $assumptions.Add($cells[0])
+                $asmStatus[$cells[0]] = $cells[4].ToLowerInvariant()
+                $asmLink[$cells[0]] = $cells[5]
+                $asmRisk[$cells[0]] = $cells[6]
+                $asmDest[$cells[0]] = $cells[7]
+            }
+            'Verification obligations' {
+                $obligations.Add($cells[0])
+                $oblOwner[$cells[0]] = $cells[2]
+                $oblStatus[$cells[0]] = $cells[3]
+                $oblDest[$cells[0]] = $cells[4]
+            }
+            'Intake metadata' {
+                $meta[$cells[0]] = $cells[1]
+            }
+            'Round log' {
+                $rounds = $rounds + 1
+                if ($cells[1] -match '^[0-9]+$') { $qsum = $qsum + [int]$cells[1] }
+            }
+        }
+    }
+
+    $usable = @{}
     foreach ($required in @('Intake metadata', 'Decisions', 'Accepted defaults', 'Assumption records', 'Verification obligations', 'Round log')) {
         if (-not $seenSections.ContainsKey($required)) {
             $out.Add('REGISTER_MISSING|' + $required)
-            $registerOk[$required] = $false
             continue
         }
-        $actualHeader = ''
-        if ($headerCells.ContainsKey($required)) { $actualHeader = (@($headerCells[$required]) -join '|') }
-        $expectedHeaderText = (@($expectedHeader[$required]) -join '|')
-        $ok = $sepSeen.ContainsKey($required) -and $columnCount[$required] -eq $expectedColumns[$required] -and $actualHeader -ceq $expectedHeaderText
-        $registerOk[$required] = $ok
+        # A register is canonical only when its complete ordered header row and
+        # separator matched the contract (set during parsing).
+        $ok = ($registerCanonical.ContainsKey($required) -and $registerCanonical[$required])
         if (-not $ok) { $out.Add('REGISTER_NOT_TABULAR|' + $required) }
+        # Dependent (cross-register) checks are suppressed when a register is
+        # non-canonical OR carried a malformed data row, so one structural
+        # defect cannot cascade into misleading lifecycle or count verdicts.
+        if ($ok -and $registerClean.ContainsKey($required) -and $registerClean[$required]) { $usable[$required] = $true }
     }
 
-    if ($registerOk['Assumption records']) {
+    if ($usable['Assumption records']) {
         foreach ($id in $assumptions) {
             $st = $asmStatus[$id]
             $lk = $asmLink[$id]
-            if ($registerOk['Decisions'] -and $null -ne $lk -and $lk -match '^DECISION-') {
-                if (-not $decStatus.ContainsKey($lk)) {
-                    $out.Add('ASSUMPTION_LINK_UNRESOLVED|' + $id + '|' + $lk)
+            # Blank and the shared placeholder set mean "no linked decision".
+            # Every other value must use the accepted DECISION-* identifier
+            # syntax; malformed syntax is reported even when the Decisions
+            # register is unusable, because it is intrinsic to this row.
+            if (-not (Test-Placeholder $lk)) {
+                if ($lk -notmatch '^DECISION-[a-z0-9]+(-[a-z0-9]+)*-[0-9]{3}$') {
+                    $out.Add('ASSUMPTION_LINK_INVALID|' + $id + '|' + $lk)
                 }
-                elseif ($decStatus[$lk] -eq 'confirmed' -and $st -notmatch '^(accepted|superseded)') {
-                    $out.Add('ASSUMPTION_STILL_OPEN|' + $id + '|' + $lk)
+                elseif ($usable['Decisions']) {
+                    if (-not $decStatus.ContainsKey($lk)) {
+                        $out.Add('ASSUMPTION_LINK_UNRESOLVED|' + $id + '|' + $lk)
+                    }
+                    elseif ($decStatus[$lk] -eq 'confirmed' -and $st -notmatch '^(accepted|superseded)') {
+                        $out.Add('ASSUMPTION_STILL_OPEN|' + $id + '|' + $lk)
+                    }
                 }
             }
             if ($null -ne $st -and $st -match '^(accepted|superseded)' -and -not (Test-Placeholder $asmRisk[$id]) -and (Test-Placeholder $asmDest[$id])) {
@@ -233,7 +262,7 @@ function Invoke-AnalyseIntake([string]$Path) {
         }
     }
 
-    if ($registerOk['Decisions'] -and $registerOk['Accepted defaults']) {
+    if ($usable['Decisions'] -and $usable['Accepted defaults']) {
         foreach ($id in $decisions) {
             $match = [regex]::Match([string]$decProv[$id], 'DEFAULT-[a-z0-9-]+-[0-9]{3}')
             if ($match.Success) {
@@ -245,7 +274,7 @@ function Invoke-AnalyseIntake([string]$Path) {
         }
     }
 
-    if ($registerOk['Intake metadata'] -and $registerOk['Round log']) {
+    if ($usable['Intake metadata'] -and $usable['Round log']) {
         $size = ''
         if ($meta.ContainsKey('Size')) { $size = $meta['Size'].ToLowerInvariant() }
         $questionCeiling = 0
@@ -273,7 +302,7 @@ function Invoke-AnalyseIntake([string]$Path) {
         }
     }
 
-    if ($registerOk['Verification obligations']) {
+    if ($usable['Verification obligations']) {
         foreach ($id in $obligations) {
             if (Test-Placeholder $oblOwner[$id]) { $out.Add('OBLIGATION_UNTRACKED|' + $id + '|owner') }
             if (Test-Placeholder $oblStatus[$id]) { $out.Add('OBLIGATION_UNTRACKED|' + $id + '|status') }

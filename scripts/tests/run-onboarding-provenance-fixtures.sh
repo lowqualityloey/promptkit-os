@@ -91,6 +91,23 @@ BEGIN {
     FS = "|"
     sec = ""
     na = 0; nd = 0; ndf = 0; no = 0; rounds = 0; qsum = 0
+    # Declared width and canonical complete header row for each register,
+    # taken from the canonical baseline fixture (cases/valid-baseline). Both
+    # are needed at parse time: every parsed data row must be exactly as wide
+    # as its register, and a register whose header/separator is not canonical
+    # has its rows skipped rather than misparsed.
+    w["Intake metadata"] = 2
+    H["Intake metadata"] = "Field|Value"
+    w["Decisions"] = 4
+    H["Decisions"] = "Decision ID|Status|Statement|Provenance"
+    w["Accepted defaults"] = 6
+    H["Accepted defaults"] = "Default ID|Status|Accepted value|Scope|Resolves|Adjacent decisions that stay open"
+    w["Assumption records"] = 8
+    H["Assumption records"] = "Assumption ID|Statement|Owner|Validation action|Status|Linked decision|Residual risk|Destination"
+    w["Verification obligations"] = 5
+    H["Verification obligations"] = "Obligation ID|Statement|Owner|Status|Destination"
+    w["Round log"] = 3
+    H["Round log"] = "Round|Questions|Closed by"
 }
 function trim(s) { gsub(/^[[:space:]]+/, "", s); gsub(/[[:space:]]+$/, "", s); return s }
 function placeholder(s) {
@@ -118,10 +135,27 @@ function member(list, target,    n, i, arr) {
     if (!(sec in sep_ok)) {
         sep = 1
         for (i = 1; i <= m; i++) if (cells[i] !~ /^:?-+:?$/) sep = 0
-        if (sep && m == ncols[sec]) sep_ok[sec] = 1
+        if (sep && m == ncols[sec]) {
+            sep_ok[sec] = 1
+            # The register is canonical only when its header row and declared
+            # width both match the contract; otherwise its rows are skipped.
+            if (hdr[sec] == H[sec] && ncols[sec] == w[sec]) { hdr_ok[sec] = 1; clean[sec] = 1 }
+        }
         next
     }
     if (cells[1] ~ /^:?-+:?$/) next
+    if (!(sec in hdr_ok)) next
+    # One documented malformed-row convention: the register name, the declared
+    # and observed widths, and the leading identifying value of the row. A short or
+    # over-wide row is reported and skipped, never truncated or padded, and the
+    # register is marked incomplete so dependent checks do not cascade.
+    if (m != w[sec]) {
+        rowid = cells[1]
+        if (rowid == "") rowid = "none"
+        print "ROW_WIDTH|" sec "|expected=" w[sec] "|actual=" m "|row=" rowid
+        clean[sec] = 0
+        next
+    }
     if (sec == "Decisions") {
         nd++
         dec_id[nd] = cells[1]
@@ -154,43 +188,41 @@ function member(list, target,    n, i, arr) {
 }
 END {
     nreq = split("Intake metadata;Decisions;Accepted defaults;Assumption records;Verification obligations;Round log", req, ";")
-    # Expected complete header row for each register, taken from the canonical
-    # baseline fixture (cases/valid-baseline). A register must match every
-    # header cell in order, not merely the first cell and the column count.
-    expn["Intake metadata"] = 2
-    exph["Intake metadata"] = "Field|Value"
-    expn["Decisions"] = 4
-    exph["Decisions"] = "Decision ID|Status|Statement|Provenance"
-    expn["Accepted defaults"] = 6
-    exph["Accepted defaults"] = "Default ID|Status|Accepted value|Scope|Resolves|Adjacent decisions that stay open"
-    expn["Assumption records"] = 8
-    exph["Assumption records"] = "Assumption ID|Statement|Owner|Validation action|Status|Linked decision|Residual risk|Destination"
-    expn["Verification obligations"] = 5
-    exph["Verification obligations"] = "Obligation ID|Statement|Owner|Status|Destination"
-    expn["Round log"] = 3
-    exph["Round log"] = "Round|Questions|Closed by"
     for (i = 1; i <= nreq; i++) {
         r = req[i]
-        if (!(r in seen)) { print "REGISTER_MISSING|" r; reg_ok[r] = 0; continue }
-        ok = (r in sep_ok) && (ncols[r] == expn[r]) && (hdr[r] == exph[r])
-        reg_ok[r] = ok
+        if (!(r in seen)) { print "REGISTER_MISSING|" r; continue }
+        # A register is canonical only when its complete ordered header row and
+        # separator matched the contract (hdr_ok is set during parsing).
+        ok = (r in hdr_ok)
         if (!ok) print "REGISTER_NOT_TABULAR|" r
+        # Dependent (cross-register) checks are suppressed when a register is
+        # non-canonical OR carried a malformed data row, so one structural
+        # defect cannot cascade into misleading lifecycle or count verdicts.
+        if (ok && (r in clean) && clean[r] == 1) usable[r] = 1
     }
-    if (reg_ok["Assumption records"]) {
+    if (usable["Assumption records"]) {
         for (k = 1; k <= na; k++) {
             id = asm_id[k]
             st = asm_status[id]
             lk = asm_link[id]
-            if (reg_ok["Decisions"] && lk ~ /^DECISION-/) {
-                if (!(lk in dec_status)) print "ASSUMPTION_LINK_UNRESOLVED|" id "|" lk
-                else if (dec_status[lk] == "confirmed" && st !~ /^(accepted|superseded)/)
-                    print "ASSUMPTION_STILL_OPEN|" id "|" lk
+            # Blank and the shared placeholder set mean "no linked decision".
+            # Every other value must use the accepted DECISION-* identifier
+            # syntax; malformed syntax is reported even when the Decisions
+            # register is unusable, because it is intrinsic to this row.
+            if (!placeholder(lk)) {
+                if (lk !~ /^DECISION-[a-z0-9]+(-[a-z0-9]+)*-[0-9][0-9][0-9]$/) {
+                    print "ASSUMPTION_LINK_INVALID|" id "|" lk
+                } else if (usable["Decisions"]) {
+                    if (!(lk in dec_status)) print "ASSUMPTION_LINK_UNRESOLVED|" id "|" lk
+                    else if (dec_status[lk] == "confirmed" && st !~ /^(accepted|superseded)/)
+                        print "ASSUMPTION_STILL_OPEN|" id "|" lk
+                }
             }
             if (st ~ /^(accepted|superseded)/ && !placeholder(asm_risk[id]) && placeholder(asm_dest[id]))
                 print "RESIDUAL_RISK_UNTRACKED|" id
         }
     }
-    if (reg_ok["Decisions"] && reg_ok["Accepted defaults"]) {
+    if (usable["Decisions"] && usable["Accepted defaults"]) {
         for (k = 1; k <= nd; k++) {
             id = dec_id[k]
             if (match(dec_prov[id], /DEFAULT-[a-z0-9-]+-[0-9][0-9][0-9]/)) {
@@ -199,7 +231,7 @@ END {
             }
         }
     }
-    if (reg_ok["Intake metadata"] && reg_ok["Round log"]) {
+    if (usable["Intake metadata"] && usable["Round log"]) {
         size = tolower(meta["Size"])
         if (size == "small") qceil = 5
         else if (size == "medium") qceil = 8
@@ -214,7 +246,7 @@ END {
             if (qceil > 0 && qs + 0 > qceil) print "QUESTION_BUDGET_EXCEEDED|size=" size "|ceiling=" qceil "|asked=" qs
         }
     }
-    if (reg_ok["Verification obligations"]) {
+    if (usable["Verification obligations"]) {
         for (k = 1; k <= no; k++) {
             id = obl_id[k]
             if (placeholder(obl_owner[id])) print "OBLIGATION_UNTRACKED|" id "|owner"
