@@ -60,9 +60,11 @@ function Sort-Diagnostics($Items) {
 }
 
 function Get-RepoFileLines {
-    $gitDir = Join-Path $repoRoot '.git'
     $items = Get-ChildItem -LiteralPath $repoRoot -Recurse -File -Force -ErrorAction SilentlyContinue |
-        Where-Object { -not $_.FullName.StartsWith($gitDir) } |
+        Where-Object {
+            $relative = $_.FullName.Substring($repoRoot.Length).TrimStart([char]92, [char]47) -replace '\\', '/'
+            -not ($relative -eq '.git' -or $relative.StartsWith('.git/'))
+        } |
         Sort-Object -Property FullName
     $lines = New-Object System.Collections.Generic.List[string]
     foreach ($item in $items) {
@@ -89,7 +91,6 @@ function Assert-Unchanged([string]$BeforeFiles, [string]$BeforeStatus, [string]$
 
 function Invoke-AnalyseIntake([string]$Path) {
     $section = ''
-    $headerSeen = $false
     $decisions = New-Object System.Collections.Generic.List[string]
     $decStatus = @{}
     $decProv = @{}
@@ -109,19 +110,34 @@ function Invoke-AnalyseIntake([string]$Path) {
     $rounds = 0
     $qsum = 0
 
+    $headerSeen = @{}
+    $sepSeen = @{}
+    $columnCount = @{}
+    $firstHeader = @{}
+
     foreach ($line in (Get-Content -LiteralPath $Path)) {
         if ($line -match '^##\s+(.*)$') {
             $section = $Matches[1].Trim()
             $seenSections[$section] = $true
-            $headerSeen = $false
             continue
         }
         if ($line -notmatch '^\|') { continue }
         if ($section -eq '') { continue }
         $cells = Get-TrimmedCells $line
         if ($cells.Count -eq 0) { continue }
+        if (-not $headerSeen.ContainsKey($section)) {
+            $headerSeen[$section] = $true
+            $columnCount[$section] = $cells.Count
+            $firstHeader[$section] = $cells[0]
+            continue
+        }
+        if (-not $sepSeen.ContainsKey($section)) {
+            $isSeparator = $true
+            foreach ($cell in $cells) { if ($cell -notmatch '^:?-+:?$') { $isSeparator = $false; break } }
+            if ($isSeparator -and $cells.Count -eq $columnCount[$section]) { $sepSeen[$section] = $true }
+            continue
+        }
         if ($cells[0] -match '^:?-+:?$') { continue }
-        if (-not $headerSeen) { $headerSeen = $true; continue }
         switch ($section) {
             'Decisions' {
                 if ($cells.Count -ge 4) {
@@ -165,15 +181,44 @@ function Invoke-AnalyseIntake([string]$Path) {
 
     $out = New-Object System.Collections.Generic.List[string]
 
+    $expectedColumns = @{
+        'Intake metadata' = 2
+        'Decisions' = 4
+        'Accepted defaults' = 6
+        'Assumption records' = 8
+        'Verification obligations' = 5
+        'Round log' = 3
+    }
+    $expectedFirstHeader = @{
+        'Intake metadata' = 'Field'
+        'Decisions' = 'Decision ID'
+        'Accepted defaults' = 'Default ID'
+        'Assumption records' = 'Assumption ID'
+        'Verification obligations' = 'Obligation ID'
+        'Round log' = 'Round'
+    }
+    $registerOk = @{}
     foreach ($required in @('Intake metadata', 'Decisions', 'Accepted defaults', 'Assumption records', 'Verification obligations', 'Round log')) {
-        if (-not $seenSections.ContainsKey($required)) { $out.Add('REGISTER_MISSING|' + $required) }
+        if (-not $seenSections.ContainsKey($required)) {
+            $out.Add('REGISTER_MISSING|' + $required)
+            $registerOk[$required] = $false
+            continue
+        }
+        $ok = $sepSeen.ContainsKey($required) -and $columnCount[$required] -eq $expectedColumns[$required] -and $firstHeader[$required] -eq $expectedFirstHeader[$required]
+        $registerOk[$required] = $ok
+        if (-not $ok) { $out.Add('REGISTER_NOT_TABULAR|' + $required) }
     }
 
     foreach ($id in $assumptions) {
         $st = $asmStatus[$id]
         $lk = $asmLink[$id]
-        if ($null -ne $lk -and $lk -match '^DECISION-' -and $decStatus[$lk] -eq 'confirmed' -and $st -notmatch '^(accepted|superseded)') {
-            $out.Add('ASSUMPTION_STILL_OPEN|' + $id + '|' + $lk)
+        if ($registerOk['Decisions'] -and $null -ne $lk -and $lk -match '^DECISION-') {
+            if (-not $decStatus.ContainsKey($lk)) {
+                $out.Add('ASSUMPTION_LINK_UNRESOLVED|' + $id + '|' + $lk)
+            }
+            elseif ($decStatus[$lk] -eq 'confirmed' -and $st -notmatch '^(accepted|superseded)') {
+                $out.Add('ASSUMPTION_STILL_OPEN|' + $id + '|' + $lk)
+            }
         }
         if ($null -ne $st -and $st -match '^(accepted|superseded)' -and -not (Test-Placeholder $asmRisk[$id]) -and (Test-Placeholder $asmDest[$id])) {
             $out.Add('RESIDUAL_RISK_UNTRACKED|' + $id)
@@ -311,15 +356,30 @@ try {
     if (-not (Test-Path -LiteralPath $manifest -PathType Leaf)) { Fail-Harness 'Missing onboarding provenance case manifest' }
 
     $caseCount = 0
-    foreach ($line in (Get-Content -LiteralPath $manifest)) {
+    $manifestLines = @(Get-Content -LiteralPath $manifest)
+    $declaredCases = @{}
+    foreach ($manifestLine in $manifestLines) {
+        if ([string]::IsNullOrWhiteSpace($manifestLine)) { continue }
+        if ($manifestLine.StartsWith('#')) { continue }
+        $declaredFields = $manifestLine.Split($tab)
+        if ($declaredFields.Count -ge 1) { $declaredCases[$declaredFields[0]] = $true }
+    }
+    foreach ($caseDirectory in @(Get-ChildItem -LiteralPath (Join-Path $fixtureRoot 'cases') -Directory | Sort-Object -Property Name)) {
+        if (-not $declaredCases.ContainsKey($caseDirectory.Name)) {
+            Fail-Harness ('Case directory not declared in expected/cases.tsv: ' + $caseDirectory.Name)
+        }
+    }
+    foreach ($line in $manifestLines) {
         if ([string]::IsNullOrWhiteSpace($line)) { continue }
         if ($line.StartsWith('#')) { continue }
         $fields = $line.Split($tab)
-        if ($fields.Count -lt 4) { Fail-Harness ('Malformed manifest row: ' + $line) }
+        if ($fields.Count -ne 4) { Fail-Harness ('Malformed manifest row for case ' + $fields[0] + ': expected 4 tab-separated fields') }
         $name = $fields[0]
-        $expectedExit = [int]$fields[1]
+        $expectedExit = 0
+        if (-not [int]::TryParse($fields[1], [ref]$expectedExit)) { Fail-Harness ('Malformed manifest row for case ' + $name + ": expected exit '" + $fields[1] + "' is not numeric") }
         $expectedSummary = $fields[2]
         $expectedDiagnostics = $fields[3]
+        if ([string]::IsNullOrWhiteSpace($expectedSummary)) { Fail-Harness ('Missing expected summary for case ' + $name) }
         if ([string]::IsNullOrWhiteSpace($expectedDiagnostics)) { Fail-Harness ('Missing diagnostic contract for case ' + $name) }
         $caseRoot = Join-Path (Join-Path $fixtureRoot 'cases') $name
         if (-not (Test-Path -LiteralPath $caseRoot -PathType Container)) { Fail-Harness ('Missing case root: ' + $caseRoot) }
@@ -328,7 +388,7 @@ try {
         if ($expectedSummary -match 'ERRORS=([0-9]+)') { $expectedErrors = [int]$Matches[1] }
         if ($expectedDiagnostics -eq '-') {
             if ($null -ne $expectedErrors) { Fail-Harness ('Case ' + $name + ' claims a valid summary but lists diagnostics') }
-            if ($expectedExit -ne 0) { Fail-Harness ('Case ' + $name + ' expects diagnostics with a failing exit') }
+            if ($expectedExit -ne 0) { Fail-Harness ('Case ' + $name + ' declares no diagnostics but a failing expected exit') }
         } else {
             if ($null -eq $expectedErrors) { Fail-Harness ('Case ' + $name + ' must state an ERRORS count in its expected summary') }
             $contractCount = @($expectedDiagnostics -split ';;').Count

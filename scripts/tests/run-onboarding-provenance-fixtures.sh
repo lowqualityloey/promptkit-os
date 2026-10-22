@@ -101,14 +101,25 @@ function member(list, target,    n, i, arr) {
     for (i = 1; i <= n; i++) if (arr[i] == target) return 1
     return 0
 }
-/^## / { sec = trim(substr($0, 4)); hdr = 0; seen[sec] = 1; next }
+/^## / { sec = trim(substr($0, 4)); seen[sec] = 1; next }
 /^[|]/ {
     if (sec == "") next
     m = 0
     for (i = 2; i <= NF - 1; i++) cells[++m] = trim($i)
     if (m == 0) next
+    if (!(sec in hdr_seen)) {
+        hdr_seen[sec] = 1
+        ncols[sec] = m
+        h1[sec] = cells[1]
+        next
+    }
+    if (!(sec in sep_ok)) {
+        sep = 1
+        for (i = 1; i <= m; i++) if (cells[i] !~ /^:?-+:?$/) sep = 0
+        if (sep && m == ncols[sec]) sep_ok[sec] = 1
+        next
+    }
     if (cells[1] ~ /^:?-+:?$/) next
-    if (hdr == 0) { hdr = 1; next }
     if (sec == "Decisions") {
         nd++
         dec_id[nd] = cells[1]
@@ -141,13 +152,28 @@ function member(list, target,    n, i, arr) {
 }
 END {
     nreq = split("Intake metadata;Decisions;Accepted defaults;Assumption records;Verification obligations;Round log", req, ";")
-    for (i = 1; i <= nreq; i++) if (!(req[i] in seen)) print "REGISTER_MISSING|" req[i]
+    expn["Intake metadata"] = 2; exph["Intake metadata"] = "Field"
+    expn["Decisions"] = 4; exph["Decisions"] = "Decision ID"
+    expn["Accepted defaults"] = 6; exph["Accepted defaults"] = "Default ID"
+    expn["Assumption records"] = 8; exph["Assumption records"] = "Assumption ID"
+    expn["Verification obligations"] = 5; exph["Verification obligations"] = "Obligation ID"
+    expn["Round log"] = 3; exph["Round log"] = "Round"
+    for (i = 1; i <= nreq; i++) {
+        r = req[i]
+        if (!(r in seen)) { print "REGISTER_MISSING|" r; reg_ok[r] = 0; continue }
+        ok = (r in sep_ok) && (ncols[r] == expn[r]) && (h1[r] == exph[r])
+        reg_ok[r] = ok
+        if (!ok) print "REGISTER_NOT_TABULAR|" r
+    }
     for (k = 1; k <= na; k++) {
         id = asm_id[k]
         st = asm_status[id]
         lk = asm_link[id]
-        if (lk ~ /^DECISION-/ && dec_status[lk] == "confirmed" && st !~ /^(accepted|superseded)/)
-            print "ASSUMPTION_STILL_OPEN|" id "|" lk
+        if (reg_ok["Decisions"] && lk ~ /^DECISION-/) {
+            if (!(lk in dec_status)) print "ASSUMPTION_LINK_UNRESOLVED|" id "|" lk
+            else if (dec_status[lk] == "confirmed" && st !~ /^(accepted|superseded)/)
+                print "ASSUMPTION_STILL_OPEN|" id "|" lk
+        }
         if (st ~ /^(accepted|superseded)/ && !placeholder(asm_risk[id]) && placeholder(asm_dest[id]))
             print "RESIDUAL_RISK_UNTRACKED|" id
     }
@@ -245,7 +271,7 @@ run_case() {
     expected_errors="$(printf '%s\n' "$expected_summary" | sed -n 's/.*ERRORS=\([0-9][0-9]*\).*/\1/p')"
     if [ "$expected_diagnostics" = '-' ]; then
         [ -z "$expected_errors" ] || fail "Case $name claims a valid summary but lists diagnostics"
-        [ "$expected_exit" -eq 0 ] || fail "Case $name expects diagnostics with a failing exit"
+        [ "$expected_exit" -eq 0 ] || fail "Case $name declares no diagnostics but a failing expected exit"
     else
         [ -n "$expected_errors" ] || fail "Case $name must state an ERRORS count in its expected summary"
         actual_errors="$(printf '%s\n' "$expected_diagnostics" | sed 's/;;/\n/g' | grep -c . || true)"
@@ -263,9 +289,19 @@ run_case() {
 [ -f "$FIXTURE_ROOT/expected/cases.tsv" ] || fail "Missing onboarding provenance case manifest"
 
 case_count=0
-while IFS=$'\t' read -r name expected_exit expected_summary expected_diagnostics; do
+for case_dir in "$FIXTURE_ROOT"/cases/*/; do
+    [ -d "$case_dir" ] || continue
+    name="$(basename "$case_dir")"
+    awk -F'\t' -v n="$name" '$1 == n { found = 1 } END { exit(found ? 0 : 1) }' "$FIXTURE_ROOT/expected/cases.tsv" \
+        || fail "Case directory not declared in expected/cases.tsv: $name"
+done
+
+while IFS=$'\t' read -r name expected_exit expected_summary expected_diagnostics extra; do
     [ -n "$name" ] || continue
     [[ "$name" = \#* ]] && continue
+    [ -z "$extra" ] || fail "Malformed manifest row for case $name: expected 4 tab-separated fields"
+    [[ "$expected_exit" =~ ^[0-9]+$ ]] || fail "Malformed manifest row for case $name: expected exit '$expected_exit' is not numeric"
+    [ -n "$expected_summary" ] || fail "Missing expected summary for case $name"
     [ -n "$expected_diagnostics" ] || fail "Missing diagnostic contract for case $name"
     case_root="$FIXTURE_ROOT/cases/$name"
     [ -d "$case_root" ] || fail "Missing case root: $case_root"
