@@ -298,6 +298,82 @@ function Assert-InvariantSectionVerdict {
     $script:FailCount++
 }
 
+# Issue #643 regression: the profile header must record when the profile was written,
+# never assert that the engine was installed. Onboarding copies the template into
+# place, so the rendered template is a faithful proxy for an engine-absent header --
+# it does not execute a live agent, and no assertion below claims that it does.
+function Get-ProfileHeaderVerdict {
+    param([string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return 'FAIL:missing-file'
+    }
+
+    $content = $null
+    try {
+        $content = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop
+    } catch {
+        return 'FAIL:missing-file'
+    }
+    if ($null -eq $content) {
+        return 'FAIL:empty-header'
+    }
+
+    $lines = ($content -replace "`r", '') -split "`n"
+    $inSection = $false
+    $sectionFound = $false
+    $bodyLines = 0
+    $installationClaim = $false
+    $profileWritten = 0
+
+    foreach ($line in $lines) {
+        if (-not $inSection) {
+            if ($line -match '^## 0\. PromptKit OS Profile$') {
+                $inSection = $true
+                $sectionFound = $true
+            }
+            continue
+        }
+        if ($line -eq '---') {
+            $inSection = $false
+            continue
+        }
+        if ($line.Trim().Length -gt 0) { $bodyLines++ }
+        if ($line -match 'Installed\*{0,2}:[ \t]*\d{4}-\d{2}-\d{2}') { $installationClaim = $true }
+        if ($line -match '^- \*\*Profile written\*\*: \d{4}-\d{2}-\d{2}$') { $profileWritten++ }
+    }
+
+    if ((-not $sectionFound) -or ($bodyLines -eq 0)) { return 'FAIL:empty-header' }
+    if ($installationClaim) { return 'FAIL:installation-claim' }
+    if ($profileWritten -eq 0) { return 'FAIL:missing-profile-written' }
+    if ($profileWritten -gt 1) { return 'FAIL:multiple-profile-written' }
+    return 'PASS'
+}
+
+function Assert-ProfileHeader {
+    param(
+        [string]$File,
+        [string]$Expected,
+        [string]$Description
+    )
+
+    if ([System.IO.Path]::IsPathRooted($File)) {
+        $fullPath = $File
+    } else {
+        $fullPath = Join-Path $RepoRoot $File
+    }
+
+    $verdict = Get-ProfileHeaderVerdict $fullPath
+
+    if ($verdict -eq $Expected) {
+        Write-Host "  ✅ PASS: $Description" -ForegroundColor Green
+        $script:PassCount++
+        return
+    }
+    Write-Host "  ❌ FAIL: $Description (expected $Expected, got '$verdict')" -ForegroundColor Red
+    $script:FailCount++
+}
+
 Write-Host "`n🧪 Running PromptKit OS Behavioral Prompt-Contract Tests" -ForegroundColor Cyan
 Write-Host "===========================================================" -ForegroundColor DarkGray
 
@@ -580,6 +656,36 @@ Assert-Contains "protocols/discovery-intake.md" "Product-Shape Cover Questions" 
 Assert-Contains "protocols/discovery-intake.md" "Never answer a product-shaped request with a stack" "Intake forbids scaffolds, templates, or a named stack for product-shaped requests"
 Assert-Contains "templates/project-profile-template.md" "intake-status:" "Project profile template carries machine-readable intake signals"
 Assert-Contains "templates/project-profile-template.md" "intake questions, not defaults" "Profile placeholders are declared intake questions, never silent defaults"
+
+# Issue #643: the profile header records authoring provenance, never installation.
+# Rendering the template mirrors onboarding's copy step; it runs no live agent.
+$profileTemplatePath = Join-Path $RepoRoot "templates/project-profile-template.md"
+$profileRenderedText = (Get-Content -LiteralPath $profileTemplatePath -Raw) -replace '\r', ''
+$profileRenderedText = $profileRenderedText -replace '\[YYYY-MM-DD\]', '2026-10-22'
+$profileLegacyText = $profileRenderedText -replace '(?m)^- \*\*(Installed|Profile written)\*\*:.*', '- **Installed**: 2026-10-21'
+$profileMissingText = $profileRenderedText -replace '(?m)^- \*\*(Installed|Profile written)\*\*:.*\n?', ''
+$profileRenderPath = Join-Path ([System.IO.Path]::GetTempPath()) ("pk643-profile-render-" + [System.Guid]::NewGuid().ToString('N') + ".md")
+$profileLegacyPath = Join-Path ([System.IO.Path]::GetTempPath()) ("pk643-profile-legacy-" + [System.Guid]::NewGuid().ToString('N') + ".md")
+$profileMissingPath = Join-Path ([System.IO.Path]::GetTempPath()) ("pk643-profile-missing-" + [System.Guid]::NewGuid().ToString('N') + ".md")
+try {
+    Set-Content -LiteralPath $profileRenderPath -Value $profileRenderedText -Encoding utf8
+    Set-Content -LiteralPath $profileLegacyPath -Value $profileLegacyText -Encoding utf8
+    Set-Content -LiteralPath $profileMissingPath -Value $profileMissingText -Encoding utf8
+    Assert-ProfileHeader $profileRenderPath "PASS" "Profile header passes the template rendered as onboarding copies it, without executing a live agent"
+    Assert-ProfileHeader $profileLegacyPath "FAIL:installation-claim" "Profile header guard rejects a legacy Installed date in the rendered profile"
+    Assert-ProfileHeader $profileMissingPath "FAIL:missing-profile-written" "Profile header guard rejects a rendered profile with the authoring-date field removed"
+} finally {
+    Remove-Item -LiteralPath $profileRenderPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $profileLegacyPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $profileMissingPath -Force -ErrorAction SilentlyContinue
+}
+Assert-Contains "templates/project-profile-template.md" "does not establish installation status" "Profile-date guidance separates authoring provenance from installation status"
+Assert-Contains "templates/project-profile-template.md" "may be external" "Profile Engine field documents an external or absent engine"
+Assert-NotContains "templates/project-profile-template.md" "\*\*Installed\*\*" "Profile template no longer labels the authoring date as an installation"
+Assert-NotContains "templates/project-profile-template.md" "last refreshed" "Profile-date guidance does not promise a refresh timestamp"
+Assert-Contains "templates/project-profile-template.md" "does not restamp" "Profile-date guidance states installer reruns preserve an existing date"
+Assert-Contains "templates/project-profile-template.md" "date is retained" "Profile-date guidance states a legacy Installed date is retained during migration"
+Assert-Contains "workflows/onboard.md" "templates/project-profile-template\.md.*to .*\./PROMPTKIT\.md" "Onboarding still generates the profile by copying the template"
 Assert-Contains "workflows/plan.md" "Step 0: Intake Preflight" "Plan workflow gates architecture on intake status before Step 1"
 Assert-Contains "workflows/plan.md" "intake-status: legacy-partial" "Plan workflow never re-interviews brownfield installs"
 Assert-Contains "workflows/plan.md" "Later ledger" "Plan workflow routes unrequired complexity to the Later ledger"

@@ -250,6 +250,76 @@ assert_invariant_section_verdict() {
     fi
 }
 
+# Issue #643 regression: the profile header must record when the profile was written,
+# never assert that the engine was installed. Onboarding copies the template into
+# place, so the rendered template is a faithful proxy for an engine-absent header --
+# it does not execute a live agent, and no assertion below claims that it does.
+profile_header_verdict() {
+    local file="$1"
+    local verdict=""
+
+    if [ ! -f "$file" ]; then
+        printf 'FAIL:missing-file\n'
+        return 0
+    fi
+
+    verdict="$(awk '
+        {
+            line = $0
+            sub(/\r$/, "", line)
+            L[NR] = line
+        }
+        END {
+            in_s0 = 0; found = 0; body = 0
+            installed = 0; profile_written = 0
+            for (i = 1; i <= NR; i++) {
+                raw = L[i]
+                if (!in_s0) {
+                    if (raw ~ /^## 0\. PromptKit OS Profile$/) { in_s0 = 1; found = 1 }
+                    continue
+                }
+                if (raw == "---") { in_s0 = 0; continue }
+                if (raw ~ /[^[:space:]]/) body++
+                if (raw ~ /Installed:[[:blank:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}/) installed = 1
+                if (raw ~ /Installed\*\*:[[:blank:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}/) installed = 1
+                if (raw ~ /^- \*\*Profile written\*\*: [0-9]{4}-[0-9]{2}-[0-9]{2}$/) profile_written++
+            }
+            if (!found || body == 0) { print "FAIL:empty-header"; exit }
+            if (installed) { print "FAIL:installation-claim"; exit }
+            if (profile_written == 0) { print "FAIL:missing-profile-written"; exit }
+            if (profile_written > 1) { print "FAIL:multiple-profile-written"; exit }
+            print "PASS"
+        }
+    ' "$file" 2>/dev/null)" || verdict="FAIL:awk-error"
+
+    if [ -z "$verdict" ]; then
+        verdict="FAIL:empty-verdict"
+    fi
+    printf '%s\n' "$verdict"
+    return 0
+}
+
+assert_profile_header() {
+    local file="$1"
+    local expected="$2"
+    local desc="$3"
+    local path="$file"
+    local actual=""
+
+    if [ "${path#/}" = "$path" ]; then
+        path="$REPO_ROOT/$file"
+    fi
+    actual="$(profile_header_verdict "$path")"
+
+    if [ "$actual" = "$expected" ]; then
+        echo "  ✅ PASS: $desc"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        echo "  ❌ FAIL: $desc (expected $expected, got $actual)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+
 echo ""
 echo "🧪 Running PromptKit OS Behavioral Prompt-Contract Tests"
 echo "==========================================================="
@@ -540,6 +610,26 @@ assert_contains "protocols/discovery-intake.md" "Product-Shape Cover Questions" 
 assert_contains "protocols/discovery-intake.md" "Never answer a product-shaped request with a stack" "Intake forbids scaffolds, templates, or a named stack for product-shaped requests"
 assert_contains "templates/project-profile-template.md" "intake-status:" "Project profile template carries machine-readable intake signals"
 assert_contains "templates/project-profile-template.md" "intake questions, not defaults" "Profile placeholders are declared intake questions, never silent defaults"
+
+# Issue #643: the profile header records authoring provenance, never installation.
+# Rendering the template mirrors onboarding's copy step; it runs no live agent.
+PROFILE_RENDER_TMP="$(mktemp "${TMPDIR:-/tmp}/pk-profile-render.XXXXXX")"
+PROFILE_LEGACY_TMP="$(mktemp "${TMPDIR:-/tmp}/pk-profile-legacy.XXXXXX")"
+PROFILE_MISSING_TMP="$(mktemp "${TMPDIR:-/tmp}/pk-profile-missing.XXXXXX")"
+sed 's/\[YYYY-MM-DD\]/2026-10-22/' "$REPO_ROOT/templates/project-profile-template.md" > "$PROFILE_RENDER_TMP"
+sed -E 's/^- \*\*(Installed|Profile written)\*\*:.*/- **Installed**: 2026-10-21/' "$PROFILE_RENDER_TMP" > "$PROFILE_LEGACY_TMP"
+sed -E '/^- \*\*(Installed|Profile written)\*\*:.*/d' "$PROFILE_RENDER_TMP" > "$PROFILE_MISSING_TMP"
+assert_profile_header "$PROFILE_RENDER_TMP" "PASS" "Profile header passes the template rendered as onboarding copies it, without executing a live agent"
+assert_profile_header "$PROFILE_LEGACY_TMP" "FAIL:installation-claim" "Profile header guard rejects a legacy Installed date in the rendered profile"
+assert_profile_header "$PROFILE_MISSING_TMP" "FAIL:missing-profile-written" "Profile header guard rejects a rendered profile with the authoring-date field removed"
+rm -f -- "$PROFILE_RENDER_TMP" "$PROFILE_LEGACY_TMP" "$PROFILE_MISSING_TMP"
+assert_contains "templates/project-profile-template.md" "does not establish installation status" "Profile-date guidance separates authoring provenance from installation status"
+assert_contains "templates/project-profile-template.md" "may be external" "Profile Engine field documents an external or absent engine"
+assert_not_contains "templates/project-profile-template.md" "\*\*Installed\*\*" "Profile template no longer labels the authoring date as an installation"
+assert_not_contains "templates/project-profile-template.md" "last refreshed" "Profile-date guidance does not promise a refresh timestamp"
+assert_contains "templates/project-profile-template.md" "does not restamp" "Profile-date guidance states installer reruns preserve an existing date"
+assert_contains "templates/project-profile-template.md" "date is retained" "Profile-date guidance states a legacy Installed date is retained during migration"
+assert_contains "workflows/onboard.md" "templates/project-profile-template\.md.*to .*\./PROMPTKIT\.md" "Onboarding still generates the profile by copying the template"
 assert_contains "workflows/plan.md" "Step 0: Intake Preflight" "Plan workflow gates architecture on intake status before Step 1"
 assert_contains "workflows/plan.md" "intake-status: legacy-partial" "Plan workflow never re-interviews brownfield installs"
 assert_contains "workflows/plan.md" "Later ledger" "Plan workflow routes unrequired complexity to the Later ledger"

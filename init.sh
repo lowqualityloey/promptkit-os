@@ -888,6 +888,74 @@ set_staged_machine_field() {
     cat "$tmp_file" > "$target_file" && rm -f "$tmp_file"
 }
 
+# Issue #643: normalize the profile date metadata. An existing Profile written value
+# wins over the legacy Installed field; every Installed line is dropped; exactly one
+# date line remains, so reruns are idempotent and never restamp a resolved date.
+# Runs before the profile: branch so a legacy label is migrated even when the profile
+# has no `profile:` machine line.
+normalize_profile_written_metadata() {
+    local target_file="$1" today="$2" tmp_file
+    tmp_file=$(mktemp "$STAGING_DIR/tmp_profile_date.XXXXXX")
+    if ! awk -v today="$today" '
+        { line[NR] = $0 }
+        END {
+            have_written = 0; written_value = ""
+            have_legacy = 0; legacy_value = ""
+            for (i = 1; i <= NR; i++) {
+                if (!have_written && line[i] ~ /^- \*\*Profile written\*\*: /) {
+                    have_written = 1
+                    written_value = line[i]
+                    sub(/^- \*\*Profile written\*\*: /, "", written_value)
+                }
+                if (!have_legacy && line[i] ~ /^- \*\*Installed\*\*: /) {
+                    have_legacy = 1
+                    legacy_value = line[i]
+                    sub(/^- \*\*Installed\*\*: /, "", legacy_value)
+                }
+            }
+            if (have_written) {
+                keep = "written"
+                resolved = written_value
+            } else if (have_legacy) {
+                keep = "legacy"
+                resolved = legacy_value
+            } else {
+                for (i = 1; i <= NR; i++) print line[i]
+                exit
+            }
+            if (resolved !~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/) resolved = today
+            emitted = 0
+            for (i = 1; i <= NR; i++) {
+                if (line[i] ~ /^- \*\*Installed\*\*: /) {
+                    if (keep == "legacy" && !emitted) {
+                        print "- **Profile written**: " resolved
+                        emitted = 1
+                    }
+                    continue
+                }
+                if (line[i] ~ /^- \*\*Profile written\*\*: /) {
+                    if (!emitted) {
+                        print "- **Profile written**: " resolved
+                        emitted = 1
+                    }
+                    continue
+                }
+                print line[i]
+            }
+        }
+    ' "$target_file" > "$tmp_file"; then
+        rm -f "$tmp_file"
+        return 1
+    fi
+    cat "$tmp_file" > "$target_file" && rm -f "$tmp_file"
+}
+
+PROFILE_WRITTEN_DATE="$(date +%Y-%m-%d)"
+if ! normalize_profile_written_metadata "$STAGED_PROFILE" "$PROFILE_WRITTEN_DATE"; then
+    echo "ERROR: could not normalize the profile date metadata in $STAGED_PROFILE" >&2
+    exit 1
+fi
+
 if grep -q "^profile:" "$STAGED_PROFILE" 2>/dev/null; then
     set_staged_machine_field "$STAGED_PROFILE" "profile" "$PROFILE"
     if grep -q '^- \*\*Profile\*\*:' "$STAGED_PROFILE" 2>/dev/null; then
@@ -897,13 +965,6 @@ if grep -q "^profile:" "$STAGED_PROFILE" 2>/dev/null; then
             sed -i.bak "s/^- \*\*Profile\*\*:.*/- **Profile**: $PROFILE/" "$STAGED_PROFILE" && rm -f "$STAGED_PROFILE.bak"
         fi
     fi
-    if grep -q '^- \*\*Installed\*\*:' "$STAGED_PROFILE" 2>/dev/null; then
-        if sed --version >/dev/null 2>&1; then
-            sed -i "s/^- \*\*Installed\*\*:.*/- **Installed**: $(date +%Y-%m-%d)/" "$STAGED_PROFILE"
-        else
-            sed -i.bak "s/^- \*\*Installed\*\*:.*/- **Installed**: $(date +%Y-%m-%d)/" "$STAGED_PROFILE" && rm -f "$STAGED_PROFILE.bak"
-        fi
-    fi
 else
     TMP_P=$(mktemp "$STAGING_DIR/prof_sec.XXXXXX")
     {
@@ -911,7 +972,9 @@ else
         echo ""
         echo "## 0. PromptKit OS Profile"
         echo "- **Profile**: $PROFILE"
-        echo "- **Installed**: $(date +%Y-%m-%d)"
+        if ! grep -q '^- \*\*Profile written\*\*:' "$STAGED_PROFILE" 2>/dev/null; then
+            echo "- **Profile written**: $PROFILE_WRITTEN_DATE"
+        fi
         echo "- **Engine**: \`$DIR_NAME\`"
         echo "- **Upgrade**: Run \`$DIR_NAME/init.sh --balanced\` for the full Balanced profile, or \`--turbo --experimental\` for parallel waves"
         echo ""

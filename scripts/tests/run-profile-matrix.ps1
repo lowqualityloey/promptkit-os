@@ -260,6 +260,112 @@ if ($LASTEXITCODE -eq 0 -and $t15GitAgents -match '(?m)^Engine: v1\.2\.3 \([0-9a
     NotOk "Git identity precedence (agent=$($t15GitAgents -split "`r?`n" | Where-Object { $_ -match '^Engine:' }))"
 }
 
+# 16. Fresh install with the engine external (#643): the profile must record when the
+# profile was written, not an "Installed" date, and the target starts without an engine.
+$d = NewDir "t16-profile-written"
+if (Test-Path (Join-Path $d ".promptkit")) {
+    NotOk "fresh-install target unexpectedly contains an in-repo engine (.promptkit)"
+} else {
+    $env:PROMPTKIT_NO_PREFLIGHT = "1"
+    try {
+        & pwsh -NoProfile -File $Init --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+        $t16Rc = $LASTEXITCODE
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+    }
+    $t16Doc = [string](Get-Content (Join-Path $d "PROMPTKIT.md") -ErrorAction SilentlyContinue -Raw) -replace "`r`n", "`n"
+    $t16Written = ([regex]::Matches($t16Doc, "(?m)^- \*\*Profile written\*\*: \d{4}-\d{2}-\d{2}$")).Count
+    $t16Legacy = ([regex]::Matches($t16Doc, "Installed\*{0,2}:[ \t]*\d{4}-\d{2}-\d{2}")).Count
+    if ($t16Rc -eq 0 -and $t16Written -eq 1 -and $t16Legacy -eq 0) {
+        Ok "fresh install records Profile written and no Installed date"
+    } else {
+        NotOk "fresh install header (rc=$t16Rc, Profile written=$t16Written, Installed=$t16Legacy, header=$(($t16Doc -split "`n" | Where-Object { $_ -match 'Profile written|Installed' }) -join ' | '))"
+    }
+}
+
+# 17. Legacy labeled profile on rerun (#643): an existing Installed date line is migrated to
+# Profile written, and the profile section survives.
+$d = NewDir "t17-profile-migration"
+$seed = "profile: balanced`n`n## 0. PromptKit OS Profile`n- **Profile**: balanced`n- **Installed**: 2026-10-21`n- **Engine**: ``external```n"
+Set-Content -LiteralPath (Join-Path $d "PROMPTKIT.md") -Value $seed -NoNewline
+$env:PROMPTKIT_NO_PREFLIGHT = "1"
+try {
+    & pwsh -NoProfile -File $Init --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+    $t17Rc = $LASTEXITCODE
+} finally {
+    Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+}
+$t17Doc = [string](Get-Content (Join-Path $d "PROMPTKIT.md") -ErrorAction SilentlyContinue -Raw) -replace "`r`n", "`n"
+$t17Written = ([regex]::Matches($t17Doc, "(?m)^- \*\*Profile written\*\*: \d{4}-\d{2}-\d{2}$")).Count
+$t17Legacy = ([regex]::Matches($t17Doc, "Installed\*{0,2}:[ \t]*\d{4}-\d{2}-\d{2}")).Count
+if ($t17Rc -eq 0 -and $t17Written -eq 1 -and $t17Legacy -eq 0 -and $t17Doc -match "(?m)^## 0\. PromptKit OS Profile$") {
+    Ok "legacy Installed date migrates to Profile written on rerun"
+} else {
+    NotOk "legacy profile migration (rc=$t17Rc, Profile written=$t17Written, Installed=$t17Legacy, header=$(($t17Doc -split "`n" | Where-Object { $_ -match 'Profile written|Installed' }) -join ' | '))"
+}
+
+# 18. Append path (#643): no profile: machine line and a legacy date line; one Profile written
+# date is added and the user's overview survives.
+$d = NewDir "t18-profile-append"
+$seed = "# Project Profile`n`n## 1. Overview`n- **Project Name**: Legacy`n`n## 0. PromptKit OS Profile`n- **Installed**: 2026-10-21`n"
+Set-Content -LiteralPath (Join-Path $d "PROMPTKIT.md") -Value $seed -NoNewline
+$env:PROMPTKIT_NO_PREFLIGHT = "1"
+try {
+    & pwsh -NoProfile -File $Init --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+    $t18Rc = $LASTEXITCODE
+} finally {
+    Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+}
+$t18Doc = [string](Get-Content (Join-Path $d "PROMPTKIT.md") -ErrorAction SilentlyContinue -Raw) -replace "`r`n", "`n"
+$t18Written = ([regex]::Matches($t18Doc, "(?m)^- \*\*Profile written\*\*: \d{4}-\d{2}-\d{2}$")).Count
+$t18Legacy = ([regex]::Matches($t18Doc, "Installed\*{0,2}:[ \t]*\d{4}-\d{2}-\d{2}")).Count
+if ($t18Rc -eq 0 -and $t18Written -eq 1 -and $t18Legacy -eq 0 -and $t18Doc -match "(?m)^## 1\. Overview$" -and $t18Doc -match "(?m)^- \*\*Project Name\*\*: Legacy$") {
+    Ok "append path adds one Profile written date without dropping user overview"
+} else {
+    NotOk "append path header (rc=$t18Rc, Profile written=$t18Written, Installed=$t18Legacy, header=$(($t18Doc -split "`n" | Where-Object { $_ -match 'Profile written|Installed' }) -join ' | '))"
+}
+
+# 19. Conflicting date labels (#643): the existing Profile written value wins, every legacy
+# Installed line is stripped, and a second rerun keeps the same single resolved value.
+$d = NewDir "t19-profile-conflict"
+$seed = @(
+    'profile: balanced'
+    ''
+    '## 0. PromptKit OS Profile'
+    '- **Profile**: balanced'
+    '- **Installed**: 2026-10-21'
+    '- **Profile written**: 2026-10-20'
+    '- **Engine**: `external`'
+    ''
+    '## 1. Overview'
+    '- **Project Name**: Legacy'
+) -join "`n"
+Set-Content -LiteralPath (Join-Path $d "PROMPTKIT.md") -Value ($seed + "`n") -NoNewline
+$env:PROMPTKIT_NO_PREFLIGHT = "1"
+try {
+    & pwsh -NoProfile -File $Init --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+    $t19Rc = $LASTEXITCODE
+    $t19First = ([string](Get-Content (Join-Path $d "PROMPTKIT.md") -ErrorAction SilentlyContinue -Raw)) -replace "`r`n", "`n"
+    & pwsh -NoProfile -File $Init --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+    $t19Rc2 = $LASTEXITCODE
+} finally {
+    Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+}
+$t19Doc = ([string](Get-Content (Join-Path $d "PROMPTKIT.md") -ErrorAction SilentlyContinue -Raw)) -replace "`r`n", "`n"
+$t19FirstWritten = ([regex]::Matches($t19First, "(?m)^- \*\*Profile written\*\*: \d{4}-\d{2}-\d{2}$")).Count
+$t19FirstLegacy = ([regex]::Matches($t19First, "Installed\*{0,2}:[ \t]*\d{4}-\d{2}-\d{2}")).Count
+$t19FirstValue = if ($t19First -match "(?m)^- \*\*Profile written\*\*: (\d{4}-\d{2}-\d{2})$") { $Matches[1] } else { "" }
+$t19Written = ([regex]::Matches($t19Doc, "(?m)^- \*\*Profile written\*\*: \d{4}-\d{2}-\d{2}$")).Count
+$t19Legacy = ([regex]::Matches($t19Doc, "Installed\*{0,2}:[ \t]*\d{4}-\d{2}-\d{2}")).Count
+$t19Value = if ($t19Doc -match "(?m)^- \*\*Profile written\*\*: (\d{4}-\d{2}-\d{2})$") { $Matches[1] } else { "" }
+if ($t19Rc -eq 0 -and $t19Rc2 -eq 0 -and
+    $t19FirstWritten -eq 1 -and $t19FirstLegacy -eq 0 -and $t19FirstValue -eq "2026-10-20" -and
+    $t19Written -eq 1 -and $t19Legacy -eq 0 -and $t19Value -eq "2026-10-20") {
+    Ok "conflicting date labels resolve to one retained Profile written value and rerun keeps it"
+} else {
+    NotOk "conflicting date labels (rc=$t19Rc/$t19Rc2, run1=$t19FirstWritten/$t19FirstLegacy/$t19FirstValue, run2=$t19Written/$t19Legacy/$t19Value, header=$(($t19Doc -split "`n" | Where-Object { $_ -match 'Profile written|Installed' }) -join ' | '))"
+}
+
 Write-Host "`n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 Write-Host "Passed: $script:Pass | Failed: $script:Fail"
 

@@ -925,6 +925,58 @@ foreach ($targetPath in $TargetsFound) {
     }
 }
 
+# Issue #643: normalize the profile date metadata. An existing Profile written value
+# wins over the legacy Installed field; every Installed line is dropped; exactly one
+# date line remains, so reruns are idempotent and never restamp a resolved date.
+# Runs before the profile: branch so a legacy label is migrated even when the profile
+# has no `profile:` machine line.
+function Get-NormalizedProfileDateContent {
+    param(
+        [string]$Content,
+        [string]$Today
+    )
+
+    $lines = ($Content -replace "`r`n", "`n") -split "`n"
+    $writtenIndex = -1
+    $legacyIndex = -1
+    for ($i = 0; $i -lt $lines.Length; $i++) {
+        if ($writtenIndex -lt 0 -and $lines[$i] -match '^- \*\*Profile written\*\*: ') { $writtenIndex = $i }
+        if ($legacyIndex -lt 0 -and $lines[$i] -match '^- \*\*Installed\*\*: ') { $legacyIndex = $i }
+    }
+    if ($writtenIndex -lt 0 -and $legacyIndex -lt 0) { return $Content }
+
+    $datePattern = '^\d{4}-\d{2}-\d{2}$'
+    if ($writtenIndex -ge 0) {
+        $resolved = $lines[$writtenIndex].Substring('- **Profile written**: '.Length)
+        $keep = 'written'
+    } else {
+        $resolved = $lines[$legacyIndex].Substring('- **Installed**: '.Length)
+        $keep = 'legacy'
+    }
+    if ($resolved -notmatch $datePattern) { $resolved = $Today }
+
+    $result = New-Object System.Collections.Generic.List[string]
+    $emitted = $false
+    foreach ($line in $lines) {
+        if ($line -match '^- \*\*Installed\*\*: ') {
+            if ($keep -eq 'legacy' -and -not $emitted) {
+                $result.Add("- **Profile written**: $resolved")
+                $emitted = $true
+            }
+            continue
+        }
+        if ($line -match '^- \*\*Profile written\*\*: ') {
+            if (-not $emitted) {
+                $result.Add("- **Profile written**: $resolved")
+                $emitted = $true
+            }
+            continue
+        }
+        $result.Add($line)
+    }
+    return ($result -join "`n")
+}
+
 # Pre-calculate PROMPTKIT.md content
 function Get-UpdatedProfileContent {
     param(
@@ -935,6 +987,8 @@ function Get-UpdatedProfileContent {
         [string]$EngineDir
     )
     $text = $CurrentContent
+    $today = Get-Date -Format 'yyyy-MM-dd'
+    $text = Get-NormalizedProfileDateContent $text $today
     if ($text -match "(?m)^profile:") {
         $lines = @($text -split "`r?\n" | Where-Object { $_ -notmatch "^profile:" })
         $lines += "profile: $Profile"
@@ -942,21 +996,21 @@ function Get-UpdatedProfileContent {
         if ($text -match "(?m)^- \*\*Profile\*\*:") {
             $text = $text -replace "(?m)^- \*\*Profile\*\*:.*", "- **Profile**: $Profile"
         }
-        if ($text -match "(?m)^- \*\*Installed\*\*:") {
-            $text = $text -replace "(?m)^- \*\*Installed\*\*:.*", "- **Installed**: $(Get-Date -Format 'yyyy-MM-dd')"
-        }
     } else {
         $firstLine = ""
         $rest = ""
         $allLines = $text -split "`r?\n"
         if ($allLines.Length -gt 0) { $firstLine = $allLines[0] }
         if ($allLines.Length -gt 1) { $rest = ($allLines[1..($allLines.Length - 1)] -join "`n") }
+        $dateLine = ""
+        if ($text -notmatch "(?m)^- \*\*Profile written\*\*:") {
+            $dateLine = "- **Profile written**: $today`n"
+        }
         $profileSection = @"
 
 ## 0. PromptKit OS Profile
 - **Profile**: $Profile
-- **Installed**: $(Get-Date -Format "yyyy-MM-dd")
-- **Engine**: $EngineDir
+${dateLine}- **Engine**: $EngineDir
 - **Upgrade**: Run ``$EngineDir/init.ps1 --balanced`` for the full Balanced profile, or ``--turbo --experimental`` for parallel waves
 
 "@
