@@ -248,6 +248,70 @@ else
     notok "courier identity stamp (agent=$(grep -h '^Engine: ' "$D/AGENTS.md" 2>/dev/null), state=$(grep -h 'Engine Version' "$D/docs/STATE.md" 2>/dev/null))"
 fi
 
+# 17. Fresh install with the engine external (#643): the profile must record when the
+# profile was written, not an "Installed" date, and the target starts without an engine.
+D="$TEST_ROOT/t17"; mkdir -p "$D"
+if [[ -e "$D/.promptkit" ]]; then
+    notok "fresh-install target unexpectedly contains an in-repo engine (.promptkit)"
+else
+    PROMPTKIT_NO_PREFLIGHT=1 bash "$REPO_ROOT/init.sh" --balanced --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1; rc=$?
+    written=$(grep -cE '^- \*\*Profile written\*\*: [0-9]{4}-[0-9]{2}-[0-9]{2}$' "$D/PROMPTKIT.md" 2>/dev/null)
+    legacy=$(grep -cE 'Installed(\*\*)?:[[:blank:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' "$D/PROMPTKIT.md" 2>/dev/null)
+    if [[ $rc -eq 0 && "$written" -eq 1 && "$legacy" -eq 0 ]]; then
+        ok "fresh install records Profile written and no Installed date"
+    else
+        notok "fresh install header (rc=$rc, Profile written=$written, Installed=$legacy, header=$(grep -E 'Profile written|Installed' "$D/PROMPTKIT.md" 2>/dev/null | tr '\n' '|'))"
+    fi
+fi
+
+# 18. Legacy labeled profile on rerun (#643): an existing Installed date line is migrated to
+# Profile written, and the profile section survives.
+D="$TEST_ROOT/t18"; mkdir -p "$D"
+printf '%s\n' 'profile: balanced' '' '## 0. PromptKit OS Profile' '- **Profile**: balanced' '- **Installed**: 2026-10-21' '- **Engine**: `external`' > "$D/PROMPTKIT.md"
+PROMPTKIT_NO_PREFLIGHT=1 bash "$REPO_ROOT/init.sh" --balanced --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1; rc=$?
+written=$(grep -cE '^- \*\*Profile written\*\*: [0-9]{4}-[0-9]{2}-[0-9]{2}$' "$D/PROMPTKIT.md" 2>/dev/null)
+legacy=$(grep -cE 'Installed(\*\*)?:[[:blank:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' "$D/PROMPTKIT.md" 2>/dev/null)
+if [[ $rc -eq 0 && "$written" -eq 1 && "$legacy" -eq 0 ]] \
+   && grep -q '^## 0\. PromptKit OS Profile$' "$D/PROMPTKIT.md"; then
+    ok "legacy Installed date migrates to Profile written on rerun"
+else
+    notok "legacy profile migration (rc=$rc, Profile written=$written, Installed=$legacy, header=$(grep -E 'Profile written|Installed' "$D/PROMPTKIT.md" 2>/dev/null | tr '\n' '|'))"
+fi
+
+# 19. Append path (#643): no profile: machine line and a legacy date line; one Profile written
+# date is added and the user's overview survives.
+D="$TEST_ROOT/t19"; mkdir -p "$D"
+printf '%s\n' '# Project Profile' '' '## 1. Overview' '- **Project Name**: Legacy' '' '## 0. PromptKit OS Profile' '- **Installed**: 2026-10-21' > "$D/PROMPTKIT.md"
+PROMPTKIT_NO_PREFLIGHT=1 bash "$REPO_ROOT/init.sh" --balanced --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1; rc=$?
+written=$(grep -cE '^- \*\*Profile written\*\*: [0-9]{4}-[0-9]{2}-[0-9]{2}$' "$D/PROMPTKIT.md" 2>/dev/null)
+legacy=$(grep -cE 'Installed(\*\*)?:[[:blank:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' "$D/PROMPTKIT.md" 2>/dev/null)
+if [[ $rc -eq 0 && "$written" -eq 1 && "$legacy" -eq 0 ]] \
+   && grep -q '^## 1\. Overview$' "$D/PROMPTKIT.md" \
+   && grep -q '^- \*\*Project Name\*\*: Legacy$' "$D/PROMPTKIT.md"; then
+    ok "append path adds one Profile written date without dropping user overview"
+else
+    notok "append path header (rc=$rc, Profile written=$written, Installed=$legacy, header=$(grep -E 'Profile written|Installed' "$D/PROMPTKIT.md" 2>/dev/null | tr '\n' '|'))"
+fi
+
+# 20. Conflicting date labels (#643): the existing Profile written value wins, every legacy
+# Installed line is stripped, and a second rerun keeps the same single resolved value.
+D="$TEST_ROOT/t20"; mkdir -p "$D"
+printf '%s\n' 'profile: balanced' '' '## 0. PromptKit OS Profile' '- **Profile**: balanced' '- **Installed**: 2026-10-21' '- **Profile written**: 2026-10-20' '- **Engine**: `external`' '' '## 1. Overview' '- **Project Name**: Legacy' > "$D/PROMPTKIT.md"
+PROMPTKIT_NO_PREFLIGHT=1 bash "$REPO_ROOT/init.sh" --balanced --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1; rc=$?
+written1=$(grep -cE '^- \*\*Profile written\*\*: [0-9]{4}-[0-9]{2}-[0-9]{2}$' "$D/PROMPTKIT.md" 2>/dev/null)
+legacy1=$(grep -cE 'Installed(\*\*)?:[[:blank:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' "$D/PROMPTKIT.md" 2>/dev/null)
+value1=$(sed -nE 's/^- \*\*Profile written\*\*: ([0-9]{4}-[0-9]{2}-[0-9]{2})$/\1/p' "$D/PROMPTKIT.md" | head -1)
+PROMPTKIT_NO_PREFLIGHT=1 bash "$REPO_ROOT/init.sh" --balanced --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1; rc2=$?
+written2=$(grep -cE '^- \*\*Profile written\*\*: [0-9]{4}-[0-9]{2}-[0-9]{2}$' "$D/PROMPTKIT.md" 2>/dev/null)
+legacy2=$(grep -cE 'Installed(\*\*)?:[[:blank:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' "$D/PROMPTKIT.md" 2>/dev/null)
+value2=$(sed -nE 's/^- \*\*Profile written\*\*: ([0-9]{4}-[0-9]{2}-[0-9]{2})$/\1/p' "$D/PROMPTKIT.md" | head -1)
+if [[ $rc -eq 0 && $rc2 -eq 0 && "$written1" -eq 1 && "$legacy1" -eq 0 && "$value1" == "2026-10-20" ]] \
+   && [[ "$written2" -eq 1 && "$legacy2" -eq 0 && "$value2" == "2026-10-20" ]]; then
+    ok "conflicting date labels resolve to one retained Profile written value and rerun keeps it"
+else
+    notok "conflicting date labels (rc=$rc/$rc2, run1=$written1/$legacy1/$value1, run2=$written2/$legacy2/$value2, header=$(grep -E 'Profile written|Installed' "$D/PROMPTKIT.md" 2>/dev/null | tr '\n' '|'))"
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Passed: $PASS | Failed: $FAIL"

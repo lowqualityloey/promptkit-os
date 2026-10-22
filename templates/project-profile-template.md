@@ -4,8 +4,8 @@
 
 ## 0. PromptKit OS Profile
 - **Profile**: `balanced` (options: `lite` | `balanced` | `turbo` experimental)
-- **Installed**: [YYYY-MM-DD]
-- **Engine**: `<kit>` (resolved kit root: `.promptkit/` recommended, `promptkit/` supported)
+- **Profile written**: [YYYY-MM-DD]
+- **Engine**: `<kit>` (resolved kit root: `.promptkit/` recommended, `promptkit/` supported; may be external to this repository, or `not installed` when the engine is absent)
 - **Description**:
   - `lite`: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value — onboarding
   - `balanced`: the full 26-workflow set, Level 0-3 adaptive ceremony (default) — teams, production
@@ -27,6 +27,7 @@ size: [small | medium | large]
 intake-status: [unanswered | partial | legacy-partial | complete]
 intake-record: [docs/specs/YYYY-MM-DD-intake-<project>.md]
 > `size:` and `intake-status:` are written by `pk:onboard` (greenfield Phase 0 interview, or a brownfield estimate marked `legacy-partial` when fields predate intake). `unanswered` or `partial` instructs `pk:plan` Step 0 to run the bounded intake in `protocols/discovery-intake.md` before proposing architecture. Never guess these values.
+> `Profile written:` records when the profile was authored or last refreshed by `pk:onboard` or the installer, and must never be guessed. The date does not establish installation status: the profile remains valid when the engine is external to or absent from this repository. Engine identity and version provenance are separate: the resolved kit root in `Engine:`, the installer's `Engine: <ver> (<sha>)` directive stamp, and the `Engine Version` row in `docs/STATE.md`.
 > `intake-record:` is the project-relative path to the Intake Record (`protocols/discovery-intake.md` §G). A missing line is valid for profiles created before this field existed; a completed intake should reference an existing record. Never guess this value.
 
 ---
