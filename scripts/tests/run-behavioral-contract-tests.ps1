@@ -751,6 +751,14 @@ Assert-Contains "scripts/tests/fixtures/onboard-divergence/cases/one-conflicting
 Assert-Contains "scripts/tests/run-onboard-divergence-fixtures.sh" "ROW_COUNT_MISMATCH" "Bash divergence harness pins the exact divergence-row count"
 Assert-Contains "scripts/tests/run-onboard-divergence-fixtures.sh" "HOST_DOCUMENT_MUTATED" "Bash divergence harness pins the host-document immutability check"
 Assert-Contains "scripts/tests/run-onboard-divergence-fixtures.ps1" "HOST_DOCUMENT_MUTATED" "PowerShell divergence harness pins the host-document immutability check"
+Assert-Contains "scripts/tests/run-onboard-divergence-fixtures.sh" "PROFILE_PRECEDENCE_MISMATCH" "Bash divergence harness pins the generated-profile precedence consistency check"
+Assert-Contains "scripts/tests/run-onboard-divergence-fixtures.sh" "PROFILE_PRECEDENCE_MISSING" "Bash divergence harness pins the missing generated-profile precedence check"
+Assert-Contains "scripts/tests/run-onboard-divergence-fixtures.sh" "NEXT_ACTION_REASKS_DESIGNATION" "Bash divergence harness pins the next-action consistency check"
+Assert-Contains "scripts/tests/run-onboard-divergence-fixtures.ps1" "PROFILE_PRECEDENCE_MISMATCH" "PowerShell divergence harness pins the generated-profile precedence consistency check"
+Assert-Contains "scripts/tests/run-onboard-divergence-fixtures.ps1" "PROFILE_PRECEDENCE_MISSING" "PowerShell divergence harness pins the missing generated-profile precedence check"
+Assert-Contains "scripts/tests/run-onboard-divergence-fixtures.ps1" "NEXT_ACTION_REASKS_DESIGNATION" "PowerShell divergence harness pins the next-action consistency check"
+Assert-NotContains "scripts/tests/fixtures/onboard-divergence/cases/designated-precedence/expected-output/docs/specs/2026-10-22-intake-acme-platform.md" "or to record an explicit precedence designation" "A designated divergence row does not ask for another precedence designation"
+Assert-Contains "scripts/tests/fixtures/onboard-divergence/cases/one-conflicting-architecture/expected-output/docs/specs/2026-10-22-intake-acme-platform.md" "no human designation has been recorded" "An undesignated divergence row documents the missing human designation"
 
 Write-Host "`n📌 Scenario O: Protocol registry & FAQ count drift guards" -ForegroundColor Yellow
 $protoFail = $false

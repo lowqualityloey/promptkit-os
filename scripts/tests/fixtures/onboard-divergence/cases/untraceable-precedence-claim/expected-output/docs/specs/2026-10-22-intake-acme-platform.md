@@ -27,7 +27,7 @@ size: medium
 
 ## Host Documentation Divergence
 
-The detected `ARCHITECTURE.md` states the opposite of `DECISION-acme-platform-001` about the dispatch surface. The document is left untouched; the contradiction is recorded here for human resolution.
+The detected `ARCHITECTURE.md` states the opposite of `DECISION-acme-platform-001` about the dispatch surface. The document is left untouched; the contradiction is recorded here for human resolution. No human designation has been recorded, so the precedence stays `unresolved` until a human designates it in this Intake Record.
 
 | Divergence ID | Document | Line | Decision ID | Precedence | Designated By | Owner | Next Action |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |

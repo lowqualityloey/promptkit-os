@@ -22,4 +22,5 @@ tracking: local
 - **Operations Runbook**: N/A
 - **Code Style Guide**: N/A
 - **Host Documentation Divergence**: `docs/specs/2026-10-22-intake-acme-platform.md` (1 row: `DIVERGENCE-acme-platform-001`)
+- **Dispatch Precedence**: `unresolved` - the `ARCHITECTURE.md` dispatch statement and `DECISION-acme-platform-001` disagree and no human has designated a precedence yet; source: `DIVERGENCE-acme-platform-001` (not designated).
 Entries here override `./ARCHITECTURE.md` wherever the two disagree.

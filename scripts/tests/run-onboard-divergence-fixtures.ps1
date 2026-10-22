@@ -95,6 +95,21 @@ function Get-ArtifactDiagnostics { param([string]$Path, [string]$Relative)
     return @($found)
 }
 
+function Get-ProfilePrecedence {
+    param([string]$Profile)
+    if (-not (Test-Path -LiteralPath $Profile -PathType Leaf)) { return '' }
+    foreach ($line in @(Get-Content -LiteralPath $Profile)) {
+        if ($line.Contains('Dispatch Precedence')) {
+            $ticks = [regex]::Match($line, '`([^`]*)`')
+            if ($ticks.Success) { return $ticks.Groups[1].Value }
+            $quotes = [regex]::Match($line, "'([^']*)'")
+            if ($quotes.Success) { return $quotes.Groups[1].Value }
+            return ''
+        }
+    }
+    return ''
+}
+
 function Test-DivergenceRow { param([string]$Row, [int]$RowIndex, [string]$ProjectRoot, [string]$Profile, [string[]]$IntakeLines)
     $diagnostics = New-Object System.Collections.Generic.List[string]
     $cells = @(Split-RowCells $Row)
@@ -133,16 +148,38 @@ function Test-DivergenceRow { param([string]$Row, [int]$RowIndex, [string]$Proje
         if ($intakeLine.Contains($decisionId) -and $intakeLine.ToLower().Contains('confirmed')) { $confirmed = $true; break }
     }
     if (-not $confirmed) { $diagnostics.Add("DECISION_NOT_CONFIRMED|row $RowIndex Decision ID '$decisionId' has no confirmed decision in the Intake Record") }
-    if (-not ($script:allowedPrecedence -ccontains $precedence)) { $diagnostics.Add("PRECEDENCE_NOT_IN_ENUM|row $RowIndex precedence '$precedence' is outside the allowed set") }
+    $precedenceOk = $true
+    if (-not ($script:allowedPrecedence -ccontains $precedence)) {
+        $diagnostics.Add("PRECEDENCE_NOT_IN_ENUM|row $RowIndex precedence '$precedence' is outside the allowed set")
+        $precedenceOk = $false
+    }
     if ($precedence -ceq 'unresolved') {
-        if ($designatedBy -cne 'not designated') { $diagnostics.Add("DESIGNATION_WITHOUT_PRECEDENCE|row $RowIndex names a designator while the precedence stays 'unresolved'") }
+        if ($designatedBy -cne 'not designated') {
+            $diagnostics.Add("DESIGNATION_WITHOUT_PRECEDENCE|row $RowIndex names a designator while the precedence stays 'unresolved'")
+            $precedenceOk = $false
+        }
     } else {
         if (($designatedBy -ceq 'not designated') -or (-not [regex]::IsMatch($designatedBy, '[0-9]{4}-[0-9]{2}-[0-9]{2}')) -or (-not $designatedBy.Contains('docs/specs/'))) {
             $diagnostics.Add("MISSING_HUMAN_DESIGNATION|row $RowIndex precedence $precedence has no explicit human designation (approver, date, record path)")
+            $precedenceOk = $false
         }
     }
     if (Test-Path -LiteralPath $Profile -PathType Leaf) {
         if (-not (Get-FileText $Profile).Contains($divergenceId)) { $diagnostics.Add("PROFILE_POINTER_MISSING|the generated PROMPTKIT.md does not reference the divergence row '$divergenceId'") }
+        $profilePrecedence = Get-ProfilePrecedence $Profile
+        if ($profilePrecedence -ne '') {
+            if ($profilePrecedence -cne $precedence) {
+                $diagnostics.Add("PROFILE_PRECEDENCE_MISMATCH|row $RowIndex records precedence '$precedence' but the generated PROMPTKIT.md states '$profilePrecedence'")
+            }
+        } elseif ($precedenceOk) {
+            $diagnostics.Add("PROFILE_PRECEDENCE_MISSING|row $RowIndex records precedence '$precedence' but the generated PROMPTKIT.md states no precedence")
+        }
+        if ($precedenceOk -and ($precedence -cne 'unresolved')) {
+            $nextActionLower = $cells[7].ToLower()
+            if ($nextActionLower.Contains('record') -and $nextActionLower.Contains('designation')) {
+                $diagnostics.Add("NEXT_ACTION_REASKS_DESIGNATION|row $RowIndex asks to record a precedence designation although '$designatedBy' already designated one")
+            }
+        }
     }
     return @($diagnostics)
 }

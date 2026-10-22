@@ -27,11 +27,11 @@ size: medium
 
 ## Host Documentation Divergence
 
-The detected `ARCHITECTURE.md` states the opposite of `DECISION-acme-platform-001` about the dispatch surface. The document is left untouched; the contradiction is recorded here for human resolution.
+The detected `ARCHITECTURE.md` states the opposite of `DECISION-acme-platform-001` about the dispatch surface. The document is left untouched. A human designated `decision-authority` on 2026-10-22 (Jordan Vale), so the contradiction is recorded here for architecture reconciliation and the outstanding work is reconciling the host blueprint.
 
 | Divergence ID | Document | Line | Decision ID | Precedence | Designated By | Owner | Next Action |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| DIVERGENCE-acme-platform-001 | ARCHITECTURE.md | 2 | DECISION-acme-platform-001 | decision-authority | Jordan Vale (2026-10-22, docs/specs/2026-10-22-intake-acme-platform.md) | Platform lead | Ask the architecture owner to reconcile the dispatch model in `ARCHITECTURE.md`, or to record an explicit precedence designation in this Intake Record. |
+| DIVERGENCE-acme-platform-001 | ARCHITECTURE.md | 2 | DECISION-acme-platform-001 | decision-authority | Jordan Vale (2026-10-22, docs/specs/2026-10-22-intake-acme-platform.md) | Platform lead | Ask the architecture owner to reconcile the dispatch model in `ARCHITECTURE.md` with the designated `decision-authority` precedence; the host document stays untouched until that reconciliation is agreed. |
 
 ## Later ledger
 

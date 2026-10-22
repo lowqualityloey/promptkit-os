@@ -88,6 +88,14 @@ scan_artifact() {
     done < "$file"
 }
 
+# Print the precedence value the generated PROMPTKIT.md states, if any.
+profile_precedence() {
+    local profile="$1" line
+    line="$(grep -F 'Dispatch Precedence' "$profile" | head -n 1 || true)"
+    [ -n "$line" ] || return 0
+    printf '%s\n' "$line" | tr '`' '\n' | sed -n '2p'
+}
+
 # Validate one divergence row and print its diagnostics.
 validate_row() {
     local row="$1" row_index="$2" project_root="$3" intake="$4" profile="$5"
@@ -154,21 +162,42 @@ FIELDS
     done < "$intake"
     [ "$confirmed" -eq 1 ] || echo "DECISION_NOT_CONFIRMED|row $row_index Decision ID '$decision_id' has no confirmed decision in the Intake Record"
 
-    [[ "$precedence" =~ ^(${ALLOWED_PRECEDENCE})$ ]] || echo "PRECEDENCE_NOT_IN_ENUM|row $row_index precedence '$precedence' is outside the allowed set"
+    local precedence_ok=1
+    if [[ ! "$precedence" =~ ^(${ALLOWED_PRECEDENCE})$ ]]; then
+        echo "PRECEDENCE_NOT_IN_ENUM|row $row_index precedence '$precedence' is outside the allowed set"
+        precedence_ok=0
+    fi
 
     if [ "$precedence" = 'unresolved' ]; then
         if [ "$designated_by" != 'not designated' ]; then
             echo "DESIGNATION_WITHOUT_PRECEDENCE|row $row_index names a designator while the precedence stays 'unresolved'"
+            precedence_ok=0
         fi
     else
         if [ "$designated_by" = 'not designated' ] || [[ ! "$designated_by" =~ [0-9]{4}-[0-9]{2}-[0-9]{2} ]] || [[ "$designated_by" != *docs/specs/* ]]; then
             echo "MISSING_HUMAN_DESIGNATION|row $row_index precedence $precedence has no explicit human designation (approver, date, record path)"
+            precedence_ok=0
         fi
     fi
 
     if [ -f "$profile" ]; then
         if ! grep -Fq "$divergence_id" "$profile"; then
             echo "PROFILE_POINTER_MISSING|the generated PROMPTKIT.md does not reference the divergence row '$divergence_id'"
+        fi
+        local profile_precedence_value
+        profile_precedence_value="$(profile_precedence "$profile")"
+        if [ -n "$profile_precedence_value" ]; then
+            if [ "$profile_precedence_value" != "$precedence" ]; then
+                echo "PROFILE_PRECEDENCE_MISMATCH|row $row_index records precedence '$precedence' but the generated PROMPTKIT.md states '$profile_precedence_value'"
+            fi
+        elif [ "$precedence_ok" -eq 1 ]; then
+            echo "PROFILE_PRECEDENCE_MISSING|row $row_index records precedence '$precedence' but the generated PROMPTKIT.md states no precedence"
+        fi
+        if [ "$precedence_ok" -eq 1 ] && [ "$precedence" != 'unresolved' ]; then
+            local next_action_lower="${next_action,,}"
+            if [[ "$next_action_lower" == *"record"* ]] && [[ "$next_action_lower" == *"designation"* ]]; then
+                echo "NEXT_ACTION_REASKS_DESIGNATION|row $row_index asks to record a precedence designation although '$designated_by' already designated one"
+            fi
         fi
     fi
 }
