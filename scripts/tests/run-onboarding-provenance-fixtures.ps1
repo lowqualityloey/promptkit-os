@@ -113,7 +113,7 @@ function Invoke-AnalyseIntake([string]$Path) {
     $headerSeen = @{}
     $sepSeen = @{}
     $columnCount = @{}
-    $firstHeader = @{}
+    $headerCells = @{}
 
     foreach ($line in (Get-Content -LiteralPath $Path)) {
         if ($line -match '^##\s+(.*)$') {
@@ -128,7 +128,7 @@ function Invoke-AnalyseIntake([string]$Path) {
         if (-not $headerSeen.ContainsKey($section)) {
             $headerSeen[$section] = $true
             $columnCount[$section] = $cells.Count
-            $firstHeader[$section] = $cells[0]
+            $headerCells[$section] = @($cells)
             continue
         }
         if (-not $sepSeen.ContainsKey($section)) {
@@ -189,13 +189,16 @@ function Invoke-AnalyseIntake([string]$Path) {
         'Verification obligations' = 5
         'Round log' = 3
     }
-    $expectedFirstHeader = @{
-        'Intake metadata' = 'Field'
-        'Decisions' = 'Decision ID'
-        'Accepted defaults' = 'Default ID'
-        'Assumption records' = 'Assumption ID'
-        'Verification obligations' = 'Obligation ID'
-        'Round log' = 'Round'
+    # Expected complete header row for each register, taken from the canonical
+    # baseline fixture (cases/valid-baseline). A register must match every
+    # header cell in order, not merely the first cell and the column count.
+    $expectedHeader = @{
+        'Intake metadata' = @('Field', 'Value')
+        'Decisions' = @('Decision ID', 'Status', 'Statement', 'Provenance')
+        'Accepted defaults' = @('Default ID', 'Status', 'Accepted value', 'Scope', 'Resolves', 'Adjacent decisions that stay open')
+        'Assumption records' = @('Assumption ID', 'Statement', 'Owner', 'Validation action', 'Status', 'Linked decision', 'Residual risk', 'Destination')
+        'Verification obligations' = @('Obligation ID', 'Statement', 'Owner', 'Status', 'Destination')
+        'Round log' = @('Round', 'Questions', 'Closed by')
     }
     $registerOk = @{}
     foreach ($required in @('Intake metadata', 'Decisions', 'Accepted defaults', 'Assumption records', 'Verification obligations', 'Round log')) {
@@ -204,68 +207,79 @@ function Invoke-AnalyseIntake([string]$Path) {
             $registerOk[$required] = $false
             continue
         }
-        $ok = $sepSeen.ContainsKey($required) -and $columnCount[$required] -eq $expectedColumns[$required] -and $firstHeader[$required] -eq $expectedFirstHeader[$required]
+        $actualHeader = ''
+        if ($headerCells.ContainsKey($required)) { $actualHeader = (@($headerCells[$required]) -join '|') }
+        $expectedHeaderText = (@($expectedHeader[$required]) -join '|')
+        $ok = $sepSeen.ContainsKey($required) -and $columnCount[$required] -eq $expectedColumns[$required] -and $actualHeader -ceq $expectedHeaderText
         $registerOk[$required] = $ok
         if (-not $ok) { $out.Add('REGISTER_NOT_TABULAR|' + $required) }
     }
 
-    foreach ($id in $assumptions) {
-        $st = $asmStatus[$id]
-        $lk = $asmLink[$id]
-        if ($registerOk['Decisions'] -and $null -ne $lk -and $lk -match '^DECISION-') {
-            if (-not $decStatus.ContainsKey($lk)) {
-                $out.Add('ASSUMPTION_LINK_UNRESOLVED|' + $id + '|' + $lk)
+    if ($registerOk['Assumption records']) {
+        foreach ($id in $assumptions) {
+            $st = $asmStatus[$id]
+            $lk = $asmLink[$id]
+            if ($registerOk['Decisions'] -and $null -ne $lk -and $lk -match '^DECISION-') {
+                if (-not $decStatus.ContainsKey($lk)) {
+                    $out.Add('ASSUMPTION_LINK_UNRESOLVED|' + $id + '|' + $lk)
+                }
+                elseif ($decStatus[$lk] -eq 'confirmed' -and $st -notmatch '^(accepted|superseded)') {
+                    $out.Add('ASSUMPTION_STILL_OPEN|' + $id + '|' + $lk)
+                }
             }
-            elseif ($decStatus[$lk] -eq 'confirmed' -and $st -notmatch '^(accepted|superseded)') {
-                $out.Add('ASSUMPTION_STILL_OPEN|' + $id + '|' + $lk)
-            }
-        }
-        if ($null -ne $st -and $st -match '^(accepted|superseded)' -and -not (Test-Placeholder $asmRisk[$id]) -and (Test-Placeholder $asmDest[$id])) {
-            $out.Add('RESIDUAL_RISK_UNTRACKED|' + $id)
-        }
-    }
-
-    foreach ($id in $decisions) {
-        $match = [regex]::Match([string]$decProv[$id], 'DEFAULT-[a-z0-9-]+-[0-9]{3}')
-        if ($match.Success) {
-            $defaultId = $match.Value
-            if (-not (Test-Member $defResolves[$defaultId] $id)) {
-                $out.Add('DEFAULT_WIDENED|' + $defaultId + '|' + $id)
+            if ($null -ne $st -and $st -match '^(accepted|superseded)' -and -not (Test-Placeholder $asmRisk[$id]) -and (Test-Placeholder $asmDest[$id])) {
+                $out.Add('RESIDUAL_RISK_UNTRACKED|' + $id)
             }
         }
     }
 
-    $size = ''
-    if ($meta.ContainsKey('Size')) { $size = $meta['Size'].ToLowerInvariant() }
-    $questionCeiling = 0
-    if ($size -eq 'small') { $questionCeiling = 5 }
-    elseif ($size -eq 'medium') { $questionCeiling = 8 }
-    elseif ($size -eq 'large') { $questionCeiling = 12 }
-
-    $roundsStated = $null
-    $questionsStated = $null
-    if ($meta.ContainsKey('Rounds used')) { $roundsStated = $meta['Rounds used'] }
-    if ($meta.ContainsKey('Questions asked')) { $questionsStated = $meta['Questions asked'] }
-
-    if ($null -ne $roundsStated -and $roundsStated -match '^[0-9]+$') {
-        if ([int]$roundsStated -ne $rounds) {
-            $out.Add('COUNT_CONTRADICTION|rounds|stated=' + $roundsStated + '|recorded=' + $rounds)
-        }
-    }
-    if ($null -ne $questionsStated -and $questionsStated -match '^[0-9]+$') {
-        if ([int]$questionsStated -ne $qsum) {
-            $out.Add('COUNT_CONTRADICTION|questions|stated=' + $questionsStated + '|recorded=' + $qsum)
-        }
-        if ($questionCeiling -gt 0 -and [int]$questionsStated -gt $questionCeiling) {
-            $out.Add('QUESTION_BUDGET_EXCEEDED|size=' + $size + '|ceiling=' + $questionCeiling + '|asked=' + $questionsStated)
+    if ($registerOk['Decisions'] -and $registerOk['Accepted defaults']) {
+        foreach ($id in $decisions) {
+            $match = [regex]::Match([string]$decProv[$id], 'DEFAULT-[a-z0-9-]+-[0-9]{3}')
+            if ($match.Success) {
+                $defaultId = $match.Value
+                if (-not (Test-Member $defResolves[$defaultId] $id)) {
+                    $out.Add('DEFAULT_WIDENED|' + $defaultId + '|' + $id)
+                }
+            }
         }
     }
 
-    foreach ($id in $obligations) {
-        if (Test-Placeholder $oblOwner[$id]) { $out.Add('OBLIGATION_UNTRACKED|' + $id + '|owner') }
-        if (Test-Placeholder $oblStatus[$id]) { $out.Add('OBLIGATION_UNTRACKED|' + $id + '|status') }
-        if (Test-Placeholder $oblDest[$id]) { $out.Add('OBLIGATION_UNTRACKED|' + $id + '|destination') }
-        else { $out.Add('DESTCHECK|' + $id + '|' + $oblDest[$id]) }
+    if ($registerOk['Intake metadata'] -and $registerOk['Round log']) {
+        $size = ''
+        if ($meta.ContainsKey('Size')) { $size = $meta['Size'].ToLowerInvariant() }
+        $questionCeiling = 0
+        if ($size -eq 'small') { $questionCeiling = 5 }
+        elseif ($size -eq 'medium') { $questionCeiling = 8 }
+        elseif ($size -eq 'large') { $questionCeiling = 12 }
+
+        $roundsStated = $null
+        $questionsStated = $null
+        if ($meta.ContainsKey('Rounds used')) { $roundsStated = $meta['Rounds used'] }
+        if ($meta.ContainsKey('Questions asked')) { $questionsStated = $meta['Questions asked'] }
+
+        if ($null -ne $roundsStated -and $roundsStated -match '^[0-9]+$') {
+            if ([int]$roundsStated -ne $rounds) {
+                $out.Add('COUNT_CONTRADICTION|rounds|stated=' + $roundsStated + '|recorded=' + $rounds)
+            }
+        }
+        if ($null -ne $questionsStated -and $questionsStated -match '^[0-9]+$') {
+            if ([int]$questionsStated -ne $qsum) {
+                $out.Add('COUNT_CONTRADICTION|questions|stated=' + $questionsStated + '|recorded=' + $qsum)
+            }
+            if ($questionCeiling -gt 0 -and [int]$questionsStated -gt $questionCeiling) {
+                $out.Add('QUESTION_BUDGET_EXCEEDED|size=' + $size + '|ceiling=' + $questionCeiling + '|asked=' + $questionsStated)
+            }
+        }
+    }
+
+    if ($registerOk['Verification obligations']) {
+        foreach ($id in $obligations) {
+            if (Test-Placeholder $oblOwner[$id]) { $out.Add('OBLIGATION_UNTRACKED|' + $id + '|owner') }
+            if (Test-Placeholder $oblStatus[$id]) { $out.Add('OBLIGATION_UNTRACKED|' + $id + '|status') }
+            if (Test-Placeholder $oblDest[$id]) { $out.Add('OBLIGATION_UNTRACKED|' + $id + '|destination') }
+            else { $out.Add('DESTCHECK|' + $id + '|' + $oblDest[$id]) }
+        }
     }
 
     $out.Add('COUNTS|DECISIONS=' + $decisions.Count + '|DEFAULTS=' + $defaults.Count + '|ASSUMPTIONS=' + $assumptions.Count + '|OBLIGATIONS=' + $obligations.Count + '|ROUNDS=' + $rounds)
@@ -375,6 +389,7 @@ try {
         $fields = $line.Split($tab)
         if ($fields.Count -ne 4) { Fail-Harness ('Malformed manifest row for case ' + $fields[0] + ': expected 4 tab-separated fields') }
         $name = $fields[0]
+        if ([string]::IsNullOrWhiteSpace($name)) { Fail-Harness 'Malformed manifest row: empty case name' }
         $expectedExit = 0
         if (-not [int]::TryParse($fields[1], [ref]$expectedExit)) { Fail-Harness ('Malformed manifest row for case ' + $name + ": expected exit '" + $fields[1] + "' is not numeric") }
         $expectedSummary = $fields[2]

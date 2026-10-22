@@ -110,7 +110,9 @@ function member(list, target,    n, i, arr) {
     if (!(sec in hdr_seen)) {
         hdr_seen[sec] = 1
         ncols[sec] = m
-        h1[sec] = cells[1]
+        header_text = cells[1]
+        for (i = 2; i <= m; i++) header_text = header_text "|" cells[i]
+        hdr[sec] = header_text
         next
     }
     if (!(sec in sep_ok)) {
@@ -152,57 +154,74 @@ function member(list, target,    n, i, arr) {
 }
 END {
     nreq = split("Intake metadata;Decisions;Accepted defaults;Assumption records;Verification obligations;Round log", req, ";")
-    expn["Intake metadata"] = 2; exph["Intake metadata"] = "Field"
-    expn["Decisions"] = 4; exph["Decisions"] = "Decision ID"
-    expn["Accepted defaults"] = 6; exph["Accepted defaults"] = "Default ID"
-    expn["Assumption records"] = 8; exph["Assumption records"] = "Assumption ID"
-    expn["Verification obligations"] = 5; exph["Verification obligations"] = "Obligation ID"
-    expn["Round log"] = 3; exph["Round log"] = "Round"
+    # Expected complete header row for each register, taken from the canonical
+    # baseline fixture (cases/valid-baseline). A register must match every
+    # header cell in order, not merely the first cell and the column count.
+    expn["Intake metadata"] = 2
+    exph["Intake metadata"] = "Field|Value"
+    expn["Decisions"] = 4
+    exph["Decisions"] = "Decision ID|Status|Statement|Provenance"
+    expn["Accepted defaults"] = 6
+    exph["Accepted defaults"] = "Default ID|Status|Accepted value|Scope|Resolves|Adjacent decisions that stay open"
+    expn["Assumption records"] = 8
+    exph["Assumption records"] = "Assumption ID|Statement|Owner|Validation action|Status|Linked decision|Residual risk|Destination"
+    expn["Verification obligations"] = 5
+    exph["Verification obligations"] = "Obligation ID|Statement|Owner|Status|Destination"
+    expn["Round log"] = 3
+    exph["Round log"] = "Round|Questions|Closed by"
     for (i = 1; i <= nreq; i++) {
         r = req[i]
         if (!(r in seen)) { print "REGISTER_MISSING|" r; reg_ok[r] = 0; continue }
-        ok = (r in sep_ok) && (ncols[r] == expn[r]) && (h1[r] == exph[r])
+        ok = (r in sep_ok) && (ncols[r] == expn[r]) && (hdr[r] == exph[r])
         reg_ok[r] = ok
         if (!ok) print "REGISTER_NOT_TABULAR|" r
     }
-    for (k = 1; k <= na; k++) {
-        id = asm_id[k]
-        st = asm_status[id]
-        lk = asm_link[id]
-        if (reg_ok["Decisions"] && lk ~ /^DECISION-/) {
-            if (!(lk in dec_status)) print "ASSUMPTION_LINK_UNRESOLVED|" id "|" lk
-            else if (dec_status[lk] == "confirmed" && st !~ /^(accepted|superseded)/)
-                print "ASSUMPTION_STILL_OPEN|" id "|" lk
-        }
-        if (st ~ /^(accepted|superseded)/ && !placeholder(asm_risk[id]) && placeholder(asm_dest[id]))
-            print "RESIDUAL_RISK_UNTRACKED|" id
-    }
-    for (k = 1; k <= nd; k++) {
-        id = dec_id[k]
-        if (match(dec_prov[id], /DEFAULT-[a-z0-9-]+-[0-9][0-9][0-9]/)) {
-            d = substr(dec_prov[id], RSTART, RLENGTH)
-            if (!member(def_resolves[d], id)) print "DEFAULT_WIDENED|" d "|" id
+    if (reg_ok["Assumption records"]) {
+        for (k = 1; k <= na; k++) {
+            id = asm_id[k]
+            st = asm_status[id]
+            lk = asm_link[id]
+            if (reg_ok["Decisions"] && lk ~ /^DECISION-/) {
+                if (!(lk in dec_status)) print "ASSUMPTION_LINK_UNRESOLVED|" id "|" lk
+                else if (dec_status[lk] == "confirmed" && st !~ /^(accepted|superseded)/)
+                    print "ASSUMPTION_STILL_OPEN|" id "|" lk
+            }
+            if (st ~ /^(accepted|superseded)/ && !placeholder(asm_risk[id]) && placeholder(asm_dest[id]))
+                print "RESIDUAL_RISK_UNTRACKED|" id
         }
     }
-    size = tolower(meta["Size"])
-    if (size == "small") qceil = 5
-    else if (size == "medium") qceil = 8
-    else if (size == "large") qceil = 12
-    else qceil = 0
-    rs = meta["Rounds used"]
-    qs = meta["Questions asked"]
-    if (rs ~ /^[0-9]+$/ && rs + 0 != rounds)
-        print "COUNT_CONTRADICTION|rounds|stated=" rs "|recorded=" rounds
-    if (qs ~ /^[0-9]+$/) {
-        if (qs + 0 != qsum) print "COUNT_CONTRADICTION|questions|stated=" qs "|recorded=" qsum
-        if (qceil > 0 && qs + 0 > qceil) print "QUESTION_BUDGET_EXCEEDED|size=" size "|ceiling=" qceil "|asked=" qs
+    if (reg_ok["Decisions"] && reg_ok["Accepted defaults"]) {
+        for (k = 1; k <= nd; k++) {
+            id = dec_id[k]
+            if (match(dec_prov[id], /DEFAULT-[a-z0-9-]+-[0-9][0-9][0-9]/)) {
+                d = substr(dec_prov[id], RSTART, RLENGTH)
+                if (!member(def_resolves[d], id)) print "DEFAULT_WIDENED|" d "|" id
+            }
+        }
     }
-    for (k = 1; k <= no; k++) {
-        id = obl_id[k]
-        if (placeholder(obl_owner[id])) print "OBLIGATION_UNTRACKED|" id "|owner"
-        if (placeholder(obl_status[id])) print "OBLIGATION_UNTRACKED|" id "|status"
-        if (placeholder(obl_dest[id])) print "OBLIGATION_UNTRACKED|" id "|destination"
-        else print "DESTCHECK|" id "|" obl_dest[id]
+    if (reg_ok["Intake metadata"] && reg_ok["Round log"]) {
+        size = tolower(meta["Size"])
+        if (size == "small") qceil = 5
+        else if (size == "medium") qceil = 8
+        else if (size == "large") qceil = 12
+        else qceil = 0
+        rs = meta["Rounds used"]
+        qs = meta["Questions asked"]
+        if (rs ~ /^[0-9]+$/ && rs + 0 != rounds)
+            print "COUNT_CONTRADICTION|rounds|stated=" rs "|recorded=" rounds
+        if (qs ~ /^[0-9]+$/) {
+            if (qs + 0 != qsum) print "COUNT_CONTRADICTION|questions|stated=" qs "|recorded=" qsum
+            if (qceil > 0 && qs + 0 > qceil) print "QUESTION_BUDGET_EXCEEDED|size=" size "|ceiling=" qceil "|asked=" qs
+        }
+    }
+    if (reg_ok["Verification obligations"]) {
+        for (k = 1; k <= no; k++) {
+            id = obl_id[k]
+            if (placeholder(obl_owner[id])) print "OBLIGATION_UNTRACKED|" id "|owner"
+            if (placeholder(obl_status[id])) print "OBLIGATION_UNTRACKED|" id "|status"
+            if (placeholder(obl_dest[id])) print "OBLIGATION_UNTRACKED|" id "|destination"
+            else print "DESTCHECK|" id "|" obl_dest[id]
+        }
     }
     print "COUNTS|DECISIONS=" nd "|DEFAULTS=" ndf "|ASSUMPTIONS=" na "|OBLIGATIONS=" no "|ROUNDS=" rounds
 }
@@ -296,10 +315,23 @@ for case_dir in "$FIXTURE_ROOT"/cases/*/; do
         || fail "Case directory not declared in expected/cases.tsv: $name"
 done
 
-while IFS=$'\t' read -r name expected_exit expected_summary expected_diagnostics extra; do
-    [ -n "$name" ] || continue
-    [[ "$name" = \#* ]] && continue
-    [ -z "$extra" ] || fail "Malformed manifest row for case $name: expected 4 tab-separated fields"
+while IFS= read -r manifest_line; do
+    [ -n "$manifest_line" ] || continue
+    [[ "$manifest_line" =~ ^[[:space:]]*$ ]] && continue
+    case "$manifest_line" in \#*) continue ;; esac
+    # Count fields exactly. IFS=$'\t' read collapses repeated and trailing
+    # tabs, so the tab count is measured on the raw row instead: every tab
+    # separates fields, which keeps empty and trailing fields visible.
+    tab_count="$(printf '%s' "$manifest_line" | tr -cd '\t' | wc -c)"
+    field_count=$((tab_count + 1))
+    name="${manifest_line%%$'\t'*}"
+    [ "$field_count" -eq 4 ] || fail "Malformed manifest row for case $name: expected 4 tab-separated fields"
+    [ -n "$name" ] || fail "Malformed manifest row: empty case name"
+    remainder="${manifest_line#*$'\t'}"
+    expected_exit="${remainder%%$'\t'*}"
+    remainder="${remainder#*$'\t'}"
+    expected_summary="${remainder%%$'\t'*}"
+    expected_diagnostics="${remainder#*$'\t'}"
     [[ "$expected_exit" =~ ^[0-9]+$ ]] || fail "Malformed manifest row for case $name: expected exit '$expected_exit' is not numeric"
     [ -n "$expected_summary" ] || fail "Missing expected summary for case $name"
     [ -n "$expected_diagnostics" ] || fail "Missing diagnostic contract for case $name"
