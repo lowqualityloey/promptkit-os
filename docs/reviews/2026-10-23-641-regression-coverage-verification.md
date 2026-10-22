@@ -3,7 +3,7 @@
 Date: 2026-10-23 (Pacific/Auckland)
 Branch: `fix/641-regression-coverage` (worktree `.worktrees/641-regression-coverage`)
 Base: `65e22b12061aca0c2d75211f0a834970812246f4` (current remote `main`)
-Commits: `975c03e` (fixture family and harnesses), `49f9689` (register-presence check and eighth case), then this report's commit
+Commits: `975c03e` (fixture family and harnesses), `49f9689` (register-presence check and eighth case), `db1317b` (corrective pass for review findings F1–F7), then this report's own commit
 Related issues: #641, #645, #646; this follow-up
 
 Everything below was observed in this worktree. Nothing was pushed, merged, or recorded against any issue.
@@ -24,7 +24,7 @@ scripts/tests/run-onboarding-provenance-fixtures.ps1
 
 Each case is a complete artifact set: the Intake Record with machine-readable registers (Intake metadata, Decisions, Accepted defaults, Assumption records, Verification obligations, Round log) plus the generated `docs/STATE.md` those registers point at, so an obligation destination can be *resolved* rather than asserted. One shared TAB manifest pins, per case, the expected exit code, the exact summary line, and the complete normalized diagnostic set. Diagnostics are compared as a set, not a sample.
 
-Registers are markdown tables on purpose: both twins parse them with the same rules and no prose heuristics, and a record that drops a register (or writes registers as prose) is rejected instead of silently yielding zero rows.
+Registers are markdown tables on purpose: both twins parse them with the same rules and no prose heuristics. A record that drops a register is rejected as `REGISTER_MISSING`; a record whose register is present but not the expected table is rejected as `REGISTER_NOT_TABULAR`, so an unreadable register cannot read as "nothing to report". Both harnesses also fail closed on a case directory that the manifest does not declare, a manifest row that is not exactly four tab-separated fields, or a stated expected exit code that is not numeric.
 
 ## 2. Case matrix as observed
 
@@ -38,12 +38,14 @@ Registers are markdown tables on purpose: both twins parse them with the same ru
 | `question-budget-exceeded` | 9 questions asked for a `medium` intake (ceiling 8) | `QUESTION_BUDGET_EXCEEDED\|size=medium\|ceiling=8\|asked=9` | 1 |
 | `obligation-untracked` | obligation with no owner, plus a second obligation whose destination section does not exist | `OBLIGATION_UNTRACKED\|...\|owner` and `OBLIGATION_DESTINATION_MISSING\|...\|docs/STATE.md §9` | 1 |
 | `register-missing` | the Verification obligations register is absent | `REGISTER_MISSING\|Verification obligations` | 1 |
+| `register-not-tabular` | the Verification obligations register is present as prose instead of the required table | `REGISTER_NOT_TABULAR\|Verification obligations` | 1 |
+| `assumption-link-unresolved` | an assumption claims `DECISION-acme-platform-099`, which is not in the Decisions register | `ASSUMPTION_LINK_UNRESOLVED\|ASSUMPTION-acme-platform-002\|DECISION-acme-platform-099` | 1 |
 
-Observed matrix output (Bash, exit 0): `Onboarding provenance Bash matrix cases passed: 8 isolated contracts.`
+Observed matrix output (Bash, exit 0): `Onboarding provenance Bash matrix cases passed: 10 isolated contracts.` The PowerShell twin reports the same ten contracts (section 5).
 
 ## 3. Negative controls: before and after
 
-Every non-baseline case is derived from `valid-baseline` by changing only the defective cells; `docs/STATE.md` is byte-identical to the baseline in all eight cases. Verified with a pairwise diff of each case against the baseline:
+Every non-baseline case is derived from `valid-baseline` by changing only the defective cells; `docs/STATE.md` is byte-identical to the baseline in all ten cases (`sha256 d12e416c517c0758442ce535635e7eeaad62524c1a43073e138d5aa6d422f2ae`). Verified with a pairwise diff of each case against the baseline:
 
 - `assumption-still-open`: one cell, Status `accepted by DECISION-acme-platform-001` → `open`.
 - `residual-risk-untracked`: one cell, Destination `docs/STATE.md §5` → `-`.
@@ -52,6 +54,8 @@ Every non-baseline case is derived from `valid-baseline` by changing only the de
 - `question-budget-exceeded`: `Questions asked` `5` → `9` with round rows changed to 5 and 4, so the arithmetic still reconciles and only the budget rule can fire.
 - `obligation-untracked`: Owner → `-` on the first obligation, plus a second obligation whose destination `docs/STATE.md §9` does not exist.
 - `register-missing`: the whole Verification obligations section removed.
+- `register-not-tabular`: the Verification obligations table replaced by one prose sentence.
+- `assumption-link-unresolved`: `DECISION-acme-platform-004` → `DECISION-acme-platform-099` in one cell.
 
 Before/after result: the baseline artifact passes (`VALID|DECISIONS=4|DEFAULTS=1|ASSUMPTIONS=2|OBLIGATIONS=1|ROUNDS=2`, exit 0); each mutated artifact is rejected with exactly the diagnostic listed in section 2 and no others. The harness also fails if a case manifest's stated `ERRORS` count disagrees with its listed diagnostics, so a manifest cannot quietly drift from the contract.
 
@@ -61,7 +65,7 @@ Harness integrity: per case, both twins snapshot every repository file hash and 
 
 | Contract rule | Owner after this change |
 | :--- | :--- |
-| 3 bounded defaults, 4 assumption lifecycle, 5 residual risk, 6 obligations, 7 counts/budget, register presence | new fixture harnesses (both twins) |
+| 3 bounded defaults, 4 assumption lifecycle (including decision-link resolution), 5 residual risk, 6 obligations, 7 counts/budget, register presence and tabularity | new fixture harnesses (both twins) |
 | 1 no implied promotion, 2 traceable locks, 8 designated precedence | existing documentation-contract assertions plus the eight-item human-review checklist |
 | derived PromptKit baselines | existing behavioral-contract assertions |
 | invariant→decision references in `docs/STATE.md` | existing documentation-contract assertions plus manual review; not checked by this harness |
@@ -75,37 +79,38 @@ Environment: WSL2, Ubuntu 24.04.5 LTS, Linux 6.18.54.1-microsoft-standard-WSL2, 
 
 | Path | Result | Status |
 | :--- | :--- | :--- |
-| Bash harness on Linux (worktree) | 8/8 cases, exit 0 | verified locally |
-| PowerShell harness on Windows pwsh, Windows-local copy | 8/8 cases, exit 0 | verified locally |
+| Bash harness on Linux (worktree) | 10/10 cases, exit 0 | verified locally |
+| PowerShell harness on Windows pwsh, Windows-local copy | 10/10 cases, exit 0 | verified locally |
 | PowerShell harness over the `\\wsl.localhost\` UNC path | `HARNESS_FAILURE\|Unable to read Git status` | environment-limited, not a harness defect |
 | Native Windows CI (`windows-latest`) | not run | pending push; authoritative when it runs |
 
 Two WSL-interop facts, neither worked around in the committed script: Windows pwsh refuses the unsigned `.ps1` over UNC without `-ExecutionPolicy Bypass` (GitHub runners invoke `pwsh -NoProfile -File` and need no such flag), and `git status` over that UNC path fails with "detected dubious ownership in repository" and "`.git` may refer to a non-local directory". The committed harness deliberately contains no `safe.directory` mutation; real Windows CI uses a local path.
 
-Parity was therefore established on a genuinely Windows-local copy (`/mnt/c/Users/jonel/AppData/Local/Temp/pk-prov-parity3-*`, a fresh timestamped directory, not deleted): harness pair plus fixture family copied there, `git init` + commit, then the Bash twin from WSL and the PowerShell twin via `wslpath -w`. Both runs exit 0 and produce the same eight case rows: identical case names, exit codes, diagnostics and summary lines, including the two-obligation case (`FAILED\|ERRORS=2\|...\|OBLIGATIONS=2\|ROUNDS=2`).
+Parity was therefore established on genuinely Windows-local copies (`/mnt/c/Users/jonel/AppData/Local/Temp/pk-fix2-1792692948` and `pk-hard2-1792693740`, fresh timestamped directories, not deleted): harness pair plus fixture family copied there, `git init` + commit, then the Bash twin from WSL and the PowerShell twin via `wslpath -w`. Both runs exit 0 and produce the same ten case rows: identical case names, exit codes, diagnostics and summary lines, including the two-obligation case (`FAILED|ERRORS=2|...|OBLIGATIONS=2|ROUNDS=2`). Per-case instrumentation printed `CASE|<name>|<diagnostic>` rows from patched copies in the temporary directory; after sorting, the only differing line is the section sign byte described below. The unpatched committed twins pass unmodified.
 
 Residual byte-level difference, measured: with stdout redirected, Bash writes the section sign as UTF-8 `c2 a7`, Windows pwsh writes it in the OEM code page as the single byte `f5` and uses CRLF. This affects only log bytes; every assertion compares strings inside each twin, and both twins read the fixture artifacts as UTF-8, so no diagnostic differs. No other character in the matrix is non-ASCII.
 
 CI wiring (not yet exercised): `bash -n` line in the Linux syntax cascade, a Bash run step after the onboarding-divergence Bash step, `scripts/tests/run-onboarding-provenance-fixtures.ps1` appended to the Windows `$syntaxFiles` parse list, and a PowerShell run step after the divergence PowerShell step in `windows-validate-core`.
 
-## 6. Gate results (exact commands, this worktree)
+## 6. Gate results (exact commands, this worktree, HEAD `db1317b`)
 
 | Command | Exit | Result line |
 | :--- | :--- | :--- |
-| `bash scripts/tests/run-onboarding-provenance-fixtures.sh` | 0 | `Onboarding provenance Bash matrix cases passed: 8 isolated contracts.` |
+| `bash scripts/tests/run-onboarding-provenance-fixtures.sh` | 0 | `Onboarding provenance Bash matrix cases passed: 10 isolated contracts.` |
 | `bash scripts/tests/run-behavioral-contract-tests.sh` | 0 | `Passed: 557 \| Failed: 0` |
 | `bash scripts/tests/run-doctor-tests.sh` | 0 | `Passed: 42 \| Failed: 0 \| Skipped: 0` |
 | `bash scripts/tests/run-onboard-divergence-fixtures.sh` | 0 | `4 isolated contracts.` |
 | `bash scripts/tests/run-reference-link-tests.sh` | 0 | `Passed: 8 \| Failed: 0` |
 | `bash scripts/validate-references.sh .` | 0 | `All references valid! No broken links found.` |
-| `bash scripts/check-changelog-entry.sh` | 0 | `CHANGELOG_GATE\|PASS\|no behavior-surface paths in range, entry not required` |
+| `bash scripts/check-changelog-entry.sh --base 65e22b12061aca0c2d75211f0a834970812246f4` | 0 | `CHANGELOG_GATE\|PASS\|no behavior-surface paths in range, entry not required` |
 | `bash scripts/measure-tokens.sh --strict` | 0 | `BALANCED\|2341\|2500\|PASS`, `LITE\|1456\|1500\|PASS` |
 | `bash scripts/measure-per-task-tokens.sh --strict` | 0 | `Per-task baseline gate passed for all profiles.` |
 | `bash scripts/measure-turbo-overhead.sh --strict` | 0 | `Turbo overhead claim within documented window.` |
 | `bash scripts/validate-execution-control.sh --root .` | 0 | `VALID\|RECORDS=66\|ROOT=.` |
-| `bash -n scripts/tests/run-onboarding-provenance-fixtures.sh` | 0 | no output |
+| `bash -n` on every touched shell script | 0 | no output |
+| PowerShell `Parser::ParseFile` on the twin | 0 | `PARSE_ERRORS=0` |
 
-Notes: `validate-references.sh` takes the engine root as its first argument and defaults to `.promptkit`, which does not exist in a worktree; the CI form is `bash scripts/validate-references.sh .`. The changelog gate does not require an entry here because behavior-surface matching covers `scripts/<file>` but not `scripts/tests/**`; the entry is voluntary and follows the #644 precedent. Token figures are unchanged from `main` because no measured input was touched.
+Notes: `validate-references.sh` takes the engine root as its first argument and defaults to `.promptkit`, which does not exist in a worktree; the CI form is `bash scripts/validate-references.sh .`. `check-changelog-entry.sh` accepts `--base REF`; passing a bare positional ref is a usage error (exit 2) and is not a gate failure. The changelog gate does not require an entry here because behavior-surface matching covers `scripts/<file>` but not `scripts/tests/**`; the entry is voluntary and follows the #644 precedent. Token figures are unchanged from `main` because no measured input was touched.
 
 ## 7. F8, F9, F10 dispositions
 
@@ -121,9 +126,9 @@ Owner decision, recorded here on 2026-10-23 at the maintainer's direction: **F9 
 | :--- | :--- | :--- | :--- | :--- |
 | 1 | Review the onboarding, discovery-intake, context-sync, checkpoint, project-profile, design-profile and state-tracker contracts; identify the narrowest canonical owner per rule | #645 (11 files) then #642, #643, #644, #646, #647, #648 | Each follow-up narrows exactly one owner: pre-write artifact (#642), profile label (#643), host-documentation divergence (#644), doctor five checks (#646), intake-record path authority (#647), §4 illustrative syntax (#648) | Satisfied, indirectly evidenced: no single owner-map document exists; the owner split is exhibited by the follow-up series |
 | 2 | Decide which findings are deterministic and which need a human checklist | #645 | `protocols/discovery-intake.md` §G "Artifact Provenance Contract" (eight rules, line 247 onward) plus the eight-item Human-review checklist ending at line 284; `scripts/check-doctor.sh` check 5 is the deterministic part | Satisfied |
-| 3 | Add regression fixtures using the existing cross-platform conventions | none on `main` | `main` has no fixture for these families; this branch adds the family, eight cases, two harnesses, CI wiring | **Not satisfied on `main`; completed on this branch, pending CI** |
+| 3 | Add regression fixtures using the existing cross-platform conventions | none on `main` | `main` has no fixture for these families; this branch adds the family, ten cases, two harnesses, CI wiring | **Not satisfied on `main`; completed on this branch, pending CI** |
 | 4 | Update only the owning workflow/protocol/template/validator surfaces | #645 | Diff touches `protocols/discovery-intake.md`, two templates, two doctor scripts, tests, docs and changelog; no unrelated surface | Satisfied |
-| 5 | Verify stale-assumption transitions, exact-scope defaults, decision references, metadata counts and obligation ownership | #645 assertions; this branch fixtures | On `main`: static assertions plus the manual checklist only. On this branch: eight executable cases covering transition, scope, counts and ownership; decision references remain with the documentation assertions | **Partially satisfied on `main`; the executable part completes on this branch** |
+| 5 | Verify stale-assumption transitions, exact-scope defaults, decision references, metadata counts and obligation ownership | #645 assertions; this branch fixtures | On `main`: static assertions plus the manual checklist only. On this branch: ten executable cases covering transition, scope, decision-link resolution, counts and ownership | **Partially satisfied on `main`; the executable part completes on this branch** |
 | 6 | Run reference, behavioral-contract and strict token-budget checks on supported platform paths | #645 plus merges | PR body figures reproduce on merge run 39561444224 (Linux behavioral 498/0, Linux doctor 42/0/0, Windows doc-contract 486/0 + 1 skip, Windows doctor 41/0/1); current `main` run 39753414434 shows 557/0, 42/0/0, 545/0 + 1 skip, 41/0/1 | Satisfied, verified from CI logs rather than the PR body |
 | 7 | Document the enforcement boundary | #645 | `workflows/doctor.md` line 72 "What the provenance row does not prove"; discovery-intake checklist closing line; PR body statement that static checks establish artifact contracts, not universal live-agent behavior | Satisfied |
 
@@ -133,26 +138,44 @@ Smallest transparent correction: post one comment on #641 carrying this table, c
 
 | Criterion | Result |
 | :--- | :--- |
-| Stale-assumption fixture: confirmed decision with an incorrectly active linked assumption | Met — `assumption-still-open`, plus `residual-risk-untracked` for the risk side |
+| Stale-assumption fixture: confirmed decision with an incorrectly active linked assumption | Met — `assumption-still-open`, plus `residual-risk-untracked` for the risk side and `assumption-link-unresolved` for a link that does not resolve |
 | Default-widening fixture: accepted default expanded beyond approved scope | Met — `default-widened` |
-| Metadata/obligation fixture: contradictory counts or inadequately tracked obligation | Met — `count-contradiction`, `question-budget-exceeded`, `obligation-untracked` |
-| Each fixture has a meaningful expected verdict and, where applicable, a negative control | Met — every case pins the exact exit, summary and complete diagnostic set; seven genuine negative controls with a shared positive control |
-| Bash and PowerShell provide equivalent coverage on supported platforms | Met locally on a Windows-local copy (identical eight case rows); native Windows CI run still pending |
+| Metadata/obligation fixture: contradictory counts or inadequately tracked obligation | Met — `count-contradiction`, `question-budget-exceeded`, `obligation-untracked`, `register-missing`, `register-not-tabular` |
+| Each fixture has a meaningful expected verdict and, where applicable, a negative control | Met — every case pins the exact exit, summary and complete diagnostic set; nine genuine negative controls with a shared positive control |
+| Bash and PowerShell provide equivalent coverage on supported platforms | Met locally on Windows-local copies (identical ten case rows); native Windows CI run still pending |
 | Authority boundaries and category distinctions intact | Met — no protocol, template, workflow, doctor, or schema change; fixture-only |
 | F9/F10 evidence-backed definitions or an explicit owner decision | Met by owner decision: both rescinded (section 7) |
 | All seven #641 tasks reconciled | Met — section 8 |
 | CI and repository gates pass, skips reported accurately | Met for the local gate set (section 6); CI wiring unexercised until push, and the Windows runner remains authoritative |
 | Documentation does not claim static tests prove live-model compliance | Met — fixture README, both harness closing lines, CHANGELOG entry and this report all state the boundary |
 
-## 10. Residual risks and limitations
+## 10. Corrective pass: pre-push review findings F1–F7
+
+The pre-push review of commit `f5add69` found seven defects. Each is reproduced once against the pre-correction behavior and re-tested against `db1317b`. The two Medium findings blocked the branch: in both cases the harness reported a green matrix for an artifact the contract says must be rejected.
+
+| # | Severity | Finding | Reproduction before the fix | Fix | Verification after the fix |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| F1 | Medium | Register presence keyed only to the `## heading`, so a register written as prose yielded zero rows and every rule over it passed silently | Replacing the Decisions table with prose produced no diagnostic; with manifest counts lowered the suite exited 0 | Each required register must carry its expected header row, separator row and column count; absent → `REGISTER_MISSING`, present-but-unparseable → `REGISTER_NOT_TABULAR`; link rules stay gated on a usable Decisions register so one defect does not fan out | Committed case `register-not-tabular` → `REGISTER_NOT_TABULAR|Verification obligations`, exit 1. Isolated `decisions-prose` reproduction (temporary copy): exactly one diagnostic `REGISTER_NOT_TABULAR|Decisions` plus `FAILED|ERRORS=1|DECISIONS=0|DEFAULTS=1|ASSUMPTIONS=2|OBLIGATIONS=1|ROUNDS=2`, 11 contracts pass, no `ASSUMPTION_*` cascade |
+| F2 | Medium | A `Linked decision` that names a nonexistent decision silently disabled the lifecycle rule | `DECISION-...-099` with status `open` emitted no diagnostic and validated as `VALID` | Every link is resolved against the Decisions register; unresolved → `ASSUMPTION_LINK_UNRESOLVED|<assumption>|<decision>`, and an unresolved link replaces (never duplicates) the lifecycle verdict for that row | Committed case `assumption-link-unresolved` → single diagnostic, exit 1, counts unchanged |
+| F3 | Low | PowerShell repository snapshot pruned every path starting `.git`, dropping `.gitignore`, `.gitattributes` and `.github` from the read-only proof | Predicate test showed `.gitignore` excluded | Skip only the `.git` entry itself, using the repo's existing relative-path convention | Filter predicate measured over the worktree: old filter excluded 5 entries, new filter excludes 1; `.gitignore skippedByNewFilter=False`, `.gitattributes skippedByNewFilter=False` |
+| F4 | Low | A case directory missing from the manifest was silently ignored | Extra `cases/zzz-orphan/` left the suite green | Fail closed before the run if any case directory is undeclared | Bash: `HARNESS_FAILURE|Case directory not declared in expected/cases.tsv: zzz-orphan`, exit 1. PowerShell: identical message, exit 1 |
+| F5 | Low | Inverted valid-branch message ("expects diagnostics with a failing exit") in both twins | — | Message corrected in both twins | `grep` shows `declares no diagnostics but a failing expected exit` in `run-...-fixtures.sh:274` and `run-...-fixtures.ps1:391` |
+| F6 | Low | PowerShell dropped fields beyond the fourth on a malformed manifest row and threw a raw conversion exception on a non-numeric exit | — | Reject any row whose field count is not exactly four; parse the exit with `TryParse` and fail through `HARNESS_FAILURE` | PowerShell: five-field row → `HARNESS_FAILURE|Malformed manifest row for case extra-field: expected 4 tab-separated fields`, exit 1; `nope` → `... expected exit 'nope' is not numeric`, exit 1. Bash: same two messages, exit 1 |
+| F7 | Low | Fixture README rule row said "4 registers present" while six are required | — | Row corrected to "registers present and tabular" listing six | `README.md:43` |
+
+All three fail-closed reproductions (F4, F6) were executed against the unmodified committed twin on the Windows-local copy `pk-hard2-1792693740`; the F1 suppression reproduction used a temporary eleventh case in a throwaway copy under `/tmp`, never in the repository. Neither harness gained a self-test mode: the repository has no harness-of-harness convention, so the F1/F2 defects are guarded by committed cases and F4–F6 by the documented isolated reproductions above.
+
+Both twins were re-run after the correction: Bash `10 isolated contracts`, PowerShell `10 isolated contracts`, exit 0, with the ten case rows matching (section 5).
+
+## 11. Residual risks and limitations
 
 - **CI wiring is unverified until pushed.** The YAML edits parse and the steps mirror existing ones, but only a real run proves the Windows runner executes the new PowerShell step.
 - **Local PowerShell evidence is environment-limited.** The UNC run cannot report parity; the Windows-local copy can, and its repository-integrity check exercises a genuinely local `git` repository rather than the CI checkout. Native Windows CI is still the authoritative check.
 - **Log encoding differs between twins** (measured in section 5). It cannot change a verdict because comparisons happen in string space, but any future consumer that parses redirected PowerShell output as UTF-8 will mis-read the section sign.
-- **Register parsing requires markdown tables.** A record that writes registers as prose is rejected as `REGISTER_MISSING`, which is the correct verdict but means this harness cannot validate a prose-only intake format.
+- **Register parsing requires markdown tables with the expected shape.** A record that omits a register is rejected as `REGISTER_MISSING` and one that writes it as prose as `REGISTER_NOT_TABULAR`; both verdicts are correct, but this harness cannot validate a prose-only intake format, and a future format change must update the expected header and column counts in both twins.
 - **Coverage is bounded to artifact shape.** The harness does not verify that an invariant in `docs/STATE.md` cites a real `DECISION-*` id, that a destination's content satisfies its obligation, that an accepted default's prose scope matches its declared scope, or that a human actually approved a decision. Those stay with the documentation-contract assertions and the bounded manual review.
-- **A green matrix is not agent compliance.** Eight artifact shapes are classified as specified; nothing here shows that a live model produces consistent artifacts.
+- **A green matrix is not agent compliance.** Ten artifact shapes are classified as specified; nothing here shows that a live model produces consistent artifacts.
 
-## 11. What this does not prove
+## 12. What this does not prove
 
-It does not show that a running onboarding session preserves decision provenance, that every on-host mismatch is detected, or that any model follows the workflow. It proves that these eight generated artifact shapes are accepted or rejected exactly as the contract specifies, on both twins, and that the harness leaves the repository untouched.
+It does not show that a running onboarding session preserves decision provenance, that every on-host mismatch is detected, or that any model follows the workflow. It proves that these ten generated artifact shapes are accepted or rejected exactly as the contract specifies, on both twins, and that the harness leaves the repository untouched.
