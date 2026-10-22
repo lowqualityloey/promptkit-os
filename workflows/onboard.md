@@ -19,9 +19,9 @@ The assistant must perform the investigative heavy lifting: reading manifests, c
 ---
 
 ## Non-Negotiable Guardrail: Passive Discovery, Human-Authorized Generation
-Phases 0–2 perform passive non-destructive discovery: scanning manifests, tooling, and directory structures without modifying host application source or configuration files. The assistant must **never** create, modify, or delete host application source files unprompted.
+Phases 0–2 perform passive non-destructive discovery: scanning manifests, tooling, and directory structures without modifying host application source or configuration files. The assistant must **never** create, modify, or delete host application source files unprompted. A detected project document (`ARCHITECTURE.md`, `ROADMAP.md`, `RUNBOOK.md`/`OPERATIONS.md`, `STYLE.md`/`STYLEGUIDE.md`) stays read-only in every phase: never rewrite, reformat, normalize, or delete it, not even to resolve a contradiction with a confirmed decision.
 
-Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESIGN.md`, `docs/STATE.md`) only after explicit human confirmation of the Phase 2 findings summary — the single pre-write authorization artifact, presented at the end of Phase 2. A refusal, an adjustment request, an ambiguous reply, or absent confirmation is not approval. Explicit confirmation authorizes only the managed-artifact generation scope above; it never authorizes host application source/configuration changes, which remain untouched without separate authorization. The Executive Architecture Scorecard is not this precondition: it is a Phase 4 deliverable, emitted after the artifacts it evaluates.
+Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESIGN.md`, `docs/STATE.md`) and the Intake Record under `docs/specs/` only after explicit human confirmation of the Phase 2 findings summary — the single pre-write authorization artifact, presented at the end of Phase 2. A refusal, an adjustment request, an ambiguous reply, or absent confirmation is not approval. Explicit confirmation authorizes only the managed-artifact generation scope above, including Intake Record amendments that record interview answers and divergence rows; it never authorizes host application source/configuration changes, and it never authorizes a rewrite of a detected project document, which stays byte-identical. The Executive Architecture Scorecard is not this precondition: it is a Phase 4 deliverable, emitted after the artifacts it evaluates.
 
 ---
 
@@ -146,12 +146,13 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    - `RUNBOOK.md` / `OPERATIONS.md`: Operational SRE manuals and rollback procedures.
    - `STYLE.md` / `STYLEGUIDE.md`: Repository-specific code style conventions.
    - If detected, record these files for linkage in `PROMPTKIT.md`. If absent, silently continue with zero warnings.
+   - When a detected document contradicts a confirmed intake decision, record one divergence row per contradiction in the Intake Record (`protocols/discovery-intake.md` §G, *Host Documentation Divergence*): document path, one-based line number, decision ID, precedence, who designated that precedence, owner, and next action. Default the precedence to `unresolved`; record `host-doc-authority` or `decision-authority` only from an explicit human designation. Never edit the detected document, and never emit a precedence claim that cites no source.
 
 6. **Environment & Configuration Validation**:
    Passively detect configuration schema files (`.env.example`, `env.ts`, `t3-env`, `pydantic-settings`). For fail-fast boot validation and client vs. server secret isolation patterns, see `docs/recipes/env-validation.md`.
 
 7. **End-of-Phase-2 Findings Summary (single pre-write authorization artifact)**:
-   Present a concise findings summary in the conversation — detected manifests and tooling, extracted commands (marked *unverified until executed*), architecture/boundary patterns, data, auth, and API conventions, standard root documentation, and environment-config observations — then halt for explicit human confirmation of that summary before any Phase 3 managed-artifact write. This summary is the only artifact Phase 3 confirmation covers; the Executive Architecture Scorecard stays a Phase 4 deliverable and is never the pre-write precondition.
+   Present a concise findings summary in the conversation — detected manifests and tooling, extracted commands (marked *unverified until executed*), architecture/boundary patterns, data, auth, and API conventions, standard root documentation, and environment-config observations — then halt for explicit human confirmation of that summary before any Phase 3 managed-artifact write. This summary is the only artifact Phase 3 confirmation covers; the Executive Architecture Scorecard stays a Phase 4 deliverable and is never the pre-write precondition. Include every recorded divergence row (document, line, decision, precedence, designation) so the human can designate precedence in the Intake Record (`docs/specs/`) before any managed-artifact write.
 
 ---
 
@@ -210,6 +211,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    - Active commands configured to the exact detected package manager and runner scripts (labeled as discovered/unverified until executed under a quality gate).
    - If monorepo detected, populate Section 4 (`Monorepo & Workspace Topology`) with the mapped workspace manager, package table, filtered command conventions (`pnpm --filter <pkg>`, `turbo run <cmd> --filter=<pkg>`), and boundary guardrails. If single-package repo, set Section 4 to `N/A (Standalone Repository)`.
    - Document paths set to standard defaults (`docs/specs/`, `docs/tasks/`, `docs/data/`, etc.) and link any detected root documentation (`ARCHITECTURE.md`, `ROADMAP.md`, `RUNBOOK.md`, `STYLE.md`).
+   - When the Intake Record holds host-document divergence rows, add one pointer line under *Standard Root Documentation* naming the Intake Record path, the row count, and the `DIVERGENCE-*` IDs. That pointer carries the source; a precedence claim without a source reference is not policy.
    - Task tracking system recorded in Section 5 from Step 1b picker (`Local Markdown (docs/tasks/)` default, or `GitHub Issues` / `Jira` / `Linear`). Jira/Linear are manual import / copy-paste with no auto-push; Local Task Record at `docs/tasks/<task-id>.md` remains authoritative and board status is a projection only.
    - Tailored architectural invariants added (e.g. strict TypeScript, zero loose casting, database check constraints, RLS enforcement), preserving existing custom invariants.
    - Ensure `## 0. PromptKit OS Profile` section exists with chosen profile (`lite|balanced|turbo`), machine-readable `profile:` line, and machine-readable `tracking: local|github|jira|linear` line at bottom for agent parsing (from Steps 1 and 1b).
@@ -228,6 +230,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    - Populate project name, current branch, and active status (Section 2).
    - If monorepo, set initial Target Workspace / Package in Section 3 (`Active Working Set`) — initialization only; later Section 3 mutations belong to `pk:checkpoint`/`pk:tasks`.
    - Record existing documented policies and explicitly human-approved rules in Section 4 with source references. Stage manifest-derived observations and inferred rules in Section 4A (`Candidate Learnings`) with status `pending`; they are not locked invariants.
+   - Never write host-document divergence rows into `docs/STATE.md`; the Intake Record owns them. A precedence statement about a detected project document belongs in Section 4 only when a human approved it and it cites its `DIVERGENCE-*` row or policy path; otherwise it stays in Section 4A as a pending candidate.
    - Seed Section 8 (`Session Continuity Log`) with an initial onboarding entry:
      `| YYYY-MM-DD | Assistant (pk:onboard) | Project Intake (Greenfield or Brownfield) | Generated PROMPTKIT.md and initialized docs/STATE.md |`
    - Preserve Section 9 (`Session Spend Ledger`) with its starting placeholder table ready for subsequent `pk:checkpoint` spend tracking.
@@ -242,6 +245,7 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
    - **Task Tracking System**: Confirmed task lifecycle backend from Step 1b (`tracking: local|github|jira|linear`). Jira/Linear are manual import with no auto-push.
    - **Active MCP Capabilities**: Catalog detected Model Context Protocol servers (e.g. GitHub MCP, Postgres MCP, Linear) or record `N/A (Standard CLI Fallback)`. This step is non-blocking advise only — the agent cannot enable MCP; the human configures it in-host. Relevant MCP capabilities may be recommended when supported by the detected project and host (e.g. tracker=github → `github-mcp-server`; `pk:data` planned → `postgres-mcp` read-only; frontend → `playwright`). Always add fallback line: `No MCP? Zero errors — falls back to gh CLI + markdown.` Store in `PROMPTKIT.md §5`. Alongside detected state, record intended MCP (`intended: <servers or CLI-only>`) so a later enablement is a planned change, not silent drift.
    - **Existing System Documentation**: Catalog detected standard root documentation (`ARCHITECTURE.md`, `ROADMAP.md`, `RUNBOOK.md`, `STYLE.md`) or record `N/A (None Detected)`.
+   - **Host Documentation Divergence**: Report the Intake Record row count and the precedence state of each row (`unresolved` unless a human designated it).
    - **Architectural Strengths** (examples of evidence to report): High test coverage, strict typing, clean modular boundaries.
    - **Vulnerabilities & Missing Seams** (examples of evidence to report): Zero integration tests, unindexed foreign keys, loose `any` types, missing error boundaries.
 
@@ -271,4 +275,5 @@ Phase 3+ may create or update PromptKit-managed artifacts (`PROMPTKIT.md`, `DESI
 - `./docs/STATE.md` initialized with project baseline and active branch.
 - **Invariant Handoff**: Human-stated rules persisted to `docs/STATE.md` Section 4; manifest-derived observations staged as pending Candidate Learnings per the memory-vs-policy boundary.
 - Executive Architecture Scorecard delivered to developer.
+- Host-document contradictions recorded as Intake Record divergence rows (`DIVERGENCE-*`) with a designated precedence and an accountable next action; the detected document left byte-identical.
 - Workspace ready for immediate `pk:` workflow pairing.
