@@ -1,0 +1,369 @@
+#!/usr/bin/env pwsh
+# Cross-platform fixture harness for the onboarding artifact-provenance
+# consistency contract (protocols/discovery-intake.md section G).
+# Run from repository root: pwsh -NoProfile -File scripts/tests/run-onboarding-provenance-fixtures.ps1
+#
+# Enforcement honesty: onboarding is a Markdown workflow, not an executable
+# artifact generator. This harness validates the SPECIFIED classification of
+# generated onboarding artifacts against the provenance contract. It does not
+# execute an onboarding engine, and it cannot prove that a live model produces
+# consistent artifacts.
+
+[CmdletBinding()]
+param()
+
+$ErrorActionPreference = 'Stop'
+
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = (Split-Path -Parent (Split-Path -Parent $scriptDir)).TrimEnd([char]92, [char]47)
+$fixtureRoot = Join-Path $repoRoot 'scripts/tests/fixtures/onboarding-provenance'
+
+if ($env:RUNNER_TEMP) { $tempBase = $env:RUNNER_TEMP }
+elseif ($env:TMPDIR) { $tempBase = $env:TMPDIR }
+else { $tempBase = [System.IO.Path]::GetTempPath() }
+$tempRoot = Join-Path $tempBase ('promptkit-onboarding-provenance.' + [System.Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+
+$nl = [Environment]::NewLine
+$pipe = [char]124
+$tab = [char]9
+$sectionSign = [char]167
+
+function Fail-Harness([string]$Message) { throw ('HARNESS_FAILURE|' + $Message) }
+
+function Test-Placeholder([string]$Value) {
+    if ($null -eq $Value) { return $true }
+    if ($Value -eq '') { return $true }
+    return (@('-', 'none', 'None', 'NONE', 'n/a', 'N/A', 'TBD', 'not tracked', '?') -contains $Value)
+}
+
+function Test-Member([string]$List, [string]$Target) {
+    if ($null -eq $List) { return $false }
+    foreach ($part in ($List -split '[,;\s]+')) {
+        if ($part -eq $Target) { return $true }
+    }
+    return $false
+}
+
+function Get-TrimmedCells([string]$Line) {
+    $parts = $Line.Split($pipe)
+    $cells = New-Object System.Collections.Generic.List[string]
+    for ($i = 1; $i -le $parts.Count - 2; $i++) { $cells.Add($parts[$i].Trim()) }
+    return ,$cells
+}
+
+function Sort-Diagnostics($Items) {
+    $list = New-Object System.Collections.Generic.List[string]
+    foreach ($item in $Items) { $list.Add($item) }
+    $list.Sort([System.StringComparer]::OrdinalIgnoreCase)
+    return $list
+}
+
+function Get-RepoFileLines {
+    $gitDir = Join-Path $repoRoot '.git'
+    $items = Get-ChildItem -LiteralPath $repoRoot -Recurse -File -Force -ErrorAction SilentlyContinue |
+        Where-Object { -not $_.FullName.StartsWith($gitDir) } |
+        Sort-Object -Property FullName
+    $lines = New-Object System.Collections.Generic.List[string]
+    foreach ($item in $items) {
+        $hash = (Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash
+        $lines.Add($item.FullName + '|' + $hash)
+    }
+    return ($lines -join $nl)
+}
+
+function Get-GitStatus {
+    $status = git -C $repoRoot status --porcelain=v1 --untracked-files=all
+    if ($LASTEXITCODE -ne 0) { Fail-Harness 'Unable to read Git status' }
+    return ($status -join $nl)
+}
+
+function Assert-Unchanged([string]$BeforeFiles, [string]$BeforeStatus, [string]$Label) {
+    $afterFiles = Get-RepoFileLines
+    $afterStatus = Get-GitStatus
+    Set-Content -LiteralPath (Join-Path $tempRoot ($Label + '-after-files.txt')) -Value $afterFiles
+    Set-Content -LiteralPath (Join-Path $tempRoot ($Label + '-after-status.txt')) -Value $afterStatus
+    if ($afterFiles -cne $BeforeFiles) { Fail-Harness ('Repository file hashes changed during ' + $Label + ' validation') }
+    if ($afterStatus -cne $BeforeStatus) { Fail-Harness ('Git status changed during ' + $Label + ' validation') }
+}
+
+function Invoke-AnalyseIntake([string]$Path) {
+    $section = ''
+    $headerSeen = $false
+    $decisions = New-Object System.Collections.Generic.List[string]
+    $decStatus = @{}
+    $decProv = @{}
+    $defaults = New-Object System.Collections.Generic.List[string]
+    $defResolves = @{}
+    $assumptions = New-Object System.Collections.Generic.List[string]
+    $asmStatus = @{}
+    $asmLink = @{}
+    $asmRisk = @{}
+    $asmDest = @{}
+    $obligations = New-Object System.Collections.Generic.List[string]
+    $oblOwner = @{}
+    $oblStatus = @{}
+    $oblDest = @{}
+    $meta = @{}
+    $rounds = 0
+    $qsum = 0
+
+    foreach ($line in (Get-Content -LiteralPath $Path)) {
+        if ($line -match '^##\s+(.*)$') {
+            $section = $Matches[1].Trim()
+            $headerSeen = $false
+            continue
+        }
+        if ($line -notmatch '^\|') { continue }
+        if ($section -eq '') { continue }
+        $cells = Get-TrimmedCells $line
+        if ($cells.Count -eq 0) { continue }
+        if ($cells[0] -match '^:?-+:?$') { continue }
+        if (-not $headerSeen) { $headerSeen = $true; continue }
+        switch ($section) {
+            'Decisions' {
+                if ($cells.Count -ge 4) {
+                    $decisions.Add($cells[0])
+                    $decStatus[$cells[0]] = $cells[1].ToLowerInvariant()
+                    $decProv[$cells[0]] = $cells[3]
+                }
+            }
+            'Accepted defaults' {
+                if ($cells.Count -ge 6) {
+                    $defaults.Add($cells[0])
+                    $defResolves[$cells[0]] = $cells[4]
+                }
+            }
+            'Assumption records' {
+                if ($cells.Count -ge 8) {
+                    $assumptions.Add($cells[0])
+                    $asmStatus[$cells[0]] = $cells[4].ToLowerInvariant()
+                    $asmLink[$cells[0]] = $cells[5]
+                    $asmRisk[$cells[0]] = $cells[6]
+                    $asmDest[$cells[0]] = $cells[7]
+                }
+            }
+            'Verification obligations' {
+                if ($cells.Count -ge 5) {
+                    $obligations.Add($cells[0])
+                    $oblOwner[$cells[0]] = $cells[2]
+                    $oblStatus[$cells[0]] = $cells[3]
+                    $oblDest[$cells[0]] = $cells[4]
+                }
+            }
+            'Intake metadata' {
+                if ($cells.Count -ge 2) { $meta[$cells[0]] = $cells[1] }
+            }
+            'Round log' {
+                $rounds = $rounds + 1
+                if ($cells.Count -ge 2 -and $cells[1] -match '^[0-9]+$') { $qsum = $qsum + [int]$cells[1] }
+            }
+        }
+    }
+
+    $out = New-Object System.Collections.Generic.List[string]
+
+    foreach ($id in $assumptions) {
+        $st = $asmStatus[$id]
+        $lk = $asmLink[$id]
+        if ($null -ne $lk -and $lk -match '^DECISION-' -and $decStatus[$lk] -eq 'confirmed' -and $st -notmatch '^(accepted|superseded)') {
+            $out.Add('ASSUMPTION_STILL_OPEN|' + $id + '|' + $lk)
+        }
+        if ($null -ne $st -and $st -match '^(accepted|superseded)' -and -not (Test-Placeholder $asmRisk[$id]) -and (Test-Placeholder $asmDest[$id])) {
+            $out.Add('RESIDUAL_RISK_UNTRACKED|' + $id)
+        }
+    }
+
+    foreach ($id in $decisions) {
+        $match = [regex]::Match([string]$decProv[$id], 'DEFAULT-[a-z0-9-]+-[0-9]{3}')
+        if ($match.Success) {
+            $defaultId = $match.Value
+            if (-not (Test-Member $defResolves[$defaultId] $id)) {
+                $out.Add('DEFAULT_WIDENED|' + $defaultId + '|' + $id)
+            }
+        }
+    }
+
+    $size = ''
+    if ($meta.ContainsKey('Size')) { $size = $meta['Size'].ToLowerInvariant() }
+    $questionCeiling = 0
+    if ($size -eq 'small') { $questionCeiling = 5 }
+    elseif ($size -eq 'medium') { $questionCeiling = 8 }
+    elseif ($size -eq 'large') { $questionCeiling = 12 }
+
+    $roundsStated = $null
+    $questionsStated = $null
+    if ($meta.ContainsKey('Rounds used')) { $roundsStated = $meta['Rounds used'] }
+    if ($meta.ContainsKey('Questions asked')) { $questionsStated = $meta['Questions asked'] }
+
+    if ($null -ne $roundsStated -and $roundsStated -match '^[0-9]+$') {
+        if ([int]$roundsStated -ne $rounds) {
+            $out.Add('COUNT_CONTRADICTION|rounds|stated=' + $roundsStated + '|recorded=' + $rounds)
+        }
+    }
+    if ($null -ne $questionsStated -and $questionsStated -match '^[0-9]+$') {
+        if ([int]$questionsStated -ne $qsum) {
+            $out.Add('COUNT_CONTRADICTION|questions|stated=' + $questionsStated + '|recorded=' + $qsum)
+        }
+        if ($questionCeiling -gt 0 -and [int]$questionsStated -gt $questionCeiling) {
+            $out.Add('QUESTION_BUDGET_EXCEEDED|size=' + $size + '|ceiling=' + $questionCeiling + '|asked=' + $questionsStated)
+        }
+    }
+
+    foreach ($id in $obligations) {
+        if (Test-Placeholder $oblOwner[$id]) { $out.Add('OBLIGATION_UNTRACKED|' + $id + '|owner') }
+        if (Test-Placeholder $oblStatus[$id]) { $out.Add('OBLIGATION_UNTRACKED|' + $id + '|status') }
+        if (Test-Placeholder $oblDest[$id]) { $out.Add('OBLIGATION_UNTRACKED|' + $id + '|destination') }
+        else { $out.Add('DESTCHECK|' + $id + '|' + $oblDest[$id]) }
+    }
+
+    $out.Add('COUNTS|DECISIONS=' + $decisions.Count + '|DEFAULTS=' + $defaults.Count + '|ASSUMPTIONS=' + $assumptions.Count + '|OBLIGATIONS=' + $obligations.Count + '|ROUNDS=' + $rounds)
+    return $out
+}
+
+function Test-DestinationResolves([string]$Destination, [string]$OutputRoot) {
+    $path = $Destination
+    $rest = ''
+    $index = $path.IndexOf($sectionSign)
+    if ($index -ge 0) {
+        $rest = $path.Substring($index + 1)
+        $path = $path.Substring(0, $index)
+    }
+    $path = $path.TrimEnd()
+    if ($path -eq 'docs/STATE.md' -or $path -eq './docs/STATE.md') {
+        $stateFile = Join-Path (Join-Path $OutputRoot 'docs') 'STATE.md'
+        if (-not (Test-Path -LiteralPath $stateFile -PathType Leaf)) { return $false }
+        $content = @(Get-Content -LiteralPath $stateFile)
+        foreach ($match in [regex]::Matches($rest, '[0-9]+')) {
+            $heading = '^##\s+' + $match.Value + '[.]\s'
+            $found = $false
+            foreach ($contentLine in $content) {
+                if ($contentLine -match $heading) { $found = $true; break }
+            }
+            if (-not $found) { return $false }
+        }
+        return $true
+    }
+    if ($path -like 'docs/tasks/*') {
+        $candidate = Join-Path $OutputRoot ($path.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+        return (Test-Path -LiteralPath $candidate -PathType Leaf)
+    }
+    return $false
+}
+
+function Invoke-ValidateCase([string]$CaseRoot) {
+    $outputRoot = Join-Path $CaseRoot 'expected-output'
+    $counts = 'DECISIONS=0|DEFAULTS=0|ASSUMPTIONS=0|OBLIGATIONS=0|ROUNDS=0'
+    $diagnostics = New-Object System.Collections.Generic.List[string]
+    $specDir = Join-Path (Join-Path $outputRoot 'docs') 'specs'
+    $intakes = @()
+    if (Test-Path -LiteralPath $specDir -PathType Container) {
+        $intakes = @(Get-ChildItem -LiteralPath $specDir -File -Filter '*.md' | Sort-Object -Property Name)
+    }
+    if ($intakes.Count -ne 1) {
+        $diagnostics.Add('MISSING_INTAKE_RECORD|the fixture does not contain exactly one Intake Record under expected-output/docs/specs')
+        return [pscustomobject]@{ Diagnostics = @(Sort-Diagnostics $diagnostics); Summary = ('FAILED|ERRORS=1|' + $counts); ExitCode = 1 }
+    }
+    $stateFile = Join-Path (Join-Path $outputRoot 'docs') 'STATE.md'
+    if (-not (Test-Path -LiteralPath $stateFile -PathType Leaf)) {
+        $diagnostics.Add('MISSING_STATE|the fixture has no generated docs/STATE.md')
+        return [pscustomobject]@{ Diagnostics = @(Sort-Diagnostics $diagnostics); Summary = ('FAILED|ERRORS=1|' + $counts); ExitCode = 1 }
+    }
+
+    $analysis = @(Invoke-AnalyseIntake $intakes[0].FullName)
+    $parsedCounts = $null
+    foreach ($entry in $analysis) {
+        if ($entry.StartsWith('COUNTS|')) { $parsedCounts = $entry.Substring('COUNTS|'.Length) }
+    }
+    if ($null -ne $parsedCounts -and $parsedCounts -ne '') { $counts = $parsedCounts }
+    foreach ($entry in $analysis) {
+        if ($entry.StartsWith('COUNTS|')) { continue }
+        if ($entry.StartsWith('DESTCHECK|')) { continue }
+        $diagnostics.Add($entry)
+    }
+    foreach ($entry in $analysis) {
+        if (-not $entry.StartsWith('DESTCHECK|')) { continue }
+        $rest = $entry.Substring('DESTCHECK|'.Length)
+        $cut = $rest.IndexOf($pipe)
+        $obligationId = $rest.Substring(0, $cut)
+        $destination = $rest.Substring($cut + 1)
+        if (-not (Test-DestinationResolves $destination $outputRoot)) {
+            $diagnostics.Add('OBLIGATION_DESTINATION_MISSING|' + $obligationId + '|' + $destination)
+        }
+    }
+
+    $sorted = @(Sort-Diagnostics $diagnostics)
+    if ($sorted.Count -gt 0) {
+        return [pscustomobject]@{ Diagnostics = $sorted; Summary = ('FAILED|ERRORS=' + $sorted.Count + '|' + $counts); ExitCode = 1 }
+    }
+    return [pscustomobject]@{ Diagnostics = @(); Summary = ('VALID|' + $counts); ExitCode = 0 }
+}
+
+try {
+    if (-not (Test-Path -LiteralPath (Join-Path $fixtureRoot 'cases') -PathType Container)) { Fail-Harness 'Missing onboarding provenance fixture root' }
+    $manifest = Join-Path $fixtureRoot 'expected/cases.tsv'
+    if (-not (Test-Path -LiteralPath $manifest -PathType Leaf)) { Fail-Harness 'Missing onboarding provenance case manifest' }
+
+    $caseCount = 0
+    foreach ($line in (Get-Content -LiteralPath $manifest)) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        if ($line.StartsWith('#')) { continue }
+        $fields = $line.Split($tab)
+        if ($fields.Count -lt 4) { Fail-Harness ('Malformed manifest row: ' + $line) }
+        $name = $fields[0]
+        $expectedExit = [int]$fields[1]
+        $expectedSummary = $fields[2]
+        $expectedDiagnostics = $fields[3]
+        if ([string]::IsNullOrWhiteSpace($expectedDiagnostics)) { Fail-Harness ('Missing diagnostic contract for case ' + $name) }
+        $caseRoot = Join-Path (Join-Path $fixtureRoot 'cases') $name
+        if (-not (Test-Path -LiteralPath $caseRoot -PathType Container)) { Fail-Harness ('Missing case root: ' + $caseRoot) }
+
+        $expectedErrors = $null
+        if ($expectedSummary -match 'ERRORS=([0-9]+)') { $expectedErrors = [int]$Matches[1] }
+        if ($expectedDiagnostics -eq '-') {
+            if ($null -ne $expectedErrors) { Fail-Harness ('Case ' + $name + ' claims a valid summary but lists diagnostics') }
+            if ($expectedExit -ne 0) { Fail-Harness ('Case ' + $name + ' expects diagnostics with a failing exit') }
+        } else {
+            if ($null -eq $expectedErrors) { Fail-Harness ('Case ' + $name + ' must state an ERRORS count in its expected summary') }
+            $contractCount = @($expectedDiagnostics -split ';;').Count
+            if ($contractCount -ne $expectedErrors) {
+                Fail-Harness ('Case ' + $name + ' manifest disagreement: the summary claims ' + $expectedErrors + ' diagnostic(s), the contract lists ' + $contractCount)
+            }
+        }
+
+        $beforeFiles = Get-RepoFileLines
+        $beforeStatus = Get-GitStatus
+        $result = Invoke-ValidateCase $caseRoot
+        if ($result.ExitCode -ne $expectedExit) {
+            foreach ($item in $result.Diagnostics) { [Console]::Error.WriteLine($item) }
+            [Console]::Error.WriteLine($result.Summary)
+            Fail-Harness ($name + ' expected exit ' + $expectedExit + ' but received ' + $result.ExitCode)
+        }
+        if ($result.Summary -cne $expectedSummary) {
+            foreach ($item in $result.Diagnostics) { [Console]::Error.WriteLine($item) }
+            [Console]::Error.WriteLine($result.Summary)
+            Fail-Harness ($name + ' did not contain the exact expected summary ' + $expectedSummary)
+        }
+        if ($expectedDiagnostics -eq '-') {
+            if (@($result.Diagnostics).Count -ne 0) { Fail-Harness 'Unexpected diagnostics in a valid case' }
+        } else {
+            $expectedList = New-Object System.Collections.Generic.List[string]
+            foreach ($expectedLine in ($expectedDiagnostics -split ';;')) { $expectedList.Add($expectedLine) }
+            $expectedList.Sort([System.StringComparer]::OrdinalIgnoreCase)
+            $actualList = New-Object System.Collections.Generic.List[string]
+            foreach ($item in $result.Diagnostics) { $actualList.Add($item) }
+            if (($actualList -join $nl) -cne ($expectedList -join $nl)) {
+                Fail-Harness 'Complete normalized diagnostic set did not match the shared contract'
+            }
+        }
+        Assert-Unchanged $beforeFiles $beforeStatus $name
+        $caseCount = $caseCount + 1
+    }
+
+    Write-Output ('Onboarding provenance PowerShell matrix cases passed: ' + $caseCount + ' isolated contracts.')
+    Write-Output 'Onboarding provenance validation is deterministic, network-free, and read-only; it validates the specified classification of generated Intake Records and their obligation destinations.'
+    Write-Output 'Onboarding provenance validation does not execute an onboarding engine; it cannot prove that a live model produces consistent artifacts.'
+}
+finally {
+    Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
