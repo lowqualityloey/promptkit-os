@@ -3,7 +3,8 @@
 Fixture family for the onboarding **Artifact Provenance Contract** in
 `protocols/discovery-intake.md` section G. It supplies the regression coverage
 that Issue #641 Scenario 6 named but did not ship: the superseded-assumption,
-accepted-default-widening, and intake-metadata/obligation inconsistency families.
+accepted-default-widening, and intake-metadata/obligation inconsistency families,
+plus a structural-completeness case for an artifact that drops a required register.
 
 ## What a case contains
 
@@ -32,6 +33,7 @@ case). Diagnostics are compared as a complete set, not a sample.
 | 5 residual risk survives resolution | Re-home residual operational risk before closing an assumption. | `RESIDUAL_RISK_UNTRACKED` | `residual-risk-untracked` |
 | 6 obligations stay owned and tracked | "An obligation missing any of the three is untracked." | `OBLIGATION_UNTRACKED`, `OBLIGATION_DESTINATION_MISSING` | `obligation-untracked` |
 | 7 no arithmetic without a count | Counts are asserted only when the record tracks them. | `COUNT_CONTRADICTION`, `QUESTION_BUDGET_EXCEEDED` | `count-contradiction`, `question-budget-exceeded` |
+| 4 registers present | Keep the decision, accepted-default, assumption, and verification-obligation registers distinct and present, so a missing register cannot read as "nothing to report". | `REGISTER_MISSING` | `register-missing` |
 
 `valid-baseline` is the positive control: every rule holds, including an
 assumption that stays legitimately open because its linked decision is itself
@@ -50,7 +52,7 @@ artifact must be rejected, and the harness fails if it is not.
 
 ## Enforcement boundary
 
-A green matrix proves that these seven artifact shapes are classified as
+A green matrix proves that these eight artifact shapes are classified as
 specified: the checker accepts the consistent record and rejects each named
 inconsistency with a stable diagnostic. It does not prove that a live model
 produces consistent artifacts, that a reviewer notices every remaining

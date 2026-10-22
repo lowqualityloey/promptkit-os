@@ -105,12 +105,14 @@ function Invoke-AnalyseIntake([string]$Path) {
     $oblStatus = @{}
     $oblDest = @{}
     $meta = @{}
+    $seenSections = @{}
     $rounds = 0
     $qsum = 0
 
     foreach ($line in (Get-Content -LiteralPath $Path)) {
         if ($line -match '^##\s+(.*)$') {
             $section = $Matches[1].Trim()
+            $seenSections[$section] = $true
             $headerSeen = $false
             continue
         }
@@ -162,6 +164,10 @@ function Invoke-AnalyseIntake([string]$Path) {
     }
 
     $out = New-Object System.Collections.Generic.List[string]
+
+    foreach ($required in @('Intake metadata', 'Decisions', 'Accepted defaults', 'Assumption records', 'Verification obligations', 'Round log')) {
+        if (-not $seenSections.ContainsKey($required)) { $out.Add('REGISTER_MISSING|' + $required) }
+    }
 
     foreach ($id in $assumptions) {
         $st = $asmStatus[$id]

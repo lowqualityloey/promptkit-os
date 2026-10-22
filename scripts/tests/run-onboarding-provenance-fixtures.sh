@@ -101,7 +101,7 @@ function member(list, target,    n, i, arr) {
     for (i = 1; i <= n; i++) if (arr[i] == target) return 1
     return 0
 }
-/^## / { sec = trim(substr($0, 4)); hdr = 0; next }
+/^## / { sec = trim(substr($0, 4)); hdr = 0; seen[sec] = 1; next }
 /^[|]/ {
     if (sec == "") next
     m = 0
@@ -140,6 +140,8 @@ function member(list, target,    n, i, arr) {
     next
 }
 END {
+    nreq = split("Intake metadata;Decisions;Accepted defaults;Assumption records;Verification obligations;Round log", req, ";")
+    for (i = 1; i <= nreq; i++) if (!(req[i] in seen)) print "REGISTER_MISSING|" req[i]
     for (k = 1; k <= na; k++) {
         id = asm_id[k]
         st = asm_status[id]
