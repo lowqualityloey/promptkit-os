@@ -12,7 +12,6 @@ const { spawnSync } = require("node:child_process");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
-const os = require("node:os");
 
 const PKG = require("../package.json");
 const REPO = "lowqualityloey/promptkit-os";
@@ -143,13 +142,21 @@ async function download(url) {
 }
 
 async function extract(tarball, dest) {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "promptkit-os-"));
-  const tarPath = path.join(tmp, "release.tar.gz");
-  fs.writeFileSync(tarPath, tarball);
-
-  const res = spawnSync("tar", ["-xzf", tarPath, "-C", dest, "--strip-components=1"], { stdio: "inherit" });
-  if (res.status !== 0) die("failed to extract release tarball (is `tar` available?)");
-  fs.rmSync(tmp, { recursive: true, force: true });
+  // Every tar operand must stay relative: GNU tar — the first `tar` on PATH inside
+  // Git Bash — reads `C:\...` operands as remote host:path and dies with
+  // "Cannot connect to C: resolve failed", so the staging-temp-dir + absolute -C
+  // form broke the Windows leg wherever Git Bash leads PATH. Staging the archive
+  // inside `dest` (created by the caller) and extracting with cwd=dest leaves no
+  // absolute path in argv at all, on GNU tar, bsdtar, and POSIX tar alike.
+  const stagedTarball = path.join(dest, ".promptkit-release.tar.gz");
+  fs.writeFileSync(stagedTarball, tarball);
+  const res = spawnSync("tar", ["-xzf", ".promptkit-release.tar.gz", "--strip-components=1"], { cwd: dest, stdio: "inherit" });
+  fs.rmSync(stagedTarball, { force: true });
+  if (res.error) {
+    const hint = res.error.code === "ENOENT" ? "tar not found on PATH" : res.error.message;
+    die(`failed to extract release tarball: ${hint}`);
+  }
+  if (res.status !== 0) die(`failed to extract release tarball (tar exit ${res.status})`);
 }
 
 function runInstaller(kitDir, args) {
