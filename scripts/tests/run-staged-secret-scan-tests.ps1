@@ -271,6 +271,7 @@ try {
         Fail "Narrative scan reported an incorrect file:line."
     }
     if (-not $narrativeResult.Output.Contains("relativize")) { Fail "Narrative finding omitted the remediation guidance." }
+    if (-not $narrativeResult.Output.Contains("not a credential")) { Fail "Narrative finding did not state it is not a credential." }
     if ($narrativeResult.Output.Contains($narrativePosix)) { Fail "Narrative scan leaked the matching absolute path." }
 
     # Scenario 3: an allowlisted staged path does not fire.

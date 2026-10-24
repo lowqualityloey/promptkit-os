@@ -298,6 +298,7 @@ done
 [[ "$output" == *'notes.md:1'* && "$output" == *'notes.md:4'* ]] ||
     fail 'narrative scan reported an incorrect or missing file:line'
 [[ "$output" == *'relativize'* ]] || fail 'narrative finding omitted the remediation guidance'
+[[ "$output" == *'not a credential'* ]] || fail 'narrative finding did not state it is not a credential'
 [[ "$output" != *"$narrative_posix"* ]] || fail 'narrative scan leaked the matching absolute path'
 
 # Scenario 3: an allowlisted staged path does not fire.
