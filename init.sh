@@ -388,7 +388,7 @@ for arg in "$@"; do
         --target=*)
             TARGET_PATH="${arg#--target=}"
             case "$TARGET_PATH" in
-                /*|*../*|*..\\*)
+                /*|..|../*|..\\*|*/..|*\\..|*/../*|*\\..\\*|*/..\\*|*\\../*)
                     echo -e "\033[0;31m[!] --target must be a project-relative path without '..': $TARGET_PATH\033[0m" >&2; exit 1
                     ;;
             esac

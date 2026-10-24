@@ -391,6 +391,34 @@ try {
     if ($LASTEXITCODE -eq 0) {
         throw "Failed Test 15: traversal --target=../evil was accepted; expected rejection."
     }
+    # Test 15b: a file path is rejected as the project root (-PathType Container parity with init.sh -d).
+    $plainFile = Join-Path $TestRoot "plainfile.txt"
+    [System.IO.File]::WriteAllText($plainFile, "placeholder", $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $plainFile 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        throw "Failed Test 15b: a file path was accepted as the project root; expected rejection."
+    }
+    # Test 15c: '..' inside a legitimate filename is accepted (segment matching, not substring).
+    $dotdotRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "dotdotname") -Force).FullName
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $dotdotRoot --balanced --target=docs/v1..v2.md | Out-Null
+    $dotdotPath = Join-Path $dotdotRoot "docs/v1..v2.md"
+    if (-not (Test-Path -LiteralPath $dotdotPath)) {
+        throw "Failed Test 15c: docs/v1..v2.md was not created by --target (substring '..' rejection is too broad)."
+    }
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $dotdotRoot --balanced --target=docs/v1..v2.md | Out-Null
+    $dotdotBlocks = ([regex]::Matches([System.IO.File]::ReadAllText($dotdotPath, [System.Text.Encoding]::UTF8), "PROMPTKIT_START")).Count
+    if ($dotdotBlocks -ne 1) {
+        throw "Failed Test 15c: docs/v1..v2.md should contain exactly one directive block after re-runs."
+    }
+    # Test 15d: trailing '..' segment and -Target parameter binding are both rejected.
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $TargetRoot --target=docs/.. 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        throw "Failed Test 15d: trailing --target=docs/.. was accepted; expected rejection."
+    }
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $TargetRoot -Target "..\outside.md" 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        throw "Failed Test 15d: -Target parameter binding bypassed the '..' check; expected rejection."
+    }
     # Test 16: Inline marker example in preamble survives update without deletion of intervening user prose
     $InlineRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "inlineexample") -Force).FullName
     $inlineAgent = Join-Path $InlineRoot "AGENTS.md"
