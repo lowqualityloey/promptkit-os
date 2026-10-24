@@ -993,7 +993,14 @@ function Get-UpdatedProfileContent {
     $text = $CurrentContent
     $today = Get-Date -Format 'yyyy-MM-dd'
     $text = Get-NormalizedProfileDateContent $text $today
+    # -split keeps a trailing empty element when the text ends with a newline, and
+    # each split-filter-append pass below turns that element into a blank line;
+    # init.sh writes profile/tracking/projection on adjacent lines, so strip one
+    # trailing newline before every pass to keep PROMPTKIT.md byte-identical with
+    # the canonical door (smoke.sh §3 diffs the two byte-for-byte) and to stop
+    # blank lines accumulating on re-runs.
     if ($text -match "(?m)^profile:") {
+        $text = $text -replace "\r?\n$", ""
         $lines = @($text -split "`r?\n" | Where-Object { $_ -notmatch "^profile:" })
         $lines += "profile: $Profile"
         $text = ($lines -join "`n") + "`n"
@@ -1019,15 +1026,18 @@ ${dateLine}- **Engine**: $EngineDir
 
 "@
         $text = "$firstLine`n$profileSection`n$rest`n`n"
+        $text = $text -replace "\r?\n$", ""
         $lines = @($text -split "`r?\n" | Where-Object { $_ -notmatch "^profile:" })
         $lines += "profile: $Profile"
         $text = ($lines -join "`n") + "`n"
     }
 
+    $text = $text -replace "\r?\n$", ""
     $lines = @($text -split "`r?\n" | Where-Object { $_ -notmatch "^tracking:" })
     $lines += "tracking: $Tracking"
     $text = ($lines -join "`n") + "`n"
 
+    $text = $text -replace "\r?\n$", ""
     $lines = @($text -split "`r?\n" | Where-Object { $_ -notmatch "^projection:" })
     if (-not [string]::IsNullOrEmpty($TrackingProjection)) {
         $lines += "projection: $TrackingProjection"

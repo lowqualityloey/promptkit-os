@@ -88,6 +88,8 @@ jobs:
         run: git ls-remote --exit-code --tags "origin" "refs/tags/$TAG"
 
       - name: Preserve Hardened Smoke Harness
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
         run: |
           mkdir -p "$RUNNER_TEMP/hardened-smoke"
           cp package/test/smoke.sh "$RUNNER_TEMP/hardened-smoke/smoke.sh"
@@ -95,6 +97,14 @@ jobs:
           cp scripts/mint-courier-integrity-pin.sh "$RUNNER_TEMP/hardened-smoke/mint-courier-integrity-pin.sh"
           chmod +x "$RUNNER_TEMP/hardened-smoke/smoke.sh"
           chmod +x "$RUNNER_TEMP/hardened-smoke/mint-courier-integrity-pin.sh"
+          if [ "$DRY_RUN" = "true" ]; then
+            # A dry run validates the DISPATCH REF's courier code against the tag's
+            # published bytes: the tag checkout below would otherwise replace package/
+            # with the tag's own tree, so a dry run against v2.0.0 re-ran that tag's
+            # pre-#677 courier and could never pass on windows. Real releases keep
+            # tag-exact package/ validation; dry runs restore this copy after checkout.
+            cp -R package "$RUNNER_TEMP/hardened-smoke/package"
+          fi
 
       - name: Checkout Resolved Release Tag
         id: release_source
@@ -121,6 +131,13 @@ jobs:
           fi
           echo "tag_commit=$TAG_COMMIT" >> "$GITHUB_OUTPUT"
           echo "Successfully checked out detached commit $TAG_COMMIT for tag $TAG"
+
+      - name: Restore Dispatch-Ref Package (dry run only)
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
+        run: |
+          rm -rf package
+          cp -R "$RUNNER_TEMP/hardened-smoke/package" package
+          echo "Dry run: package/ restored from the dispatch ref. The mint step injects the tag archive digest into it, and the smoke suite exercises the dispatch ref's courier code against the tag's bytes."
 
       - name: Sync Courier Version to Release Tag
         env:

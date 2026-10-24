@@ -391,6 +391,27 @@ try {
     if ($LASTEXITCODE -eq 0) {
         throw "Failed Test 15: traversal --target=../evil was accepted; expected rejection."
     }
+    # Test 15b: PROMPTKIT.md is byte-idempotent across re-runs. The profile/tracking/
+    # projection split-filter-append passes used to keep the split's trailing empty
+    # element and grow one blank line per pass per rerun; smoke.sh §3 compares
+    # PROMPTKIT.md byte-for-byte between the courier and canonical doors, so the
+    # accumulation broke the windows release leg on the first real tag.
+    $profileRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "profileidempotent") -Force).FullName
+    $env:PROMPTKIT_NO_INTERACTIVE = "1"
+    try {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $profileRoot --balanced | Out-Null
+        $profileFirst = [System.IO.File]::ReadAllBytes((Join-Path $profileRoot "PROMPTKIT.md"))
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $profileRoot --balanced | Out-Null
+        $profileSecond = [System.IO.File]::ReadAllBytes((Join-Path $profileRoot "PROMPTKIT.md"))
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
+    }
+    if (-not $profileFirst -or -not $profileSecond) {
+        throw "Failed Test 15b: PROMPTKIT.md was not created by init.ps1."
+    }
+    if ([System.Convert]::ToBase64String($profileFirst) -ne [System.Convert]::ToBase64String($profileSecond)) {
+        throw "Failed Test 15b: PROMPTKIT.md changed across re-runs (trailing-newline split accumulation)."
+    }
     # Test 16: Inline marker example in preamble survives update without deletion of intervening user prose
     $InlineRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "inlineexample") -Force).FullName
     $inlineAgent = Join-Path $InlineRoot "AGENTS.md"
