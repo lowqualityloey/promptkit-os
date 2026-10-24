@@ -54,14 +54,23 @@ mkdir -p "$PACK_DIR"
 (cd "$STAGE_PKG_DIR" && npm pack --pack-destination "$PACK_DIR" >/dev/null)
 TARBALL=$(find "$PACK_DIR" -name "promptkit-os-*.tgz" | head -1)
 [ -n "$TARBALL" ] || { echo "FAIL: npm pack failed to produce tarball"; exit 1; }
-tar -xzf "$TARBALL" -C "$PACK_DIR"
+tar -xzf "$TARBALL" -C "$PACK_DIR" || { echo "FAIL: could not extract courier tarball $TARBALL"; exit 1; }
 COURIER_BIN="$PACK_DIR/package/bin/promptkit-os.js"
 chmod +x "$COURIER_BIN"
 
 COURIER_DIR="$WORK/courier"
 mkdir -p "$COURIER_DIR"
+# Capture, don't die: a failing courier must still print its diagnostic (the
+# installer's own message is the fastest route to the platform-specific cause).
+set +e
 INSTALL_OUTPUT="$(cd "$COURIER_DIR" && PROMPTKIT_NO_INTERACTIVE=1 node "$COURIER_BIN" --balanced "$COURIER_DIR" 2>&1)"
+COURIER_STATUS=$?
+set -e
 printf '%s\n' "$INSTALL_OUTPUT"
+if [ "$COURIER_STATUS" -ne 0 ]; then
+    echo "FAIL: courier install exited $COURIER_STATUS (output above)"
+    exit 1
+fi
 # Regression guard for the v2.0.0 smoke failure: the courier path must stamp the
 # release version. The canonical path asserts the same stamp below; section 3 keeps
 # strict full-file equality (no row filtering) so both halves must agree byte-for-byte.
