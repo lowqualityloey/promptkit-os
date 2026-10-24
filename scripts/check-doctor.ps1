@@ -441,7 +441,67 @@ function Check-IgnoreState {
     foreach ($hrel in $installedHosts) { Test-IgnoreOne $hrel }
 }
 
+function Check-Submodule {
+    # Issue #667: a `.promptkit` installed as a git submodule is recorded in the
+    # index as a gitlink (mode 160000). Without a matching `.gitmodules` mapping
+    # a fresh `git clone` materializes an EMPTY `.promptkit/` (its scripts are
+    # absent), so a CI gate that runs kit scripts fails unreproducibly while the
+    # original checkout keeps working. Recovery is non-obvious (`git submodule
+    # add` refuses the existing path), so the doctor names the exact repair.
+    # Purely read-only: `git rev-parse` and `git ls-files` plus a file read.
+    if ($engineOutsideProject) {
+        Emit 'submodule' 'SKIP(engine outside project)' 'the engine directory is not tracked under the project root' '-'
+        return
+    }
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Emit 'submodule' 'SKIP(git unavailable)' 'git is not on PATH' 'Install git to enable submodule registration checks'
+        return
+    }
+    $toplevel = $null
+    try {
+        $toplevel = (& git -C $projectRoot rev-parse --show-toplevel 2>$null)
+        if ($LASTEXITCODE -ne 0) { $toplevel = $null }
+    } catch { $toplevel = $null }
+    if ([string]::IsNullOrWhiteSpace($toplevel)) {
+        Emit 'submodule' 'SKIP(no git repo)' 'the project root is not inside a git work tree' '-'
+        return
+    }
+    $toplevel = $toplevel.Trim()
+    $engineFromTop = $engineDir
+    if ($engineDir.StartsWith(($toplevel.TrimEnd('\', '/') + '\'), [System.StringComparison]::OrdinalIgnoreCase)) {
+        $engineFromTop = $engineDir.Substring($toplevel.TrimEnd('\', '/').Length + 1) -replace '\\', '/'
+    } elseif ($engineDir -eq $toplevel) {
+        $engineFromTop = '.'
+    } else {
+        Emit 'submodule' 'SKIP(engine outside repo)' 'the engine directory is outside this git work tree' '-'
+        return
+    }
+    $entry = $null
+    try {
+        $entry = (& git -C $toplevel ls-files -s -- $engineFromTop 2>$null | Select-Object -First 1)
+    } catch { $entry = $null }
+    $mode = if ($entry) { ($entry -split '\s+')[0] } else { '' }
+    if ($mode -ne '160000') {
+        Emit 'submodule' 'SKIP(not a submodule install)' 'the engine directory is not recorded as a gitlink (mode 160000)' '-'
+        return
+    }
+    $gitmodules = Join-Path $toplevel '.gitmodules'
+    $mapped = $false
+    if (Test-Path -LiteralPath $gitmodules -PathType Leaf) {
+        $needle = 'path = ' + $engineFromTop
+        foreach ($line in (Get-Content -LiteralPath $gitmodules)) {
+            if ($line.Trim() -eq $needle) { $mapped = $true; break }
+        }
+    }
+    if ($mapped) {
+        Emit 'submodule' 'OK' "gitlink $engineFromTop is mapped in .gitmodules" '-'
+        return
+    }
+    Emit 'submodule' 'MISSING(.gitmodules)' "gitlink $engineFromTop has no .gitmodules mapping; a fresh clone materializes an empty engine" "Run: git rm --cached $engineFromTop && git submodule add <repo-url> $engineFromTop, then commit the .gitmodules mapping"
+}
+
 Check-IgnoreState
+Check-Submodule
 
 # --- Check 4: docs-drift --------------------------------------------------
 # Three-store precedence (protocols/context-sync.md §3.2): the Task Record at
