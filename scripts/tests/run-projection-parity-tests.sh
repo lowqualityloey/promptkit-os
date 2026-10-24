@@ -63,6 +63,8 @@ prose="$(printf '%s\n' "$doctor_sh" | awk -F'|' '$3 == "prose" { print $1 }')"
 [ "$(printf '%s\n' "$prose" | sort | tr '\n' ' ')" = "Execution Scope Next Action Specification " ] \
     || fail "prose class must be exactly: Execution Scope, Next Action, Specification"
 machine_count="$(printf '%s\n' "$doctor_sh" | awk -F'|' '$3 == "machine" { n++ } END { print n+0 }')"
-[ "$machine_count" -eq 7 ] || fail "machine class must cover the remaining 7 fields, got $machine_count"
+[ "$machine_count" -eq 6 ] || fail "machine class must cover the remaining 6 fields, got $machine_count"
+level_count="$(printf '%s\n' "$doctor_sh" | awk -F'|' '$3 == "level" { n++ } END { print n+0 }')"
+[ "$level_count" -eq 1 ] || fail "level class must cover exactly Ceremony Level, got $level_count"
 
-echo "PASS|projection definition identical across check-doctor and validate-execution-control twins (10 fields; prose=Execution Scope,Next Action,Specification; machine=7)"
+echo "PASS|projection definition identical across check-doctor and validate-execution-control twins (10 fields; prose=Execution Scope,Next Action,Specification; level=Ceremony Level; machine=6)"

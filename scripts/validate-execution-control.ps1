@@ -1186,7 +1186,7 @@ if (Test-Path -LiteralPath $stateFile -PathType Leaf) {
                 @('Active Task Pointer', 'Active Task Pointer', 'machine'),
                 @('Next Action', 'Next Action', 'prose'),
                 @('Owner / Current Actor', 'Current Actor', 'machine'),
-                @('Ceremony Level', 'Ceremony Level', 'machine'),
+                @('Ceremony Level', 'Ceremony Level', 'level'),
                 @('Specification', 'Specification', 'prose'),
                 @('Execution Scope', 'Execution Scope', 'prose'),
                 @('Start Time', 'Start Time', 'machine'),
@@ -1204,6 +1204,16 @@ if (Test-Path -LiteralPath $stateFile -PathType Leaf) {
                 if ($pair[2] -eq 'prose') {
                     $stateCmp = ConvertTo-NormalizedProseValue $stateValue
                     $taskCmp = ConvertTo-NormalizedProseValue $taskValue
+                } elseif ($pair[2] -eq 'level') {
+                    $stateParse = Get-ParsedCeremonyLevel $stateValue
+                    $taskParse = Get-ParsedCeremonyLevel $taskValue
+                    if ($stateParse -ne '' -and $taskParse -ne '' -and $stateParse -ne 'invalid' -and $taskParse -ne 'invalid') {
+                        $stateCmp = $stateParse
+                        $taskCmp = $taskParse
+                    } else {
+                        $stateCmp = $stateValue
+                        $taskCmp = $taskValue
+                    }
                 } else {
                     $stateCmp = $stateValue
                     $taskCmp = $taskValue
