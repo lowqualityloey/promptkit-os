@@ -21,4 +21,4 @@
 - **Changed-File Summary**: Synthetic STATE projection fixture.
 - **Latest Checkpoint**: None
 - **Latest Handoff**: None
-- **Next Action**: Reconcile the STATE execution state before acceptance.
+- **Next Action**: Reconcile the STATE execution state before accepting the projection.

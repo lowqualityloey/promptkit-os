@@ -419,20 +419,41 @@ check_ignore_state
 # to SKIP(<reason>) and never fails the run.
 # Shared fields derived from the shipped state-tracker-template.md section 3A
 # and the shipped execution-task-record-template.md. Each entry is
-# "<3A label>|<Task Record label>"; Owner is projected as "Owner / Current
-# Actor" in 3A and "Owner / Actor" in the Task Record. No invented fields.
+# "<3A label>|<Task Record label>|<class>". Owner is projected as "Owner /
+# Current Actor" in 3A and "Current Actor" in the Task Record (the live-actor
+# field; the record's "Owner / Actor" header field is the assignment, not the
+# projection). No invented fields. The pair list AND the class assignment are
+# identical in check-doctor.ps1, validate-execution-control.sh, and
+# validate-execution-control.ps1 — enforced by
+# scripts/tests/run-projection-parity-tests.sh / .ps1 (#669).
+# Classes (#671): machine = byte-exact after extraction; prose = normalized
+# (all leading/trailing backticks stripped, internal whitespace runs collapsed)
+# so 3A prose may reflow without diverging.
 SHARED_PROJECTION_FIELDS=(
-    'Task ID|Task ID'
-    'Execution State|Execution State'
-    'Active Task Pointer|Active Task Pointer'
-    'Next Action|Next Action'
-    'Owner / Current Actor|Owner / Actor'
-    'Ceremony Level|Ceremony Level'
-    'Specification|Specification'
-    'Execution Scope|Execution Scope'
-    'Start Time|Start Time'
-    "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status"
+    'Task ID|Task ID|machine'
+    'Execution State|Execution State|machine'
+    'Active Task Pointer|Active Task Pointer|machine'
+    'Next Action|Next Action|prose'
+    'Owner / Current Actor|Current Actor|machine'
+    'Ceremony Level|Ceremony Level|machine'
+    'Specification|Specification|prose'
+    'Execution Scope|Execution Scope|prose'
+    'Start Time|Start Time|machine'
+    "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status|machine"
 )
+
+# Prose-class normalization (#671): strip every leading/trailing backtick
+# (deeper than proj_field's single pair), collapse internal whitespace runs to
+# single spaces, then trim — byte-exact equality on the normalized form.
+normalize_prose() {
+    local val="$1"
+    while [[ "$val" == \`* ]]; do val="${val#\`}"; done
+    while [[ "$val" == *\` ]]; do val="${val%\`}"; done
+    val="$(printf '%s' "$val" | tr -s ' \t\n' ' ')"
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%"${val##*[![:space:]]}"}"
+    printf '%s' "$val"
+}
 
 proj_field() {
     local text="$1" label="$2" line val
@@ -496,9 +517,15 @@ check_docs_drift() {
     compared=0
     for pair in "${SHARED_PROJECTION_FIELDS[@]}"; do
         p_label="${pair%%|*}"
-        r_label="${pair#*|}"
+        rest="${pair#*|}"
+        r_label="${rest%%|*}"
+        class="${rest#*|}"
         p_val="$(proj_field "$section" "$p_label")"
         r_val="$(proj_field "$rec_text" "$r_label")"
+        if [[ "$class" == "prose" ]]; then
+            p_val="$(normalize_prose "$p_val")"
+            r_val="$(normalize_prose "$r_val")"
+        fi
         if is_placeholder "$r_val"; then
             continue
         fi

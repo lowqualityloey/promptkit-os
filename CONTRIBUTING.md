@@ -57,6 +57,7 @@ bash -n scripts/tests/run-ai-attribution-tests.sh
 bash scripts/tests/run-init-safety-tests.sh
 bash scripts/tests/run-behavioral-contract-tests.sh
 bash scripts/tests/run-execution-control-fixtures.sh
+bash scripts/tests/run-projection-parity-tests.sh
 bash scripts/tests/run-ci-triage-fixtures.sh
 bash scripts/tests/run-onboard-divergence-fixtures.sh
 bash scripts/tests/run-checkpoint-ignore-tests.sh

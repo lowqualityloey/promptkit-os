@@ -27,3 +27,4 @@ quick-unlinked	1	quick-unlinked.summary.txt	quick-unlinked.diagnostics.txt
 quick-rejected	1	quick-rejected.summary.txt	quick-rejected.diagnostics.txt
 quick-placeholder	1	quick-placeholder.summary.txt	quick-placeholder.diagnostics.txt
 l0-no-write	1	l0-no-write.summary.txt	l0-no-write.diagnostics.txt
+state-projection-prose-reflow	0	state-projection-prose-reflow.summary.txt	state-projection-prose-reflow.diagnostics.txt

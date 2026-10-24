@@ -453,19 +453,27 @@ Check-IgnoreState
 # to SKIP(<reason>) and never fails the run.
 # Shared fields derived from the shipped state-tracker-template.md section 3A
 # and the shipped execution-task-record-template.md. Each entry is
-# "<3A label>|<Task Record label>"; Owner is projected as "Owner / Current
-# Actor" in 3A and "Owner / Actor" in the Task Record. No invented fields.
+# "<3A label>|<Task Record label>|<class>". Owner is projected as "Owner /
+# Current Actor" in 3A and "Current Actor" in the Task Record (the live-actor
+# field; the record's "Owner / Actor" header field is the assignment, not the
+# projection). No invented fields. The pair list AND the class assignment are
+# identical in check-doctor.sh, validate-execution-control.sh, and
+# validate-execution-control.ps1 — enforced by
+# scripts/tests/run-projection-parity-tests.sh / .ps1 (#669).
+# Classes (#671): machine = byte-exact after extraction; prose = normalized
+# (all leading/trailing backticks stripped, internal whitespace runs collapsed)
+# so 3A prose may reflow without diverging.
 $sharedProjectionFields = @(
-    'Task ID|Task ID',
-    'Execution State|Execution State',
-    'Active Task Pointer|Active Task Pointer',
-    'Next Action|Next Action',
-    'Owner / Current Actor|Owner / Actor',
-    'Ceremony Level|Ceremony Level',
-    'Specification|Specification',
-    'Execution Scope|Execution Scope',
-    'Start Time|Start Time',
-    'Mapped `pk:tasks` Status|Mapped `pk:tasks` Status'
+    'Task ID|Task ID|machine',
+    'Execution State|Execution State|machine',
+    'Active Task Pointer|Active Task Pointer|machine',
+    'Next Action|Next Action|prose',
+    'Owner / Current Actor|Current Actor|machine',
+    'Ceremony Level|Ceremony Level|machine',
+    'Specification|Specification|prose',
+    'Execution Scope|Execution Scope|prose',
+    'Start Time|Start Time|machine',
+    'Mapped `pk:tasks` Status|Mapped `pk:tasks` Status|machine'
 )
 
 function Get-ProjectionField {
@@ -473,6 +481,15 @@ function Get-ProjectionField {
     $m = [regex]::Match($Text, "(?m)^- \*\*$([regex]::Escape($Label))\*\*:[ \t]*(.*)$")
     if (-not $m.Success) { return '' }
     return $m.Groups[1].Value.Trim().Trim('`').Trim()
+}
+
+function ConvertTo-NormalizedProse {
+    # Prose-class normalization (#671): strip every leading/trailing backtick,
+    # collapse internal whitespace runs to single spaces, then trim.
+    param([string]$Value)
+    $v = $Value.Trim('`')
+    $v = [regex]::Replace($v, '\s+', ' ')
+    return $v.Trim()
 }
 
 function Test-Placeholder {
@@ -522,8 +539,13 @@ function Check-DocsDrift {
         $parts = $pair.Split('|')
         $pLabel = $parts[0]
         $rLabel = $parts[1]
+        $class = $parts[2]
         $pVal = Get-ProjectionField $section $pLabel
         $rVal = Get-ProjectionField $recText $rLabel
+        if ($class -eq 'prose') {
+            $pVal = ConvertTo-NormalizedProse $pVal
+            $rVal = ConvertTo-NormalizedProse $rVal
+        }
         if (Test-Placeholder $rVal) { continue }
         if ((Test-Placeholder $pVal) -or ($pVal -ne $rVal)) { $diffFields += $pLabel }
         else { $compared++ }

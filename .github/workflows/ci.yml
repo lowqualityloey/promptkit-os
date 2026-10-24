@@ -146,6 +146,9 @@ jobs:
       - name: Run Doctor Tests (Bash)
         run: bash scripts/tests/run-doctor-tests.sh
 
+      - name: Run Projection Parity Tests (Bash)
+        run: bash scripts/tests/run-projection-parity-tests.sh
+
       - name: Run pk Entry-Point Tests (Bash)
         run: bash scripts/tests/run-pk-entry-points-tests.sh
 
@@ -411,6 +414,10 @@ jobs:
       - name: Run Doctor Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-doctor-tests.ps1
+
+      - name: Run Projection Parity Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-projection-parity-tests.ps1
 
       - name: Run pk Entry-Point Tests (PowerShell)
         shell: pwsh

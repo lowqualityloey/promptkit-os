@@ -545,13 +545,37 @@ try {
 - **Task ID**: `TASK-2026-01-01-n3`
 - **Execution State**: `in_progress`
 - **Next Action**: `Ship the different action`
-- **Owner / Actor**: `Reviewer`
+- **Current Actor**: `Reviewer`
 '@
     [IO.File]::WriteAllText((Join-Path $rootN3 'docs/tasks/TASK-2026-01-01-n3.md'), $recN3d, $utf8)
     Invoke-Doctor -Root $rootN3
     Want-Status 1
     Want-Contains "docs-drift`tDIVERGED(STATE 3A vs Task Record: Next Action; Owner / Current Actor)"
     Want-NotContains "docs-drift`tDIVERGED(STATE 3A vs Task Record: Task ID)"
+
+    # (e) prose normalization: reflowed whitespace and extra backticks agree (#671)
+    $stateN3e = @'
+# Project State
+- **Engine Version**: v1.2.3 @ __SHA__
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Task Record**: `docs/tasks/TASK-2026-01-01-n3.md`
+- **Execution State**: `in_progress`
+- **Next Action**: ``  Finalize   the   fixture  ``
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/STATE.md'), $stateN3e.Replace('__SHA__', $shaN3), $utf8)
+    $recN3e = @'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Next Action**: `Finalize the fixture`
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/tasks/TASK-2026-01-01-n3.md'), $recN3e, $utf8)
+    Invoke-Doctor -Root $rootN3
+    Want-Status 0
+    Want-Contains "docs-drift`tOK"
+    Want-NotContains 'DIVERGED'
     Report-Scenario 'N3 docs-drift compares shared fields, DIVERGED/SKIP, never bare OK'
 
     # N4: a deleted universal AGENTS.md is MISSING (re-run the installer), exit 1.

@@ -21,4 +21,4 @@
 - **Changed-File Summary**: Synthetic revision projection fixture.
 - **Latest Checkpoint**: None
 - **Latest Handoff**: None
-- **Next Action**: Reconcile the STATE revision before acceptance.
+- **Next Action**: Reconcile the STATE revision before accepting the projection.
