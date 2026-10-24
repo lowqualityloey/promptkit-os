@@ -1287,7 +1287,7 @@ if [ -f "$STATE_FILE" ]; then
             # check-doctor.ps1 — enforced by scripts/tests/run-projection-parity-tests.sh.
             # Classes (#671): machine = byte-exact; prose = normalized (backticks +
             # internal whitespace collapsed) so 3A prose may reflow without diverging.
-            compare_pairs=("Task ID|Task ID|machine" "Execution State|Execution State|machine" "Active Task Pointer|Active Task Pointer|machine" "Next Action|Next Action|prose" "Owner / Current Actor|Current Actor|machine" "Ceremony Level|Ceremony Level|machine" "Specification|Specification|prose" "Execution Scope|Execution Scope|prose" "Start Time|Start Time|machine" "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status|machine")
+            compare_pairs=("Task ID|Task ID|machine" "Execution State|Execution State|machine" "Active Task Pointer|Active Task Pointer|machine" "Next Action|Next Action|prose" "Owner / Current Actor|Current Actor|machine" "Ceremony Level|Ceremony Level|level" "Specification|Specification|prose" "Execution Scope|Execution Scope|prose" "Start Time|Start Time|machine" "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status|machine")
             for pair in "${compare_pairs[@]}"; do
                 IFS='|' read -r state_label task_label class <<< "$pair"
                 state_value="$(field_value "$STATE_FILE" "$state_label")"
@@ -1303,6 +1303,16 @@ if [ -f "$STATE_FILE" ]; then
                 if [ "$class" = "prose" ]; then
                     state_cmp="$(normalize_prose_value "$state_value")"
                     task_cmp="$(normalize_prose_value "$task_value")"
+                elif [ "$class" = "level" ]; then
+                    state_parse="$(parse_ceremony_level "$state_value")"
+                    task_parse="$(parse_ceremony_level "$task_value")"
+                    if [ -n "$state_parse" ] && [ -n "$task_parse" ] && [ "$state_parse" != "invalid" ] && [ "$task_parse" != "invalid" ]; then
+                        state_cmp="$state_parse"
+                        task_cmp="$task_parse"
+                    else
+                        state_cmp="$state_value"
+                        task_cmp="$task_value"
+                    fi
                 else
                     state_cmp="$state_value"
                     task_cmp="$task_value"

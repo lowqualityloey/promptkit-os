@@ -85,10 +85,10 @@ The 4-level ceremony model refines and clarifies the system's execution boundari
 | :--- | :--- | :--- | :--- |
 | **Level 0** | **Direct (L0 Work)** | Conceptual queries, syntax lookups, doc typos, formatting, 1-line micro-fixes | **No** (Fast-path direct execution + `fast` verify) |
 | **Level 1** | **Standard (Lightweight Work)** | Localized bug fixes, small self-contained feature tweaks, or single-component changes modifying source files without schema/auth/breaking contract risks | **No** (Natural workflow `pk:debug`/`pk:test` with inline/`STATE.md` tracking + `required` verify) |
-| **Level 2** | **Controlled Work** | Relational schema/data migrations, auth, permissions, breaking API contracts, or multi-component architectural changes | **Yes** (Canonical Task Record at `docs/tasks/<task-id>.md` + `extended` verify) |
+| **Level 2** | **Controlled** | Relational schema/data migrations, auth, permissions, breaking API contracts, or multi-component architectural changes | **Yes** (Canonical Task Record at `docs/tasks/<task-id>.md` + `extended` verify) |
 | **Level 3** | **Release-Critical Work** | Release candidates, deployments, tag generation, or high-impact contract changes | **Yes** (Level 2 evidence plus release candidate evaluation `pk:ship` & human approval) |
 
-**Important Rule**: Modifying durable source files during an ordinary bug fix or small localized tweak is classified as **Level 1 (Standard)** and does **not** trigger Level 2 Controlled Work requirements or mandate creating `docs/tasks/<task-id>.md`. Where protocols or templates refer to "Controlled Work", those requirements apply specifically to **Level 2 (Controlled)** and **Level 3 (Release-Critical)** tasks.
+**Important Rule**: Modifying durable source files during an ordinary bug fix or small localized tweak is classified as **Level 1 (Standard)** and does **not** trigger Level 2 (Controlled) requirements or mandate creating `docs/tasks/<task-id>.md`. Where protocols or templates refer to "Controlled Work", those requirements apply specifically to **Level 2 (Controlled)** and **Level 3 (Release-Critical)** tasks.
 
 ### Level Decision, Escalation, Upgrade, and Downgrade Rules
 
@@ -128,7 +128,7 @@ To prevent framework bloat while providing deep architectural invariants, the ro
 - **Bounded JIT Loading**: The assistant loads **only** the candidate playbook(s) declared in `PROMPTKIT.md` (e.g. `docs/stacks/database-turso.md`).
 - **Context Exclusion**: Unrelated stack playbooks (e.g. Rust playbooks in a Next.js repo) are strictly excluded to preserve token budgets.
 - **Precedence Hierarchy**: Local Project Profile Overrides > PromptKit Stack Playbooks > External Host Skills.
-  - *Invocation vs. Classification*: Invoking an external host skill or slash command never reclassifies work. Classification is determined strictly by the produced work (e.g. database migrations produced via a host skill remain Level 2 Controlled Work).
+  - *Invocation vs. Classification*: Invoking an external host skill or slash command never reclassifies work. Classification is determined strictly by the produced work (e.g. database migrations produced via a host skill remain Level 2 (Controlled) work).
   - *Gate Subordination*: Skill-specific process instructions yield to PromptKit Hard Gates (machine-verified oracle compliance, Expand-Contract data safety, secret hygiene, and milestone boundaries). Domain knowledge is preserved; process instructions yield.
   - *Namespace Collisions*: Host skills named with a `pk-*` prefix collide with PromptKit's `pk:*` text-convention triggers and shadow workflow routing. Host skills should use domain-specific names (e.g. `sql-optimizer`, not `pk-db`).
 

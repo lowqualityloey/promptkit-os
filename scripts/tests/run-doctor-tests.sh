@@ -484,6 +484,40 @@ EOF
     want_status 0
     want_contains $'docs-drift\tOK'
     want_not_contains 'DIVERGED'
+
+    # (f) ceremony vocabulary: record uses the legacy "Controlled Work" prose, 3A the
+    # canonical enum — same level, so the projection agrees (#668)
+    cat > "$root/docs/STATE.md" <<EOF
+# Project State
+- **Engine Version**: v1.2.3 @ $sha
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: \`TASK-2026-01-01-n3\`
+- **Task Record**: \`docs/tasks/TASK-2026-01-01-n3.md\`
+- **Execution State**: \`in_progress\`
+- **Ceremony Level**: \`Level 2 (Controlled)\`
+EOF
+    cat > "$root/docs/tasks/TASK-2026-01-01-n3.md" <<'EOF'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Ceremony Level**: `Level 2 (Controlled Work)`
+EOF
+    run_doctor "$root"
+    want_status 0
+    want_contains $'docs-drift\tOK'
+    want_not_contains 'DIVERGED'
+
+    # (g) ceremony level 1 vs 2 still diverges after normalization
+    cat > "$root/docs/tasks/TASK-2026-01-01-n3.md" <<'EOF'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Ceremony Level**: `Level 1 (Standard)`
+EOF
+    run_doctor "$root"
+    want_status 1
+    want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Ceremony Level)'
 }
 
 # N4: a deleted universal AGENTS.md is MISSING (re-run the installer), exit 1.

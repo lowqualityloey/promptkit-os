@@ -58,7 +58,9 @@ foreach ($name in @('check-doctor.ps1', 'validate-execution-control.sh', 'valida
 }
 $prose = @($definitions['check-doctor.sh'] | ForEach-Object { ($_ -split '\|')[2] } | Where-Object { $_ -eq 'prose' }).Count
 $machine = @($definitions['check-doctor.sh'] | ForEach-Object { ($_ -split '\|')[2] } | Where-Object { $_ -eq 'machine' }).Count
+$level = @($definitions['check-doctor.sh'] | ForEach-Object { ($_ -split '\|')[2] } | Where-Object { $_ -eq 'level' }).Count
 if ($prose -ne 3) { Fail "prose class must cover exactly 3 fields, got $prose" }
-if ($machine -ne 7) { Fail "machine class must cover exactly 7 fields, got $machine" }
+if ($machine -ne 6) { Fail "machine class must cover exactly 6 fields, got $machine" }
+if ($level -ne 1) { Fail "level class must cover exactly Ceremony Level, got $level" }
 
-Write-Output 'PASS|projection definition identical across check-doctor and validate-execution-control twins (10 fields; prose=Execution Scope,Next Action,Specification; machine=7)'
+Write-Output 'PASS|projection definition identical across check-doctor and validate-execution-control twins (10 fields; prose=Execution Scope,Next Action,Specification; level=Ceremony Level; machine=6)'

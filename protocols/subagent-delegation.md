@@ -39,7 +39,7 @@ Evaluate your upcoming task against this triage before executing:
 | **External Documentation / Web Search** (API docs, GitHub issues) | **Subagent** | Eliminates long HTML/markdown search dumps. |
 | **Parallel Risk Spikes** (evaluating Library A vs Library B) | **Subagent (Parallel)** | Enables concurrent exploration in `pk:spike` — only when the host supports concurrent subagents and the profile permits parallel execution (Turbo; otherwise sequential). |
 | **Two-Axis PR Audits** (Spec Fidelity vs Fowler Code Smells) | **Subagent (Parallel)** | Enables independent, unbiased reviews in `pk:review`. |
-| **Independent Verification** (Level 2/3 Controlled Work) | **Subagent (Single-Pass)** | Eliminates author confirmation bias; single-pass audit contract; no child-agent delegation; max 15-line synthesis. |
+| **Independent Verification** (Level 2/3 Controlled) | **Subagent (Single-Pass)** | Eliminates author confirmation bias; single-pass audit contract; no child-agent delegation; max 15-line synthesis. |
 | **Long-Running Test / Linter Runs** (full CI simulation) | **Subagent / Task** | Prevents terminal scrollback from cluttering context. |
 | **Direct User Interaction & Alignments** | **Main Thread Only** | Subagents must never prompt the human developer directly. |
 | **Small Localized Edits** (<10 lines, single file tweaks) | **Main Thread Only** | Spawning a subagent introduces unnecessary latency overhead. |
@@ -106,7 +106,7 @@ When running `pk:review` on a substantial pull request:
 3. **Claims-Audit Duty**: Both reviewers enumerate verifiable claims in the Task Record and PR body, re-verifying each against the diff and recorded exit codes before synthesizing findings.
 4. **Parent Agent**: Merges both reports side-by-side into the final PR review.
 
-### Pattern C: Independent Fresh-Context Verification (Level 2/3 Controlled Work)
+### Pattern C: Independent Fresh-Context Verification (Level 2/3 Controlled)
 When an agent writes a complex feature (relational schema changes, authentication rewiring, breaking public APIs, or release candidates), reviewing its own implementation in the same thread introduces author confirmation bias.
 1. **Scope Exclusions**: Level 0 and Level 1 tasks bypass this pattern completely (0 token impact; standard single-agent review).
 2. **Execution Contract**: The parent agent spawns a single fresh-context verifier subagent with *only* the Gherkin Acceptance Criteria, the fixed-point git diff, the runnable test commands with recorded exit codes and pass counts, and bounded claim excerpts from the Task Record or PR body.

@@ -435,7 +435,7 @@ SHARED_PROJECTION_FIELDS=(
     'Active Task Pointer|Active Task Pointer|machine'
     'Next Action|Next Action|prose'
     'Owner / Current Actor|Current Actor|machine'
-    'Ceremony Level|Ceremony Level|machine'
+    'Ceremony Level|Ceremony Level|level'
     'Specification|Specification|prose'
     'Execution Scope|Execution Scope|prose'
     'Start Time|Start Time|machine'
@@ -453,6 +453,30 @@ normalize_prose() {
     val="${val#"${val%%[![:space:]]*}"}"
     val="${val%"${val##*[![:space:]]}"}"
     printf '%s' "$val"
+}
+
+# Level-class normalization (#668): records and projections may name the same
+# ceremony level with different vocabularies ("Level 2 (Controlled)" vs
+# "Level 2 (Controlled Work)" vs "L2" vs "2"); compare the parsed digit, with
+# the raw strings kept as the fallback when either side is not parseable.
+# Same token grammar as validate-execution-control's parse_ceremony_level.
+parse_ceremony_level() {
+    local val
+    val="$(printf '%s' "$1" | tr -s ' \t\n' ' ')"
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%"${val##*[![:space:]]}"}"
+    [ -z "$val" ] && return 0
+    if [[ "$val" =~ ^[[:space:]]*(0|[Ll]evel[[:space:]]*0|[Ll]0)([^0-9]|$) ]]; then
+        echo "0"
+    elif [[ "$val" =~ ^[[:space:]]*(1|[Ll]evel[[:space:]]*1|[Ll]1)([^0-9]|$) ]]; then
+        echo "1"
+    elif [[ "$val" =~ ^[[:space:]]*(2|[Ll]evel[[:space:]]*2|[Ll]2)([^0-9]|$) ]]; then
+        echo "2"
+    elif [[ "$val" =~ ^[[:space:]]*(3|[Ll]evel[[:space:]]*3|[Ll]3)([^0-9]|$) ]]; then
+        echo "3"
+    else
+        echo "invalid"
+    fi
 }
 
 proj_field() {
@@ -525,6 +549,13 @@ check_docs_drift() {
         if [[ "$class" == "prose" ]]; then
             p_val="$(normalize_prose "$p_val")"
             r_val="$(normalize_prose "$r_val")"
+        elif [[ "$class" == "level" ]]; then
+            p_parse="$(parse_ceremony_level "$p_val")"
+            r_parse="$(parse_ceremony_level "$r_val")"
+            if [[ -n "$p_parse" && -n "$r_parse" && "$p_parse" != "invalid" && "$r_parse" != "invalid" ]]; then
+                p_val="$p_parse"
+                r_val="$r_parse"
+            fi
         fi
         if is_placeholder "$r_val"; then
             continue

@@ -576,6 +576,43 @@ try {
     Want-Status 0
     Want-Contains "docs-drift`tOK"
     Want-NotContains 'DIVERGED'
+
+    # (f) ceremony vocabulary: record uses the legacy "Controlled Work" prose, 3A the
+    # canonical enum — same level, so the projection agrees (#668)
+    $stateN3f = @'
+# Project State
+- **Engine Version**: v1.2.3 @ __SHA__
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Task Record**: `docs/tasks/TASK-2026-01-01-n3.md`
+- **Execution State**: `in_progress`
+- **Ceremony Level**: `Level 2 (Controlled)`
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/STATE.md'), $stateN3f.Replace('__SHA__', $shaN3), $utf8)
+    $recN3f = @'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Ceremony Level**: `Level 2 (Controlled Work)`
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/tasks/TASK-2026-01-01-n3.md'), $recN3f, $utf8)
+    Invoke-Doctor -Root $rootN3
+    Want-Status 0
+    Want-Contains "docs-drift`tOK"
+    Want-NotContains 'DIVERGED'
+
+    # (g) ceremony level 1 vs 2 still diverges after normalization
+    $recN3g = @'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Ceremony Level**: `Level 1 (Standard)`
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/tasks/TASK-2026-01-01-n3.md'), $recN3g, $utf8)
+    Invoke-Doctor -Root $rootN3
+    Want-Status 1
+    Want-Contains "docs-drift`tDIVERGED(STATE 3A vs Task Record: Ceremony Level)"
     Report-Scenario 'N3 docs-drift compares shared fields, DIVERGED/SKIP, never bare OK'
 
     # N4: a deleted universal AGENTS.md is MISSING (re-run the installer), exit 1.

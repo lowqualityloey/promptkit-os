@@ -469,7 +469,7 @@ $sharedProjectionFields = @(
     'Active Task Pointer|Active Task Pointer|machine',
     'Next Action|Next Action|prose',
     'Owner / Current Actor|Current Actor|machine',
-    'Ceremony Level|Ceremony Level|machine',
+    'Ceremony Level|Ceremony Level|level',
     'Specification|Specification|prose',
     'Execution Scope|Execution Scope|prose',
     'Start Time|Start Time|machine',
@@ -490,6 +490,23 @@ function ConvertTo-NormalizedProse {
     $v = $Value.Trim('`')
     $v = [regex]::Replace($v, '\s+', ' ')
     return $v.Trim()
+}
+
+function Get-ParsedCeremonyLevel {
+    # Level-class normalization (#668): records and projections may name the
+    # same ceremony level with different vocabularies ("Level 2 (Controlled)"
+    # vs "Level 2 (Controlled Work)" vs "L2" vs "2"); compare the parsed digit,
+    # with the raw strings kept as the fallback when either side is not
+    # parseable. Same token grammar as validate-execution-control.ps1's
+    # Get-ParsedCeremonyLevel (PowerShell -match is case-insensitive).
+    param([AllowEmptyString()][string]$Value)
+    $v = [regex]::Replace($Value, '\s+', ' ').Trim()
+    if ($v -eq '') { return '' }
+    if ($v -match '^(0|level\s*0|l0)([^0-9]|$)') { return '0' }
+    if ($v -match '^(1|level\s*1|l1)([^0-9]|$)') { return '1' }
+    if ($v -match '^(2|level\s*2|l2)([^0-9]|$)') { return '2' }
+    if ($v -match '^(3|level\s*3|l3)([^0-9]|$)') { return '3' }
+    return 'invalid'
 }
 
 function Test-Placeholder {
@@ -545,6 +562,13 @@ function Check-DocsDrift {
         if ($class -eq 'prose') {
             $pVal = ConvertTo-NormalizedProse $pVal
             $rVal = ConvertTo-NormalizedProse $rVal
+        } elseif ($class -eq 'level') {
+            $pParse = Get-ParsedCeremonyLevel $pVal
+            $rParse = Get-ParsedCeremonyLevel $rVal
+            if ($pParse -ne '' -and $rParse -ne '' -and $pParse -ne 'invalid' -and $rParse -ne 'invalid') {
+                $pVal = $pParse
+                $rVal = $rParse
+            }
         }
         if (Test-Placeholder $rVal) { continue }
         if ((Test-Placeholder $pVal) -or ($pVal -ne $rVal)) { $diffFields += $pLabel }
