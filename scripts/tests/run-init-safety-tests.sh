@@ -158,6 +158,30 @@ grep -q 'Keep content before\.' "$CRLF_ROOT/AGENTS.md"
 grep -q 'Keep content after\.' "$CRLF_ROOT/AGENTS.md"
 grep -q '## PromptKit OS: Engineering Operating System' "$CRLF_ROOT/AGENTS.md"
 
+# CRLF EOL purity (init.ps1 parity, issue #666): every line ending in the updated
+# file must remain CRLF — the POSIX door must not splice LF-only directive lines
+# into a CRLF host file. count(LF) == count(CR) iff no lone LF survives.
+crlf_lf_count="$(tr -cd '\n' < "$CRLF_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+crlf_cr_count="$(tr -cd '\r' < "$CRLF_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+if [[ "$crlf_lf_count" -ne "$crlf_cr_count" ]]; then
+    echo "CRLF update left mixed line endings (LF=$crlf_lf_count, CR=$crlf_cr_count)." >&2
+    exit 1
+fi
+
+# CRLF inject (issue #666): a CRLF host file WITHOUT a directive block must
+# receive the directive in CRLF as well, matching init.ps1's inject semantics.
+CRLF_INJECT_ROOT="$TEST_ROOT/crlf_inject"
+mkdir -p "$CRLF_INJECT_ROOT"
+printf 'CRLF host file without a directive block.\r\nSecond line.\r\n' > "$CRLF_INJECT_ROOT/AGENTS.md"
+bash "$REPO_ROOT/init.sh" "$CRLF_INJECT_ROOT" >/dev/null
+grep -q '^## PromptKit OS: Engineering Operating System' "$CRLF_INJECT_ROOT/AGENTS.md"
+inject_lf_count="$(tr -cd '\n' < "$CRLF_INJECT_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+inject_cr_count="$(tr -cd '\r' < "$CRLF_INJECT_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+if [[ "$inject_lf_count" -ne "$inject_cr_count" ]]; then
+    echo "CRLF inject left mixed line endings (LF=$inject_lf_count, CR=$inject_cr_count)." >&2
+    exit 1
+fi
+
 # UTF-8 Emoji/CJK content test
 UTF8_ROOT="$TEST_ROOT/utf8"
 mkdir -p "$UTF8_ROOT"

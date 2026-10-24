@@ -818,7 +818,14 @@ for target in "${TARGETS_FOUND[@]}"; do
         fi
 
         directive_file="$(mktemp "$STAGING_DIR/directive.XXXXXX")"
-        printf '%s\n' "$DIRECTIVE" > "$directive_file"
+        # EOL parity with init.ps1 (issue #666): a CRLF host file must receive a
+        # CRLF directive block, so every directive line carries a trailing CR and
+        # the awk splice below keeps count(LF) == count(CR).
+        if grep -q $'\r' "$target"; then
+            printf '%s\n' "$DIRECTIVE" | sed 's/$/\r/' > "$directive_file"
+        else
+            printf '%s\n' "$DIRECTIVE" > "$directive_file"
+        fi
 
         if ! awk -v directive_file="$directive_file" '
             BEGIN {
@@ -857,7 +864,30 @@ for target in "${TARGETS_FOUND[@]}"; do
     elif [[ -f "$target" ]]; then
         cp "$target" "$staged_target"
         if [[ -s "$staged_target" ]]; then
-            printf "\n\n%s\n" "$DIRECTIVE" >> "$staged_target"
+            # EOL parity with init.ps1 (issue #666): match the host file's line
+            # endings and its trailing-newline state. A file already ending in a
+            # newline gets one separator; a file with no trailing newline gets
+            # two (a blank line); a CRLF host gets CRLF throughout.
+            if grep -q $'\r' "$staged_target"; then
+                eol=$'\r\n'
+            else
+                eol=$'\n'
+            fi
+            last_byte="$(tail -c 1 "$staged_target" | od -An -tuC | tr -d ' \n')"
+            prev_byte="$(tail -c 2 "$staged_target" | head -c 1 | od -An -tuC | tr -d ' \n')"
+            if [[ "$last_byte" == "10" && "$prev_byte" == "13" ]]; then
+                prefix_sep="$eol"
+            elif [[ "$last_byte" == "10" ]]; then
+                prefix_sep=$'\n'
+            else
+                prefix_sep="$eol$eol"
+            fi
+            if [[ "$eol" == $'\r\n' ]]; then
+                printf '%s' "$prefix_sep" >> "$staged_target"
+                printf '%s\n' "$DIRECTIVE" | sed 's/$/\r/' >> "$staged_target"
+            else
+                printf '%s%s\n' "$prefix_sep" "$DIRECTIVE" >> "$staged_target"
+            fi
         else
             printf "%s\n" "$DIRECTIVE" > "$staged_target"
         fi
@@ -1143,6 +1173,16 @@ for (( i=0; i<${#TARGETS_FOUND[@]}; i++ )); do
 
     mkdir -p "$(dirname "$target")"
     if [[ -f "$target" || -L "$target" ]]; then
+        # Re-verify symlinked destinations immediately before the write (issue #666):
+        # the earlier containment check can be raced by a swapped link; refuse any
+        # destination that no longer resolves under the project root.
+        if [[ -L "$target" ]]; then
+            link_real="$(readlink -f "$target" 2>/dev/null || true)"
+            if [[ -z "$link_real" || "$link_real" != "$PROJECT_ROOT"* ]]; then
+                echo "Error: refusing to write symlink target resolving outside the project root: $REL_TARGET" >&2
+                exit 1
+            fi
+        fi
         t_mode="$(get_file_mode "$target")"
         cp "$staged_file" "$target"
         if [[ -n "$t_mode" ]]; then chmod "$t_mode" "$target" 2>/dev/null || true; fi
@@ -1177,10 +1217,10 @@ fi
 echo -e "\n\033[0;36m✨ PromptKit OS successfully configured for $PROJECT_ROOT! ($PROFILE profile)\033[0m"
 if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok\033[0m"
-    echo -e "   Upgrade anytime: .promptkit/init.sh --balanced for the full Balanced profile"
+    echo -e "   Upgrade anytime: $KIT_DIR_REL/init.sh --balanced for the full Balanced profile"
 elif [[ "$PROFILE" == "balanced" ]]; then
     echo -e "   Balanced: 26 workflows, Level 0-3 adaptive ceremony — full power"
-    echo -e "   For onboarding: .promptkit/init.sh --lite for minimal setup"
+    echo -e "   For onboarding: $KIT_DIR_REL/init.sh --lite for minimal setup"
 else
     echo -e "   \033[0;33mTurbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost\033[0m"
     echo -e "   Human approval still required for Level 3 (releases/tags/deploys)"

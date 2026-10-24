@@ -51,6 +51,14 @@ try {
         throw "Failed Test 1 (CRLF): Expected 1 START and 1 END marker, found start=$crlfStartCount, end=$crlfEndCount."
     }
 
+    # CRLF EOL purity (issue #666): every line ending must remain CRLF after the
+    # update — no lone LF may be spliced into a CRLF host file. count(LF) == count(CR).
+    $crlfLfCount = ([regex]::Matches($crlfUpdated, "`n")).Count
+    $crlfCrCount = ([regex]::Matches($crlfUpdated, "`r")).Count
+    if ($crlfLfCount -ne $crlfCrCount) {
+        throw "Failed Test 1 (CRLF): mixed line endings after update (LF=$crlfLfCount, CR=$crlfCrCount)."
+    }
+
     $crlfPrTemplate = Join-Path $CrlfRoot ".github/pull_request_template.md"
     if (-not (Test-Path $crlfPrTemplate)) {
         throw "Failed Test 1 (CRLF): .github/pull_request_template.md was not scaffolded."
@@ -76,6 +84,22 @@ try {
     $reRunStartCount = @($reRunLines | Where-Object { $_ -eq '<!-- PROMPTKIT_START -->' }).Count
     if ($reRunStartCount -ne 1) {
         throw "Failed Test 10 (Idempotency): Expected 1 PROMPTKIT_START after re-run, found ${reRunStartCount}."
+    }
+
+    # Test: CRLF inject (issue #666) — a CRLF host file WITHOUT a directive block
+    # must receive the directive in CRLF as well, matching init.ps1's inject semantics.
+    $CrlfInjectRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "crlf_inject") -Force).FullName
+    $crlfInjectPath = Join-Path $CrlfInjectRoot "AGENTS.md"
+    [System.IO.File]::WriteAllText($crlfInjectPath, "CRLF host file without a directive block.`r`nSecond line.`r`n", $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfInjectRoot | Out-Null
+    $crlfInjectUpdated = [System.IO.File]::ReadAllText($crlfInjectPath, [System.Text.Encoding]::UTF8)
+    if (-not $crlfInjectUpdated.Contains('## PromptKit OS: Engineering Operating System')) {
+        throw "Failed Test (CRLF inject): directive was not injected."
+    }
+    $injectLfCount = ([regex]::Matches($crlfInjectUpdated, "`n")).Count
+    $injectCrCount = ([regex]::Matches($crlfInjectUpdated, "`r")).Count
+    if ($injectLfCount -ne $injectCrCount) {
+        throw "Failed Test (CRLF inject): mixed line endings after inject (LF=$injectLfCount, CR=$injectCrCount)."
     }
 
     # Test 2: Successful replacement in an LF file
