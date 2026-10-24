@@ -444,7 +444,17 @@ check_submodule() {
         emit 'submodule' 'SKIP(not a submodule install)' 'the engine directory is not recorded as a gitlink (mode 160000)' '-'
         return 0
     fi
-    if [[ -f "$toplevel/.gitmodules" ]] && grep -Eq "^[[:space:]]*path[[:space:]]*=[[:space:]]*${engine_from_top//./\\.}[[:space:]]*$" "$toplevel/.gitmodules"; then
+    # Split on the first '=' and trim both sides for an exact compare: the old
+    # ERE escaped only dots, so regex metacharacters (+, (, ), [, ]) in the
+    # engine path could silently miss or over-match.
+    if [[ -f "$toplevel/.gitmodules" ]] && awk -v want="$engine_from_top" '{
+        eq = index($0, "=")
+        if (eq > 0) {
+            key = substr($0, 1, eq - 1); sub(/^[ \t]+/, "", key); sub(/[ \t]+$/, "", key)
+            val = substr($0, eq + 1); sub(/^[ \t]+/, "", val); sub(/[ \t]+$/, "", val)
+            if (key == "path" && val == want) found = 1
+        }
+    } END { exit found ? 0 : 1 }' "$toplevel/.gitmodules"; then
         emit 'submodule' 'OK' "gitlink $engine_from_top is mapped in .gitmodules" '-'
         return 0
     fi

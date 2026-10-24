@@ -929,6 +929,10 @@ n8() {
     want_status 0
     want_contains $'submodule\tOK'
     want_not_contains $'submodule\tMISSING'
+    printf '[submodule "promptkit"]\n\tpath=.promptkit\n\turl = https://github.com/lowqualityloey/promptkit-os.git\n' > "$root/.gitmodules"
+    run_doctor "$root"
+    want_status 0
+    want_contains $'submodule\tOK'
 }
 
 begin; s1; report 'S1 healthy Balanced install -> all OK, exit 0'

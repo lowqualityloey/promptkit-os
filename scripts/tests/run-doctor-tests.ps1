@@ -987,7 +987,7 @@ try {
     Begin-Scenario
     $rootN8 = New-HealthyKit 'n8' 'balanced'
     git -C $rootN8 init -q 2>$null
-    git -C $rootN8 update-index --add --cacheinfo 160000,0cfa09390e4f6f0ffe090a6ba193db912b9a3c6d,.promptkit 2>$null
+    git -C $rootN8 update-index --add --cacheinfo '160000' '0cfa09390e4f6f0ffe090a6ba193db912b9a3c6d' '.promptkit' 2>$null
     Invoke-Doctor -Root $rootN8
     Want-Status 1
     Want-Contains "submodule`tMISSING(.gitmodules)"
@@ -996,6 +996,10 @@ try {
     Want-Status 0
     Want-Contains "submodule`tOK"
     Want-NotContains "submodule`tMISSING"
+    [IO.File]::WriteAllText((Join-Path $rootN8 '.gitmodules'), "[submodule `"promptkit`"]`n`tpath=.promptkit`n`turl = https://github.com/lowqualityloey/promptkit-os.git`n", $utf8)
+    Invoke-Doctor -Root $rootN8
+    Want-Status 0
+    Want-Contains "submodule`tOK"
     Report-Scenario 'N8 gitlink registration -> MISSING(.gitmodules) without mapping, OK with'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

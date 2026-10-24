@@ -458,28 +458,36 @@ function Check-Submodule {
         return
     }
     $toplevel = $null
-    try {
-        $toplevel = (& git -C $projectRoot rev-parse --show-toplevel 2>$null)
-        if ($LASTEXITCODE -ne 0) { $toplevel = $null }
-    } catch { $toplevel = $null }
+    $probe = Invoke-LocalGit -Dir $projectRoot -GitArgs @('rev-parse', '--show-toplevel')
+    if ($script:gitStatus -eq 0 -and $probe) { $toplevel = ($probe | Select-Object -First 1) }
     if ([string]::IsNullOrWhiteSpace($toplevel)) {
         Emit 'submodule' 'SKIP(no git repo)' 'the project root is not inside a git work tree' '-'
         return
     }
     $toplevel = $toplevel.Trim()
-    $engineFromTop = $engineDir
-    if ($engineDir.StartsWith(($toplevel.TrimEnd('\', '/') + '\'), [System.StringComparison]::OrdinalIgnoreCase)) {
-        $engineFromTop = $engineDir.Substring($toplevel.TrimEnd('\', '/').Length + 1) -replace '\\', '/'
-    } elseif ($engineDir -eq $toplevel) {
-        $engineFromTop = '.'
-    } else {
+    # git prints Windows toplevels with forward slashes and a runner TEMP path may
+    # hold 8.3 short names, so a string StartsWith against a backslash-joined
+    # prefix is always false on Windows (every N8 became SKIP(engine outside
+    # repo)). Resolve both sides through the filesystem and derive the engine
+    # path with GetRelativePath so separator or short-name forms cannot skew it.
+    $engineFromTop = $null
+    try {
+        $engineFull = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $engineDir -ErrorAction Stop).ProviderPath)
+        $topFull = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $toplevel -ErrorAction Stop).ProviderPath)
+        $rel = [System.IO.Path]::GetRelativePath($topFull, $engineFull)
+        if ($rel -eq '.') {
+            $engineFromTop = '.'
+        } elseif ($rel -ne '' -and -not $rel.StartsWith('..')) {
+            $engineFromTop = $rel -replace '\\', '/'
+        }
+    } catch { $engineFromTop = $null }
+    if (-not $engineFromTop) {
         Emit 'submodule' 'SKIP(engine outside repo)' 'the engine directory is outside this git work tree' '-'
         return
     }
     $entry = $null
-    try {
-        $entry = (& git -C $toplevel ls-files -s -- $engineFromTop 2>$null | Select-Object -First 1)
-    } catch { $entry = $null }
+    $probe = Invoke-LocalGit -Dir $toplevel -GitArgs @('ls-files', '-s', '--', $engineFromTop)
+    if ($script:gitStatus -eq 0 -and $probe) { $entry = ($probe | Select-Object -First 1) }
     $mode = if ($entry) { ($entry -split '\s+')[0] } else { '' }
     if ($mode -ne '160000') {
         Emit 'submodule' 'SKIP(not a submodule install)' 'the engine directory is not recorded as a gitlink (mode 160000)' '-'
@@ -488,9 +496,14 @@ function Check-Submodule {
     $gitmodules = Join-Path $toplevel '.gitmodules'
     $mapped = $false
     if (Test-Path -LiteralPath $gitmodules -PathType Leaf) {
-        $needle = 'path = ' + $engineFromTop
+        # Split on the first '=' and trim both sides so every valid git syntax
+        # (path=.promptkit, tab indentation, extra spaces) maps like the .sh twin.
         foreach ($line in (Get-Content -LiteralPath $gitmodules)) {
-            if ($line.Trim() -eq $needle) { $mapped = $true; break }
+            $eq = $line.IndexOf('=')
+            if ($eq -lt 0) { continue }
+            $key = $line.Substring(0, $eq).Trim()
+            $val = $line.Substring($eq + 1).Trim()
+            if ($key -eq 'path' -and $val -eq $engineFromTop) { $mapped = $true; break }
         }
     }
     if ($mapped) {

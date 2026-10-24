@@ -113,6 +113,7 @@ jobs:
           bash -n scripts/tests/run-synthetic-base-tests.sh
           bash -n scripts/check-doctor.sh
           bash -n scripts/tests/run-doctor-tests.sh
+          bash -n scripts/tests/run-projection-parity-tests.sh
           bash -n scripts/pk
           bash -n scripts/pk-route.sh
           bash -n scripts/tests/run-pk-entry-points-tests.sh
@@ -367,6 +368,7 @@ jobs:
             "scripts/tests/run-synthetic-base-tests.ps1",
             "scripts/check-doctor.ps1",
             "scripts/tests/run-doctor-tests.ps1",
+            "scripts/tests/run-projection-parity-tests.ps1",
             "scripts/pk.ps1",
             "scripts/pk-route.ps1",
             "scripts/tests/run-pk-entry-points-tests.ps1",
