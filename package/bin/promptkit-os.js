@@ -60,12 +60,12 @@ function passthroughFlags(argv) {
   const out = [];
   for (const arg of argv) {
     if (arg === "--force") continue; // courier-only flag, never forwarded to the installer
-    if (known.has(arg) || arg.startsWith("--host=") || arg.startsWith("--target=") || arg.startsWith("--tracking=")) {
+    if (known.has(arg) || arg.startsWith("--host=") || arg.startsWith("--add-host=") || arg.startsWith("--target=") || arg.startsWith("--tracking=")) {
       out.push(arg);
     } else if (!arg.startsWith("-")) {
       out.push(arg); // positional project root
     } else {
-      die(`unknown flag '${arg}' — pass it through after the install target, or see init --help`);
+      die(`unknown flag '${arg}' — the courier forwards a fixed allowlist; run the installer directly for full flags (init.sh --help / init.ps1 --help)`);
     }
   }
   return out;
@@ -158,13 +158,25 @@ function runInstaller(kitDir, args) {
     const ps = path.join(kitDir, "init.ps1");
     if (!fs.existsSync(ps)) die("init.ps1 missing from release tarball");
     const res = spawnSync("pwsh", ["-NoProfile", "-File", ps, ...args], { stdio: "inherit" });
-    if (res.status !== 0) die("init.ps1 failed");
+    if (res.error) {
+      const hint = res.error.code === "ENOENT"
+        ? "pwsh not found — PowerShell 7 is required on Windows (aka.ms/powershell); or use the git-submodule door and run bash .promptkit/init.sh"
+        : res.error.message;
+      die(`failed to launch init.ps1: ${hint}`);
+    }
+    if (res.status !== 0) die(`init.ps1 failed (exit ${res.status})`);
   } else {
     const sh = path.join(kitDir, "init.sh");
     if (!fs.existsSync(sh)) die("init.sh missing from release tarball");
     fs.chmodSync(sh, 0o755);
     const res = spawnSync("bash", [sh, ...args], { stdio: "inherit" });
-    if (res.status !== 0) die("init.sh failed");
+    if (res.error) {
+      const hint = res.error.code === "ENOENT"
+        ? "bash not found — a POSIX shell is required to run init.sh"
+        : res.error.message;
+      die(`failed to launch init.sh: ${hint}`);
+    }
+    if (res.status !== 0) die(`init.sh failed (exit ${res.status})`);
   }
 }
 
@@ -192,7 +204,7 @@ async function main() {
         "  npx promptkit-os@latest --lite\n" +
         "  npx promptkit-os@latest --turbo --experimental\n" +
         "  npx promptkit-os@latest /path/to/project\n\n" +
-        "Pass-through flags: --lite --balanced --turbo --experimental --host= --target= --tracking= --reconfigure\n" +
+        "Pass-through flags: --lite --balanced --turbo --experimental --host= --add-host= --target= --tracking= --reconfigure\n" +
         "Courier flags: --force (overlay a non-empty .promptkit/; not recommended)\n\n" +
         "Updating an existing install? Use the canonical path instead:\n" +
         "  git submodule update --remote --merge .promptkit && bash .promptkit/init.sh\n\n" +
