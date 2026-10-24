@@ -53,7 +53,7 @@ For the PromptKit SDLC Adaptation, `pk:route` classifies work into the canonical
 
 - **Level 0 (Direct / L0 Work)**: Direct fast-path execution. No formal planning or Task Record required.
 - **Level 1 (Standard / Lightweight Work)**: Localized bug fixes or small self-contained features. Uses lightweight inline planning without requiring a formal Task Record file (`docs/tasks/<task-id>.md`).
-- **Level 2 (Controlled Work)**: Schema migrations, auth, permissions, breaking API contracts, or multi-component architectural risks. Requires `Minimal` or `Full` planning depth and the canonical Local Task Record at `docs/tasks/<task-id>.md`.
+- **Level 2 (Controlled)**: Schema migrations, auth, permissions, breaking API contracts, or multi-component architectural risks. Requires `Minimal` or `Full` planning depth and the canonical Local Task Record at `docs/tasks/<task-id>.md`.
 - **Level 3 (Release-Critical Work)**: Releases, deployments, tag generation, or high-impact contract changes. Requires Level 2 planning and Task Record readiness plus release candidate evaluation (`pk:ship`), QA review, and human Release Coordinator authorization.
 
 The planner maps Minimal or Full results into existing architecture, contract, migration, FMEA, milestone, and task inputs. Planning supplies inputs; it does not change execution state or approve implementation, commits, pull requests, releases, deployment, or rollback. Existing workflow ownership and approval boundaries remain authoritative; the shared matrix is maintained in [`docs/WORKFLOW-MAP.md`](../docs/WORKFLOW-MAP.md).
@@ -64,7 +64,7 @@ After `pk:route` classifies the request into Levels 0–3:
 
 1. **Level 0 (Direct / L0 Work):** Direct execution (`understand → change → verify`). Do not create a Planning Record, Assumption Record, or Adaptation artifact.
 2. **Level 1 (Standard / Lightweight Work):** Lightweight inline planning only (outcome, completion condition, scope boundary) directly in conversation or `docs/STATE.md`. Do NOT create or populate `docs/tasks/<task-id>.md`.
-3. **Level 2 (Controlled Work):** Requires canonical Local Task Record readiness at `docs/tasks/<task-id>.md`. Select `Minimal` or `Full` planning depth:
+3. **Level 2 (Controlled):** Requires canonical Local Task Record readiness at `docs/tasks/<task-id>.md`. Select `Minimal` or `Full` planning depth:
    - **Minimal Planning (Level 2 default):** Record only requested outcome, observable completion condition, and scope boundary. Map them into the canonical Task Record at `docs/tasks/<task-id>.md` via `pk:tasks`, then stop the planning interrogation without continuing into the full RFC.
    - **Full Planning (Level 2 triggering work):** Record requested outcome, explicit non-goals, affected Behavioral Components, externally visible contracts, failure/rollback considerations, and verification approach. Continue through the full RFC architecture, contracts, Expand-Contract migrations, FMEA matrix, milestones, and grilling steps.
 4. **Level 3 (Release-Critical Work):** Requires Level 2 planning and Task Record readiness (`docs/tasks/<task-id>.md`), plus release-critical provenance, candidate evaluation (`pk:ship`), QA review, and explicit human Release Coordinator authorization.

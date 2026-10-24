@@ -419,20 +419,65 @@ check_ignore_state
 # to SKIP(<reason>) and never fails the run.
 # Shared fields derived from the shipped state-tracker-template.md section 3A
 # and the shipped execution-task-record-template.md. Each entry is
-# "<3A label>|<Task Record label>"; Owner is projected as "Owner / Current
-# Actor" in 3A and "Owner / Actor" in the Task Record. No invented fields.
+# "<3A label>|<Task Record label>|<class>". Owner is projected as "Owner /
+# Current Actor" in 3A and "Current Actor" in the Task Record (the live-actor
+# field; the record's "Owner / Actor" header field is the assignment, not the
+# projection). No invented fields. The pair list AND the class assignment are
+# identical in check-doctor.ps1, validate-execution-control.sh, and
+# validate-execution-control.ps1 — enforced by
+# scripts/tests/run-projection-parity-tests.sh / .ps1 (#669).
+# Classes (#671): machine = byte-exact after extraction; prose = normalized
+# (all leading/trailing backticks stripped, internal whitespace runs collapsed)
+# so 3A prose may reflow without diverging.
 SHARED_PROJECTION_FIELDS=(
-    'Task ID|Task ID'
-    'Execution State|Execution State'
-    'Active Task Pointer|Active Task Pointer'
-    'Next Action|Next Action'
-    'Owner / Current Actor|Owner / Actor'
-    'Ceremony Level|Ceremony Level'
-    'Specification|Specification'
-    'Execution Scope|Execution Scope'
-    'Start Time|Start Time'
-    "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status"
+    'Task ID|Task ID|machine'
+    'Execution State|Execution State|machine'
+    'Active Task Pointer|Active Task Pointer|machine'
+    'Next Action|Next Action|prose'
+    'Owner / Current Actor|Current Actor|machine'
+    'Ceremony Level|Ceremony Level|level'
+    'Specification|Specification|prose'
+    'Execution Scope|Execution Scope|prose'
+    'Start Time|Start Time|machine'
+    "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status|machine"
 )
+
+# Prose-class normalization (#671): strip every leading/trailing backtick
+# (deeper than proj_field's single pair), collapse internal whitespace runs to
+# single spaces, then trim — byte-exact equality on the normalized form.
+normalize_prose() {
+    local val="$1"
+    while [[ "$val" == \`* ]]; do val="${val#\`}"; done
+    while [[ "$val" == *\` ]]; do val="${val%\`}"; done
+    val="$(printf '%s' "$val" | tr -s ' \t\n' ' ')"
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%"${val##*[![:space:]]}"}"
+    printf '%s' "$val"
+}
+
+# Level-class normalization (#668): records and projections may name the same
+# ceremony level with different vocabularies ("Level 2 (Controlled)" vs
+# "Level 2 (Controlled Work)" vs "L2" vs "2"); compare the parsed digit, with
+# the raw strings kept as the fallback when either side is not parseable.
+# Same token grammar as validate-execution-control's parse_ceremony_level.
+parse_ceremony_level() {
+    local val
+    val="$(printf '%s' "$1" | tr -s ' \t\n' ' ')"
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%"${val##*[![:space:]]}"}"
+    [ -z "$val" ] && return 0
+    if [[ "$val" =~ ^[[:space:]]*(0|[Ll]evel[[:space:]]*0|[Ll]0)([^0-9]|$) ]]; then
+        echo "0"
+    elif [[ "$val" =~ ^[[:space:]]*(1|[Ll]evel[[:space:]]*1|[Ll]1)([^0-9]|$) ]]; then
+        echo "1"
+    elif [[ "$val" =~ ^[[:space:]]*(2|[Ll]evel[[:space:]]*2|[Ll]2)([^0-9]|$) ]]; then
+        echo "2"
+    elif [[ "$val" =~ ^[[:space:]]*(3|[Ll]evel[[:space:]]*3|[Ll]3)([^0-9]|$) ]]; then
+        echo "3"
+    else
+        echo "invalid"
+    fi
+}
 
 proj_field() {
     local text="$1" label="$2" line val
@@ -492,24 +537,43 @@ check_docs_drift() {
         return 0
     fi
     rec_text="$(cat -- "$rec_path")"
-    diff_field=""
+    diff_fields=()
     compared=0
     for pair in "${SHARED_PROJECTION_FIELDS[@]}"; do
         p_label="${pair%%|*}"
-        r_label="${pair#*|}"
+        rest="${pair#*|}"
+        r_label="${rest%%|*}"
+        class="${rest#*|}"
         p_val="$(proj_field "$section" "$p_label")"
         r_val="$(proj_field "$rec_text" "$r_label")"
+        if [[ "$class" == "prose" ]]; then
+            p_val="$(normalize_prose "$p_val")"
+            r_val="$(normalize_prose "$r_val")"
+        elif [[ "$class" == "level" ]]; then
+            p_parse="$(parse_ceremony_level "$p_val")"
+            r_parse="$(parse_ceremony_level "$r_val")"
+            if [[ -n "$p_parse" && -n "$r_parse" && "$p_parse" != "invalid" && "$r_parse" != "invalid" ]]; then
+                p_val="$p_parse"
+                r_val="$r_parse"
+            fi
+        fi
         if is_placeholder "$r_val"; then
             continue
         fi
         if is_placeholder "$p_val" || [[ "$p_val" != "$r_val" ]]; then
-            diff_field="$p_label"
-            break
+            diff_fields+=("$p_label")
+        else
+            compared=$((compared + 1))
         fi
-        compared=$((compared + 1))
     done
-    if [[ -n "$diff_field" ]]; then
-        emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $diff_field)" "projection disagrees with the canonical Task Record on $diff_field" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
+    if [[ "${#diff_fields[@]}" -gt 0 ]]; then
+        # One run names every diverging field (#670); a single divergence keeps the
+        # exact historical single-field verdict, joined fields use "; ".
+        joined=""
+        for f in "${diff_fields[@]}"; do
+            if [[ -z "$joined" ]]; then joined="$f"; else joined="$joined; $f"; fi
+        done
+        emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $joined)" "projection disagrees with the canonical Task Record on $joined" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
     elif [[ "$compared" -gt 0 ]]; then
         emit 'docs-drift' 'OK' 'projection agrees with the canonical Task Record' '-'
     else

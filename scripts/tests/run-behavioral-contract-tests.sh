@@ -333,7 +333,7 @@ assert_contains "templates/agent-directive-template.md" "Fast-Path \(Zero Overhe
 echo ""
 echo "📌 Scenario B: Localized Bug / Small Feature ('Fix empty password crash') — Level 1 Standard"
 assert_contains "workflows/route.md" "Level 1 — Standard" "Level 1 Standard classification defined in router"
-assert_contains "workflows/route.md" "does .*not.* trigger Level 2 Controlled Work" "Level 1 file edits do not trigger mandatory Task Record creation"
+assert_contains "workflows/route.md" "does .*not.* trigger Level 2 \(Controlled\) requirements" "Level 1 file edits do not trigger mandatory Task Record creation"
 assert_contains "workflows/plan.md" "Level 1 .*Do NOT create or populate" "Plan workflow specifies Level 1 does not map to Task Record file"
 assert_contains "workflows/tasks.md" "Level 0 \(Direct\) and Level 1 \(Standard\) work modify source files directly" "Tasks workflow specifies Level 1 file edits do not require Task Record"
 
