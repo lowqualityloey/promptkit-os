@@ -793,6 +793,8 @@ target_idx=0
 for target in "${TARGETS_FOUND[@]}"; do
     REL_TARGET="${target#"$PROJECT_ROOT"/}"
     CR=$'\r'
+    LF=$'\n'
+    CRLF=$'\r\n'
     has_start=0
     has_end=0
     if [[ -f "$target" ]]; then
@@ -819,10 +821,14 @@ for target in "${TARGETS_FOUND[@]}"; do
 
         directive_file="$(mktemp "$STAGING_DIR/directive.XXXXXX")"
         # EOL parity with init.ps1 (issue #666): a CRLF host file must receive a
-        # CRLF directive block, so every directive line carries a trailing CR and
-        # the awk splice below keeps count(LF) == count(CR).
-        if grep -q $'\r' "$target"; then
-            printf '%s\n' "$DIRECTIVE" | sed 's/$/\r/' > "$directive_file"
+        # CRLF directive block. CR is embedded as a literal byte (BSD sed does
+        # not interpret \r in a replacement), and every directive line keeps its
+        # LF terminator so the awk splice preserves count(LF) == count(CR).
+        if grep -q "$CR" "$target"; then
+            # The '\r\n' suffix also terminates the FINAL directive line with CR
+            # (the expansion only converts internal newlines), so the awk splice
+            # ends the replaced block "END\r\n" exactly like init.ps1's update.
+            printf '%s\r\n' "${DIRECTIVE//$LF/$CRLF}" > "$directive_file"
         else
             printf '%s\n' "$DIRECTIVE" > "$directive_file"
         fi
@@ -859,6 +865,17 @@ for target in "${TARGETS_FOUND[@]}"; do
             exit 1
         fi
         rm -f "$directive_file"
+        # Preserve EOF state exactly (cross-door parity with init.ps1's offset
+        # surgery): awk's print appends ORS unconditionally, so if the original
+        # file did not end with a newline, drop the one awk just added — bytes
+        # outside the managed block must not change.
+        if [ "$(tail -c 1 "$target" | od -An -tuC | tr -d ' \n')" != "10" ]; then
+            staged_bytes="$(wc -c < "$staged_target" | tr -d ' ')"
+            if [ "$staged_bytes" -gt 0 ]; then
+                head -c $((staged_bytes - 1)) "$staged_target" > "$staged_target.trim" \
+                    && mv "$staged_target.trim" "$staged_target"
+            fi
+        fi
         STAGED_TARGET_PATHS+=("$staged_target")
         STAGED_TARGET_MODES+=("update")
     elif [[ -f "$target" ]]; then
@@ -882,11 +899,13 @@ for target in "${TARGETS_FOUND[@]}"; do
             else
                 prefix_sep="$eol$eol"
             fi
-            if [[ "$eol" == $'\r\n' ]]; then
+            if [[ "$eol" == "$CRLF" ]]; then
+                # Match init.ps1's inject byte-for-byte: CRLF-joined directive,
+                # no trailing newline after the END marker line.
                 printf '%s' "$prefix_sep" >> "$staged_target"
-                printf '%s\n' "$DIRECTIVE" | sed 's/$/\r/' >> "$staged_target"
+                printf '%s' "${DIRECTIVE//$LF/$CRLF}" >> "$staged_target"
             else
-                printf '%s%s\n' "$prefix_sep" "$DIRECTIVE" >> "$staged_target"
+                printf '%s%s' "$prefix_sep" "$DIRECTIVE" >> "$staged_target"
             fi
         else
             printf "%s\n" "$DIRECTIVE" > "$staged_target"
@@ -1034,12 +1053,17 @@ declare -a BACKUP_SOURCES=()
 rollback() {
     local i
     for (( i=${#CREATED_FILES[@]}-1; i>=0; i-- )); do
-        rm -f "${CREATED_FILES[i]}"
+        # Containment guard: a path swapped to a symlink after staging must not
+        # be deleted through, and the restore below must not write through, a
+        # destination that escapes the project root.
+        if is_path_contained "$PROJECT_ROOT" "${CREATED_FILES[i]}"; then
+            rm -f "${CREATED_FILES[i]}"
+        fi
     done
     for (( i=0; i<${#BACKED_UP_FILES[@]}; i++ )); do
         local orig="${BACKED_UP_FILES[i]}"
         local bkp="${BACKUP_SOURCES[i]}"
-        if [[ -f "$bkp" ]]; then
+        if [[ -f "$bkp" ]] && is_path_contained "$PROJECT_ROOT" "$orig"; then
             cp -p "$bkp" "$orig"
         fi
     done
@@ -1171,18 +1195,17 @@ for (( i=0; i<${#TARGETS_FOUND[@]}; i++ )); do
     mode="${STAGED_TARGET_MODES[i]}"
     REL_TARGET="${target#"$PROJECT_ROOT"/}"
 
+    # Containment re-verification immediately before any disk mutation: the
+    # earlier step-4 check can be raced (TOCTOU), and a swapped destination
+    # symlink or parent directory would let the write escape the project root.
+    # Covers the update/inject and create branches alike.
+    if ! is_path_contained "$PROJECT_ROOT" "$target"; then
+        echo "Error: refusing to write outside the project root: $REL_TARGET" >&2
+        exit 1
+    fi
+
     mkdir -p "$(dirname "$target")"
     if [[ -f "$target" || -L "$target" ]]; then
-        # Re-verify symlinked destinations immediately before the write (issue #666):
-        # the earlier containment check can be raced by a swapped link; refuse any
-        # destination that no longer resolves under the project root.
-        if [[ -L "$target" ]]; then
-            link_real="$(readlink -f "$target" 2>/dev/null || true)"
-            if [[ -z "$link_real" || "$link_real" != "$PROJECT_ROOT"* ]]; then
-                echo "Error: refusing to write symlink target resolving outside the project root: $REL_TARGET" >&2
-                exit 1
-            fi
-        fi
         t_mode="$(get_file_mode "$target")"
         cp "$staged_file" "$target"
         if [[ -n "$t_mode" ]]; then chmod "$t_mode" "$target" 2>/dev/null || true; fi

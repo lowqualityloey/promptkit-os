@@ -1181,6 +1181,12 @@ try {
     # Commit targets
     foreach ($item in $StagedTargetUpdates) {
         $tPath = $item.TargetPath
+        # Containment re-verification immediately before any disk mutation: the
+        # earlier check can be raced (TOCTOU), and a swapped destination symlink
+        # or parent directory would let the write escape the project root.
+        if (-not (Test-PathContained $ProjectRoot $tPath)) {
+            throw "Error: refusing to write outside the project root: $($item.RelTarget)"
+        }
         $pDir = Split-Path -Parent $tPath
         if ($pDir -ne "" -and -not (Test-Path -LiteralPath $pDir)) {
             [System.IO.Directory]::CreateDirectory($pDir) | Out-Null
@@ -1196,15 +1202,19 @@ try {
         }
     }
 } catch {
-    # Rollback!
+    # Rollback! Containment guard: a path swapped to a symlink after staging
+    # must not be deleted through, and the restore must not write through, a
+    # destination that escapes the project root.
     for ($i = $createdFiles.Count - 1; $i -ge 0; $i--) {
         $f = $createdFiles[$i]
-        if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue }
+        if ((Test-Path -LiteralPath $f) -and (Test-PathContained $ProjectRoot $f)) {
+            Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue
+        }
     }
     for ($i = 0; $i -lt $backedUpFiles.Count; $i++) {
         $dest = $backedUpFiles[$i]
         $bkp = $backupSources[$i]
-        if (Test-Path -LiteralPath $bkp) {
+        if ((Test-Path -LiteralPath $bkp) -and (Test-PathContained $ProjectRoot $dest)) {
             Copy-Item -LiteralPath $bkp -Destination $dest -Force -ErrorAction SilentlyContinue
         }
     }

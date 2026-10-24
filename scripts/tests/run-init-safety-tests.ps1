@@ -102,6 +102,29 @@ try {
         throw "Failed Test (CRLF inject): mixed line endings after inject (LF=$injectLfCount, CR=$injectCrCount)."
     }
 
+    # Test: destination symlink escaping the project root (sibling prefix) must
+    # be refused and the external target must not be touched.
+    $SiblingRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "sibling") -Force).FullName
+    $SiblingEvil = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "sibling-evil") -Force).FullName
+    $victimPath = Join-Path $SiblingEvil "victim.md"
+    [System.IO.File]::WriteAllText($victimPath, "PRECIOUS SIBLING FILE", $utf8NoBom)
+    $siblingLinkCreated = $false
+    try {
+        New-Item -ItemType SymbolicLink -Path (Join-Path $SiblingRoot "AGENTS.md") -Target $victimPath -ErrorAction Stop | Out-Null
+        $siblingLinkCreated = $true
+    } catch {
+        Write-Output "  SKIP: symbolic link creation unsupported on this host"
+    }
+    if ($siblingLinkCreated) {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $SiblingRoot *> $null
+        if ($LASTEXITCODE -eq 0) {
+            throw "Failed Test (sibling containment): installer did not refuse an external destination symlink."
+        }
+        if (-not ([System.IO.File]::ReadAllText($victimPath)).Contains('PRECIOUS SIBLING FILE')) {
+            throw "Failed Test (sibling containment): external symlink target was modified."
+        }
+    }
+
     # Test 2: Successful replacement in an LF file
     $lfAgentsPath = Join-Path $LfRoot "AGENTS.md"
     $lfInitialContent = "Header LF`n`nKeep content before.`n`n<!-- PROMPTKIT_START -->`nold directive`n<!-- PROMPTKIT_END -->`n`nKeep content after."
