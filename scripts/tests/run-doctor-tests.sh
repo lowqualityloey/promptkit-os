@@ -915,7 +915,8 @@ s12() {
 }
 
 # N8: a .promptkit gitlink without a .gitmodules mapping is MISSING, exit 1 (#667);
-# with the mapping it is OK, exit 0.
+# with the mapping it is OK, exit 0 — including compact `path=.promptkit` syntax and
+# CRLF line endings (a core.autocrlf=true checkout), which must parse identically.
 n8() {
     local root
     root="$(make_healthy n8 balanced)"
@@ -933,6 +934,11 @@ n8() {
     run_doctor "$root"
     want_status 0
     want_contains $'submodule\tOK'
+    printf '[submodule "promptkit"]\r\n\tpath=.promptkit\r\n\turl = https://github.com/lowqualityloey/promptkit-os.git\r\n' > "$root/.gitmodules"
+    run_doctor "$root"
+    want_status 0
+    want_contains $'submodule\tOK'
+    want_not_contains $'submodule\tMISSING'
 }
 
 begin; s1; report 'S1 healthy Balanced install -> all OK, exit 0'
