@@ -51,6 +51,14 @@ try {
         throw "Failed Test 1 (CRLF): Expected 1 START and 1 END marker, found start=$crlfStartCount, end=$crlfEndCount."
     }
 
+    # CRLF EOL purity (issue #666): every line ending must remain CRLF after the
+    # update — no lone LF may be spliced into a CRLF host file. count(LF) == count(CR).
+    $crlfLfCount = ([regex]::Matches($crlfUpdated, "`n")).Count
+    $crlfCrCount = ([regex]::Matches($crlfUpdated, "`r")).Count
+    if ($crlfLfCount -ne $crlfCrCount) {
+        throw "Failed Test 1 (CRLF): mixed line endings after update (LF=$crlfLfCount, CR=$crlfCrCount)."
+    }
+
     $crlfPrTemplate = Join-Path $CrlfRoot ".github/pull_request_template.md"
     if (-not (Test-Path $crlfPrTemplate)) {
         throw "Failed Test 1 (CRLF): .github/pull_request_template.md was not scaffolded."
@@ -76,6 +84,60 @@ try {
     $reRunStartCount = @($reRunLines | Where-Object { $_ -eq '<!-- PROMPTKIT_START -->' }).Count
     if ($reRunStartCount -ne 1) {
         throw "Failed Test 10 (Idempotency): Expected 1 PROMPTKIT_START after re-run, found ${reRunStartCount}."
+    }
+
+    # Test: CRLF inject (issue #666) — a CRLF host file WITHOUT a directive block
+    # must receive the directive in CRLF as well, matching init.ps1's inject semantics.
+    $CrlfInjectRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "crlf_inject") -Force).FullName
+    $crlfInjectPath = Join-Path $CrlfInjectRoot "AGENTS.md"
+    [System.IO.File]::WriteAllText($crlfInjectPath, "CRLF host file without a directive block.`r`nSecond line.`r`n", $utf8NoBom)
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfInjectRoot | Out-Null
+    $crlfInjectUpdated = [System.IO.File]::ReadAllText($crlfInjectPath, [System.Text.Encoding]::UTF8)
+    if (-not $crlfInjectUpdated.Contains('## PromptKit OS: Engineering Operating System')) {
+        throw "Failed Test (CRLF inject): directive was not injected."
+    }
+    $injectLfCount = ([regex]::Matches($crlfInjectUpdated, "`n")).Count
+    $injectCrCount = ([regex]::Matches($crlfInjectUpdated, "`r")).Count
+    if ($injectLfCount -ne $injectCrCount) {
+        throw "Failed Test (CRLF inject): mixed line endings after inject (LF=$injectLfCount, CR=$injectCrCount)."
+    }
+
+    # Test: CRLF inject rerun must be byte-stable — the update path on a file
+    # whose END marker sits at EOF must not append a dangling CR.
+    $injectLen = (Get-Item -LiteralPath $crlfInjectPath).Length
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfInjectRoot *> $null
+    $crlfRerun = [System.IO.File]::ReadAllText($crlfInjectPath, [System.Text.Encoding]::UTF8)
+    $rerunLen = (Get-Item -LiteralPath $crlfInjectPath).Length
+    $rerunCr = ([regex]::Matches($crlfRerun, "`r")).Count
+    $rerunLf = ([regex]::Matches($crlfRerun, "`n")).Count
+    if ($rerunLen -ne $injectLen -or $rerunCr -ne $injectCrCount -or $rerunLf -ne $injectLfCount) {
+        throw "Failed Test (CRLF inject rerun): not byte-stable (inject len=$injectLen CR=$injectCrCount LF=$injectLfCount; rerun len=$rerunLen CR=$rerunCr LF=$rerunLf)."
+    }
+    if ($crlfRerun.EndsWith("`r")) {
+        throw "Failed Test (CRLF inject rerun): dangling CR at EOF."
+    }
+
+    # Test: destination symlink escaping the project root (sibling prefix) must
+    # be refused and the external target must not be touched.
+    $SiblingRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "sibling") -Force).FullName
+    $SiblingEvil = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "sibling-evil") -Force).FullName
+    $victimPath = Join-Path $SiblingEvil "victim.md"
+    [System.IO.File]::WriteAllText($victimPath, "PRECIOUS SIBLING FILE", $utf8NoBom)
+    $siblingLinkCreated = $false
+    try {
+        New-Item -ItemType SymbolicLink -Path (Join-Path $SiblingRoot "AGENTS.md") -Target $victimPath -ErrorAction Stop | Out-Null
+        $siblingLinkCreated = $true
+    } catch {
+        Write-Output "  SKIP: symbolic link creation unsupported on this host"
+    }
+    if ($siblingLinkCreated) {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $SiblingRoot *> $null
+        if ($LASTEXITCODE -eq 0) {
+            throw "Failed Test (sibling containment): installer did not refuse an external destination symlink."
+        }
+        if (-not ([System.IO.File]::ReadAllText($victimPath)).Contains('PRECIOUS SIBLING FILE')) {
+            throw "Failed Test (sibling containment): external symlink target was modified."
+        }
     }
 
     # Test 2: Successful replacement in an LF file

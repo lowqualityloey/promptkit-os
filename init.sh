@@ -793,6 +793,8 @@ target_idx=0
 for target in "${TARGETS_FOUND[@]}"; do
     REL_TARGET="${target#"$PROJECT_ROOT"/}"
     CR=$'\r'
+    LF=$'\n'
+    CRLF=$'\r\n'
     has_start=0
     has_end=0
     if [[ -f "$target" ]]; then
@@ -818,7 +820,18 @@ for target in "${TARGETS_FOUND[@]}"; do
         fi
 
         directive_file="$(mktemp "$STAGING_DIR/directive.XXXXXX")"
-        printf '%s\n' "$DIRECTIVE" > "$directive_file"
+        # EOL parity with init.ps1 (issue #666): a CRLF host file must receive a
+        # CRLF directive block. CR is embedded as a literal byte (BSD sed does
+        # not interpret \r in a replacement), and every directive line keeps its
+        # LF terminator so the awk splice preserves count(LF) == count(CR).
+        if grep -q "$CR" "$target"; then
+            # The '\r\n' suffix also terminates the FINAL directive line with CR
+            # (the expansion only converts internal newlines), so the awk splice
+            # ends the replaced block "END\r\n" exactly like init.ps1's update.
+            printf '%s\r\n' "${DIRECTIVE//$LF/$CRLF}" > "$directive_file"
+        else
+            printf '%s\n' "$DIRECTIVE" > "$directive_file"
+        fi
 
         if ! awk -v directive_file="$directive_file" '
             BEGIN {
@@ -852,12 +865,57 @@ for target in "${TARGETS_FOUND[@]}"; do
             exit 1
         fi
         rm -f "$directive_file"
+        # Preserve EOF state exactly (cross-door parity with init.ps1's offset
+        # surgery): awk's print appends ORS unconditionally, so if the original
+        # file did not end with a newline, drop what awk added — bytes outside
+        # the managed block must not change. When the replaced block sits at EOF
+        # (e.g. a rerun over a previous CRLF inject), the staged file ends with
+        # the directive's own "\r\n", so BOTH bytes must go; a genuine original
+        # trailing CR keeps its CR and only loses the awk-added "\n".
+        target_last="$(tail -c 1 "$target" | od -An -tuC | tr -d ' \n')"
+        if [ "$target_last" != "10" ]; then
+            staged_bytes="$(wc -c < "$staged_target" | tr -d ' ')"
+            trim_n=1
+            if [ "$staged_bytes" -ge 2 ] && [ "$target_last" != "13" ] \
+                && [ "$(tail -c 2 "$staged_target" | head -c 1 | od -An -tuC | tr -d ' \n')" = "13" ]; then
+                trim_n=2
+            fi
+            if [ "$staged_bytes" -ge "$trim_n" ]; then
+                head -c $((staged_bytes - trim_n)) "$staged_target" > "$staged_target.trim" \
+                    && mv "$staged_target.trim" "$staged_target"
+            fi
+        fi
         STAGED_TARGET_PATHS+=("$staged_target")
         STAGED_TARGET_MODES+=("update")
     elif [[ -f "$target" ]]; then
         cp "$target" "$staged_target"
         if [[ -s "$staged_target" ]]; then
-            printf "\n\n%s\n" "$DIRECTIVE" >> "$staged_target"
+            # EOL parity with init.ps1 (issue #666): match the host file's line
+            # endings and its trailing-newline state. A file already ending in a
+            # newline gets one separator; a file with no trailing newline gets
+            # two (a blank line); a CRLF host gets CRLF throughout.
+            if grep -q $'\r' "$staged_target"; then
+                eol=$'\r\n'
+            else
+                eol=$'\n'
+            fi
+            last_byte="$(tail -c 1 "$staged_target" | od -An -tuC | tr -d ' \n')"
+            prev_byte="$(tail -c 2 "$staged_target" | head -c 1 | od -An -tuC | tr -d ' \n')"
+            if [[ "$last_byte" == "10" && "$prev_byte" == "13" ]]; then
+                prefix_sep="$eol"
+            elif [[ "$last_byte" == "10" ]]; then
+                prefix_sep=$'\n'
+            else
+                prefix_sep="$eol$eol"
+            fi
+            if [[ "$eol" == "$CRLF" ]]; then
+                # Match init.ps1's inject byte-for-byte: CRLF-joined directive,
+                # no trailing newline after the END marker line.
+                printf '%s' "$prefix_sep" >> "$staged_target"
+                printf '%s' "${DIRECTIVE//$LF/$CRLF}" >> "$staged_target"
+            else
+                printf '%s%s' "$prefix_sep" "$DIRECTIVE" >> "$staged_target"
+            fi
         else
             printf "%s\n" "$DIRECTIVE" > "$staged_target"
         fi
@@ -1004,12 +1062,17 @@ declare -a BACKUP_SOURCES=()
 rollback() {
     local i
     for (( i=${#CREATED_FILES[@]}-1; i>=0; i-- )); do
-        rm -f "${CREATED_FILES[i]}"
+        # Containment guard: a path swapped to a symlink after staging must not
+        # be deleted through, and the restore below must not write through, a
+        # destination that escapes the project root.
+        if is_path_contained "$PROJECT_ROOT" "${CREATED_FILES[i]}"; then
+            rm -f "${CREATED_FILES[i]}"
+        fi
     done
     for (( i=0; i<${#BACKED_UP_FILES[@]}; i++ )); do
         local orig="${BACKED_UP_FILES[i]}"
         local bkp="${BACKUP_SOURCES[i]}"
-        if [[ -f "$bkp" ]]; then
+        if [[ -f "$bkp" ]] && is_path_contained "$PROJECT_ROOT" "$orig"; then
             cp -p "$bkp" "$orig"
         fi
     done
@@ -1141,6 +1204,15 @@ for (( i=0; i<${#TARGETS_FOUND[@]}; i++ )); do
     mode="${STAGED_TARGET_MODES[i]}"
     REL_TARGET="${target#"$PROJECT_ROOT"/}"
 
+    # Containment re-verification immediately before any disk mutation: the
+    # earlier step-4 check can be raced (TOCTOU), and a swapped destination
+    # symlink or parent directory would let the write escape the project root.
+    # Covers the update/inject and create branches alike.
+    if ! is_path_contained "$PROJECT_ROOT" "$target"; then
+        echo "Error: refusing to write outside the project root: $REL_TARGET" >&2
+        exit 1
+    fi
+
     mkdir -p "$(dirname "$target")"
     if [[ -f "$target" || -L "$target" ]]; then
         t_mode="$(get_file_mode "$target")"
@@ -1177,10 +1249,10 @@ fi
 echo -e "\n\033[0;36m✨ PromptKit OS successfully configured for $PROJECT_ROOT! ($PROFILE profile)\033[0m"
 if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok\033[0m"
-    echo -e "   Upgrade anytime: .promptkit/init.sh --balanced for the full Balanced profile"
+    echo -e "   Upgrade anytime: $KIT_DIR_REL/init.sh --balanced for the full Balanced profile"
 elif [[ "$PROFILE" == "balanced" ]]; then
     echo -e "   Balanced: 26 workflows, Level 0-3 adaptive ceremony — full power"
-    echo -e "   For onboarding: .promptkit/init.sh --lite for minimal setup"
+    echo -e "   For onboarding: $KIT_DIR_REL/init.sh --lite for minimal setup"
 else
     echo -e "   \033[0;33mTurbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost\033[0m"
     echo -e "   Human approval still required for Level 3 (releases/tags/deploys)"

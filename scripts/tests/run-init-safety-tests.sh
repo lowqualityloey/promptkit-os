@@ -151,12 +151,101 @@ after_hash="$(sha256sum "$AWK_FAIL_ROOT/AGENTS.md" | cut -d' ' -f1)"
 # CRLF line ending test
 CRLF_ROOT="$TEST_ROOT/crlf"
 mkdir -p "$CRLF_ROOT"
-printf "Header with \$1 literal dollar reference\r\n\r\nKeep content before.\r\n\r\n<!-- PROMPTKIT_START -->\r\nold directive\r\n<!-- PROMPTKIT_END -->\r\n\r\nKeep content after.\r\n" > "$CRLF_ROOT/AGENTS.md"
+printf "Header with \$1 literal dollar reference\r\n\r\nKeep content before.\r\n\r\n<!-- PROMPTKIT_START -->\r\nold directive\r\n<!-- PROMPTKIT_END -->\r\n\r\nKeep content after." > "$CRLF_ROOT/AGENTS.md"
 bash "$REPO_ROOT/init.sh" "$CRLF_ROOT" >/dev/null
 grep -q "Header with \$1 literal dollar reference" "$CRLF_ROOT/AGENTS.md"
 grep -q 'Keep content before\.' "$CRLF_ROOT/AGENTS.md"
 grep -q 'Keep content after\.' "$CRLF_ROOT/AGENTS.md"
 grep -q '## PromptKit OS: Engineering Operating System' "$CRLF_ROOT/AGENTS.md"
+
+# CRLF EOL purity (init.ps1 parity, issue #666): every line ending in the updated
+# file must remain CRLF — the POSIX door must not splice LF-only directive lines
+# into a CRLF host file. count(LF) == count(CR) iff no lone LF survives.
+crlf_lf_count="$(tr -cd '\n' < "$CRLF_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+crlf_cr_count="$(tr -cd '\r' < "$CRLF_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+if [[ "$crlf_lf_count" -ne "$crlf_cr_count" ]]; then
+    echo "CRLF update left mixed line endings (LF=$crlf_lf_count, CR=$crlf_cr_count)." >&2
+    exit 1
+fi
+
+# CRLF inject (issue #666): a CRLF host file WITHOUT a directive block must
+# receive the directive in CRLF as well, matching init.ps1's inject semantics.
+CRLF_INJECT_ROOT="$TEST_ROOT/crlf_inject"
+mkdir -p "$CRLF_INJECT_ROOT"
+printf 'CRLF host file without a directive block.\r\nSecond line.\r\n' > "$CRLF_INJECT_ROOT/AGENTS.md"
+bash "$REPO_ROOT/init.sh" "$CRLF_INJECT_ROOT" >/dev/null
+grep -q '^## PromptKit OS: Engineering Operating System' "$CRLF_INJECT_ROOT/AGENTS.md"
+inject_lf_count="$(tr -cd '\n' < "$CRLF_INJECT_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+inject_cr_count="$(tr -cd '\r' < "$CRLF_INJECT_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+if [[ "$inject_lf_count" -ne "$inject_cr_count" ]]; then
+    echo "CRLF inject left mixed line endings (LF=$inject_lf_count, CR=$inject_cr_count)." >&2
+    exit 1
+fi
+
+# CRLF inject rerun (audit follow-up): the second run takes the update path on a
+# file whose END marker sits at EOF — it must be byte-stable, leaving no dangling
+# CR (CR == LF, same length as the inject output).
+inject_len="$(wc -c < "$CRLF_INJECT_ROOT/AGENTS.md" | tr -d ' ')"
+bash "$REPO_ROOT/init.sh" "$CRLF_INJECT_ROOT" >/dev/null
+rerun_len="$(wc -c < "$CRLF_INJECT_ROOT/AGENTS.md" | tr -d ' ')"
+rerun_cr="$(tr -cd '\r' < "$CRLF_INJECT_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+rerun_lf="$(tr -cd '\n' < "$CRLF_INJECT_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+if [[ "$rerun_len" -ne "$inject_len" || "$rerun_cr" -ne "$inject_cr_count" || "$rerun_lf" -ne "$inject_lf_count" ]]; then
+    echo "CRLF inject rerun is not byte-stable (inject len=$inject_len CR=$inject_cr_count LF=$inject_lf_count; rerun len=$rerun_len CR=$rerun_cr LF=$rerun_lf)." >&2
+    exit 1
+fi
+rerun_last="$(tail -c 1 "$CRLF_INJECT_ROOT/AGENTS.md" | od -An -tuC | tr -d ' \n')"
+[[ "$rerun_last" != "13" ]] || {
+    echo "CRLF inject rerun left a dangling CR at EOF." >&2
+    exit 1
+}
+
+# Containment: a destination symlink pointing OUTSIDE the project root (sibling
+# prefix, not a child) must be refused and the external file must not be touched.
+SIBLING_ROOT="$TEST_ROOT/sibling"
+SIBLING_EVIL="$TEST_ROOT/sibling-evil"
+mkdir -p "$SIBLING_ROOT" "$SIBLING_EVIL"
+printf 'PRECIOUS SIBLING FILE\n' > "$SIBLING_EVIL/victim.md"
+ln -s "$SIBLING_EVIL/victim.md" "$SIBLING_ROOT/AGENTS.md"
+if bash "$REPO_ROOT/init.sh" "$SIBLING_ROOT" >/dev/null 2>&1; then
+    echo "Expected refusal for destination symlink escaping the project root (sibling prefix)." >&2
+    exit 1
+fi
+grep -q 'PRECIOUS SIBLING FILE' "$SIBLING_EVIL/victim.md" || {
+    echo "External sibling file was modified by refused install." >&2
+    exit 1
+}
+
+# Containment: a swapped PARENT directory (docs/ -> external symlink) must be
+# refused for --target writes into it.
+PARENT_SWAP_ROOT="$TEST_ROOT/parent_swap"
+mkdir -p "$PARENT_SWAP_ROOT" "$SIBLING_EVIL"
+ln -s "$SIBLING_EVIL" "$PARENT_SWAP_ROOT/docs"
+if bash "$REPO_ROOT/init.sh" --target=docs/extra.md "$PARENT_SWAP_ROOT" >/dev/null 2>&1; then
+    echo "Expected refusal for parent-directory symlink escape." >&2
+    exit 1
+fi
+[ ! -e "$SIBLING_EVIL/extra.md" ] || {
+    echo "File was created outside the project root via parent-directory symlink." >&2
+    exit 1
+}
+
+# Rollback through a CONTAINED symlink must still work: the containment guard
+# allows in-root destinations, so a failed update restores the linked file.
+INT_LINK_ROOT="$TEST_ROOT/intlink"
+mkdir -p "$INT_LINK_ROOT/sub"
+printf '# Instructions\n\n<!-- PROMPTKIT_START -->\nold directive\n<!-- PROMPTKIT_END -->\n' > "$INT_LINK_ROOT/sub/real.md"
+ln -s sub/real.md "$INT_LINK_ROOT/AGENTS.md"
+intlink_before="$(sha256sum "$INT_LINK_ROOT/sub/real.md" | cut -d' ' -f1)"
+if PATH="$FAKE_BIN:$PATH" bash "$REPO_ROOT/init.sh" "$INT_LINK_ROOT" >/dev/null 2>&1; then
+    echo "Expected awk-failure rollback for contained-symlink target." >&2
+    exit 1
+fi
+intlink_after="$(sha256sum "$INT_LINK_ROOT/sub/real.md" | cut -d' ' -f1)"
+[[ "$intlink_before" == "$intlink_after" ]] || {
+    echo "Rollback did not restore through a contained symlink." >&2
+    exit 1
+}
 
 # UTF-8 Emoji/CJK content test
 UTF8_ROOT="$TEST_ROOT/utf8"

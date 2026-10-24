@@ -4,7 +4,7 @@
     Supports profiles: --lite, --balanced (default), --turbo --experimental
 .DESCRIPTION
     Initializes PromptKit OS in your project:
-    - Scaffolds project documentation directories (docs/adrs, docs/specs, docs/rca, docs/spikes, docs/design)
+    - Scaffolds project documentation directories (docs/tasks, docs/specs, docs/adrs, docs/tests)
     - Creates PROMPTKIT.md project profile if missing, injects profile: lite|balanced|turbo
     - Injects or updates PromptKit OS directives in AGENTS.md, CLAUDE.md, GEMINI.md, .cursorrules, .cursor/rules/*.mdc, .windsurfrules, .github/copilot-instructions.md, .clinerules, .traerules, .opencode/rules.md, or CONVENTIONS.md (Aider)
 #>
@@ -401,7 +401,7 @@ foreach ($a in $AllArgs) {
         }
         { $_ -like "--target=*" } {
             $tp = $_.Substring(9)
-            if ($tp.StartsWith("/") -or $tp -match '\.\.' -or [string]::IsNullOrWhiteSpace($tp)) {
+            if ($tp.StartsWith("/") -or $tp.StartsWith("\") -or $tp -match '^[A-Za-z]:' -or $tp -match '\.\.' -or [string]::IsNullOrWhiteSpace($tp)) {
                 Write-Host "[!] --target must be a project-relative path without '..': $tp" -ForegroundColor Red
                 exit 1
             }
@@ -487,7 +487,11 @@ if ($Profile -eq "turbo" -and -not $Experimental) {
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 if ($TargetDir -ne "") {
-    $ProjectRoot = Resolve-Path $TargetDir
+    if (-not (Test-Path -LiteralPath $TargetDir)) {
+        Write-Host "[!] Project root not found: $TargetDir" -ForegroundColor Red
+        exit 1
+    }
+    $ProjectRoot = Resolve-Path -LiteralPath $TargetDir
 } elseif ((Split-Path -Leaf $ScriptDir) -in @(".promptkit", "promptkit")) {
     $ProjectRoot = Resolve-Path (Join-Path $ScriptDir "..")
 } else {
@@ -1177,6 +1181,12 @@ try {
     # Commit targets
     foreach ($item in $StagedTargetUpdates) {
         $tPath = $item.TargetPath
+        # Containment re-verification immediately before any disk mutation: the
+        # earlier check can be raced (TOCTOU), and a swapped destination symlink
+        # or parent directory would let the write escape the project root.
+        if (-not (Test-PathContained $ProjectRoot $tPath)) {
+            throw "Error: refusing to write outside the project root: $($item.RelTarget)"
+        }
         $pDir = Split-Path -Parent $tPath
         if ($pDir -ne "" -and -not (Test-Path -LiteralPath $pDir)) {
             [System.IO.Directory]::CreateDirectory($pDir) | Out-Null
@@ -1192,15 +1202,19 @@ try {
         }
     }
 } catch {
-    # Rollback!
+    # Rollback! Containment guard: a path swapped to a symlink after staging
+    # must not be deleted through, and the restore must not write through, a
+    # destination that escapes the project root.
     for ($i = $createdFiles.Count - 1; $i -ge 0; $i--) {
         $f = $createdFiles[$i]
-        if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue }
+        if ((Test-Path -LiteralPath $f) -and (Test-PathContained $ProjectRoot $f)) {
+            Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue
+        }
     }
     for ($i = 0; $i -lt $backedUpFiles.Count; $i++) {
         $dest = $backedUpFiles[$i]
         $bkp = $backupSources[$i]
-        if (Test-Path -LiteralPath $bkp) {
+        if ((Test-Path -LiteralPath $bkp) -and (Test-PathContained $ProjectRoot $dest)) {
             Copy-Item -LiteralPath $bkp -Destination $dest -Force -ErrorAction SilentlyContinue
         }
     }
@@ -1230,10 +1244,10 @@ if ($assertRc -ne 0) {
 Write-Host "`n✨ PromptKit OS successfully configured for $ProjectRoot! ($Profile profile)" -ForegroundColor Cyan
 if ($Profile -eq "lite") {
     Write-Host "   Lite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok" -ForegroundColor Green
-    Write-Host "   Upgrade anytime: .promptkit/init.ps1 --balanced for the full Balanced profile" -ForegroundColor DarkGray
+    Write-Host "   Upgrade anytime: $KitDirRel/init.ps1 --balanced for the full Balanced profile" -ForegroundColor DarkGray
 } elseif ($Profile -eq "balanced") {
     Write-Host "   Balanced: 26 workflows, Level 0-3 adaptive ceremony — full power" -ForegroundColor White
-    Write-Host "   For onboarding: .promptkit/init.ps1 --lite for minimal setup" -ForegroundColor DarkGray
+    Write-Host "   For onboarding: $KitDirRel/init.ps1 --lite for minimal setup" -ForegroundColor DarkGray
 } else {
     Write-Host "   Turbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost" -ForegroundColor Yellow
     Write-Host "   Human approval still required for Level 3 (releases/tags/deploys)" -ForegroundColor DarkGray
