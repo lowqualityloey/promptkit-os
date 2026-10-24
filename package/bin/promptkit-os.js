@@ -164,7 +164,7 @@ function runInstaller(kitDir, args) {
         : res.error.message;
       die(`failed to launch init.ps1: ${hint}`);
     }
-    if (res.status !== 0) die(`init.ps1 failed (exit ${res.status})`);
+    if (res.status !== 0) die(`init.ps1 failed (exit ${res.status ?? res.signal})`);
   } else {
     const sh = path.join(kitDir, "init.sh");
     if (!fs.existsSync(sh)) die("init.sh missing from release tarball");
@@ -176,7 +176,7 @@ function runInstaller(kitDir, args) {
         : res.error.message;
       die(`failed to launch init.sh: ${hint}`);
     }
-    if (res.status !== 0) die(`init.sh failed (exit ${res.status})`);
+    if (res.status !== 0) die(`init.sh failed (exit ${res.status ?? res.signal})`);
   }
 }
 

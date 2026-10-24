@@ -401,7 +401,9 @@ foreach ($a in $AllArgs) {
         }
         { $_ -like "--target=*" } {
             $tp = $_.Substring(9)
-            if ($tp.StartsWith("/") -or $tp.StartsWith("\") -or $tp -match '^[A-Za-z]:' -or $tp -match '\.\.' -or [string]::IsNullOrWhiteSpace($tp)) {
+            # '..' is matched as a path segment (mirroring init.sh's *../* and *..\* patterns),
+            # not as a substring: a legitimate filename like docs/v1..v2.md must stay acceptable.
+            if ($tp.StartsWith("/") -or $tp.StartsWith("\") -or $tp -match '^[A-Za-z]:' -or $tp -match '\.\.[/\\]' -or [string]::IsNullOrWhiteSpace($tp)) {
                 Write-Host "[!] --target must be a project-relative path without '..': $tp" -ForegroundColor Red
                 exit 1
             }
@@ -487,7 +489,7 @@ if ($Profile -eq "turbo" -and -not $Experimental) {
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 if ($TargetDir -ne "") {
-    if (-not (Test-Path -LiteralPath $TargetDir)) {
+    if (-not (Test-Path -LiteralPath $TargetDir -PathType Container)) {
         Write-Host "[!] Project root not found: $TargetDir" -ForegroundColor Red
         exit 1
     }
