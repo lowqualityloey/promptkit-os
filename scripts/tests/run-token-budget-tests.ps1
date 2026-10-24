@@ -135,6 +135,22 @@ if ($rc -eq 0 -and $out -match "UTF-8 Bytes:\s+$hostBytes" -and $out -match "~$h
     Write-Output $out
 }
 
+# 7. Missing/empty workflows payload: the savings computation must exit 1 with a
+#    diagnostic BEFORE the Get-ChildItem throw and the -Infinity division.
+$missingKit = Join-Path $TmpDir "missing-kit"
+New-Item -ItemType Directory -Path (Join-Path $missingKit "scripts") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $missingKit "templates") -Force | Out-Null
+Copy-Item (Join-Path $RepoRoot "scripts/measure-tokens.ps1") (Join-Path $missingKit "scripts/") -Force
+Copy-Item (Join-Path $RepoRoot "templates/agent-directive-template.md") (Join-Path $missingKit "templates/") -Force
+$out = & pwsh -NoProfile -File (Join-Path $missingKit "scripts/measure-tokens.ps1") 2>&1
+$rc = $LASTEXITCODE
+if ($rc -eq 1 -and ($out -join "`n") -match "cannot compute token savings") {
+    Ok "empty workflow payload exits 1 with a diagnostic (missing workflows/)"
+} else {
+    NotOk "missing workflows/ should exit 1 with 'cannot compute token savings' (rc=$rc)"
+    Write-Output $out
+}
+
 Cleanup
 Write-Output ""
 Write-Output "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

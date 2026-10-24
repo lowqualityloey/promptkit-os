@@ -42,3 +42,17 @@ semantic-review/
 # Better-PromptKit isolated worktrees
 .worktrees/
 
+# Local agent-tool artifacts (machine-specific, never published).
+# Note: AGENTS.md stays in .git/info/exclude only — personal workspace config;
+# a committed rule would also block contributors from tracking their own AGENTS.md.
+tmp/
+.kilo/
+.senpi/
+.zcode/
+.freebuff/
+.codegraph
+.mcp.json
+.debug-journal.md
+# Stray PowerShell provider-path artifact (Microsoft.PowerShell.Core/FileSystem::)
+Microsoft.PowerShell.Core/
+

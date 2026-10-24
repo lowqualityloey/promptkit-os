@@ -110,6 +110,29 @@ try {
     Remove-Item -Path (Join-Path $FixtureRoot "templates/friction-evaluation-template.md") -Force
     Invoke-Case "Missing friction-evaluation template fails closed" "fail" "MISSING"
 
+    # Case 9: a warning-only tree (orphaned pk: trigger) exits 0 by default and 1 under -Strict.
+    Copy-Item -Path (Join-Path $RepoRoot "templates/friction-evaluation-template.md") -Destination (Join-Path $FixtureRoot "templates/friction-evaluation-template.md") -Force
+    Set-Content -Path $fixtureFile -Value "# Link Fixture`n`n- Orphaned trigger: ``pk:nonexistent-workflow``"
+    $warnOutput = & pwsh -NoProfile -File $Validator $FixtureRoot 2>&1 | Out-String
+    $warnStatus = $LASTEXITCODE
+    $strictOutput = & pwsh -NoProfile -File $Validator $FixtureRoot -Strict 2>&1 | Out-String
+    $strictStatus = $LASTEXITCODE
+    if (($warnStatus -eq 0) -and ($warnOutput -match "WARNING")) {
+        Write-Host "  ✅ PASS: Warning-only tree exits 0 without -Strict" -ForegroundColor Green
+        $script:PassCount++
+    } else {
+        Write-Host "  ❌ FAIL: Warning-only tree should exit 0 with a WARNING without -Strict (exit=$warnStatus)" -ForegroundColor Red
+        $script:FailCount++
+    }
+    if (($strictStatus -eq 1) -and ($strictOutput -match "WARNING")) {
+        Write-Host "  ✅ PASS: Warning-only tree exits 1 with -Strict" -ForegroundColor Green
+        $script:PassCount++
+    } else {
+        Write-Host "  ❌ FAIL: Warning-only tree should exit 1 with a WARNING under -Strict (exit=$strictStatus)" -ForegroundColor Red
+        $script:FailCount++
+    }
+    Remove-Item -Path $fixtureFile -Force
+
     Write-Host "`n==========================================================="
     Write-Host "Reference-Link Harness Summary"
     Write-Host "Passed: $script:PassCount | Failed: $script:FailCount"

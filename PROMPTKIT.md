@@ -17,6 +17,10 @@ profile: balanced
 status-cards: on
 > `status-cards: on` (default) emits the 3-line telemetry card on completion; `off` suppresses the decorative card only — `> [!IMPORTANT]` / `> [!WARNING]` halts still fire. A missing line means `on`.
 
+size: medium
+intake-status: legacy-partial
+> `size:` and `intake-status:` follow `templates/project-profile-template.md`. `legacy-partial` marks this brownfield profile: the fields predate a `pk:onboard` intake. `intake-record:` is validly omitted — no completed intake record exists for this repository.
+
 ---
 
 ## 1. Project Overview & Domain

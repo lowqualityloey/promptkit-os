@@ -6,7 +6,7 @@ set -u
 set -o pipefail
 
 usage() {
-  echo "Usage: check-release-validation-output.sh --exit-code <code|" >&2
+  echo "Usage: check-release-validation-output.sh --exit-code <code> [--input-file <file>]" >&2
   exit 2
 }
 

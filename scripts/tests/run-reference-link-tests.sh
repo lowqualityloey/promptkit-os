@@ -135,6 +135,27 @@ cp "$REPO_ROOT/templates/execution-scope-change-template.md" "$FIXTURE_ROOT/temp
 rm -f "$FIXTURE_ROOT/templates/friction-evaluation-template.md"
 run_case "Missing friction-evaluation template fails closed" "fail" "MISSING"
 
+# Case 9: a warning-only tree (orphaned pk: trigger) exits 0 by default and 1 under --strict.
+cp "$REPO_ROOT/templates/friction-evaluation-template.md" "$FIXTURE_ROOT/templates/friction-evaluation-template.md"
+cat > "$FIXTURE_ROOT/docs/link-fixture.md" <<'MD'
+# Link Fixture
+
+- Orphaned trigger: `pk:nonexistent-workflow`
+MD
+warn_output="$(bash "$VALIDATOR" "$FIXTURE_ROOT" 2>&1)"; warn_status=$?
+strict_output="$(bash "$VALIDATOR" "$FIXTURE_ROOT" --strict 2>&1)"; strict_status=$?
+if [ "$warn_status" -eq 0 ] && printf '%s' "$warn_output" | grep -q "WARNING"; then
+    pass "Warning-only tree exits 0 without --strict"
+else
+    fail "Warning-only tree should exit 0 with a WARNING without --strict (exit=$warn_status)"
+fi
+if [ "$strict_status" -eq 1 ] && printf '%s' "$strict_output" | grep -q "WARNING"; then
+    pass "Warning-only tree exits 1 with --strict"
+else
+    fail "Warning-only tree should exit 1 with a WARNING under --strict (exit=$strict_status)"
+fi
+rm -f "$FIXTURE_ROOT/docs/link-fixture.md"
+
 echo ""
 echo "==========================================================="
 echo "Reference-Link Harness Summary"

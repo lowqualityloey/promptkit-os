@@ -343,7 +343,7 @@ If the request is:
 
 **Action**: Answer directly, concisely, and immediately.
 - For an **informational L0** request (no code changes): Do **not** trigger a workflow ceremony, do **not** write files to `docs/`, do **not** require an atomic commit or Task Record, do **not** output terminal execution evidence, and do **not** add a banner.
-- For a **small L0 edit**: Apply proportional local verification only. Do **not** trigger a workflow ceremony or add unnecessary process overhead. Preserve tokens and developer velocity.
+- For a **small L0 edit**: Apply proportional local verification only. Do **not** trigger a workflow ceremony or add unnecessary process overhead. Preserve tokens and developer velocity. Still emit the Turn 1 Level 0 banner (`[PromptKit OS: Level 0 (Direct) — …]`); only informational L0 requests skip the banner.
 
 ### Tier 2: Substantive Protocol Auto-Route
 If the request involves non-trivial engineering changes (new features, crashes, schema changes, auth, API modifications, or releases):
@@ -368,7 +368,7 @@ If the request involves non-trivial engineering changes (new features, crashes, 
    - **Pull requests, PR descriptions, or opening a PR**: Auto-route to `pk:pr`. Compile verification evidence and format PR description.
    - **Context bloat, chat lag, session handover, or pausing**: Auto-route to `pk:checkpoint`. Compress working state, sync `docs/STATE.md`, and generate handover prompt.
    - **Production deployment, env vars, rollback prep**: Auto-route to `pk:ship`. Run runtime env validation and release checklist.
-   - **Unattended execution, hands-off automation, end-to-end task runs**: Auto-route to `workflows/auto.md` (`pk:auto`). Announce the active leash on Turn 1 and halt at `review ready` (or declared boundary) with a 3-strike test circuit breaker.
+   - **Unattended execution, hands-off automation, end-to-end task runs**: Auto-route to `pk:auto` (`workflows/auto.md`). Announce the active leash on Turn 1 and halt at `review ready` (or declared boundary) with a 3-strike test circuit breaker.
 
 ### Tier 3: Subagent Delegation Guardrails
 When executing workflows in agentic multi-agent environments (Antigravity, Claude Code, Cursor background agents), follow `<kit>/protocols/subagent-delegation.md`:
