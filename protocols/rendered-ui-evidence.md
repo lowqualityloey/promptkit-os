@@ -7,6 +7,10 @@ protocol for UI implementation, responsive changes, visual audits, or UI fixes.
 Use it with the applicable design workflow and `protocols/code-quality-gate.md`.
 This is an evidence contract, not a required browser vendor or test framework.
 
+> **Advisory agent instruction.** This protocol directs agent behavior; there is
+> no runtime executor behind it — CI asserts invariant text presence only. See
+> `protocols/context-economy.md` §11 (Enforcement Boundary) for the full boundary.
+
 ## Proportionate browser coverage
 
 Drive the running application through its real browser surface. Match coverage

@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [26 Inlined Workflows (118,124 tok) + Templates + Protocols] │
+│ Every Turn: [26 Inlined Workflows (118,157 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -40,8 +40,8 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **32,280 tok** |
-| Full workflow set | 26 | **118,124 tok** |
+| Core-six Lite subset | 6 | **32,313 tok** |
+| Full workflow set | 26 | **118,157 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -88,7 +88,7 @@ Gate coverage: the static dual-profile budget **and** the per-task baseline gate
 
 PromptKit OS benchmarks both the **static footprint** (1,456 tok Lite, 2,341 tok Balanced) and the **dynamic per-task runtime context**.
 
-By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without a mandatory preload of `workflows/route.md` (6,962 tokens at the archived review's source revision `258cf8c`; 9,474 tokens at the current banner anchor). Change A's modeled saving was 6,915 tokens – the 6,962-token route figure less the 47-token modeled directive growth recorded by the landed Change A record (1,882 → 1,929). That saving belongs to the historical baseline; the current end-to-end payloads are measured below and do not reuse it.
+By embedding decision-grade Level 0–3 classification directly into the static directive and adopting lazy convention loading (`$KIT_DIR_REL/workflows/<trigger>.md`), agents classify tasks without a mandatory preload of `workflows/route.md` (6,962 tokens at the archived review's source revision `258cf8c`; 9,506 tokens at the current banner anchor). Change A's modeled saving was 6,915 tokens – the 6,962-token route figure less the 47-token modeled directive growth recorded by the landed Change A record (1,882 → 1,929). That saving belongs to the historical baseline; the current end-to-end payloads are measured below and do not reuse it.
 
 **Methodology for per-task table:**
 - Historical comparison anchors: `fc98f2f` (after 2+1 profiles) and `c34be80` (before profiles, Balanced only). These SHAs identify historical inputs; they are not the source of the refreshed current values, and neither is the source of the per-task baseline constants below – those trace to the archived 2026-09-12 review at `258cf8c`, which predates both (see **Historical baseline provenance** below).
