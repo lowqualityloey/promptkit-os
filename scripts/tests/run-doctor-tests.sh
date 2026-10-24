@@ -394,7 +394,7 @@ EOF
 EOF
     run_doctor "$root"
     want_status 1
-    want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Task ID)'
+    want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Task ID; Execution State)'
 
     # (b) Next Action mismatch -> DIVERGED
     cat > "$root/docs/STATE.md" <<EOF
@@ -438,6 +438,30 @@ EOF
     want_contains $'docs-drift\tSKIP(no comparable field)'
     want_not_contains $'docs-drift\tOK'
     want_not_contains 'DIVERGED'
+
+    # (d) two fields diverge -> one verdict naming every diverging field (#670)
+    cat > "$root/docs/STATE.md" <<EOF
+# Project State
+- **Engine Version**: v1.2.3 @ $sha
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: \`TASK-2026-01-01-n3\`
+- **Task Record**: \`docs/tasks/TASK-2026-01-01-n3.md\`
+- **Execution State**: \`in_progress\`
+- **Next Action**: \`Finalize the fixture\`
+- **Owner / Current Actor**: \`Implementor\`
+EOF
+    cat > "$root/docs/tasks/TASK-2026-01-01-n3.md" <<'EOF'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Next Action**: `Ship the different action`
+- **Owner / Actor**: `Reviewer`
+EOF
+    run_doctor "$root"
+    want_status 1
+    want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Next Action; Owner / Current Actor)'
+    want_not_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Task ID)'
 }
 
 # N4: a deleted universal AGENTS.md is MISSING (re-run the installer), exit 1.

@@ -492,7 +492,7 @@ check_docs_drift() {
         return 0
     fi
     rec_text="$(cat -- "$rec_path")"
-    diff_field=""
+    diff_fields=()
     compared=0
     for pair in "${SHARED_PROJECTION_FIELDS[@]}"; do
         p_label="${pair%%|*}"
@@ -503,13 +503,19 @@ check_docs_drift() {
             continue
         fi
         if is_placeholder "$p_val" || [[ "$p_val" != "$r_val" ]]; then
-            diff_field="$p_label"
-            break
+            diff_fields+=("$p_label")
+        else
+            compared=$((compared + 1))
         fi
-        compared=$((compared + 1))
     done
-    if [[ -n "$diff_field" ]]; then
-        emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $diff_field)" "projection disagrees with the canonical Task Record on $diff_field" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
+    if [[ "${#diff_fields[@]}" -gt 0 ]]; then
+        # One run names every diverging field (#670); a single divergence keeps the
+        # exact historical single-field verdict, joined fields use "; ".
+        joined=""
+        for f in "${diff_fields[@]}"; do
+            if [[ -z "$joined" ]]; then joined="$f"; else joined="$joined; $f"; fi
+        done
+        emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $joined)" "projection disagrees with the canonical Task Record on $joined" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
     elif [[ "$compared" -gt 0 ]]; then
         emit 'docs-drift' 'OK' 'projection agrees with the canonical Task Record' '-'
     else
