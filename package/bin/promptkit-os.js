@@ -156,7 +156,7 @@ async function extract(tarball, dest) {
     const hint = res.error.code === "ENOENT" ? "tar not found on PATH" : res.error.message;
     die(`failed to extract release tarball: ${hint}`);
   }
-  if (res.status !== 0) die(`failed to extract release tarball (tar exit ${res.status})`);
+  if (res.status !== 0) die(`failed to extract release tarball (tar exit ${res.status ?? res.signal})`);
 }
 
 function runInstaller(kitDir, args) {
