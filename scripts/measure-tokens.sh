@@ -125,6 +125,10 @@ SUBSET_CHARS=$(cat "$KIT_ROOT"/workflows/route.md "$KIT_ROOT"/workflows/debug.md
 MONOLITHIC_TOKENS=$(( (SUBSET_CHARS + 2) / 4 ))
 FULLSET_COUNT=$(find "$KIT_ROOT/workflows" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')
 FULLSET_TOKENS=$(( ($(cat "$KIT_ROOT"/workflows/*.md 2>/dev/null | tr -d '\r' | wc -c) + 2) / 4 ))
+if (( MONOLITHIC_TOKENS <= 0 )); then
+    echo "Error: cannot compute token savings: workflow payload measured 0 tokens (are the workflow files present under $KIT_ROOT/workflows?)." >&2
+    exit 1
+fi
 SAVINGS_PERCENT=$(( ((MONOLITHIC_TOKENS - ESTIMATED_TOKENS) * 100 + MONOLITHIC_TOKENS / 2) / MONOLITHIC_TOKENS ))
 
 echo -e "\033[0;90mTarget File: $SOURCE_DESC\033[0m"
