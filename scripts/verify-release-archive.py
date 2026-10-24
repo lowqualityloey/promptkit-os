@@ -62,7 +62,12 @@ def main() -> int:
         with downloaded:
             downloaded_entries = archive_entries(downloaded, strip_root=True)
         expected_bytes = subprocess.run(
-            ["git", "-C", args.repository, "archive", "--format=tar", args.commit],
+            # The ground truth is the raw committed bytes (GitHub tarballs are LF).
+            # Two independent config knobs perturb `git archive` on Git for Windows:
+            # core.autocrlf=true AND core.eol=crlf each force CRLF for `* text=auto`
+            # files (isolated via a local config matrix), so both are pinned here —
+            # command-line -c wins over system/global/local config on any host.
+            ["git", "-C", args.repository, "-c", "core.autocrlf=false", "-c", "core.eol=lf", "archive", "--format=tar", args.commit],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
