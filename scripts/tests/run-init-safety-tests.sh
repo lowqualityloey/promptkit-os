@@ -386,6 +386,14 @@ HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --balanced --ta
 HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --balanced --target=docs/v1..v2.md "$DOTDOT_ROOT" >/dev/null
 [[ "$(grep -c 'PROMPTKIT_START' "$DOTDOT_ROOT/docs/v1..v2.md")" -eq 1 ]]
 
+# Test: trailing '..' segment is rejected (../evil only pinned the leading segment)
+TRAILING_ROOT="$TEST_ROOT/trailingdotdot"
+mkdir -p "$TRAILING_ROOT"
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --target=docs/.. "$TRAILING_ROOT" >/dev/null 2>&1; then
+    echo "Trailing --target=docs/.. was accepted; expected rejection." >&2
+    exit 1
+fi
+
 # Test: Inline marker example in preamble survives without deleting intervening user prose
 INLINE_ROOT="$TEST_ROOT/inlineexample"
 mkdir -p "$INLINE_ROOT"

@@ -410,6 +410,15 @@ try {
     if ($dotdotBlocks -ne 1) {
         throw "Failed Test 15c: docs/v1..v2.md should contain exactly one directive block after re-runs."
     }
+    # Test 15d: trailing '..' segment and -Target parameter binding are both rejected.
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $TargetRoot --target=docs/.. 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        throw "Failed Test 15d: trailing --target=docs/.. was accepted; expected rejection."
+    }
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $TargetRoot -Target "..\outside.md" 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        throw "Failed Test 15d: -Target parameter binding bypassed the '..' check; expected rejection."
+    }
     # Test 16: Inline marker example in preamble survives update without deletion of intervening user prose
     $InlineRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "inlineexample") -Force).FullName
     $inlineAgent = Join-Path $InlineRoot "AGENTS.md"
