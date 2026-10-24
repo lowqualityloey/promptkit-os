@@ -137,6 +137,19 @@ strip_backticks() {
     fi
 }
 
+# Prose-class normalization for the shared projection definition (#671): strip
+# every leading/trailing backtick, collapse internal whitespace runs to single
+# spaces, then trim — byte-exact equality on the normalized form.
+normalize_prose_value() {
+    local value="$1"
+    while [[ "$value" == \`* ]]; do value="${value#\`}"; done
+    while [[ "$value" == *\` ]]; do value="${value%\`}"; done
+    value="$(printf '%s' "$value" | tr -s ' \t\n' ' ')"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    printf '%s' "$value"
+}
+
 field_exists() {
     local file="$1"
     local label="$2"
@@ -1269,12 +1282,32 @@ if [ -f "$STATE_FILE" ]; then
         [ -n "${TASK_FILE_BY_ID[$state_id]+set}" ] || diagnostic STATE_PROJECTION_MISMATCH "$state_id" "$state_path" "STATE projection references unknown Task ID: $state_id" "Synchronize docs/STATE.md from the canonical Task Record"
         if [ -n "${TASK_FILE_BY_ID[$state_id]+set}" ]; then
             task_file="${TASK_FILE_BY_ID[$state_id]}"
-            compare_pairs=("Execution State|Execution State" "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status" "Active Task Pointer|Active Task Pointer" "Owner / Current Actor|Current Actor")
+            # Shared 3A/Task-Record projection definition (#669): identical pair list
+            # and classes in validate-execution-control.ps1, check-doctor.sh, and
+            # check-doctor.ps1 — enforced by scripts/tests/run-projection-parity-tests.sh.
+            # Classes (#671): machine = byte-exact; prose = normalized (backticks +
+            # internal whitespace collapsed) so 3A prose may reflow without diverging.
+            compare_pairs=("Task ID|Task ID|machine" "Execution State|Execution State|machine" "Active Task Pointer|Active Task Pointer|machine" "Next Action|Next Action|prose" "Owner / Current Actor|Current Actor|machine" "Ceremony Level|Ceremony Level|machine" "Specification|Specification|prose" "Execution Scope|Execution Scope|prose" "Start Time|Start Time|machine" "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status|machine")
             for pair in "${compare_pairs[@]}"; do
-                IFS='|' read -r state_label task_label <<< "$pair"
+                IFS='|' read -r state_label task_label class <<< "$pair"
                 state_value="$(field_value "$STATE_FILE" "$state_label")"
                 task_value="$(field_value "$task_file" "$task_label")"
-                [ "$state_value" = "$task_value" ] || diagnostic STATE_PROJECTION_MISMATCH "$state_id" "$state_path" "STATE $state_label '$state_value' disagrees with Task Record '$task_value'" "Reconcile the projection without overriding the Task Record"
+                # Shared semantics with check-doctor: a placeholder record value leaves
+                # nothing to compare; a placeholder 3A value against a concrete record
+                # is drift (the template-faithful 3A carries every field).
+                if is_placeholder "$task_value"; then continue; fi
+                if is_placeholder "$state_value"; then
+                    diagnostic STATE_PROJECTION_MISMATCH "$state_id" "$state_path" "STATE $state_label '$state_value' disagrees with Task Record '$task_value'" "Reconcile the projection without overriding the Task Record"
+                    continue
+                fi
+                if [ "$class" = "prose" ]; then
+                    state_cmp="$(normalize_prose_value "$state_value")"
+                    task_cmp="$(normalize_prose_value "$task_value")"
+                else
+                    state_cmp="$state_value"
+                    task_cmp="$task_value"
+                fi
+                [ "$state_cmp" = "$task_cmp" ] || diagnostic STATE_PROJECTION_MISMATCH "$state_id" "$state_path" "STATE $state_label '$state_value' disagrees with Task Record '$task_value'" "Reconcile the projection without overriding the Task Record"
             done
             state_revision="$(revision_token "$(field_value "$STATE_FILE" "Current Revision")")"
             task_revision="${TASK_REVISION_BY_ID[$state_id]-}"

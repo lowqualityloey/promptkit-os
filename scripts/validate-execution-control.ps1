@@ -112,6 +112,17 @@ function Test-Placeholder {
     }
 }
 
+function ConvertTo-NormalizedProseValue {
+    # Prose-class normalization for the shared projection definition (#671):
+    # strip every leading/trailing backtick, collapse internal whitespace runs
+    # to single spaces, then trim.
+    param([AllowEmptyString()][string]$Value)
+    $backtick = [char]96
+    $v = $Value.Trim($backtick)
+    $v = [regex]::Replace($v, '\s+', ' ')
+    return $v.Trim()
+}
+
 function Test-QuickPlaceholder {
     param([AllowEmptyString()][string]$Value)
     if (Test-Placeholder $Value) { return $true }
@@ -1164,9 +1175,40 @@ if (Test-Path -LiteralPath $stateFile -PathType Leaf) {
         if (-not $TaskById.ContainsKey($stateId)) { Add-Diagnostic 'STATE_PROJECTION_MISMATCH' $stateId $statePath "STATE projection references unknown Task ID: $stateId" 'Synchronize docs/STATE.md from the canonical Task Record' }
         if ($TaskById.ContainsKey($stateId)) {
             $taskFile = $TaskById[$stateId]
-            foreach ($pair in @(@('Execution State', 'Execution State'), @('Mapped `pk:tasks` Status', 'Mapped `pk:tasks` Status'), @('Active Task Pointer', 'Active Task Pointer'), @('Owner / Current Actor', 'Current Actor'))) {
+            # Shared 3A/Task-Record projection definition (#669): identical pair list
+            # and classes in validate-execution-control.sh, check-doctor.sh, and
+            # check-doctor.ps1 — enforced by scripts/tests/run-projection-parity-tests.ps1.
+            # Classes (#671): machine = byte-exact; prose = normalized (backticks +
+            # internal whitespace collapsed) so 3A prose may reflow without diverging.
+            foreach ($pair in @(
+                @('Task ID', 'Task ID', 'machine'),
+                @('Execution State', 'Execution State', 'machine'),
+                @('Active Task Pointer', 'Active Task Pointer', 'machine'),
+                @('Next Action', 'Next Action', 'prose'),
+                @('Owner / Current Actor', 'Current Actor', 'machine'),
+                @('Ceremony Level', 'Ceremony Level', 'machine'),
+                @('Specification', 'Specification', 'prose'),
+                @('Execution Scope', 'Execution Scope', 'prose'),
+                @('Start Time', 'Start Time', 'machine'),
+                @('Mapped `pk:tasks` Status', 'Mapped `pk:tasks` Status', 'machine')
+            )) {
                 $stateValue = Get-FieldValue $stateFile $pair[0]; $taskValue = Get-FieldValue $taskFile $pair[1]
-                if ($stateValue -ne $taskValue) { Add-Diagnostic 'STATE_PROJECTION_MISMATCH' $stateId $statePath "STATE $($pair[0]) '$stateValue' disagrees with Task Record '$taskValue'" 'Reconcile the projection without overriding the Task Record' }
+                # Shared semantics with check-doctor: a placeholder record value leaves
+                # nothing to compare; a placeholder 3A value against a concrete record
+                # is drift (the template-faithful 3A carries every field).
+                if (Test-Placeholder $taskValue) { continue }
+                if (Test-Placeholder $stateValue) {
+                    Add-Diagnostic 'STATE_PROJECTION_MISMATCH' $stateId $statePath "STATE $($pair[0]) '$stateValue' disagrees with Task Record '$taskValue'" 'Reconcile the projection without overriding the Task Record'
+                    continue
+                }
+                if ($pair[2] -eq 'prose') {
+                    $stateCmp = ConvertTo-NormalizedProseValue $stateValue
+                    $taskCmp = ConvertTo-NormalizedProseValue $taskValue
+                } else {
+                    $stateCmp = $stateValue
+                    $taskCmp = $taskValue
+                }
+                if ($stateCmp -ne $taskCmp) { Add-Diagnostic 'STATE_PROJECTION_MISMATCH' $stateId $statePath "STATE $($pair[0]) '$stateValue' disagrees with Task Record '$taskValue'" 'Reconcile the projection without overriding the Task Record' }
             }
             $stateRevision = Get-RevisionToken (Get-FieldValue $stateFile 'Current Revision')
             $taskRevision = $TaskRevisionById[$stateId]
