@@ -94,7 +94,9 @@ function Want-Status { param([int]$Expected) Assert-Scenario ($script:STATUS -eq
 function Want-Contains { param([string]$Needle) Assert-Scenario ($script:OUT.Contains($Needle)) "stdout missing: $Needle" }
 function Want-NotContains { param([string]$Needle) Assert-Scenario (-not $script:OUT.Contains($Needle)) "stdout unexpectedly contains: $Needle" }
 function Want-AllOk {
-    $bad = @($script:OUT -split "`n" | Where-Object { @($_.Split("`t")).Count -ge 2 -and @($_.Split("`t"))[1] -ne 'OK' })
+    # SKIP rows are non-failing by the doctor's own exit contract (exit 0 for
+    # OK/IGNORED/SKIP), so only non-OK, non-SKIP rows offend.
+    $bad = @($script:OUT -split "`n" | Where-Object { $f = @($_.Split("`t")); $f.Count -ge 2 -and $f[1] -ne 'OK' -and -not $f[1].StartsWith('SKIP') })
     Assert-Scenario ($bad.Count -eq 0) "expected every row OK; offending rows: $($bad -join '; ')"
 }
 
@@ -480,7 +482,7 @@ try {
     [IO.File]::WriteAllText((Join-Path $rootN3 'docs/tasks/TASK-2026-01-01-n3.md'), $recN3, $utf8)
     Invoke-Doctor -Root $rootN3
     Want-Status 1
-    Want-Contains "docs-drift`tDIVERGED(STATE 3A vs Task Record: Task ID)"
+    Want-Contains "docs-drift`tDIVERGED(STATE 3A vs Task Record: Task ID; Execution State)"
 
     $stateN3b = @'
 # Project State
@@ -526,6 +528,93 @@ try {
     Want-Contains "docs-drift`tSKIP(no comparable field)"
     Want-NotContains "docs-drift`tOK"
     Want-NotContains 'DIVERGED'
+
+    # (d) two fields diverge -> one verdict naming every diverging field (#670)
+    $stateN3d = @'
+# Project State
+- **Engine Version**: v1.2.3 @ __SHA__
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Task Record**: `docs/tasks/TASK-2026-01-01-n3.md`
+- **Execution State**: `in_progress`
+- **Next Action**: `Finalize the fixture`
+- **Owner / Current Actor**: `Implementor`
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/STATE.md'), $stateN3d.Replace('__SHA__', $shaN3), $utf8)
+    $recN3d = @'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Next Action**: `Ship the different action`
+- **Current Actor**: `Reviewer`
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/tasks/TASK-2026-01-01-n3.md'), $recN3d, $utf8)
+    Invoke-Doctor -Root $rootN3
+    Want-Status 1
+    Want-Contains "docs-drift`tDIVERGED(STATE 3A vs Task Record: Next Action; Owner / Current Actor)"
+    Want-NotContains "docs-drift`tDIVERGED(STATE 3A vs Task Record: Task ID)"
+
+    # (e) prose normalization: reflowed whitespace and extra backticks agree (#671)
+    $stateN3e = @'
+# Project State
+- **Engine Version**: v1.2.3 @ __SHA__
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Task Record**: `docs/tasks/TASK-2026-01-01-n3.md`
+- **Execution State**: `in_progress`
+- **Next Action**: ``  Finalize   the   fixture  ``
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/STATE.md'), $stateN3e.Replace('__SHA__', $shaN3), $utf8)
+    $recN3e = @'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Next Action**: `Finalize the fixture`
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/tasks/TASK-2026-01-01-n3.md'), $recN3e, $utf8)
+    Invoke-Doctor -Root $rootN3
+    Want-Status 0
+    Want-Contains "docs-drift`tOK"
+    Want-NotContains 'DIVERGED'
+
+    # (f) ceremony vocabulary: record uses the legacy "Controlled Work" prose, 3A the
+    # canonical enum — same level, so the projection agrees (#668)
+    $stateN3f = @'
+# Project State
+- **Engine Version**: v1.2.3 @ __SHA__
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Task Record**: `docs/tasks/TASK-2026-01-01-n3.md`
+- **Execution State**: `in_progress`
+- **Ceremony Level**: `Level 2 (Controlled)`
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/STATE.md'), $stateN3f.Replace('__SHA__', $shaN3), $utf8)
+    $recN3f = @'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Ceremony Level**: `Level 2 (Controlled Work)`
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/tasks/TASK-2026-01-01-n3.md'), $recN3f, $utf8)
+    Invoke-Doctor -Root $rootN3
+    Want-Status 0
+    Want-Contains "docs-drift`tOK"
+    Want-NotContains 'DIVERGED'
+
+    # (g) ceremony level 1 vs 2 still diverges after normalization
+    $recN3g = @'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Ceremony Level**: `Level 1 (Standard)`
+'@
+    [IO.File]::WriteAllText((Join-Path $rootN3 'docs/tasks/TASK-2026-01-01-n3.md'), $recN3g, $utf8)
+    Invoke-Doctor -Root $rootN3
+    Want-Status 1
+    Want-Contains "docs-drift`tDIVERGED(STATE 3A vs Task Record: Ceremony Level)"
     Report-Scenario 'N3 docs-drift compares shared fields, DIVERGED/SKIP, never bare OK'
 
     # N4: a deleted universal AGENTS.md is MISSING (re-run the installer), exit 1.
@@ -892,6 +981,26 @@ try {
     } else {
         Skip-Scenario 'P25 unreadable record file (cannot deny read on this platform/user)'
     }
+
+    # N8: a .promptkit gitlink without a .gitmodules mapping is MISSING, exit 1 (#667);
+    # with the mapping it is OK, exit 0.
+    Begin-Scenario
+    $rootN8 = New-HealthyKit 'n8' 'balanced'
+    git -C $rootN8 init -q 2>$null
+    git -C $rootN8 update-index --add --cacheinfo '160000' '0cfa09390e4f6f0ffe090a6ba193db912b9a3c6d' '.promptkit' 2>$null
+    Invoke-Doctor -Root $rootN8
+    Want-Status 1
+    Want-Contains "submodule`tMISSING(.gitmodules)"
+    [IO.File]::WriteAllText((Join-Path $rootN8 '.gitmodules'), "[submodule `"promptkit`"]`n    path = .promptkit`n    url = https://github.com/lowqualityloey/promptkit-os.git`n", $utf8)
+    Invoke-Doctor -Root $rootN8
+    Want-Status 0
+    Want-Contains "submodule`tOK"
+    Want-NotContains "submodule`tMISSING"
+    [IO.File]::WriteAllText((Join-Path $rootN8 '.gitmodules'), "[submodule `"promptkit`"]`n`tpath=.promptkit`n`turl = https://github.com/lowqualityloey/promptkit-os.git`n", $utf8)
+    Invoke-Doctor -Root $rootN8
+    Want-Status 0
+    Want-Contains "submodule`tOK"
+    Report-Scenario 'N8 gitlink registration -> MISSING(.gitmodules) without mapping, OK with'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }

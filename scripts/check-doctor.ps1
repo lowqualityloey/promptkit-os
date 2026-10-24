@@ -441,7 +441,80 @@ function Check-IgnoreState {
     foreach ($hrel in $installedHosts) { Test-IgnoreOne $hrel }
 }
 
+function Check-Submodule {
+    # Issue #667: a `.promptkit` installed as a git submodule is recorded in the
+    # index as a gitlink (mode 160000). Without a matching `.gitmodules` mapping
+    # a fresh `git clone` materializes an EMPTY `.promptkit/` (its scripts are
+    # absent), so a CI gate that runs kit scripts fails unreproducibly while the
+    # original checkout keeps working. Recovery is non-obvious (`git submodule
+    # add` refuses the existing path), so the doctor names the exact repair.
+    # Purely read-only: `git rev-parse` and `git ls-files` plus a file read.
+    if ($engineOutsideProject) {
+        Emit 'submodule' 'SKIP(engine outside project)' 'the engine directory is not tracked under the project root' '-'
+        return
+    }
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Emit 'submodule' 'SKIP(git unavailable)' 'git is not on PATH' 'Install git to enable submodule registration checks'
+        return
+    }
+    $toplevel = $null
+    $probe = Invoke-LocalGit -Dir $projectRoot -GitArgs @('rev-parse', '--show-toplevel')
+    if ($script:gitStatus -eq 0 -and $probe) { $toplevel = ($probe | Select-Object -First 1) }
+    if ([string]::IsNullOrWhiteSpace($toplevel)) {
+        Emit 'submodule' 'SKIP(no git repo)' 'the project root is not inside a git work tree' '-'
+        return
+    }
+    $toplevel = $toplevel.Trim()
+    # git prints Windows toplevels with forward slashes and a runner TEMP path may
+    # hold 8.3 short names, so a string StartsWith against a backslash-joined
+    # prefix is always false on Windows (every N8 became SKIP(engine outside
+    # repo)). Resolve both sides through the filesystem and derive the engine
+    # path with GetRelativePath so separator or short-name forms cannot skew it.
+    $engineFromTop = $null
+    try {
+        $engineFull = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $engineDir -ErrorAction Stop).ProviderPath)
+        $topFull = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $toplevel -ErrorAction Stop).ProviderPath)
+        $rel = [System.IO.Path]::GetRelativePath($topFull, $engineFull)
+        if ($rel -eq '.') {
+            $engineFromTop = '.'
+        } elseif ($rel -ne '' -and -not $rel.StartsWith('..')) {
+            $engineFromTop = $rel -replace '\\', '/'
+        }
+    } catch { $engineFromTop = $null }
+    if (-not $engineFromTop) {
+        Emit 'submodule' 'SKIP(engine outside repo)' 'the engine directory is outside this git work tree' '-'
+        return
+    }
+    $entry = $null
+    $probe = Invoke-LocalGit -Dir $toplevel -GitArgs @('ls-files', '-s', '--', $engineFromTop)
+    if ($script:gitStatus -eq 0 -and $probe) { $entry = ($probe | Select-Object -First 1) }
+    $mode = if ($entry) { ($entry -split '\s+')[0] } else { '' }
+    if ($mode -ne '160000') {
+        Emit 'submodule' 'SKIP(not a submodule install)' 'the engine directory is not recorded as a gitlink (mode 160000)' '-'
+        return
+    }
+    $gitmodules = Join-Path $toplevel '.gitmodules'
+    $mapped = $false
+    if (Test-Path -LiteralPath $gitmodules -PathType Leaf) {
+        # Split on the first '=' and trim both sides so every valid git syntax
+        # (path=.promptkit, tab indentation, extra spaces) maps like the .sh twin.
+        foreach ($line in (Get-Content -LiteralPath $gitmodules)) {
+            $eq = $line.IndexOf('=')
+            if ($eq -lt 0) { continue }
+            $key = $line.Substring(0, $eq).Trim()
+            $val = $line.Substring($eq + 1).Trim()
+            if ($key -eq 'path' -and $val -eq $engineFromTop) { $mapped = $true; break }
+        }
+    }
+    if ($mapped) {
+        Emit 'submodule' 'OK' "gitlink $engineFromTop is mapped in .gitmodules" '-'
+        return
+    }
+    Emit 'submodule' 'MISSING(.gitmodules)' "gitlink $engineFromTop has no .gitmodules mapping; a fresh clone materializes an empty engine" "Run: git rm --cached $engineFromTop && git submodule add <repo-url> $engineFromTop, then commit the .gitmodules mapping"
+}
+
 Check-IgnoreState
+Check-Submodule
 
 # --- Check 4: docs-drift --------------------------------------------------
 # Three-store precedence (protocols/context-sync.md §3.2): the Task Record at
@@ -453,19 +526,27 @@ Check-IgnoreState
 # to SKIP(<reason>) and never fails the run.
 # Shared fields derived from the shipped state-tracker-template.md section 3A
 # and the shipped execution-task-record-template.md. Each entry is
-# "<3A label>|<Task Record label>"; Owner is projected as "Owner / Current
-# Actor" in 3A and "Owner / Actor" in the Task Record. No invented fields.
+# "<3A label>|<Task Record label>|<class>". Owner is projected as "Owner /
+# Current Actor" in 3A and "Current Actor" in the Task Record (the live-actor
+# field; the record's "Owner / Actor" header field is the assignment, not the
+# projection). No invented fields. The pair list AND the class assignment are
+# identical in check-doctor.sh, validate-execution-control.sh, and
+# validate-execution-control.ps1 — enforced by
+# scripts/tests/run-projection-parity-tests.sh / .ps1 (#669).
+# Classes (#671): machine = byte-exact after extraction; prose = normalized
+# (all leading/trailing backticks stripped, internal whitespace runs collapsed)
+# so 3A prose may reflow without diverging.
 $sharedProjectionFields = @(
-    'Task ID|Task ID',
-    'Execution State|Execution State',
-    'Active Task Pointer|Active Task Pointer',
-    'Next Action|Next Action',
-    'Owner / Current Actor|Owner / Actor',
-    'Ceremony Level|Ceremony Level',
-    'Specification|Specification',
-    'Execution Scope|Execution Scope',
-    'Start Time|Start Time',
-    'Mapped `pk:tasks` Status|Mapped `pk:tasks` Status'
+    'Task ID|Task ID|machine',
+    'Execution State|Execution State|machine',
+    'Active Task Pointer|Active Task Pointer|machine',
+    'Next Action|Next Action|prose',
+    'Owner / Current Actor|Current Actor|machine',
+    'Ceremony Level|Ceremony Level|level',
+    'Specification|Specification|prose',
+    'Execution Scope|Execution Scope|prose',
+    'Start Time|Start Time|machine',
+    'Mapped `pk:tasks` Status|Mapped `pk:tasks` Status|machine'
 )
 
 function Get-ProjectionField {
@@ -473,6 +554,32 @@ function Get-ProjectionField {
     $m = [regex]::Match($Text, "(?m)^- \*\*$([regex]::Escape($Label))\*\*:[ \t]*(.*)$")
     if (-not $m.Success) { return '' }
     return $m.Groups[1].Value.Trim().Trim('`').Trim()
+}
+
+function ConvertTo-NormalizedProse {
+    # Prose-class normalization (#671): strip every leading/trailing backtick,
+    # collapse internal whitespace runs to single spaces, then trim.
+    param([string]$Value)
+    $v = $Value.Trim('`')
+    $v = [regex]::Replace($v, '\s+', ' ')
+    return $v.Trim()
+}
+
+function Get-ParsedCeremonyLevel {
+    # Level-class normalization (#668): records and projections may name the
+    # same ceremony level with different vocabularies ("Level 2 (Controlled)"
+    # vs "Level 2 (Controlled Work)" vs "L2" vs "2"); compare the parsed digit,
+    # with the raw strings kept as the fallback when either side is not
+    # parseable. Same token grammar as validate-execution-control.ps1's
+    # Get-ParsedCeremonyLevel (PowerShell -match is case-insensitive).
+    param([AllowEmptyString()][string]$Value)
+    $v = [regex]::Replace($Value, '\s+', ' ').Trim()
+    if ($v -eq '') { return '' }
+    if ($v -match '^(0|level\s*0|l0)([^0-9]|$)') { return '0' }
+    if ($v -match '^(1|level\s*1|l1)([^0-9]|$)') { return '1' }
+    if ($v -match '^(2|level\s*2|l2)([^0-9]|$)') { return '2' }
+    if ($v -match '^(3|level\s*3|l3)([^0-9]|$)') { return '3' }
+    return 'invalid'
 }
 
 function Test-Placeholder {
@@ -516,20 +623,35 @@ function Check-DocsDrift {
         return
     }
     $recText = Get-Content -LiteralPath $recPath -Raw
-    $diffField = ''
+    $diffFields = @()
     $compared = 0
     foreach ($pair in $sharedProjectionFields) {
         $parts = $pair.Split('|')
         $pLabel = $parts[0]
         $rLabel = $parts[1]
+        $class = $parts[2]
         $pVal = Get-ProjectionField $section $pLabel
         $rVal = Get-ProjectionField $recText $rLabel
+        if ($class -eq 'prose') {
+            $pVal = ConvertTo-NormalizedProse $pVal
+            $rVal = ConvertTo-NormalizedProse $rVal
+        } elseif ($class -eq 'level') {
+            $pParse = Get-ParsedCeremonyLevel $pVal
+            $rParse = Get-ParsedCeremonyLevel $rVal
+            if ($pParse -ne '' -and $rParse -ne '' -and $pParse -ne 'invalid' -and $rParse -ne 'invalid') {
+                $pVal = $pParse
+                $rVal = $rParse
+            }
+        }
         if (Test-Placeholder $rVal) { continue }
-        if ((Test-Placeholder $pVal) -or ($pVal -ne $rVal)) { $diffField = $pLabel; break }
-        $compared++
+        if ((Test-Placeholder $pVal) -or ($pVal -ne $rVal)) { $diffFields += $pLabel }
+        else { $compared++ }
     }
-    if (-not [string]::IsNullOrEmpty($diffField)) {
-        Emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $diffField)" "projection disagrees with the canonical Task Record on $diffField" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
+    if ($diffFields.Count -gt 0) {
+        # One run names every diverging field (#670); a single divergence keeps the
+        # exact historical single-field verdict, joined fields use "; ".
+        $joined = $diffFields -join '; '
+        Emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $joined)" "projection disagrees with the canonical Task Record on $joined" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
     } elseif ($compared -gt 0) {
         Emit 'docs-drift' 'OK' 'projection agrees with the canonical Task Record' '-'
     } else {

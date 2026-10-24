@@ -40,7 +40,9 @@ want_contains() { scenario_check "$([[ "$OUT" == *"$1"* ]] && printf 1 || printf
 want_not_contains() { scenario_check "$([[ "$OUT" != *"$1"* ]] && printf 1 || printf 0)" "stdout unexpectedly contains: $1"; }
 want_all_ok() {
     local bad
-    bad="$(printf '%s\n' "$OUT" | awk -F'\t' 'NF >= 2 && $2 != "OK" { print }')"
+    # SKIP rows are non-failing by the doctor's own exit contract (exit 0 for
+    # OK/IGNORED/SKIP), so only non-OK, non-SKIP rows offend.
+    bad="$(printf '%s\n' "$OUT" | awk -F'\t' 'NF >= 2 && $2 != "OK" && $2 !~ /^SKIP/ { print }')"
     scenario_check "$([[ -z "$bad" ]] && printf 1 || printf 0)" "expected every row OK; offending rows: $bad"
 }
 
@@ -394,7 +396,7 @@ EOF
 EOF
     run_doctor "$root"
     want_status 1
-    want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Task ID)'
+    want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Task ID; Execution State)'
 
     # (b) Next Action mismatch -> DIVERGED
     cat > "$root/docs/STATE.md" <<EOF
@@ -438,6 +440,86 @@ EOF
     want_contains $'docs-drift\tSKIP(no comparable field)'
     want_not_contains $'docs-drift\tOK'
     want_not_contains 'DIVERGED'
+
+    # (d) two fields diverge -> one verdict naming every diverging field (#670)
+    cat > "$root/docs/STATE.md" <<EOF
+# Project State
+- **Engine Version**: v1.2.3 @ $sha
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: \`TASK-2026-01-01-n3\`
+- **Task Record**: \`docs/tasks/TASK-2026-01-01-n3.md\`
+- **Execution State**: \`in_progress\`
+- **Next Action**: \`Finalize the fixture\`
+- **Owner / Current Actor**: \`Implementor\`
+EOF
+    cat > "$root/docs/tasks/TASK-2026-01-01-n3.md" <<'EOF'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Next Action**: `Ship the different action`
+- **Current Actor**: `Reviewer`
+EOF
+    run_doctor "$root"
+    want_status 1
+    want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Next Action; Owner / Current Actor)'
+    want_not_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Task ID)'
+
+    # (e) prose normalization: reflowed whitespace and extra backticks agree (#671)
+    cat > "$root/docs/STATE.md" <<EOF
+# Project State
+- **Engine Version**: v1.2.3 @ $sha
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: \`TASK-2026-01-01-n3\`
+- **Task Record**: \`docs/tasks/TASK-2026-01-01-n3.md\`
+- **Execution State**: \`in_progress\`
+- **Next Action**: \`\`  Finalize   the   fixture  \`\`
+EOF
+    cat > "$root/docs/tasks/TASK-2026-01-01-n3.md" <<'EOF'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Next Action**: `Finalize the fixture`
+EOF
+    run_doctor "$root"
+    want_status 0
+    want_contains $'docs-drift\tOK'
+    want_not_contains 'DIVERGED'
+
+    # (f) ceremony vocabulary: record uses the legacy "Controlled Work" prose, 3A the
+    # canonical enum — same level, so the projection agrees (#668)
+    cat > "$root/docs/STATE.md" <<EOF
+# Project State
+- **Engine Version**: v1.2.3 @ $sha
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: \`TASK-2026-01-01-n3\`
+- **Task Record**: \`docs/tasks/TASK-2026-01-01-n3.md\`
+- **Execution State**: \`in_progress\`
+- **Ceremony Level**: \`Level 2 (Controlled)\`
+EOF
+    cat > "$root/docs/tasks/TASK-2026-01-01-n3.md" <<'EOF'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Ceremony Level**: `Level 2 (Controlled Work)`
+EOF
+    run_doctor "$root"
+    want_status 0
+    want_contains $'docs-drift\tOK'
+    want_not_contains 'DIVERGED'
+
+    # (g) ceremony level 1 vs 2 still diverges after normalization
+    cat > "$root/docs/tasks/TASK-2026-01-01-n3.md" <<'EOF'
+# Task Record: n3
+- **Task ID**: `TASK-2026-01-01-n3`
+- **Execution State**: `in_progress`
+- **Ceremony Level**: `Level 1 (Standard)`
+EOF
+    run_doctor "$root"
+    want_status 1
+    want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Ceremony Level)'
 }
 
 # N4: a deleted universal AGENTS.md is MISSING (re-run the installer), exit 1.
@@ -832,6 +914,27 @@ s12() {
     want_contains $'host:.cursor/rules/promptkit.mdc\tOK'
 }
 
+# N8: a .promptkit gitlink without a .gitmodules mapping is MISSING, exit 1 (#667);
+# with the mapping it is OK, exit 0.
+n8() {
+    local root
+    root="$(make_healthy n8 balanced)"
+    git -C "$root" init -q
+    git -C "$root" update-index --add --cacheinfo 160000,0cfa09390e4f6f0ffe090a6ba193db912b9a3c6d,.promptkit
+    run_doctor "$root"
+    want_status 1
+    want_contains $'submodule\tMISSING(.gitmodules)'
+    printf '[submodule "promptkit"]\n\tpath = .promptkit\n\turl = https://github.com/lowqualityloey/promptkit-os.git\n' > "$root/.gitmodules"
+    run_doctor "$root"
+    want_status 0
+    want_contains $'submodule\tOK'
+    want_not_contains $'submodule\tMISSING'
+    printf '[submodule "promptkit"]\n\tpath=.promptkit\n\turl = https://github.com/lowqualityloey/promptkit-os.git\n' > "$root/.gitmodules"
+    run_doctor "$root"
+    want_status 0
+    want_contains $'submodule\tOK'
+}
+
 begin; s1; report 'S1 healthy Balanced install -> all OK, exit 0'
 begin; s2; report 'S2 stale engine + ignored path + diverged projection -> exit 1'
 begin; s3; report 'S3 intentional ignore alone -> IGNORED, exit 0'
@@ -874,6 +977,7 @@ begin; p22; report 'P22 single-backtick wrapping -> OK'
 begin; p23; report 'P23 double-backtick wrapping -> MISSING, exit 1'
 begin; p24; report 'P24 trailing-separator record -> OK'
 begin; p25; report 'P25 unreadable record file -> MISSING, exit 1'
+begin; n8; report 'N8 gitlink registration -> MISSING(.gitmodules) without mapping, OK with'
 
 printf 'Passed: %s | Failed: %s | Skipped: %s\n' "$PASS" "$FAIL" "$SKIPPED"
 [[ "$FAIL" -eq 0 ]] || exit 1

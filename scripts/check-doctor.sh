@@ -409,6 +409,61 @@ check_ignore_state() {
 
 check_ignore_state
 
+# --- Check 3b: submodule registration (Issue #667) -------------------------
+# A `.promptkit` installed as a git submodule is recorded in the index as a
+# gitlink (mode 160000). Without a matching `.gitmodules` mapping the clone
+# that matters — a fresh `git clone` of the consumer project — materializes an
+# EMPTY `.promptkit/` (its scripts are absent), so a CI gate that runs kit
+# scripts fails unreproducibly while the original checkout keeps working.
+# Recovery is non-obvious (`git submodule add` refuses the existing path), so
+# the doctor names the exact two-step repair. Purely read-only: `git rev-parse`
+# and `git ls-files` plus a file read of `.gitmodules`.
+check_submodule() {
+    if [[ "$engine_outside_project" -ne 0 ]]; then
+        emit 'submodule' 'SKIP(engine outside project)' 'the engine directory is not tracked under the project root' '-'
+        return 0
+    fi
+    if ! command -v git >/dev/null 2>&1; then
+        emit 'submodule' 'SKIP(git unavailable)' 'git is not on PATH' 'Install git to enable submodule registration checks'
+        return 0
+    fi
+    local toplevel entry mode engine_from_top
+    toplevel="$(git -C "$project_root" rev-parse --show-toplevel 2>/dev/null || true)"
+    if [[ -z "$toplevel" ]]; then
+        emit 'submodule' 'SKIP(no git repo)' 'the project root is not inside a git work tree' '-'
+        return 0
+    fi
+    engine_from_top="${engine_dir#"$toplevel"/}"
+    if [[ "$engine_from_top" == "$engine_dir" ]]; then
+        emit 'submodule' 'SKIP(engine outside repo)' 'the engine directory is outside this git work tree' '-'
+        return 0
+    fi
+    entry="$(git -C "$toplevel" ls-files -s -- "$engine_from_top" 2>/dev/null | head -n 1)"
+    mode="${entry%% *}"
+    if [[ "$mode" != "160000" ]]; then
+        emit 'submodule' 'SKIP(not a submodule install)' 'the engine directory is not recorded as a gitlink (mode 160000)' '-'
+        return 0
+    fi
+    # Split on the first '=' and trim both sides for an exact compare: the old
+    # ERE escaped only dots, so regex metacharacters (+, (, ), [, ]) in the
+    # engine path could silently miss or over-match.
+    if [[ -f "$toplevel/.gitmodules" ]] && awk -v want="$engine_from_top" '{
+        eq = index($0, "=")
+        if (eq > 0) {
+            key = substr($0, 1, eq - 1); sub(/^[ \t]+/, "", key); sub(/[ \t]+$/, "", key)
+            val = substr($0, eq + 1); sub(/^[ \t]+/, "", val); sub(/[ \t]+$/, "", val)
+            if (key == "path" && val == want) found = 1
+        }
+    } END { exit found ? 0 : 1 }' "$toplevel/.gitmodules"; then
+        emit 'submodule' 'OK' "gitlink $engine_from_top is mapped in .gitmodules" '-'
+        return 0
+    fi
+    emit 'submodule' 'MISSING(.gitmodules)' "gitlink $engine_from_top has no .gitmodules mapping; a fresh clone materializes an empty engine" "Run: git rm --cached $engine_from_top && git submodule add <repo-url> $engine_from_top, then commit the .gitmodules mapping"
+    return 0
+}
+
+check_submodule
+
 # --- Check 4: docs-drift --------------------------------------------------
 # Three-store precedence (protocols/context-sync.md §3.2): the Task Record at
 # docs/tasks/<task-id>.md is canonical, STATE.md §3A is a synchronized
@@ -419,20 +474,65 @@ check_ignore_state
 # to SKIP(<reason>) and never fails the run.
 # Shared fields derived from the shipped state-tracker-template.md section 3A
 # and the shipped execution-task-record-template.md. Each entry is
-# "<3A label>|<Task Record label>"; Owner is projected as "Owner / Current
-# Actor" in 3A and "Owner / Actor" in the Task Record. No invented fields.
+# "<3A label>|<Task Record label>|<class>". Owner is projected as "Owner /
+# Current Actor" in 3A and "Current Actor" in the Task Record (the live-actor
+# field; the record's "Owner / Actor" header field is the assignment, not the
+# projection). No invented fields. The pair list AND the class assignment are
+# identical in check-doctor.ps1, validate-execution-control.sh, and
+# validate-execution-control.ps1 — enforced by
+# scripts/tests/run-projection-parity-tests.sh / .ps1 (#669).
+# Classes (#671): machine = byte-exact after extraction; prose = normalized
+# (all leading/trailing backticks stripped, internal whitespace runs collapsed)
+# so 3A prose may reflow without diverging.
 SHARED_PROJECTION_FIELDS=(
-    'Task ID|Task ID'
-    'Execution State|Execution State'
-    'Active Task Pointer|Active Task Pointer'
-    'Next Action|Next Action'
-    'Owner / Current Actor|Owner / Actor'
-    'Ceremony Level|Ceremony Level'
-    'Specification|Specification'
-    'Execution Scope|Execution Scope'
-    'Start Time|Start Time'
-    "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status"
+    'Task ID|Task ID|machine'
+    'Execution State|Execution State|machine'
+    'Active Task Pointer|Active Task Pointer|machine'
+    'Next Action|Next Action|prose'
+    'Owner / Current Actor|Current Actor|machine'
+    'Ceremony Level|Ceremony Level|level'
+    'Specification|Specification|prose'
+    'Execution Scope|Execution Scope|prose'
+    'Start Time|Start Time|machine'
+    "Mapped \`pk:tasks\` Status|Mapped \`pk:tasks\` Status|machine"
 )
+
+# Prose-class normalization (#671): strip every leading/trailing backtick
+# (deeper than proj_field's single pair), collapse internal whitespace runs to
+# single spaces, then trim — byte-exact equality on the normalized form.
+normalize_prose() {
+    local val="$1"
+    while [[ "$val" == \`* ]]; do val="${val#\`}"; done
+    while [[ "$val" == *\` ]]; do val="${val%\`}"; done
+    val="$(printf '%s' "$val" | tr -s ' \t\n' ' ')"
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%"${val##*[![:space:]]}"}"
+    printf '%s' "$val"
+}
+
+# Level-class normalization (#668): records and projections may name the same
+# ceremony level with different vocabularies ("Level 2 (Controlled)" vs
+# "Level 2 (Controlled Work)" vs "L2" vs "2"); compare the parsed digit, with
+# the raw strings kept as the fallback when either side is not parseable.
+# Same token grammar as validate-execution-control's parse_ceremony_level.
+parse_ceremony_level() {
+    local val
+    val="$(printf '%s' "$1" | tr -s ' \t\n' ' ')"
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%"${val##*[![:space:]]}"}"
+    [ -z "$val" ] && return 0
+    if [[ "$val" =~ ^[[:space:]]*(0|[Ll]evel[[:space:]]*0|[Ll]0)([^0-9]|$) ]]; then
+        echo "0"
+    elif [[ "$val" =~ ^[[:space:]]*(1|[Ll]evel[[:space:]]*1|[Ll]1)([^0-9]|$) ]]; then
+        echo "1"
+    elif [[ "$val" =~ ^[[:space:]]*(2|[Ll]evel[[:space:]]*2|[Ll]2)([^0-9]|$) ]]; then
+        echo "2"
+    elif [[ "$val" =~ ^[[:space:]]*(3|[Ll]evel[[:space:]]*3|[Ll]3)([^0-9]|$) ]]; then
+        echo "3"
+    else
+        echo "invalid"
+    fi
+}
 
 proj_field() {
     local text="$1" label="$2" line val
@@ -492,24 +592,43 @@ check_docs_drift() {
         return 0
     fi
     rec_text="$(cat -- "$rec_path")"
-    diff_field=""
+    diff_fields=()
     compared=0
     for pair in "${SHARED_PROJECTION_FIELDS[@]}"; do
         p_label="${pair%%|*}"
-        r_label="${pair#*|}"
+        rest="${pair#*|}"
+        r_label="${rest%%|*}"
+        class="${rest#*|}"
         p_val="$(proj_field "$section" "$p_label")"
         r_val="$(proj_field "$rec_text" "$r_label")"
+        if [[ "$class" == "prose" ]]; then
+            p_val="$(normalize_prose "$p_val")"
+            r_val="$(normalize_prose "$r_val")"
+        elif [[ "$class" == "level" ]]; then
+            p_parse="$(parse_ceremony_level "$p_val")"
+            r_parse="$(parse_ceremony_level "$r_val")"
+            if [[ -n "$p_parse" && -n "$r_parse" && "$p_parse" != "invalid" && "$r_parse" != "invalid" ]]; then
+                p_val="$p_parse"
+                r_val="$r_parse"
+            fi
+        fi
         if is_placeholder "$r_val"; then
             continue
         fi
         if is_placeholder "$p_val" || [[ "$p_val" != "$r_val" ]]; then
-            diff_field="$p_label"
-            break
+            diff_fields+=("$p_label")
+        else
+            compared=$((compared + 1))
         fi
-        compared=$((compared + 1))
     done
-    if [[ -n "$diff_field" ]]; then
-        emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $diff_field)" "projection disagrees with the canonical Task Record on $diff_field" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
+    if [[ "${#diff_fields[@]}" -gt 0 ]]; then
+        # One run names every diverging field (#670); a single divergence keeps the
+        # exact historical single-field verdict, joined fields use "; ".
+        joined=""
+        for f in "${diff_fields[@]}"; do
+            if [[ -z "$joined" ]]; then joined="$f"; else joined="$joined; $f"; fi
+        done
+        emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $joined)" "projection disagrees with the canonical Task Record on $joined" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
     elif [[ "$compared" -gt 0 ]]; then
         emit 'docs-drift' 'OK' 'projection agrees with the canonical Task Record' '-'
     else

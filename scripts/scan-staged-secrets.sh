@@ -343,7 +343,7 @@ AWK
     while IFS='|' read -r line_number category detail severity; do
         [[ -n "$line_number" ]] || continue
         if [[ "$category" == NARRATIVE ]]; then
-            printf "Narrative surface %s (%s) in staged additions: %s:%s (relativize the path to a \$HOME-relative form, or untrack the file).\\n" \
+            printf "Narrative surface %s (%s) in staged additions: %s:%s (relativize the path to a \$HOME-relative form, or untrack the file; narrative findings are not a credential detection - policy: workflows/commit.md).\\n" \
                 "$detail" "$severity" "$escaped_path" "$line_number"
             narrative_found=1
         else
