@@ -3,6 +3,8 @@
 ## Purpose
 Define the operational rules for delegating engineering tasks to background subagents versus executing them in the primary conversation thread. This protocol protects the parent agent's context window from token exhaustion, minimizes hallucinations caused by context clutter, and accelerates complex tasks through parallel execution.
 
+> **Advisory agent instruction.** This protocol directs agent behavior; there is no runtime executor behind it — CI asserts invariant text presence only. See `protocols/context-economy.md` §11 (Enforcement Boundary) for the full boundary.
+
 ---
 
 ## 1. The Context Preservation Law

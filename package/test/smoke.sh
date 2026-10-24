@@ -122,7 +122,7 @@ grep -q "^- \*\*Engine Version\*\*: v$VERSION @ " "$CANON_DIR/docs/STATE.md" || 
 echo "  ok: canonical Engine Version stamp carries v$VERSION"
 
 echo "== 3. equivalence: generated artifacts must match =="
-for f in PROMPTKIT.md docs/STATE.md; do
+for f in PROMPTKIT.md docs/STATE.md AGENTS.md; do
     if ! diff -q "$COURIER_DIR/$f" "$CANON_DIR/$f" >/dev/null; then
         echo "FAIL: $f differs between courier and canonical paths"
         diff "$COURIER_DIR/$f" "$CANON_DIR/$f" | head -20
