@@ -45,7 +45,7 @@ After the existing hygiene checks and before staging, Level 2 (Controlled) and L
 - Confirm acceptance-criteria results, verification evidence, changed-file summary, blockers/resume condition, and review prerequisites are recorded. A commit link is not required before the first commit exists; it is added after the human-confirmed commit.
 - Confirm the current revision and checkpoint/handoff state are consistent. A hard checkpoint blocks staging and commit actions until explicit resume evidence is recorded.
 - Route commit construction, Conventional Commit formatting, staging, and developer confirmation through the rest of this workflow. Validation does not grant commit authority: staging is reversible local preparation, while creating the commit requires developer confirmation (see also the Action Authority Model in `protocols/code-quality-gate.md`).
-- After the human confirms the commit, record the exact revision and commit evidence in the canonical Task Record. Validator success proves evidence consistency only; it does not approve the commit.
+- After the human confirms the commit, record the exact revision and commit evidence in the canonical Task Record. A record cannot contain the hash of the commit that carries it: the Commit Evidence Entry for a confirmed commit is added in a later commit — for a milestone commit, a docs-only follow-up commit directly on top carries the entry citing the confirmed SHA (the two-commit pattern; a commit cannot contain its own SHA). Validator success proves evidence consistency only; it does not approve the commit.
 
 ---
 
