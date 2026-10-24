@@ -441,7 +441,80 @@ function Check-IgnoreState {
     foreach ($hrel in $installedHosts) { Test-IgnoreOne $hrel }
 }
 
+function Check-Submodule {
+    # Issue #667: a `.promptkit` installed as a git submodule is recorded in the
+    # index as a gitlink (mode 160000). Without a matching `.gitmodules` mapping
+    # a fresh `git clone` materializes an EMPTY `.promptkit/` (its scripts are
+    # absent), so a CI gate that runs kit scripts fails unreproducibly while the
+    # original checkout keeps working. Recovery is non-obvious (`git submodule
+    # add` refuses the existing path), so the doctor names the exact repair.
+    # Purely read-only: `git rev-parse` and `git ls-files` plus a file read.
+    if ($engineOutsideProject) {
+        Emit 'submodule' 'SKIP(engine outside project)' 'the engine directory is not tracked under the project root' '-'
+        return
+    }
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Emit 'submodule' 'SKIP(git unavailable)' 'git is not on PATH' 'Install git to enable submodule registration checks'
+        return
+    }
+    $toplevel = $null
+    $probe = Invoke-LocalGit -Dir $projectRoot -GitArgs @('rev-parse', '--show-toplevel')
+    if ($script:gitStatus -eq 0 -and $probe) { $toplevel = ($probe | Select-Object -First 1) }
+    if ([string]::IsNullOrWhiteSpace($toplevel)) {
+        Emit 'submodule' 'SKIP(no git repo)' 'the project root is not inside a git work tree' '-'
+        return
+    }
+    $toplevel = $toplevel.Trim()
+    # git prints Windows toplevels with forward slashes and a runner TEMP path may
+    # hold 8.3 short names, so a string StartsWith against a backslash-joined
+    # prefix is always false on Windows (every N8 became SKIP(engine outside
+    # repo)). Resolve both sides through the filesystem and derive the engine
+    # path with GetRelativePath so separator or short-name forms cannot skew it.
+    $engineFromTop = $null
+    try {
+        $engineFull = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $engineDir -ErrorAction Stop).ProviderPath)
+        $topFull = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $toplevel -ErrorAction Stop).ProviderPath)
+        $rel = [System.IO.Path]::GetRelativePath($topFull, $engineFull)
+        if ($rel -eq '.') {
+            $engineFromTop = '.'
+        } elseif ($rel -ne '' -and -not $rel.StartsWith('..')) {
+            $engineFromTop = $rel -replace '\\', '/'
+        }
+    } catch { $engineFromTop = $null }
+    if (-not $engineFromTop) {
+        Emit 'submodule' 'SKIP(engine outside repo)' 'the engine directory is outside this git work tree' '-'
+        return
+    }
+    $entry = $null
+    $probe = Invoke-LocalGit -Dir $toplevel -GitArgs @('ls-files', '-s', '--', $engineFromTop)
+    if ($script:gitStatus -eq 0 -and $probe) { $entry = ($probe | Select-Object -First 1) }
+    $mode = if ($entry) { ($entry -split '\s+')[0] } else { '' }
+    if ($mode -ne '160000') {
+        Emit 'submodule' 'SKIP(not a submodule install)' 'the engine directory is not recorded as a gitlink (mode 160000)' '-'
+        return
+    }
+    $gitmodules = Join-Path $toplevel '.gitmodules'
+    $mapped = $false
+    if (Test-Path -LiteralPath $gitmodules -PathType Leaf) {
+        # Split on the first '=' and trim both sides so every valid git syntax
+        # (path=.promptkit, tab indentation, extra spaces) maps like the .sh twin.
+        foreach ($line in (Get-Content -LiteralPath $gitmodules)) {
+            $eq = $line.IndexOf('=')
+            if ($eq -lt 0) { continue }
+            $key = $line.Substring(0, $eq).Trim()
+            $val = $line.Substring($eq + 1).Trim()
+            if ($key -eq 'path' -and $val -eq $engineFromTop) { $mapped = $true; break }
+        }
+    }
+    if ($mapped) {
+        Emit 'submodule' 'OK' "gitlink $engineFromTop is mapped in .gitmodules" '-'
+        return
+    }
+    Emit 'submodule' 'MISSING(.gitmodules)' "gitlink $engineFromTop has no .gitmodules mapping; a fresh clone materializes an empty engine" "Run: git rm --cached $engineFromTop && git submodule add <repo-url> $engineFromTop, then commit the .gitmodules mapping"
+}
+
 Check-IgnoreState
+Check-Submodule
 
 # --- Check 4: docs-drift --------------------------------------------------
 # Three-store precedence (protocols/context-sync.md §3.2): the Task Record at

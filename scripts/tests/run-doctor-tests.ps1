@@ -94,7 +94,9 @@ function Want-Status { param([int]$Expected) Assert-Scenario ($script:STATUS -eq
 function Want-Contains { param([string]$Needle) Assert-Scenario ($script:OUT.Contains($Needle)) "stdout missing: $Needle" }
 function Want-NotContains { param([string]$Needle) Assert-Scenario (-not $script:OUT.Contains($Needle)) "stdout unexpectedly contains: $Needle" }
 function Want-AllOk {
-    $bad = @($script:OUT -split "`n" | Where-Object { @($_.Split("`t")).Count -ge 2 -and @($_.Split("`t"))[1] -ne 'OK' })
+    # SKIP rows are non-failing by the doctor's own exit contract (exit 0 for
+    # OK/IGNORED/SKIP), so only non-OK, non-SKIP rows offend.
+    $bad = @($script:OUT -split "`n" | Where-Object { $f = @($_.Split("`t")); $f.Count -ge 2 -and $f[1] -ne 'OK' -and -not $f[1].StartsWith('SKIP') })
     Assert-Scenario ($bad.Count -eq 0) "expected every row OK; offending rows: $($bad -join '; ')"
 }
 
@@ -979,6 +981,26 @@ try {
     } else {
         Skip-Scenario 'P25 unreadable record file (cannot deny read on this platform/user)'
     }
+
+    # N8: a .promptkit gitlink without a .gitmodules mapping is MISSING, exit 1 (#667);
+    # with the mapping it is OK, exit 0.
+    Begin-Scenario
+    $rootN8 = New-HealthyKit 'n8' 'balanced'
+    git -C $rootN8 init -q 2>$null
+    git -C $rootN8 update-index --add --cacheinfo '160000' '0cfa09390e4f6f0ffe090a6ba193db912b9a3c6d' '.promptkit' 2>$null
+    Invoke-Doctor -Root $rootN8
+    Want-Status 1
+    Want-Contains "submodule`tMISSING(.gitmodules)"
+    [IO.File]::WriteAllText((Join-Path $rootN8 '.gitmodules'), "[submodule `"promptkit`"]`n    path = .promptkit`n    url = https://github.com/lowqualityloey/promptkit-os.git`n", $utf8)
+    Invoke-Doctor -Root $rootN8
+    Want-Status 0
+    Want-Contains "submodule`tOK"
+    Want-NotContains "submodule`tMISSING"
+    [IO.File]::WriteAllText((Join-Path $rootN8 '.gitmodules'), "[submodule `"promptkit`"]`n`tpath=.promptkit`n`turl = https://github.com/lowqualityloey/promptkit-os.git`n", $utf8)
+    Invoke-Doctor -Root $rootN8
+    Want-Status 0
+    Want-Contains "submodule`tOK"
+    Report-Scenario 'N8 gitlink registration -> MISSING(.gitmodules) without mapping, OK with'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }

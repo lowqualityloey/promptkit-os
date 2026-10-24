@@ -18,7 +18,7 @@ One command checks hosts × engine version × ignore-state × docs-drift × inta
 - `scripts/validate-references.sh` checks markdown reference integrity (files, links, triggers) and runs only in CI; `pk:doctor` runs in-session and audits installation health, not link targets.
 
 ## Non-Negotiable Guardrail: Read-Only by Default
-`pk:doctor` reports; it never edits, stages, commits, or writes unless an explicit `--fix` is passed, and `--fix` is limited to re-emitting a host directive block. It never runs an upgrade; upgrade execution is owned by `workflows/sync.md` / #545. The engine is `scripts/check-doctor.sh` / `scripts/check-doctor.ps1` (twins), both read-only: allowed operations are exactly file reads plus `git check-ignore`, `rev-parse`, `rev-list`, and `merge-base`.
+`pk:doctor` reports; it never edits, stages, commits, or writes unless an explicit `--fix` is passed, and `--fix` is limited to re-emitting a host directive block. It never runs an upgrade; upgrade execution is owned by `workflows/sync.md` / #545. The engine is `scripts/check-doctor.sh` / `scripts/check-doctor.ps1` (twins), both read-only: allowed operations are exactly file reads plus `git check-ignore`, `rev-parse`, `rev-list`, `ls-files`, and `merge-base`.
 
 ---
 

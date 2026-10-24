@@ -409,6 +409,61 @@ check_ignore_state() {
 
 check_ignore_state
 
+# --- Check 3b: submodule registration (Issue #667) -------------------------
+# A `.promptkit` installed as a git submodule is recorded in the index as a
+# gitlink (mode 160000). Without a matching `.gitmodules` mapping the clone
+# that matters — a fresh `git clone` of the consumer project — materializes an
+# EMPTY `.promptkit/` (its scripts are absent), so a CI gate that runs kit
+# scripts fails unreproducibly while the original checkout keeps working.
+# Recovery is non-obvious (`git submodule add` refuses the existing path), so
+# the doctor names the exact two-step repair. Purely read-only: `git rev-parse`
+# and `git ls-files` plus a file read of `.gitmodules`.
+check_submodule() {
+    if [[ "$engine_outside_project" -ne 0 ]]; then
+        emit 'submodule' 'SKIP(engine outside project)' 'the engine directory is not tracked under the project root' '-'
+        return 0
+    fi
+    if ! command -v git >/dev/null 2>&1; then
+        emit 'submodule' 'SKIP(git unavailable)' 'git is not on PATH' 'Install git to enable submodule registration checks'
+        return 0
+    fi
+    local toplevel entry mode engine_from_top
+    toplevel="$(git -C "$project_root" rev-parse --show-toplevel 2>/dev/null || true)"
+    if [[ -z "$toplevel" ]]; then
+        emit 'submodule' 'SKIP(no git repo)' 'the project root is not inside a git work tree' '-'
+        return 0
+    fi
+    engine_from_top="${engine_dir#"$toplevel"/}"
+    if [[ "$engine_from_top" == "$engine_dir" ]]; then
+        emit 'submodule' 'SKIP(engine outside repo)' 'the engine directory is outside this git work tree' '-'
+        return 0
+    fi
+    entry="$(git -C "$toplevel" ls-files -s -- "$engine_from_top" 2>/dev/null | head -n 1)"
+    mode="${entry%% *}"
+    if [[ "$mode" != "160000" ]]; then
+        emit 'submodule' 'SKIP(not a submodule install)' 'the engine directory is not recorded as a gitlink (mode 160000)' '-'
+        return 0
+    fi
+    # Split on the first '=' and trim both sides for an exact compare: the old
+    # ERE escaped only dots, so regex metacharacters (+, (, ), [, ]) in the
+    # engine path could silently miss or over-match.
+    if [[ -f "$toplevel/.gitmodules" ]] && awk -v want="$engine_from_top" '{
+        eq = index($0, "=")
+        if (eq > 0) {
+            key = substr($0, 1, eq - 1); sub(/^[ \t]+/, "", key); sub(/[ \t]+$/, "", key)
+            val = substr($0, eq + 1); sub(/^[ \t]+/, "", val); sub(/[ \t]+$/, "", val)
+            if (key == "path" && val == want) found = 1
+        }
+    } END { exit found ? 0 : 1 }' "$toplevel/.gitmodules"; then
+        emit 'submodule' 'OK' "gitlink $engine_from_top is mapped in .gitmodules" '-'
+        return 0
+    fi
+    emit 'submodule' 'MISSING(.gitmodules)' "gitlink $engine_from_top has no .gitmodules mapping; a fresh clone materializes an empty engine" "Run: git rm --cached $engine_from_top && git submodule add <repo-url> $engine_from_top, then commit the .gitmodules mapping"
+    return 0
+}
+
+check_submodule
+
 # --- Check 4: docs-drift --------------------------------------------------
 # Three-store precedence (protocols/context-sync.md §3.2): the Task Record at
 # docs/tasks/<task-id>.md is canonical, STATE.md §3A is a synchronized
