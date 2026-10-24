@@ -131,6 +131,7 @@ For each decomposed task, fill out `<kit>/templates/issue-task-template.md`:
     - **Happy Path (Gherkin)**: `Given <context>, When <action>, Then <outcome>`.
     - **Negative & Error Path**: Explicit assertions for the task's interface-appropriate failure paths (e.g. for HTTP APIs: 400 Bad Request, 401 Unauthorized, 403 Forbidden, 409 Conflict, or 429 Rate Limit).
    - **Boundary Conditions**: Empty states, maximum payload boundaries, concurrent double-submit guards.
+   - **Wording policy (evaluation-time binding)**: Acceptance criteria are evaluated once, when the record reaches `awaiting_review`. The `awaiting_review` to `completed` transition may legitimately follow the owner-authorized commit and does not re-evaluate criteria. Phrase prohibitions about the future ("nothing is committed, pushed or deployed") as state-at-acceptance facts instead ("HEAD stayed at `<rev>` throughout the work"), and mark a criterion that must remain true only until acceptance with `held at acceptance` — it is not re-evaluated afterwards. Authorization boundaries ("no commit without owner approval") belong in the Approval Boundary, never in an acceptance criterion.
 4. **Automated Verification Command**:
    - Provide the exact test runner command that validates the criteria (e.g., `pnpm test path/to/feature.test.ts`).
 

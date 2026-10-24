@@ -158,7 +158,7 @@ Record the complete workspace state before switching sessions, including intenti
 
    Section 1 through Section 6 are **required for every task**, including Level 0 (Direct) and Level 1 (Standard) work that has no Task Record file — record `N/A — no Task Record (Level 0/1)` explicitly rather than deleting the field. Section 7 stays optional and applies only to release-evaluation transfers.
 
-   Field names mirror [`templates/execution-handoff-template.md`](../templates/execution-handoff-template.md) so the block is a **projection of the canonical records**, never a second source of truth. Populate every boundary field from the records themselves: a summary written here is not new authority, and a blank boundary field is not a default.
+   Field names mirror [`templates/execution-handoff-template.md`](../templates/execution-handoff-template.md) so the block is a **projection of the canonical records**, never a second source of truth. Populate every boundary field from the records themselves: a summary written here is not new authority, and a blank boundary field is not a default. Acceptance criteria carry their evaluation-time binding from the Task Record (`workflows/tasks.md` Phase 3): they are evaluated when the record reaches `awaiting_review`, and the `awaiting_review` to `completed` transition may follow the owner-authorized commit without re-evaluating them.
 
 ````markdown
 ### Handover Prompt for Fresh Chat Session

@@ -45,6 +45,8 @@
 
 ## 3. Acceptance Criteria
 
+> Phrase each criterion as a state at acceptance time. A prohibition about the future ("nothing is committed") is true when the record reaches `awaiting_review` and false the moment the owner authorizes the commit, forcing a rewrite of an approved record; write what was true and held ("HEAD stayed at `<rev>` throughout the work") and mark a criterion that only binds until acceptance with `held at acceptance` (see `workflows/tasks.md` Phase 3). Authorization boundaries belong in the Approval Boundary, not here.
+
 - [ ] **AC-1**: `[Observable acceptance condition]`
   - **Result**: `[Pending]`
   - **Evidence**: `[Command, check, artifact, or link]`
@@ -133,7 +135,7 @@ A passing verification may clear the *consecutive*-failure counter but **never r
 - **TDD Exception Verification [Required for Documentation, Configuration, or Research Work; Not applicable for Code Work]**: `[Exception verification link and reason]` or `N/A - Code Work`
 - **CI Evidence**: `[Provider, workflow/job, run, revision, result, or N/A]`
 - **Review Evidence**: `[REVIEW-<review-slug>](../reviews/<review-slug>.md#REVIEW-<review-slug>); reviewer; result; or N/A]`
-- **Commit Evidence**: `[N/A before commit; for each new commit add a Commit Evidence Entry with SHA, message, Authorization Checkpoint Reference, and Authorization Source]`
+- **Commit Evidence**: `[N/A before commit; for each new commit add a Commit Evidence Entry with SHA, message, Authorization Checkpoint Reference, and Authorization Source. The entry naming commit X cannot live inside commit X: record it in a later commit — a milestone commit's entry is carried by a docs-only follow-up commit directly on top of it (see workflows/commit.md)]`
 - **Pull Request Evidence**: `[PR URL/number, or N/A before PR]`
 - **Release Evidence**: `[Release evaluation/tag/post-release link, or N/A]`
 - **Blocker and Resume Condition**: `[Blocker, owner, evidence, and precise resume condition, or None]`
@@ -156,7 +158,7 @@ A referenced Batch Authorization record must contain `Declared Boundary`, `Permi
 
 ### Commit Evidence Entries
 
-- **Commit Evidence Entry**: `[SHA and message; Authorization Checkpoint Reference: AUTHZ-<task-slug>-<nnn>; Authorization Source: [user instruction reference or Batch Authorization link]]`
+- **Commit Evidence Entry**: `[SHA and message; Authorization Checkpoint Reference: AUTHZ-<task-slug>-<nnn>; Authorization Source: [user instruction reference or Batch Authorization link]]` — the entry for commit X is recorded in a later commit, never inside X itself: a milestone commit's entry is carried by a docs-only follow-up commit directly on top of it, so the cited SHA stays immutable.
 
 ### TDD Mode Branches
 
