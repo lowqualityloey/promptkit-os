@@ -516,7 +516,7 @@ function Check-DocsDrift {
         return
     }
     $recText = Get-Content -LiteralPath $recPath -Raw
-    $diffField = ''
+    $diffFields = @()
     $compared = 0
     foreach ($pair in $sharedProjectionFields) {
         $parts = $pair.Split('|')
@@ -525,11 +525,14 @@ function Check-DocsDrift {
         $pVal = Get-ProjectionField $section $pLabel
         $rVal = Get-ProjectionField $recText $rLabel
         if (Test-Placeholder $rVal) { continue }
-        if ((Test-Placeholder $pVal) -or ($pVal -ne $rVal)) { $diffField = $pLabel; break }
-        $compared++
+        if ((Test-Placeholder $pVal) -or ($pVal -ne $rVal)) { $diffFields += $pLabel }
+        else { $compared++ }
     }
-    if (-not [string]::IsNullOrEmpty($diffField)) {
-        Emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $diffField)" "projection disagrees with the canonical Task Record on $diffField" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
+    if ($diffFields.Count -gt 0) {
+        # One run names every diverging field (#670); a single divergence keeps the
+        # exact historical single-field verdict, joined fields use "; ".
+        $joined = $diffFields -join '; '
+        Emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $joined)" "projection disagrees with the canonical Task Record on $joined" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
     } elseif ($compared -gt 0) {
         Emit 'docs-drift' 'OK' 'projection agrees with the canonical Task Record' '-'
     } else {
