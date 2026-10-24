@@ -983,7 +983,8 @@ try {
     }
 
     # N8: a .promptkit gitlink without a .gitmodules mapping is MISSING, exit 1 (#667);
-    # with the mapping it is OK, exit 0.
+    # with the mapping it is OK, exit 0 — including compact `path=.promptkit` syntax and
+    # CRLF line endings (a core.autocrlf=true checkout), which must parse identically.
     Begin-Scenario
     $rootN8 = New-HealthyKit 'n8' 'balanced'
     git -C $rootN8 init -q 2>$null
@@ -1000,6 +1001,11 @@ try {
     Invoke-Doctor -Root $rootN8
     Want-Status 0
     Want-Contains "submodule`tOK"
+    [IO.File]::WriteAllText((Join-Path $rootN8 '.gitmodules'), "[submodule `"promptkit`"]`r`n`tpath=.promptkit`r`n`turl = https://github.com/lowqualityloey/promptkit-os.git`r`n", $utf8)
+    Invoke-Doctor -Root $rootN8
+    Want-Status 0
+    Want-Contains "submodule`tOK"
+    Want-NotContains "submodule`tMISSING"
     Report-Scenario 'N8 gitlink registration -> MISSING(.gitmodules) without mapping, OK with'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

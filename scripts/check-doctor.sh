@@ -446,8 +446,12 @@ check_submodule() {
     fi
     # Split on the first '=' and trim both sides for an exact compare: the old
     # ERE escaped only dots, so regex metacharacters (+, (, ), [, ]) in the
-    # engine path could silently miss or over-match.
+    # engine path could silently miss or over-match. Strip a trailing \r first:
+    # a CRLF .gitmodules (a core.autocrlf=true checkout) carries one on every
+    # line, the [ \t] trims below do not remove it, and the value compare then
+    # missed every mapping.
     if [[ -f "$toplevel/.gitmodules" ]] && awk -v want="$engine_from_top" '{
+        sub(/\r$/, "", $0)
         eq = index($0, "=")
         if (eq > 0) {
             key = substr($0, 1, eq - 1); sub(/^[ \t]+/, "", key); sub(/[ \t]+$/, "", key)
