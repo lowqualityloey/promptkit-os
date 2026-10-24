@@ -20,7 +20,7 @@
 #   pk:ship  : Pattern B dual-axis QA review (k=2) + Pattern C single-pass
 #              verifier (k=1) in the release evidence path
 #
-# Usage: pwsh -File scripts/measure-turbo-overhead.ps1 [--strict]
+# Usage: pwsh -File scripts/measure-turbo-overhead.ps1 [(-Strict|--strict)]
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -31,8 +31,9 @@ $STRICT = 0
 foreach ($arg in $args) {
     switch ($arg) {
         "--strict" { $STRICT = 1 }
-        "-h" { Write-Output "Usage: measure-turbo-overhead.ps1 [--strict]"; exit 0 }
-        "--help" { Write-Output "Usage: measure-turbo-overhead.ps1 [--strict]"; exit 0 }
+        "-Strict" { $STRICT = 1 }
+        "-h" { Write-Output "Usage: measure-turbo-overhead.ps1 [(-Strict|--strict)]"; exit 0 }
+        "--help" { Write-Output "Usage: measure-turbo-overhead.ps1 [(-Strict|--strict)]"; exit 0 }
         default { Write-Error "Unknown argument: $arg"; exit 2 }
     }
 }

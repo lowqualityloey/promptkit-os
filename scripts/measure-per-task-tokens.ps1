@@ -6,16 +6,17 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # Modes:
-#   default  : informational report (unchanged behavior).
-#   --strict : CI gate mode. After the report, asserts every measured per-task payload
+#   default           : informational report (unchanged behavior).
+#   --strict / -Strict : CI gate mode. After the report, asserts every measured per-task payload
 #              stays <= its recorded historical baseline below. Machine-parseable lines:
 #              BASELINE|task/profile|measured|limit|PASS|FAIL
 $STRICT = 0
 foreach ($arg in $args) {
     switch ($arg) {
         "--strict" { $STRICT = 1 }
-        "-h" { Write-Output "Usage: measure-per-task-tokens.ps1 [--strict]"; exit 0 }
-        "--help" { Write-Output "Usage: measure-per-task-tokens.ps1 [--strict]"; exit 0 }
+        "-Strict" { $STRICT = 1 }
+        "-h" { Write-Output "Usage: measure-per-task-tokens.ps1 [(-Strict|--strict)]"; exit 0 }
+        "--help" { Write-Output "Usage: measure-per-task-tokens.ps1 [(-Strict|--strict)]"; exit 0 }
         default { Write-Error "Unknown argument: $arg"; exit 2 }
     }
 }

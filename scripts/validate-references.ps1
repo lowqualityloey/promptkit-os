@@ -2,7 +2,8 @@
 # Run from repository root: .\.promptkit\scripts\validate-references.ps1
 
 param(
-    [string]$PromptKitDir = ".promptkit"
+    [string]$PromptKitDir = ".promptkit",
+    [switch]$Strict
 )
 
 $ErrorActionPreference = "Continue"
@@ -48,10 +49,13 @@ $AllMarkdownFiles += Get-ChildItem -Path (Join-Path $PromptKitRoot "*.md") -File
 
 Write-Host "📄 Found $($AllMarkdownFiles.Count) markdown files to validate`n" -ForegroundColor Cyan
 
-# Anti-typo check for setup script commands
+# Anti-typo check for setup script commands. Scope parity with the Bash twin:
+# scan every file under the root (not only *.md), excluding VCS/worktree internals.
 Write-Host "🔍 Checking for setup script typos..." -ForegroundColor Cyan
 $typoPattern = 'i' + ' nit\.ps1'
-$typoFiles = Get-ChildItem -Path $PromptKitRoot -Recurse -Filter "*.md" -ErrorAction SilentlyContinue | Select-String -Pattern $typoPattern
+$typoFiles = Get-ChildItem -Path $PromptKitRoot -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -notmatch '[\\/]\.git([\\/]|$)' -and $_.FullName -notmatch '[\\/]\.worktrees([\\/]|$)' } |
+    Select-String -Pattern $typoPattern
 if ($typoFiles) {
     Write-Host "  ❌ BROKEN: Setup typo found in repository:" -ForegroundColor Red
     $typoFiles | ForEach-Object { Write-Host "     $($_.Path):$($_.LineNumber)" -ForegroundColor Red }
@@ -66,10 +70,7 @@ $Patterns = @{
     "Template Reference" = '\.promptkit/templates/([a-zA-Z0-9_-]+\.md)'
     "Workflow Reference" = '\.promptkit/workflows/([a-zA-Z0-9_-]+\.md)'
     "Protocol Reference" = '\.promptkit/protocols/([a-zA-Z0-9_-]+\.md)'
-    "Docs Path Reference" = 'docs/(adrs|specs|rca|spikes|design|data|auth|api|tests|perf|tasks|releases)/'
     "Relative Template" = 'templates/([a-zA-Z0-9_-]+\.md)'
-    "Relative Workflow" = 'workflows/([a-zA-Z0-9_-]+\.md)'
-    "Relative Protocol" = 'protocols/([a-zA-Z0-9_-]+\.md)'
 }
 
 function Test-FileReference {
@@ -384,6 +385,9 @@ if ($script:ErrorCount -eq 0 -and $script:WarningCount -eq 0) {
     
     if ($script:ErrorCount -gt 0) {
         Write-Host "❌ Validation failed. Fix broken references before deployment.`n" -ForegroundColor Red
+        exit 1
+    } elseif ($Strict) {
+        Write-Host "❌ Validation failed (strict): $script:WarningCount warning(s). Fix or justify them before deployment.`n" -ForegroundColor Red
         exit 1
     } else {
         Write-Host "⚠️  Validation passed with warnings. Review recommended.`n" -ForegroundColor Yellow

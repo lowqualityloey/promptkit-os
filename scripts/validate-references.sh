@@ -4,7 +4,29 @@
 
 set +e  # Don't exit on first error
 
-PROMPTKIT_DIR="${1:-.promptkit}"
+# Usage: validate-references.sh [--strict] [promptkit-dir]
+#   --strict  CI gate mode: exit non-zero when warnings are present. Errors always
+#             exit non-zero; without --strict a warning-only tree exits 0.
+STRICT_MODE=0
+PROMPTKIT_DIR=""
+for arg in "$@"; do
+    case "$arg" in
+        --strict) STRICT_MODE=1 ;;
+        -h|--help)
+            echo "Usage: validate-references.sh [--strict] [promptkit-dir]"
+            exit 0
+            ;;
+        *)
+            if [ -z "$PROMPTKIT_DIR" ]; then
+                PROMPTKIT_DIR="$arg"
+            else
+                echo "Error: unknown argument: $arg" >&2
+                exit 2
+            fi
+            ;;
+    esac
+done
+PROMPTKIT_DIR="${PROMPTKIT_DIR:-.promptkit}"
 ERROR_COUNT=0
 WARNING_COUNT=0
 
@@ -367,6 +389,10 @@ else
     
     if [ $ERROR_COUNT -gt 0 ]; then
         echo "❌ Validation failed. Fix broken references before deployment."
+        echo ""
+        exit 1
+    elif [ "$STRICT_MODE" -eq 1 ]; then
+        echo "❌ Validation failed (strict): $WARNING_COUNT warning(s). Fix or justify them before deployment."
         echo ""
         exit 1
     else

@@ -131,6 +131,14 @@ function Measure-BytesNoCR([string]$p) {
 $subsetBytes = 0
 foreach ($s in @("route", "debug", "commit", "checkpoint", "sync", "profile")) { $subsetBytes += Measure-BytesNoCR (Join-Path $KitRoot "workflows\$s.md") }
 $MonolithicTokens = [Math]::Floor(($subsetBytes + 2) / 4)
+# Twin parity with measure-tokens.sh (issue #662): fail with a diagnostic BEFORE
+# the Get-ChildItem below (which throws under $ErrorActionPreference = "Stop" when
+# workflows/ is missing) and before the savings division, which would silently
+# produce -Infinity/NaN for a zero workflow payload instead of exiting non-zero.
+if ($MonolithicTokens -le 0) {
+    [Console]::Error.WriteLine("Error: cannot compute token savings: workflow payload measured 0 tokens (are the workflow files present under $KitRoot/workflows?).")
+    exit 1
+}
 $workflowFiles = @(Get-ChildItem (Join-Path $KitRoot "workflows") -Filter *.md -File)
 $FullsetCount = $workflowFiles.Count
 $fullBytes = 0

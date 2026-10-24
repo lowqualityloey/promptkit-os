@@ -100,6 +100,20 @@ else
     echo "$out"
 fi
 
+# 7. Missing/empty workflows payload: the savings computation must exit 1 with a
+#    diagnostic (twin parity with measure-tokens.ps1), not crash on division.
+MISSING_KIT="$TMP_DIR/missing-kit"
+mkdir -p "$MISSING_KIT/scripts" "$MISSING_KIT/templates"
+cp "$REPO_ROOT/scripts/measure-tokens.sh" "$MISSING_KIT/scripts/"
+cp "$REPO_ROOT/templates/agent-directive-template.md" "$MISSING_KIT/templates/"
+out=$(bash "$MISSING_KIT/scripts/measure-tokens.sh" 2>&1); rc=$?
+if [[ $rc -eq 1 && "$out" == *"cannot compute token savings"* ]]; then
+    ok "empty workflow payload exits 1 with a diagnostic (missing workflows/)"
+else
+    notok "missing workflows/ should exit 1 with 'cannot compute token savings' (rc=$rc)"
+    echo "$out" | tail -4
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Passed: $PASS | Failed: $FAIL"

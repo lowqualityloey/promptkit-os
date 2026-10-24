@@ -279,7 +279,7 @@ jobs:
           echo "Prompt hygiene check passed: all workflows have valid structural H1 headings."
 
       - name: Run Reference and Structural Validator (Bash)
-        run: bash scripts/validate-references.sh .
+        run: bash scripts/validate-references.sh . --strict
 
       - name: Run pk:doctor Self-Audit (Bash)
         run: |
@@ -511,15 +511,15 @@ jobs:
 
       - name: Run Reference and Structural Validator (PowerShell)
         shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir .
+        run: pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir . -Strict
 
       - name: Assert Per-Task Token Baselines (PowerShell)
         shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\measure-per-task-tokens.ps1 --strict
+        run: pwsh -NoProfile -File .\scripts\measure-per-task-tokens.ps1 -Strict
 
       - name: Assert Turbo Protocol Overhead Claim Window (PowerShell)
         shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\measure-turbo-overhead.ps1 --strict
+        run: pwsh -NoProfile -File .\scripts\measure-turbo-overhead.ps1 -Strict
 
       - name: Assert No Fragile Math Labels (PowerShell)
         shell: pwsh
