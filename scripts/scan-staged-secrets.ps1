@@ -208,7 +208,7 @@ foreach ($path in $stagedPaths) {
             foreach ($rule in $narrativeRules) {
                 if ($content -cmatch $rule.Regex) {
                     $narrativeFound = $true
-                    [Console]::Out.WriteLine(('Narrative surface {0} ({1}) in staged additions: {2}:{3} (relativize the path to a $HOME-relative form, or untrack the file).' -f $rule.Rule, $rule.Severity, $escapedPath, $lineNumber))
+                    [Console]::Out.WriteLine(('Narrative surface {0} ({1}) in staged additions: {2}:{3} (relativize the path to a $HOME-relative form, or untrack the file; narrative findings are not a credential detection - policy: workflows/commit.md).' -f $rule.Rule, $rule.Severity, $escapedPath, $lineNumber))
                 }
             }
         }
