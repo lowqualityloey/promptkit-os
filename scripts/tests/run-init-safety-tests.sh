@@ -182,6 +182,24 @@ if [[ "$inject_lf_count" -ne "$inject_cr_count" ]]; then
     exit 1
 fi
 
+# CRLF inject rerun (audit follow-up): the second run takes the update path on a
+# file whose END marker sits at EOF — it must be byte-stable, leaving no dangling
+# CR (CR == LF, same length as the inject output).
+inject_len="$(wc -c < "$CRLF_INJECT_ROOT/AGENTS.md" | tr -d ' ')"
+bash "$REPO_ROOT/init.sh" "$CRLF_INJECT_ROOT" >/dev/null
+rerun_len="$(wc -c < "$CRLF_INJECT_ROOT/AGENTS.md" | tr -d ' ')"
+rerun_cr="$(tr -cd '\r' < "$CRLF_INJECT_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+rerun_lf="$(tr -cd '\n' < "$CRLF_INJECT_ROOT/AGENTS.md" | wc -c | tr -d ' ')"
+if [[ "$rerun_len" -ne "$inject_len" || "$rerun_cr" -ne "$inject_cr_count" || "$rerun_lf" -ne "$inject_lf_count" ]]; then
+    echo "CRLF inject rerun is not byte-stable (inject len=$inject_len CR=$inject_cr_count LF=$inject_lf_count; rerun len=$rerun_len CR=$rerun_cr LF=$rerun_lf)." >&2
+    exit 1
+fi
+rerun_last="$(tail -c 1 "$CRLF_INJECT_ROOT/AGENTS.md" | od -An -tuC | tr -d ' \n')"
+[[ "$rerun_last" != "13" ]] || {
+    echo "CRLF inject rerun left a dangling CR at EOF." >&2
+    exit 1
+}
+
 # Containment: a destination symlink pointing OUTSIDE the project root (sibling
 # prefix, not a child) must be refused and the external file must not be touched.
 SIBLING_ROOT="$TEST_ROOT/sibling"

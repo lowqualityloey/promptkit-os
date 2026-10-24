@@ -867,12 +867,21 @@ for target in "${TARGETS_FOUND[@]}"; do
         rm -f "$directive_file"
         # Preserve EOF state exactly (cross-door parity with init.ps1's offset
         # surgery): awk's print appends ORS unconditionally, so if the original
-        # file did not end with a newline, drop the one awk just added — bytes
-        # outside the managed block must not change.
-        if [ "$(tail -c 1 "$target" | od -An -tuC | tr -d ' \n')" != "10" ]; then
+        # file did not end with a newline, drop what awk added — bytes outside
+        # the managed block must not change. When the replaced block sits at EOF
+        # (e.g. a rerun over a previous CRLF inject), the staged file ends with
+        # the directive's own "\r\n", so BOTH bytes must go; a genuine original
+        # trailing CR keeps its CR and only loses the awk-added "\n".
+        target_last="$(tail -c 1 "$target" | od -An -tuC | tr -d ' \n')"
+        if [ "$target_last" != "10" ]; then
             staged_bytes="$(wc -c < "$staged_target" | tr -d ' ')"
-            if [ "$staged_bytes" -gt 0 ]; then
-                head -c $((staged_bytes - 1)) "$staged_target" > "$staged_target.trim" \
+            trim_n=1
+            if [ "$staged_bytes" -ge 2 ] && [ "$target_last" != "13" ] \
+                && [ "$(tail -c 2 "$staged_target" | head -c 1 | od -An -tuC | tr -d ' \n')" = "13" ]; then
+                trim_n=2
+            fi
+            if [ "$staged_bytes" -ge "$trim_n" ]; then
+                head -c $((staged_bytes - trim_n)) "$staged_target" > "$staged_target.trim" \
                     && mv "$staged_target.trim" "$staged_target"
             fi
         fi

@@ -102,6 +102,21 @@ try {
         throw "Failed Test (CRLF inject): mixed line endings after inject (LF=$injectLfCount, CR=$injectCrCount)."
     }
 
+    # Test: CRLF inject rerun must be byte-stable — the update path on a file
+    # whose END marker sits at EOF must not append a dangling CR.
+    $injectLen = (Get-Item -LiteralPath $crlfInjectPath).Length
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfInjectRoot *> $null
+    $crlfRerun = [System.IO.File]::ReadAllText($crlfInjectPath, [System.Text.Encoding]::UTF8)
+    $rerunLen = (Get-Item -LiteralPath $crlfInjectPath).Length
+    $rerunCr = ([regex]::Matches($crlfRerun, "`r")).Count
+    $rerunLf = ([regex]::Matches($crlfRerun, "`n")).Count
+    if ($rerunLen -ne $injectLen -or $rerunCr -ne $injectCrCount -or $rerunLf -ne $injectLfCount) {
+        throw "Failed Test (CRLF inject rerun): not byte-stable (inject len=$injectLen CR=$injectCrCount LF=$injectLfCount; rerun len=$rerunLen CR=$rerunCr LF=$rerunLf)."
+    }
+    if ($crlfRerun.EndsWith("`r")) {
+        throw "Failed Test (CRLF inject rerun): dangling CR at EOF."
+    }
+
     # Test: destination symlink escaping the project root (sibling prefix) must
     # be refused and the external target must not be touched.
     $SiblingRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "sibling") -Force).FullName
