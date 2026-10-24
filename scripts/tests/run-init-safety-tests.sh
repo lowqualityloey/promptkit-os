@@ -371,6 +371,29 @@ if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=bogus
     exit 1
 fi
 
+# A file path is rejected as the project root with the friendly error (-d / -PathType Container parity)
+touch "$TEST_ROOT/plainfile.txt"
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" "$TEST_ROOT/plainfile.txt" >/dev/null 2>&1; then
+    echo "A file path was accepted as the project root; expected rejection." >&2
+    exit 1
+fi
+
+# '..' inside a legitimate filename is accepted (segment matching, not substring)
+DOTDOT_ROOT="$TEST_ROOT/dotdotname"
+mkdir -p "$DOTDOT_ROOT"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --balanced --target=docs/v1..v2.md "$DOTDOT_ROOT" >/dev/null
+[[ -f "$DOTDOT_ROOT/docs/v1..v2.md" ]]
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --balanced --target=docs/v1..v2.md "$DOTDOT_ROOT" >/dev/null
+[[ "$(grep -c 'PROMPTKIT_START' "$DOTDOT_ROOT/docs/v1..v2.md")" -eq 1 ]]
+
+# Test: trailing '..' segment is rejected (../evil only pinned the leading segment)
+TRAILING_ROOT="$TEST_ROOT/trailingdotdot"
+mkdir -p "$TRAILING_ROOT"
+if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --target=docs/.. "$TRAILING_ROOT" >/dev/null 2>&1; then
+    echo "Trailing --target=docs/.. was accepted; expected rejection." >&2
+    exit 1
+fi
+
 # Test: Inline marker example in preamble survives without deleting intervening user prose
 INLINE_ROOT="$TEST_ROOT/inlineexample"
 mkdir -p "$INLINE_ROOT"
