@@ -400,12 +400,7 @@ foreach ($a in $AllArgs) {
             $HostSet = $true
         }
         { $_ -like "--target=*" } {
-            $tp = $_.Substring(9)
-            if ($tp.StartsWith("/") -or $tp.StartsWith("\") -or $tp -match '^[A-Za-z]:' -or $tp -match '\.\.' -or [string]::IsNullOrWhiteSpace($tp)) {
-                Write-Host "[!] --target must be a project-relative path without '..': $tp" -ForegroundColor Red
-                exit 1
-            }
-            $ExtraTargets += $tp
+            $ExtraTargets += $_.Substring(9)
         }
         "--reconfigure" { $Reconfigure = $true }
         "--help" { 
@@ -419,6 +414,17 @@ foreach ($a in $AllArgs) {
                 $TargetDir = $a
             }
         }
+    }
+}
+
+# Validate every custom target in one post-parse pass so both --target= tokens and
+# -Target parameter bindings are covered; '..' is matched as a complete path segment
+# (^|[/\\])\.\.([/\\]|$), mirroring init.sh's glob set, not as a substring: a
+# legitimate filename like docs/v1..v2.md must stay acceptable.
+foreach ($t in $ExtraTargets) {
+    if ($t.StartsWith("/") -or $t.StartsWith("\") -or $t -match '^[A-Za-z]:' -or $t -match '(^|[/\\])\.\.([/\\]|$)' -or [string]::IsNullOrWhiteSpace($t)) {
+        Write-Host "[!] --target must be a project-relative path without '..': $t" -ForegroundColor Red
+        exit 1
     }
 }
 
@@ -487,7 +493,7 @@ if ($Profile -eq "turbo" -and -not $Experimental) {
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 if ($TargetDir -ne "") {
-    if (-not (Test-Path -LiteralPath $TargetDir)) {
+    if (-not (Test-Path -LiteralPath $TargetDir -PathType Container)) {
         Write-Host "[!] Project root not found: $TargetDir" -ForegroundColor Red
         exit 1
     }
