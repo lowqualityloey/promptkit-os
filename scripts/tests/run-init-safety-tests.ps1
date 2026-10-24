@@ -418,6 +418,7 @@ try {
     & pwsh -NoProfile -File $initScriptPath -ProjectRoot $TargetRoot -Target "..\outside.md" 2>$null | Out-Null
     if ($LASTEXITCODE -eq 0) {
         throw "Failed Test 15d: -Target parameter binding bypassed the '..' check; expected rejection."
+    }
     # Test 15e: PROMPTKIT.md is byte-idempotent across re-runs. The profile/tracking/
     # projection split-filter-append passes used to keep the split's trailing empty
     # element and grow one blank line per pass per rerun; smoke.sh §3 compares
