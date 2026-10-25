@@ -1,0 +1,28 @@
+{
+  "scenario_id": "BENCH-02",
+  "condition": "bare",
+  "model": "test-model-v1",
+  "timestamp": "2026-10-25T10:00:00Z",
+  "metrics": {
+    "tokens_in": 20000,
+    "tokens_out": 2000,
+    "tokens_total": 28000,
+    "cache_read_tokens": 4000,
+    "tool_calls_total": 14,
+    "tool_calls_search": 4,
+    "tool_calls_edit": 5,
+    "tool_calls_verify": 5,
+    "tool_calls_other": 0,
+    "rework_loops": 2,
+    "rework_tokens_in": 5000,
+    "rework_tokens_out": 1000,
+    "wall_clock_seconds": 240,
+    "invariants_checked": 5,
+    "invariants_passed": 5,
+    "human_interventions": 0,
+    "accepted": false
+  },
+  "costs": {
+    "transcript_cost_usd": 0.00
+  }
+}

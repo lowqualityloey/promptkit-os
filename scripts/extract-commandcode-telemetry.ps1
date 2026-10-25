@@ -23,7 +23,7 @@
 #>
 [CmdletBinding()]
 param (
-    [Parameter(Mandatory = $true, Position = 0)][string]$TranscriptPath,
+    [Parameter(Position = 0)][string]$TranscriptPath,
     [string]$ScenarioId = "",
     [string]$Condition = "unspecified",
     [ValidateSet("true", "false")][string]$Accepted = "false",
@@ -34,6 +34,21 @@ param (
 
 $ErrorActionPreference = "Stop"
 
+function Show-Usage {
+    Write-Host "Usage: extract-commandcode-telemetry.ps1 -TranscriptPath <session.jsonl> [options]"
+    Write-Host "Options:"
+    Write-Host "  -ScenarioId ID           §5 scenario_id (default: the session id)"
+    Write-Host "  -Condition NAME          §5 condition label (default: unspecified)"
+    Write-Host "  -Accepted true|false     §5 accepted gate (default: false — acceptance is a human judgment)"
+    Write-Host "  -InvariantsChecked N     §5 invariants_checked (default: 0)"
+    Write-Host "  -InvariantsPassed N      §5 invariants_passed (default: 0)"
+    Write-Host "  -ErrorPatterns 'a|b'     rework-loop detection patterns (default: built-in list)"
+}
+
+if ([string]::IsNullOrWhiteSpace($TranscriptPath)) {
+    Show-Usage
+    exit 2
+}
 if ([string]::IsNullOrWhiteSpace($ErrorPatterns)) {
     [Console]::Error.WriteLine("EXTRACT|ERROR|BAD_VALUE|error-patterns")
     exit 2
