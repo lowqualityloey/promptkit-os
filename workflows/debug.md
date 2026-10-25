@@ -156,6 +156,8 @@ Once the failure point is proven, trace the failure back to the fundamental brok
 4. *Why did the developer use `.find()`?*: Because the repository interface did not expose an explicit transactional locking method.
 5. *Why was this not caught in CI?*: Because integration tests used SQLite in-memory which does not simulate PostgreSQL table row locking concurrency.
 
+Close the turn with the Dual-Compatible Telemetry Status Card ([`protocols/telemetry-cards.md`](../protocols/telemetry-cards.md)) when enabled (`status-cards: off` suppresses it; halts still fire).
+
 ---
 
 ### Phase 6: Surgical Fix & Regression Lock-in (Correct Seam)

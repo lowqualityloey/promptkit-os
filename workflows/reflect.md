@@ -106,3 +106,4 @@ Summarize next steps:
 - `./notes/learning-plan.md` and `./notes/skill-matrix.md` reflect current progress and upcoming goals.
 - Developer has clear clarity on their next engineering spike or milestone.
 - Unreviewed retros stay `pending review`: no journal append certifies them, and no competency advancement is recorded.
+- Close the turn with the Dual-Compatible Telemetry Status Card ([`protocols/telemetry-cards.md`](../protocols/telemetry-cards.md)) when enabled (`status-cards: off` suppresses it; halts still fire).

@@ -171,3 +171,4 @@ Avoid writing separate, unlinked TypeScript interfaces on the frontend and backe
 - Strict request and response validation schemas documented.
 - Complete machine-readable error dictionary established.
 - Pagination model, idempotency rules, and rate limits defined.
+- Close the turn with the Dual-Compatible Telemetry Status Card ([`protocols/telemetry-cards.md`](../protocols/telemetry-cards.md)) when enabled (`status-cards: off` suppresses it; halts still fire).
