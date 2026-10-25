@@ -65,6 +65,38 @@ else
     notok "rejected record (rc=$rc)"
 fi
 
+# stderr must be EMPTY on valid scoring runs — a past regression emitted nine
+# type-resolution stack traces per valid run while stdout stayed correct
+out="$(measure "$FIXTURES/telemetry-valid.json" 2>"$TMP_DIR/m.err")"; rc=$?
+if [[ $rc -eq 0 && ! -s "$TMP_DIR/m.err" ]]; then
+    ok "valid scoring run writes nothing to stderr"
+else
+    notok "stderr-empty valid scoring (rc=$rc, stderr=$(head -c 120 "$TMP_DIR/m.err" 2>/dev/null))"
+fi
+
+sed 's/"tokens_in": 20000/"tokens_in": -500000/' "$FIXTURES/telemetry-valid.json" > "$TMP_DIR/neg.json"
+out="$(measure "$TMP_DIR/neg.json" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"CPAC|ERROR|BAD_VALUE|tokens_in"* ]]; then
+    ok "negative metric value fails closed (exit 2)"
+else
+    notok "negative metric (rc=$rc, out=${out:0:160})"
+fi
+
+sed 's/"accepted": true/"accepted": true_lies/' "$FIXTURES/telemetry-valid.json" > "$TMP_DIR/lies.json"
+out="$(measure "$TMP_DIR/lies.json" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"CPAC|ERROR"* ]]; then
+    ok "unanchored boolean value fails closed (exit 2)"
+else
+    notok "unanchored boolean (rc=$rc, out=${out:0:160})"
+fi
+
+out="$(measure "$FIXTURES/telemetry-valid.json" "$FIXTURES/telemetry-rejected.json" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"CPAC|ERROR|MULTIPLE_INPUTS"* ]]; then
+    ok "multiple positional inputs fail closed (exit 2)"
+else
+    notok "multiple positionals (rc=$rc, out=${out:0:160})"
+fi
+
 out="$(measure "$FIXTURES/telemetry-missing-key.json" 2>&1)"; rc=$?
 if [[ $rc -eq 2 && "$out" == *"CPAC|ERROR|MISSING_KEY|rework_loops"* ]]; then
     ok "missing rework_loops fails closed (exit 2)"

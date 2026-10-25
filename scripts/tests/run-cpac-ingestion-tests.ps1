@@ -38,9 +38,14 @@ function Invoke-CpacMerged {
 }
 
 function Invoke-CpacStdout {
-    # Runs a twin as a child pwsh, returning stdout only (stderr passes through).
-    param ([string]$Script, [string[]]$ScriptArgs)
-    $out = & pwsh -NoProfile -File $Script @ScriptArgs
+    # Runs a twin as a child pwsh, returning stdout only; with -ErrFile the
+    # child's stderr is redirected into that file (for emptiness assertions).
+    param ([string]$Script, [string[]]$ScriptArgs, [string]$ErrFile)
+    if ($ErrFile) {
+        $out = & pwsh -NoProfile -File $Script @ScriptArgs 2>$ErrFile
+    } else {
+        $out = & pwsh -NoProfile -File $Script @ScriptArgs
+    }
     $rc = $LASTEXITCODE
     [pscustomobject]@{ Out = (($out | ForEach-Object { $_.ToString() }) -join "`n"); Rc = $rc }
 }
@@ -67,6 +72,23 @@ try {
 
     $r = Invoke-CpacMerged -Script $measureScript -ScriptArgs @("-TargetPath", (Join-Path $fixtures "telemetry-rejected.json"))
     if ($r.Rc -eq 0 -and $r.Out.Contains("INF (REJECTED)") -and $r.Out.Contains("cpac_usd=INF")) { Ok "accepted=false record reports INF (REJECTED) with cpac_usd=INF" } else { NotOk "rejected record (rc=$($r.Rc))" }
+
+    # stderr must be EMPTY on valid scoring runs — a past regression emitted
+    # nine type-resolution stack traces per valid run while stdout stayed correct
+    $errFile = Join-Path $tmp "m.err"
+    $r = Invoke-CpacStdout -Script $measureScript -ScriptArgs @("-TargetPath", (Join-Path $fixtures "telemetry-valid.json")) -ErrFile $errFile
+    $errEmpty = (-not (Test-Path $errFile)) -or ((Get-Item $errFile).Length -eq 0)
+    if ($r.Rc -eq 0 -and $errEmpty) { Ok "valid scoring run writes nothing to stderr" } else { NotOk "stderr-empty valid scoring (rc=$($r.Rc))" }
+
+    $negPath = Join-Path $tmp "neg.json"
+    [System.IO.File]::WriteAllText($negPath, ([System.IO.File]::ReadAllText((Join-Path $fixtures "telemetry-valid.json")).Replace('"tokens_in": 20000', '"tokens_in": -500000')))
+    $r = Invoke-CpacMerged -Script $measureScript -ScriptArgs @("-TargetPath", $negPath)
+    if ($r.Rc -eq 2 -and $r.Out.Contains("CPAC|ERROR|BAD_VALUE|tokens_in")) { Ok "negative metric value fails closed (exit 2)" } else { NotOk "negative metric (rc=$($r.Rc))" }
+
+    $liesPath = Join-Path $tmp "lies.json"
+    [System.IO.File]::WriteAllText($liesPath, ([System.IO.File]::ReadAllText((Join-Path $fixtures "telemetry-valid.json")).Replace('"accepted": true', '"accepted": true_lies')))
+    $r = Invoke-CpacMerged -Script $measureScript -ScriptArgs @("-TargetPath", $liesPath)
+    if ($r.Rc -eq 2 -and $r.Out.Contains("CPAC|ERROR")) { Ok "unanchored boolean value fails closed (exit 2)" } else { NotOk "unanchored boolean (rc=$($r.Rc))" }
 
     $r = Invoke-CpacMerged -Script $measureScript -ScriptArgs @("-TargetPath", (Join-Path $fixtures "telemetry-missing-key.json"))
     if ($r.Rc -eq 2 -and $r.Out.Contains("CPAC|ERROR|MISSING_KEY|rework_loops")) { Ok "missing rework_loops fails closed (exit 2)" } else { NotOk "missing-key record (rc=$($r.Rc))" }
