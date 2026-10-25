@@ -129,6 +129,8 @@
 - **Commit Evidence Entry**: `ef5b7eb fix(benchmarks): orchestrator run and finalize remediation; Authorization Checkpoint Reference: AUTHZ-ab-benchmark-harness-001; Authorization Source: owner remediation go (audit verdict accepted)`
 - **Commit Evidence Entry**: `0b0c825 test(benchmarks): mock-cli driver regression harness; Authorization Checkpoint Reference: AUTHZ-ab-benchmark-harness-001; Authorization Source: owner remediation go (audit verdict accepted)`
 - **Commit Evidence Entry**: `0bc7940 fix(benchmarks): strip and aggregate twin parity hardening; Authorization Checkpoint Reference: AUTHZ-ab-benchmark-harness-001; Authorization Source: owner remediation go (audit verdict accepted)`
+- **Commit Evidence Entry**: `6625a1a docs(benchmarks): remediation evidence and record correction; Authorization Checkpoint Reference: AUTHZ-ab-benchmark-harness-001; Authorization Source: owner remediation go (audit verdict accepted)`
+- **Commit Evidence Entry**: `d3e89ab fix(benchmarks): re-review polish for blinding and evidence integrity; Authorization Checkpoint Reference: AUTHZ-ab-benchmark-harness-001; Authorization Source: owner polish go (approved re-review P3s)`
 
 ## 7. Evidence and Completion Gate
 
