@@ -132,3 +132,4 @@ Build a minimal sandbox or branch targeting exclusively the **sharpest risk**:
 - License and maintenance longevity verified.
 - Research spike saved to `./docs/spikes/`.
 - Architectural Decision Record (ADR) recorded in `./docs/adrs/` only if a decision was made with the Step 6 decision-policy evidence recorded; otherwise the spike verdict stands as a recommendation.
+- Close the turn with the Dual-Compatible Telemetry Status Card ([`protocols/telemetry-cards.md`](../protocols/telemetry-cards.md)) when enabled (`status-cards: off` suppresses it; halts still fire).

@@ -16,7 +16,7 @@ Callout types are strictly tiered by priority; only the highest applicable level
 
 If a higher-priority callout is active, it carries the next action; a separate advisory TIP is strictly forbidden.
 
-**Precedence:** this document is canonical for callout *format*; `protocols/code-quality-gate.md` is canonical for *when-to-halt and Type A-D routing*; `protocols/setup.md` defers to both.
+**Precedence:** this document is canonical for callout *format*; `protocols/code-quality-gate.md` is canonical for *when-to-halt and Type A-D routing*; `protocols/setup.md` defers to both. The canonical turn-close order in both modes is **TL;DR opening → telemetry card → callout**; any workflow restating a close order must match this sequence.
 
 ---
 

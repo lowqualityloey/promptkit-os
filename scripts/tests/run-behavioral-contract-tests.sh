@@ -1767,8 +1767,8 @@ else
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 
-# AR-2b: the workflow documents the five-check contract the engine actually runs (#646).
-assert_contains "workflows/doctor.md" "### Phase 2: The Five Checks" "doctor Phase 2 heading declares five checks"
+# AR-2b: the workflow documents the six-check contract the engine actually runs (#646, #667).
+assert_contains "workflows/doctor.md" "### Phase 2: The Six Checks" "doctor Phase 2 heading declares six checks"
 assert_not_contains "workflows/doctor.md" "Four Checks" "doctor carries no stale four-check claim"
 
 # AR-3: exercised exit-code contract over tiny throwaway kit roots. Read-only:

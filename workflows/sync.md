@@ -22,7 +22,7 @@ Hosts that expose no compaction or continuation signal cannot reliably detect it
 
 ## Preconditions & When to Sync
 - **PromptKit Engine Updated**: Submodule updated, `git -C .promptkit pull origin main`, or `bash .promptkit/init.sh` was just run.
-- **Instruction Drift / Formatting Divergence**: The AI is omitting visual callouts (`> [!TIP]`, `> [!IMPORTANT]`), failing to render the telemetry status card when enabled (3 mandatory lines `📊 / 🎯 / 🟢` + optional `📈`; suppressed when `PROMPTKIT.md` declares `status-cards: off`, while halts still fire per `protocols/telemetry-cards.md`), or not prioritizing native interactive selection tools.
+- **Instruction Drift / Formatting Divergence**: The AI is omitting visual callouts (`> [!TIP]`, `> [!IMPORTANT]`), failing to render the telemetry status card when enabled (3 mandatory lines `📊 / 🎯 / 🟢` + optional `> 💰 Spend:` line; suppressed when `PROMPTKIT.md` declares `status-cards: off`, while halts still fire per `protocols/telemetry-cards.md`), or not prioritizing native interactive selection tools.
 - **Post-Compaction Re-Entry**: After a conversation summary/continuation, run **Mandatory Re-Entry Recovery** before resuming project work; do not treat rereading STATE and the active workflow alone or relying on summarized protocol as sufficient.
 - **New Session Startup / Protocol Verification**: Starting work on a fresh branch or verifying that the active agent is fully aligned with host repository guardrails.
 
@@ -127,7 +127,7 @@ Mismatches that require judgment (framework choice, workspace layout, an intenti
 
 ### Phase 3: Telemetry Confirmation & Protocol Alignment
 
-Conclude the synchronization turn with the standard telemetry status card (3 mandatory lines + optional `📈`) when enabled (skip the decorative card when `PROMPTKIT.md` declares `status-cards: off`; halts still fire per `protocols/telemetry-cards.md`), with every value traced to a file read or command run **this turn**:
+Conclude the synchronization turn with the standard telemetry status card (3 mandatory lines + the optional `> 💰 Spend:` line) when enabled (skip the decorative card when `PROMPTKIT.md` declares `status-cards: off`; halts still fire per `protocols/telemetry-cards.md`), with every value traced to a file read or command run **this turn**:
 
 ```text
 📊 Milestone: PromptKit OS Synced — Engine Rules Reloaded From Disk

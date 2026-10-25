@@ -151,5 +151,5 @@ Upon presenting or opening the PR, conclude with the standard Telemetry Status C
 > 🟢 **Quality Gate**: Clean (`<passed>/<total> CI Passing ✓` · `🔒 <n> Invariants Intact`)
 
 
-Single-callout rule (`protocols/telemetry-cards.md`): this `[!IMPORTANT]` action callout takes precedence, so do not emit a TIP on PR handoff. In other workflows, suppress TIP whenever an `[!IMPORTANT]` or `[!WARNING]` halt is active. Close order is always card, TL;DR line, then the one applicable callout, so the decision point stays in view.
+Single-callout rule (`protocols/telemetry-cards.md`): this `[!IMPORTANT]` action callout takes precedence, so do not emit a TIP on PR handoff. In other workflows, suppress TIP whenever an `[!IMPORTANT]` or `[!WARNING]` halt is active. Close order follows `protocols/telemetry-cards.md`: TL;DR opening, then the card, then the one applicable callout, so the decision point stays in view.
 *(You MUST invoke the host's native interactive selection tool e.g. `ask_question` / prompt picker as your final action with Option 1 marked `(Recommended)` so the developer can navigate with arrow keys and confirm with `Enter`; Bounded to closed-set operational choices — for open intent questions (MVP scope, architecture direction, auth or deployment needs), ask in the context window instead, see the Picker routing rule in `workflows/plan.md`)*
