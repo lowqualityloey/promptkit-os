@@ -80,6 +80,7 @@ jobs:
           bash -n scripts/strip-benchmark-diff.sh
           bash -n scripts/aggregate-benchmark-runs.sh
           bash -n scripts/tests/run-benchmark-tools-tests.sh
+          bash -n scripts/tests/run-benchmark-driver-tests.sh
           bash -n benchmarks/run-ab-benchmark.sh
           bash -n scripts/tests/run-token-budget-tests.sh
           bash -n scripts/validate-execution-control.sh
@@ -247,6 +248,9 @@ jobs:
 
       - name: Run Benchmark Tools Fixture Harness (Bash)
         run: bash scripts/tests/run-benchmark-tools-tests.sh
+
+      - name: Run Benchmark Driver Regression Harness (Bash)
+        run: bash scripts/tests/run-benchmark-driver-tests.sh
 
       - name: Run Release-Record Self-Validation with Grandfather Exemption (Bash)
         run: |

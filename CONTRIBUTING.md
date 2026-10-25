@@ -76,6 +76,9 @@ bash scripts/tests/run-cpac-ingestion-tests.sh
 # Benchmark tools harness (diff stripping + per-arm aggregation)
 bash scripts/tests/run-benchmark-tools-tests.sh
 
+# Benchmark driver regression (mock CLI, isolated HOME — run+finalize paths)
+bash scripts/tests/run-benchmark-driver-tests.sh
+
 # Validate reference links and release records
 bash scripts/validate-references.sh .
 bash scripts/validate-release-records.sh --root scripts/tests/fixtures/release-records/valid --strict
