@@ -105,7 +105,7 @@ PromptKit OS provides governance protocols and workflows read directly by host A
    - **Courier mode**: Once extracted into `.promptkit/`, the kit tree carries no `.git/`. Re-running the courier refuses to overlay a non-empty directory to prevent stale merges, but it never re-verifies the on-disk tree.
    - **Standalone / direct-clone mode**: When PromptKit OS is cloned directly or operated in standalone mode, changes to tracked files can be inspected through Git (`git status`, `git diff`), but runtime instruction integrity is not automatically established or enforced prior to host reads.
    - **Structural assert (`scripts/check-setup-assert.sh`)**: Asserts structural presence for core files (`setup-assert-files.txt`), not cryptographic file hashes.
-   - **Health auditor (`scripts/check-doctor.sh` / `pk:doctor`)**: Detects engine commit drift against upstream Git, missing host directive blocks, and state-store sync. It does not hash or sign installed markdown workflows.
+   - **Health auditor (`scripts/check-doctor.sh` / `pk:doctor`)**: Detects engine commit drift against upstream Git, missing host directive blocks, ignore-rule violations, docs/state divergence, intake record-path health, and `.gitmodules` submodule registration (a `.promptkit` gitlink without a mapping is reported `MISSING(.gitmodules)`). It does not hash or sign installed markdown workflows.
 4. **Host Runtime-Loaded Instruction Verification**:
    - **Passive ingestion**: When an AI assistant executes, the host application (Claude Code, Cursor, Windsurf, Copilot, etc.) reads workspace files (`AGENTS.md`, `CLAUDE.md`, `.promptkit/workflows/*.md`) directly via standard OS system calls.
    - **No pre-load runtime gate**: PromptKit OS has no mechanism to intercept host filesystem reads, enforce pre-load hashing, or prove which instruction bytes the model ingested into context.
@@ -175,7 +175,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Telemetry Cards**: `<kit>/protocols/telemetry-cards.md`
 - **Checkpoint Ignore Policy**: `<kit>/protocols/checkpoint-ignore-policy.md`
 
-> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols (`setup`, `context-sync`, `code-quality-gate`, `subagent-delegation`); the remaining protocols stay out of the static directive to keep it under the 2500-token Balanced budget (currently 2341/2500). `telemetry-cards.md` is referenced inline by the directive, `discovery-intake.md` and `rendered-ui-evidence.md` are lazy-loaded by their relevant workflows, and `context-economy.md` is reached transitively through the reference list above. Unlisted therefore means "not in the static directive", not "unreachable".
+> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols (`setup`, `context-sync`, `code-quality-gate`, `subagent-delegation`); the remaining protocols stay out of the static directive to keep it under the 2500-token Balanced budget (currently 2348/2500). `telemetry-cards.md` is referenced inline by the directive, `discovery-intake.md` and `rendered-ui-evidence.md` are lazy-loaded by their relevant workflows, and `context-economy.md` is reached transitively through the reference list above. Unlisted therefore means "not in the static directive", not "unreachable".
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)
 - **Visual Identity & Brand**: `./DESIGN.md` (if present)
 - **Living State & Tracker**: `./docs/STATE.md` (if present)
@@ -195,7 +195,6 @@ All generated project documentation must be saved to the host project:
 - Test Plans: `docs/tests/`
 - Performance Audits: `docs/perf/`
 - Releases: `docs/releases/`
-<!-- PROMPTKIT_END -->
 
 ### 5. Initialize Context & Welcome Developer
 After updating configuration:

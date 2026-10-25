@@ -40,7 +40,7 @@ Before analyzing code, establish a repeatable benchmark loop under controlled co
    - What is the acceptable target budget? (e.g., p95 `< 150ms` under 100 concurrent requests).
 
 2. **Execute Controlled Baseline Benchmark**:
-   - Treat raw profiler output as sensitive. Redirect stdout and stderr to a private, access-restricted file outside the repository; do not display or paste raw output into shared terminals, chat, tool logs, or CI logs. Redact before displaying, sharing, or saving an excerpt, then remove the raw capture. On POSIX, create a private capture with `capture_file=$(mktemp "${TMPDIR:-/tmp}/promptkit-perf.XXXXXX")` (which creates an owner-only file); if `TMPDIR` is set, confirm that directory is outside the repository.
+   - Treat raw profiler output as sensitive. Redirect stdout and stderr to a private, access-restricted file outside the repository; do not display or paste raw output into shared terminals, chat, tool logs, or CI logs. Redact before displaying, sharing, or saving an excerpt, then remove the raw capture (`rm -f -- "$capture_file"`, as `templates/perf-audit-template.md` spells out). On POSIX, create a private capture with `capture_file=$(mktemp "${TMPDIR:-/tmp}/promptkit-perf.XXXXXX")` (which creates an owner-only file); if `TMPDIR` is set, confirm that directory is outside the repository.
    - Run a minimal, reproducible benchmark command with output redirected to that capture:
      ```bash
      capture_file=$(mktemp "${TMPDIR:-/tmp}/promptkit-perf.XXXXXX")
@@ -165,3 +165,4 @@ When performance issues arise, answer these 3 diagnostic questions:
 - Targeted optimization was applied without violating domain invariants or security boundaries.
 - Re-run benchmark proves measurable latency reduction, memory stabilization, or bundle size reduction.
 - Performance audit report is documented in `docs/perf/` using `templates/perf-audit-template.md`.
+- Close the turn with the Dual-Compatible Telemetry Status Card ([`protocols/telemetry-cards.md`](../protocols/telemetry-cards.md)) when enabled (`status-cards: off` suppresses it; halts still fire).

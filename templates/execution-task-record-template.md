@@ -72,7 +72,7 @@
 - **Mapped `pk:tasks` Status**: `To Do` <!-- To Do | In Progress | In Review | Done -->
 - **Active Task Pointer**: `[This Task ID while in_progress (gated sub-task work counts), otherwise None]`
 - **Start Time**: `[YYYY-MM-DD HH:MM UTC or N/A]`
-- **Current Actor**: `[Person, role, or agent]`
+- **Current Actor**: `[Person, role, agent, or session]`
 - **Next Action**: `[Exactly one prioritized action]`
 
 ### Transition History

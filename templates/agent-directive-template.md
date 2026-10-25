@@ -30,7 +30,7 @@ Activate workflows anytime with these namespaced triggers:
 - `pk:sync` (or `pk:update`, `pk:refresh`): Hot-reload protocols, sync to disk.
 - `pk:profile`: Switch Lite/Balanced/Turbo profile at runtime.
 - `pk:auto`: Autonomous SDLC pipeline, stop at review-ready.
-- `pk:doctor`: Read-only installed-governance audit (hosts, engine version, install mode, ignore state, docs drift).
+- `pk:doctor`: Read-only installed-governance audit (hosts, engine version, ignore state, docs drift, intake provenance, submodule registration).
 
 ### Smart Auto-Route & Guardrails (Triggers Are Optional)
 You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigger, apply this triage:
