@@ -9,9 +9,9 @@
     identical input.
 
     v1 mapping and known approximations (documented in BENCHMARK-METHODOLOGY §5):
-    - tokens_in/tokens_out sum usage over SUCCESSFUL assistant turns; turns that
-      follow a failed tool_result (per the error-pattern heuristic) until the
-      next non-failed tool_result are rework turns (rework_tokens_in/out).
+    - tokens_in/tokens_out sum usage over SUCCESSFUL assistant turns; a turn whose
+      tool results since the previous assistant turn include a failure (per the
+      error-pattern heuristic) is a rework turn (rework_tokens_in/out).
     - Command Code schema v3 records no tool exit codes, so failed loops are a
       documented heuristic over tool_result text (default patterns below,
       overridable with -ErrorPatterns "a|b").
@@ -91,7 +91,7 @@ $firstTs = ""
 $lastTs = ""
 $succIn = 0; $succOut = 0; $rewIn = 0; $rewOut = 0
 $cache = 0; $cost = 0.0
-$loops = 0; $inRework = $false
+$loops = 0; $accumFail = $false
 $toolTotal = 0; $toolSearch = 0; $toolEdit = 0; $toolVerify = 0; $toolOther = 0
 $users = 0
 
@@ -111,21 +111,26 @@ foreach ($line in (Get-Content $TranscriptPath)) {
     if ($line -match '"meta":\{"source":"user"') { $users++ }
 
     if ($line -match '"type":"tool_result"') {
+        # Failure flags OR across consecutive tool_result lines between
+        # assistant turns (parallel tool calls): the next assistant turn is a
+        # rework turn when ANY result since the previous assistant turn failed.
         $isFail = $false
         foreach ($p in $patterns) {
             if ($p -ne "" -and $line.Contains($p)) { $isFail = $true; break }
         }
-        if ($isFail) { $loops++; $inRework = $true } else { $inRework = $false }
+        if ($isFail) { $loops++; $accumFail = $true }
     }
 
     if ($line -match '"role":"assistant"') {
+        $turnFail = $accumFail
+        $accumFail = $false
         if ($line -match '"usage":\{') {
             $uin = [regex]::Match($line, '"inputTokens":([0-9.]+)')
             $uout = [regex]::Match($line, '"outputTokens":([0-9.]+)')
             $ucache = [regex]::Match($line, '"cacheReadTokens":([0-9.]+)')
             $ucost = [regex]::Match($line, '"costUsd":([0-9.]+)')
             if ($uin.Success) {
-                if ($inRework) {
+                if ($turnFail) {
                     $rewIn += [double]$uin.Groups[1].Value
                     if ($uout.Success) { $rewOut += [double]$uout.Groups[1].Value }
                 } else {
@@ -139,16 +144,31 @@ foreach ($line in (Get-Content $TranscriptPath)) {
         $modelMatch = [regex]::Match($line, '"model":"([^"]+)"')
         if ($modelMatch.Success) { $model = $modelMatch.Groups[1].Value }
 
-        foreach ($nameMatch in [regex]::Matches($line, '"name":"([a-z_]+)"')) {
-            $toolTotal++
-            $tail = $line.Substring($nameMatch.Index + $nameMatch.Length)
-            $cls = Classify-Tool -Name $nameMatch.Groups[1].Value -Tail $tail
-            switch ($cls) {
-                "search" { $toolSearch++ }
-                "edit" { $toolEdit++ }
-                "verify" { $toolVerify++ }
-                default { $toolOther++ }
+        # Tool calls are counted per "type":"tool_use" block, and each block
+        # name/command are matched only INSIDE that block — an earlier tool_use
+        # without a command can never borrow a later block command (cross-tool
+        # tail bleed). Tool names may contain any non-quote character.
+        $tl = '"type":"tool_use"'
+        $cursor = $line
+        while ($true) {
+            $p = $cursor.IndexOf($tl, [System.StringComparison]::Ordinal)
+            if ($p -lt 0) { break }
+            $after = $cursor.Substring($p + $tl.Length)
+            $nxt = $after.IndexOf($tl, [System.StringComparison]::Ordinal)
+            $block = if ($nxt -ge 0) { $after.Substring(0, $nxt) } else { $after }
+            $nameMatch = [regex]::Match($block, '"name":"([^"]+)"')
+            if ($nameMatch.Success) {
+                $toolTotal++
+                $tail = $block.Substring($nameMatch.Index + $nameMatch.Length)
+                $cls = Classify-Tool -Name $nameMatch.Groups[1].Value.ToLowerInvariant() -Tail $tail
+                switch ($cls) {
+                    "search" { $toolSearch++ }
+                    "edit" { $toolEdit++ }
+                    "verify" { $toolVerify++ }
+                    default { $toolOther++ }
+                }
             }
+            $cursor = $after
         }
     }
 }
@@ -170,6 +190,16 @@ if ($firstTs -ne "" -and $lastTs -ne "") {
 }
 $humans = [Math]::Max(0, $users - 1)
 if ($ScenarioId -eq "") { $ScenarioId = $sessionId }
+# Every emitted string field — including the session id when it becomes the
+# scenario_id fallback — must be free of shell-expansion and JSON-structure
+# characters; the Bash twin enforces the identical character class so both
+# twins reach the same verdict on adversarial values.
+foreach ($strval in @($ScenarioId, $Condition, $model, $firstTs)) {
+    if ($strval -match '["\\$`]') {
+        [Console]::Error.WriteLine("EXTRACT|ERROR|BAD_VALUE|emitted-string-field")
+        exit 2
+    }
+}
 $tokensTotal = [long]($succIn + $succOut + $rewIn + $rewOut)
 $transcriptCost = $cost.ToString("0.00", [System.Globalization.CultureInfo]::InvariantCulture)
 $succIn = [long]$succIn; $succOut = [long]$succOut; $rewIn = [long]$rewIn; $rewOut = [long]$rewOut

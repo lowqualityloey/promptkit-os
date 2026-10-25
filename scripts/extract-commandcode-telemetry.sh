@@ -8,9 +8,9 @@
 # input.
 #
 # v1 mapping and known approximations (documented in BENCHMARK-METHODOLOGY §5):
-# - tokens_in/tokens_out sum usage over SUCCESSFUL assistant turns; turns that
-#   follow a failed tool_result (per the error-pattern heuristic) until the
-#   next non-failed tool_result are rework turns (rework_tokens_in/out).
+# - tokens_in/tokens_out sum usage over SUCCESSFUL assistant turns; a turn whose
+#   tool results since the previous assistant turn include a failure (per the
+#   error-pattern heuristic) is a rework turn (rework_tokens_in/out).
 # - Command Code schema v3 records no tool exit codes, so failed loops are a
 #   documented heuristic over tool_result text (default patterns below,
 #   overridable with --error-patterns="a|b").
@@ -104,10 +104,34 @@ fi
 
 extract_facts() {
     awk -v pats="$ERROR_PATTERNS" '
-    function iso_epoch(t) {
-        gsub(/[-:TZ]/, " ", t)
-        sub(/\.[0-9]+/, "", t)
-        return mktime(t)
+    function epoch(t,  y, mo, d, h, mi, s, off, sign, oh, om, yy, mm, era, yoe, doy, doe, days) {
+        # ISO-8601 (YYYY-MM-DDTHH:MM:SS[.frac])(Z | ±HH:MM) → UTC epoch seconds
+        # via pure integer arithmetic (the civil-days algorithm) — POSIX awk has
+        # no mktime, and mktime would also interpret the fields in the local
+        # timezone of the host. A timestamp with no zone suffix is read as UTC
+        # (the Command Code host emits Z).
+        y = substr(t, 1, 4) + 0
+        mo = substr(t, 6, 2) + 0
+        d = substr(t, 9, 2) + 0
+        h = substr(t, 12, 2) + 0
+        mi = substr(t, 15, 2) + 0
+        s = substr(t, 18, 2) + 0
+        off = 0
+        if (length(t) >= 25 && (substr(t, 20, 1) == "+" || substr(t, 20, 1) == "-")) {
+            sign = (substr(t, 20, 1) == "+") ? 1 : -1
+            oh = substr(t, 21, 2) + 0
+            om = substr(t, 24, 2) + 0
+            off = sign * (oh * 3600 + om * 60)
+        }
+        yy = y
+        mm = mo
+        if (mm <= 2) { yy = yy - 1; mm = mm + 12 }
+        era = int(yy / 400)
+        yoe = yy - era * 400
+        doy = int((153 * (mm - 3) + 2) / 5) + d - 1
+        doe = yoe * 365 + int(yoe / 4) - int(yoe / 100) + doy
+        days = era * 146097 + doe - 719468
+        return days * 86400 + h * 3600 + mi * 60 + s - off
     }
     function json_num(line, key,  idx, rest) {
         idx = index(line, "\"" key "\":")
@@ -146,18 +170,24 @@ extract_facts() {
         }
         if ($0 ~ /"meta":\{"source":"user"/) users++
         if ($0 ~ /"type":"tool_result"/) {
+            # Failure flags OR across consecutive tool_result lines between
+            # assistant turns (parallel tool calls): the next assistant turn is
+            # a rework turn when ANY result since the previous assistant turn
+            # failed.
             is_fail = 0
             for (i = 1; i <= npat; i++) if (index($0, P[i])) { is_fail = 1; break }
-            if (is_fail) { loops++; in_rework = 1 } else { in_rework = 0 }
+            if (is_fail) { loops++; accum_fail = 1 }
         }
         if ($0 ~ /"role":"assistant"/) {
+            turn_fail = accum_fail
+            accum_fail = 0
             if ($0 ~ /"usage":\{/) {
                 uin = json_num($0, "inputTokens")
                 uout = json_num($0, "outputTokens")
                 ucache = json_num($0, "cacheReadTokens")
                 ucost = json_num($0, "costUsd")
                 if (uin != "") {
-                    if (in_rework) {
+                    if (turn_fail) {
                         rew_in += uin
                         rew_out += (uout == "" ? 0 : uout)
                     } else {
@@ -169,18 +199,26 @@ extract_facts() {
                 }
             }
             if (match($0, /"model":"[^"]+"/)) model = substr($0, RSTART + 9, RLENGTH - 10)
+            # Tool calls are counted per "type":"tool_use" block, and each
+            # block name/command are matched only INSIDE that block — an
+            # earlier tool_use without a command can never borrow a later
+            # block command (cross-tool tail bleed).
             tmp = $0
-            while (match(tmp, /"name":"[a-z_]+"/)) {
-                nm = substr(tmp, RSTART + 8, RLENGTH - 9)
-                mstart = RSTART
-                mlen = RLENGTH
-                cls = classify(nm, substr(tmp, mstart + mlen))
-                tool_total++
-                if (cls == "search") tool_search++
-                else if (cls == "edit") tool_edit++
-                else if (cls == "verify") tool_verify++
-                else tool_other++
-                tmp = substr(tmp, mstart + mlen)
+            TL = "\"type\":\"tool_use\""
+            while ((tlp = index(tmp, TL)) > 0) {
+                after = substr(tmp, tlp + length(TL))
+                nxt = index(after, TL)
+                block = (nxt > 0) ? substr(after, 1, nxt - 1) : after
+                if (match(block, /"name":"[^"]+"/)) {
+                    nm = substr(block, RSTART + 8, RLENGTH - 9)
+                    tool_total++
+                    cls = classify(tolower(nm), substr(block, RSTART + RLENGTH))
+                    if (cls == "search") tool_search++
+                    else if (cls == "edit") tool_edit++
+                    else if (cls == "verify") tool_verify++
+                    else tool_other++
+                }
+                tmp = after
             }
         }
     }
@@ -188,7 +226,7 @@ extract_facts() {
         if (!seen) { print "NO_SESSION"; exit 3 }
         wall = 0
         if (first_ts != "" && last_ts != "") {
-            wall = iso_epoch(last_ts) - iso_epoch(first_ts)
+            wall = epoch(last_ts) - epoch(first_ts)
             if (wall < 0) wall = 0
         }
         humans = (users > 1) ? users - 1 : 0
@@ -217,12 +255,16 @@ done <<< "$FACTS"
 session_id="${F[session_id]:-}"
 model="${F[model]:-unknown}"
 first_ts="${F[first_ts]:-}"
-# The record below is emitted via an expanding heredoc, so transcript-derived
-# string fields must be free of shell-expansion and JSON-structure characters
-# before they are interpolated.
-for strval in "$model" "$first_ts"; do
+# The record below is emitted via an expanding heredoc, so every emitted string
+# field — including the session id when it becomes the scenario_id fallback —
+# must be free of shell-expansion and JSON-structure characters before it is
+# interpolated.
+if [[ -z "$SCENARIO_ID" ]]; then
+    SCENARIO_ID="$session_id"
+fi
+for strval in "$SCENARIO_ID" "$CONDITION" "$model" "$first_ts"; do
     if [[ "$strval" == *[\"\\\$\`]* ]]; then
-        printf 'EXTRACT|ERROR|BAD_VALUE|transcript-string-field\n' >&2
+        printf 'EXTRACT|ERROR|BAD_VALUE|emitted-string-field\n' >&2
         exit 2
     fi
 done
@@ -240,10 +282,6 @@ tool_verify="${F[tool_verify]:-0}"
 tool_other="${F[tool_other]:-0}"
 humans="${F[humans]:-0}"
 wall="${F[wall]:-0}"
-
-if [[ -z "$SCENARIO_ID" ]]; then
-    SCENARIO_ID="$session_id"
-fi
 
 tokens_total=$((succ_in + succ_out + rew_in + rew_out))
 
