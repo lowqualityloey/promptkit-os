@@ -24,7 +24,7 @@ When contributing to PromptKit OS, adhere to the following core principles:
 
 ## Validation Commands & Verification
 
-Run these validation commands before opening a pull request. All verification gates must pass in both Bash and PowerShell environments.
+Run these validation commands before opening a pull request. All verification gates must pass in both Bash and PowerShell environments. macOS is a supported installer platform but has no CI leg (CI runs ubuntu + windows only) — macOS-sensitive behavior (BSD vs GNU tooling) must be verified locally before the PR.
 
 ### Local Harness Preflight
 
@@ -32,7 +32,7 @@ Installers run bounded advisory inspection before project writes; `PROMPTKIT_NO_
 
 ### Behavioral Eval Harness (prompt compliance, not prose)
 
-`scripts/run-behavioral-eval.sh` (+ `.ps1` twin) scores transcripts against the 27 rubrics in `scripts/tests/eval-scenarios/` (methodology and baseline: [`docs/BEHAVIORAL-EVAL.md`](./docs/BEHAVIORAL-EVAL.md)). Run `bash scripts/run-behavioral-eval.sh --self-test` (offline, CI-wired in both jobs); score a live transcript with `--score <scenario> <file>`. A scored line reports two independent axes — a presentation verdict (`RESULT`, `checks=M/N`) and, for scenarios that declare evidence checks, a behavioral verdict (`behavioral=`) plus `provenance=`; the evidence bundle is `dirname(<transcript>)`, with no flag. `behavioral=UNTESTED` means the evidence needed to judge was absent — an invalid observation, never a pass. To extend: add a scenario file (Prompt, Checks, Threshold, embedded PASS/FAIL fixtures) — the self-test picks it up automatically. Never edit a shipped workflow to make a scenario pass. Scenario fixtures are scorer/policy diagnostics and are never model-conformance results; a green self-test proves the rubric discriminates, not that any model complied.
+`scripts/run-behavioral-eval.sh` (+ `.ps1` twin) scores transcripts against the 34 rubrics in `scripts/tests/eval-scenarios/` (methodology and baseline: [`docs/BEHAVIORAL-EVAL.md`](./docs/BEHAVIORAL-EVAL.md)). Run `bash scripts/run-behavioral-eval.sh --self-test` (offline, CI-wired in both jobs); score a live transcript with `--score <scenario> <file>`. A scored line reports two independent axes — a presentation verdict (`RESULT`, `checks=M/N`) and, for scenarios that declare evidence checks, a behavioral verdict (`behavioral=`) plus `provenance=`; the evidence bundle is `dirname(<transcript>)`, with no flag. `behavioral=UNTESTED` means the evidence needed to judge was absent — an invalid observation, never a pass. To extend: add a scenario file (Prompt, Checks, Threshold, embedded PASS/FAIL fixtures) — the self-test picks it up automatically. Never edit a shipped workflow to make a scenario pass. Scenario fixtures are scorer/policy diagnostics and are never model-conformance results; a green self-test proves the rubric discriminates, not that any model complied.
 
 ### Bash (macOS / Linux / WSL)
 
@@ -63,6 +63,11 @@ bash scripts/tests/run-onboard-divergence-fixtures.sh
 bash scripts/tests/run-checkpoint-ignore-tests.sh
 bash scripts/tests/run-pk-entry-points-tests.sh
 bash scripts/tests/run-ai-attribution-tests.sh
+
+# Token budget gates (Balanced <= 2500 / Lite <= 1500) and per-task payloads
+bash scripts/measure-tokens.sh --strict
+bash scripts/measure-per-task-tokens.sh --strict
+bash scripts/tests/run-playbook-contract-tests.sh
 
 # Validate reference links and release records
 bash scripts/validate-references.sh .
@@ -113,6 +118,12 @@ pwsh -NoProfile -File .\scripts\tests\run-onboard-divergence-fixtures.ps1
 pwsh -NoProfile -File .\scripts\tests\run-checkpoint-ignore-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-pk-entry-points-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-ai-attribution-tests.ps1
+pwsh -NoProfile -File .\scripts\tests\run-projection-parity-tests.ps1
+
+# Token budget gates (Balanced <= 2500 / Lite <= 1500) and per-task payloads
+pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict
+pwsh -NoProfile -File .\scripts\measure-per-task-tokens.ps1 -Strict
+pwsh -NoProfile -File .\scripts\tests\run-playbook-contract-tests.ps1
 
 # Validate reference links and release records
 pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir .
@@ -156,7 +167,7 @@ Mechanical gates catch most resubmission causes; the rest is judgment. Before op
 1. **CHANGELOG entry**: behavior-surface changes (`workflows/`, `templates/`, `protocols/`, `package/`, top-level `scripts/`, `init.sh`/`init.ps1`) carry an `[Unreleased]` entry. Gate: `scripts/check-changelog-entry.sh` (+ `.ps1` twin), CI-wired against `origin/main`.
 2. **No stale pending language**: "pending <authority action>" text must not survive the merge that resolves it. The countersignature-consistency scenario in the behavioral twins covers retro chains; sweep your own diff for the pattern.
 3. **Twin parity**: every behavior change ships in both `.sh` and `.ps1`; new scripts join both CI syntax lists; new fixture cases register in the shared manifests.
-4. **Measured-figure anchor**: `docs/BENCHMARKS.md` stamps its figures with `**Current measurements:** <date> at `<commit>``. Editing any measured input — `workflows/`, `protocols/code-quality-gate.md`, or a measured template (`agent-directive-template.md`, `agent-directive-lite-template.md`, `tech-spec-template.md`, `release-checklist.md`) — requires restating that anchor to the commit you measured at **and** re-propagating every published figure. The twin suites enforce this: if the anchor does not resolve, or resolves and a measured input changed after it, the run fails — the unresolvable case fails closed (#568), not skipped. The anchor must be a commit **on `main`**: a squash-merged PR-branch commit is orphaned and unresolvable in a fresh clone, which now fails the suite rather than disabling the guard. `docs/BENCHMARKS.md` §9 (the `bytes/4` vs. real-tokenizer comparison) is the one exception to enforcement: `scripts/measure-tokenizer-delta.sh` always exits 0 and prints `SKIPPED` without `tiktoken`, so no gate can catch it going stale. Re-run it in the same change that touches a measured input — `pip install tiktoken`, then `bash scripts/measure-tokenizer-delta.sh` — and update the table, its `**Provenance:**` line, and any verdict sentence in §9 that quotes a ratio.
+4. **Measured-figure anchor**: `docs/BENCHMARKS.md` stamps its figures with `**Current measurements:** <date> at `<commit>``. Editing any measured input — `workflows/`, `protocols/code-quality-gate.md`, or a measured template (`agent-directive-template.md`, `agent-directive-lite-template.md`, `tech-spec-template.md`, `release-checklist.md`) — requires restating that anchor to the commit you measured at **and** re-propagating every published figure. The twin suites enforce this: if the anchor does not resolve, or resolves and a measured input changed after it, the run fails — the unresolvable case fails closed (#568), not skipped. The anchor must be a commit **on `main`**: a squash- or rebase-merged PR-branch commit is not on `main`, resolves only while the PR branch is still fetched, and fails the suite (fail-closed, not skipped) once the branch is deleted or unfetched — so **merge anchor-bearing PRs with a merge commit, never squash or rebase**, keeping the anchor commit an ancestor of `main` regardless of whether the PR branch is later retained. `docs/BENCHMARKS.md` §9 (the `bytes/4` vs. real-tokenizer comparison) is the one exception to enforcement: `scripts/measure-tokenizer-delta.sh` always exits 0 and prints `SKIPPED` without `tiktoken`, so no gate can catch it going stale. Re-run it in the same change that touches a measured input — `pip install tiktoken`, then `bash scripts/measure-tokenizer-delta.sh` — and update the table, its `**Provenance:**` line, and any verdict sentence in §9 that quotes a ratio.
 5. **Encoded policy has a prose referent**: graphs, enums, and budgets enforced by scripts are also stated where users read them, with mechanical parity where it matters.
 6. **PR body**: `templates/pull-request-template.md` sections, acceptance criteria with in-turn evidence, and a top-level `Closes #N` line so the merge closes the issue.
 7. **Commit discipline** (`workflows/commit.md`): pre-commit secret/probe scans, message body with maintenance-or-impact classification, explicit confirmation before the commit exists.

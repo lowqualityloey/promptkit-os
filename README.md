@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![CI](https://github.com/lowqualityloey/promptkit-os/actions/workflows/ci.yml/badge.svg)](https://github.com/lowqualityloey/promptkit-os/actions)
 [![npm version](https://img.shields.io/npm/v/promptkit-os.svg)](https://www.npmjs.com/package/promptkit-os)
-[![npm provenance](https://img.shields.io/badge/provenance-attested-brightgreen.svg)](https://search.sigstore.dev/?logIndex=3029590466)
+[![npm provenance](https://img.shields.io/badge/provenance-attested-brightgreen.svg)](https://www.npmjs.com/package/promptkit-os)
 [![GitHub](https://img.shields.io/badge/GitHub-lowqualityloey%2Fpromptkit--os-black.svg)](https://github.com/lowqualityloey/promptkit-os)
 
 The open-source engineering control plane for AI coding agents.  
@@ -140,7 +140,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 
 The core instruction layer stays small. Workflows, stack playbooks, and boundary recipes are loaded only when the task requires them.
 
-- **Balanced** profile: ~2,341 tok static footprint (~93% static saving vs. ~32.0k current core-subset baseline; 2,500 tok budget cap)
+- **Balanced** profile: ~2,348 tok static footprint (~93% static saving vs. ~32.8k current core-subset baseline; 2,500 tok budget cap)
 - **Lite** profile: ~1,456 tok static footprint (~95% static saving vs. the current baseline; 1,500 tok budget cap)
 
 PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), governing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 task risk ceremony). Retrieval confidence is treated as evidence rather than authority, and high-risk boundaries direct the agent to zoom out. These are advisory agent instructions: CI asserts that the invariant text is present and that the directive token budgets hold, but PromptKit does not enforce this protocol at runtime — see the enforcement boundary recorded in that file.
@@ -227,7 +227,7 @@ Already installed? To pull updates, see [Updating PromptKit](./QUICKSTART.md#upd
 
 ### 2. Configure
 
-The installer creates `PROMPTKIT.md` (your project profile — test commands, stack constraints, architectural invariants) and `docs/STATE.md` (living project state). Run `pk:onboard` for a guided setup interview.
+The installer creates `PROMPTKIT.md` (your project profile — test commands, stack constraints, architectural invariants) and `docs/STATE.md` (living project state). Run `pk:onboard` for a guided setup interview. Verify any install anytime with `pk:doctor` — a read-only audit of host directives, engine version, ignore-state, docs drift, intake provenance, and submodule registration; it reports rot and never writes.
 
 ### 3. Work normally
 
@@ -253,6 +253,8 @@ PromptKit routes the task to the appropriate ceremony level and workflow. Explic
 | **[docs/recipes/](./docs/recipes/)** | I want reusable boundary contracts (10 — Auth, Forms, Webhooks, Env, Testing, State, Realtime + 3 pk:auto utilities) |
 | **[docs/ADOPTION-GUIDE.md](./docs/ADOPTION-GUIDE.md)** | I want to add it to an existing project gradually |
 | **[docs/MAXIMS.md](./docs/MAXIMS.md)** | I want the quotable invariants — 9 one-line maxims with canonical links |
+| **[CHANGELOG.md](./CHANGELOG.md)** | I want what changed, release by release |
+| **[SECURITY.md](./SECURITY.md)** | I want to report a vulnerability or understand the supply-chain model |
 | **[CONTRIBUTING.md](./CONTRIBUTING.md)** | I want to extend or contribute |
 
 ---
