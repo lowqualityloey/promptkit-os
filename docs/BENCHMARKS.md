@@ -312,6 +312,10 @@ For full mathematical definitions, pricing constants, and the A/B evaluation pro
   (extracted from a Command Code session transcript by `scripts/extract-commandcode-telemetry.sh`;
   invalid records exit `2`). An empirical CPAC result additionally requires records from real
   accepted sessions — the fixtures and self-tests verify mechanics, not outcomes.
+- [`../benchmarks/README.md`](../benchmarks/README.md) — the A/B benchmark harness: frozen task
+  specs with rubrics, the paired-run protocol over headless Command Code (PromptKit directive vs
+  bare), blind grading, and per-arm aggregation through the §5 pipeline. No batch has been
+  executed or published yet; the harness demonstrates mechanics, not outcomes.
 
 ---
 

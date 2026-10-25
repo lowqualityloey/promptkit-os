@@ -386,6 +386,10 @@ promptkit-os/
 │   ├── measure-cpac.ps1                # PowerShell: CPAC scoring of §5 telemetry records + self-tests
 │   ├── extract-commandcode-telemetry.sh  # Bash: Command Code session transcript → §5 telemetry record
 │   ├── extract-commandcode-telemetry.ps1  # PowerShell: Command Code session transcript → §5 record
+│   ├── strip-benchmark-diff.sh         # Bash: drop PromptKit artifacts from benchmark grading diffs
+│   ├── strip-benchmark-diff.ps1        # PowerShell: drop PromptKit artifacts from benchmark grading diffs
+│   ├── aggregate-benchmark-runs.sh     # Bash: §5 records + grading TSV → per-arm benchmark aggregates
+│   ├── aggregate-benchmark-runs.ps1    # PowerShell: §5 records + grading TSV → per-arm aggregates
 │   ├── measure-tokenizer-delta.sh      # Bash: bytes/4 vs real-tokenizer validation
 │   ├── measure-tokenizer-delta.ps1     # PowerShell: bytes/4 vs real-tokenizer validation
 │   ├── measure-per-task-tokens.sh      # Bash: Per-task JIT payload measurement
@@ -407,6 +411,7 @@ promptkit-os/
 │   ├── validate-release-records.ps1    # PowerShell: Release evaluation & approval validator
 │   └── tests/run-execution-control-fixtures.* # Paired regression and isolated fixture harnesses
 ├── package/                     # npm courier surface (bin/promptkit-os.js; version stamped from the tag at release)
+├── benchmarks/                  # A/B benchmark harness: frozen task specs, operator-local run driver, published run artifacts
 └── activities/                  # Interactive simulation katas & system design drills
     ├── README.md                   # Interactive simulation catalog
     ├── 01-system-design-spike.md         # High-throughput webhook engine design
