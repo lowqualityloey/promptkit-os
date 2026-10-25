@@ -31,6 +31,15 @@ Install PromptKit OS using the OpenCode host target so its generated `.opencode/
 - *Note*: This is operational guidance, not an automated runtime restriction; PromptKit OS does not enforce runtime model gating.
 
 
+## Install Doors: Submodule (Canonical) and npm Courier
+
+The git submodule flow used in the stages below is canonical. The npm package `promptkit-os` is a **courier, not a dependency**: `npx promptkit-os@latest` fetches the release tarball matching its version into `.promptkit/` and runs the same `init.sh` / `init.ps1`, producing an identical tree (Node 18+ required; PowerShell 7 on Windows). Published couriers `v2.0.0+` pin a per-version SHA-256 digest before download and fail closed on mismatch (trust model: [`protocols/setup.md`](../protocols/setup.md)).
+
+**Updating an existing install:**
+
+- **Submodule install**: `git submodule update --remote --merge .promptkit`, rerun `./.promptkit/init.sh` (Windows: `.\.promptkit\init.ps1`), then run `pk:sync` in your next session so the agent hot-reloads the updated rules.
+- **Courier-made `.promptkit/`**: rerun the courier; it refuses to overlay a non-empty `.promptkit/` and prints the update command that matches how the existing install was made.
+
 ### Adoption Stage 0: Zero Installation (Try Before You Buy)
 **Time**: 5 minutes  
 **Commitment**: None  
@@ -226,7 +235,7 @@ Install PromptKit OS using the OpenCode host target so its generated `.opencode/
 
 ### If Your Project Predates Intake: the `legacy-partial` Guarantee
 
-The project-profile template now carries two machine-readable lines, written by `pk:onboard` (`workflows/onboard.md:194`):
+The project-profile template now carries two machine-readable lines, written by `pk:onboard` (`workflows/onboard.md` (anchor: `Write the machine-readable`)):
 
 - `size: small|medium|large` — the bounded-interview class
 - `intake-status: unanswered|partial|complete|legacy-partial`

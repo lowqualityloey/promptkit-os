@@ -222,7 +222,7 @@ All triggers use the `pk:` prefix to avoid collisions with native slash commands
 | `pk:ship` | [`workflows/ship.md`](../workflows/ship.md) | Core 🧪 | `docs/releases/` | Runtime env validation (project-native mechanism), migration ordering, and smoke tests. |
 | `pk:checkpoint` | [`workflows/checkpoint.md`](../workflows/checkpoint.md) | Core | `docs/STATE.md` | Session compaction, invariant locking, and fresh chat handover prompt. |
 | `pk:sync` | [`workflows/sync.md`](../workflows/sync.md) | Core 🧪 | Active context | Hot-reload protocols, purge stale memory, and synchronize with disk. |
-| `pk:doctor` | [`workflows/doctor.md`](../workflows/doctor.md) | New 🧪 | Terminal report | Read-only installed-governance audit (hosts × engine version × ignore-state × docs-drift × intake-record provenance, scoped by install-mode); reports rot, never upgrades. |
+| `pk:doctor` | [`workflows/doctor.md`](../workflows/doctor.md) | New 🧪 | Terminal report | Read-only installed-governance audit (hosts × engine version × ignore-state × docs-drift × intake-record provenance × submodule registration, scoped by install-mode); reports rot, never upgrades. |
 | `pk:profile` | [`workflows/profile.md`](../workflows/profile.md) | New 🧪 | `PROMPTKIT.md` + directive | Switch Lite/Balanced/Turbo at runtime via the idempotent installer re-injection path. |
 | `pk:auto` | [`workflows/auto.md`](../workflows/auto.md) | New 🧪 | Verified diff / PR | Unattended SDLC meta-orchestration (plan→tasks→code→test→review) with circuit breakers and test immobility. |
 | `pk:retro` | [`workflows/reflect.md`](../workflows/reflect.md) | Core | `docs/adrs/` & journal | Post-feature retrospective: extracts decisions into standard MADRs. |
@@ -284,6 +284,10 @@ promptkit-os/
 │   ├── ADOPTION-GUIDE.md        # Incremental adoption for existing projects
 │   ├── INTERESTING-FACTS.md     # Unique insights and design principles
 │   ├── DESIGN-MD-FAQ.md         # FAQ on custom DESIGN.md usage & safety
+│   ├── MIGRATION.md             # Migration guide for the v2.0.0 offline-router retirement (from 1.x)
+│   ├── MAXIMS.md                # Quotable one-line invariants with canonical links
+│   ├── TURBO-WAVES-GUIDE.md     # Unattended parallel execution guide for pk:auto & Turbo
+│   ├── HARNESS-PREFLIGHT.md     # Installer local-harness preflight scope & exit codes
 │   ├── token-efficiency-review.md # Token efficiency audit trail
 │   ├── stacks/                  # JIT stack playbooks (Web, DB, Cloud, Mobile, Systems & CLI)
 │   ├── recipes/                 # Contract boundary recipes (Auth, Forms, Webhooks, Env, Test Isolation)
@@ -382,9 +386,13 @@ promptkit-os/
 │   ├── measure-cpac.ps1                # PowerShell: Cost Per Accepted Change (CPAC) measurement utility
 │   ├── measure-tokenizer-delta.sh      # Bash: bytes/4 vs real-tokenizer validation
 │   ├── measure-tokenizer-delta.ps1     # PowerShell: bytes/4 vs real-tokenizer validation
+│   ├── measure-per-task-tokens.sh      # Bash: Per-task JIT payload measurement
+│   ├── measure-per-task-tokens.ps1     # PowerShell: Per-task JIT payload measurement
+│   ├── check-doctor.sh                 # Bash: pk:doctor installed-governance audit engine
+│   ├── check-doctor.ps1                # PowerShell: pk:doctor installed-governance audit engine
 │   ├── run-behavioral-eval.sh          # Bash: Prompt-compliance eval harness + offline self-test
 │   ├── run-behavioral-eval.ps1         # PowerShell: Prompt-compliance eval harness + offline self-test
-│   ├── tests/eval-scenarios/           # Eval rubric scenarios with embedded fixtures (27)
+│   ├── tests/eval-scenarios/           # Eval rubric scenarios with embedded fixtures (34)
 │   ├── setup-github-labels.sh          # Bash: Provision standardized GitHub labels (priority, type, area)
 │   ├── setup-github-labels.ps1         # PowerShell: Provision standardized GitHub labels (priority, type, area)
 │   ├── validate-references.sh          # Bash: Check all workflow→template references
@@ -396,6 +404,7 @@ promptkit-os/
 │   ├── validate-release-records.sh     # Bash: Release evaluation & approval validator
 │   ├── validate-release-records.ps1    # PowerShell: Release evaluation & approval validator
 │   └── tests/run-execution-control-fixtures.* # Paired regression and isolated fixture harnesses
+├── package/                     # npm courier surface (bin/promptkit-os.js; version stamped from the tag at release)
 └── activities/                  # Interactive simulation katas & system design drills
     ├── README.md                   # Interactive simulation catalog
     ├── 01-system-design-spike.md         # High-throughput webhook engine design

@@ -4,7 +4,7 @@ Visual guide to help you quickly find the right workflow for your current task.
 
 ## Lite Map (Onboarding — 5 Nodes)
 
-New users start here with an introductory 5-node mental model of the development lifecycle (distinct from the Lite installer profile subset: `pk:route`, `pk:debug`, `pk:test`, `pk:commit`, `pk:checkpoint`). Full 26-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
+New users start here with an introductory 5-node mental model of the development lifecycle (distinct from the Lite installer profile subset: `pk:route`, `pk:debug`, `pk:commit`, `pk:checkpoint`, `pk:sync`, `pk:profile`). Full 26-workflow map ships below; unneeded workflows cost 0 tokens (JIT).
 
 ```text
 pk:route → pk:plan / pk:tasks → pk:debug → pk:commit → pk:checkpoint
@@ -51,7 +51,7 @@ The Adaptation adds evidence and planning guidance without creating a competing 
 | Release readiness and evaluation | `pk:ship` | Evaluates release readiness and preserves the existing release record and rollback boundaries. |
 | External-action approval | Human Release Coordinator | Separately decides tag, publication, remote operation, deployment, and rollback; no workflow or validator authorizes these automatically. |
 
-This matrix is the shared authority reference for `pk:route`, `pk:plan`, and Adaptation workflows across current PromptKit OS releases (v1.10.0). It records ownership without requiring later artifact schemas or external tooling.
+This matrix is the shared authority reference for `pk:route`, `pk:plan`, and Adaptation workflows across current PromptKit OS releases. It records ownership without requiring later artifact schemas or external tooling.
 
 <a id="canonical-artifact-contract"></a>
 ## Canonical Artifact Contract
@@ -616,7 +616,7 @@ Trigger anytime with `pk:route`. Navigate across the entire engineering lifecycl
 > - `pk:auto`: Orchestrates unattended sequential lifecycle chaining (`plan` → `tasks` → code → `test` → `review`) with built-in circuit breakers, test immobility, and a default stop at review-ready.
 > - `pk:tutor` (Socratic mentorship & 3-tier progressive hints) and `pk:grill` (Staff Engineer architecture defense drills) operate perpendicularly across all lifecycle phases whenever conceptual guidance or invariant stress-testing is needed.
 > - `pk:sync` (hot-reload) and `pk:profile` (runtime Lite/Balanced/Turbo switching) are cross-cutting session utilities outside the lifecycle flow.
-> - `pk:doctor` (read-only installed-governance audit) runs outside the lifecycle flow: it checks hosts × engine version × ignore-state × docs-drift × intake-record provenance, scoped by install-mode, and reports rot without ever upgrading or writing.
+> - `pk:doctor` (read-only installed-governance audit) runs outside the lifecycle flow: it checks hosts × engine version × ignore-state × docs-drift × intake-record provenance × submodule registration, scoped by install-mode, and reports rot without ever upgrading or writing.
 
 ---
 
