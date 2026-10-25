@@ -6,7 +6,7 @@ Trigger anytime with: `pk:doctor`
 No aliases: the spec registers none, and any bare `pk:` alias would first have to join the alias allowlist in `scripts/validate-references.sh` (and its `.ps1` twin) plus the orphan-trigger check, which requires zero warnings.
 
 ## Mission
-One command checks hosts × engine version × ignore-state × docs-drift × intake-record provenance, scoped by install-mode, and reports exactly what rotted: a stale engine, missing host directive blocks, unexpectedly ignored managed paths, diverged state stores, an unresolvable intake record. "pk stopped working and nobody noticed" becomes impossible. `pk:doctor` diagnoses; it never repairs.
+One command checks hosts × engine version × ignore-state × docs-drift × intake-record provenance × submodule registration, scoped by install-mode, and reports exactly what rotted: a stale engine, missing host directive blocks, unexpectedly ignored managed paths, diverged state stores, an unresolvable intake record, an unregistered `.promptkit` gitlink. "pk stopped working and nobody noticed" becomes impossible. `pk:doctor` diagnoses; it never repairs.
 
 ## Level
 **Level 2 (Controlled).** A new workflow is a public contract surface under [`docs/adrs/0002-workflow-lifecycle-policy.md`](../docs/adrs/0002-workflow-lifecycle-policy.md) (proposed SemVer impact `minor`). The workflow is **read-only**: it observes and reports, following the Phase 1 framing of [`workflows/sync.md`](./sync.md).
@@ -36,8 +36,8 @@ One command checks hosts × engine version × ignore-state × docs-drift × inta
 ┌───────────────────────────────────────────────────────────────────────┐
 │                          PK:DOCTOR LIFECYCLE                          │
 ├──────────────────────────────┬────────────────────────────────────────┤
-│ Phase 1: Scope & Install     │ Phase 2: Five Checks                   │
-│ Mode                         │ (hosts/version/ignore/docs/provenance) │
+│ Phase 1: Scope & Install     │ Phase 2: Six Checks                    │
+│ Mode                         │ (hosts/version/ignore/docs/prov/submod)│
 ├───────────────────────────────────────────────────────────────────────┤
 │ Phase 3: Machine-Readable Report & Exit Code                          │
 └───────────────────────────────────────────────────────────────────────┘
@@ -48,7 +48,7 @@ One command checks hosts × engine version × ignore-state × docs-drift × inta
 2. Classify the install door from the courier's own discriminator, exactly as `package/bin/promptkit-os.js` tests it: `<kit>/.git` exists → submodule/clone; absent → npx courier tarball.
 3. Enumerate expected host files and workflows **from the declared mode**: a Lite install expects only its 6 workflows, so no row may report `MISSING` for a Balanced-only workflow (mode-scoping is a correctness rule, not a cosmetic one).
 
-### Phase 2: The Five Checks
+### Phase 2: The Six Checks
 
 **1. hosts**: enumerate the expected host directive files from the declared profile; report `OK` when `<!-- PROMPTKIT_START -->` is present in each, `MISSING` when absent (remediation: re-run the installer). Scope by declared mode per Phase 1.
 
@@ -70,6 +70,8 @@ One command checks hosts × engine version × ignore-state × docs-drift × inta
 **5. provenance**: read the `intake-status` and `intake-record` machine fields in `PROMPTKIT.md` and report the intake record's *path health*. `SKIP(<reason>)` when `intake-status` is absent, an unfilled placeholder, unrecognized, or anything other than `complete`, and when the `intake-record` value is absent or an unfilled placeholder; `INCOMPLETE` when the declared path is absolute, drive-qualified, or contains a traversal segment, when the path or its symlink chain resolves outside the project root, or when an existing path or symlink chain cannot be resolved; `MISSING` when the record is absent, is not a regular file, or is not readable; `OK` when `intake-record` resolves to a readable project-relative file inside the project root.
 
 **What the provenance row does not prove.** `OK` means only that the declared record path resolves. It is not evidence that a human approved the intake, that assumption transitions were recorded, or that accepted defaults stayed in scope; those remain manual review obligations in [`protocols/discovery-intake.md`](../protocols/discovery-intake.md). A resolved record cites an intake artifact; it does not certify one. This is a different guarantee from the **Provenance Invariant** below, which governs whether *any* row may read `OK`.
+
+**6. submodule registration** (issue #667): when the engine directory is a gitlink (`160000` index mode) inside the consumer repository, verify a `[submodule]` mapping in `.gitmodules` names the kit path. The parser splits each line on the first `=` after stripping one trailing `\r`, so a CRLF `.gitmodules` (a `core.autocrlf=true` checkout) parses identically to an LF one — the v2.0.1 hardening; the `[ \t]` trims alone do not remove the `\r`. Rows: `OK` when the mapping resolves; `MISSING(.gitmodules)` when the gitlink has no mapping (remediation: re-register the submodule or restore the `.gitmodules` mapping — do not delete the gitlink); `SKIP(engine outside repo)` or `SKIP(not a submodule install)` otherwise. `ls-files` is the one git op this check adds to the read-only allowlist above.
 
 **Degradation rule.** When an input is absent or a tool is missing (`handoff.md`, Task Records, `git`, `jq`), the owning check reports `SKIP(<reason>)` and does not affect the exit code. Never report `OK` for a check that did not run.
 

@@ -7,7 +7,7 @@ Trigger anytime with: `pk:verify-bootstrap`
 Generate a project-local verification surface so done-gates have something real to gate against. In greenfield installs — where no test infrastructure exists — the Bounded Oracle (`protocols/code-quality-gate.md` §5) degrades to prose. This workflow scaffolds deterministic, re-runnable behavior checks (`verify/` + verification map), demonstrates one deliberate red/green cycle during bootstrap, and wires `pk:ship` / `pk:fix` / `pk:review` gates to prefer this surface as the done-gate target when present.
 
 ## Level
-**Level 2 — Controlled.** Cross-gate contract surface; requires a canonical Task Record (`docs/tasks/<id>.md`) before implementation. Generation writes host-executable files and therefore requires explicit human confirmation per the guardrail below.
+**Level 2 — Controlled (Controlled).** Cross-gate contract surface; requires a canonical Task Record (`docs/tasks/<id>.md`) before implementation. Generation writes host-executable files and therefore requires explicit human confirmation per the guardrail below.
 
 ## Non-Overlap (ADR 0002 Gate Record)
 - `workflows/test.md` plans pyramid seams for existing code; it has no greenfield interview, no artifact-generation procedure, and no drift-maintenance cadence.
@@ -54,7 +54,7 @@ Phases 1–2 are passive discovery (manifests, runners, existing checks). Phase 
 3. **Halt-not-waive:** if red cannot be produced, HALT with the canonical `> [!WARNING]` `### 🚫BLOCKED:` callout per `protocols/telemetry-cards.md` — never waive the guard.
 
 ### Phase 4: Wire into the existing contract + drift maintenance
-1. Record the verification surface as the preferred done-gate target for `pk:ship` / `pk:fix` / `pk:review` in the host profile.
+1. Record `verify-surface: <path-or-none>` in `PROMPTKIT.md`'s machine lines (see [`templates/project-profile-template.md`](../templates/project-profile-template.md) §0) as the preferred done-gate target for `pk:ship` / `pk:fix` / `pk:review`.
 2. Generated checks count as executed evidence under existing oracle rules (exit code 0 required; max 2 auto-repair attempts).
 3. **Drift maintenance:** re-walk the feature map against the codebase on retrofit cadence so the surface tracks the app instead of rotting.
 

@@ -5,7 +5,7 @@
 PromptKit OS ships with 2 official profiles + 1 experimental to fix recommendability gap (5/10 → 8/10):
 
 - **Lite (official)** — 6 utility workflows, 1,456 tok static (measured), 80% value, onboarding
-- **Balanced (official, default)** — full 26 workflows, 2,341 tok static, Level 0-3 adaptive ceremony, teams/production
+- **Balanced (official, default)** — full 26 workflows, 2,348 tok static, Level 0-3 adaptive ceremony, teams/production
 - **Turbo (experimental)** — Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval
 
 ## Profile Comparison
@@ -13,9 +13,9 @@ PromptKit OS ships with 2 official profiles + 1 experimental to fix recommendabi
 | Dimension | Lite | Balanced | Turbo (Experimental) |
 | :--- | :--- | :--- | :--- |
 | **Workflows** | route, debug, commit, checkpoint, sync, profile | All 26 | All 26 + parallel waves |
-| **Static tokens** | 1,456 tok | 2,341 tok | 2,341 tok + subagents |
+| **Static tokens** | 1,456 tok | 2,348 tok | 2,348 tok + subagents |
 | **Use case** | New users, learning, tiny bug fixes, docs typos | Teams, production, full lifecycle | Greenfield, user accepts cost |
-| **Install** | `init.sh --lite` | `init.sh --balanced` or no flag (default) | `init.sh --turbo --experimental` |
+| **Install** | `init.sh --lite` / `init.ps1 -Lite` | `init.sh --balanced` (or no flag, default) / `init.ps1 -Balanced` | `init.sh --turbo --experimental` / `init.ps1 -Turbo -Experimental` |
 | **PROMPTKIT.md** | `profile: lite` | `profile: balanced` | `profile: turbo` |
 | **L2/L3 support** | Recommends switching to Balanced | Full support | Full + parallel |
 | **Token cost** | 1x | 1x | 1.2-2x measured |
@@ -59,7 +59,7 @@ Current static-directive figures, and the current per-task payloads, are publish
 > Per-task payload after Change A (route.md no longer mandatory):
 > - pk:fix: 5,946 tok (was 12,861 before)
 > - pk:plan: 17,751 tok
-> - pk:ship: 17,846 tok (will drop to ~14,546 after ship.md extraction already done)
+> - pk:ship: 17,846 tok (the ship.md extraction, already done by this snapshot, later brought this figure down further)
 
 ## Upgrade Path
 

@@ -156,3 +156,4 @@ Avoid hardcoding role checks like `if (user.role === 'ADMIN')` throughout the co
 - Cookie security attributes and token lifetimes explicitly defined.
 - RBAC capability matrix and ABAC ownership rules documented.
 - Rate-limiting thresholds and session invalidation rules established.
+- Close the turn with the Dual-Compatible Telemetry Status Card ([`protocols/telemetry-cards.md`](../protocols/telemetry-cards.md)) when enabled (`status-cards: off` suppresses it; halts still fire).

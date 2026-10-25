@@ -48,6 +48,8 @@ PromptKit OS supports tailored mentorship modes matching the developer's experie
 | **5. Grill-Me / Defense** | All Tiers (Drill)   | Intensive; devil's advocate probing   | Zero code; requires learner defense      | Verbalizing trade-offs, internal mechanics, interview prep    | `pk:grill`           |
 | **6. Debug Detective**   | All Tiers (Bug RCA) | Hypothesis-driven Socratic triage     | Zero bug reveals; guides instrumentation | Scientific RCA, isolating state deltas, reproduction          | `pk:debug`           |
 
+The L1–L4 target tiers above are **learner-experience tiers** (audience calibration for hint depth and code tolerance); they are distinct from the L0–L3 task-ceremony compact notation governed by [`workflows/route.md`](./route.md) and share no semantics with it.
+
 ---
 
 ### Mode Precedence over Generic Steps
