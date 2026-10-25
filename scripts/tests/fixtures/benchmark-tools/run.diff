@@ -1,0 +1,55 @@
+diff --git a/src/app.ts b/src/app.ts
+index 1111111..2222222 100644
+--- a/src/app.ts
++++ b/src/app.ts
+@@ -1,3 +1,4 @@
+ import { serve } from "./serve";
++import { grade } from "./grade";
+ export function main() {
+   serve();
+ }
+diff --git a/PROMPTKIT.md b/PROMPTKIT.md
+index 3333333..4444444 100644
+--- a/PROMPTKIT.md
++++ b/PROMPTKIT.md
+@@ -1,3 +1,4 @@
+ profile: balanced
++size: medium
+ intake-status: legacy-partial
+Engine: v2.0.1 (de13ee3)
+diff --git a/docs/STATE.md b/docs/STATE.md
+index 5555555..6666666 100644
+--- a/docs/STATE.md
++++ b/docs/STATE.md
+@@ -1,2 +1,3 @@
+ # STATE
++## 3A drifted row
+ Task: TASK-BENCH
+diff --git a/.promptkit/workflows/route.md b/.promptkit/workflows/route.md
+index 7777777..8888888 100644
+--- a/.promptkit/workflows/route.md
++++ b/.promptkit/workflows/route.md
+@@ -1 +1,2 @@
+ # route
++added line
+diff --git a/.github/ISSUE_TEMPLATE/task.md b/.github/ISSUE_TEMPLATE/task.md
+index 9999999..aaaaaaa 100644
+--- a/.github/ISSUE_TEMPLATE/task.md
++++ b/.github/ISSUE_TEMPLATE/task.md
+@@ -1 +1,2 @@
+ task template
++added line
+diff --git a/docs/adrs/ADR-0001-benchmark.md b/docs/adrs/ADR-0001-benchmark.md
+index bbbbbbb..ccccccc 100644
+--- a/docs/adrs/ADR-0001-benchmark.md
++++ b/docs/adrs/ADR-0001-benchmark.md
+@@ -1 +1,2 @@
+ # ADR-0001
++status row
+diff --git a/docs/reviews/REVIEW-bench.md b/docs/reviews/REVIEW-bench.md
+index ddddddd..eeeeeee 100644
+--- a/docs/reviews/REVIEW-bench.md
++++ b/docs/reviews/REVIEW-bench.md
+@@ -1 +1,2 @@
+ # REVIEW
++finding row
