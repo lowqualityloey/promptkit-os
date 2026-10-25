@@ -39,12 +39,14 @@ $$\text{CPAC} = \frac{C_{\text{inference}} + C_{\text{rework}} + C_{\text{human}
 
 Where:
 
-> **Implementation note:** the formula below isolates failed iterations to the rework penalty
+> **Implementation note:** the formula below isolates failed iterations to the rework cost
 > ($C_{\text{rework}}$) so they are not double-counted in inference, and it is the formula exercised by
-> the self-tests in `scripts/measure-cpac.sh` / `.ps1`. **The shipped CLI has no telemetry ingestion
-> path:** it reads no transcript or telemetry file (a path argument is rejected with exit `2`) and
-> prints a SIMULATED demonstration scorecard. The self-tests verify the arithmetic, not an empirical
-> result.
+> the self-tests in `scripts/measure-cpac.sh` / `.ps1`. The shipped CLI implements telemetry
+> ingestion: `scripts/extract-commandcode-telemetry.sh` / `.ps1` convert a Command Code session
+> transcript into the §5 record, and a §5 record path passed to `scripts/measure-cpac.sh` / `.ps1`
+> is scored mechanically (unreadable, malformed, or incomplete records fail closed with exit `2`).
+> The self-tests verify the arithmetic; only records extracted from real sessions are empirical
+> results.
 
 ### A. Direct Inference Cost ($C_{\text{inference}}$)
 The raw LLM API consumption across all successful conversation turns. Note that inference costs from failed rework loops are accounted for in $C_{\text{rework}}$ instead of here, to avoid double counting:
@@ -113,11 +115,12 @@ To ensure rigorous comparison without confounding variables, every evaluation ru
 2. **Zero Prior Context**: Both runs begin from a clean checkout at the designated commit fixture.
 3. **Identical Task Prompt**: The user request text must be verbatim identical.
 4. **Mechanical Evaluation**: this protocol requires telemetry to be extracted mechanically from
-   transcript logs rather than scored by qualitative subjective rating. **That extraction is specified
-   here but not implemented in the shipped tooling:** `scripts/measure-cpac.sh` and its `.ps1` twin
-   currently provide formula self-tests and a simulated demonstration only, and they reject a telemetry
-   path with exit `2`. Producing an empirical CPAC result therefore requires an authorized
-   telemetry-ingestion implementation first.
+   transcript logs rather than scored by qualitative subjective rating. That extraction is
+   implemented in the shipped tooling: `scripts/extract-commandcode-telemetry.sh` and its `.ps1`
+   twin mechanically convert a Command Code session transcript into the §5 telemetry record, and
+   `scripts/measure-cpac.sh` / `.ps1` score such a record (a telemetry path that is empty,
+   malformed, or missing required keys fails closed with exit `2`). Empirical claims still require
+   real session transcripts: the bundled fixtures and self-tests verify mechanics, not outcomes.
 
 ---
 
@@ -135,11 +138,15 @@ Execution logs must export a standardized JSON telemetry record conforming to th
     "tokens_in": 14250,
     "tokens_out": 1820,
     "tokens_total": 16070,
+    "cache_read_tokens": 5300,
     "tool_calls_total": 14,
     "tool_calls_search": 4,
     "tool_calls_edit": 5,
     "tool_calls_verify": 5,
+    "tool_calls_other": 0,
     "rework_loops": 0,
+    "rework_tokens_in": 0,
+    "rework_tokens_out": 0,
     "wall_clock_seconds": 184,
     "invariants_checked": 5,
     "invariants_passed": 5,
@@ -155,6 +162,38 @@ Execution logs must export a standardized JSON telemetry record conforming to th
 }
 ```
 
+### A. Extraction Implementation and v1 Conventions (Command Code)
+
+`scripts/extract-commandcode-telemetry.sh` / `.ps1` implement the extraction for Command Code
+session transcripts (`~/.commandcode/projects/<slug>/<session>.jsonl`, JSONL schema v3), and
+`scripts/measure-cpac.sh` / `.ps1` score the emitted record (a `CPAC|MEASURED|...` machine line;
+unreadable, malformed, or incomplete records exit `2`). The v1 mapping fixes the following
+conventions, which any empirical claim must state alongside its numbers:
+
+- **Successful vs rework split (no double counting)**: usage sums from assistant turns are
+  attributed to `tokens_in`/`tokens_out` (successful) or to `rework_tokens_in`/`rework_tokens_out`
+  (rework) by a turn-walk rule: a turn that follows a failed tool result — until the next
+  non-failed tool result — is a rework turn. `tokens_total` is the sum of all four fields.
+- **Failure detection is a heuristic**: Command Code schema v3 records no tool exit codes, so the
+  dimension-3 measurement ("number of non-zero exit codes") is approximated by matching a
+  documented pattern list over tool-result text (overridable with `--error-patterns` on the
+  extractor). Treat `rework_loops` as approximate, and state the pattern list used when publishing
+  comparisons.
+- **Cache reads are reported, not priced**: `cache_read_tokens` sums the host's cache-read usage
+  but is excluded from $C_{\text{inference}}$, because §2 defines a single input price with no
+  cache-read tier. The host's `inputTokens` are used as recorded. Cross-condition comparisons
+  share the convention, so ratios remain meaningful.
+- **Tool classification is best-effort**: `tool_calls_search`/`edit`/`verify` classify tool names
+  and shell commands by documented keyword rules; the remainder is `tool_calls_other` (the four
+  need not be assumed to sum to `tool_calls_total`).
+- **Human interventions**: user prompts after the first — the initial request is the task, not an
+  intervention.
+- **Acceptance stays human**: the record's `accepted` flag defaults to `false` and may be set to
+  `true` only by an operator after human acceptance; an unaccepted record scores
+  `INF (REJECTED)`.
+- `costs.transcript_cost_usd` reports the host's own recorded cost for transparency (it reads `0`
+  under subscription pricing) and is not part of the CPAC formula.
+
 ---
 
 ## 6. Related Documentation
@@ -162,6 +201,8 @@ Execution logs must export a standardized JSON telemetry record conforming to th
 - [`BENCHMARKS.md`](./BENCHMARKS.md) — Static directive token weights and context window analysis.
 - [`BEHAVIORAL-EVAL.md`](./BEHAVIORAL-EVAL.md) — Qualitative prompt-compliance evaluation results.
 - [`specs/SPEC-empirical-benchmark.md`](./specs/SPEC-empirical-benchmark.md) — Detailed benchmark task definitions and assertion rubrics.
-- [`../scripts/measure-cpac.sh`](../scripts/measure-cpac.sh) — CPAC formula self-tests and a simulated
-  scorecard generator. Telemetry extraction is **not implemented** in the shipped utility; a telemetry
-  path argument exits `2`.
+- [`../scripts/measure-cpac.sh`](../scripts/measure-cpac.sh) — CPAC scoring: ingests a §5 telemetry
+  record (exit `2` on invalid records), plus formula self-tests and a `--demo` simulated scorecard.
+- [`../scripts/extract-commandcode-telemetry.sh`](../scripts/extract-commandcode-telemetry.sh) —
+  Command Code session transcript → §5 telemetry record extractor (dependency-free, with a `.ps1`
+  twin; see §5.A for the v1 mapping conventions).
