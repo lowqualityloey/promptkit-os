@@ -39,3 +39,17 @@ index 9999999..aaaaaaa 100644
 @@ -1 +1,2 @@
  task template
 +added line
+diff --git a/docs/adrs/ADR-0001-benchmark.md b/docs/adrs/ADR-0001-benchmark.md
+index bbbbbbb..ccccccc 100644
+--- a/docs/adrs/ADR-0001-benchmark.md
++++ b/docs/adrs/ADR-0001-benchmark.md
+@@ -1 +1,2 @@
+ # ADR-0001
++status row
+diff --git a/docs/reviews/REVIEW-bench.md b/docs/reviews/REVIEW-bench.md
+index ddddddd..eeeeeee 100644
+--- a/docs/reviews/REVIEW-bench.md
++++ b/docs/reviews/REVIEW-bench.md
+@@ -1 +1,2 @@
+ # REVIEW
++finding row

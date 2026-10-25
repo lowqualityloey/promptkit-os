@@ -54,9 +54,10 @@ $gLine = 0
 foreach ($row in (Get-Content $Grading)) {
     $gLine++
     if ([string]::IsNullOrWhiteSpace($row)) { continue }
+    $row = $row.TrimEnd("`r")
     $cells = $row -split "`t"
     if ($cells[0] -eq "run_id") { continue }
-    if ($cells.Count -lt 4 -or $cells[1] -notmatch '^[0-9]+$' -or $cells[2] -notmatch '^[0-9]+$' -or ($cells[3] -ne "true" -and $cells[3] -ne "false")) {
+    if ($cells.Count -ne 4 -or $cells[1] -notmatch '^[0-9]+$' -or $cells[2] -notmatch '^[0-9]+$' -or ($cells[3] -ne "true" -and $cells[3] -ne "false")) {
         Write-BenchError "BAD_GRADING" "$gLine"
     }
     $gAccepted[$cells[0]] = $cells[3]
@@ -93,15 +94,16 @@ foreach ($rec in $recordList) {
     $loops = $fields["rework_loops"]
     $tt = [int]$fields["tokens_in"] + [int]$fields["tokens_out"] + [int]$fields["rework_tokens_in"] + [int]$fields["rework_tokens_out"]
     $acc = 0; if ($cpac -ne "INF") { $acc = 1 }
-    $graded = 0
-    $rubric = "-"
-    if ($gAccepted.ContainsKey($scenario)) {
-        $graded = 1
-        $rubric = "$($gPassed[$scenario])/$($gTotal[$scenario])"
-        $want = 0; if ($gAccepted[$scenario] -eq "true") { $want = 1 }
-        if ($want -ne $acc) {
-            Write-BenchError "ACCEPTED_MISMATCH" "$scenario"
-        }
+    # A grading sheet is mandatory input, so a record with no row fails closed
+    # instead of silently counting toward accepted/CPAC ungraded.
+    if (-not $gAccepted.ContainsKey($scenario)) {
+        Write-BenchError "MISSING_GRADING" "$scenario"
+    }
+    $graded = 1
+    $rubric = "$($gPassed[$scenario])/$($gTotal[$scenario])"
+    $want = 0; if ($gAccepted[$scenario] -eq "true") { $want = 1 }
+    if ($want -ne $acc) {
+        Write-BenchError "ACCEPTED_MISMATCH" "$scenario"
     }
     $flat += [pscustomobject]@{
         Scenario = $scenario; Arm = $condition; Model = $model; Acc = $acc
@@ -137,11 +139,11 @@ foreach ($arm in $arms) {
         $cpacMean = ($cpacVals | Measure-Object -Average).Average
         $cpacSorted = @($cpacVals | Sort-Object)
         $cpacMedian = if ($cpacVals.Count % 2 -eq 1) { $cpacSorted[[int][Math]::Floor($cpacVals.Count / 2)] } else { ($cpacSorted[$cpacVals.Count / 2 - 1] + $cpacSorted[$cpacVals.Count / 2]) / 2 }
-        Write-Output ("BENCH|SUMMARY|arm={0}|n={1}|accepted={2}|accept_rate={3}|tokens_mean={4}|tokens_median={5}|wall_mean={6}|wall_median={7}|rework_mean={8}|cpac_n={9}|cpac_mean={10}|cpac_median={11}" -f `
-            $arm, $n, $accepted, (Format-Inv $rate "0.00"), (Format-Inv $tokensMean "0.0"), (Format-Inv $tokensMedian "0.0"), (Format-Inv $wallMean "0.0"), (Format-Inv $wallMedian "0.0"), (Format-Inv $loopsMean "0.00"), $accRows.Count, (Format-Inv $cpacMean "0.0000"), (Format-Inv $cpacMedian "0.0000"))
+        Write-Output ("BENCH|SUMMARY|arm={0}|n={1}|accepted={2}|graded_n={3}|accept_rate={4}|tokens_mean={5}|tokens_median={6}|wall_mean={7}|wall_median={8}|rework_mean={9}|cpac_n={10}|cpac_mean={11}|cpac_median={12}" -f `
+            $arm, $n, $accepted, $gradedN, (Format-Inv $rate "0.00"), (Format-Inv $tokensMean "0.0"), (Format-Inv $tokensMedian "0.0"), (Format-Inv $wallMean "0.0"), (Format-Inv $wallMedian "0.0"), (Format-Inv $loopsMean "0.00"), $accRows.Count, (Format-Inv $cpacMean "0.0000"), (Format-Inv $cpacMedian "0.0000"))
     } else {
-        Write-Output ("BENCH|SUMMARY|arm={0}|n={1}|accepted={2}|accept_rate={3}|tokens_mean={4}|tokens_median={5}|wall_mean={6}|wall_median={7}|rework_mean={8}|cpac_n=0|cpac_mean=N/A|cpac_median=N/A" -f `
-            $arm, $n, $accepted, (Format-Inv $rate "0.00"), (Format-Inv $tokensMean "0.0"), (Format-Inv $tokensMedian "0.0"), (Format-Inv $wallMean "0.0"), (Format-Inv $wallMedian "0.0"), (Format-Inv $loopsMean "0.00"))
+        Write-Output ("BENCH|SUMMARY|arm={0}|n={1}|accepted={2}|graded_n={3}|accept_rate={4}|tokens_mean={5}|tokens_median={6}|wall_mean={7}|wall_median={8}|rework_mean={9}|cpac_n=0|cpac_mean=N/A|cpac_median=N/A" -f `
+            $arm, $n, $accepted, $gradedN, (Format-Inv $rate "0.00"), (Format-Inv $tokensMean "0.0"), (Format-Inv $tokensMedian "0.0"), (Format-Inv $wallMean "0.0"), (Format-Inv $wallMedian "0.0"), (Format-Inv $loopsMean "0.00"))
     }
 }
 exit 0

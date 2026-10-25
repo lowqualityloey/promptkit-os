@@ -28,6 +28,7 @@ usage() {
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --grading)
+            [[ "$#" -ge 2 && -n "$2" ]] || { printf 'BENCH|ERROR|MISSING_VALUE|--grading\n' >&2; exit 2; }
             GRADING="$2"
             shift 2
             ;;
@@ -63,11 +64,15 @@ declare -A G_ACCEPTED=()
 declare -A G_PASSED=()
 declare -A G_TOTAL=()
 gline_no=0
-while IFS=$'\t' read -r gid gpassed gtotal gaccepted; do
+while IFS=$'\t' read -r gid gpassed gtotal gaccepted || [[ -n "$gid" ]]; do
     gline_no=$((gline_no + 1))
+    gid="${gid%$'\r'}"; gpassed="${gpassed%$'\r'}"; gtotal="${gtotal%$'\r'}"; gaccepted="${gaccepted%$'\r'}"
     [[ -z "$gid" ]] && continue
     [[ "$gid" == "run_id" ]] && continue
-    if [[ ! "$gpassed" =~ ^[0-9]+$ || ! "$gtotal" =~ ^[0-9]+$ ]] || { [[ "$gaccepted" != "true" && "$gaccepted" != "false" ]]; }; then
+    # exact 4-column rows: a tab inside the last field means extra columns
+    if [[ "$gaccepted" == *$'\t'* ]] \
+            || [[ ! "$gpassed" =~ ^[0-9]+$ || ! "$gtotal" =~ ^[0-9]+$ ]] \
+            || { [[ "$gaccepted" != "true" && "$gaccepted" != "false" ]]; }; then
         printf 'BENCH|ERROR|BAD_GRADING|%s\n' "$gline_no" >&2
         exit 2
     fi
@@ -104,15 +109,19 @@ for rec in "${RECORDS[@]}"; do
     if [[ "$cpac" == "INF" ]]; then acc=0; else acc=1; fi
     graded=0
     rubric="-"
-    if [[ -n "${G_ACCEPTED[$scenario]:-}" ]]; then
-        graded=1
-        rubric="${G_PASSED[$scenario]}/${G_TOTAL[$scenario]}"
-        want=0
-        [[ "${G_ACCEPTED[$scenario]}" == "true" ]] && want=1
-        if [[ "$want" -ne "$acc" ]]; then
-            printf 'BENCH|ERROR|ACCEPTED_MISMATCH|%s\n' "$scenario" >&2
-            exit 2
-        fi
+    # A grading sheet is mandatory input, so a record with no row fails closed
+    # instead of silently counting toward accepted/CPAC ungraded.
+    if [[ -z "${G_ACCEPTED[$scenario]:-}" ]]; then
+        printf 'BENCH|ERROR|MISSING_GRADING|%s\n' "$scenario" >&2
+        exit 2
+    fi
+    graded=1
+    rubric="${G_PASSED[$scenario]}/${G_TOTAL[$scenario]}"
+    want=0
+    [[ "${G_ACCEPTED[$scenario]}" == "true" ]] && want=1
+    if [[ "$want" -ne "$acc" ]]; then
+        printf 'BENCH|ERROR|ACCEPTED_MISMATCH|%s\n' "$scenario" >&2
+        exit 2
     fi
     printf '%s|%s|%s|%d|%d|%d|%d|%d|%s|%s|%s\n' \
         "$scenario" "$condition" "$model" "$acc" "$graded" "$tt" "$wall" "$loops" "$rubric" "$cpac" "$rec" >> "$FLAT"
@@ -121,8 +130,18 @@ for rec in "${RECORDS[@]}"; do
 done
 
 # Per-arm aggregates from the flat rows (single awk pass; medians via an
-# insertion sort over the small per-arm arrays).
+# insertion sort over the small per-arm arrays). Printed numbers round HALF
+# AWAY FROM ZERO explicitly (fmt) so the awk twin matches the PowerShell
+# twin's InvariantCulture formatting at exact midpoints, where printf's
+# native binary round-half-even would diverge by 1 ULP.
 awk -F'|' '
+function fmt(x, d,  scale, s, v) {
+    scale = 10 ^ d
+    s = (x < 0) ? -1 : 1
+    v = x * s * scale
+    v = int(v + 0.5) / scale * s
+    return v
+}
 function median(arr, n,  i, j, tmp, v, m) {
     for (i = 1; i <= n; i++) v[i] = arr[i]
     for (i = 1; i <= n; i++) {
@@ -172,9 +191,9 @@ END {
             }
             cm /= cpacn[a]
             cmed = median(cpa, cpacn[a])
-            printf "BENCH|SUMMARY|arm=%s|n=%d|accepted=%d|accept_rate=%.2f|tokens_mean=%.1f|tokens_median=%.1f|wall_mean=%.1f|wall_median=%.1f|rework_mean=%.2f|cpac_n=%d|cpac_mean=%.4f|cpac_median=%.4f\n", a, n[a], acc[a], rate, tkmean, tkmed, wlmean, wlmed, rwmean, cpacn[a], cm, cmed
+            printf "BENCH|SUMMARY|arm=%s|n=%d|accepted=%d|graded_n=%d|accept_rate=%.2f|tokens_mean=%.1f|tokens_median=%.1f|wall_mean=%.1f|wall_median=%.1f|rework_mean=%.2f|cpac_n=%d|cpac_mean=%.4f|cpac_median=%.4f\n", a, n[a], acc[a], gradedn[a], fmt(rate, 2), fmt(tkmean, 1), fmt(tkmed, 1), fmt(wlmean, 1), fmt(wlmed, 1), fmt(rwmean, 2), cpacn[a], fmt(cm, 4), fmt(cmed, 4)
         } else {
-            printf "BENCH|SUMMARY|arm=%s|n=%d|accepted=%d|accept_rate=%.2f|tokens_mean=%.1f|tokens_median=%.1f|wall_mean=%.1f|wall_median=%.1f|rework_mean=%.2f|cpac_n=0|cpac_mean=N/A|cpac_median=N/A\n", a, n[a], acc[a], rate, tkmean, tkmed, wlmean, wlmed, rwmean
+            printf "BENCH|SUMMARY|arm=%s|n=%d|accepted=%d|graded_n=%d|accept_rate=%.2f|tokens_mean=%.1f|tokens_median=%.1f|wall_mean=%.1f|wall_median=%.1f|rework_mean=%.2f|cpac_n=0|cpac_mean=N/A|cpac_median=N/A\n", a, n[a], acc[a], gradedn[a], fmt(rate, 2), fmt(tkmean, 1), fmt(tkmed, 1), fmt(wlmean, 1), fmt(wlmed, 1), fmt(rwmean, 2)
         }
     }
 }' "$FLAT"

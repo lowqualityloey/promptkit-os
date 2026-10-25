@@ -4,7 +4,8 @@
 # expectations. Run: bash scripts/tests/run-benchmark-tools-tests.sh
 # The .ps1 twin must reach identical verdicts from identical fixtures.
 # Fixture arithmetic (default pricing $3/1M in, $15/1M out, $0.05/loop):
-#   strip run.diff    -> in_files=5, out_files=1 (src/app.ts kept), dropped=4
+#   strip run.diff    -> in_files=7, out_files=1 (src/app.ts kept), dropped=6
+#                        (incl. docs/adrs/ and docs/reviews/ scaffold sections)
 #   aggregate 4 records + grading.tsv ->
 #     bare:         n=2 accepted=1 rate=0.50 tokens 19500 wall 180 rework 1.00
 #                   cpac_n=1 cpac 0.2200
@@ -33,10 +34,20 @@ echo "🧪 Benchmark Tools Fixture Harness (Bash)"
 out="$(strip "$FIXTURES/run.diff" 2>"$TMP_DIR/strip.err")"; rc=$?
 kept="$(printf '%s\n' "$out" | grep -c '^diff --git ' || true)"
 if [[ $rc -eq 0 && "$kept" -eq 1 && "$out" == *"diff --git a/src/app.ts b/src/app.ts"* \
-        && "$(cat "$TMP_DIR/strip.err")" == "STRIP|OK|in_files=5|out_files=1|dropped=4" ]]; then
-    ok "strip keeps code changes and drops all four PromptKit artifacts"
+        && "$(cat "$TMP_DIR/strip.err")" == "STRIP|OK|in_files=7|out_files=1|dropped=6" ]]; then
+    ok "strip keeps code changes and drops all six PromptKit artifacts (incl. scaffold dirs)"
 else
     notok "strip valid diff (rc=$rc, kept=$kept, err=$(cat "$TMP_DIR/strip.err" 2>/dev/null))"
+fi
+
+# CRLF parity: both twins must reach the identical verdict on a CRLF copy
+sed 's/$/\r/' "$FIXTURES/run.diff" > "$TMP_DIR/run-crlf.diff"
+out="$(strip "$TMP_DIR/run-crlf.diff" 2>"$TMP_DIR/strip2.err")"; rc=$?
+if [[ $rc -eq 0 && "$(cat "$TMP_DIR/strip2.err")" == "STRIP|OK|in_files=7|out_files=1|dropped=6" ]] \
+        && ! printf '%s\n' "$out" | grep -q "PROMPTKIT.md\|docs/STATE.md"; then
+    ok "CRLF diff strips identically (no artifact leak under CRLF)"
+else
+    notok "strip CRLF (err=$(cat "$TMP_DIR/strip2.err" 2>/dev/null))"
 fi
 
 out="$(strip "$FIXTURES/not-a-diff.txt" 2>&1)"; rc=$?
@@ -58,8 +69,8 @@ fi
 out="$(aggregate --grading "$FIXTURES/grading.tsv" \
     "$FIXTURES/rec-bare-1.json" "$FIXTURES/rec-bare-2.json" \
     "$FIXTURES/rec-pk-1.json" "$FIXTURES/rec-pk-2.json" 2>"$TMP_DIR/agg.err")"; rc=$?
-SUM_BARE='BENCH|SUMMARY|arm=bare|n=2|accepted=1|accept_rate=0.50|tokens_mean=19500.0|tokens_median=19500.0|wall_mean=180.0|wall_median=180.0|rework_mean=1.00|cpac_n=1|cpac_mean=0.2200|cpac_median=0.2200'
-SUM_PK='BENCH|SUMMARY|arm=promptkit_os|n=2|accepted=2|accept_rate=1.00|tokens_mean=17200.0|tokens_median=17200.0|wall_mean=195.0|wall_median=195.0|rework_mean=0.50|cpac_n=2|cpac_mean=0.0970|cpac_median=0.0970'
+SUM_BARE='BENCH|SUMMARY|arm=bare|n=2|accepted=1|graded_n=2|accept_rate=0.50|tokens_mean=19500.0|tokens_median=19500.0|wall_mean=180.0|wall_median=180.0|rework_mean=1.00|cpac_n=1|cpac_mean=0.2200|cpac_median=0.2200'
+SUM_PK='BENCH|SUMMARY|arm=promptkit_os|n=2|accepted=2|graded_n=2|accept_rate=1.00|tokens_mean=17200.0|tokens_median=17200.0|wall_mean=195.0|wall_median=195.0|rework_mean=0.50|cpac_n=2|cpac_mean=0.0970|cpac_median=0.0970'
 if [[ $rc -eq 0 \
         && "$out" == *"$SUM_BARE"* \
         && "$out" == *"$SUM_PK"* \
@@ -85,6 +96,35 @@ if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|BAD_GRADING"* ]]; then
     ok "malformed grading row fails closed (exit 2)"
 else
     notok "bad grading (rc=$rc)"
+fi
+
+# exact-column discipline: an extra tab-separated column is BAD_GRADING
+printf 'BENCH-BARE-1\t5\t5\ttrue\textra\n' > "$TMP_DIR/extracol.tsv"
+out="$(aggregate --grading "$TMP_DIR/extracol.tsv" "$FIXTURES/rec-bare-1.json" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|BAD_GRADING"* ]]; then
+    ok "extra grading column fails closed (exit 2)"
+else
+    notok "extra column (rc=$rc)"
+fi
+
+# CRLF + missing final newline parity: a CRLF sheet grades identically
+sed 's/$/\r/' "$FIXTURES/grading.tsv" | head -3 > "$TMP_DIR/grading-crlf.tsv"
+out="$(aggregate --grading "$TMP_DIR/grading-crlf.tsv" \
+    "$FIXTURES/rec-bare-1.json" "$FIXTURES/rec-bare-2.json" 2>&1)"; rc=$?
+if [[ $rc -eq 0 && "$out" == *'BENCH|SUMMARY|arm=bare|n=2|accepted=1|graded_n=2|accept_rate=0.50|tokens_mean=19500.0|tokens_median=19500.0|wall_mean=180.0|wall_median=180.0|rework_mean=1.00|cpac_n=1|cpac_mean=0.2200|cpac_median=0.2200'* ]]; then
+    ok "CRLF sheet without final newline grades identically (final row included)"
+else
+    notok "CRLF grading (rc=$rc, out=${out:0:180})"
+fi
+
+# MISSING_GRADING: a record absent from the mandatory sheet fails closed
+printf 'BENCH-BARE-1\t5\t5\ttrue\n' > "$TMP_DIR/partial.tsv"
+out="$(aggregate --grading "$TMP_DIR/partial.tsv" \
+    "$FIXTURES/rec-bare-1.json" "$FIXTURES/rec-bare-2.json" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|MISSING_GRADING|BENCH-BARE-2"* ]]; then
+    ok "record missing from the grading sheet fails closed (exit 2)"
+else
+    notok "missing grading (rc=$rc, out=${out:0:160})"
 fi
 
 out="$(aggregate --grading "$FIXTURES/grading.tsv" 2>&1)"; rc=$?

@@ -13,7 +13,7 @@
 set -euo pipefail
 export LC_ALL=C
 
-DROP_PATTERNS="PROMPTKIT.md|AGENTS.md|docs/STATE.md|docs/tasks/|docs/specs/|.promptkit/|.github/pull_request_template.md|.github/ISSUE_TEMPLATE/"
+DROP_PATTERNS="PROMPTKIT.md|AGENTS.md|docs/STATE.md|docs/tasks/|docs/specs/|docs/adrs/|docs/reviews/|docs/releases/|docs/tests/|.promptkit/|.github/pull_request_template.md|.github/ISSUE_TEMPLATE/"
 TARGET_FILE=""
 
 usage() {
@@ -75,18 +75,21 @@ BEGIN {
     npat = split(pats, P, "|")
     infiles = 0; outfiles = 0; dropped = 0; keep = 0; buf = ""
 }
-/^diff --git / {
-    if (infiles > 0) {
-        if (keep) { printf "%s", buf; outfiles++ } else { dropped++ }
+{
+    sub(/\r$/, "")
+    if ($0 ~ /^diff --git /) {
+        if (infiles > 0) {
+            if (keep) { printf "%s", buf; outfiles++ } else { dropped++ }
+        }
+        infiles++
+        path = $NF
+        sub(/^b\//, "", path)
+        keep = is_artifact(path) ? 0 : 1
+        buf = $0 "\n"
+        next
     }
-    infiles++
-    path = $NF
-    sub(/^b\//, "", path)
-    keep = is_artifact(path) ? 0 : 1
-    buf = $0 "\n"
-    next
+    buf = buf $0 "\n"
 }
-{ buf = buf $0 "\n" }
 END {
     if (infiles > 0) {
         if (keep) { printf "%s", buf; outfiles++ } else { dropped++ }

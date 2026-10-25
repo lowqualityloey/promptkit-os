@@ -20,7 +20,7 @@ param (
 )
 
 $ErrorActionPreference = "Stop"
-$DropPatterns = @("PROMPTKIT.md", "AGENTS.md", "docs/STATE.md", "docs/tasks/", "docs/specs/", ".promptkit/", ".github/pull_request_template.md", ".github/ISSUE_TEMPLATE/")
+$DropPatterns = @("PROMPTKIT.md", "AGENTS.md", "docs/STATE.md", "docs/tasks/", "docs/specs/", "docs/adrs/", "docs/reviews/", "docs/releases/", "docs/tests/", ".promptkit/", ".github/pull_request_template.md", ".github/ISSUE_TEMPLATE/")
 
 function Show-Usage {
     Write-Host "Usage: strip-benchmark-diff.ps1 -TargetPath <run.diff>"

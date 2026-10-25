@@ -46,10 +46,20 @@ try {
     # --- strip-benchmark-diff ---
     $r = Invoke-ToolMerged -Script $stripScript -ScriptArgs @("-TargetPath", (Join-Path $fixtures "run.diff"))
     $kept = @($r.Out -split "`n" | Where-Object { $_.StartsWith("diff --git ") }).Count
-    if ($r.Rc -eq 0 -and $kept -eq 1 -and $r.Out.Contains("diff --git a/src/app.ts b/src/app.ts") -and $r.Out.Contains("STRIP|OK|in_files=5|out_files=1|dropped=4")) {
-        Ok "strip keeps code changes and drops all four PromptKit artifacts"
+    if ($r.Rc -eq 0 -and $kept -eq 1 -and $r.Out.Contains("diff --git a/src/app.ts b/src/app.ts") -and $r.Out.Contains("STRIP|OK|in_files=7|out_files=1|dropped=6")) {
+        Ok "strip keeps code changes and drops all six PromptKit artifacts (incl. scaffold dirs)"
     } else {
         NotOk "strip valid diff (rc=$($r.Rc), kept=$kept)"
+    }
+
+    # CRLF parity: both twins must reach the identical verdict on a CRLF copy
+    $crlfDiff = Join-Path $tmp "run-crlf.diff"
+    [System.IO.File]::WriteAllText($crlfDiff, (([System.IO.File]::ReadAllText((Join-Path $fixtures "run.diff"))) -replace "`n", "`r`n"))
+    $r = Invoke-ToolMerged -Script $stripScript -ScriptArgs @("-TargetPath", $crlfDiff)
+    if ($r.Rc -eq 0 -and $r.Out.Contains("STRIP|OK|in_files=7|out_files=1|dropped=6") -and -not $r.Out.Contains("PROMPTKIT.md")) {
+        Ok "CRLF diff strips identically (no artifact leak under CRLF)"
+    } else {
+        NotOk "strip CRLF (rc=$($r.Rc))"
     }
 
     $r = Invoke-ToolMerged -Script $stripScript -ScriptArgs @("-TargetPath", (Join-Path $fixtures "not-a-diff.txt"))
@@ -62,9 +72,9 @@ try {
 
     # --- aggregate-benchmark-runs ---
     $records = "{0},{1},{2},{3}" -f (Join-Path $fixtures "rec-bare-1.json"), (Join-Path $fixtures "rec-bare-2.json"), (Join-Path $fixtures "rec-pk-1.json"), (Join-Path $fixtures "rec-pk-2.json")
-    $r = Invoke-ToolMerged -Script $aggregateScript -ScriptArgs @("-Grading", (Join-Path $fixtures "grading.tsv"), "-Records", $records.Trim('"'))
-    $sumBare = 'BENCH|SUMMARY|arm=bare|n=2|accepted=1|accept_rate=0.50|tokens_mean=19500.0|tokens_median=19500.0|wall_mean=180.0|wall_median=180.0|rework_mean=1.00|cpac_n=1|cpac_mean=0.2200|cpac_median=0.2200'
-    $sumPk = 'BENCH|SUMMARY|arm=promptkit_os|n=2|accepted=2|accept_rate=1.00|tokens_mean=17200.0|tokens_median=17200.0|wall_mean=195.0|wall_median=195.0|rework_mean=0.50|cpac_n=2|cpac_mean=0.0970|cpac_median=0.0970'
+    $r = Invoke-ToolMerged -Script $aggregateScript -ScriptArgs @("-Grading", (Join-Path $fixtures "grading.tsv"), "-Records", $records)
+    $sumBare = 'BENCH|SUMMARY|arm=bare|n=2|accepted=1|graded_n=2|accept_rate=0.50|tokens_mean=19500.0|tokens_median=19500.0|wall_mean=180.0|wall_median=180.0|rework_mean=1.00|cpac_n=1|cpac_mean=0.2200|cpac_median=0.2200'
+    $sumPk = 'BENCH|SUMMARY|arm=promptkit_os|n=2|accepted=2|graded_n=2|accept_rate=1.00|tokens_mean=17200.0|tokens_median=17200.0|wall_mean=195.0|wall_median=195.0|rework_mean=0.50|cpac_n=2|cpac_mean=0.0970|cpac_median=0.0970'
     if ($r.Rc -eq 0 `
             -and $r.Out.Contains($sumBare) `
             -and $r.Out.Contains($sumPk) `
@@ -84,6 +94,32 @@ try {
     [System.IO.File]::WriteAllText($badg, "BENCH-X`tok`t5`n")
     $r = Invoke-ToolMerged -Script $aggregateScript -ScriptArgs @("-Grading", $badg, "-Records", (Join-Path $fixtures "rec-bare-1.json"))
     if ($r.Rc -eq 2 -and $r.Out.Contains("BENCH|ERROR|BAD_GRADING")) { Ok "malformed grading row fails closed (exit 2)" } else { NotOk "bad grading (rc=$($r.Rc))" }
+
+    # exact-column discipline: an extra tab-separated column is BAD_GRADING
+    $extracol = Join-Path $tmp "extracol.tsv"
+    [System.IO.File]::WriteAllText($extracol, "BENCH-BARE-1`t5`t5`ttrue`textra`n")
+    $r = Invoke-ToolMerged -Script $aggregateScript -ScriptArgs @("-Grading", $extracol, "-Records", (Join-Path $fixtures "rec-bare-1.json"))
+    if ($r.Rc -eq 2 -and $r.Out.Contains("BENCH|ERROR|BAD_GRADING")) { Ok "extra grading column fails closed (exit 2)" } else { NotOk "extra column (rc=$($r.Rc))" }
+
+    # CRLF + missing final newline parity: a CRLF sheet grades identically
+    # (records precomputed: an inline -f inside the array literal would bind
+    # to the whole array, since the comma operator binds tighter than -f)
+    $crlfSheet = Join-Path $tmp "grading-crlf.tsv"
+    $crlfRows = (([System.IO.File]::ReadAllText((Join-Path $fixtures "grading.tsv"))) -replace "`n", "`r`n") -split "`r`n" | Select-Object -First 3
+    [System.IO.File]::WriteAllText($crlfSheet, ($crlfRows -join "`r`n"))   # no trailing newline
+    $twoBare = "{0},{1}" -f (Join-Path $fixtures "rec-bare-1.json"), (Join-Path $fixtures "rec-bare-2.json")
+    $r = Invoke-ToolMerged -Script $aggregateScript -ScriptArgs @("-Grading", $crlfSheet, "-Records", $twoBare)
+    if ($r.Rc -eq 0 -and $r.Out.Contains('BENCH|SUMMARY|arm=bare|n=2|accepted=1|graded_n=2|accept_rate=0.50')) {
+        Ok "CRLF sheet without final newline grades identically (final row included)"
+    } else {
+        NotOk "CRLF grading (rc=$($r.Rc))"
+    }
+
+    # MISSING_GRADING: a record absent from the mandatory sheet fails closed
+    $partial = Join-Path $tmp "partial.tsv"
+    [System.IO.File]::WriteAllText($partial, "BENCH-BARE-1`t5`t5`ttrue`n")
+    $r = Invoke-ToolMerged -Script $aggregateScript -ScriptArgs @("-Grading", $partial, "-Records", $twoBare)
+    if ($r.Rc -eq 2 -and $r.Out.Contains("BENCH|ERROR|MISSING_GRADING|BENCH-BARE-2")) { Ok "record missing from the grading sheet fails closed (exit 2)" } else { NotOk "missing grading (rc=$($r.Rc))" }
 
     $r = Invoke-ToolMerged -Script $aggregateScript -ScriptArgs @("-Grading", (Join-Path $fixtures "grading.tsv"))
     if ($r.Rc -eq 2) { Ok "missing records exits 2 with usage" } else { NotOk "no records (rc=$($r.Rc))" }
