@@ -1,0 +1,2 @@
+This file is not a unified diff at all.
+It is just prose that a naive parser might accept.

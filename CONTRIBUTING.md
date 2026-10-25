@@ -73,6 +73,9 @@ bash scripts/tests/run-playbook-contract-tests.sh
 bash scripts/measure-cpac.sh --self-test
 bash scripts/tests/run-cpac-ingestion-tests.sh
 
+# Benchmark tools harness (diff stripping + per-arm aggregation)
+bash scripts/tests/run-benchmark-tools-tests.sh
+
 # Validate reference links and release records
 bash scripts/validate-references.sh .
 bash scripts/validate-release-records.sh --root scripts/tests/fixtures/release-records/valid --strict
@@ -132,6 +135,9 @@ pwsh -NoProfile -File .\scripts\tests\run-playbook-contract-tests.ps1
 # CPAC ingestion harness (§5 telemetry scoring + Command Code extraction)
 pwsh -NoProfile -File .\scripts\measure-cpac.ps1 -SelfTest
 pwsh -NoProfile -File .\scripts\tests\run-cpac-ingestion-tests.ps1
+
+# Benchmark tools harness (diff stripping + per-arm aggregation)
+pwsh -NoProfile -File .\scripts\tests\run-benchmark-tools-tests.ps1
 
 # Validate reference links and release records
 pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir .

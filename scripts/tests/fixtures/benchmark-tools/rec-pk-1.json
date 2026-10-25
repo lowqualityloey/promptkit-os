@@ -1,0 +1,28 @@
+{
+  "scenario_id": "BENCH-PK-1",
+  "condition": "promptkit_os",
+  "model": "test-model-v1",
+  "timestamp": "2026-10-26T10:20:00Z",
+  "metrics": {
+    "tokens_in": 14000,
+    "tokens_out": 1500,
+    "tokens_total": 15500,
+    "cache_read_tokens": 3000,
+    "tool_calls_total": 8,
+    "tool_calls_search": 2,
+    "tool_calls_edit": 4,
+    "tool_calls_verify": 2,
+    "tool_calls_other": 0,
+    "rework_loops": 0,
+    "rework_tokens_in": 0,
+    "rework_tokens_out": 0,
+    "wall_clock_seconds": 90,
+    "invariants_checked": 5,
+    "invariants_passed": 5,
+    "human_interventions": 0,
+    "accepted": true
+  },
+  "costs": {
+    "transcript_cost_usd": 0.00
+  }
+}

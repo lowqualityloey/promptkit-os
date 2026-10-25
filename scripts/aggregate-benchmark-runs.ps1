@@ -38,7 +38,7 @@ function Write-BenchError {
     exit 2
 }
 
-$recordList = @($Records -split ',' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
+$recordList = @($Records -split ',' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim().Trim('"') })
 if ($recordList.Count -eq 0) {
     Show-Usage
     exit 2

@@ -77,6 +77,10 @@ jobs:
           bash -n scripts/measure-cpac.sh
           bash -n scripts/extract-commandcode-telemetry.sh
           bash -n scripts/tests/run-cpac-ingestion-tests.sh
+          bash -n scripts/strip-benchmark-diff.sh
+          bash -n scripts/aggregate-benchmark-runs.sh
+          bash -n scripts/tests/run-benchmark-tools-tests.sh
+          bash -n benchmarks/run-ab-benchmark.sh
           bash -n scripts/tests/run-token-budget-tests.sh
           bash -n scripts/validate-execution-control.sh
           bash -n scripts/validate-authorization-evidence.sh
@@ -241,6 +245,9 @@ jobs:
       - name: Run CPAC Ingestion Fixture Harness (Bash)
         run: bash scripts/tests/run-cpac-ingestion-tests.sh
 
+      - name: Run Benchmark Tools Fixture Harness (Bash)
+        run: bash scripts/tests/run-benchmark-tools-tests.sh
+
       - name: Run Release-Record Self-Validation with Grandfather Exemption (Bash)
         run: |
           set +e
@@ -386,7 +393,10 @@ jobs:
             "scripts/tests/run-onboarding-provenance-fixtures.ps1",
             "scripts/measure-cpac.ps1",
             "scripts/extract-commandcode-telemetry.ps1",
-            "scripts/tests/run-cpac-ingestion-tests.ps1"
+            "scripts/tests/run-cpac-ingestion-tests.ps1",
+            "scripts/strip-benchmark-diff.ps1",
+            "scripts/aggregate-benchmark-runs.ps1",
+            "scripts/tests/run-benchmark-tools-tests.ps1"
           )
           foreach ($file in $syntaxFiles) {
             $errors = @()
@@ -538,6 +548,10 @@ jobs:
       - name: Run CPAC Ingestion Fixture Harness (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-cpac-ingestion-tests.ps1
+
+      - name: Run Benchmark Tools Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-benchmark-tools-tests.ps1
 
       - name: Assert Turbo Protocol Overhead Claim Window (PowerShell)
         shell: pwsh
