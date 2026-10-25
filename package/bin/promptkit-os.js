@@ -192,6 +192,14 @@ function installerArgs(args, version) {
 }
 
 async function main() {
+  const nodeMajor = parseInt(String(process.versions.node).split(".")[0], 10);
+  if (nodeMajor < 18 || typeof fetch !== "function") {
+    die(
+      `Node 18+ is required (found ${process.versions.node}) — the courier uses global fetch.\n` +
+        `            upgrade Node, or install via the canonical git submodule path:\n` +
+        `            git submodule add https://github.com/${REPO}.git .promptkit && ./.promptkit/init.sh`
+    );
+  }
   const version = PKG.version;
   if (version === "0.0.0") {
     die(
