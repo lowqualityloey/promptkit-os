@@ -172,8 +172,9 @@ conventions, which any empirical claim must state alongside its numbers:
 
 - **Successful vs rework split (no double counting)**: usage sums from assistant turns are
   attributed to `tokens_in`/`tokens_out` (successful) or to `rework_tokens_in`/`rework_tokens_out`
-  (rework) by a turn-walk rule: a turn that follows a failed tool result — until the next
-  non-failed tool result — is a rework turn. `tokens_total` is the sum of all four fields.
+  (rework) by a turn-walk rule: a turn is a rework turn when any tool result since the previous
+  assistant turn failed (parallel tool calls OR their failure flags). `tokens_total` is the sum of
+  all four fields.
 - **Failure detection is a heuristic**: Command Code schema v3 records no tool exit codes, so the
   dimension-3 measurement ("number of non-zero exit codes") is approximated by matching a
   documented pattern list over tool-result text (overridable with `--error-patterns` on the

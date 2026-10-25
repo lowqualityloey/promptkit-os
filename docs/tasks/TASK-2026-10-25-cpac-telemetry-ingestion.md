@@ -129,14 +129,14 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `bash scripts/measure-cpac.sh --self-test → pass; run-cpac-ingestion-tests.sh 13/13; run-cpac-ingestion-tests.ps1 13/13 (/usr/bin/pwsh, native path); check-changelog-entry.sh → CHANGELOG_GATE|PASS; validate-references.sh . --strict → pass; check-math-labels.sh --root . → pass; measure-tokens.sh --strict + measure-per-task-tokens.sh --strict → pass (anchor 7ab8b50 figures unaffected); run-behavioral-contract-tests.sh → 560/560; extraction→scoring verified end-to-end on a real Command Code transcript with byte-identical twin outputs. Known red at ddc9ade: repository self-validation (execution-control) failed on this record's schema — remediated in the fix commits atop it, validator re-run recorded below.`
+- **Verification Evidence**: `bash scripts/measure-cpac.sh --self-test → pass; run-cpac-ingestion-tests.sh 17/17; run-cpac-ingestion-tests.ps1 16/16 (/usr/bin/pwsh, native path); validate-execution-control.sh --root . --strict --authorization-baseline origin/main → VALID|RECORDS=67|ROOT=.) with zero diagnostics after the schema scaffold; check-changelog-entry.sh → CHANGELOG_GATE|PASS; validate-references.sh . --strict → pass; check-math-labels.sh --root . → pass; measure-tokens.sh --strict + measure-per-task-tokens.sh --strict → pass (anchor 7ab8b50 figures unaffected); run-behavioral-contract-tests.sh → 560/560; extraction→scoring verified end-to-end on a real Command Code transcript with byte-identical twin outputs. Audit remediation (2026-10-25, Arena.ai REQUEST CHANGES: 4×P1 + 2×P2, each verified against source): record re-scaffolded to the canonical schema, scoring twins hardened (single-pass unrounded totals, tail-anchored parsing, negative rejection, stderr-free valid runs), extractor twins hardened (mktime-free POSIX epoch with offset handling, per-block tool classification, OR rule for parallel tool results, four-field string validation).`
 - **Behavior IDs**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Code Work`
-- **CI Evidence**: `GitHub Actions run 40187961965 (PR #692 @ ddc9ade): behavioral/security/shard legs green; Linux/Windows Validate (Core) red on Self-Validate Repository Execution Records (ERRORS=30, this record's schema) — fix commits pushed; re-run pending at record time`
-- **Review Evidence**: `N/A - external audit (Arena.ai, 2026-10-25: REQUEST CHANGES, 4×P1 + 2×P2, verified against source by this agent) is tracked in the PR conversation; remediation is in the fix commits atop ddc9ade`
-- **Commit Evidence**: `Commit Evidence Entries below cover 8b58f79..ddc9ade; the fix commits atop ddc9ade will have their entries recorded in the next docs-only commit (two-commit pattern)`
+- **CI Evidence**: `GitHub Actions run 40187961965 (PR #692 @ ddc9ade): behavioral/security/shard legs green; Linux/Windows Validate (Core) red on Self-Validate Repository Execution Records (ERRORS=30, this record's pre-scaffold schema) — remediated by a2ec0e8; re-run on the fix stack pending at record time`
+- **Review Evidence**: `N/A - external audit (Arena.ai, 2026-10-25: REQUEST CHANGES, 4×P1 + 2×P2 + 2×P3, verified against source and live reproduction by this agent) is tracked in the PR conversation; remediation commits a2ec0e8..5358187 on this branch`
+- **Commit Evidence**: `Commit Evidence Entries below cover 8b58f79..ddc9ade (recorded a posteriori in a2ec0e8) and a2ec0e8..5358187 (recorded in this update); this update commit's own entry is deferred to the next docs-only commit per the two-commit pattern`
 - **Pull Request Evidence**: `https://github.com/lowqualityloey/promptkit-os/pull/692`
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
@@ -159,6 +159,10 @@
 - **Commit Evidence Entry**: `a45549a feat(measure): extract commandcode session telemetry; Authorization Checkpoint Reference: AUTHZ-cpac-telemetry-ingestion-001; Authorization Source: owner implementation go`
 - **Commit Evidence Entry**: `b913df1 test(cpac): ingestion fixture harness and ci wiring; Authorization Checkpoint Reference: AUTHZ-cpac-telemetry-ingestion-001; Authorization Source: owner implementation go`
 - **Commit Evidence Entry**: `ddc9ade docs(benchmarks): implemented cpac ingestion status and mapping; Authorization Checkpoint Reference: AUTHZ-cpac-telemetry-ingestion-001; Authorization Source: owner implementation go`
+- **Commit Evidence Entry**: `a2ec0e8 docs(tasks): scaffold task record to the canonical schema; Authorization Checkpoint Reference: AUTHZ-cpac-telemetry-ingestion-001; Authorization Source: owner remediation go (audit verdict accepted)`
+- **Commit Evidence Entry**: `1d38ac9 fix(measure): harden cpac scoring twins after audit; Authorization Checkpoint Reference: AUTHZ-cpac-telemetry-ingestion-001; Authorization Source: owner remediation go`
+- **Commit Evidence Entry**: `39f7274 fix(measure): harden cpac extractor twins after audit; Authorization Checkpoint Reference: AUTHZ-cpac-telemetry-ingestion-001; Authorization Source: owner remediation go`
+- **Commit Evidence Entry**: `5358187 test(cpac): stderr-emptiness and fail-closed regression cases; Authorization Checkpoint Reference: AUTHZ-cpac-telemetry-ingestion-001; Authorization Source: owner remediation go`
 
 ### Completion Gate
 
