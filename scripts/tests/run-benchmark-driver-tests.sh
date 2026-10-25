@@ -137,11 +137,12 @@ fi
 nblind="$(ls "$OUT/grading"/B*.diff 2>/dev/null | wc -l)"
 nverify="$(ls "$OUT/grading"/B*.verify.txt 2>/dev/null | wc -l)"
 nkey=$(( $(wc -l < "$OUT/grading/key.csv") - 1 ))
-if [[ "$nblind" -eq 2 && "$nkey" -eq 2 && "$nverify" -eq 2 ]] \
+vexit_ok="$(grep -l "^verify_exit=0$" "$OUT/grading"/B*.verify.txt 2>/dev/null | wc -l)"
+if [[ "$nblind" -eq 2 && "$nkey" -eq 2 && "$nverify" -eq 2 && "$vexit_ok" -eq 2 ]] \
         && grep -q "promptkit_os" "$OUT/grading/key.csv" && grep -q ",BENCH-DRIVER-01-bare-r1" "$OUT/grading/key.csv"; then
-    ok "blind packets, key.csv (1:1), and verify evidence written for all runs"
+    ok "blind packets, key.csv (1:1), and verify packets (exit code recorded) for all runs"
 else
-    notok "blind packets (diffs=$nblind key=$nkey verify=$nverify)"
+    notok "blind packets (diffs=$nblind key=$nkey verify=$nverify vexit=$vexit_ok)"
 fi
 
 # --- finalize end-to-end: blind-keyed sheet -> aggregates ----------------------

@@ -35,8 +35,11 @@ For every task × arm × repeat:
    shuffle across the whole batch (reproducible with `BENCH_SHUFFLE_SEED`), so
    id order carries no arm information; when the task declares a `Verify`
    command, the harness itself runs it post-session and the arm-neutral output
-   ships as `B<nnn>.verify.txt` — the grader never needs the arm-revealing
-   session log for evidence-gated rubric items. The grader scores
+   ships as `B<nnn>.verify.txt` with the command's exit code recorded on its
+   first line (`verify_exit=`) — the grader never needs the arm-revealing
+   session log for evidence-gated rubric items, and a successful-but-silent
+   command still yields gradeable evidence. The blind→scenario mapping lives
+   only in `grading/key.csv` (never printed to the terminal); the grader scores
    `B*.diff` (+ `B*.verify.txt`) against the task's frozen rubric without seeing
    `grading/key.csv` (the blind→scenario mapping is consulted only by
    `--finalize`), and writes the sheet keyed by blind id:

@@ -133,6 +133,7 @@ if [[ "$FINALIZE" -eq 1 ]]; then
         acc="${G_ACC[$blind]:-}"
         [[ -n "$acc" ]] || bench_error "MISSING_GRADING" "$blind ($scenario)"
         bash "$EXTRACT" "$transcript" --scenario-id="$scenario" --condition="$arm" --accepted="$acc" \
+            --error-patterns="$(cat "$OUT/error-patterns.txt")" \
             > "$record" 2>>"$OUT/runs/$scenario/extract.log" || bench_error "EXTRACT_FAILED" "$scenario"
         printf '%s\t%s\t%s\t%s\n' "$scenario" "${G_PASS[$blind]}" "${G_TOT[$blind]}" "$acc" >> "$TRANSLATED"
         RECORDS+=("$record")
@@ -262,11 +263,16 @@ for tf in "${TASKFILES[@]}"; do
                 || bench_error "DIFF_FAILED" "$scenario"
             # Optional arm-neutral verification evidence, produced by the HARNESS
             # (not the agent) so the grader never needs the arm-revealing
-            # session log for evidence-gated rubric items.
+            # session log for evidence-gated rubric items. The packet always
+            # carries the command's exit code first (verify_exit=), so a
+            # successful-but-silent command still yields gradeable evidence.
             verify_out=""
             if [[ -n "$verify_cmd" ]]; then
                 verify_out="$OUT/runs/$scenario/verify.txt"
-                ( cd "$rundir" && bash -c "$verify_cmd" ) > "$verify_out" 2>&1 || true
+                vrc=0
+                ( cd "$rundir" && bash -c "$verify_cmd" ) > "$verify_out.raw" 2>&1 || vrc=$?
+                { printf 'verify_exit=%s\n' "$vrc"; cat "$verify_out.raw"; } > "$verify_out"
+                rm -f "$verify_out.raw"
             fi
             slug="$(printf '%s' "$rundir" | sed 's#^/##; s#/#-#g')"
             transcript="$(ls -t "${HOME}/.commandcode/projects/${slug}/"*.jsonl 2>/dev/null | grep -v checkpoints | head -1 || true)"
@@ -319,11 +325,14 @@ for scenario in "${RUN_SCENARIOS[@]}"; do
     sdiff="$(printf '%s' "$row" | cut -f7)"
     verify_out="$(printf '%s' "$row" | cut -f8)"
     cp "$sdiff" "$OUT/grading/$blind.diff"
-    if [[ -n "$verify_out" && -s "$verify_out" ]]; then
+    if [[ -n "$verify_out" && -f "$verify_out" ]]; then
         cp "$verify_out" "$OUT/grading/$blind.verify.txt"
     fi
     printf '%s,%s\n' "$blind" "$scenario" >> "$OUT/grading/key.csv"
-    printf 'BLIND|%s|%s\n' "$blind" "$scenario"
+    # The blind->scenario mapping lives ONLY in key.csv: printing it to the
+    # terminal would hand a single operator+grader the key in scrollback
+    # right before grading.
+    printf 'BLIND|%s\n' "$blind"
     idx=$((idx + 1))
 done
 
