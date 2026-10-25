@@ -2,6 +2,8 @@
 
 **The 20 questions every developer asks before adopting PromptKit OS.**
 
+> **Upgrading from 1.x?** v2.0.0 (2026-10-12) retired the external Jev/System One assisted router and made routing fully offline and deterministic. See the [migration and upgrade guide](docs/MIGRATION.md).
+
 ---
 
 ## 1. How is this different from just writing good prompts?
@@ -44,10 +46,11 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 
 ## 2. Will this actually save me time or add overhead?
 
-**Short Answer**: Setup takes ~10 minutes, and structured workflows reduce trial-and-error debugging and rework.
+**Short Answer**: Installation takes ~10 seconds (`npx promptkit-os`); the first guided session takes ~10 minutes, and structured workflows reduce trial-and-error debugging and rework.
 
 **Time Investment**:
-- Setup: ~10 minutes (run init script)
+- Install: ~10 seconds (one command — see [README](README.md) Quick Start)
+- First guided setup: ~10 minutes (installer + `pk:onboard`)
 - Learning curve: 2-3 hours (first week)
 
 **What feels slower initially**:
@@ -58,7 +61,7 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 **What's actually faster long-term**:
 - Fewer debugging cycles (systematic hypothesis testing vs trial-and-error)
 - Higher first-attempt success (spec-first planning reduces rework)
-- **Durable context preservation** (pk:checkpoint persists state in `docs/STATE.md`; unrecorded in-flight chat reasoning remains ephemeral per `protocols/context-sync.md:123`)
+- **Durable context preservation** (pk:checkpoint persists state in `docs/STATE.md`; unrecorded in-flight chat reasoning remains ephemeral per `protocols/context-sync.md` (anchor: `Unrecorded in-flight reasoning is not recovered`))
 - **No more "what was I doing?"** (STATE.md tracks active working sets and tasks)
 
 **Why the tradeoff pays off**:
@@ -469,7 +472,7 @@ Remember: **AI assistants aren't perfect**. PromptKit structures their reasoning
 **How it works**:
 - **Baseline footprint**: Initialization scripts inject only a lean router directive into your configuration file (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, etc.) — current measured footprints live in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
 - **On-demand loading**: The AI only reads specific workflow files (e.g. `workflows/debug.md`) from the local filesystem when that specific workflow is triggered or routed.
-- **Comparison to monolithic prompts**: Traditional prompt packs inline all rules, workflows, and templates directly into the prompt on every turn, consuming ~19,794 to ~75,505 tokens statically before work begins (historical core-6 lifecycle figures; current core-subset baseline is ~32.0k). PromptKit preserves ~90% of static context overhead compared to monolithic packs (~32.0k current core-subset baseline).
+- **Comparison to monolithic prompts**: Traditional prompt packs inline all rules, workflows, and templates directly into the prompt on every turn, consuming ~19,794 to ~75,505 tokens statically before work begins (historical core-6 lifecycle figures; current core-subset baseline is ~32.8k). PromptKit reduces static context overhead by ~93% compared to monolithic packs (~32.8k current core-subset baseline).
 - **Subagent context preservation**: Multi-file exploration is delegated to subagents whose results are synthesized into compact findings, reducing conversational bloat by up to 98%.
 - **Mechanical verification**: Measure your exact active directive token footprint anytime using `pwsh -File .promptkit/scripts/measure-tokens.ps1` (or `bash .promptkit/scripts/measure-tokens.sh`).
 
@@ -609,6 +612,6 @@ For full playbook details, see [docs/stacks/](docs/stacks/) and [docs/recipes/](
 
 ---
 
-**Last Updated**: 2026-10-02  
-**Version**: 1.10.1\
+**Last Updated**: 2026-10-25  
+**Version**: 2.0.1
 **Maintainer**: [@lowqualityloey](https://github.com/lowqualityloey)

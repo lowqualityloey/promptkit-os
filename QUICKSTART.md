@@ -71,6 +71,8 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit
 
 **What this does**: Creates core `docs/` directories (`tasks/`, `specs/`, `adrs/`, `tests/`), scaffolds `PROMPTKIT.md` and `docs/STATE.md`, asks where tasks live (`tracking: local|github|jira|linear` — Jira/Linear manual import), advises MCP (or CLI fallback), and injects the lightweight directive router into your AI assistant configuration (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, etc.).
 
+**Verify the install**: prompt your agent with `pk:doctor` — a read-only audit (host directives, engine version, ignore-state, docs drift, intake provenance, submodule registration) that reports rot without writing.
+
 ### Updating PromptKit
 
 Pull the latest engine and re-run the installer (idempotent — never overwrites files you own):

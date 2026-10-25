@@ -317,7 +317,7 @@ ORDER BY created_at
 LIMIT 10
 ```
 
-**PromptKit Guidance**: Cursor-based pagination is recommended for high-velocity collections, feeds, and append-heavy logs (`workflows/api.md:161`); simple offset pagination remains permissible for small, static administrative listings.
+**PromptKit Guidance**: Cursor-based pagination is recommended for high-velocity collections, feeds, and append-heavy logs (`workflows/api.md` (anchor: `Cursor-Based Pagination (Default for Feeds`)); simple offset pagination remains permissible for small, static administrative listings.
 
 ---
 
@@ -516,7 +516,7 @@ These are example figures from a fictional project used to show what a PromptKit
 
 ## 🌟 Unique Combinations
 
-### 31. **Combining Toyota + Software Patterns**
+### 29. **Combining Toyota + Software Patterns**
 - 5-Whys (Toyota)
 - FMEA (Aerospace)
 - Socratic Method (Ancient Greece)
@@ -528,7 +528,7 @@ These are example figures from a fictional project used to show what a PromptKit
 
 ---
 
-### 32. **Zero Lock-In (Pure Markdown)**
+### 30. **Zero Lock-In (Pure Markdown)**
 - No mandatory background daemon
 - No vendor lock-in or proprietary schema
 - Plain Git-tracked Markdown and shell/PowerShell helpers
@@ -537,7 +537,7 @@ These are example figures from a fictional project used to show what a PromptKit
 
 ---
 
-### 33. **Installer Support Across Leading AI Assistants**
+### 31. **Installer Support Across Leading AI Assistants**
 PromptKit OS ships tested automated installers (`init.sh` and `init.ps1`) targeting the configuration surfaces of leading AI assistants:
 - Claude Code (`CLAUDE.md`)
 - Cursor (`.cursorrules` / `.cursor/rules/promptkit.mdc`)

@@ -8,7 +8,7 @@ This evaluation applies only to the Better-PromptKit repository. It is a documen
 
 The evaluation must remain separate from production execution. A calculated version is a preliminary candidate, not an Approved Release Version. A passing validator, CI result, checkpoint handoff, empty blocker list, or completed QA review does not create a tag, hosted release, published changelog, remote operation, deployment, or rollback authorization.
 
-For the external-harness authorization contract introduced by #516, record public-contract impact as `minor` and use `v1.12.0` as the effective release. CI compares new Task Record and Commit Evidence lines with the declared PR-base or push-before SHA; untouched legacy evidence is not revalidated retroactively.
+For the external-harness authorization contract introduced by #516, record public-contract impact as `minor`; its effective release is the first approved release that contains it (the former `v1.12.0` placeholder never shipped — releases went v1.11.0 → v2.0.0). CI compares new Task Record and Commit Evidence lines with the declared PR-base or push-before SHA; untouched legacy evidence is not revalidated retroactively.
 
 #### 1. Establish Evaluation Identity and the Version Source of Truth
 
@@ -96,6 +96,10 @@ An empty eligible range is not an automatic patch release and is not an implicit
 - **Approve a documented no-contract-change release:** record why a release with no public-contract increment is needed, the approved version rationale, QA result, and all consistency results.
 
 If neither decision is recorded, the evaluation remains blocked. No empty-range result authorizes a tag, hosted release, changelog publication, remote action, deployment, or rollback.
+
+#### 5a. Lightweight Path for No-Contract-Change Patch Releases
+
+When every commit in the eligible range is maintenance-only (no SemVer-impacting public contract change) and the Release Coordinator approves a documented no-contract-change release, the full record chain (separate evaluation, candidate, QA/Reviewer review, and release-notes records) may be collapsed into **one Approved Release Record** that carries: the Evaluation ID, the explicit **Approve a documented no-contract-change release** decision with rationale, the release range and candidate commit, the QA and consistency results (CI runs, validator output), and pointers to the shipped CHANGELOG section and release evidence. The record must still be filed under `docs/releases/` and pass `scripts/validate-release-records.sh --strict`. Minor and major releases always require the full chain; this path never applies to a range containing a public-contract change. A retroactive record under this path must mark itself retroactive and cite the approval evidence that existed at release time.
 
 #### 6. QA/Reviewer Release-Evaluation Review
 

@@ -1,6 +1,6 @@
 # Migrating from the Jev / System One Assisted Router
 
-**Status:** This guide is the in-tree migration documentation for the v2.0.0 candidate. v2.0.0 remains DRAFT / PRELIMINARY / BLOCKED / NOT APPROVED. This document does not approve it, and it provides no new behavior or implementation capability of its own.
+**Status:** This guide is the in-tree migration documentation for the v2.0.0 release. v2.0.0 was approved and released 2026-10-12 (see [`docs/releases/2026-10-12-v2.0.0-approved-release.md`](./releases/2026-10-12-v2.0.0-approved-release.md)); v2.0.1 (2026-10-25) continues the same offline-routing contract. This document provides no new behavior or implementation capability of its own.
 
 ## What changed (E-MAJOR-01)
 
