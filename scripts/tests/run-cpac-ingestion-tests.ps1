@@ -144,6 +144,16 @@ try {
     $r = Invoke-CpacMerged -Script $extractScript -ScriptArgs @()
     if ($r.Rc -eq 2) { Ok "missing transcript argument exits 2 with usage" } else { NotOk "missing argument (rc=$($r.Rc))" }
 
+    # --- extractor: offset-bearing timestamps (P3 hardening) ---
+    $offsets = Join-Path $tmp "offsets.jsonl"
+    [System.IO.File]::WriteAllLines($offsets, @(
+        '{"type":"session","version":3,"id":"off-set-1","timestamp":"2026-10-25T12:00:00+02:00","cwd":"/tmp/x"}',
+        '{"type":"message","id":"c1","parentId":null,"timestamp":"2026-10-25T12:00:01+02:00","message":{"role":"user","content":[{"type":"text","text":"t"}],"meta":{"source":"user","createdAt":1,"messageId":"u1"}}}',
+        '{"type":"message","id":"c2","parentId":"c1","timestamp":"2026-10-25T12:00:10+02:00","message":{"role":"assistant","content":[{"type":"text","text":"done"}],"meta":{"source":"model","createdAt":2,"messageId":"a1"}},"usage":{"inputTokens":100,"outputTokens":10,"cacheReadTokens":0,"cacheWriteTokens":0,"costUsd":0},"model":"m1"}'
+    ))
+    $r = Invoke-CpacStdout -Script $extractScript -ScriptArgs @("-TranscriptPath", $offsets, "-Accepted", "true")
+    if ($r.Rc -eq 0 -and $r.Out.Contains('"wall_clock_seconds": 10') -and $r.Out.Contains('"tokens_in": 100')) { Ok "offset-bearing timestamps compute absolute wall clock" } else { NotOk "offset timestamps (rc=$($r.Rc))" }
+
     Write-Host ""
     Write-Host "CPAC ingestion harness (PowerShell): $script:pass passed, $script:fail failed."
     if ($script:fail -ne 0) { exit 1 }

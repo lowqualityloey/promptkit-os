@@ -21,6 +21,9 @@
 # - tool_calls_search/edit/verify classify tool names and shell commands with
 #   best-effort keyword rules; the remainder is tool_calls_other.
 set -euo pipefail
+# Locale-independent formatting: the emitted record must always carry dot
+# decimals regardless of the host locale.
+export LC_ALL=C
 
 DEFAULT_ERROR_PATTERNS="No tool named|command not found|Error:|error:|ERROR:|Traceback|Exception|Permission denied|FAILED|npm ERR!"
 
@@ -116,6 +119,9 @@ extract_facts() {
         h = substr(t, 12, 2) + 0
         mi = substr(t, 15, 2) + 0
         s = substr(t, 18, 2) + 0
+        # Strip the fractional part FIRST so position 20 is the zone character
+        # in every shape (Z or ±HH:MM, with or without .sss).
+        sub(/\.[0-9]+/, "", t)
         off = 0
         if (length(t) >= 25 && (substr(t, 20, 1) == "+" || substr(t, 20, 1) == "-")) {
             sign = (substr(t, 20, 1) == "+") ? 1 : -1

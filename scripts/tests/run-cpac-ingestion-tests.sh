@@ -173,6 +173,26 @@ else
     notok "missing argument (rc=$rc)"
 fi
 
+# --- extractor: offset-bearing timestamps (P3 hardening) -------------------
+printf '%s\n' \
+  '{"type":"session","version":3,"id":"off-set-1","timestamp":"2026-10-25T12:00:00+02:00","cwd":"/tmp/x"}' \
+  '{"type":"message","id":"c1","parentId":null,"timestamp":"2026-10-25T12:00:01+02:00","message":{"role":"user","content":[{"type":"text","text":"t"}],"meta":{"source":"user","createdAt":1,"messageId":"u1"}}}' \
+  '{"type":"message","id":"c2","parentId":"c1","timestamp":"2026-10-25T12:00:10+02:00","message":{"role":"assistant","content":[{"type":"text","text":"done"}],"meta":{"source":"model","createdAt":2,"messageId":"a1"}},"usage":{"inputTokens":100,"outputTokens":10,"cacheReadTokens":0,"cacheWriteTokens":0,"costUsd":0},"model":"m1"}' \
+  > "$TMP_DIR/offsets.jsonl"
+out="$(extract "$TMP_DIR/offsets.jsonl" --accepted=true 2>/dev/null)"; rc=$?
+if [[ $rc -eq 0 && "$out" == *'"wall_clock_seconds": 10'* && "$out" == *'"tokens_in": 100'* ]]; then
+    ok "offset-bearing timestamps compute absolute wall clock"
+else
+    notok "offset timestamps (rc=$rc, out=${out:0:160})"
+fi
+
+# The locale pin is asserted at its source: a functional comma-locale run is
+# non-deterministic across runner images, so the guarantee (LC_ALL=C before
+# any awk call) is checked structurally.
+grep -q "^export LC_ALL=C" "$REPO_ROOT/scripts/extract-commandcode-telemetry.sh" \
+    && ok "extractor pins LC_ALL=C" \
+    || notok "LC_ALL=C pin"
+
 echo ""
 echo "CPAC ingestion harness (Bash): $PASS passed, $FAIL failed."
 if [[ "$FAIL" -ne 0 ]]; then
