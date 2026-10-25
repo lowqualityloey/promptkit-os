@@ -294,7 +294,7 @@ jobs:
           import tarfile
 
           path, expected_version = sys.argv[1:]
-          expected = {"package/package.json", "package/README.md", "package/bin/promptkit-os.js"}
+          expected = {"package/package.json", "package/README.md", "package/bin/promptkit-os.js", "package/LICENSE"}
           with tarfile.open(path, "r:gz") as archive:
               members = archive.getmembers()
               files = [member for member in members if member.isfile()]

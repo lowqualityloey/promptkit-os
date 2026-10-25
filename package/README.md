@@ -1,6 +1,6 @@
 # `promptkit-os` (npm)
 
-The open-source engineering control plane for AI coding agents (Claude Code, Cursor, Copilot, Antigravity, Gemini CLI) — managing task ceremony levels (L0–L3), context economy, JIT stack playbooks, and evidence-gated verification.
+The open-source engineering control plane for AI coding agents (Claude Code, Cursor, Windsurf, GitHub Copilot, Cline/Roo Code, Trae, OpenCode, Aider, Gemini CLI/Antigravity) — managing task ceremony levels (L0–L3), context economy, JIT stack playbooks, and evidence-gated verification.
 
 > **Note**: This npm package is the **courier**, not the product. PromptKit OS itself is pure repository-native markdown with no runtime, no daemon, and no model lock-in — it lives at [lowqualityloey/promptkit-os](https://github.com/lowqualityloey/promptkit-os).
 
@@ -16,9 +16,11 @@ npx promptkit-os@latest --turbo --experimental
 npx promptkit-os@latest /path/to/project
 ```
 
-Pass-through flags: `--lite`, `--balanced`, `--turbo`, `--experimental`, `--host=`, `--target=`, `--tracking=`, `--reconfigure`.
+Pass-through flags: `--lite`, `--balanced`, `--turbo`, `--experimental`, `--host=`, `--add-host=`, `--target=`, `--tracking=`, `--reconfigure`.
 
-Requires Node 18+ (the courier runs on Node; the installed product does not). On Windows it also requires **PowerShell 7 (`pwsh`)**, which is what `init.ps1` targets — stock Windows PowerShell 5.1 is not supported.
+Requires Node 18+ (the courier runs on Node; the installed product does not) — the courier checks at startup and prints a clear error on older runtimes instead of failing on a missing `fetch`. On Windows it also requires **PowerShell 7 (`pwsh`)**, which is what `init.ps1` targets — stock Windows PowerShell 5.1 is not supported.
+
+> The `version` in this repository's `package/package.json` is intentionally `0.0.0`: the release workflow stamps the real version from the git tag and mints the tarball integrity pin at publish time (`docs/internal/release-evaluation.md` §1 records the mechanics). Running the courier from an unstamped checkout refuses with a clear error.
 
 ## Updating an existing install
 
