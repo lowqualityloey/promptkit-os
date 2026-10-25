@@ -86,6 +86,7 @@ For each scenario run, the harness records:
 
 - [`BENCHMARK-METHODOLOGY.md`](../BENCHMARK-METHODOLOGY.md) — Benchmark philosophy and mathematical CPAC formula.
 - [`../BENCHMARKS.md`](../BENCHMARKS.md) — Static prompt token budgets.
-- [`../../scripts/measure-cpac.sh`](../../scripts/measure-cpac.sh) — CPAC formula self-test CLI plus a
-  simulated demonstration scorecard. Telemetry extraction is **not implemented** in the shipped
-  utility; a telemetry path argument exits `2`.
+- [`../../scripts/measure-cpac.sh`](../../scripts/measure-cpac.sh) — CPAC formula self-test CLI,
+  a `--demo` simulated demonstration scorecard, and measured scoring of a §5 telemetry record
+  (extracted from Command Code session transcripts by `scripts/extract-commandcode-telemetry.sh`;
+  invalid records exit `2`).

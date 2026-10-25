@@ -382,8 +382,10 @@ promptkit-os/
 │   ├── isolate-worktree.ps1            # PowerShell: Git worktree sandbox manager (create, merge, remove)
 │   ├── measure-tokens.sh               # Bash: Mechanical directive character and token counter
 │   ├── measure-tokens.ps1              # PowerShell: Mechanical directive character and token counter
-│   ├── measure-cpac.sh                 # Bash: Cost Per Accepted Change (CPAC) measurement utility
-│   ├── measure-cpac.ps1                # PowerShell: Cost Per Accepted Change (CPAC) measurement utility
+│   ├── measure-cpac.sh                 # Bash: CPAC scoring of §5 telemetry records + self-tests
+│   ├── measure-cpac.ps1                # PowerShell: CPAC scoring of §5 telemetry records + self-tests
+│   ├── extract-commandcode-telemetry.sh  # Bash: Command Code session transcript → §5 telemetry record
+│   ├── extract-commandcode-telemetry.ps1  # PowerShell: Command Code session transcript → §5 record
 │   ├── measure-tokenizer-delta.sh      # Bash: bytes/4 vs real-tokenizer validation
 │   ├── measure-tokenizer-delta.ps1     # PowerShell: bytes/4 vs real-tokenizer validation
 │   ├── measure-per-task-tokens.sh      # Bash: Per-task JIT payload measurement

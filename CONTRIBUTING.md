@@ -69,6 +69,10 @@ bash scripts/measure-tokens.sh --strict
 bash scripts/measure-per-task-tokens.sh --strict
 bash scripts/tests/run-playbook-contract-tests.sh
 
+# CPAC ingestion harness (§5 telemetry scoring + Command Code extraction)
+bash scripts/measure-cpac.sh --self-test
+bash scripts/tests/run-cpac-ingestion-tests.sh
+
 # Validate reference links and release records
 bash scripts/validate-references.sh .
 bash scripts/validate-release-records.sh --root scripts/tests/fixtures/release-records/valid --strict
@@ -124,6 +128,10 @@ pwsh -NoProfile -File .\scripts\tests\run-projection-parity-tests.ps1
 pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict
 pwsh -NoProfile -File .\scripts\measure-per-task-tokens.ps1 -Strict
 pwsh -NoProfile -File .\scripts\tests\run-playbook-contract-tests.ps1
+
+# CPAC ingestion harness (§5 telemetry scoring + Command Code extraction)
+pwsh -NoProfile -File .\scripts\measure-cpac.ps1 -SelfTest
+pwsh -NoProfile -File .\scripts\tests\run-cpac-ingestion-tests.ps1
 
 # Validate reference links and release records
 pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir .
