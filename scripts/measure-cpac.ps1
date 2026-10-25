@@ -105,9 +105,11 @@ function Run-SelfTest {
 }
 
 function ConvertTo-Invariant4 {
-    # Invariant 4-decimal money formatting shared with the Bash twin's %.4f
+    # Invariant 4-decimal money formatting shared with the Bash twin's %.4f —
+    # invariant culture so a comma-decimal runner locale cannot split the
+    # machine line's field format.
     param ([double]$Value)
-    return ("{0:0.0000}" -f $Value)
+    return $Value.ToString("0.0000", [System.Globalization.CultureInfo]::InvariantCulture)
 }
 
 function Run-Ingest {
@@ -117,8 +119,9 @@ function Run-Ingest {
         Write-CpacError "UNREADABLE" $Path
     }
 
+    $raw = Get-Content $Path -Raw
     try {
-        $record = Get-Content $Path -Raw | ConvertFrom-Json -ErrorAction Stop
+        $record = $raw | ConvertFrom-Json -ErrorAction Stop
     } catch {
         Write-CpacError "UNREADABLE" $Path
     }
@@ -126,11 +129,18 @@ function Run-Ingest {
     if ($null -eq $record -or $null -eq $record.metrics) {
         Write-CpacError "MISSING_KEY" "metrics"
     }
+
+    # String fields are validated and read TEXTUALLY from the raw record, not
+    # from the parsed object: ConvertFrom-Json silently converts ISO-8601
+    # strings (e.g. "timestamp") to [datetime], which would both falsify the
+    # value and break the [string] check. The Bash twin scans the same text.
+    $strings = @{}
     foreach ($key in @("scenario_id", "condition", "model", "timestamp")) {
-        $prop = $record.PSObject.Properties[$key]
-        if ($null -eq $prop -or $null -eq $prop.Value -or $prop.Value -isnot [string] -or $prop.Value -eq "") {
+        $m = [regex]::Match($raw, ('"' + $key + '"[ \t]*:[ \t]*"([^"]*)"'))
+        if (-not $m.Success -or $m.Groups[1].Value -eq "") {
             Write-CpacError "MISSING_KEY" $key
         }
+        $strings[$key] = $m.Groups[1].Value
     }
 
     $tokensIn = Get-MetricNumber $record.metrics "tokens_in"
@@ -163,8 +173,8 @@ function Run-Ingest {
     Write-Host ""
     Write-Host "📊 PromptKit OS CPAC Scorecard (Measured Telemetry)" -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-    Write-Host "   Scenario: $($record.scenario_id) | Condition: $($record.condition) | Model: $($record.model)"
-    Write-Host "   Timestamp: $($record.timestamp) | Wall-Clock: $wallClock`s"
+    Write-Host "   Scenario: $($strings['scenario_id']) | Condition: $($strings['condition']) | Model: $($strings['model'])"
+    Write-Host "   Timestamp: $($strings['timestamp']) | Wall-Clock: $wallClock`s"
     Write-Host "-----------------------|------------------" -ForegroundColor Gray
     "{0,-24} {1}" -f "Input Tokens (successful):", $tokensIn
     "{0,-24} {1}" -f "Output Tokens (successful):", $tokensOut
@@ -189,7 +199,7 @@ function Run-Ingest {
     Write-Host "Methodology: docs/BENCHMARK-METHODOLOGY.md | Extractor: scripts/extract-commandcode-telemetry.ps1"
 
     Write-Output ("CPAC|MEASURED|scenario={0}|condition={1}|model={2}|tokens_in={3}|tokens_out={4}|cache_read_tokens={5}|rework_loops={6}|rework_tokens_in={7}|rework_tokens_out={8}|wall_clock_seconds={9}|human_interventions={10}|inference_usd={11}|rework_usd={12}|human_usd={13}|cpac_usd={14}" -f `
-        $record.scenario_id, $record.condition, $record.model, $tokensIn, $tokensOut, $cacheRead, `
+        $strings['scenario_id'], $strings['condition'], $strings['model'], $tokensIn, $tokensOut, $cacheRead, `
         $reworkLoops, $reworkTokensIn, $reworkTokensOut, $wallClock, $humanInterventions, `
         (ConvertTo-Invariant4 $infCost), (ConvertTo-Invariant4 $rewCost), (ConvertTo-Invariant4 $humCost), $cpacValue)
 }
