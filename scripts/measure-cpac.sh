@@ -6,12 +6,20 @@
 # transcript extraction into the §5 record is provided by
 # scripts/extract-commandcode-telemetry.sh (Command Code sessions).
 set -euo pipefail
+# Locale-independent arithmetic and formatting: awk printf must always emit
+# dot decimals regardless of the host locale.
+export LC_ALL=C
 
 # Standard Pricing Constants (USD) — overridable by flag for cross-model runs
 PRICE_IN_PER_TOKEN="0.000003"    # $3.00 per 1M input tokens
 PRICE_OUT_PER_TOKEN="0.000015"   # $15.00 per 1M output tokens
 REWORK_TOOL_COST_USD="0.05"      # tau_tool: infrastructure execution cost per failed loop
 HUMAN_INTERVENTION_USD="8.33"    # 5 minutes of engineering review @ $100/hr
+
+cpac_error() {
+    printf 'CPAC|ERROR|%s|%s\n' "$1" "$2" >&2
+    exit 2
+}
 
 SELF_TEST=0
 DEMO=0
@@ -45,7 +53,12 @@ for arg in "$@"; do
             printf 'CPAC|ERROR|UNKNOWN_FLAG|%s\n' "$arg" >&2
             exit 2
             ;;
-        *) TARGET_FILE="$arg" ;;
+        *)
+            if [[ -n "$TARGET_FILE" ]]; then
+                cpac_error "MULTIPLE_INPUTS" "$arg"
+            fi
+            TARGET_FILE="$arg"
+            ;;
     esac
 done
 
@@ -56,11 +69,6 @@ for price in "$PRICE_IN_PER_TOKEN" "$PRICE_OUT_PER_TOKEN" "$REWORK_TOOL_COST_USD
         exit 2
     fi
 done
-
-cpac_error() {
-    printf 'CPAC|ERROR|%s|%s\n' "$1" "$2" >&2
-    exit 2
-}
 
 # calculate_cpac implements the successful-turn/rework split of the §2
 # methodology, including the §2B per-loop rework formula:
@@ -73,6 +81,8 @@ cpac_error() {
 # accepted: boolean flag
 # C_rework = (rtin * P_in + rtout * P_out) + R * tau_tool — loop tokens are
 # priced at the same rates and excluded from C_inference (no double counting).
+# The TOTAL is computed from the unrounded expression in a single pass in both
+# twins (per-component rounding is display-only) so rounding semantics match.
 calculate_cpac() {
     local tin="$1"
     local tout="$2"
@@ -82,7 +92,7 @@ calculate_cpac() {
     local human="$6"
     local accepted="$7"
 
-    # Inference cost (successful turns only)
+    # Inference cost (successful turns only) — display rounding only
     local inf_cost
     inf_cost=$(awk "BEGIN { printf \"%.4f\", ($tin * $PRICE_IN_PER_TOKEN) + ($tout * $PRICE_OUT_PER_TOKEN) }")
 
@@ -94,8 +104,9 @@ calculate_cpac() {
     local hum_cost
     hum_cost=$(awk "BEGIN { printf \"%.4f\", $human * $HUMAN_INTERVENTION_USD }")
 
+    # Total from the unrounded expression, rounded once
     local total_cost
-    total_cost=$(awk "BEGIN { printf \"%.4f\", $inf_cost + $rew_cost + $hum_cost }")
+    total_cost=$(awk "BEGIN { printf \"%.4f\", ($tin * $PRICE_IN_PER_TOKEN) + ($tout * $PRICE_OUT_PER_TOKEN) + ($rtin * $PRICE_IN_PER_TOKEN) + ($rtout * $PRICE_OUT_PER_TOKEN) + ($rework * $REWORK_TOOL_COST_USD) + ($human * $HUMAN_INTERVENTION_USD) }")
 
     if [[ "$accepted" == "true" || "$accepted" == "1" ]]; then
         echo "$total_cost"
@@ -153,10 +164,13 @@ run_self_test() {
 
 # Textual JSON scanners — dependency-free (no jq/python/node), same text rules
 # as the PowerShell twin so both reach identical verdicts from identical files.
-# First line carrying the key wins; CRLF tolerated.
+# First line carrying the key wins; CRLF tolerated. Values are tail-anchored:
+# a numeric value must be followed by a JSON structural character (, } ]) or
+# whitespace before one, so "10abc" or "true_lies" are as absent as a missing
+# key and fail closed instead of parsing a prefix.
 numeric_json_value() {
     # numeric_json_value <file> <key> : the first numeric "key": N value, or empty
-    awk -v needle="\"$2\"" '{ sub(/\r$/, "") } index($0, needle) { rest = substr($0, index($0, needle) + length(needle)); if (rest ~ /^[ \t]*:[ \t]*-?[0-9]/) { sub(/^[ \t]*:[ \t]*/, "", rest); if (match(rest, /^-?[0-9]+(\.[0-9]+)?/)) { print substr(rest, RSTART, RLENGTH); exit } } }' "$1"
+    awk -v needle="\"$2\"" '{ sub(/\r$/, "") } index($0, needle) { rest = substr($0, index($0, needle) + length(needle)); if (rest ~ /^[ \t]*:[ \t]*-?[0-9]/) { sub(/^[ \t]*:[ \t]*/, "", rest); if (match(rest, /^-?[0-9]+(\.[0-9]+)?/)) { tail = substr(rest, RSTART + RLENGTH); if (tail == "" || tail ~ /^[ \t]*[,}\]]/) { print substr(rest, RSTART, RLENGTH); exit } } } }' "$1"
 }
 
 string_json_value() {
@@ -165,14 +179,20 @@ string_json_value() {
 }
 
 boolean_json_value() {
-    # boolean_json_value <file> <key> : "true"/"false" literal, or empty when
-    # absent or not a bare boolean
-    awk -v needle="\"$2\"" '{ sub(/\r$/, "") } index($0, needle) { rest = substr($0, index($0, needle) + length(needle)); sub(/^[ \t]*:[ \t]*/, "", rest); if (rest ~ /^true/) { print "true"; exit } if (rest ~ /^false/) { print "false"; exit } }' "$1"
+    # boolean_json_value <file> <key> : "true"/"false" literal tail-anchored to a
+    # JSON structural character, or empty when absent or not a bare boolean
+    awk -v needle="\"$2\"" '{ sub(/\r$/, "") } index($0, needle) { rest = substr($0, index($0, needle) + length(needle)); sub(/^[ \t]*:[ \t]*/, "", rest); if (match(rest, /^true/)) { tail = substr(rest, RSTART + RLENGTH); if (tail == "" || tail ~ /^[ \t]*[,}\]]/) { print "true"; exit } } if (match(rest, /^false/)) { tail = substr(rest, RSTART + RLENGTH); if (tail == "" || tail ~ /^[ \t]*[,}\]]/) { print "false"; exit } } }' "$1"
 }
 
 run_ingest() {
     local file="$TARGET_FILE"
     if [[ ! -s "$file" ]]; then
+        cpac_error "UNREADABLE" "$file"
+    fi
+    # Minimal structure guard matching the PowerShell twin: the record must be
+    # a JSON object and carry a metrics object; the textual scanners otherwise
+    # have no opinion about nesting.
+    if [[ "$(tr -d '[:space:]\r' < "$file" | head -c 1)" != "{" ]] || ! grep -q '"metrics"' "$file"; then
         cpac_error "UNREADABLE" "$file"
     fi
 
@@ -185,6 +205,7 @@ run_ingest() {
     for key in "${NUMERIC_KEYS[@]}"; do
         NUM[$key]="$(numeric_json_value "$file" "$key")"
         [[ -n "${NUM[$key]}" ]] || cpac_error "MISSING_KEY" "$key"
+        [[ "${NUM[$key]}" != -* ]] || cpac_error "BAD_VALUE" "$key"
     done
     for key in "${STRING_KEYS[@]}"; do
         STR[$key]="$(string_json_value "$file" "$key")"
@@ -204,7 +225,8 @@ run_ingest() {
     inf_cost=$(awk "BEGIN { printf \"%.4f\", (${NUM[tokens_in]} * $PRICE_IN_PER_TOKEN) + (${NUM[tokens_out]} * $PRICE_OUT_PER_TOKEN) }")
     rew_cost=$(awk "BEGIN { printf \"%.4f\", (${NUM[rework_tokens_in]} * $PRICE_IN_PER_TOKEN) + (${NUM[rework_tokens_out]} * $PRICE_OUT_PER_TOKEN) + (${NUM[rework_loops]} * $REWORK_TOOL_COST_USD) }")
     hum_cost=$(awk "BEGIN { printf \"%.4f\", ${NUM[human_interventions]} * $HUMAN_INTERVENTION_USD }")
-    total=$(awk "BEGIN { printf \"%.4f\", $inf_cost + $rew_cost + $hum_cost }")
+    # Total from the unrounded expression, rounded once (twin-matched semantics)
+    total=$(awk "BEGIN { printf \"%.4f\", (${NUM[tokens_in]} * $PRICE_IN_PER_TOKEN) + (${NUM[tokens_out]} * $PRICE_OUT_PER_TOKEN) + (${NUM[rework_tokens_in]} * $PRICE_IN_PER_TOKEN) + (${NUM[rework_tokens_out]} * $PRICE_OUT_PER_TOKEN) + (${NUM[rework_loops]} * $REWORK_TOOL_COST_USD) + (${NUM[human_interventions]} * $HUMAN_INTERVENTION_USD) }")
 
     local cpac_value="$total"
     if [[ "$accepted" != "true" ]]; then

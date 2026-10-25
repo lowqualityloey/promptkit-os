@@ -20,6 +20,14 @@ param (
     [double]$HumanRate = 8.33        # 5 minutes of engineering review @ $100/hr
 )
 
+$ErrorActionPreference = "Stop"
+
+if ($PriceIn -lt 0 -or $PriceOut -lt 0 -or $ReworkToolCost -lt 0 -or $HumanRate -lt 0) {
+    [Console]::Error.WriteLine("CPAC|ERROR|BAD_VALUE|pricing")
+    [Console]::Error.WriteLine("Pricing parameters must be non-negative numbers: -PriceIn -PriceOut -ReworkToolCost -HumanRate")
+    exit 2
+}
+
 function Write-CpacError {
     param ([string]$Kind, [string]$Detail)
     [Console]::Error.WriteLine("CPAC|ERROR|$Kind|$Detail")
@@ -44,10 +52,13 @@ function Calculate-Cpac {
     $infCost = ($TokensIn * $PriceIn) + ($TokensOut * $PriceOut)
     $rewCost = ($ReworkTokensIn * $PriceIn) + ($ReworkTokensOut * $PriceOut) + ($ReworkLoops * $ReworkToolCost)
     $humCost = $HumanInterventions * $HumanRate
-    $totalCost = [math]::Round($infCost + $rewCost + $humCost, 4)
+    # Total from the unrounded expression, rounded once — the Bash twin computes
+    # the same single-pass total via printf (per-component rounding is
+    # display-only in both twins).
+    $totalCost = ($TokensIn * $PriceIn) + ($TokensOut * $PriceOut) + ($ReworkTokensIn * $PriceIn) + ($ReworkTokensOut * $PriceOut) + ($ReworkLoops * $ReworkToolCost) + ($HumanInterventions * $HumanRate)
 
     if ($Accepted) {
-        return ("{0:0.0000}" -f $totalCost)
+        return $totalCost.ToString("0.0000", [System.Globalization.CultureInfo]::InvariantCulture)
     } else {
         return "INF (REJECTED)"
     }
@@ -55,18 +66,26 @@ function Calculate-Cpac {
 
 function Get-MetricNumber {
     # Returns the metrics value as double; exits with MISSING_KEY when absent
-    # or not a numeric JSON type (a string-typed number is as absent as a
-    # missing key — the Bash twin's numeric scan behaves identically).
+    # and BAD_VALUE when not an explicit numeric JSON type or negative. An
+    # explicit type allowlist is used — [ValueType] would wrongly admit
+    # [datetime] (ConvertFrom-Json converts ISO-8601 strings), and a string-
+    # typed number is as absent as a missing key (the Bash twin's anchored
+    # numeric scan behaves identically).
     param ([object]$Metrics, [string]$Key)
     $prop = $Metrics.PSObject.Properties[$Key]
     if ($null -eq $prop -or $null -eq $prop.Value) {
         Write-CpacError "MISSING_KEY" $Key
     }
     $v = $prop.Value
-    if ($v -is [string] -or $v -is [bool] -or -not ($v -is [valueuetype] -or $v -is [double] -or $v -is [int64] -or $v -is [int32] -or $v -is [decimal])) {
+    $isNumeric = $v -is [int] -or $v -is [int64] -or $v -is [int32] -or $v -is [uint32] -or $v -is [int16] -or $v -is [uint16] -or $v -is [byte] -or $v -is [sbyte] -or $v -is [long] -or $v -is [uint64] -or $v -is [single] -or $v -is [double] -or $v -is [decimal]
+    if (-not $isNumeric) {
         Write-CpacError "MISSING_KEY" $Key
     }
-    return [double]$v
+    $num = [double]$v
+    if ($num -lt 0) {
+        Write-CpacError "BAD_VALUE" $Key
+    }
+    return $num
 }
 
 function Run-SelfTest {
@@ -165,7 +184,8 @@ function Run-Ingest {
     $infCost = ($tokensIn * $PriceIn) + ($tokensOut * $PriceOut)
     $rewCost = ($reworkTokensIn * $PriceIn) + ($reworkTokensOut * $PriceOut) + ($reworkLoops * $ReworkToolCost)
     $humCost = $humanInterventions * $HumanRate
-    $total = [math]::Round($infCost + $rewCost + $humCost, 4)
+    # Total from the unrounded expression, rounded once (twin-matched semantics)
+    $total = ($tokensIn * $PriceIn) + ($tokensOut * $PriceOut) + ($reworkTokensIn * $PriceIn) + ($reworkTokensOut * $PriceOut) + ($reworkLoops * $ReworkToolCost) + ($humanInterventions * $HumanRate)
 
     $cpacValue = ConvertTo-Invariant4 $total
     if (-not $accepted) { $cpacValue = "INF" }
@@ -185,7 +205,7 @@ function Run-Ingest {
     "{0,-24} {1}" -f "Human Interventions:", $humanInterventions
     Write-Host "-----------------------|------------------" -ForegroundColor Gray
     "{0,-24} `${1}" -f "Inference Cost:", (ConvertTo-Invariant4 $infCost)
-    "{0,-24} `${1} ($2 loops × τ_tool `${3} + loop-token inference)" -f "Rework Cost:", (ConvertTo-Invariant4 $rewCost), $reworkLoops, $ReworkToolCost
+    "{0,-24} `${1} ({2} loops × τ_tool `${3} + loop-token inference)" -f "Rework Cost:", (ConvertTo-Invariant4 $rewCost), $reworkLoops, $ReworkToolCost
     "{0,-24} `${1}" -f "Human Cost:", (ConvertTo-Invariant4 $humCost)
     if ($accepted) {
         Write-Host ("{0,-24} `${1}" -f "Total CPAC:", $cpacValue) -ForegroundColor Green
