@@ -30,15 +30,29 @@ For every task × arm × repeat:
    per-message usage exactly like interactive sessions (verified on this host), so the §5
    record is extracted mechanically per run (`accepted=false` at extraction — acceptance is
    a human judgment).
-5. **Blind grading**: per task, each arm's diff is stripped of PromptKit artifacts
-   (`scripts/strip-benchmark-diff.sh`) and assigned a random blind id (`B<nnn>`); the
-   grader scores the stripped diffs against the task's frozen rubric without seeing the
-   arm mapping (the key is written to `grading/key.csv` and not consulted until grading is
-   complete).
-6. **Acceptance and aggregation**: after grading, each run is re-extracted with
-   `--accepted` set from the grading sheet, and `scripts/aggregate-benchmark-runs.sh`
-   cross-checks the grading TSV against the records (mismatch exits 2) and emits the
-   per-arm summary (`BENCH|SUMMARY|...`).
+5. **Blind grading**: per run, the diff is stripped of PromptKit artifacts
+   (`scripts/strip-benchmark-diff.sh`) and assigned a blind id (`B<nnn>`) by a
+   shuffle across the whole batch (reproducible with `BENCH_SHUFFLE_SEED`), so
+   id order carries no arm information; when the task declares a `Verify`
+   command, the harness itself runs it post-session and the arm-neutral output
+   ships as `B<nnn>.verify.txt` — the grader never needs the arm-revealing
+   session log for evidence-gated rubric items. The grader scores
+   `B*.diff` (+ `B*.verify.txt`) against the task's frozen rubric without seeing
+   `grading/key.csv` (the blind→scenario mapping is consulted only by
+   `--finalize`), and writes the sheet keyed by blind id:
+   `blind_id <TAB> rubric_passed <TAB> rubric_total <TAB> accepted`.
+6. **Acceptance and aggregation**: after grading, `--finalize` translates the
+   blind-id sheet via the key, re-extracts each run's §5 record with its graded
+   `accepted` flag, and runs `scripts/aggregate-benchmark-runs.sh` with the
+   translated scenario-keyed sheet as a fail-closed cross-check (a mismatch or
+   a record missing from the sheet exits 2) — emitting the per-arm summary
+   (`BENCH|SUMMARY|...`, including `graded_n`).
+
+Diff capture is anchored to the **seed commit SHA** recorded before each run:
+under `--yolo` the agent may `git commit`, and a plain `git diff --cached`
+against the moved HEAD would silently return an empty diff. A run that
+produced no changes (e.g. `--max-turns` hit) still gets an empty grading
+packet and is graded `accepted=false` — it never aborts the batch.
 
 ## Raw-data policy
 
@@ -86,7 +100,13 @@ bash benchmarks/run-ab-benchmark.sh --engine /path/to/promptkit-os \
 # Run a batch (spends the plan)
 bash benchmarks/run-ab-benchmark.sh --engine ... --seed ... --tasks a.md,b.md \
   --model <model> --out /tmp/bench-batch-1
+
+# After grading B*.diff (+ B*.verify.txt) into grading/grading.tsv
+# (blind_id <TAB> rubric_passed <TAB> rubric_total <TAB> accepted):
+bash benchmarks/run-ab-benchmark.sh --finalize /tmp/bench-batch-1 \
+  --grading /tmp/bench-batch-1/grading/grading.tsv
 ```
 
-Post-grading finalization and aggregation are documented in the README section the driver
-prints at the end of a batch.
+The run and finalize paths are regression-tested in CI against a stub CLI with
+an isolated HOME (`scripts/tests/run-benchmark-driver-tests.sh`) — see that
+harness for the exact observable contract the driver depends on.

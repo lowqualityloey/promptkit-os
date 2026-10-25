@@ -9,6 +9,7 @@
 - **Seed Repository**: `[operator-provided seed repo with src/app.ts exporting main()]`
 - **Prompt**: `"Add an exported greet(name: string) function to src/app.ts that returns the string 'Hello, ' + name, and call it from main() with the value 'world'. Do not change any other file."`
 - **Setup**: `None`
+- **Verify**: `None`
 
 ## Rubric
 
