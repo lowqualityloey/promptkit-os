@@ -82,6 +82,7 @@ jobs:
           bash -n scripts/tests/run-benchmark-tools-tests.sh
           bash -n scripts/tests/run-benchmark-driver-tests.sh
           bash -n benchmarks/run-ab-benchmark.sh
+          bash -n benchmarks/seed/neutralize.sh
           bash -n scripts/tests/run-token-budget-tests.sh
           bash -n scripts/validate-execution-control.sh
           bash -n scripts/validate-authorization-evidence.sh

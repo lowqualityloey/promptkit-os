@@ -53,7 +53,7 @@ pilot with a pre-registered, isolated, repeated design.
 
 A paired, randomized block design:
 
-- **6 tasks** × **2 arms** × **3 repeats** = **36 primary sessions**.
+- **6 tasks** × **2 arms** × **3 repeats** = **36 primary sessions** (30 under the five-task `Phase 3b-L1L2` fallback in §2.1).
 - Task blocks: **1 L0** (cost-only), **2 L1**, **2 L2**, **1 L3**.
 - The arm is the only intended difference: `promptkit_os` receives
   `init.sh --balanced --host=agents`; `bare` receives no PromptKit install.
@@ -293,13 +293,14 @@ stop the batch. No extension without a new protocol.
 - Sensitivity: ITT vs artifact-graded timeout handling; cache-read
   included/excluded; actual cost vs modeled CPAC; L0 excluded; per-level.
 - No subgroup fishing. Exploratory analyses are labeled exploratory.
-- All 36 runs, replacements, timeouts, and deviations appear in the report.
+- All runs (36, or 30 under `Phase 3b-L1L2`), replacements, timeouts, and
+  deviations appear in the report.
 
 ## 9. Spend cap
 
 | Item | Hard cap |
 |---|---:|
-| Primary sessions | 36 |
+| Primary sessions | 36 (six tasks) / 30 (`Phase 3b-L1L2`) |
 | Infrastructure replacements | 6 |
 | Total CLI sessions | **42** |
 | Wall-clock | **24 hours** |
@@ -310,6 +311,10 @@ stop the batch. No extension without a new protocol.
 The session and time caps are binding; modeled CPAC is not a bill. No extra
 runs, no “just one more repeat,” no re-running a task because the first result
 was surprising.
+
+The primary-session count follows the slate: six tasks give 36, the five-task
+`Phase 3b-L1L2` design gives 30, and either way the 6 infrastructure
+replacements and the 42-session ceiling are unchanged.
 
 ## 10. Preregistration and change control
 
@@ -331,8 +336,10 @@ was surprising.
 - [ ] Clean host verified: empty taste, no instructions/skills/hooks/MCP, no
   `heyloey`, same environment both arms.
 - [ ] Isolation preflight guard passes.
-- [ ] Driver patch for randomized/alternating task and arm order passes its
-  tests.
+- [x] Driver preregistration passes its tests: seeded task/arm/repeat order,
+  the complete pre-session plan, both required seeds, and the isolation guard
+  (33/33 in `scripts/tests/run-benchmark-driver-tests.sh`, merged as
+  `13f7567`).
 - [ ] Task specs frozen; bundle hash recorded.
 - [ ] `--preflight-only` passes; zero spend.
 - [ ] Blind key generated and stored outside the grading workspace.
