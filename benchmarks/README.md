@@ -42,7 +42,13 @@ For every task × arm × repeat:
    agent-instruction file, when the seed tree is dirty, or when the host `HOME` carries
    instruction/skill/hook/MCP configuration or `heyloey` on `PATH`. Phase 3b therefore runs
    from a neutralized seed (`benchmarks/seed/neutralize.sh`, which removes exactly the
-   surfaces the guard refuses) under an isolated `HOME`; there is no override flag. The
+   surfaces the guard refuses) under an isolated `HOME`; there is no override flag. This
+   repository cannot serve as that seed: 26 tracked files carry a `heyloey` reference and 18
+   of them are dated release, review, and transcript records that must not be rewritten to
+   manufacture a clean seed, so `neutralize.sh` refuses it. `benchmarks/seed/build-phase3b-seed.sh`
+   writes the purpose-built alternative — a dependency-free Node service with no instruction
+   surface, deterministic to a fixed SHA, which `neutralize.sh` accepts with `removed=0`.
+   A batch run against it is labeled synthetic: it has a backlog, but not a real one. The
    Phase 3 pilot predates the guard and inherited the seed's `AGENTS.md` and host surfaces,
    so its report records the resulting `heyloey` hook confound.
 4. **Telemetry**: headless sessions persist to `~/.commandcode/projects/<slug>/` and record
