@@ -13,7 +13,7 @@
 - **External Reference (Optional)**: `https://github.com/lowqualityloey/promptkit-os/issues/694`, `https://github.com/lowqualityloey/promptkit-os/issues/607`, `https://github.com/lowqualityloey/promptkit-os/issues/596`
 - **Owner / Actor**: `PromptKit maintainer (agent-assisted session)`
 - **Execution Scope**: `promptkit-os repository — Phase 3 live benchmark batch (three real backlog tasks), the transcript-slug driver fix discovered by the first live run, publication of the batch under benchmarks/runs/, and the Phase 3 record/docs updates`
-- **Approval Boundary**: `Human approval authorized the live Command Code spend (six runs, then a clean six-run rerun), in-session blind grading after the owner's go, publication of records/diffs/verify packets under benchmarks/runs/, and local commits with a PR body. Push, PR creation, and merge remain human-only; raw transcripts and grading/key.csv are never published.`
+- **Approval Boundary**: `Human approval authorized the live Command Code spend (six runs, then a clean six-run rerun), in-session blind grading after the owner's go, publication of records/diffs/verify packets under benchmarks/runs/, and local commits with a PR body. The owner subsequently authorized push and PR creation ("publish it"); merge remains human-only. Raw transcripts and grading/key.csv are never published.`
 - **Created**: `2026-10-26 02:31 UTC`
 
 > This Local Task Source is authoritative for this Controlled Work.
@@ -65,9 +65,9 @@
 - [x] **AC-7**: The full verification battery passes on the final branch.
   - **Result**: `Pass`
   - **Evidence**: `run-benchmark-driver-tests.sh 8/8; run-benchmark-tools-tests.sh 11/11 and .ps1 11/11; run-cpac-ingestion-tests.sh 19/19 and .ps1 17/17; validate-execution-control.sh --root . --strict --authorization-baseline origin/main → VALID|RECORDS=69; check-changelog-entry.sh → PASS; validate-references.sh . --strict → pass; measure-tokens strict → Balanced 2,348/2,500, Lite 1,456/1,500; measure-per-task-tokens strict → pass both twins; check-math-labels.sh → PASS; behavioral-contract twins 560/560 Bash, 549/549 PowerShell.`
-- [x] **AC-8**: The branch remains local, with no push, PR creation, merge, release, or deployment; the PR body is prepared for the owner.
-  - **Result**: `Pass` (held at acceptance)
-  - **Evidence**: `Branch feat/phase-3-live-ab-benchmark; no remote write performed; PR body prepared separately.`
+- [x] **AC-8**: At acceptance the branch was local, with no push, PR creation, merge, release, or deployment, and the PR body was prepared. The owner subsequently authorized publishing.
+  - **Result**: `Pass` (held at acceptance; publish authorized after acceptance)
+  - **Evidence**: `PR #695 opened after the owner's "publish it"; no merge performed.`
 
 ## 4. Execution Policy
 
@@ -88,7 +88,7 @@
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-10-26 00:10 UTC`
 - **Current Actor**: `PromptKit maintainer (agent-assisted session)`
-- **Next Action**: `Owner review of the local branch and PR body; push, PR creation, and merge remain human-only.`
+- **Next Action**: `Owner review of PR #695; merge remains human-only.`
 
 ### Transition History
 
@@ -110,6 +110,15 @@ The record was authored at close-out; timestamps describe the work, not the file
 - **Verbatim Human Instruction**: `"Phase 3 setup: the seed repo is promptkit-os itself, the model is deepseek v4.1 flash (latest), and first batch scope is 3 tasks: L0, L1, L2, 1 repeat"` → `"Approve 6 runs"` → `"Approve clean rerun (7 total)"` → `"can you plan finish this phase until PR is ready"` → `"You grade"` / `"Local branch + PR body"` / `"Records + diffs + verify packets"` → `"go"`
 - **Instruction Source**: `Owner messages in the 2026-10-26 agent session (Phase 3 setup; spend approvals; PR boundary; grading/publication choices)`
 - **Frozen Task and Milestone Scope**: `Phase 3 first live batch: BENCH-L0-01, BENCH-L1-02, BENCH-L2-02 × bare/promptkit_os × 1 repeat on deepseek/deepseek-v4.1-flash; fix the live transcript-slug defect; publish records/diffs/verify packets; prepare a local branch and PR body; no push, PR creation, merge, release, or deployment.`
+- **Batch Authorization Reference**: `N/A`
+
+<a id="AUTHZ-live-ab-benchmark-002"></a>
+
+- **Authorization Checkpoint ID**: `AUTHZ-live-ab-benchmark-002`
+- **Declared Boundary**: `pr`
+- **Verbatim Human Instruction**: `"publish it"`
+- **Instruction Source**: `Owner message in the 2026-10-26 agent session, after the PR-ready handoff`
+- **Frozen Task and Milestone Scope**: `Push feat/phase-3-live-ab-benchmark and open a ready PR against main using the prepared PR body; merge, release, and deployment remain human-only.`
 - **Batch Authorization Reference**: `N/A`
 
 ## 6. Evidence and Completion Gate
@@ -134,10 +143,10 @@ The record was authored at close-out; timestamps describe the work, not the file
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Code Work`
-- **CI Evidence**: `N/A before push; the PR run will be recorded here`
+- **CI Evidence**: `PromptKit OS CI (pull_request) run 40260718784 on a1e4caf: 8/8 checks green — Lint & Validate (Linux/Windows), Linux Validate (Core), Windows Validate (Core), Linux Shard - Execution Control Fixtures, Windows Shard - Init Safety, Windows Shard - Documentation Contract, Staged Secret Scan (PR Diff).`
 - **Review Evidence**: `Blind in-session grading after the owner's go; key.csv was not read before grading.tsv was written; single reviewer, no independent re-score (recorded in the batch README's Limitations).`
-- **Commit Evidence**: `2811353, e9c82bd, 0d67371; this record's own commit is recorded in the docs-only follow-up per the two-commit pattern.`
-- **Pull Request Evidence**: `N/A - local branch + PR body only; no remote write authorized`
+- **Commit Evidence**: `2811353, e9c82bd, 0d67371, 5cc85d5, a1e4caf; the PR-evidence docs commit follows the two-commit pattern.`
+- **Pull Request Evidence**: `[#695](https://github.com/lowqualityloey/promptkit-os/pull/695) — open, non-draft, base main; 8/8 checks green at a1e4caf; merge remains human-only.`
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
 
@@ -147,6 +156,7 @@ The record was authored at close-out; timestamps describe the work, not the file
 - **Commit Evidence Entry**: `e9c82bd docs(benchmarks): add phase 3 live task batch; Authorization Checkpoint Reference: AUTHZ-live-ab-benchmark-001; Authorization Source: owner Phase 3 setup + frozen rubrics`
 - **Commit Evidence Entry**: `0d67371 feat(benchmarks): publish first live ab batch; Authorization Checkpoint Reference: AUTHZ-live-ab-benchmark-001; Authorization Source: owner publication choice (records + diffs + verify packets) and local-branch boundary`
 - **Commit Evidence Entry**: `5cc85d5 docs(tasks): record phase 3 live ab batch; Authorization Checkpoint Reference: AUTHZ-live-ab-benchmark-001; Authorization Source: owner local-branch + PR-body boundary`
+- **Commit Evidence Entry**: `a1e4caf docs(tasks): record phase 3 record commit evidence; Authorization Checkpoint Reference: AUTHZ-live-ab-benchmark-001; Authorization Source: owner local-branch + PR-body boundary`
 
 ### Completion Gate
 
@@ -154,4 +164,4 @@ The record was authored at close-out; timestamps describe the work, not the file
 - **Acceptance Results**: `AC-1 Pass; AC-2 Pass; AC-3 Pass; AC-4 Pass; AC-5 Pass; AC-6 Pass; AC-7 Pass; AC-8 Pass`
 - **Changed-File Summary**: `11 paths: driver + driver harness, three real task specs, the published batch directory (report, env, manifest, records, full/stripped diffs, verify packets, blind packets, grading sheet, logs), README/BENCHMARKS pointers, CHANGELOG, .gitignore, this record.`
 - **Completion Exception**: `None`
-- **Completion Decision and Timestamp**: `Pending owner review — push, PR creation, and merge are human-only`
+- **Completion Decision and Timestamp**: `Pending owner review of PR #695 — merge remains human-only`
