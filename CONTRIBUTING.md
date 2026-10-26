@@ -80,8 +80,10 @@ bash scripts/tests/run-benchmark-tools-tests.sh
 bash scripts/tests/run-benchmark-driver-tests.sh
 
 # Benchmark task-card lint (probe before suite; no && between the halves)
+# Opt-in local enforcement: scripts/install-benchmark-task-card-hook.sh --root . (--remove to uninstall)
 bash scripts/check-benchmark-task-cards.sh --root .
 bash scripts/tests/run-benchmark-task-card-tests.sh
+bash scripts/tests/run-benchmark-task-card-hook-tests.sh
 
 # Validate reference links and release records
 bash scripts/validate-references.sh .
@@ -147,8 +149,10 @@ pwsh -NoProfile -File .\scripts\tests\run-cpac-ingestion-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-benchmark-tools-tests.ps1
 
 # Benchmark task-card lint (probe before suite; no && between the halves)
+# Opt-in local enforcement: scripts\install-benchmark-task-card-hook.ps1 -Root . (-Remove to uninstall)
 pwsh -NoProfile -File .\scripts\check-benchmark-task-cards.ps1 -Root .
 pwsh -NoProfile -File .\scripts\tests\run-benchmark-task-card-tests.ps1
+pwsh -NoProfile -File .\scripts\tests\run-benchmark-task-card-hook-tests.ps1
 
 # Validate reference links and release records
 pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir .

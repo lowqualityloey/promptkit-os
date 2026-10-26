@@ -83,6 +83,8 @@ jobs:
           bash -n scripts/tests/run-benchmark-driver-tests.sh
           bash -n scripts/check-benchmark-task-cards.sh
           bash -n scripts/tests/run-benchmark-task-card-tests.sh
+          bash -n scripts/install-benchmark-task-card-hook.sh
+          bash -n scripts/tests/run-benchmark-task-card-hook-tests.sh
           bash -n benchmarks/run-ab-benchmark.sh
           bash -n benchmarks/seed/neutralize.sh
           bash -n benchmarks/seed/build-phase3b-seed.sh
@@ -262,6 +264,9 @@ jobs:
       - name: Run Benchmark Task-Card Lint Tests (Bash)
         run: bash scripts/tests/run-benchmark-task-card-tests.sh
 
+      - name: Run Benchmark Task-Card Hook Tests (Bash)
+        run: bash scripts/tests/run-benchmark-task-card-hook-tests.sh
+
       - name: Run Release-Record Self-Validation with Grandfather Exemption (Bash)
         run: |
           set +e
@@ -412,7 +417,9 @@ jobs:
             "scripts/aggregate-benchmark-runs.ps1",
             "scripts/tests/run-benchmark-tools-tests.ps1",
             "scripts/check-benchmark-task-cards.ps1",
-            "scripts/tests/run-benchmark-task-card-tests.ps1"
+            "scripts/tests/run-benchmark-task-card-tests.ps1",
+            "scripts/install-benchmark-task-card-hook.ps1",
+            "scripts/tests/run-benchmark-task-card-hook-tests.ps1"
           )
           foreach ($file in $syntaxFiles) {
             $errors = @()
@@ -576,6 +583,10 @@ jobs:
       - name: Run Benchmark Task-Card Lint Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-benchmark-task-card-tests.ps1
+
+      - name: Run Benchmark Task-Card Hook Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-benchmark-task-card-hook-tests.ps1
 
       - name: Assert Turbo Protocol Overhead Claim Window (PowerShell)
         shell: pwsh
