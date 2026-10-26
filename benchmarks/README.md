@@ -37,11 +37,14 @@ For every task × arm × repeat:
    asserted empty between arms; the driver warns and stops if taste accumulated (learning
    during a batch would make arms unequal).
 
-   Instruction surfaces are not yet frozen by the driver. A fresh clone still carries the
-   seed's `AGENTS.md`, and Command Code can load host-level instruction/skill/hook
-   configuration; both arms inherit those surfaces. Future batches must snapshot or
-   neutralize them alongside `taste.md` and record what remains. The Phase 3 batch did not;
-   its report records the resulting `heyloey` hook confound.
+   Instruction surfaces are refused rather than inherited, from the guard merged in
+   `13f7567` onward: before any session the driver fails closed when the seed tracks an
+   agent-instruction file, when the seed tree is dirty, or when the host `HOME` carries
+   instruction/skill/hook/MCP configuration or `heyloey` on `PATH`. Phase 3b therefore runs
+   from a neutralized seed (`benchmarks/seed/neutralize.sh`, which removes exactly the
+   surfaces the guard refuses) under an isolated `HOME`; there is no override flag. The
+   Phase 3 pilot predates the guard and inherited the seed's `AGENTS.md` and host surfaces,
+   so its report records the resulting `heyloey` hook confound.
 4. **Telemetry**: headless sessions persist to `~/.commandcode/projects/<slug>/` and record
    per-message usage exactly like interactive sessions (verified on this host), so the §5
    record is extracted mechanically per run (`accepted=false` at extraction — acceptance is

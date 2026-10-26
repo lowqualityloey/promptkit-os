@@ -53,7 +53,7 @@ pilot with a pre-registered, isolated, repeated design.
 
 A paired, randomized block design:
 
-- **6 tasks** × **2 arms** × **3 repeats** = **36 primary sessions**.
+- **6 tasks** × **2 arms** × **3 repeats** = **36 primary sessions** (30 under the five-task `Phase 3b-L1L2` fallback in §2.1).
 - Task blocks: **1 L0** (cost-only), **2 L1**, **2 L2**, **1 L3**.
 - The arm is the only intended difference: `promptkit_os` receives
   `init.sh --balanced --host=agents`; `bare` receives no PromptKit install.
@@ -62,8 +62,9 @@ A paired, randomized block design:
   grading procedure.
 - The unit of analysis is the **task-run**. The task is the cluster. Repeats are
   not pooled as if independent tasks.
-- All 36 primary runs are reported. No run is dropped because its result is
-  inconvenient; infrastructure replacements are the only permitted substitution
+- All primary runs (36, or 30 under `Phase 3b-L1L2`) are reported. No run is
+  dropped because its result is inconvenient; infrastructure replacements are
+  the only permitted substitution
   and are logged separately.
 
 ### 2.1 Why six tasks, not the original 8–12
@@ -85,7 +86,8 @@ so.
   ordering and `--shuffle-seed` for blind-id assignment. The driver refuses to
   start without both and records both in `<out>/env.txt` and
   `<out>/isolation.txt`.
-- Randomize the order of the six task blocks with the order seed.
+- Randomize the order of the task blocks (six, or five under
+  `Phase 3b-L1L2`) with the order seed.
 - Within each task block, randomize arm order and repeat order. The driver
   takes the required `--order-seed` and derives the plan from it: it sorts
   SHA-256 digests of the seed with each task id and with each arm × repeat
@@ -97,8 +99,9 @@ so.
   repeats; the driver uses the seeded shuffle instead. A second counterbalanced
   block would double the sessions and does not fit the 42-session cap; it is
   not used here.
-- Randomize blind ids across all 36 runs, not per task or per arm, seeded from
-  `--shuffle-seed`. The blind-to-scenario key stays out of the grading
+- Randomize blind ids across every run in the batch (36, or 30 under
+  `Phase 3b-L1L2`), not per task or per arm, seeded from `--shuffle-seed`. The
+  blind-to-scenario key stays out of the grading
   workspace.
 
 ### 2.3 Task selection
@@ -115,8 +118,9 @@ have:
 
 **No task from the Phase 3 pilot may be a primary endpoint in Phase 3b.** The
 pilot tasks were already seen, discussed, and used to tune the harness. They may
-be used only as smoke tests/calibration and must not enter the 36-run analysis.
-At least two of the six tasks must change executable code (not documentation
+be used only as smoke tests/calibration and must not enter the confirmatory
+analysis (36 runs, or 30 under `Phase 3b-L1L2`).
+At least two of the tasks must change executable code (not documentation
 only). The L3 task must have an owner-approved scope and rollback plan; if no
 real L3 task is available, run five tasks (1 L0, 2 L1, 2 L2), label the batch
 `Phase 3b-L1L2`, and make no L3 claim rather than relabeling an L2 task.
@@ -293,13 +297,14 @@ stop the batch. No extension without a new protocol.
 - Sensitivity: ITT vs artifact-graded timeout handling; cache-read
   included/excluded; actual cost vs modeled CPAC; L0 excluded; per-level.
 - No subgroup fishing. Exploratory analyses are labeled exploratory.
-- All 36 runs, replacements, timeouts, and deviations appear in the report.
+- All runs (36, or 30 under `Phase 3b-L1L2`), replacements, timeouts, and
+  deviations appear in the report.
 
 ## 9. Spend cap
 
 | Item | Hard cap |
 |---|---:|
-| Primary sessions | 36 |
+| Primary sessions | 36 (six tasks) / 30 (`Phase 3b-L1L2`) |
 | Infrastructure replacements | 6 |
 | Total CLI sessions | **42** |
 | Wall-clock | **24 hours** |
@@ -310,6 +315,10 @@ stop the batch. No extension without a new protocol.
 The session and time caps are binding; modeled CPAC is not a bill. No extra
 runs, no “just one more repeat,” no re-running a task because the first result
 was surprising.
+
+The primary-session count follows the slate: six tasks give 36, the five-task
+`Phase 3b-L1L2` design gives 30, and either way the 6 infrastructure
+replacements and the 42-session ceiling are unchanged.
 
 ## 10. Preregistration and change control
 
@@ -331,8 +340,10 @@ was surprising.
 - [ ] Clean host verified: empty taste, no instructions/skills/hooks/MCP, no
   `heyloey`, same environment both arms.
 - [ ] Isolation preflight guard passes.
-- [ ] Driver patch for randomized/alternating task and arm order passes its
-  tests.
+- [x] Driver preregistration passes its tests: seeded task/arm/repeat order,
+  the complete pre-session plan, both required seeds, and the isolation guard
+  (33/33 in `scripts/tests/run-benchmark-driver-tests.sh`, merged as
+  `13f7567`).
 - [ ] Task specs frozen; bundle hash recorded.
 - [ ] `--preflight-only` passes; zero spend.
 - [ ] Blind key generated and stored outside the grading workspace.
@@ -396,8 +407,11 @@ edits; if no L3, use five tasks and label `Phase 3b-L1L2`.
 
 - [ ] `command-code --version` matches the frozen version.
 - [ ] Model is pinned and available.
-- [ ] Seed is neutral; no `AGENTS.md`, `CLAUDE.md`, Cursor/Claude/Copilot
-  instructions, or `heyloey`.
+- [ ] Seed is neutral: no tracked `AGENTS.md`, `CLAUDE.md`, `PROMPTKIT.md`,
+  `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.clinerules`,
+  `copilot-instructions.md`, `.cursor/rules/`, `.claude/`, `.promptkit/`,
+  `.github/instructions/`, and no `heyloey` reference - produced by
+  `benchmarks/seed/neutralize.sh` rather than by hand.
 - [ ] Host `HOME` has only auth; taste is empty; no hooks/skills/MCP/global
   instructions.
 - [ ] `heyloey` is absent from `PATH`.
