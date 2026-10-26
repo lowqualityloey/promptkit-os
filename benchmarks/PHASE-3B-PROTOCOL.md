@@ -405,12 +405,12 @@ Slate notes:
 
 ## Appendix B — Frozen parameters (fill before run)
 
-- Protocol commit: __________ (recorded in the follow-up docs-only commit, per §10)
+- Protocol commit: `71fc79dccb403480f07b4e7a1baeb2ac7cd93305` (2026-10-27)
 - Freeze date: 2026-10-27 (slate and parameters drafted; frozen by the Approval signature)
 - Owner approval: **PENDING** — see the Approval section
 - Model: `deepseek/deepseek-v4.1-flash`
 - Command Code version: `1.88.0`
-- Engine SHA: __________ (this repository at the protocol commit)
+- Engine SHA: `71fc79dccb403480f07b4e7a1baeb2ac7cd93305` (this repository at the protocol commit)
 - Seed SHA: `16b3cf74c809c23dd48466da2212bd3e67a530ed`
 - Neutralization procedure SHA: `843ecc47249e2cf0914ce594fc77ac45b5a5f55c1c993c559cbf8e5d85703d3f` (`benchmarks/seed/neutralize.sh`); the seed was produced by `benchmarks/seed/build-phase3b-seed.sh` at `aecfff209793cf6dba35ae33ea810efc71675bbb42ecf054cc62c3d478bcbd12` and accepted by `neutralize.sh` with `removed=0`
 - Task bundle SHA-256: `13d231220ca5e73c86646af5139877b7eb928808d1cf51d8d44dfce86a22bf89`
