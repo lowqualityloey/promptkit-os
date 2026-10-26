@@ -81,19 +81,25 @@ so.
 
 ### 2.2 Order and randomization
 
-- Pre-register a shuffle seed for blind-id assignment and a separate order seed
-  for task/arm ordering.
+- Pre-register two separate numeric seeds: `--order-seed` for task/arm
+  ordering and `--shuffle-seed` for blind-id assignment. The driver refuses to
+  start without both and records both in `<out>/env.txt` and
+  `<out>/isolation.txt`.
 - Randomize the order of the six task blocks with the order seed.
-- Within each task block, randomize arm order and repeat order. The current
-  driver runs `promptkit_os` before `bare` and repeats in ascending order; that
-  fixed order is a potential warm-cache/order confound. **Phase 3b requires a
-  driver patch that randomizes or alternates arm order under a pre-registered
-  seed.** Alternating means A-B, B-A, A-B across the three repeats. A second
-  counterbalanced block would double the sessions and does not fit the
-  42-session cap; it is not used here. If the patch is not done, the batch is
-  order-confounded and cannot be the primary confirmatory basis.
-- Randomize blind ids across all 36 runs, not per task or per arm. The
-  blind-to-scenario key stays out of the grading workspace.
+- Within each task block, randomize arm order and repeat order. The driver
+  takes the required `--order-seed` and derives the plan from it: it sorts
+  SHA-256 digests of the seed with each task id and with each arm × repeat
+  cell, writes the **complete** plan to `<out>/order.tsv` before the preflight
+  exit and before the first session, and executes it as written, so neither arm
+  is always first. The same seed reproduces the plan, and a mid-batch stop
+  cannot truncate the pre-registration. Duplicate `Task ID`s are rejected
+  before any session. Alternating would mean A-B, B-A, A-B across the three
+  repeats; the driver uses the seeded shuffle instead. A second counterbalanced
+  block would double the sessions and does not fit the 42-session cap; it is
+  not used here.
+- Randomize blind ids across all 36 runs, not per task or per arm, seeded from
+  `--shuffle-seed`. The blind-to-scenario key stays out of the grading
+  workspace.
 
 ### 2.3 Task selection
 
@@ -127,8 +133,12 @@ Preferred: a **neutral consumer repository** with a real backlog. Fallback: a
 **neutralized copy of this repository** at a frozen SHA. In either case:
 
 - Remove or replace all agent-instruction surfaces: `AGENTS.md`, `CLAUDE.md`,
-  `.cursorrules`, `.cursor/rules`, `.claude/`, `.github/copilot-instructions.md`,
-  and any `heyloey` reference.
+  `PROMPTKIT.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.clinerules`,
+  `.cursor/rules`, `.claude/`, `.promptkit/`, `.github/instructions/`,
+  `.github/copilot-instructions.md`, and any `heyloey` reference. A tracked
+  `PROMPTKIT.md` or `.promptkit/` is a PromptKit install marker: `init.sh`
+  treats it as an existing install and keeps its profile, so it is not a
+  neutral surface for either arm.
 - The bare arm starts from this neutral seed. The treatment arm's
   `init.sh --balanced --host=agents` writes the only PromptKit directive.
 - The seed's tests must pass after neutralization; the task specs and `Verify`
@@ -153,8 +163,11 @@ Use a dedicated OS user or container with:
 - no IDE or editor extensions injecting instructions.
 
 If any surface cannot be neutralized, **stop**; do not run a “neutral-ish”
-batch. The current preflight checks taste but not all of these; Phase 3b
-requires an isolation preflight guard.
+batch. The driver's isolation guard enforces the seed and host surfaces above
+before any session, with no override; `--preflight-only` exercises it with zero
+spend and a pass is recorded in `<out>/isolation.txt`. The JSON checks strip
+whitespace before matching, so an empty `{}` or `[]` `hooks`/`mcpServers` value
+passes in any formatting while any non-empty value fails closed.
 
 ## 4. Blinding and grading
 
