@@ -28,6 +28,7 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 FAKE_HOME="$TMP_DIR/home"
 BINDIR="$TMP_DIR/bin"
+CLEAN_PATH="$BINDIR:/usr/bin:/bin"
 SEED="$TMP_DIR/seed"
 OUT="$TMP_DIR/out"
 mkdir -p "$FAKE_HOME/.commandcode/taste" "$BINDIR"
@@ -90,7 +91,7 @@ echo "🧪 Benchmark Driver Regression Harness (mock CLI)"
 
 # --- finalize flag-consumption regression ------------------------------------
 # The documented invocation must reach real validation, not UNKNOWN_FLAG.
-out="$(PATH="$BINDIR:$PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
     --finalize "$OUT" --grading "$OUT/grading/grading.tsv" 2>&1)"; rc=$?
 if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|UNREADABLE"* && "$out" != *"UNKNOWN_FLAG"* ]]; then
     ok "--finalize consumes its <dir> operand (documented invocation parses)"
@@ -98,10 +99,27 @@ else
     notok "--finalize parse (rc=$rc, out=${out:0:160})"
 fi
 
+# --- second task card (multi-block schedule) ---------------------------------
+TASK2="$TMP_DIR/task2.md"
+cat > "$TASK2" <<'TASK2EOF'
+# Task Spec: Driver smoke task 2
+
+- **Task ID**: `BENCH-DRIVER-02`
+- **Level**: `L1`
+- **Seed Repository**: `throwaway`
+- **Prompt**: `"Append the line STUB-LINE to src/app.ts. Do not change any other file."`
+- **Setup**: `None`
+- **Verify**: `None`
+
+## Rubric
+
+- [ ] `R1`: src/app.ts contains STUB-LINE.
+TASK2EOF
+
 # --- run the batch ------------------------------------------------------------
-out="$(PATH="$BINDIR:$PATH" HOME="$FAKE_HOME" BENCH_SHUFFLE_SEED=7 bash "$DRIVER" \
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" BENCH_SHUFFLE_SEED=7 bash "$DRIVER" \
     --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
-    --model stub/model-a --out "$OUT" --max-turns 5 --timeout 60 2>&1)"; rc=$?
+    --model stub/model-a --out "$OUT" --max-turns 5 --timeout 60 --order-seed 7 2>&1)"; rc=$?
 if [[ $rc -eq 0 && "$out" == *"PREFLIGHT|OK"* && "$out" == *"BATCH|OK|runs=2"* ]]; then
     ok "batch runs both arms end-to-end against the stub CLI"
 else
@@ -153,7 +171,7 @@ fi
 b1="$(grep -m1 B "$OUT/grading/key.csv" | cut -d, -f1)"
 b2="$(tail -1 "$OUT/grading/key.csv" | cut -d, -f1)"
 printf '%s\t3\t3\ttrue\n' "$b1" "$b2" > "$OUT/grading/grading.tsv"
-out="$(PATH="$BINDIR:$PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
     --finalize "$OUT" --grading "$OUT/grading/grading.tsv" 2>&1)"; rc=$?
 # Stub transcript per run: 900 in / 90 out, no rework, accepted → CPAC = 900*3e-6
 # + 90*15e-6 = 0.00405 → machine line prints 0.0040 or 0.0041 at 4dp; assert the
@@ -180,6 +198,128 @@ if [[ -z "$leak" && "$scrubbed" -eq 2 ]]; then
     ok "verify packets scrub the run directory and scenario id"
 else
     notok "verify packet scrub (leak=${leak:-none} scrubbed=$scrubbed)"
+fi
+
+# --- seeded schedule: no pre-registered seed, no batch ----------------------
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
+    --model stub/model-a --out "$TMP_DIR/out-noseed" --preflight-only 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|MISSING|order-seed"* && ! -e "$TMP_DIR/out-noseed" ]]; then
+    ok "run refuses to start without a pre-registered --order-seed"
+else
+    notok "order-seed refusal (rc=$rc, out=${out:0:160})"
+fi
+
+# --- seeded schedule: complete plan, executed as written ---------------------
+# Seed 7 puts bare first for this task, the opposite of the legacy fixed order,
+# so a driver that ignored order.tsv would run promptkit_os first and fail.
+OUT_SCHED="$TMP_DIR/out-sched"
+out_sched="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
+    --model stub/model-a --out "$OUT_SCHED" --max-turns 5 --timeout 60 --order-seed 7 2>&1)"; rc=$?
+plan="$OUT_SCHED/order.tsv"
+plan_rows=$(( $(wc -l < "$plan") - 1 ))
+planned="$(tail -n +2 "$plan" | awk -F'\t' '{print $2"-"$3"-r"$4}')"
+executed="$(printf '%s\n' "$out_sched" | grep '^RUNDONE|' | cut -d'|' -f2)"
+if [[ $rc -eq 0 && "$plan_rows" -eq 2 && "$executed" == "$planned" \
+        && "$(printf '%s\n' "$planned" | head -1)" == "BENCH-DRIVER-01-bare-r1" ]]; then
+    ok "order.tsv is complete and the batch executes exactly that plan"
+else
+    notok "seeded plan (rc=$rc rows=$plan_rows)"
+fi
+
+OUT_REPEAT="$TMP_DIR/out-repeat"
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
+    --model stub/model-a --out "$OUT_REPEAT" --max-turns 5 --timeout 60 --order-seed 7 2>&1)"; rc=$?
+if [[ $rc -eq 0 && "$(cat "$OUT_REPEAT/order.tsv")" == "$(cat "$plan")" ]]; then
+    ok "the same --order-seed reproduces a byte-identical plan"
+else
+    notok "plan reproducibility (rc=$rc)"
+fi
+
+# --- seeded schedule: task blocks and per-block arm order -------------------
+OUT_MULTI="$TMP_DIR/out-multi"
+out_multi="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK,$TASK2" \
+    --model stub/model-a --out "$OUT_MULTI" --max-turns 5 --timeout 60 --order-seed 11 2>&1)"; rc=$?
+planned_multi="$(tail -n +2 "$OUT_MULTI/order.tsv" | awk -F'\t' '{print $2"-"$3"-r"$4}')"
+executed_multi="$(printf '%s\n' "$out_multi" | grep '^RUNDONE|' | cut -d'|' -f2)"
+first_01="$(awk -F'\t' '$2=="BENCH-DRIVER-01"{print $3; exit}' "$OUT_MULTI/order.tsv")"
+first_02="$(awk -F'\t' '$2=="BENCH-DRIVER-02"{print $3; exit}' "$OUT_MULTI/order.tsv")"
+per_task="$(tail -n +2 "$OUT_MULTI/order.tsv" | cut -f2 | sort | uniq -c | awk '{print $1}' | sort -u)"
+if [[ $rc -eq 0 && "$out_multi" == *"BATCH|OK|runs=4"* \
+        && "$executed_multi" == "$planned_multi" && "$per_task" == "2" \
+        && -n "$first_01" && -n "$first_02" && "$first_01" != "$first_02" ]]; then
+    ok "both task blocks run every cell, with arm order shuffled per block"
+else
+    notok "multi-block schedule (rc=$rc per_task=$per_task first=$first_01/$first_02)"
+fi
+
+# --- isolation guard: every refused surface fails closed --------------------
+expect_preflight_fail() {
+    local label="$1" want="$2" home="$3" seed="$4" path="$5"
+    local got rcf
+    got="$(PATH="$path" HOME="$home" bash "$DRIVER" --engine "$REPO_ROOT" \
+        --seed "$seed" --tasks "$TASK" --model stub/model-a \
+        --out "$TMP_DIR/out-$label" --order-seed 7 --preflight-only 2>&1)"; rcf=$?
+    if [[ $rcf -eq 2 && "$got" == *"$want"* ]]; then
+        ok "isolation guard: $label"
+    else
+        notok "isolation guard: $label (rc=$rcf, out=${got:0:200})"
+    fi
+}
+
+for variant in agents leak dirty; do cp -a "$SEED" "$TMP_DIR/seed-$variant"; done
+printf '# Global instructions\n' > "$TMP_DIR/seed-agents/AGENTS.md"
+git -C "$TMP_DIR/seed-agents" add AGENTS.md
+git -C "$TMP_DIR/seed-agents" -c user.name=seed -c user.email=seed@test commit -qm "instruction surface"
+printf 'Closings go through heyloey.\n' > "$TMP_DIR/seed-leak/NOTES.md"
+git -C "$TMP_DIR/seed-leak" add NOTES.md
+git -C "$TMP_DIR/seed-leak" -c user.name=seed -c user.email=seed@test commit -qm "reference"
+printf 'dirty\n' >> "$TMP_DIR/seed-dirty/src/app.ts"
+
+expect_preflight_fail seed-agents \
+    "PREFLIGHT|seed isolation: tracked instruction surface: AGENTS.md" \
+    "$FAKE_HOME" "$TMP_DIR/seed-agents" "$CLEAN_PATH"
+expect_preflight_fail seed-leak \
+    "PREFLIGHT|seed isolation: heyloey reference: NOTES.md" \
+    "$FAKE_HOME" "$TMP_DIR/seed-leak" "$CLEAN_PATH"
+expect_preflight_fail seed-dirty \
+    "PREFLIGHT|seed isolation: working tree is dirty" \
+    "$FAKE_HOME" "$TMP_DIR/seed-dirty" "$CLEAN_PATH"
+
+for variant in agents mcp; do
+    mkdir -p "$TMP_DIR/home-$variant/.commandcode/taste"
+    : > "$TMP_DIR/home-$variant/.commandcode/taste/taste.md"
+done
+printf '# global\n' > "$TMP_DIR/home-agents/.commandcode/AGENTS.md"
+printf '{"mcpServers":{"demo":{"command":"demo"}}}\n' > "$TMP_DIR/home-mcp/.commandcode/mcp.json"
+mkdir -p "$TMP_DIR/hostbin"
+printf '#!/bin/sh\nexit 0\n' > "$TMP_DIR/hostbin/heyloey"
+chmod +x "$TMP_DIR/hostbin/heyloey"
+
+expect_preflight_fail host-agents \
+    "PREFLIGHT|host isolation: global instruction surface:" \
+    "$TMP_DIR/home-agents" "$SEED" "$CLEAN_PATH"
+expect_preflight_fail host-mcp \
+    "PREFLIGHT|host isolation: MCP servers configured:" \
+    "$TMP_DIR/home-mcp" "$SEED" "$CLEAN_PATH"
+expect_preflight_fail host-path \
+    "PREFLIGHT|host isolation: heyloey on PATH:" \
+    "$FAKE_HOME" "$SEED" "$TMP_DIR/hostbin:$CLEAN_PATH"
+
+# --- clean preflight: guard passes, records evidence, starts nothing -------
+OUT_PREFLIGHT="$TMP_DIR/out-preflight"
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
+    --model stub/model-a --out "$OUT_PREFLIGHT" --order-seed 7 --preflight-only 2>&1)"; rc=$?
+if [[ $rc -eq 0 && "$out" == *"ISOLATION|OK"* && "$out" == *"PREFLIGHT|OK"* ]] \
+        && grep -q '^order_seed: 7$' "$OUT_PREFLIGHT/isolation.txt" \
+        && [[ ! -e "$OUT_PREFLIGHT/manifest.tsv" ]]; then
+    ok "clean preflight records isolation evidence and starts no session"
+else
+    notok "clean preflight (rc=$rc, out=${out:0:200})"
 fi
 
 echo ""

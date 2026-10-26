@@ -101,8 +101,30 @@ Linux/WSL (uses GNU `timeout`).
 Each run consumes the operator's Command Code plan. Controls: `--max-turns` (default 40,
 exit 8 on cap-hit), a wall-clock `timeout` per run (default 900s), and the task batch
 itself is reviewed before any run. The driver refuses to start without an explicit
-`--model`, and `--preflight-only` validates the environment (CLI, model, taste state,
-engine and seed repos) without spending.
+`--model` and a pre-registered numeric `--order-seed`, and `--preflight-only` validates
+the environment (CLI, model, taste state, engine and seed repos, seed/host isolation)
+without spending.
+
+## Schedule and isolation
+
+Every run requires `--order-seed N`. The driver sorts SHA-256 digests of that seed with
+each task id (block order) and with each arm × repeat cell (order inside the block),
+writes the plan to `<out>/order.tsv`, and executes it exactly as written — neither arm
+is always first, and task position cannot line up with cache or carryover effects. The
+same seed reproduces the same plan; the order is part of the pre-registration, not an
+operator choice made at run time.
+
+Before any session, the isolation guard fails closed (`BENCH|ERROR|PREFLIGHT|...`) when:
+
+- the seed has a tracked agent-instruction surface (`AGENTS.md`, `CLAUDE.md`,
+  `.cursorrules`, `.cursor/rules/`, `.claude/`, `copilot-instructions.md`), any
+  `heyloey` reference, or a dirty working tree; or
+- the host has a global instruction file, `.commandcode` skills/hooks/MCP servers, or
+  `heyloey` on `PATH`.
+
+There is no override flag. Run on a neutralized seed under an isolated `HOME` (or a
+container), as the regression harness does. A pass prints `ISOLATION|OK` and writes
+`<out>/isolation.txt`; `--preflight-only` exercises the whole guard with zero spend.
 
 ## Limitations
 
@@ -123,11 +145,11 @@ this harness does not establish general performance.
 # Validate the environment without spending
 bash benchmarks/run-ab-benchmark.sh --engine /path/to/promptkit-os \
   --seed /path/to/seed-repo --tasks benchmarks/tasks/TASK-BENCH-L1-01.md \
-  --model <model> --out /tmp/bench-batch-1 --preflight-only
+  --model <model> --out /tmp/bench-batch-1 --order-seed 20261026 --preflight-only
 
 # Run a batch (spends the plan)
 bash benchmarks/run-ab-benchmark.sh --engine ... --seed ... --tasks a.md,b.md \
-  --model <model> --out /tmp/bench-batch-1
+  --model <model> --out /tmp/bench-batch-1 --order-seed 20261026
 
 # After grading B*.diff (+ B*.verify.txt) into grading/grading.tsv
 # (blind_id <TAB> rubric_passed <TAB> rubric_total <TAB> accepted):

@@ -84,14 +84,14 @@ so.
 - Pre-register a shuffle seed for blind-id assignment and a separate order seed
   for task/arm ordering.
 - Randomize the order of the six task blocks with the order seed.
-- Within each task block, randomize arm order and repeat order. The current
-  driver runs `promptkit_os` before `bare` and repeats in ascending order; that
-  fixed order is a potential warm-cache/order confound. **Phase 3b requires a
-  driver patch that randomizes or alternates arm order under a pre-registered
-  seed.** Alternating means A-B, B-A, A-B across the three repeats. A second
-  counterbalanced block would double the sessions and does not fit the
-  42-session cap; it is not used here. If the patch is not done, the batch is
-  order-confounded and cannot be the primary confirmatory basis.
+- Within each task block, randomize arm order and repeat order. The driver now
+  takes a required, pre-registered numeric `--order-seed` and derives the plan
+  from it: it sorts SHA-256 digests of the seed with each task id and with each
+  arm × repeat cell, writes the plan to `<out>/order.tsv`, and executes it as
+  written, so neither arm is always first. The same seed reproduces the plan.
+  Alternating would mean A-B, B-A, A-B across the three repeats; the driver uses
+  the seeded shuffle instead. A second counterbalanced block would double the
+  sessions and does not fit the 42-session cap; it is not used here.
 - Randomize blind ids across all 36 runs, not per task or per arm. The
   blind-to-scenario key stays out of the grading workspace.
 
@@ -153,8 +153,9 @@ Use a dedicated OS user or container with:
 - no IDE or editor extensions injecting instructions.
 
 If any surface cannot be neutralized, **stop**; do not run a “neutral-ish”
-batch. The current preflight checks taste but not all of these; Phase 3b
-requires an isolation preflight guard.
+batch. The driver's isolation guard now enforces the seed and host surfaces
+above before any session, with no override; `--preflight-only` exercises it with
+zero spend and a pass is recorded in `<out>/isolation.txt`.
 
 ## 4. Blinding and grading
 
