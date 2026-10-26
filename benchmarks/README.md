@@ -3,8 +3,9 @@
 Paired-run benchmarking of PromptKit OS against bare Command Code, implementing the
 Dual-Condition Evaluation Protocol in [`docs/BENCHMARK-METHODOLOGY.md`](../docs/BENCHMARK-METHODOLOGY.md)
 §4 with the CPAC telemetry pipeline (`scripts/measure-cpac.sh` +
-`scripts/extract-commandcode-telemetry.sh`). The harness exists to turn the methodology'sclaims into measured evidence; until runs are executed and published, no performance claim is
-made here.
+`scripts/extract-commandcode-telemetry.sh`). The harness exists to turn the methodology's
+claims into measured evidence. A published batch is a directional measurement under its
+recorded limitations; the harness itself makes no general performance claim.
 
 ## Published batches
 
@@ -28,11 +29,19 @@ For every task × arm × repeat:
      timeout, same prompt text byte-for-byte (`benchmarks/tasks/*.md` is the single source).
    - `--skip-onboarding` prevents taste onboarding from differentiating the arms.
    - Arm `promptkit_os` additionally installs the directive via the engine's
-     `init.sh --balanced --host=agents` from the pinned engine checkout; arm `bare` stays
-     untouched.
+     `init.sh --balanced --host=agents` from the pinned engine checkout; arm `bare` receives
+     no PromptKit installation. Neither arm is a vanilla CLI: every clone carries the
+     seed's checked-in instruction files, and host-level `~/.commandcode` instruction,
+     skill, and hook surfaces may apply to both. See Limitations.
 3. **Taste freeze**: `~/.commandcode/taste/taste.md` is snapshotted before the batch and
    asserted empty between arms; the driver warns and stops if taste accumulated (learning
    during a batch would make arms unequal).
+
+   Instruction surfaces are not yet frozen by the driver. A fresh clone still carries the
+   seed's `AGENTS.md`, and Command Code can load host-level instruction/skill/hook
+   configuration; both arms inherit those surfaces. Future batches must snapshot or
+   neutralize them alongside `taste.md` and record what remains. The Phase 3 batch did not;
+   its report records the resulting `heyloey` hook confound.
 4. **Telemetry**: headless sessions persist to `~/.commandcode/projects/<slug>/` and record
    per-message usage exactly like interactive sessions (verified on this host), so the §5
    record is extracted mechanically per run (`accepted=false` at extraction — acceptance is
@@ -41,16 +50,21 @@ For every task × arm × repeat:
    (`scripts/strip-benchmark-diff.sh`) and assigned a blind id (`B<nnn>`) by a
    shuffle across the whole batch (reproducible with `BENCH_SHUFFLE_SEED`), so
    id order carries no arm information; when the task declares a `Verify`
-   command, the harness itself runs it post-session and the arm-neutral output
-   ships as `B<nnn>.verify.txt` with the command's exit code recorded on its
-   first line (`verify_exit=`) — the grader never needs the arm-revealing
-   session log for evidence-gated rubric items, and a successful-but-silent
-   command still yields gradeable evidence. The blind→scenario mapping lives
-   only in `grading/key.csv` (never printed to the terminal); the grader scores
-   `B*.diff` (+ `B*.verify.txt`) against the task's frozen rubric without seeing
-   `grading/key.csv` (the blind→scenario mapping is consulted only by
-   `--finalize`), and writes the sheet keyed by blind id:
-   `blind_id <TAB> rubric_passed <TAB> rubric_total <TAB> accepted`.
+   command, the harness itself runs it post-session and ships path-scrubbed
+   output as `B<nnn>.verify.txt` with the command's exit code recorded on its
+   first line (`verify_exit=`). The harness replaces the run directory, output
+   root, and scenario id with `<rundir>`, `<out>`, and `<scenario>` before
+   writing the packet, so a Verify command that prints its cwd cannot leak the
+   arm. The grader never needs the arm-revealing session log for evidence-gated
+   rubric items, and a successful-but-silent command still yields gradeable
+   evidence. The blind→scenario mapping lives in `grading/key.csv` and is never
+   printed to the terminal; the grader scores `B*.diff` (+ `B*.verify.txt`)
+   against the task's frozen rubric without seeing it, and writes the sheet keyed
+   by blind id: `blind_id <TAB> rubric_passed <TAB> rubric_total <TAB>
+   accepted`. The mapping is withheld during grading, not secret after
+   publication: published per-scenario stripped diffs are byte-identical to the
+   blind packets, so a reader can recover it by content matching. Do not claim
+   otherwise.
 6. **Acceptance and aggregation**: after grading, `--finalize` translates the
    blind-id sheet via the key, re-extracts each run's §5 record with its graded
    `accepted` flag, and runs `scripts/aggregate-benchmark-runs.sh` with the
@@ -94,10 +108,14 @@ engine and seed repos) without spending.
 
 Small n, one operator, one host, one model per batch: results are directional evidence
 under the stated conventions (see `docs/BENCHMARK-METHODOLOGY.md` §5.A), not proof.
-Grading is single-reviewer blind scoring against rubrics frozen before the runs; reviewer
-bias is mitigated only by blinding and rubric specificity. The rework-loop count is the
-documented heuristic (no tool exit codes in schema v3). Until a batch is published under
-`benchmarks/runs/`, this framework demonstrates mechanics, not outcomes.
+Grading is single-reviewer scoring against rubrics frozen before the runs. Blinding is
+only as strong as the packets: a Verify command that echoes an arm-bearing path leaks it
+unless scrubbed. The driver now scrubs run/output/scenario paths, but a published batch
+must disclose any leak that occurred before the scrub rather than claiming arm-blinded
+independence. Reviewer bias is mitigated only by packet discipline and rubric
+specificity. The rework-loop count is the documented heuristic (no tool exit codes in
+schema v3). A published batch is directional evidence under its recorded limitations;
+this harness does not establish general performance.
 
 ## Usage
 

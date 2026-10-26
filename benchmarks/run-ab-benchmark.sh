@@ -17,8 +17,10 @@
 #
 # Blinding contract: the grader receives B<nnn>.diff (+ B<nnn>.verify.txt when
 # the task declares a Verify command) with ids assigned by a shuffle across ALL
-# runs of the batch; the blind->scenario mapping lives in grading/key.csv and
-# is consulted only by --finalize. The grading sheet is keyed by BLIND ID.
+# runs of the batch; verify output is scrubbed of the run directory, output
+# root, and scenario id so a Verify command that prints its cwd cannot reveal
+# the arm. The blind->scenario mapping lives in grading/key.csv and is
+# consulted only by --finalize. The grading sheet is keyed by BLIND ID.
 #
 # Modes:
 #   run batch:   run-ab-benchmark.sh --engine E --seed S --tasks a.md,b.md \
@@ -56,6 +58,20 @@ slugify_run_path() {
         | sed 's#^/##; s#/#-#g' \
         | tr '[:upper:]' '[:lower:]' \
         | sed 's#_#-#g; s#[^a-z0-9-]#-#g; s#-\{2,\}#-#g; s#^-##; s#-$##'
+}
+
+scrub_verify_output() {
+    # scrub_verify_output <rundir> <out> <scenario> <file>
+    # The verify command runs inside the clone, so tools that print their cwd
+    # (validate-references.sh does) would otherwise put the arm-bearing
+    # scenario id into the blind packet. Replace the absolute run paths before
+    # the packet is written; the exit code is prepended by the caller.
+    local scrubbed
+    scrubbed="$(cat "$4")"
+    scrubbed="${scrubbed//"$1"/<rundir>}"
+    scrubbed="${scrubbed//"$2"/<out>}"
+    scrubbed="${scrubbed//"$3"/<scenario>}"
+    printf '%s\n' "$scrubbed"
 }
 
 need_value() {
@@ -272,17 +288,21 @@ for tf in "${TASKFILES[@]}"; do
             [[ "$th1" == "$th2" ]] || bench_error "TASTE_CHANGED" "$scenario"
             ( cd "$rundir" && git add -A && git diff --cached --no-color "$seed_sha" > "$rundir-run.diff"; git reset -q ) \
                 || bench_error "DIFF_FAILED" "$scenario"
-            # Optional arm-neutral verification evidence, produced by the HARNESS
-            # (not the agent) so the grader never needs the arm-revealing
-            # session log for evidence-gated rubric items. The packet always
-            # carries the command's exit code first (verify_exit=), so a
-            # successful-but-silent command still yields gradeable evidence.
+            # Optional path-scrubbed verification evidence, produced by the
+            # HARNESS (not the agent) so the grader never needs the
+            # arm-revealing session log for evidence-gated rubric items. The
+            # packet always carries the command's exit code first
+            # (verify_exit=), so a successful-but-silent command still yields
+            # gradeable evidence.
             verify_out=""
             if [[ -n "$verify_cmd" ]]; then
                 verify_out="$OUT/runs/$scenario/verify.txt"
                 vrc=0
                 ( cd "$rundir" && bash -c "$verify_cmd" ) > "$verify_out.raw" 2>&1 || vrc=$?
-                { printf 'verify_exit=%s\n' "$vrc"; cat "$verify_out.raw"; } > "$verify_out"
+                {
+                    printf 'verify_exit=%s\n' "$vrc"
+                    scrub_verify_output "$rundir" "$OUT" "$scenario" "$verify_out.raw"
+                } > "$verify_out"
                 rm -f "$verify_out.raw"
             fi
             slug="$(slugify_run_path "$rundir")"

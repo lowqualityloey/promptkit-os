@@ -12,22 +12,29 @@ Phase 3 deliverable for issue
 - **Engine and seed**: `9c8080df3e9e8de9fc60fd2f794eebee3af46428` (both arms)
 - **Profile**: `balanced`
 - **Batch**: 3 tasks × 2 arms × 1 repeat = 6 sessions
-- **Raw data**: transcripts remain local under `~/.commandcode/`; `key.csv` is
-  withheld. Neither is published here.
+- **Raw data**: transcripts remain local under `~/.commandcode/`; `key.csv` was
+  withheld from the grader and is not published. Because the per-scenario
+  stripped diffs are published alongside the blind packets, the
+  blind-to-scenario mapping is derivable by content matching after the fact.
+  The sheet itself was written before the key was consulted.
 
 ## Protocol
 
 Each run began from a fresh clone of the seed at the recorded SHA. Both arms used
 the same prompt bytes, model, `--yolo --tools-all --max-turns 40`, and 900-second
 harness timeout. The `promptkit_os` arm additionally installed the Balanced
-directive through `init.sh --balanced --host=agents`; the `bare` arm was left
-untouched. Taste was frozen empty before the batch.
+directive through `init.sh --balanced --host=agents`; the `bare` arm received no
+PromptKit installation. Neither arm was a vanilla CLI: both inherited the
+seed's checked-in instruction files and any host-level `~/.commandcode`
+surfaces. Taste was frozen empty before the batch.
 
-Per-run diffs were stripped of PromptKit artifacts and shuffled into blind
+Per-run diffs were stripped of PromptKit artifacts and shuffled into blind-id
 packets (`B001`–`B006`). The harness ran each task's `Verify` command and shipped
-the arm-neutral output as `B*.verify.txt` with the exit code on its first line.
-The blind sheet was written before `key.csv` was consulted; `--finalize` then
-translated it and re-extracted the §5 records with the graded acceptance flags.
+path-scrubbed output as `B*.verify.txt` with the exit code on its first line; the
+harness replaces the run directory, output root, and scenario id with
+`<rundir>`, `<out>`, and `<scenario>`. The sheet was written before `key.csv`
+was consulted; `--finalize` then translated it and re-extracted the §5 records
+with the graded acceptance flags.
 
 Task specs and frozen rubrics:
 
@@ -36,6 +43,19 @@ Task specs and frozen rubrics:
 | [`BENCH-L0-01`](../../tasks/TASK-BENCH-L0-01.md) | L0 | 6 items | `bash scripts/validate-references.sh . --strict` |
 | [`BENCH-L1-02`](../../tasks/TASK-BENCH-L1-02.md) | L1 | 5 items | measurement twins, strict |
 | [`BENCH-L2-02`](../../tasks/TASK-BENCH-L2-02.md) | L2 | 6 items | behavioral-contract twins |
+
+## Correction (2026-10-26 review)
+
+An external review of PR #695 found that the two L0 verify packets echoed their
+run directory — and therefore the arm — because `validate-references.sh` prints
+absolute scan paths. The pre-correction `B003` and `B006` packets exposed
+`BENCH-L0-01-<arm>-r1`; the L0 grading was therefore not fully blind. The
+harness now scrubs the run directory, output root, and scenario id before
+writing any verify packet, and the driver regression prints its cwd to keep the
+old leak failing the suite. The published L0 packets and their run-level
+`verify.txt` sources were redacted to `<rundir>`; the pre-redaction text remains
+in the PR commit history. Redaction does not retroactively blind the sheet, so
+the grading limitation below records the leak rather than claiming it away.
 
 ## Results
 
@@ -60,8 +80,12 @@ Per-arm aggregate (`BENCH|SUMMARY` from `finalize.log`):
 | `promptkit_os` | 3 | 3 | 1.00 | 1,418,645.3 | 587,027.0 | 332.3 | 132.0 | 1.67 | 4.4442 | 1.8942 |
 
 `tokens_total` is the extractor's total (successful plus rework turns). CPAC is
-computed by `scripts/measure-cpac.sh` under the harness's default pricing inputs;
-it is a comparative model, not a provider invoice.
+computed by `scripts/measure-cpac.sh` under its reference defaults: `$3.00` per
+1M input tokens, `$15.00` per 1M output tokens, and `$0.05` per rework loop;
+cache-read tokens are reported but not priced in v1. These are reference
+constants, not provider billing: the records' `transcript_cost_usd` is
+`$0.01`–`$0.04` per session for this model. CPAC is a comparative model, not an
+invoice.
 
 ## Interpretation
 
@@ -91,12 +115,24 @@ conventions, not a statistically supported effect.
   telemetry (765 s and 636 s) is the transcript span, not proof the session
   finished naturally. L2 wall and CPAC comparisons are therefore the weakest in
   the batch.
-- **Grading was blind but single-reviewer**: the sheet was written from
-  `B*.diff` and `B*.verify.txt` before `key.csv` was read, and `--finalize` was
-  the first key consultation. The original runbook assigns grading to the owner;
-  the owner's sheet was not supplied, so the in-session agent graded after the
-  owner's `go`. No independent re-score was performed. This is a reviewer-bias
-  limitation, not a claim of arm-blinded independence.
+- **Grading was single-reviewer and only partially blind**: the sheet was
+  written from `B*.diff` and `B*.verify.txt` before `key.csv` was read, and
+  `--finalize` was the first key consultation. However, the two L0 verify
+  packets leaked the run directory (and thus the arm) before the harness scrub
+  described in Correction; the L0 grade cannot claim arm-blinded independence.
+  No independent re-score was performed; the correction is disclosure plus a
+  harness fix, not a claim that the original sheet was blind. The key is
+  withheld as a file but derivable from the published stripped diffs after
+  publication.
+- **Instruction and hook surfaces were not isolated**: every fresh clone
+  carries the seed's checked-in `AGENTS.md`, which instructs the agent to
+  dispatch milestone updates through `heyloey`; host-level
+  `~/.commandcode` instruction/skill/hook surfaces may also apply to both arms.
+  Both L1 sessions invoked `heyloey`. The bare L1 call returned `partial`
+  (exit 5) while the PromptKit L1 call logged, so the L1 cell contains an
+  asymmetric side effect in addition to shared prompt/tool overhead. `bare`
+  here means "no PromptKit installation," not "vanilla Command Code"; this
+  batch does not measure a clean CLI baseline.
 - **One model/host**: results do not transfer to other Command Code models or
   hosts.
 - **Self-referential seed**: the seed is the PromptKit repository at the engine
@@ -116,17 +152,19 @@ conventions, not a statistically supported effect.
 - [`error-patterns.txt`](error-patterns.txt) — frozen rework-loop pattern list.
 - [`grading/grading.tsv`](grading/grading.tsv) — blind-id sheet used by finalize.
 - [`grading/`](grading/) — the six stripped `B*.diff` packets and their
-  `B*.verify.txt` evidence.
+  path-scrubbed `B*.verify.txt` evidence.
 - `runs/<scenario>/record.json` — final §5 record with the graded acceptance.
 - `runs/<scenario>/run.diff` — full seed-SHA diff (includes directive artifacts
   for the `promptkit_os` arm).
 - `runs/<scenario>/run.stripped.diff` — the graded, artifact-stripped diff.
 - `runs/<scenario>/verify.txt`, `session.log`, `strip.log`, `extract.log` —
-  verification and harness evidence.
+  path-scrubbed verification and harness evidence.
 
-Not published: `key.csv`, `grading.scenario.tsv` (the key-derived translation),
-raw Command Code transcripts, and the full clone directories under the local
-batch. The harness's raw-data policy is in [`benchmarks/README.md`](../../README.md).
+Not published as files: `key.csv`, `grading.scenario.tsv` (the key-derived
+translation), raw Command Code transcripts, and the full clone directories under
+the local batch. The mapping is withheld during grading but derivable from the
+published diffs; it is not a post-publication secret. The harness's raw-data
+policy is in [`benchmarks/README.md`](../../README.md).
 
 ## Reproduction
 
@@ -143,7 +181,7 @@ bash benchmarks/run-ab-benchmark.sh \
   --max-turns 40 --timeout 900
 ```
 
-After blind grading:
+After grading from the blind-id packets:
 
 ```bash
 bash benchmarks/run-ab-benchmark.sh \

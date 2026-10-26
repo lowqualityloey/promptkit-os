@@ -3,14 +3,14 @@ verify_exit=0
 🔍 PromptKit OS Reference Validation
 
 📂 Scanning directories:
-   - /tmp/bench-batch-1-clean/runs/BENCH-L0-01-promptkit_os-r1/workflows
-   - /tmp/bench-batch-1-clean/runs/BENCH-L0-01-promptkit_os-r1/protocols
-   - /tmp/bench-batch-1-clean/runs/BENCH-L0-01-promptkit_os-r1/templates
-   - /tmp/bench-batch-1-clean/runs/BENCH-L0-01-promptkit_os-r1/activities
-   - /tmp/bench-batch-1-clean/runs/BENCH-L0-01-promptkit_os-r1/docs
-   - /tmp/bench-batch-1-clean/runs/BENCH-L0-01-promptkit_os-r1/examples
-   - /tmp/bench-batch-1-clean/runs/BENCH-L0-01-promptkit_os-r1/notes
-   - /tmp/bench-batch-1-clean/runs/BENCH-L0-01-promptkit_os-r1 (top level)
+   - <rundir>/workflows
+   - <rundir>/protocols
+   - <rundir>/templates
+   - <rundir>/activities
+   - <rundir>/docs
+   - <rundir>/examples
+   - <rundir>/notes
+   - <rundir> (top level)
 
 📄 Found 394 markdown files to validate
 

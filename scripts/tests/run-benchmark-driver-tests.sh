@@ -79,7 +79,7 @@ cat > "$TASK" <<'TASK'
 - **Seed Repository**: `throwaway`
 - **Prompt**: `"Append the line STUB-LINE to src/app.ts. Do not change any other file."`
 - **Setup**: `None`
-- **Verify**: `grep -c STUB-LINE src/app.ts`
+- **Verify**: `printf 'cwd=%s\n' "$PWD"; grep -c STUB-LINE src/app.ts`
 
 ## Rubric
 
@@ -169,6 +169,17 @@ if grep -q "^${b1}	" "$OUT/grading/grading.tsv" && ! grep -q "BENCH-DRIVER" "$OU
     ok "operator grading sheet stays blind-keyed (no scenario/arm ids)"
 else
     notok "grading sheet blinding"
+fi
+
+# --- verify packets: scrub the run directory and scenario id -----------------
+# The mock Verify prints its cwd, mirroring validate-references.sh, whose
+# absolute scan paths originally leaked the arm in the Phase 3 L0 packets.
+leak="$(grep -lE 'promptkit_os|bare|BENCH-DRIVER|bench-driver' "$OUT/grading"/B*.verify.txt 2>/dev/null || true)"
+scrubbed="$(grep -l '<rundir>' "$OUT/grading"/B*.verify.txt 2>/dev/null | wc -l)"
+if [[ -z "$leak" && "$scrubbed" -eq 2 ]]; then
+    ok "verify packets scrub the run directory and scenario id"
+else
+    notok "verify packet scrub (leak=${leak:-none} scrubbed=$scrubbed)"
 fi
 
 echo ""
