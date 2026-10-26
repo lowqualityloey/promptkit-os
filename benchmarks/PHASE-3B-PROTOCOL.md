@@ -401,10 +401,12 @@ Slate notes:
 - Every `Verify` command was exercised before this slate was written, through
   the driver's own field parser, against a compliant artifact (exit 0) and
   against the untouched seed (non-zero), on Node 18.19.1 and 24.22.1. Each
-  card's Notes name the specific defect its probe is meant to catch. The two
+  card's Notes name the specific defect its probe is meant to catch. The six
   cards amended by the pre-freeze revision (Appendix B) were re-exercised the
-  same way, and each assertion they gained was shown to fail on its own, with
-  no agent-written tests present, against a dedicated near-miss artifact.
+  same way, on Node 18.19.1 and 24.22.1: each passes on a reference
+  implementation and fails on the untouched seed with its own probe message,
+  and a deliberately failing suite reports `VERIFY|probe=0|tests=1` instead of
+  hiding the behavioral result.
 
 ## Appendix B — Frozen parameters (fill before run)
 
@@ -416,7 +418,7 @@ Slate notes:
 - Engine SHA: `0b60af240f8e75ea0a8a357677a931de0894b292` (this repository at the protocol commit)
 - Seed SHA: `16b3cf74c809c23dd48466da2212bd3e67a530ed`
 - Neutralization procedure SHA: `843ecc47249e2cf0914ce594fc77ac45b5a5f55c1c993c559cbf8e5d85703d3f` (`benchmarks/seed/neutralize.sh`); the seed was produced by `benchmarks/seed/build-phase3b-seed.sh` at `aecfff209793cf6dba35ae33ea810efc71675bbb42ecf054cc62c3d478bcbd12` and accepted by `neutralize.sh` with `removed=0`
-- Task bundle SHA-256: `1942989017d39590baade05fe702c38a0d8f3115eae9bdde126da9f1ba1f1d6d`
+- Task bundle SHA-256: `c82822c86c236447b9ac6481d375ec069ed2797a047dba10cb6dcc8266e3ad9f`
 - Blind-id shuffle seed: `90613245`
 - Task/arm order seed: `20261027`
 - Price inputs: $3.00/$15.00/$0.05; cache-read reported only
@@ -433,7 +435,7 @@ done | sha256sum | cut -d' ' -f1
 ```
 
 Pre-freeze revision (2026-10-27, before the owner signature): the digest above is
-the corrected bundle. Two cards were amended after reading the frozen rubrics
+the corrected bundle. The cards were amended after reading the frozen rubrics
 against the two artifacts a blind grader actually receives, the stripped diff and
 `B<nnn>.verify.txt`.
 
@@ -447,9 +449,14 @@ against the two artifacts a blind grader actually receives, the stripped diff an
   loop passed while emptying the queue; nothing pinned the default `maxAttempts`,
   `Number.isInteger` enforcement, or that the failed entry carries the final
   attempt's error. The probe now asserts all four.
+- All six — every `Verify` command ran `node --test && <probe>`, so a failing
+  suite short-circuited the probe and the packet held only test output: the
+  behavior was untested and `rubric_passed` stopped saying why a task failed.
+  Each command now runs the probe first, runs the suite second, prints
+  `VERIFY|probe=<n>|tests=<n>`, and exits non-zero if either failed.
 
-No session had run, so no result is invalidated, and neither change touches the
-slate, the seed, the thresholds, or the cap. A change to any card after the
+No session had run, so no result is invalidated, and the revision touches
+neither the slate, the seed, the thresholds, nor the cap. A change to any card after the
 signature is an Appendix C deviation.
 
 Owner decisions recorded as proposed values: two entries are the owner's to
