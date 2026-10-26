@@ -43,7 +43,11 @@ if [[ "${1:-}" == "--list-models" ]]; then echo "stub/model-a"; echo "stub/model
 # COMMIT a file (proving the seed-SHA diff anchor), exit 0.
 printf '%s\n' "${@: -1}" >> "$HOME/stub-prompts.log"
 cwd="$(pwd)"
-slug="$(printf '%s' "$cwd" | sed 's#^/##; s#/#-#g')"
+# Real Command Code slugifies the working directory with
+# @sindresorhus/slugify: lowercase, path separators and underscores become
+# hyphens. Mirror that shape so the driver's transcript lookup is exercised
+# against the same path the real CLI writes.
+slug="$(printf '%s' "$cwd" | sed 's#^/##; s#/#-#g' | tr '[:upper:]' '[:lower:]' | sed 's#_#-#g; s#[^a-z0-9-]#-#g; s#-\{2,\}#-#g; s#^-##; s#-$##')"
 proj="$HOME/.commandcode/projects/$slug"
 mkdir -p "$proj"
 sid="stub-$(date +%s%N)-$RANDOM"

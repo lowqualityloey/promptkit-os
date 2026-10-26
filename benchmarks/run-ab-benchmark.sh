@@ -47,6 +47,17 @@ bench_error() {
     exit 2
 }
 
+slugify_run_path() {
+    # Command Code records transcripts under @sindresorhus/slugify(cwd):
+    # lowercase, path separators and underscores become hyphens, repeated
+    # separators collapse. The driver owns this path alphabet, so an ASCII
+    # mirror is sufficient; revisit if run paths may contain non-ASCII text.
+    printf '%s' "$1" \
+        | sed 's#^/##; s#/#-#g' \
+        | tr '[:upper:]' '[:lower:]' \
+        | sed 's#_#-#g; s#[^a-z0-9-]#-#g; s#-\{2,\}#-#g; s#^-##; s#-$##'
+}
+
 need_value() {
     # need_value <flag> : fail closed when a value-taking flag has no operand
     [[ "$#" -ge 2 && -n "$2" ]] || bench_error "MISSING_VALUE" "$1"
@@ -274,7 +285,7 @@ for tf in "${TASKFILES[@]}"; do
                 { printf 'verify_exit=%s\n' "$vrc"; cat "$verify_out.raw"; } > "$verify_out"
                 rm -f "$verify_out.raw"
             fi
-            slug="$(printf '%s' "$rundir" | sed 's#^/##; s#/#-#g')"
+            slug="$(slugify_run_path "$rundir")"
             transcript="$(ls -t "${HOME}/.commandcode/projects/${slug}/"*.jsonl 2>/dev/null | grep -v checkpoints | head -1 || true)"
             [[ -n "$transcript" ]] || bench_error "TRANSCRIPT_MISSING" "$scenario"
             record="$OUT/runs/$scenario/record.json"
