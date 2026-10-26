@@ -228,7 +228,10 @@ guard_stop() {
 
 guard_seed() {
     local hit
-    hit="$(git -C "$SEED" ls-files 2>/dev/null \
+    # core.quotepath=false keeps non-ASCII paths unquoted, so a root-level
+    # surface such as a .claude/ file with a non-ASCII name cannot slip past
+    # the anchors below.
+    hit="$(git -c core.quotepath=false -C "$SEED" ls-files 2>/dev/null \
         | grep -E -i -m1 '(^|/)(AGENTS\.md|CLAUDE\.md|PROMPTKIT\.md|GEMINI\.md|\.cursorrules|\.windsurfrules|\.clinerules|copilot-instructions\.md)$|(^|/)(\.cursor/rules|\.claude|\.promptkit|\.github/instructions)/' \
         || true)"
     [[ -z "$hit" ]] || guard_stop "seed" "tracked instruction surface: $hit"

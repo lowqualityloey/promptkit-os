@@ -436,6 +436,151 @@ else
     notok "clean preflight (rc=$rc, out=${out:0:200})"
 fi
 
+# --- seed neutralization (benchmarks/seed/neutralize.sh) ---------------------
+NEUTRALIZE="$REPO_ROOT/benchmarks/seed/neutralize.sh"
+
+mk_fixture() {  # mk_fixture <dir> : clean repo whose only content is src/app.ts
+    mkdir -p "$1/src"
+    printf 'export function main() {}\n' > "$1/src/app.ts"
+    git -C "$1" init -q -b main
+    git -C "$1" add -A
+    git -C "$1" -c user.name=seed -c user.email=seed@test commit -qm init
+}
+
+SURFACES="$TMP_DIR/seed-surfaces"
+mkdir -p "$SURFACES/src" "$SURFACES/.claude/skills" "$SURFACES/.github/instructions" \
+    "$SURFACES/.promptkit" "$SURFACES/.cursor/rules" "$SURFACES/nested/.claude"
+printf 'x\n' > "$SURFACES/src/app.ts"
+for f in AGENTS.md CLAUDE.md PROMPTKIT.md GEMINI.md .cursorrules .windsurfrules .clinerules; do
+    printf 'surface\n' > "$SURFACES/$f"
+done
+printf 's\n' > "$SURFACES/.claude/skills/s.md"
+printf 'i\n' > "$SURFACES/.github/instructions/i.md"
+printf 'p\n' > "$SURFACES/.promptkit/engine"
+printf 'r\n' > "$SURFACES/.cursor/rules/r.md"
+printf 'n\n' > "$SURFACES/nested/.claude/deep.md"
+git -C "$SURFACES" init -q -b main
+git -C "$SURFACES" add -A
+git -C "$SURFACES" -c user.name=seed -c user.email=seed@test commit -qm init
+
+CLEAN_SEED="$TMP_DIR/neutral"
+out="$(bash "$NEUTRALIZE" "$SURFACES" "$CLEAN_SEED" 2>&1)"; rc=$?
+tracked="$(git -C "$CLEAN_SEED" ls-files 2>/dev/null | tr '\n' ' ')"
+if [[ $rc -eq 0 && "$out" == *"NEUTRALIZE|OK|"* && "$out" == *"removed=12"* \
+        && "$tracked" == "src/app.ts " ]]; then
+    ok "neutralize removes every surface kind and leaves only the seed content"
+else
+    notok "neutralize surface removal (rc=$rc out=${out:0:160} tracked=$tracked)"
+fi
+
+# End-to-end: the neutralized clone has to satisfy the driver's own guard, which
+# is the parity claim the script header makes.
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$CLEAN_SEED" --tasks "$TASK" \
+    --model stub/model-a --out "$TMP_DIR/out-neutral" \
+    --order-seed 7 --shuffle-seed 7 --preflight-only 2>&1)"; rc=$?
+if [[ $rc -eq 0 && "$out" == *"ISOLATION|OK"* && "$out" == *"PREFLIGHT|OK"* ]]; then
+    ok "a neutralized seed passes the isolation guard end to end"
+else
+    notok "neutralized seed preflight (rc=$rc, out=${out:0:200})"
+fi
+
+bash "$NEUTRALIZE" "$SURFACES" "$TMP_DIR/neutral2" >/dev/null 2>&1 || true
+if [[ "$(git -C "$CLEAN_SEED" rev-parse HEAD 2>/dev/null)" \
+        == "$(git -C "$TMP_DIR/neutral2" rev-parse HEAD 2>/dev/null)" ]]; then
+    ok "the same source neutralizes to the same seed SHA in a second dest"
+else
+    notok "neutralize determinism"
+fi
+
+out="$(bash "$NEUTRALIZE" "$SURFACES" "$CLEAN_SEED" 2>&1)"; rc=$?
+if [[ $rc -eq 0 && "$out" == *"NEUTRALIZE|ALREADY|"* ]]; then
+    ok "re-running into the same dest reports ALREADY instead of rewriting"
+else
+    notok "neutralize idempotence (rc=$rc, out=${out:0:160})"
+fi
+
+# A non-ASCII path is C-quoted by ls-files unless quotepath is off, which used
+# to hide a root-level surface from both this script and the driver guard.
+NONASCII="$TMP_DIR/seed-nonascii"
+mkdir -p "$NONASCII/src" "$NONASCII/.claude"
+printf 'x\n' > "$NONASCII/src/app.ts"
+printf 'skill\n' > "$NONASCII/.claude/café.md"
+git -C "$NONASCII" init -q -b main
+git -C "$NONASCII" add -A
+git -C "$NONASCII" -c user.name=seed -c user.email=seed@test commit -qm init
+out="$(bash "$NEUTRALIZE" "$NONASCII" "$TMP_DIR/nonascii-neutral" 2>&1)"; rc=$?
+if [[ $rc -eq 0 && "$out" == *"removed=1"* \
+        && "$(git -C "$TMP_DIR/nonascii-neutral" ls-files | tr '\n' ' ')" == "src/app.ts " ]]; then
+    ok "a non-ASCII surface path is removed rather than quoted past the pattern"
+else
+    notok "non-ASCII surface removal (rc=$rc, out=${out:0:160})"
+fi
+expect_preflight_fail seed-nonascii \
+    "PREFLIGHT|seed isolation: tracked instruction surface: .claude/café.md" \
+    "$FAKE_HOME" "$NONASCII" "$CLEAN_PATH"
+
+# Refusals: nothing this script did not create is deleted or replaced.
+CLEAN_SRC="$TMP_DIR/seed-clean-src"
+mk_fixture "$CLEAN_SRC"
+printf 'keep me\n' > "$TMP_DIR/notes.md"
+out="$(bash "$NEUTRALIZE" "$CLEAN_SRC" "$TMP_DIR/notes.md" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && -f "$TMP_DIR/notes.md" && "$out" == *"not a directory"* ]]; then
+    ok "a regular file at dest is refused and preserved"
+else
+    notok "regular-file dest (rc=$rc, present=$([[ -f "$TMP_DIR/notes.md" ]] && echo yes || echo no))"
+fi
+
+ln -s "$CLEAN_SRC/src" "$TMP_DIR/dest-link"
+out="$(bash "$NEUTRALIZE" "$CLEAN_SRC" "$TMP_DIR/dest-link" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && -L "$TMP_DIR/dest-link" && "$out" == *"not a directory"* ]]; then
+    ok "a symlink at dest is refused and preserved"
+else
+    notok "symlink dest (rc=$rc, link=$([[ -L "$TMP_DIR/dest-link" ]] && echo yes || echo no))"
+fi
+
+mkdir -p "$CLEAN_SRC/sub/keep"
+printf 'k\n' > "$CLEAN_SRC/sub/keep/f"
+git -C "$CLEAN_SRC" add -A
+git -C "$CLEAN_SRC" -c user.name=seed -c user.email=seed@test commit -qm sub
+out="$(bash "$NEUTRALIZE" "$CLEAN_SRC" "$CLEAN_SRC/sub" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && -f "$CLEAN_SRC/sub/keep/f" && "$out" != *"ALREADY"* ]]; then
+    ok "a directory inside another checkout is refused, not reported as ALREADY"
+else
+    notok "nested-directory dest (rc=$rc, out=${out:0:160})"
+fi
+
+printf 'dirty\n' >> "$CLEAN_SRC/src/app.ts"
+out="$(bash "$NEUTRALIZE" "$CLEAN_SRC" "$TMP_DIR/dirty-out" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"dirty"* ]]; then
+    ok "a dirty source is refused"
+else
+    notok "dirty source (rc=$rc, out=${out:0:160})"
+fi
+git -C "$CLEAN_SRC" checkout -- src/app.ts
+
+mkdir -p "$TMP_DIR/not-a-repo"
+out="$(bash "$NEUTRALIZE" "$TMP_DIR/not-a-repo" "$TMP_DIR/not-a-repo-out" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"not a git work tree"* ]]; then
+    ok "a non-git source is refused"
+else
+    notok "non-git source (rc=$rc, out=${out:0:160})"
+fi
+
+LEAKY="$TMP_DIR/seed-heyloey-neutralize"
+mkdir -p "$LEAKY/src"
+printf 'x\n' > "$LEAKY/src/app.ts"
+printf 'closings go through heyloey\n' > "$LEAKY/NOTES.md"
+git -C "$LEAKY" init -q -b main
+git -C "$LEAKY" add -A
+git -C "$LEAKY" -c user.name=seed -c user.email=seed@test commit -qm init
+out="$(bash "$NEUTRALIZE" "$LEAKY" "$TMP_DIR/heyloey-out" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"heyloey reference survives"* && ! -e "$TMP_DIR/heyloey-out" ]]; then
+    ok "a surviving heyloey reference is refused and no seed is produced"
+else
+    notok "heyloey refusal (rc=$rc, out=${out:0:160})"
+fi
+
 echo ""
 echo "Benchmark driver harness (Bash): $PASS passed, $FAIL failed."
 if [[ "$FAIL" -ne 0 ]]; then

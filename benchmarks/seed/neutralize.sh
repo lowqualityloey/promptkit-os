@@ -18,6 +18,10 @@
 # authority, and this script cannot drift into removing less than the guard
 # refuses.
 #
+# Like benchmarks/run-ab-benchmark.sh this is operator-local Bash with no
+# PowerShell twin: it drives git, not a CLI, so CI covers it with a syntax check
+# plus the driver harness's end-to-end neutralization cases.
+#
 # Output (stdout, one machine line):
 #   NEUTRALIZE|OK|source=<sha>|seed=<sha>|removed=<n>|script_sha256=<hash>
 #   NEUTRALIZE|ALREADY|<sha>|dest=<path>
@@ -73,7 +77,7 @@ while IFS= read -r path; do
     [[ -n "$path" ]] || continue
     git -C "$clone" rm -q -- "$path" || die "cannot remove tracked surface: $path"
     removed=$((removed + 1))
-done < <(git -C "$clone" ls-files | grep -E -i -e "$SURFACE_RE" || true)
+done < <(git -c core.quotepath=false -C "$clone" ls-files | grep -E -i -e "$SURFACE_RE" || true)
 
 # heyloey cannot be scrubbed automatically: it appears in prose, hook names, and
 # stored paths, and a blind rewrite could silently change what a task asks for.
@@ -99,17 +103,27 @@ fi
 seed_sha=$(git -C "$clone" rev-parse HEAD) || die "cannot read neutralized HEAD"
 
 # Idempotence without destruction: an existing dest is accepted only when it is
-# already the same neutralized seed, and is never overwritten.
-if [[ -e "$dest" ]]; then
-    if [[ -d "$dest" ]] && [[ -n "$(ls -A "$dest" 2>/dev/null)" ]]; then
-        existing=$(git -C "$dest" rev-parse HEAD 2>/dev/null || true)
-        if [[ "$existing" == "$seed_sha" ]] && [[ -z "$(git -C "$dest" status --porcelain 2>/dev/null)" ]]; then
-            printf 'NEUTRALIZE|ALREADY|%s|dest=%s\n' "$seed_sha" "$dest"
-            exit 0
+# already the same neutralized seed. A regular file, a symlink, and a directory
+# that is not a clone are refused untouched, and an empty directory is cleared
+# with rmdir rather than a recursive delete this script did not create.
+if [[ -e "$dest" || -L "$dest" ]]; then
+    [[ ! -L "$dest" && -d "$dest" ]] \
+        || die "dest exists and is not a directory, so it was left untouched: $dest"
+    if [[ -n "$(ls -A "$dest" 2>/dev/null)" ]]; then
+        # Requiring $dest/.git is not redundant: without it a directory nested
+        # inside another checkout resolves that repo's HEAD and reports ALREADY
+        # for a path the driver would then reject as not a clone.
+        if [[ -d "$dest/.git" ]]; then
+            existing=$(git -C "$dest" rev-parse HEAD 2>/dev/null || true)
+            if [[ "$existing" == "$seed_sha" ]] \
+                    && [[ -z "$(git -C "$dest" status --porcelain 2>/dev/null)" ]]; then
+                printf 'NEUTRALIZE|ALREADY|%s|dest=%s\n' "$seed_sha" "$dest"
+                exit 0
+            fi
         fi
         die "dest exists and is not this neutralized seed, so it was left untouched: $dest"
     fi
-    rm -rf -- "$dest" || die "cannot clear empty dest: $dest"
+    rmdir -- "$dest" || die "cannot clear the empty dest: $dest"
 fi
 
 mkdir -p -- "$(dirname -- "$dest")" 2>/dev/null || true
