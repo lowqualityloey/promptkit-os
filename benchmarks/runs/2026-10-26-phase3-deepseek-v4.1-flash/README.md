@@ -55,7 +55,39 @@ writing any verify packet, and the driver regression prints its cwd to keep the
 old leak failing the suite. The published L0 packets and their run-level
 `verify.txt` sources were redacted to `<rundir>`; the pre-redaction text remains
 in the PR commit history. Redaction does not retroactively blind the sheet, so
-the grading limitation below records the leak rather than claiming it away.
+the grading limitation below records the leak rather than claiming it away. A
+post-publication blind re-grade of the two affected packets is recorded below;
+it confirms their outcomes but does not retroactively blind the original sheet.
+
+## Post-publication blind re-grade (B003/B006)
+
+On 2026-10-26, the two affected L0 packets were re-graded by a fresh, isolated
+Codex CLI session (OpenAI; default model for that session), separate from the
+batch's DeepSeek runs. The reviewer received, as grading evidence, only the
+stripped `B003` and `B006` diffs, their `verify_exit=0` summaries, and the
+frozen [`BENCH-L0-01`](../../tasks/TASK-BENCH-L0-01.md) rubric. It was given no
+repository path, no `key.csv`, no scenario names, and no batch report; the
+session ran in an isolated temporary workspace containing only the prompt,
+output schema, and an isolation note, with user config disabled and a read-only
+sandbox.
+
+| Packet | Original sheet (partial-blind) | Blind re-grade | Accepted |
+|---|---:|---:|---:|
+| `B003` | 6/6 | 6/6 | yes |
+| `B006` | 6/6 | 6/6 | yes |
+
+Both packets passed `R1`–`R6`: the heading, the "not measured" statement and
+absence of a numeric ceremony figure, all three template names, the `#607`
+link, the single-file change with existing figures untouched, and
+`verify_exit=0` with all references valid. This matches the published
+[`grading.tsv`](grading/grading.tsv) rows; no scores changed.
+
+This is a post-publication confirmation of the published diffs, not a rerun of
+the original grading. The original L0 grading remains partially unblinded
+because its verify packets leaked the arm before the harness fix; the re-grade
+does not erase that history or turn the original sheet into an arm-blinded
+one. It does establish that a reviewer without the mapping reaches the same
+6/6 result on both packets.
 
 ## Results
 
@@ -115,15 +147,16 @@ conventions, not a statistically supported effect.
   telemetry (765 s and 636 s) is the transcript span, not proof the session
   finished naturally. L2 wall and CPAC comparisons are therefore the weakest in
   the batch.
-- **Grading was single-reviewer and only partially blind**: the sheet was
-  written from `B*.diff` and `B*.verify.txt` before `key.csv` was read, and
+- **Original grading was single-reviewer and only partially blind**: the sheet
+  was written from `B*.diff` and `B*.verify.txt` before `key.csv` was read, and
   `--finalize` was the first key consultation. However, the two L0 verify
   packets leaked the run directory (and thus the arm) before the harness scrub
-  described in Correction; the L0 grade cannot claim arm-blinded independence.
-  No independent re-score was performed; the correction is disclosure plus a
-  harness fix, not a claim that the original sheet was blind. The key is
-  withheld as a file but derivable from the published stripped diffs after
-  publication.
+  described in Correction; the original L0 grade cannot claim arm-blinded
+  independence. No independent re-score was performed at the time. A
+  post-publication blind re-grade of the two affected packets later confirmed
+  both at 6/6 (see the re-grade section above), but it does not make the
+  original sheet blind. The key is withheld as a file but derivable from the
+  published stripped diffs after publication.
 - **Instruction and hook surfaces were not isolated**: every fresh clone
   carries the seed's checked-in `AGENTS.md`, which instructs the agent to
   dispatch milestone updates through `heyloey`; host-level
