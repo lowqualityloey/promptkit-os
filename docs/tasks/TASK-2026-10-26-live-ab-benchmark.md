@@ -146,6 +146,7 @@ The record was authored at close-out; timestamps describe the work, not the file
 - **Commit Evidence Entry**: `2811353 fix(benchmarks): match command-code transcript slug; Authorization Checkpoint Reference: AUTHZ-live-ab-benchmark-001; Authorization Source: owner Phase 3 setup + spend approvals`
 - **Commit Evidence Entry**: `e9c82bd docs(benchmarks): add phase 3 live task batch; Authorization Checkpoint Reference: AUTHZ-live-ab-benchmark-001; Authorization Source: owner Phase 3 setup + frozen rubrics`
 - **Commit Evidence Entry**: `0d67371 feat(benchmarks): publish first live ab batch; Authorization Checkpoint Reference: AUTHZ-live-ab-benchmark-001; Authorization Source: owner publication choice (records + diffs + verify packets) and local-branch boundary`
+- **Commit Evidence Entry**: `5cc85d5 docs(tasks): record phase 3 live ab batch; Authorization Checkpoint Reference: AUTHZ-live-ab-benchmark-001; Authorization Source: owner local-branch + PR-body boundary`
 
 ### Completion Gate
 
