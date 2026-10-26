@@ -270,6 +270,30 @@ h7() {
     unset PK_PY_MARKER
 }
 
+# H8: a repository under $HOME keeps a single-prefix hook path. An unquoted
+# `~/*` case pattern is tilde-expanded to "$HOME/*", which matches an absolute
+# hook path under HOME and used to write the hook to "$HOME/<abs path>".
+# Bash-only: the PowerShell twin compares a literal string prefix and never
+# expands a pattern, so it has no equivalent defect to pin.
+h8() {
+    local root expected out
+    root="$TMP/home/repo-h8"
+    mkdir -p "$root"
+    git -C "$root" init -q
+    git -C "$root" config user.name Fixture
+    git -C "$root" config user.email fixture@example.invalid
+    printf 'profile: balanced\nai-attribution: off\n' > "$root/PROMPTKIT.md"
+    printf 'x\n' > "$root/f.txt"
+    git -C "$root" add -A
+    git -C "$root" commit -qm base
+    expected="$(git -C "$root" rev-parse --path-format=absolute --git-path hooks)/commit-msg"
+    out="$(bash "$HOOK_INSTALLER" --root "$root" 2>&1)"
+    scenario_check "$([[ "$out" == *"AI_ATTRIBUTION_HOOK|INSTALLED|$expected" ]] && printf 1 || printf 0)" "reported path is not the effective git-path: $out"
+    scenario_check "$([[ -f "$expected" ]] && printf 1 || printf 0)" "hook not installed at the effective git-path under HOME: $expected"
+    scenario_check "$([[ ! -e "$HOME/${expected#/}" ]] && printf 1 || printf 0)" "hook also written to a doubled path under HOME"
+    bash "$HOOK_INSTALLER" --root "$root" --remove >/dev/null
+}
+
 begin; d1; report 'D1 host-default/missing preference never newly blocks'
 begin; d2; report 'D2 off: AI co-author trailer prohibited with diagnostics'
 begin; d3; report 'D3 off: AI promotional footer prohibited'
@@ -284,6 +308,7 @@ begin; d7; report 'D7 human Claude Martin passes; bot Claude trailers prohibited
 begin; h5; report 'H5 remove preserves exec bit; restored hook runs without warning'
 begin; h6; report 'H6 install honors core.hooksPath'
 begin; h7; report 'H7 non-shell python hook preserved, chained, and enforced'
+begin; h8; report 'H8 a repository under HOME installs at the single effective path'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1

@@ -56,10 +56,15 @@ resolve_hook_dir() {
     if [[ -z "$p" ]]; then
         p="$(git -C "$root" config --get core.hooksPath 2>/dev/null || true)"
     fi
-    case "$p" in
-        '') p="$git_dir/hooks" ;;
-        ~/*) p="$HOME/${p#\~/}" ;;
-    esac
+    # A quoted RHS keeps `~` literal: an unquoted `~/*` pattern is
+    # tilde-expanded to "$HOME/*", which matches this repository's own absolute
+    # hook path under HOME and would double the prefix (writing the hook
+    # outside the repository, where Git never runs it).
+    if [[ -z "$p" ]]; then
+        p="$git_dir/hooks"
+    elif [[ "$p" == "~/"* ]]; then
+        p="$HOME/${p#\~/}"
+    fi
     case "$p" in
         /*) : ;;
         *)
