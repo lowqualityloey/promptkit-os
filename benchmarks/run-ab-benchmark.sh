@@ -22,19 +22,20 @@
 # the arm. The blind->scenario mapping lives in grading/key.csv and is
 # consulted only by --finalize. The grading sheet is keyed by BLIND ID.
 #
-# Order and isolation: the schedule is derived from a pre-registered
-# --order-seed, required for every run. Task blocks are ordered by sorting a
-# SHA-256 digest of the seed and the task id; inside each block the arm x repeat
-# cells are ordered the same way. The plan is written to $OUT/order.tsv before
-# the first session and executed exactly as written. Before any spend an
-# isolation guard fails closed when the seed carries an agent-instruction
-# surface or a heyloey reference, or when the host HOME/PATH carries global
-# instructions, skills, hooks, MCP servers, or heyloey (Phase 3b protocol 3).
+# Order and isolation: the schedule is derived from two pre-registered,
+# required seeds. --order-seed orders task blocks (SHA-256 digest of the seed
+# and the task id) and the arm x repeat cells inside each block; --shuffle-seed
+# seeds the whole-batch blind-id shuffle. The complete plan is written to
+# $OUT/order.tsv before the preflight exit and before the first session, then
+# executed exactly as written. Before any spend an isolation guard fails closed
+# when the seed carries an agent-instruction surface or a heyloey reference, or
+# when the host HOME/PATH carries global instructions, skills, hooks, MCP
+# servers, or heyloey (Phase 3b protocol 3).
 #
 # Modes:
 #   run batch:   run-ab-benchmark.sh --engine E --seed S --tasks a.md,b.md \
-#                  --model M --out DIR --order-seed N [--max-turns N]
-#                  [--repeats N] [--profile lite|balanced]
+#                  --model M --out DIR --order-seed N --shuffle-seed N
+#                  [--max-turns N] [--repeats N] [--profile lite|balanced]
 #   dry run:     ... --preflight-only   (validates environment, spends nothing)
 #   finalize:    run-ab-benchmark.sh --finalize DIR --grading DIR/grading/grading.tsv
 #                (translates the blind-id sheet via key.csv, re-extracts each
@@ -43,13 +44,14 @@
 set -euo pipefail
 export LC_ALL=C
 
-ENGINE="" SEED="" TASKS_CSV="" MODEL="" OUT="" MAXTURNS=40 TIMEOUT=900 REPEATS=1 PROFILE=balanced PREFLIGHT_ONLY=0 FINALIZE=0 GRADING="" ORDER_SEED=""
+ENGINE="" SEED="" TASKS_CSV="" MODEL="" OUT="" MAXTURNS=40 TIMEOUT=900 REPEATS=1 PROFILE=balanced PREFLIGHT_ONLY=0 FINALIZE=0 GRADING="" ORDER_SEED="" SHUFFLE_SEED="${BENCH_SHUFFLE_SEED:-}"
 
 usage() {
     echo "Usage: run-ab-benchmark.sh --engine <promptkit-repo> --seed <seed-repo>"
     echo "       --tasks <task.md,...> --model <model> --out <dir>"
     echo "       [--max-turns N] [--timeout S] [--repeats N] [--profile lite|balanced]"
     echo "       --order-seed N   (required: pre-registered task/arm/repeat order)"
+    echo "       --shuffle-seed N (required: pre-registered blind-id shuffle)"
     echo "       [--preflight-only]"
     echo "       run-ab-benchmark.sh --finalize <dir> --grading <dir/grading/grading.tsv>"
 }
@@ -113,6 +115,8 @@ while [[ $# -gt 0 ]]; do
         --grading) need_value "$1" "${2:-}"; GRADING="$2"; shift ;;
         --order-seed=*) ORDER_SEED="${1#--order-seed=}" ;;
         --order-seed) need_value "$1" "${2:-}"; ORDER_SEED="$2"; shift ;;
+        --shuffle-seed=*) SHUFFLE_SEED="${1#--shuffle-seed=}" ;;
+        --shuffle-seed) need_value "$1" "${2:-}"; SHUFFLE_SEED="$2"; shift ;;
         --preflight-only) PREFLIGHT_ONLY=1 ;;
         --finalize)
             # consumes its <dir> operand per the documented invocation
@@ -198,6 +202,12 @@ fi
 if [[ ! "$ORDER_SEED" =~ ^[0-9]+$ ]]; then
     bench_error "MISSING" "order-seed (pre-register one; see benchmarks/PHASE-3B-PROTOCOL.md section 2.2)"
 fi
+# The blind-id shuffle is part of the pre-registration too. An unrecorded RNG
+# seed makes the packet mapping unreproducible, so --shuffle-seed is required
+# and recorded alongside --order-seed (BENCH_SHUFFLE_SEED remains a fallback).
+if [[ ! "$SHUFFLE_SEED" =~ ^[0-9]+$ ]]; then
+    bench_error "MISSING" "shuffle-seed (pre-register one; see benchmarks/PHASE-3B-PROTOCOL.md section 2.2)"
+fi
 
 EXTRACT="$ENGINE/scripts/extract-commandcode-telemetry.sh"
 STRIP="$ENGINE/scripts/strip-benchmark-diff.sh"
@@ -219,13 +229,23 @@ guard_stop() {
 guard_seed() {
     local hit
     hit="$(git -C "$SEED" ls-files 2>/dev/null \
-        | grep -E -i -m1 '(^|/)(AGENTS\.md|CLAUDE\.md|\.cursorrules|copilot-instructions\.md)$|(^|/)\.cursor/rules/|(^|/)\.claude/' \
+        | grep -E -i -m1 '(^|/)(AGENTS\.md|CLAUDE\.md|PROMPTKIT\.md|GEMINI\.md|\.cursorrules|\.windsurfrules|\.clinerules|copilot-instructions\.md)$|(^|/)(\.cursor/rules|\.claude|\.promptkit|\.github/instructions)/' \
         || true)"
     [[ -z "$hit" ]] || guard_stop "seed" "tracked instruction surface: $hit"
     hit="$(git -C "$SEED" grep -I -i -l -e heyloey -- . 2>/dev/null | head -1 || true)"
     [[ -z "$hit" ]] || guard_stop "seed" "heyloey reference: $hit"
     [[ -z "$(git -C "$SEED" status --porcelain 2>/dev/null)" ]] \
         || guard_stop "seed" "working tree is dirty, so the recorded seed SHA would not describe the batch"
+}
+
+json_key_nonempty() {
+    # json_key_nonempty <file> <key>: true only when the key is present and its
+    # value is neither {} nor []. Whitespace is stripped first so a pretty-printed
+    # empty object passes and a one-line empty object cannot slip through.
+    local slim
+    slim="$(tr -d '[:space:]' < "$1")"
+    [[ "$slim" == *"\"$2\":{}"* || "$slim" == *"\"$2\":[]"* ]] && return 1
+    [[ "$slim" == *"\"$2\":"* ]]
 }
 
 guard_host() {
@@ -245,8 +265,7 @@ guard_host() {
     done
     [[ -z "$path" ]] || guard_stop "host" "global instruction surface: $path"
     if [[ -f "$HOME/.commandcode/mcp.json" ]] \
-        && grep -Eq '"mcpServers"[[:space:]]*:' "$HOME/.commandcode/mcp.json" \
-        && ! grep -Eq '"mcpServers"[[:space:]]*:[[:space:]]*\{[[:space:]]*\}' "$HOME/.commandcode/mcp.json"; then
+        && json_key_nonempty "$HOME/.commandcode/mcp.json" mcpServers; then
         guard_stop "host" "MCP servers configured: $HOME/.commandcode/mcp.json"
     fi
     if [[ -f "$HOME/.commandcode/trusted-hooks.json" ]]; then
@@ -255,14 +274,19 @@ guard_host() {
             || guard_stop "host" "hooks configured: $HOME/.commandcode/trusted-hooks.json"
     fi
     if [[ -f "$HOME/.commandcode/settings.json" ]] \
-        && grep -Eq '"hooks"[[:space:]]*:' "$HOME/.commandcode/settings.json"; then
+        && json_key_nonempty "$HOME/.commandcode/settings.json" hooks; then
         guard_stop "host" "hooks configured: $HOME/.commandcode/settings.json"
+    fi
+    if [[ -f "$HOME/.commandcode/settings.json" ]] \
+        && json_key_nonempty "$HOME/.commandcode/settings.json" mcpServers; then
+        guard_stop "host" "MCP servers configured: $HOME/.commandcode/settings.json"
     fi
     hp="$(command -v heyloey 2>/dev/null || true)"
     [[ -z "$hp" ]] || guard_stop "host" "heyloey on PATH: $hp"
 }
 
-# Preflight (always runs; --preflight-only stops here)
+# Preflight checks (--preflight-only exits after the task slate is parsed and the
+# complete schedule is written, so a dry run exercises those too)
 command -v command-code >/dev/null 2>&1 || bench_error "PREFLIGHT" "command-code not on PATH"
 CC_VERSION="$(command-code --version 2>/dev/null | tail -1 || echo unknown)"
 if ! command-code --list-models 2>/dev/null | grep -qF "$MODEL"; then
@@ -274,40 +298,6 @@ if [[ -s "$TASTE" ]]; then
 fi
 guard_seed
 guard_host
-mkdir -p "$OUT/grading" "$OUT/runs"
-printf '%s\n' "$ENGINE" > "$OUT/engine-path.txt"
-{
-    echo "command-code: $CC_VERSION"
-    echo "engine: $(git -C "$ENGINE" rev-parse HEAD 2>/dev/null || echo unknown)"
-    echo "seed: $(git -C "$SEED" rev-parse HEAD 2>/dev/null || echo unknown)"
-    echo "model: $MODEL"
-    echo "profile: $PROFILE"
-    echo "order_seed: $ORDER_SEED"
-    echo "date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-} > "$OUT/env.txt"
-{
-    echo "seed_commit: $(git -C "$SEED" rev-parse HEAD)"
-    echo "seed_working_tree: clean"
-    echo "seed_instruction_surfaces: none"
-    echo "seed_heyloey_references: none"
-    echo "host_home: $HOME"
-    echo "host_instruction_surfaces: none"
-    echo "host_mcp_servers: none"
-    echo "host_hooks: none"
-    echo "taste: empty"
-    echo "order_seed: $ORDER_SEED"
-    echo "checked_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-} > "$OUT/isolation.txt"
-cp "$TASTE" "$OUT/taste.md.snapshot" 2>/dev/null || true
-printf 'ISOLATION|OK|seed=%s|home=%s\n' \
-    "$(git -C "$SEED" rev-parse --short HEAD 2>/dev/null || echo '?')" "$HOME"
-printf 'PREFLIGHT|OK|engine=%s|seed=%s|model=%s|cli=%s\n' \
-    "$(git -C "$ENGINE" rev-parse --short HEAD 2>/dev/null || echo '?')" \
-    "$(git -C "$SEED" rev-parse --short HEAD 2>/dev/null || echo '?')" \
-    "$MODEL" "$CC_VERSION"
-if [[ "$PREFLIGHT_ONLY" -eq 1 ]]; then
-    exit 0
-fi
 
 parse_field() {
     # parse_field <file> <label>: the single-line field value, backticks stripped
@@ -321,23 +311,20 @@ parse_field() {
     printf '%s' "$line"
 }
 
-: > "$OUT/manifest.tsv"
-MANIFEST="$OUT/manifest.tsv"
-printf 'scenario\tarm\trundir\ttranscript\trecord\tdiff\tstripped\tverify\n' >> "$MANIFEST"
-printf 'Error:|error:|ERROR:|No tool named|command not found|Traceback|Exception|Permission denied|FAILED|npm ERR!' > "$OUT/error-patterns.txt"
-declare -a RUN_SCENARIOS=()
-RUNS=0
-
 IFS=',' read -r -a TASKFILES <<< "$TASKS_CSV"
 TASK_IDS=()
 TASK_LEVELS=()
 TASK_PROMPTS=()
 TASK_SETUPS=()
 TASK_VERIFIES=()
+declare -A SEEN_TASK_ID=()
 for tf in "${TASKFILES[@]}"; do
     tf="$(printf '%s' "$tf" | tr -d '[:space:]')"
     [[ -f "$tf" ]] || bench_error "UNREADABLE" "$tf"
     taskid="$(parse_field "$tf" "Task ID")" || bench_error "BAD_TASK" "$tf (Task ID)"
+    [[ -z "${SEEN_TASK_ID[$taskid]:-}" ]] \
+        || bench_error "DUPLICATE_TASK" "$taskid ($tf)"
+    SEEN_TASK_ID[$taskid]=1
     level="$(parse_field "$tf" "Level")" || bench_error "BAD_TASK" "$tf (Level)"
     promptline="$(grep -m1 -- '^- \*\*Prompt\*\*: ' "$tf" || true)"
     [[ -n "$promptline" ]] || bench_error "BAD_TASK" "$tf (Prompt)"
@@ -366,7 +353,9 @@ done
 # reproducible from the seed alone. Task blocks are shuffled first (carryover,
 # cache, and time-of-day effects must not line up with task position); then the
 # arm x repeat cells inside each block are shuffled, so neither arm is always
-# first. The plan is written before the first session and executed as written.
+# first. The whole plan is materialized and written before the preflight exit,
+# then executed as written, so a mid-batch stop cannot truncate the
+# pre-registration to an attempted prefix.
 order_hash_key() {
     printf '%s' "$1" | sha256sum | cut -c1-16
 }
@@ -380,16 +369,10 @@ done < <(
     done | sort -k1,1
 )
 
-printf 'position\ttask_id\tarm\trepeat\n' > "$OUT/order.tsv"
-printf 'ORDER|PLAN|seed=%s|file=%s\n' "$ORDER_SEED" "$OUT/order.tsv"
+declare -a PLAN_LINES=() PLAN_TASK_IDX=()
 POSITION=0
-
 for order_idx in "${TASK_ORDER[@]}"; do
     taskid="${TASK_IDS[$order_idx]}"
-    level="${TASK_LEVELS[$order_idx]}"
-    prompt="${TASK_PROMPTS[$order_idx]}"
-    setup="${TASK_SETUPS[$order_idx]}"
-    verify_cmd="${TASK_VERIFIES[$order_idx]}"
     CELLS=()
     while IFS=$'\t' read -r _order_key arm r; do
         CELLS+=("$arm:$r")
@@ -405,85 +388,151 @@ for order_idx in "${TASK_ORDER[@]}"; do
         arm="${cell%%:*}"
         r="${cell##*:}"
         POSITION=$((POSITION + 1))
-        printf '%s\t%s\t%s\t%s\n' "$POSITION" "$taskid" "$arm" "$r" >> "$OUT/order.tsv"
-        printf 'ORDER|RUN|%s|task=%s|arm=%s|repeat=%s\n' "$POSITION" "$taskid" "$arm" "$r"
-        scenario="${taskid}-${arm}-r${r}"
-        rundir="$OUT/runs/$scenario"
-        rm -rf "$rundir"
-        git clone --quiet "$SEED" "$rundir" || bench_error "CLONE_FAILED" "$scenario"
-        if [[ -n "$setup" ]]; then
-            ( cd "$rundir" && bash -c "$setup" ) || bench_error "SETUP_FAILED" "$scenario"
-        fi
-        if [[ "$arm" == "promptkit_os" ]]; then
-            PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 \
-                bash "$INIT" "--$PROFILE" --host=agents "$rundir" \
-                > "$OUT/runs/$scenario-init.log" 2>&1 || bench_error "INIT_FAILED" "$scenario"
-        fi
-        # Anchor the grading diff to the SEED commit: under --yolo the agent
-        # may commit, and `git diff --cached` against a moved HEAD would
-        # return an empty diff, silently losing every committed change.
-        seed_sha="$(git -C "$rundir" rev-parse HEAD)"
-        th1="$(sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo none)"
-        set +e
-        ( cd "$rundir" && timeout "$TIMEOUT" command-code -t --yolo --tools-all \
-            --skip-onboarding --no-auto-update -m "$MODEL" --max-turns "$MAXTURNS" \
-            -p "$prompt" ) > "$OUT/runs/$scenario/session.log" 2>&1
-        rc=$?
-        set -e
-        th2="$(sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo none2)"
-        [[ "$th1" == "$th2" ]] || bench_error "TASTE_CHANGED" "$scenario"
-        ( cd "$rundir" && git add -A && git diff --cached --no-color "$seed_sha" > "$rundir-run.diff"; git reset -q ) \
-            || bench_error "DIFF_FAILED" "$scenario"
-        # Optional path-scrubbed verification evidence, produced by the
-        # HARNESS (not the agent) so the grader never needs the
-        # arm-revealing session log for evidence-gated rubric items. The
-        # packet always carries the command's exit code first
-        # (verify_exit=), so a successful-but-silent command still yields
-        # gradeable evidence.
-        verify_out=""
-        if [[ -n "$verify_cmd" ]]; then
-            verify_out="$OUT/runs/$scenario/verify.txt"
-            vrc=0
-            ( cd "$rundir" && bash -c "$verify_cmd" ) > "$verify_out.raw" 2>&1 || vrc=$?
-            {
-                printf 'verify_exit=%s\n' "$vrc"
-                scrub_verify_output "$rundir" "$OUT" "$scenario" "$verify_out.raw"
-            } > "$verify_out"
-            rm -f "$verify_out.raw"
-        fi
-        slug="$(slugify_run_path "$rundir")"
-        transcript="$(ls -t "${HOME}/.commandcode/projects/${slug}/"*.jsonl 2>/dev/null | grep -v checkpoints | head -1 || true)"
-        [[ -n "$transcript" ]] || bench_error "TRANSCRIPT_MISSING" "$scenario"
-        record="$OUT/runs/$scenario/record.json"
-        bash "$EXTRACT" "$transcript" --scenario-id="$scenario" --condition="$arm" \
-            --accepted=false --error-patterns="$(cat "$OUT/error-patterns.txt")" \
-            > "$record" 2>>"$OUT/runs/$scenario/extract.log" || bench_error "EXTRACT_FAILED" "$scenario"
-        stripped="$OUT/runs/$scenario/run.stripped.diff"
-        if [[ -s "$rundir-run.diff" ]]; then
-            bash "$STRIP" "$rundir-run.diff" > "$stripped" 2>>"$OUT/runs/$scenario/strip.log" \
-                || bench_error "STRIP_FAILED" "$scenario"
-        else
-            # A no-op run (max-turns hit, early failure) stays gradeable as
-            # accepted=false; an empty packet is the honest artifact.
-            : > "$stripped"
-        fi
-        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-            "$scenario" "$arm" "$rundir" "$transcript" "$record" "$rundir-run.diff" "$stripped" "${verify_out:-}" >> "$OUT/manifest.tsv"
-        RUN_SCENARIOS+=("$scenario")
-        RUNS=$((RUNS + 1))
-        printf 'RUNDONE|%s|arm=%s|level=%s|cli_exit=%s\n' "$scenario" "$arm" "$level" "$rc"
-        if [[ "$rc" -eq 8 ]]; then
-            printf 'BENCH|WARN|MAX_TURNS_HIT|%s\n' "$scenario" >&2
-        fi
+        PLAN_LINES+=("$POSITION"$'\t'"$taskid"$'\t'"$arm"$'\t'"$r")
+        PLAN_TASK_IDX+=("$order_idx")
     done
+done
+PLAN_COUNT=${#PLAN_LINES[@]}
+
+mkdir -p "$OUT/grading" "$OUT/runs"
+{
+    printf 'position\ttask_id\tarm\trepeat\n'
+    printf '%s\n' "${PLAN_LINES[@]}"
+} > "$OUT/order.tsv"
+PLAN_SHA="$(sha256sum "$OUT/order.tsv" | cut -d' ' -f1)"
+
+printf '%s\n' "$ENGINE" > "$OUT/engine-path.txt"
+{
+    echo "command-code: $CC_VERSION"
+    echo "engine: $(git -C "$ENGINE" rev-parse HEAD 2>/dev/null || echo unknown)"
+    echo "seed: $(git -C "$SEED" rev-parse HEAD 2>/dev/null || echo unknown)"
+    echo "model: $MODEL"
+    echo "profile: $PROFILE"
+    echo "order_seed: $ORDER_SEED"
+    echo "shuffle_seed: $SHUFFLE_SEED"
+    echo "order_plan_sha256: $PLAN_SHA"
+    echo "order_plan_rows: $PLAN_COUNT"
+    echo "date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+} > "$OUT/env.txt"
+{
+    echo "seed_commit: $(git -C "$SEED" rev-parse HEAD)"
+    echo "seed_working_tree: clean"
+    echo "seed_instruction_surfaces: none"
+    echo "seed_heyloey_references: none"
+    echo "host_home: $HOME"
+    echo "host_instruction_surfaces: none"
+    echo "host_mcp_servers: none"
+    echo "host_hooks: none"
+    echo "taste: empty"
+    echo "order_seed: $ORDER_SEED"
+    echo "shuffle_seed: $SHUFFLE_SEED"
+    echo "order_plan_sha256: $PLAN_SHA"
+    echo "order_plan_rows: $PLAN_COUNT"
+    echo "checked_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+} > "$OUT/isolation.txt"
+cp "$TASTE" "$OUT/taste.md.snapshot" 2>/dev/null || true
+printf 'ISOLATION|OK|seed=%s|home=%s\n' \
+    "$(git -C "$SEED" rev-parse --short HEAD 2>/dev/null || echo '?')" "$HOME"
+printf 'PREFLIGHT|OK|engine=%s|seed=%s|model=%s|cli=%s\n' \
+    "$(git -C "$ENGINE" rev-parse --short HEAD 2>/dev/null || echo '?')" \
+    "$(git -C "$SEED" rev-parse --short HEAD 2>/dev/null || echo '?')" \
+    "$MODEL" "$CC_VERSION"
+printf 'ORDER|PLAN|seed=%s|shuffle_seed=%s|rows=%s|sha256=%s|file=%s\n' \
+    "$ORDER_SEED" "$SHUFFLE_SEED" "$PLAN_COUNT" "$PLAN_SHA" "$OUT/order.tsv"
+if [[ "$PREFLIGHT_ONLY" -eq 1 ]]; then
+    exit 0
+fi
+
+: > "$OUT/manifest.tsv"
+MANIFEST="$OUT/manifest.tsv"
+printf 'scenario\tarm\trundir\ttranscript\trecord\tdiff\tstripped\tverify\n' >> "$MANIFEST"
+printf 'Error:|error:|ERROR:|No tool named|command not found|Traceback|Exception|Permission denied|FAILED|npm ERR!' > "$OUT/error-patterns.txt"
+declare -a RUN_SCENARIOS=()
+RUNS=0
+
+for ((pi = 0; pi < PLAN_COUNT; pi++)); do
+    IFS=$'\t' read -r POSITION taskid arm r <<< "${PLAN_LINES[$pi]}"
+    order_idx="${PLAN_TASK_IDX[$pi]}"
+    level="${TASK_LEVELS[$order_idx]}"
+    prompt="${TASK_PROMPTS[$order_idx]}"
+    setup="${TASK_SETUPS[$order_idx]}"
+    verify_cmd="${TASK_VERIFIES[$order_idx]}"
+    printf 'ORDER|RUN|%s|task=%s|arm=%s|repeat=%s\n' "$POSITION" "$taskid" "$arm" "$r"
+    scenario="${taskid}-${arm}-r${r}"
+    rundir="$OUT/runs/$scenario"
+    rm -rf "$rundir"
+    git clone --quiet "$SEED" "$rundir" || bench_error "CLONE_FAILED" "$scenario"
+    if [[ -n "$setup" ]]; then
+        ( cd "$rundir" && bash -c "$setup" ) || bench_error "SETUP_FAILED" "$scenario"
+    fi
+    if [[ "$arm" == "promptkit_os" ]]; then
+        PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 \
+            bash "$INIT" "--$PROFILE" --host=agents "$rundir" \
+            > "$OUT/runs/$scenario-init.log" 2>&1 || bench_error "INIT_FAILED" "$scenario"
+    fi
+    # Anchor the grading diff to the SEED commit: under --yolo the agent
+    # may commit, and `git diff --cached` against a moved HEAD would
+    # return an empty diff, silently losing every committed change.
+    seed_sha="$(git -C "$rundir" rev-parse HEAD)"
+    th1="$(sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo none)"
+    set +e
+    ( cd "$rundir" && timeout "$TIMEOUT" command-code -t --yolo --tools-all \
+        --skip-onboarding --no-auto-update -m "$MODEL" --max-turns "$MAXTURNS" \
+        -p "$prompt" ) > "$OUT/runs/$scenario/session.log" 2>&1
+    rc=$?
+    set -e
+    th2="$(sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo none2)"
+    [[ "$th1" == "$th2" ]] || bench_error "TASTE_CHANGED" "$scenario"
+    ( cd "$rundir" && git add -A && git diff --cached --no-color "$seed_sha" > "$rundir-run.diff"; git reset -q ) \
+        || bench_error "DIFF_FAILED" "$scenario"
+    # Optional path-scrubbed verification evidence, produced by the
+    # HARNESS (not the agent) so the grader never needs the
+    # arm-revealing session log for evidence-gated rubric items. The
+    # packet always carries the command's exit code first
+    # (verify_exit=), so a successful-but-silent command still yields
+    # gradeable evidence.
+    verify_out=""
+    if [[ -n "$verify_cmd" ]]; then
+        verify_out="$OUT/runs/$scenario/verify.txt"
+        vrc=0
+        ( cd "$rundir" && bash -c "$verify_cmd" ) > "$verify_out.raw" 2>&1 || vrc=$?
+        {
+            printf 'verify_exit=%s\n' "$vrc"
+            scrub_verify_output "$rundir" "$OUT" "$scenario" "$verify_out.raw"
+        } > "$verify_out"
+        rm -f "$verify_out.raw"
+    fi
+    slug="$(slugify_run_path "$rundir")"
+    transcript="$(ls -t "${HOME}/.commandcode/projects/${slug}/"*.jsonl 2>/dev/null | grep -v checkpoints | head -1 || true)"
+    [[ -n "$transcript" ]] || bench_error "TRANSCRIPT_MISSING" "$scenario"
+    record="$OUT/runs/$scenario/record.json"
+    bash "$EXTRACT" "$transcript" --scenario-id="$scenario" --condition="$arm" \
+        --accepted=false --error-patterns="$(cat "$OUT/error-patterns.txt")" \
+        > "$record" 2>>"$OUT/runs/$scenario/extract.log" || bench_error "EXTRACT_FAILED" "$scenario"
+    stripped="$OUT/runs/$scenario/run.stripped.diff"
+    if [[ -s "$rundir-run.diff" ]]; then
+        bash "$STRIP" "$rundir-run.diff" > "$stripped" 2>>"$OUT/runs/$scenario/strip.log" \
+            || bench_error "STRIP_FAILED" "$scenario"
+    else
+        # A no-op run (max-turns hit, early failure) stays gradeable as
+        # accepted=false; an empty packet is the honest artifact.
+        : > "$stripped"
+    fi
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "$scenario" "$arm" "$rundir" "$transcript" "$record" "$rundir-run.diff" "$stripped" "${verify_out:-}" >> "$OUT/manifest.tsv"
+    RUN_SCENARIOS+=("$scenario")
+    RUNS=$((RUNS + 1))
+    printf 'RUNDONE|%s|arm=%s|level=%s|cli_exit=%s\n' "$scenario" "$arm" "$level" "$rc"
+    if [[ "$rc" -eq 8 ]]; then
+        printf 'BENCH|WARN|MAX_TURNS_HIT|%s\n' "$scenario" >&2
+    fi
 done
 
 # Blind-id assignment happens AFTER all runs, by shuffle across the whole
 # batch, so id order carries no arm information (a sequential per-run id would
-# leak the arm by parity). BENCH_SHUFFLE_SEED makes the shuffle reproducible.
-if [[ -n "${BENCH_SHUFFLE_SEED:-}" ]]; then
-    RANDOM="$BENCH_SHUFFLE_SEED"
-fi
+# leak the arm by parity). The required --shuffle-seed makes the shuffle
+# reproducible and is recorded in env.txt/isolation.txt.
+RANDOM="$SHUFFLE_SEED"
 n=${#RUN_SCENARIOS[@]}
 for ((i = n - 1; i > 0; i--)); do
     j=$((RANDOM % (i + 1)))

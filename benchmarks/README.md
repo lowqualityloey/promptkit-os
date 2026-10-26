@@ -48,7 +48,7 @@ For every task × arm × repeat:
    a human judgment).
 5. **Blind grading**: per run, the diff is stripped of PromptKit artifacts
    (`scripts/strip-benchmark-diff.sh`) and assigned a blind id (`B<nnn>`) by a
-   shuffle across the whole batch (reproducible with `BENCH_SHUFFLE_SEED`), so
+   shuffle across the whole batch (reproducible with `--shuffle-seed`), so
    id order carries no arm information; when the task declares a `Verify`
    command, the harness itself runs it post-session and ships path-scrubbed
    output as `B<nnn>.verify.txt` with the command's exit code recorded on its
@@ -101,26 +101,35 @@ Linux/WSL (uses GNU `timeout`).
 Each run consumes the operator's Command Code plan. Controls: `--max-turns` (default 40,
 exit 8 on cap-hit), a wall-clock `timeout` per run (default 900s), and the task batch
 itself is reviewed before any run. The driver refuses to start without an explicit
-`--model` and a pre-registered numeric `--order-seed`, and `--preflight-only` validates
-the environment (CLI, model, taste state, engine and seed repos, seed/host isolation)
-without spending.
+`--model` and two pre-registered numeric seeds (`--order-seed` and `--shuffle-seed`),
+and `--preflight-only` validates the environment (CLI, model, taste state, engine and
+seed repos, task cards, the complete schedule, seed/host isolation) without spending.
 
 ## Schedule and isolation
 
-Every run requires `--order-seed N`. The driver sorts SHA-256 digests of that seed with
-each task id (block order) and with each arm × repeat cell (order inside the block),
-writes the plan to `<out>/order.tsv`, and executes it exactly as written — neither arm
-is always first, and task position cannot line up with cache or carryover effects. The
-same seed reproduces the same plan; the order is part of the pre-registration, not an
-operator choice made at run time.
+Every run requires two pre-registered numeric seeds. `--order-seed N` orders the
+schedule: the driver sorts SHA-256 digests of that seed with each task id (block order)
+and with each arm × repeat cell (order inside the block). `--shuffle-seed N` seeds the
+whole-batch blind-id shuffle. Both are recorded in `<out>/env.txt` and
+`<out>/isolation.txt`, along with the plan's SHA-256.
+
+The driver parses and validates every task card, rejects duplicate `Task ID`s, and
+writes the **complete** plan to `<out>/order.tsv` before `--preflight-only` exits and
+before the first session — then executes it exactly as written. Neither arm is always
+first, task position cannot line up with cache or carryover effects, and a mid-batch
+stop leaves the full pre-registration on disk rather than a truncated prefix. The same
+seeds reproduce the same plan and blind key; the order and the blinding are part of the
+pre-registration, not operator choices made at run time.
 
 Before any session, the isolation guard fails closed (`BENCH|ERROR|PREFLIGHT|...`) when:
 
 - the seed has a tracked agent-instruction surface (`AGENTS.md`, `CLAUDE.md`,
-  `.cursorrules`, `.cursor/rules/`, `.claude/`, `copilot-instructions.md`), any
-  `heyloey` reference, or a dirty working tree; or
-- the host has a global instruction file, `.commandcode` skills/hooks/MCP servers, or
-  `heyloey` on `PATH`.
+  `PROMPTKIT.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.clinerules`,
+  `copilot-instructions.md`, `.cursor/rules/`, `.claude/`, `.promptkit/`,
+  `.github/instructions/`), any `heyloey` reference, or a dirty working tree; or
+- the host has a global instruction file, `.commandcode` skills, non-empty `hooks` or
+  `mcpServers` in `settings.json`, non-empty `trusted-hooks.json`, non-empty
+  `mcp.json`, or `heyloey` on `PATH`.
 
 There is no override flag. Run on a neutralized seed under an isolated `HOME` (or a
 container), as the regression harness does. A pass prints `ISOLATION|OK` and writes
@@ -145,11 +154,13 @@ this harness does not establish general performance.
 # Validate the environment without spending
 bash benchmarks/run-ab-benchmark.sh --engine /path/to/promptkit-os \
   --seed /path/to/seed-repo --tasks benchmarks/tasks/TASK-BENCH-L1-01.md \
-  --model <model> --out /tmp/bench-batch-1 --order-seed 20261026 --preflight-only
+  --model <model> --out /tmp/bench-batch-1 \
+  --order-seed 20261026 --shuffle-seed 20261027 --preflight-only
 
 # Run a batch (spends the plan)
 bash benchmarks/run-ab-benchmark.sh --engine ... --seed ... --tasks a.md,b.md \
-  --model <model> --out /tmp/bench-batch-1 --order-seed 20261026
+  --model <model> --out /tmp/bench-batch-1 \
+  --order-seed 20261026 --shuffle-seed 20261027
 
 # After grading B*.diff (+ B*.verify.txt) into grading/grading.tsv
 # (blind_id <TAB> rubric_passed <TAB> rubric_total <TAB> accepted):
