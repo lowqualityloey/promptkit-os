@@ -370,32 +370,75 @@ An **Inconclusive** or **Worse** result closes this line without Phase 4.
 
 | Slot | Level | Task ID | Issue | Seed area | Rubric | Verify | Status |
 |---|---|---|---|---|---|---|---|
-| 1 | L0 | TBD | TBD | TBD | TBD | TBD | new task; cost-only |
-| 2 | L1 | TBD | TBD | TBD | TBD | TBD | new task; executable code |
-| 3 | L1 | TBD | TBD | TBD | TBD | TBD | new task |
-| 4 | L2 | TBD | TBD | TBD | TBD | TBD | new task |
-| 5 | L2 | TBD | TBD | TBD | TBD | TBD | new task |
-| 6 | L3 | TBD | TBD | TBD | TBD | TBD | owner-approved scope/rollback |
+| 1 | L0 | `BENCH-L0-02` | seed `BACKLOG.md` 1: `queue.peek()` | `src/queue.js` | `TASK-BENCH-L0-02.md` R1–R5 | `node --test` + peek probe | new; cost-only; executable |
+| 2 | L1 | `BENCH-L1-03` | seed `BACKLOG.md` 3: dispatch counts | `src/dispatcher.js` | `TASK-BENCH-L1-03.md` R1–R5 | `node --test` + counts probe | new; executable |
+| 3 | L1 | `BENCH-L1-04` | seed `BACKLOG.md` 5: `--DRY_RUN` | `src/app.js` | `TASK-BENCH-L1-04.md` R1–R6 | `node --test` + dry-run probe | new; executable |
+| 4 | L2 | `BENCH-L2-03` | seed `BACKLOG.md` 4: unbounded capacity | `src/config.js`, `src/queue.js` | `TASK-BENCH-L2-03.md` R1–R6 | `node --test` + unbounded probe | new; executable |
+| 5 | L2 | `BENCH-L2-04` | seed `BACKLOG.md` 6: atomic `enqueueMany` | `src/queue.js` | `TASK-BENCH-L2-04.md` R1–R6 | `node --test` + atomicity probe | new; executable |
+| 6 | L3 | `BENCH-L3-01` | seed `BACKLOG.md` 2: retry with backoff | `src/dispatcher.js` | `TASK-BENCH-L3-01.md` R1–R7 | `node --test` + retry probe | new; owner sign-off required |
 
 Rules: no pilot task; at least two executable-code tasks; no benchmark-artifact
 edits; if no L3, use five tasks and label `Phase 3b-L1L2`.
 
+Slate notes:
+
+- All six are new tasks drawn from the neutral seed's own `BACKLOG.md`; none is a
+  Phase 3 pilot task and none is a benchmark-artifact edit. Every one changes
+  executable code, and each card carries the exact prompt, frozen rubric, and a
+  deterministic `Verify` command.
+- The seed is **synthetic** — it has a backlog, but not a real one — so the batch
+  is labeled **synthetic-seed**. Nothing here transfers to consumer code, and
+  §12's limitation on other models, hosts, and consumer codebases applies in
+  full.
+- Task IDs continue the published sequence rather than reusing one:
+  `BENCH-L0-01` through `BENCH-L2-02` belong to the pilot, and `BENCH-L3-01` is
+  the first L3 id.
+- Slot 6 is conditional, because §2.3 requires an owner-approved scope and
+  rollback plan for the L3 cell. The card carries both and the Approval section
+  approves them. If the owner declines, drop slot 6, run the five-task
+  `Phase 3b-L1L2` slate (30 primary sessions), and make no L3 claim; do not
+  relabel an L2 task as L3.
+- Every `Verify` command was exercised before this slate was written, through
+  the driver's own field parser, against a compliant artifact (exit 0) and
+  against the untouched seed (non-zero), on Node 18.19.1 and 24.22.1. Each
+  card's Notes name the specific defect its probe is meant to catch.
+
 ## Appendix B — Frozen parameters (fill before run)
 
-- Protocol commit: __________
-- Freeze date: __________
-- Owner approval: __________
-- Model: __________
-- Command Code version: __________
-- Engine SHA: __________
-- Seed SHA: __________
-- Neutralization procedure SHA: __________
-- Task bundle SHA-256: __________
-- Blind-id shuffle seed: __________
-- Task/arm order seed: __________
+- Protocol commit: __________ (recorded in the follow-up docs-only commit, per §10)
+- Freeze date: 2026-10-27 (slate and parameters drafted; frozen by the Approval signature)
+- Owner approval: **PENDING** — see the Approval section
+- Model: `deepseek/deepseek-v4.1-flash`
+- Command Code version: `1.88.0`
+- Engine SHA: __________ (this repository at the protocol commit)
+- Seed SHA: `16b3cf74c809c23dd48466da2212bd3e67a530ed`
+- Neutralization procedure SHA: `843ecc47249e2cf0914ce594fc77ac45b5a5f55c1c993c559cbf8e5d85703d3f` (`benchmarks/seed/neutralize.sh`); the seed was produced by `benchmarks/seed/build-phase3b-seed.sh` at `aecfff209793cf6dba35ae33ea810efc71675bbb42ecf054cc62c3d478bcbd12` and accepted by `neutralize.sh` with `removed=0`
+- Task bundle SHA-256: `13d231220ca5e73c86646af5139877b7eb928808d1cf51d8d44dfce86a22bf89`
+- Blind-id shuffle seed: `90613245`
+- Task/arm order seed: `20261027`
 - Price inputs: $3.00/$15.00/$0.05; cache-read reported only
 - Thresholds: quality 1-run aggregate / 2-repeat task loss; cost 1.25/1.50
 - Spend cap: 42 sessions / 24 hours / $25 actual-cost guardrail
+
+Bundle recipe: the digest above is `sha256sum` of the six lines
+`<task-id> TAB <sha256 of that card>`, in Appendix A slot order:
+
+```sh
+for id in BENCH-L0-02 BENCH-L1-03 BENCH-L1-04 BENCH-L2-03 BENCH-L2-04 BENCH-L3-01; do
+  printf '%s\t%s\n' "$id" "$(sha256sum "benchmarks/tasks/TASK-$id.md" | cut -d' ' -f1)"
+done | sha256sum | cut -d' ' -f1
+```
+
+Owner decisions recorded as proposed values: two entries are the owner's to
+confirm rather than the repository's to derive. The model is kept at the Phase 3
+model so that Phase 4 remains the cross-model phase, and the two seeds are
+pre-registered integers chosen before the slate existed, not derived from any
+run. The signature below freezes them; a change after freeze is an Appendix C
+deviation.
+
+Host runtime: the seed declares Node ≥ 20. This host resolves 18.19.1 on the
+default `PATH` and 24.22.1 through nvm, so the operator pins one interpreter for
+both arms before the run; every `Verify` command was exercised on both.
 
 ## Appendix C — Deviations log
 
