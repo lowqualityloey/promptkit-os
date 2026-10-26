@@ -690,6 +690,42 @@ fi
 grep -q '^ASSERT|standalone|tree|OK$' <<<"$standalone_out"
 grep -q 'PromptKit OS successfully configured' <<<"$standalone_out"
 
+# Test 31a: kit root == project root renders a relative kit reference. "KIT"
+# has no shorter relative form than "."; an absolute value is rendered by the
+# template as ".//abs/path", which is not a path.
+grep -qF '(`./.`)' "$STANDALONE_KIT/AGENTS.md"
+if grep -qF './/' "$STANDALONE_KIT/AGENTS.md" || grep -qF "$STANDALONE_KIT" "$STANDALONE_KIT/AGENTS.md"; then
+    echo "Standalone kit rendered an absolute kit reference." >&2
+    exit 1
+fi
+
+# Test 31b: the kit reference is compared with a path boundary, not a bare
+# string prefix. Kit "$X/kitref_project-kit" merely starts with project root
+# "$X/kitref_project"; treating that as "kit is inside the project" leaves the
+# absolute source path in KIT_DIR_REL, so the directive carries a foreign
+# "./abs" path and the banner advertises an external upgrade path.
+KITREF_PROJ="$TEST_ROOT/kitref_project"
+KITREF_KIT="$TEST_ROOT/kitref_project-kit"
+copy_kit "$KITREF_KIT"
+mkdir -p "$KITREF_PROJ"
+[[ "$KITREF_KIT" == "$KITREF_PROJ"* ]]
+if kitref_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$KITREF_KIT/init.sh" --balanced "$KITREF_PROJ" 2>&1)"; then
+    kitref_rc=0
+else
+    kitref_rc=$?
+fi
+[[ "$kitref_rc" -eq 0 ]]
+grep -qF '(`./.promptkit`)' "$KITREF_PROJ/AGENTS.md"
+if grep -qF './/' "$KITREF_PROJ/AGENTS.md" || grep -qF "$KITREF_KIT" "$KITREF_PROJ/AGENTS.md"; then
+    echo "Sibling kit directory leaked into the directive: kit reference is not path-bounded." >&2
+    exit 1
+fi
+grep -qF '.promptkit/init.sh' <<<"$kitref_out"
+if grep -qF "$KITREF_KIT/init.sh" <<<"$kitref_out"; then
+    echo "Sibling kit directory leaked into the upgrade hint." >&2
+    exit 1
+fi
+
 # Test 32: explicit opt-out — PROMPTKIT_NO_PREFLIGHT=1 skips the assert
 OPTOUT_PROJ="$TEST_ROOT/assert_optout_project"
 OPTOUT_KIT="$TEST_ROOT/assert_optout_kit"
@@ -725,4 +761,4 @@ if grep -q 'PromptKit OS successfully configured' <<<"$gitfail_out"; then
     exit 1
 fi
 
-echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."
+echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."

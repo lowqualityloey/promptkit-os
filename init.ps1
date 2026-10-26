@@ -784,8 +784,17 @@ foreach ($dest in $AllDestinations) {
 }
 
 # 5. Directive Block (Loaded from Canonical Template based on profile)
-$KitDirRel = if ($ScriptDir.StartsWith($ProjectRootPath)) {
-    $ScriptDir.Substring($ProjectRootPath.Length).TrimStart("\", "/") -replace "\\", "/"
+# Path-bounded: a bare StartsWith also accepts a sibling directory (project
+# "...\pro", kit "...\project"), and Substring then emits a truncated reference
+# such as "ject". When the kit root IS the project root, "." is the only
+# truthful relative reference.
+$KitRootFull = [System.IO.Path]::GetFullPath($ProjectRootPath).TrimEnd('\', '/')
+$KitDirFull = [System.IO.Path]::GetFullPath($ScriptDir).TrimEnd('\', '/')
+$KitDirRel = if ($KitDirFull -ieq $KitRootFull) {
+    "."
+} elseif ($KitDirFull.StartsWith($KitRootFull + '/', [System.StringComparison]::OrdinalIgnoreCase) -or
+          $KitDirFull.StartsWith($KitRootFull + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+    $KitDirFull.Substring($KitRootFull.Length).TrimStart('\', '/') -replace '\\', '/'
 } else {
     ".promptkit"
 }
