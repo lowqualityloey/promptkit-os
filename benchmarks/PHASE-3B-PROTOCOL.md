@@ -401,7 +401,10 @@ Slate notes:
 - Every `Verify` command was exercised before this slate was written, through
   the driver's own field parser, against a compliant artifact (exit 0) and
   against the untouched seed (non-zero), on Node 18.19.1 and 24.22.1. Each
-  card's Notes name the specific defect its probe is meant to catch.
+  card's Notes name the specific defect its probe is meant to catch. The two
+  cards amended by the pre-freeze revision (Appendix B) were re-exercised the
+  same way, and each assertion they gained was shown to fail on its own, with
+  no agent-written tests present, against a dedicated near-miss artifact.
 
 ## Appendix B — Frozen parameters (fill before run)
 
@@ -413,7 +416,7 @@ Slate notes:
 - Engine SHA: `71fc79dccb403480f07b4e7a1baeb2ac7cd93305` (this repository at the protocol commit)
 - Seed SHA: `16b3cf74c809c23dd48466da2212bd3e67a530ed`
 - Neutralization procedure SHA: `843ecc47249e2cf0914ce594fc77ac45b5a5f55c1c993c559cbf8e5d85703d3f` (`benchmarks/seed/neutralize.sh`); the seed was produced by `benchmarks/seed/build-phase3b-seed.sh` at `aecfff209793cf6dba35ae33ea810efc71675bbb42ecf054cc62c3d478bcbd12` and accepted by `neutralize.sh` with `removed=0`
-- Task bundle SHA-256: `13d231220ca5e73c86646af5139877b7eb928808d1cf51d8d44dfce86a22bf89`
+- Task bundle SHA-256: `1942989017d39590baade05fe702c38a0d8f3115eae9bdde126da9f1ba1f1d6d`
 - Blind-id shuffle seed: `90613245`
 - Task/arm order seed: `20261027`
 - Price inputs: $3.00/$15.00/$0.05; cache-read reported only
@@ -428,6 +431,26 @@ for id in BENCH-L0-02 BENCH-L1-03 BENCH-L1-04 BENCH-L2-03 BENCH-L2-04 BENCH-L3-0
   printf '%s\t%s\n' "$id" "$(sha256sum "benchmarks/tasks/TASK-$id.md" | cut -d' ' -f1)"
 done | sha256sum | cut -d' ' -f1
 ```
+
+Pre-freeze revision (2026-10-27, before the owner signature): the digest above is
+the corrected bundle. Two cards were amended after reading the frozen rubrics
+against the two artifacts a blind grader actually receives, the stripped diff and
+`B<nnn>.verify.txt`.
+
+- `BENCH-L1-04` — the `Verify` probe asserted a returned `config` the prompt never
+  asked for, so a compliant `{ exitCode: 0 }` return failed `verify_exit` for a
+  reason no rubric item stated. The prompt now states the return shape, requires
+  `parseFlags` to accept the flag, and pins both the bare and `=<value>` spellings;
+  the probe exercises each.
+- `BENCH-L3-01` — R1, R2, and R4 claimed more than the probe observed. Nothing
+  checked the queue's size after a refused option object, so a `drain()`-first
+  loop passed while emptying the queue; nothing pinned the default `maxAttempts`,
+  `Number.isInteger` enforcement, or that the failed entry carries the final
+  attempt's error. The probe now asserts all four.
+
+No session had run, so no result is invalidated, and neither change touches the
+slate, the seed, the thresholds, or the cap. A change to any card after the
+signature is an Appendix C deviation.
 
 Owner decisions recorded as proposed values: two entries are the owner's to
 confirm rather than the repository's to derive. The model is kept at the Phase 3
