@@ -1,0 +1,579 @@
+diff --git a/.github/ISSUE_TEMPLATE/task.md b/.github/ISSUE_TEMPLATE/task.md
+new file mode 100644
+index 0000000..e21ff1c
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/task.md
+@@ -0,0 +1,81 @@
++---
++name: Task Specification
++about: Standard PromptKit OS task with Gherkin AC and technical invariants
++title: "<type>(<scope>): <summary>"
++labels: ["type:feature", "priority/p1"]
++---
++
++### Metadata
++- **Related Spec**: [Link to `docs/specs/<spec>.md` or `N/A - <reason>`]
++- **Architectural Decision (ADR)**: [Link to `docs/adrs/<adr>.md` or `N/A - <reason>`]
++- **Milestone**: `[M1: Data & Contracts | M2: Core Logic | M3: UI & Presentation | M4: Hardening]`
++- **Priority**: `[#priority/p0 (Blocker) | #priority/p1 (Core) | #priority/p2 (Enhancement) | #priority/p3 (Polish)]`
++- **Labels**: `[area:backend, area:frontend, area:data, area:auth, area:ui, area:perf]`
++- **Kanban Status**: `[To Do | In Progress | In Review | Done]`
++
++---
++
++## User Story & Context
++<!-- Describe who benefits, what capability is unlocked, and why now. -->
++**As a** `[user role or persona]`  
++**I want** `[action or capability]`  
++**So that** `[measurable business or technical value]`
++
++---
++
++## Technical Scope & Invariants
++
++### Files & Endpoints Touched
++- **Database Tables / Migrations**: `[path/to/schema.ts or migrations/]`
++- **Services / Handlers**: `[path/to/service.ts]`
++- **API Endpoints**: `[METHOD /api/v1/path]`
++- **UI Components**: `[path/to/component.tsx]`
++
++### Non-Negotiable Invariants (mark applicable items; use `N/A - <reason>` where not applicable)
++- [ ] **Data Isolation** (when multi-tenant or persistent data exists): Tenant Row-Level Security (RLS) or organization ID enforced on every query; otherwise `N/A - <reason>`.
++- [ ] **Schema Safety** (when schema or migration exists): Expand-Contract pattern followed for live or compatibility-sensitive data — one-shot, disposable, or pre-deployment changes may skip with documented rationale; otherwise `N/A - <reason>` and zero instantaneous destructive drops when EC applies.
++- [ ] **Security & Validation** (when external input exists): Runtime schema validation using the project's native mechanism (e.g. Zod/Valibot for TypeScript) applied to all external input; otherwise `N/A - <reason>`.
++- [ ] **Budget & Performance** (when API or data path exists): No N+1 query loops; API response p95 within target SLA; otherwise `N/A - <reason>`.
++
++### Out of Scope
++<!-- Explicitly list what this issue will NOT address to prevent scope creep. -->
++- `[Feature or boundary excluded from this specific issue]`
++
++---
++
++## Implementation Tasks (The Build)
++<!-- Concrete, ordered sequence of files and functions to create or modify. -->
++- [ ] 1. Define schema types and database migration (`Expand` phase) where persistent storage exists; otherwise `N/A - <reason>`.
++- [ ] 2. Implement domain service logic and state validation.
++- [ ] 3. Expose API endpoint with structured error envelope (or interface-appropriate contract).
++- [ ] 4. Wire client query hook and presentation component (or interface-appropriate surface).
++- [ ] 5. Write automated unit and integration tests.
++
++---
++
++## Acceptance Criteria (The Verifiable Proof)
++<!-- Concrete conditions of satisfaction. All must pass before this issue can be closed. -->
++
++### Scenario 1: Happy Path
++- **Given** `[precondition or system state]`
++- **When** `[action taken or event triggered]`
++- **Then** `[expected outcome or response status]`
++
++### Scenario 2: Negative & Error Edge Cases
++- **Given** `[unauthenticated user or invalid payload]`
++- **When** `[request is dispatched]`
++- **Then** `[expected error (e.g. for HTTP APIs: 400, 401, 403, 409, 429) or interface-appropriate error and structured message]`
++
++### Scenario 3: Boundary & Concurrency (If Applicable)
++- **Given** `[duplicate concurrent requests with same idempotency key]`
++- **When** `[processed simultaneously]`
++- **Then** `[only one transaction succeeds without data corruption]`
++
++---
++
++## Automated Verification Command
++<!-- Paste the exact CLI command used to prove this issue meets acceptance criteria. -->
++```bash
++# Run the specific test suite covering this issue
++pnpm test path/to/feature.test.ts
++```
+diff --git a/.github/pull_request_template.md b/.github/pull_request_template.md
+new file mode 100644
+index 0000000..6f7cc2a
+--- /dev/null
++++ b/.github/pull_request_template.md
+@@ -0,0 +1,101 @@
++# Pull Request Template
++
++## Description
++<!-- Provide a clear, concise summary of the problem this PR solves and why the change was made. -->
++
++### Related Issues & Specs
++- **Closes / Fixes**: #
++- **Technical RFC / Spec**: `docs/specs/`
++- **Architectural Decision Record (ADR)**: `docs/adrs/`
++
++## Execution-Control Traceability (Optional)
++
++Use this section for Controlled Work. Enter `N/A` for L0 Work or for a consumer repository that does not adopt the optional protocol.
++
++- **Task ID / Canonical Task Record**: `[TASK-YYYY-MM-DD-slug]` / `docs/tasks/<task-id>.md`
++- **Specification / Execution Scope**: `[specification path]` / `[bounded files, artifacts, or behaviors]`
++- **Current Execution State / Active Ownership**: `[awaiting_review / completed]` / `[owner and active pointer]`
++- **Acceptance Criteria Results**: `[AC-* results and evidence]`
++- **Changed-File Summary**: `[files and concise summaries]`
++- **Branch / Exact Revision**: `[branch] @ [revision]`
++- **Checkpoint / Handoff Records**: `[links or N/A]`
++- **Scope Changes / Exceptions**: `[links or N/A]`
++- **Verification / CI Evidence**: `[commands, results, and links]`
++- **Blockers / Receiver Validation**: `[blockers and resume condition; receiver/revision validation or N/A]`
++
++> A passing execution-control validator or CI job supports traceability only. It does not approve opening, merging, shipping, deploying, or rolling back this PR. Human review and the owning workflow remain authoritative.
++
++---
++
++## Summary of Changes
++<!-- High-level overview of what was implemented, grouped by architectural layer. -->
++- **Data Layer**:
++- **Backend / API**:
++- **Frontend / UI**:
++- **Tooling / Config**:
++
++---
++
++## Acceptance Criteria Checklist
++<!-- List verified acceptance criteria: Gherkin scenarios where required by the Task Record/spec (Level 2/3); observable behavior change with AC IDs otherwise. Never check a box without in-turn verification evidence cited beside it. -->
++- [ ] **AC-1**: [Scenario: Given ... When ... Then ...]
++- [ ] **AC-2**: [Scenario: Given ... When ... Then ...]
++
++---
++
++## Database & Data Safety Checklist
++<!-- If this PR touches database schemas, migrations, or data models, complete this section; otherwise check No Database Changes and mark the rest N/A. -->
++- [ ] **No Database Changes**: This PR does not touch schemas, tables, or queries.
++- [ ] **Expand-Contract Pattern** (when live/compatibility-sensitive data): All schema alterations are additive (non-breaking for rolling deploys); one-shot/disposable/pre-deployment may skip with documented rationale; otherwise `N/A`.
++- [ ] **No Destructive Drops**: No unauthorized `DROP TABLE`, `DROP COLUMN`, or `TRUNCATE` operations in this phase (when EC applies).
++- [ ] **Row-Level Security (RLS)** (when multi-tenant data exists): Policies verified for tenant/organization boundary enforcement; otherwise `N/A`.
++- [ ] **Query Efficiency** (when DB queries exist): Composite indexes added for high-cardinality filters and sorted queries; otherwise `N/A`.
++
++---
++
++## Testing & Verification Evidence
++<!-- Provide proof that the changes have been rigorously verified. -->
++
++### Automated Tests
++- **Test Runner Command**: `pnpm test`
++- **Results**: `[X] passing, 0 failing`
++- **Coverage Added**:
++  - Unit tests for: `[functions/modules]`
++  - Integration/E2E tests for: `[endpoints/user flows]`
++
++### Manual Verification Steps
++1. Navigate to `[URL or page]`
++2. Perform action `[step-by-step instructions]`
++3. Verify expected outcome `[result]`
++
++### Visual Changes (UI Before & After)
++<!-- If this PR modifies visual presentation, include screenshots or recordings. -->
++
++| Viewport / Theme | Before | After |
++| :--- | :--- | :--- |
++| **Desktop (Light)** | *(image or N/A)* | *(image or N/A)* |
++| **Desktop (Dark)**  | *(image or N/A)* | *(image or N/A)* |
++| **Mobile (390px)**  | *(image or N/A)* | *(image or N/A)* |
++
++---
++
++## Rollback Strategy
++<!-- How can this deployment be safely reversed if an incident occurs in production? -->
++- [ ] **Zero-State Rollback**: Reverting application code or rolling back the deployment SHA has no adverse database effects.
++- [ ] **Dual-Phase Rollback Required**: Rollback instructions documented below:
++  - *Steps*:
++
++---
++
++## Reviewer Focus Areas
++<!-- Highlight specific files, algorithms, or boundary conditions that deserve extra scrutiny. -->
++- `[path/to/file.ts:L20-L45]`: [Specific area for reviewer focus]
++
++---
++
++## Pre-Submission Quality Gate
++- [ ] Static checks pass with 0 errors (`tsc --noEmit` for TypeScript, or project's equivalent — `cargo check` / `ruff check` / `go vet` / `flutter analyze`)
++- [ ] All automated test suites pass locally per the project's verification
++- [ ] Scanned for secret leaks (`.env`, credentials, private tokens)
++- [ ] Verified all temporary debug probes (`[DEBUG-xxxx]`) are removed
++- [ ] Conforms to project guidelines in `PROMPTKIT.md` (and `DESIGN.md` if applicable)
+diff --git a/AGENTS.md b/AGENTS.md
+new file mode 100644
+index 0000000..e194a1d
+--- /dev/null
++++ b/AGENTS.md
+@@ -0,0 +1,72 @@
++<!-- PROMPTKIT_START -->
++## PromptKit OS: Engineering Operating System
++PromptKit OS is active in this workspace (`./.promptkit`). Follow these protocols, workflows, and quality gates during pair-programming, design, code generation, and review:
++Engine: v2.0.1-36-g9c8080d (9c8080d) — stamped at install time; run `pk:sync` to check for drift.
++
++### Fast Shorthand Triggers (Collision-Free)
++Activate workflows anytime with these namespaced triggers:
++- `pk:route`: Lifecycle router + decision matrix.
++- `pk:tutor` (or `pk:tutor beginner`, `pk:tutor architect`): Socratic mentorship, 3-tier hints.
++- `pk:grill`: Staff Engineer architecture interview + defense drill.
++- `pk:plan`: Spec-driven architecture + feature planning.
++- `pk:onboard`: Project intake + PROMPTKIT.md scaffold.
++- `pk:tasks` (or `pk:issue`, `pk:kanban`): Decompose specs into atomic issues.
++- `pk:review`: Multi-dimensional PR + architecture review.
++- `pk:commit`: Atomic commits, single-concern staging, secret-leak scan.
++- `pk:pr`: PR descriptions, verification evidence, GitHub CLI.
++- `pk:debug`: Hypothesis-driven debugging + root cause analysis.
++- `pk:fix`: Surgical remediation, security-first ordering.
++- `pk:refactor`: Structural debt remediation.
++- `pk:perf`: Performance profiling, latency SLAs.
++- `pk:data` (or `pk:db`): Relational modeling, indexing, RLS.
++- `pk:auth`: Auth flows, cookie security, session, RBAC.
++- `pk:api`: Frontend-backend handshake, unified envelopes.
++- `pk:test`: Testing strategy, seam allocation, mock boundaries.
++- `pk:ship`: Release engineering, migration sequencing.
++- `pk:spike` (or `pk:research`): Technical spikes + benchmarks.
++- `pk:design`: UI/UX, design tokens, WCAG 2.2 AA.
++- `pk:retro` (or `pk:reflect`): Retrospective log + ADR extraction.
++- `pk:checkpoint` (or `pk:handoff`): State compaction, STATE.md update, handover prompt.
++- `pk:sync` (or `pk:update`, `pk:refresh`): Hot-reload protocols, sync to disk.
++- `pk:profile`: Switch Lite/Balanced/Turbo profile at runtime.
++- `pk:auto`: Autonomous SDLC pipeline, stop at review-ready.
++- `pk:doctor`: Read-only installed-governance audit (hosts, engine version, ignore state, docs drift, intake provenance, submodule registration).
++
++### Smart Auto-Route & Guardrails (Triggers Are Optional)
++You do not need to memorize triggers. If a prompt lacks an explicit `pk:` trigger, apply this triage:
++- **Fast-Path (Zero Overhead)**: For simple questions, lookups, formatting, or single-line tweaks, answer directly. No heavy ceremony. **Risk-before-size**: 1-line security or data edits escalate immediately.
++- **TL;DR-First Output**: Start substantive turns with TL;DR 1-3 bullets (≤40w: outcome+next) → Details (tables/lines) → Next. Grade-8 plain. No paragraph >3 lines, no essay walls. L0 exempt. L2/L3 evidence never shortened. `TL;DR` live only; `Session Summary` checkpoint-only.
++- **Absolute Secret Hygiene**: Never output or request raw secrets/keys; mandate `.env.example` templates and local `.env`.
++- **Context Economy**: Lowest-cost context first; escalate on Hard Triggers (auth, DB, APIs, shared state). Anti-Starvation: halt/escalate before guessing.
++- **Search Circuit Breaker (advisory)**: 1 unit=1 read/search call (parallel batch=1). Halt past **≤6 (L0/L1)/≤12 (L2/L3)** with no task-advancing edit/test: HALT, ask for paths. Trivial edits do not reset. Read-only tasks exempt.
++- **Session Endurance**: Nudge ~15 substantive turns, hard checkpoint ~30 turns (L2/L3 hard, L1 adv). If unable to recite invariants from a fresh `docs/STATE.md` read, run `pk:checkpoint` for fresh session.
++- **STATE.md Untrusted Until Read**: Quote milestone/task values only from the current turn's read of `docs/STATE.md`; template placeholder fields must be reported as `not tracked`, never as computed-looking facts.
++- **Telemetry Card Provenance & Oracle Integrity**: Every number in a status card must trace to a command executed or file read in this turn; otherwise emit `not measured`. Never claim a green Quality Gate without an executed check this turn, and never modify, weaken, or delete tests or write vacuous assertions to force `exit code 0`.
++- **Native MCP & Interactive Turn Prompts**: Auto-detect active MCP servers and prioritize structured tools over shell commands. Format discretionary Type A/B choices per `card-style:` in `PROMPTKIT.md` (framed box default; `> [!TIP]` when markdown) only when no `[!IMPORTANT]` or `[!WARNING]` halt is active. Route Type C/D decisions through their decision card, and suppress TIP whenever a higher-priority halt is present. When a Type A/B choice has a supported native picker, use it; otherwise format at most 3-4 priced options under `### 💡NEXT STEPS (Type number & Enter):` with Option 1 `(Recommended + why)`. A numeric reply selects only that stated option; it does not authorize a separate protected action.
++- **Telemetry Cards & Single Callout**: Emit card and callouts per `card-style:` (`.promptkit/protocols/telemetry-cards.md`: framed ceiling/floor box default; GFM alert when markdown; `[■■■■■■■■□□]`). Max 1 callout/turn (IMPORTANT > WARNING > TIP). Suppress cards on `status-cards: off` (halts fire); silent on empty state.
++- **Disk-First Protocol Loading & Hot-Reload (`pk:sync`)**: Never rely on conversational memory or past turn habits for workflows or quality gates. Always read `.promptkit/workflows/<trigger>.md` freshly from disk. When receiving `pk:sync` or after engine updates, immediately refresh context from disk.
++- **Context Recovery**: After handover, compaction/continuation, task-invariant loss, or status interruption that displaced active work, pause writes; read `.promptkit/workflows/sync.md` before resuming.
++- **Pre-Response Check**: Before replying, confirm stop state, the highest-priority unresolved human action with its concrete action + `👉 Reply:` hint, retained suppressed actions, honest evidence, and TL;DR on substantive turns (L0 exempt); see `.promptkit/protocols/telemetry-cards.md`.
++- **Project Database & Harness Isolation**: Integration tests and DB verification must use dedicated project-scoped containers (e.g. `./docker-compose.yml`). Never run destructive queries against foreign project containers or credentials.
++- **Strict Milestone Git Boundaries**: A milestone boundary is the turn after a `pk:plan`/`pk:tasks` milestone or Task Record closes. Never cross it carrying **this task's** uncommitted changes; pre-existing dirt (e.g. init output) is surfaced and recommended for `pk:commit`, never a stall reason. At milestone end: stage atomically (`pk:commit`), update `docs/STATE.md`, request human sign-off (`> [!IMPORTANT]`).
++- **Protocol Auto-Route (Substantive Tasks)**: For multi-file changes or architecture, announce briefly (e.g. `[PromptKit OS: Auto-routed to pk:plan]`) and adopt the matching workflow from the Fast Shorthand Triggers above (`pk:auto` for unattended execution).
++
++### Workflows & Protocols Reference
++Load lazily by convention — never preload:
++- Workflow: `.promptkit/workflows/<trigger>.md` (e.g. `pk:plan` -> `workflows/plan.md`, `pk:design` -> `workflows/design-system.md`)
++- Trigger-to-file exceptions (the convention alone would misresolve these): `pk:spike` -> `research.md`, `pk:retro` -> `reflect.md`, `pk:grill` -> `tutor.md`, `pk:design` -> `design-system.md`; parenthesized aliases inherit: `pk:db` -> `data.md`, `pk:handoff` -> `checkpoint.md`, `pk:issue`/`pk:kanban` -> `tasks.md`, `pk:update`/`pk:refresh` -> `sync.md`; all other triggers match their file name.
++- Protocols: `.promptkit/protocols/{setup,context-sync,code-quality-gate,subagent-delegation}.md`
++- Router: load `.promptkit/workflows/route.md` only when routing is ambiguous or Level 3 escalation/downgrade rules are needed
++- Project files: `./PROMPTKIT.md`, `./DESIGN.md`, `./docs/STATE.md` (if present)
++
++### Task Ceremony Levels (classify here — do not load route.md to decide)
++Declare on line 1 of Turn 1 (no banner for informational L0 fast-path): `[PromptKit OS: Level <0-3> (<Name>) — <1-line reason>]`
++- **L0 Direct**: questions, lookups, doc typos, formatting, non-risky 1-line edits. `understand -> change -> verify`. No task record. Risk-before-size: 1-line security/data edits escalate.
++- **L1 Standard**: localized bug fix, small self-contained feature, no schema/auth/breaking contract. Inline planning; no Task Record file.
++- **L2 Controlled**: schema/migrations, auth, permissions, public contracts, multi-component. Requires `docs/tasks/<task-id>.md` + spec before implementation.
++- **L3 Release-Critical**: release, tag, deploy, high-impact contract change. Requires L2 evidence + `pk:ship` + explicit human approval.
++- **Escalate** immediately if scope grows into persistent data, auth, public contracts, or multiple components. **Ties take the higher level.** Downgrades must be announced with a one-line reason; silent downgrade is a protocol violation. `workflows/route.md` remains the canonical authority for these rules and for downgrade guardrails.
++
++### Project Artifact Output Paths
++Save generated project documentation to host `./docs/` per `PROMPTKIT.md` (State: `docs/STATE.md`, Tasks: `docs/tasks/`, Specs: `docs/specs/`, ADRs: `docs/adrs/`, Releases: `docs/releases/`). Specialized directories (`data/`, `auth/`, `api/`, `tests/`, `design/`, `perf/`, `rca/`, `spikes/`, `reviews/`) are created on-demand.
++<!-- PROMPTKIT_END -->
+diff --git a/PROMPTKIT.md b/PROMPTKIT.md
+index e397231..c3cae76 100644
+--- a/PROMPTKIT.md
++++ b/PROMPTKIT.md
+@@ -5,14 +5,13 @@
+ > **Scope note**: This file describes the `promptkit-os` repository itself for contributors. It is installed to `.promptkit/PROMPTKIT.md` in consumer projects and never overrides a consumer's own `./PROMPTKIT.md`.
+ 
+ ## 0. PromptKit OS Profile
+-- **Profile**: `balanced` (options: `lite` | `balanced` | `turbo` experimental)
++- **Profile**: balanced
+ - **Description**:
+   - `lite`: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value — onboarding
+   - `balanced`: the full 26-workflow set, Level 0-3 adaptive ceremony (default) — teams, production
+   - `turbo`: experimental, Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval
+ - **Upgrade Path**: Run `.promptkit/init.sh --balanced` for full, `--lite` for minimal, `--turbo --experimental` for parallel waves — or switch in-session with `pk:profile`
+ 
+-profile: balanced
+ 
+ status-cards: on
+ > `status-cards: on` (default) emits the 3-line telemetry card on completion; `off` suppresses the decorative card only — `> [!IMPORTANT]` / `> [!WARNING]` halts still fire. A missing line means `on`.
+@@ -91,4 +90,5 @@ All artifacts generated by PromptKit workflows must be saved to these host proje
+ - [ ] **No synthetic base**: Never derive a comparison base (review fixed point, PR base, changelog range, drift-audit upstream comparison) from a synthetic workspace commit; run `scripts/check-synthetic-base.sh` and return to the carrying branch on refusal. See `docs/MAXIMS.md`.
+ - [ ] **Context Window Reset Threshold (~30 Turns)**: When conversation approaches ~30 turns or high token saturation, run `pk:checkpoint` to synchronize `docs/STATE.md` and recommend continuing in a fresh session via `pk:route`.
+ 
++profile: balanced
+ tracking: local
+diff --git a/docs/STATE.md b/docs/STATE.md
+new file mode 100644
+index 0000000..3d3929d
+--- /dev/null
++++ b/docs/STATE.md
+@@ -0,0 +1,178 @@
++# Project State & Living Execution Tracker
++
++## 1. Executive Summary & Current Position
++- **Project Name**: [Project Name]
++- **Current Milestone / Epic**: [e.g., Milestone 2: Core Domain Engine]
++- **Overall Status**: [ACTIVE | PAUSED | STABILIZING | RELEASE_CANDIDATE | COMPLETED] <!-- ACTIVE while work is in flight; COMPLETED only when all milestones closed, release evidence archived, zero open blockers — recording stops here -->
++- **Target Release / Deadline**: [e.g., v1.0.0 / YYYY-MM-DD]
++- **Current Working Branch**: [e.g., main or feature/branch-name]
++- **Last Updated**: [YYYY-MM-DD]
++- **Engine Version**: v2.0.1-36-g9c8080d @ 9c8080d
++
++---
++
++## 2. Milestone & Task Progress
++
++### Milestone Roadmap
++- [ ] **Milestone 1**: not tracked — defined by `pk:onboard` intake, then owned here
++
++### Active Milestone Task Breakdown
++Track tasks using atomic checklists (`[x]` Done, `[/]` In Progress, `[ ]` Queued, `[!]` Blocked):
++
++- [ ] not tracked — populated by `pk:tasks` and `pk:checkpoint` from real execution, never pre-filled
++
++---
++
++## 3. Active Working Set
++- **Target Workspace / Package (if Monorepo)**: [e.g. `apps/web` or `@repo/db` (leave blank for standalone repo)]
++- **Active RFC / Spec**: not tracked — recorded here when planning starts, never pre-filled
++- **Active Task Spec**: not tracked — recorded here when task breakdown starts, never pre-filled
++- **Key Source Files in Flight**: not tracked — recorded here when work starts, never pre-filled
++- **Verification Commands (Scoped)** (replace with the project's native commands once the host stack is observed; npm shown as example):
++  - Unit Tests: `npm test` (or `pnpm --filter <pkg> test`, `turbo run test --filter=<pkg>`)
++  - Typecheck: `npm run typecheck` (or `pnpm --filter <pkg> typecheck`)
++  - Linter: `npm run lint` (or `pnpm --filter <pkg> lint`)
++
++---
++
++## 3A. Execution-Control Projection (Optional)
++
++> This section is a synchronized projection for checkpoint continuity when the host project uses Controlled Work. The canonical authority remains `docs/tasks/<task-id>.md`; disagreement with that record is a validation failure and leaves execution blocked or `checkpoint_due` until reconciled. When a field carries verbatim command output containing a pipe character (for example a validator summary `VALID|RECORDS=28`), escape it as `\|` inside markdown table cells so the table does not read it as a column separator; it then renders as the verbatim `|`.
++
++- **Local Task Source**: `docs/tasks/<task-id>.md`
++- **Task ID**: `TASK-<task-slug>` (preserve `TASK-YYYY-MM-DD-<slug>` for legacy/`none`-profile records)
++- **Task Record**: `docs/tasks/<task-id>.md`
++- **Ceremony Level**: `[Level 1 (Standard) | Level 2 (Controlled) | Level 3 (Release-Critical)]`
++- **Specification**: `docs/specs/[specification].md`
++- **Execution Scope**: `[Repository, workspace, package, or session boundary]`
++- **Execution State**: `[planned | ready | in_progress | checkpoint_due | blocked | paused | handoff_ready | awaiting_review | completed | aborted]`
++- **Mapped `pk:tasks` Status**: `[To Do | In Progress | In Review | Done]`
++- **Active Task Pointer**: `[Task ID while active, otherwise None]`
++- **Owner / Current Actor**: `[Person, role, agent, or session]`
++- **Start Time**: `[YYYY-MM-DD HH:MM UTC or N/A]`
++- **Current Branch**: `[Branch name]`
++- **Current Revision**: `[Exact commit or revision]`
++- **Checkpoint Policy**: `[Soft/hard intervals, event triggers, and host timer capability/limitation]`
++- **Blockers and Resume Condition**: `[Blocker, owner, evidence, and precise condition, or None]`
++- **Verification Status**: `[Commands, results, and timestamp]`
++- **CI Evidence**: `[Provider, workflow/job, run, revision, result, or N/A]`
++- **Changed-File Summary**: `[Current working set summary]`
++- **Latest Checkpoint**: `[Record path or None]`
++- **Latest Handoff**: `[Record path or None]`
++- **Next Action**: `[Exactly one prioritized action]`
++
++#### Field-mapping (checkpoint labels)
++
++| Label | Quick (L1) required | From /handoff payload | Derivable from local git | Degrades to (when unmappable) |
++| :--- | :--- | :--- | :--- | :--- |
++| Record Type | yes | no | no | n/a |
++| Checkpoint ID | yes | no | no | n/a |
++| Task ID | no | yes | no | TRACEABILITY_MISSING (full); `N/A — no Task Record (Level 0/1)` (quick) |
++| Specification | no | yes | no | POLICY_LIMITATION |
++| Created | yes | partial | yes | n/a |
++| Checkpoint Type | no | no | no | POLICY_LIMITATION |
++| Execution State | yes | yes | no | not measured |
++| Objective | yes | yes | no | not measured |
++| Completed Work | no | partial | no | not measured |
++| Remaining Work | yes | partial | no | not measured |
++| Changed Files | no | yes | yes | not measured |
++| Branch / Revision | no | yes | yes | n/a |
++| Locked Decisions and Invariants | no | yes | no | not measured |
++| Verification Evidence | no | yes | no | not measured |
++| CI Evidence | no | partial | no | POLICY_LIMITATION |
++| Blockers | yes | partial | no | not measured |
++| Scope Changes | no | partial | no | not measured |
++| Next Action | yes | yes | no | not measured |
++| Resume Condition | yes | partial | no | not measured |
++| Recorded By | yes | no | no | POLICY_LIMITATION |
++
++The importer emits a `Ceremony Level` line in every draft whose level is known, so a `quick` draft re-validates at the quick tier. Level 0 payloads are refused (`REFUSED-L0`); unlabeled payloads default fail-closed to the `full` tier. Verdicts: `QUICK-VALID` (all ten quick labels resolve at Level 1; unresolved full-only labels degrade via `POLICY_LIMITATION` and are never reported as full-valid), `FULL-VALID` (all 20 labels and a resolvable Task ID), otherwise `DRAFT-INCOMPLETE`. The exit status is 0 only for `QUICK-VALID` or `FULL-VALID`. A resolvable linked Task Record owns the tier: a lower payload claim is flagged as a downgrade (`POLICY_LIMITATION`) and the draft takes the record's level. A supplied `Task ID` that does not resolve, or a `Checkpoint ID` that is not a stable canonical ID, stays visible in the draft and counts as unresolved, so canonical re-validation reports the same failure.
++
++---
++
++## 3B. Release-Evaluation Handoff (Optional)
++
++> Use this projection only when PromptKit OS release evaluation is being handed from QA/Reviewer to a Release Coordinator. It is a durable handoff, not approval, and the canonical evaluation or Task Record remains authoritative.
++
++- **Evaluation ID**: `[evaluation ID or N/A]`
++- **Release Candidate Commit**: `[exact candidate revision or N/A]`
++- **Preliminary SemVer Candidate**: `[preliminary version, including prerelease identifier when applicable, or N/A]`
++- **QA/Reviewer Result**: `[Pass | Fail | Pending | N/A]`
++- **Unresolved Blockers**: `[blocker, owner, and resolution condition, or None]`
++- **Requested Release Coordinator Decision / Next Approval Action**: `[exact human decision requested, or N/A]`
++- **Handoff Status**: `[Ready for Coordinator Review | Blocked | Deferred | N/A]`
++- **Approval Boundary**: `This projection does not approve a candidate or version and does not authorize tag creation, hosted release creation, changelog publication, remote operations, deployment, or rollback.`
++- **Source Evaluation / Task Record**: `[authoritative record path or N/A]`
++
++---
++
++## 4. Locked Technical Invariants (Do Not Undo)
++Document non-negotiable architectural decisions agreed upon during pairing sessions. Every **actual invariant entry** is a human-approved rule that carries an inline source: a confirmed decision ID (`DECISION-*`) or an explicit pre-existing project policy (`policy:` plus a project-relative path). An entry without one of those two sources is not an invariant.
++
++**Illustrative syntax — not invariant entries.** The fenced lines below show only the required `source:` shape. They are placeholders, not locked or human-approved rules, and must never be copied into a tracker as policy:
++
++```text
++<invariant> — source: DECISION-<spec-slug>-<nnn>
++<invariant> — source: policy: <project-relative path>
++```
++
++A candidate learning, derived PromptKit baseline, or unverified recommendation is never human-approved or locked without one of those sources. Keep it in §4A until the human decision is recorded (`protocols/context-sync.md` §3.1).
++
++A contradiction between a detected project document and a confirmed decision is not a §4 entry: the Intake Record owns those divergence rows (`protocols/discovery-intake.md` §G). A precedence statement about a detected project document belongs in §4 only when a human approved it and it cites its `DIVERGENCE-*` row or policy path; an unsupported override claim stays out of the tracker.
++
++**Empty state — not an invariant entry.** Until a pairing session locks a real decision, leave §4 without entry bullets; keep only this guidance and never pre-fill an entry.
++
++---
++
++## 4A. Candidate Learnings (Unpromoted)
++
++Staging area for rules observed during sessions but not yet approved as invariants. Entries here are **never pre-filled** and are non-authoritative: agents must not treat them as policy, quote them as invariants, or copy them into project guardrails. Promotion requires a recorded human decision (`approved` / `rejected` / `deferred`) with approver, date, evidence reference, and destination (see `protocols/context-sync.md` §3.1).
++
++| Date | Proposed Rule | Source / Evidence | Scope | Status | Human Decision (approver, date, destination) |
++| :--- | :--- | :--- | :--- | :--- | :--- |
++| not tracked | not tracked | not tracked | not tracked | not tracked | not tracked |
++
++---
++
++## 5. Known Blockers, Risks & Open Questions
++- **Blockers**:
++  - [e.g., TASK-06 blocked on third-party API sandbox credentials from devops team]
++- **Architectural Questions**:
++  - [e.g., Evaluate Redis vs in-memory caching for session tokens before Milestone 4]
++- **Technical Debt & Risks**:
++  - [e.g., Monolithic test suite is taking >45s in CI; needs sharding before launch]
++
++---
++
++## 6. Recent Architectural Decisions (ADR Log)
++| Date | Title & Scope | Decision Summary | ADR File |
++| :--- | :--- | :--- | :--- |
++| not tracked | not tracked | not tracked | not tracked |
++
++---
++
++## 7. Next Immediate Actions (Queued)
++1. not tracked — populated by `pk:checkpoint` from real session state, never pre-filled.
++
++---
++
++## 8. Session Continuity Log
++Compact record of pairing sessions to enable instant chat resumption:
++<!-- Table Invariant: Keep rows strictly contiguous without blank lines; escape literal pipes as \|; use <br> for multi-line cells -->
++
++| Date | Engineer / Agent | Milestone / Focus | Key Changes & Artifacts |
++| :--- | :--- | :--- | :--- |
++| not tracked | not tracked | not tracked | not tracked |
++
++---
++
++## 9. Session Spend Ledger
++<!-- Table Invariant: Keep rows strictly contiguous without blank lines; escape literal pipes as \|; use <br> for multi-line cells -->
++
++| Session | Turns | Measured in/out | Estimated context payload | Note |
++| :--- | :--- | :--- | :--- | :--- |
++| not tracked | not tracked | not tracked | not tracked | not tracked |
++
++- **Running total**: not tracked — refreshed by `pk:checkpoint`; keep measured tokens and heuristic context-payload ranges as separate totals and never add them together. One row per real work session (trivial sessions under ~5 turns with no workflow usage write nothing). When host metering is unavailable, compute the lower and upper bounds independently via the heuristic (`turns × 8k` through `turns × 15k tok/turn`) rather than emitting a midpoint or `not measured`.
++- **Note evidence**: use `duration=<value>; repairs=<count or not tracked>; interventions=<count or not tracked>; verification=<result or not tracked>; outcome=<accepted | rejected | incomplete | blocked | not tracked>`. Never infer `0`, `passed`, or `accepted` from missing evidence.
++- **Evidence boundary**: this ledger is operational telemetry, not CPAC benchmark evidence. Heuristic context payload is not provider billing telemetry or actual spend; avoided rework remains `not measured` without comparative evidence. Preserve historical rows and the five-column shape without silent backfill.
+diff --git a/scripts/measure-per-task-tokens.ps1 b/scripts/measure-per-task-tokens.ps1
+index 9bd121f..2360556 100644
+--- a/scripts/measure-per-task-tokens.ps1
++++ b/scripts/measure-per-task-tokens.ps1
+@@ -1,6 +1,7 @@
+ #!/usr/bin/env pwsh
+ # PromptKit OS Per-Task Token Measurement Utility (PowerShell twin)
+ # Measures directive + workflow + gate payload for pk:fix, pk:plan, pk:ship
++# Also measures the Ceremony Artifacts section (task-record, checkpoint, handoff)
+ # Uses bytes/4 convention, same as measure-tokens.ps1
+ Set-StrictMode -Version Latest
+ $ErrorActionPreference = "Stop"
+@@ -60,6 +61,18 @@ $SHIP_TOK = Measure-File (Join-Path $KitDir "workflows/ship.md")
+ $TECH_SPEC_TOK = Measure-File (Join-Path $KitDir "templates/tech-spec-template.md")
+ $RELEASE_CHECKLIST_TOK = Measure-File (Join-Path $KitDir "templates/release-checklist.md")
+ 
++# Ceremony artifacts
++$CeremonyTaskRecord = Join-Path $KitDir "templates/execution-task-record-template.md"
++$CeremonyCheckpoint = Join-Path $KitDir "templates/execution-checkpoint-template.md"
++$CeremonyHandoff = Join-Path $KitDir "templates/execution-handoff-template.md"
++
++$CEREMONY_TASK_RECORD_TOK = Measure-File $CeremonyTaskRecord
++$CEREMONY_TASK_RECORD_BYTES = Get-ByteCount $CeremonyTaskRecord
++$CEREMONY_CHECKPOINT_TOK = Measure-File $CeremonyCheckpoint
++$CEREMONY_CHECKPOINT_BYTES = Get-ByteCount $CeremonyCheckpoint
++$CEREMONY_HANDOFF_TOK = Measure-File $CeremonyHandoff
++$CEREMONY_HANDOFF_BYTES = Get-ByteCount $CeremonyHandoff
++
+ Write-Output ""
+ Write-Output "📊 PromptKit OS Per-Task Token Analysis (bytes/4)"
+ Write-Output "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+@@ -85,6 +98,12 @@ Write-Output "  plan.md: $PLAN_TOK tok"
+ Write-Output "  ship.md: $SHIP_TOK tok (after extraction, was ~8,292 tok before)"
+ Write-Output ""
+ 
++Write-Output "Ceremony Artifacts:"
++Write-Output "CEREMONY|task-record|$CEREMONY_TASK_RECORD_BYTES|$CEREMONY_TASK_RECORD_TOK"
++Write-Output "CEREMONY|checkpoint|$CEREMONY_CHECKPOINT_BYTES|$CEREMONY_CHECKPOINT_TOK"
++Write-Output "CEREMONY|handoff|$CEREMONY_HANDOFF_BYTES|$CEREMONY_HANDOFF_TOK"
++Write-Output ""
++
+ # Calculate per-task payloads
+ $BASELINE_FIX = 12861
+ $BASELINE_PLAN = 24666
+diff --git a/scripts/measure-per-task-tokens.sh b/scripts/measure-per-task-tokens.sh
+index d82eca6..4531919 100755
+--- a/scripts/measure-per-task-tokens.sh
++++ b/scripts/measure-per-task-tokens.sh
+@@ -1,6 +1,7 @@
+ #!/usr/bin/env bash
+ # PromptKit OS Per-Task Token Measurement Utility
+ # Measures directive + workflow + gate payload for pk:fix, pk:plan, pk:ship
++# Also measures the Ceremony Artifacts section (task-record, checkpoint, handoff)
+ # Uses bytes/4 convention, same as measure-tokens.sh
+ set -euo pipefail
+ 
+@@ -49,6 +50,27 @@ SHIP_TOK=$(measure_file "$KIT_DIR/workflows/ship.md")
+ TECH_SPEC_TOK=$(measure_file "$KIT_DIR/templates/tech-spec-template.md")
+ RELEASE_CHECKLIST_TOK=$(measure_file "$KIT_DIR/templates/release-checklist.md")
+ 
++# Ceremony artifacts
++CEREMONY_TASK_RECORD="$KIT_DIR/templates/execution-task-record-template.md"
++CEREMONY_CHECKPOINT="$KIT_DIR/templates/execution-checkpoint-template.md"
++CEREMONY_HANDOFF="$KIT_DIR/templates/execution-handoff-template.md"
++
++measure_bytes() {
++    local file="$1"
++    if [[ ! -f "$file" ]]; then
++        echo "MEASURE_ERROR|MISSING|$file" >&2
++        exit 2
++    fi
++    tr -d '\r' < "$file" | wc -c | tr -d ' '
++}
++
++CEREMONY_TASK_RECORD_BYTES=$(measure_bytes "$CEREMONY_TASK_RECORD")
++CEREMONY_TASK_RECORD_TOK=$(measure_file "$CEREMONY_TASK_RECORD")
++CEREMONY_CHECKPOINT_BYTES=$(measure_bytes "$CEREMONY_CHECKPOINT")
++CEREMONY_CHECKPOINT_TOK=$(measure_file "$CEREMONY_CHECKPOINT")
++CEREMONY_HANDOFF_BYTES=$(measure_bytes "$CEREMONY_HANDOFF")
++CEREMONY_HANDOFF_TOK=$(measure_file "$CEREMONY_HANDOFF")
++
+ echo ""
+ echo "📊 PromptKit OS Per-Task Token Analysis (bytes/4)"
+ echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+@@ -69,6 +91,12 @@ echo "  plan.md: $PLAN_TOK tok"
+ echo "  ship.md: $SHIP_TOK tok (after extraction, was ~8,292 tok before)"
+ echo ""
+ 
++echo "Ceremony Artifacts:"
++echo "CEREMONY|task-record|$CEREMONY_TASK_RECORD_BYTES|$CEREMONY_TASK_RECORD_TOK"
++echo "CEREMONY|checkpoint|$CEREMONY_CHECKPOINT_BYTES|$CEREMONY_CHECKPOINT_TOK"
++echo "CEREMONY|handoff|$CEREMONY_HANDOFF_BYTES|$CEREMONY_HANDOFF_TOK"
++echo ""
++
+ # Calculate per-task payloads
+ # Baseline = old behavior: directive (1882) + route (6962) + workflow + gate + template
+ # New = directive (full or lite) + workflow + gate + template (no route)

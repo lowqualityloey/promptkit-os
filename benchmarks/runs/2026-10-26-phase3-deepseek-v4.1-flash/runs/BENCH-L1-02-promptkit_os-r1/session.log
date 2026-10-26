@@ -1,0 +1,14 @@
+Both scripts now include a Ceremony Artifacts section. Verified output from each:
+
+```
+CEREMONY|task-record|19249|4812
+CEREMONY|checkpoint|3308|827
+CEREMONY|handoff|3912|978
+```
+
+- Bytes are CR-stripped counts; tokens are `floor((bytes + 2) / 4)` — e.g. `(19249+2)/4 = 4812`.
+- The section is emitted after the existing Workflows block; all pre-existing report lines, payloads, baselines, and strict-gate lines are byte-identical (diff is insertions only), and both headers mention the new section.
+- `bash scripts/measure-per-task-tokens.sh --strict` → exit 0, all six baselines PASS.
+- `/usr/bin/pwsh -NoProfile -File ./scripts/measure-per-task-tokens.ps1 -Strict` → exit 0, all six baselines PASS.
+
+Only the two script files were modified. Auto-logged the milestone to the loey_space daily note and handoff (`RESULT done logged`).

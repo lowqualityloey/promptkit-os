@@ -314,8 +314,8 @@ For full mathematical definitions, pricing constants, and the A/B evaluation pro
   accepted sessions — the fixtures and self-tests verify mechanics, not outcomes.
 - [`../benchmarks/README.md`](../benchmarks/README.md) — the A/B benchmark harness: frozen task
   specs with rubrics, the paired-run protocol over headless Command Code (PromptKit directive vs
-  bare), blind grading, and per-arm aggregation through the §5 pipeline. No batch has been
-  executed or published yet; the harness demonstrates mechanics, not outcomes.
+  bare), blind grading, and per-arm aggregation through the §5 pipeline.
+- [`../benchmarks/runs/2026-10-26-phase3-deepseek-v4.1-flash/README.md`](../benchmarks/runs/2026-10-26-phase3-deepseek-v4.1-flash/README.md) — the first published live batch (2026-10-26): 3 tasks × 2 arms × 1 repeat on `deepseek/deepseek-v4.1-flash`; all six runs accepted, with a higher token/CPAC mean for the PromptKit arm and both L2 sessions at the 900-second cap. Six sessions, one model, single-reviewer grading; the two L0 verify packets leaked run paths before the harness scrub, so the L0 grade is reported as only partially blind. Raw transcripts stay local; the key is withheld but derivable from the published stripped diffs. Directional evidence only.
 
 ---
 

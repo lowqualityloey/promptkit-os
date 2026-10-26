@@ -1,0 +1,16 @@
+Both scripts now emit the ceremony block, and both strict runs exit 0.
+
+**What I added** (only the two scripts touched):
+- A shared byte-count helper so `b` and `t` come from the same CR-stripped read.
+- A `Ceremony Artifacts:` section placed after `Workflows:`, printing in order:
+```
+CEREMONY|task-record|19249|4812
+CEREMONY|checkpoint|3308|827
+CEREMONY|handoff|3912|978
+```
+Tokens are `floor((bytes+2)/4)` — 19251/4→4812, 3310/4→827, 3914/4→978. Bash and pwsh produce identical lines.
+- Header comments in both files now mention the new section.
+
+**Verification**: `bash scripts/measure-per-task-tokens.sh --strict` and `/usr/bin/pwsh -NoProfile -File ./scripts/measure-per-task-tokens.ps1 -Strict` both exit 0. I diffed each against the pre-change script's output (rebuilt from `HEAD`) with ceremony lines filtered out: everything matches exactly except one added blank separator line — all existing lines, payloads, baselines, and six `BASELINE|...|PASS` results are unchanged. `git status` shows only the two scripts modified.
+
+One caveat on logging: `heyloey done` returned **partial** (exit 5) — `daily=written` but the daily entry wasn't verified inside `## 📝 Daily Log`; `handoff=verified`.

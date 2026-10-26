@@ -1,0 +1,22 @@
+PREFLIGHT|OK|engine=9c8080d|seed=9c8080d|model=deepseek/deepseek-v4.1-flash|cli=1.88.0
+RUNDONE|BENCH-L0-01-promptkit_os-r1|arm=promptkit_os|level=L0|cli_exit=0
+RUNDONE|BENCH-L0-01-bare-r1|arm=bare|level=L0|cli_exit=0
+RUNDONE|BENCH-L1-02-promptkit_os-r1|arm=promptkit_os|level=L1|cli_exit=0
+RUNDONE|BENCH-L1-02-bare-r1|arm=bare|level=L1|cli_exit=0
+RUNDONE|BENCH-L2-02-promptkit_os-r1|arm=promptkit_os|level=L2|cli_exit=124
+RUNDONE|BENCH-L2-02-bare-r1|arm=bare|level=L2|cli_exit=124
+BLIND|B001
+BLIND|B002
+BLIND|B003
+BLIND|B004
+BLIND|B005
+BLIND|B006
+BATCH|OK|runs=6|out=/tmp/bench-batch-1-clean
+Next steps (operator):
+1. Grade each $OUT/grading/B*.diff (+ B*.verify.txt when present) against the
+   task rubric WITHOUT reading $OUT/grading/key.csv; write
+   $OUT/grading/grading.tsv as
+   blind_id<TAB>rubric_passed<TAB>rubric_total<TAB>accepted(true|false).
+2. Finalize (translates blind ids via the key, re-extracts records with the
+   graded acceptance, then aggregates with the sheet as cross-check):
+   bash benchmarks/run-ab-benchmark.sh --finalize "$OUT" --grading "$OUT/grading/grading.tsv"

@@ -1,0 +1,15 @@
+diff --git a/docs/BENCHMARKS.md b/docs/BENCHMARKS.md
+index 8b65371..61770b9 100644
+--- a/docs/BENCHMARKS.md
++++ b/docs/BENCHMARKS.md
+@@ -234,6 +234,10 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
+ - **Avoid Flagship Burn on L0 Tasks**: Standard coding assistants frequently waste expensive flagship reasoning tokens on basic single-line formatting, regex syntax checks, or documentation typo fixes. Routing Level 0 tasks to economy models reduces token spend significantly on daily ad-hoc queries.
+ - **Avoid Reasoning Failures on Hard Tasks**: Conversely, under-powering database migrations (Expand-Contract) or authentication boundary redesigns with lightweight models causes expensive defect repair loops. Deploying deep reasoning models exclusively on Level 2/3 work provides a verification standard for intended zero-downtime safety while keeping total aggregate token budgets lean.
+ 
++### Ceremony Artifact Overhead
++
++Per-level ceremony artifact overhead is **not yet measured**. The Level 1–3 ceremony records are the execution task record ([`templates/execution-task-record-template.md`](../templates/execution-task-record-template.md)), the execution checkpoint ([`templates/execution-checkpoint-template.md`](../templates/execution-checkpoint-template.md)), and the execution handoff ([`templates/execution-handoff-template.md`](../templates/execution-handoff-template.md)). No size or token figure is published for these artifacts until they are measured, and the figures in the sections above do not include them. Tracking issue: [#607](https://github.com/lowqualityloey/promptkit-os/issues/607).
++
+ ---
+ 
+ ## 8. Turbo Protocol Economics — Measured Bounds & Decision (Issue #145)

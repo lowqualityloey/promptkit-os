@@ -1,0 +1,69 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 23d8ff4..1335df3 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
+ - **CPAC real telemetry ingestion (§5 record scoring + Command Code extraction)**: the CPAC utility is no longer simulated-only. New `scripts/extract-commandcode-telemetry.sh`/`.ps1` convert a Command Code session transcript (`~/.commandcode/projects/<slug>/<session>.jsonl`, JSONL schema v3) into the standardized telemetry record defined in `docs/BENCHMARK-METHODOLOGY.md` §5 — successful-turn token sums split from rework turns by a documented turn-walk rule, tool-call totals with a best-effort search/edit/verify classification, human interventions (user prompts after the first), wall clock from the first/last event timestamps, the last assistant model, and cache-read tokens reported but excluded from `C_inference` (the v1 cache convention, since §2 prices a single input tier); `accepted` defaults to `false` with a loud stderr note because acceptance is a human judgment. `scripts/measure-cpac.sh`/`.ps1` now score such a record from a path argument: required keys validated fail-closed (exit `2` with `CPAC|ERROR|MISSING_KEY|<key>` / `BAD_VALUE` / `UNREADABLE` diagnostics) and a measured scorecard plus a `CPAC|MEASURED|...` machine line printed, with new pricing override flags (`--price-in/--price-out/--rework-tool-cost/--human-rate`; PS `-PriceIn/-PriceOut/-ReworkToolCost/-HumanRate`) for cross-model repricing. Both twins reach byte-identical records and machine lines from identical inputs (verified on a real transcript); the Bash extractor is a dependency-free awk state machine (no jq/python/node), and transcript-derived values never re-enter the shell parser. Rework-loop failure detection is a documented heuristic (Command Code schema v3 records no tool exit codes), approximating dimension 3's non-zero-exit-code measurement via a pattern list over tool-result text (`--error-patterns` overridable). A fixture harness (`scripts/tests/run-cpac-ingestion-tests.sh`/`.ps1`, 17 Bash / 16 PowerShell paired cases) pins the formula expectations, machine lines, fail-closed diagnostics (including tail-anchored values and negative-metric rejection added by the post-audit hardening), an stderr-empty-on-valid-run regression, exact extraction fields, and an extraction→scoring end-to-end case; `measure-cpac.sh`/`.ps1` (previously syntax-checked nowhere) and the new scripts join both CI syntax lists and both run legs, with matching `CONTRIBUTING.md` validation-command entries. The simulated scorecard is preserved, labeled, behind `--demo`/`-Demo`. Behavior-surface paths: `scripts/measure-cpac.sh`, `scripts/measure-cpac.ps1`, `scripts/extract-commandcode-telemetry.sh`, `scripts/extract-commandcode-telemetry.ps1`, `scripts/tests/run-cpac-ingestion-tests.sh`, `scripts/tests/run-cpac-ingestion-tests.ps1`, `scripts/tests/fixtures/cpac-ingestion/`, `.github/workflows/ci.yml`, `CONTRIBUTING.md`, `docs/BENCHMARK-METHODOLOGY.md`, `docs/BENCHMARKS.md`, `docs/specs/SPEC-empirical-benchmark.md`, `docs/ARCHITECTURE.md`, `docs/tasks/TASK-2026-10-25-cpac-telemetry-ingestion.md`.
+ 
+ ### Changed
++- **Transitive context-economy discovery route regression guard (issue #596, documentation correction)**: `protocols/context-economy.md` §11 no longer claims that no automated check exercises the transitive discovery route to the file. That claim was true until the behavioral-contract suites gained a scenario pinning the route's static text: both `scripts/tests/run-behavioral-contract-tests.sh` and `scripts/tests/run-behavioral-contract-tests.ps1` now assert that the Balanced and Lite directive protocol lines reference `setup`, that `protocols/setup.md` lists `context-economy.md` in its workflows and protocols reference, and that `docs/WORKFLOW-MAP.md` links it. The corrected paragraph keeps live-transcript validation explicitly open — the guard proves the route is still written down, not that an agent follows it, and Balanced/Lite discoverability and sufficiency remain open acceptance evidence. Documentation and tests only: the directive templates, `protocols/setup.md`, and `docs/WORKFLOW-MAP.md` are unchanged. Behavior-surface paths: `protocols/context-economy.md`, `scripts/tests/run-behavioral-contract-tests.sh`, `scripts/tests/run-behavioral-contract-tests.ps1`, `CHANGELOG.md`.
+ - **CPAC CLI default output and §2B rework-formula alignment**: a bare `measure-cpac.sh`/`.ps1` invocation now prints usage instead of defaulting to the simulated scorecard (the simulation moves behind `--demo`/`-Demo`, still labeled), so an unlabeled simulated table can no longer appear to be a measurement; `calculate_cpac` now implements the documented §2B rework formula — `C_rework = Σ(T_loop × P_avg + τ_tool)`, i.e. rework-loop tokens priced at the same in/out rates plus the per-loop tool execution cost, excluded from `C_inference` — replacing the previous flat per-loop penalty, with the self-test expectations recomputed (Test 2 now prices 12,000/2,100 loop tokens across 3 loops: `8.7725`) and the machine-line money fields of both twins formatted invariantly to 4 decimals so twin outputs match regardless of runner locale. The PowerShell twin reads the record's string fields (`scenario_id`, `condition`, `model`, `timestamp`) textually rather than from the parsed object, because `ConvertFrom-Json` silently converts ISO-8601 values to `[datetime]`. Behavior-surface paths: `scripts/measure-cpac.sh`, `scripts/measure-cpac.ps1`, `docs/BENCHMARK-METHODOLOGY.md`.
+ 
+ ### Fixed
+diff --git a/protocols/context-economy.md b/protocols/context-economy.md
+index a7f5bce..ad23b5d 100644
+--- a/protocols/context-economy.md
++++ b/protocols/context-economy.md
+@@ -140,4 +140,4 @@ Three authorities are easy to conflate here, and they are not interchangeable:
+ 
+ The claim this protocol makes is that the agent is **directed** to escalate and **directed** not to proceed on insufficient evidence. The claim it does not make is that PromptKit OS can prevent an agent from doing otherwise.
+ 
+-**Discovery route (current; not validated as live behavior).** This file is not named in the protocol line of the Balanced or Lite directive — that line lists `setup`, `context-sync`, `code-quality-gate`, and `subagent-delegation`. The route to this file is **transitive**: the directive points at `protocols/setup.md`, whose *Workflows & Protocols Reference* lists `context-economy.md`, and `docs/WORKFLOW-MAP.md` also links it directly. Discovery through that route has **not** been validated with recorded live transcripts, and no automated check exercises it. Balanced/Lite discoverability and sufficiency remain **open acceptance evidence**: documenting the route is not evidence that it works.
++**Discovery route (current; not validated as live behavior).** This file is not named in the protocol line of the Balanced or Lite directive — that line lists `setup`, `context-sync`, `code-quality-gate`, and `subagent-delegation`. The route to this file is **transitive**: the directive points at `protocols/setup.md`, whose *Workflows & Protocols Reference* lists `context-economy.md`, and `docs/WORKFLOW-MAP.md` also links it directly. The behavioral-contract suites (`scripts/tests/run-behavioral-contract-tests.sh` and its `.ps1` twin) pin that route as static documentation: they assert the directive protocol lines reference `setup`, that `protocols/setup.md` lists this file, and that `docs/WORKFLOW-MAP.md` links it — which proves the route is still written down, not that an agent follows it. Discovery through that route has **not been validated with recorded live transcripts**. Balanced/Lite discoverability and sufficiency remain **open acceptance evidence**: documenting the route is not evidence that it works.
+diff --git a/scripts/tests/run-behavioral-contract-tests.ps1 b/scripts/tests/run-behavioral-contract-tests.ps1
+index effa3fc..1988670 100644
+--- a/scripts/tests/run-behavioral-contract-tests.ps1
++++ b/scripts/tests/run-behavioral-contract-tests.ps1
+@@ -1121,6 +1121,18 @@ Assert-Contains "protocols/context-economy.md" "required_capabilities" "Context
+ Assert-Contains "templates/agent-directive-template.md" "Context Economy.*Anti-Starvation" "Balanced directive registers the Context Economy contract"
+ Assert-Contains "templates/agent-directive-lite-template.md" "Context Economy.*Anti-Starvation" "Lite directive registers the Context Economy contract"
+ 
++Write-Host "`n📌 Scenario AT: Transitive Context-Economy Discovery Route (Issue #596)" -ForegroundColor Yellow
++# protocols/context-economy.md is deliberately absent from the directive protocol
++# line. Its documented route is transitive -- directive -> protocols/setup.md ->
++# context-economy.md -- plus a direct docs/WORKFLOW-MAP.md link. These assertions
++# pin that route's static text; they observe no agent behavior.
++Assert-Contains "templates/agent-directive-template.md" 'Protocols: .*[{]setup,' "Balanced directive protocol line references setup"
++Assert-Contains "templates/agent-directive-lite-template.md" 'Protocols: .*[{]setup,' "Lite directive protocol line references setup"
++Assert-Contains "protocols/setup.md" '\*\*Context Economy\*\*: .*context-economy\.md' "Setup workflows and protocols reference lists context-economy.md"
++Assert-Contains "docs/WORKFLOW-MAP.md" '\]\(\.\./protocols/context-economy\.md\)' "WORKFLOW-MAP links context-economy.md"
++Assert-Contains "protocols/context-economy.md" 'not been validated with recorded live transcripts' "Context Economy keeps live-transcript validation open"
++Assert-NotContains "protocols/context-economy.md" 'no automated check exercises' "Context Economy no longer claims no automated check exercises the route"
++
+ Write-Host "`n📌 Scenario U: Table Structural Integrity & Installer Host Auto-Detection" -ForegroundColor Yellow
+ Assert-Contains "scripts/validate-execution-control.ps1" "ORPHANED_TABLE_ROW" "Validator PS1 defines ORPHANED_TABLE_ROW diagnostic"
+ Assert-Contains "scripts/validate-execution-control.ps1" "TABLE_COLUMN_MISMATCH" "Validator PS1 defines TABLE_COLUMN_MISMATCH diagnostic"
+diff --git a/scripts/tests/run-behavioral-contract-tests.sh b/scripts/tests/run-behavioral-contract-tests.sh
+index 3a19f4f..0144031 100755
+--- a/scripts/tests/run-behavioral-contract-tests.sh
++++ b/scripts/tests/run-behavioral-contract-tests.sh
+@@ -1110,6 +1110,19 @@ assert_contains "protocols/context-economy.md" "required_capabilities" "Context
+ assert_contains "templates/agent-directive-template.md" "Context Economy.*Anti-Starvation" "Balanced directive registers the Context Economy contract"
+ assert_contains "templates/agent-directive-lite-template.md" "Context Economy.*Anti-Starvation" "Lite directive registers the Context Economy contract"
+ 
++echo ""
++echo "📌 Scenario AT: Transitive Context-Economy Discovery Route (Issue #596)"
++# protocols/context-economy.md is deliberately absent from the directive protocol
++# line. Its documented route is transitive -- directive -> protocols/setup.md ->
++# context-economy.md -- plus a direct docs/WORKFLOW-MAP.md link. These assertions
++# pin that route's static text; they observe no agent behavior.
++assert_contains "templates/agent-directive-template.md" 'Protocols: .*[{]setup,' "Balanced directive protocol line references setup"
++assert_contains "templates/agent-directive-lite-template.md" 'Protocols: .*[{]setup,' "Lite directive protocol line references setup"
++assert_contains "protocols/setup.md" '\*\*Context Economy\*\*: .*context-economy\.md' "Setup workflows and protocols reference lists context-economy.md"
++assert_contains "docs/WORKFLOW-MAP.md" '\]\(\.\./protocols/context-economy\.md\)' "WORKFLOW-MAP links context-economy.md"
++assert_contains "protocols/context-economy.md" 'not been validated with recorded live transcripts' "Context Economy keeps live-transcript validation open"
++assert_not_contains "protocols/context-economy.md" 'no automated check exercises' "Context Economy no longer claims no automated check exercises the route"
++
+ echo ""
+ echo "📌 Scenario U: Table Structural Integrity & Installer Host Auto-Detection"
+ assert_contains "scripts/validate-execution-control.ps1" "ORPHANED_TABLE_ROW" "Validator PS1 defines ORPHANED_TABLE_ROW diagnostic"
