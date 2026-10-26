@@ -66,7 +66,16 @@ For every task × arm × repeat:
    writing the packet, so a Verify command that prints its cwd cannot leak the
    arm. The grader never needs the arm-revealing session log for evidence-gated
    rubric items, and a successful-but-silent command still yields gradeable
-   evidence. The blind→scenario mapping lives in `grading/key.csv` and is never
+   evidence. A card that needs execution proof runs its behavioral probe
+   **before** its test suite and exits non-zero if either fails: chaining them
+   with `&&` lets one red suite suppress the probe, which leaves the packet
+   holding only test output and turns the rubric's behavioral items into
+   guesswork. The probe's output therefore leads the packet, the
+   `VERIFY|probe=<n>|tests=<n>` line records both statuses, and `verify_exit`
+   means "both passed". The exact shape is in
+   `benchmarks/tasks/TEMPLATE-task.md`, and every card in the frozen slate
+   follows it.
+   The blind→scenario mapping lives in `grading/key.csv` and is never
    printed to the terminal; the grader scores `B*.diff` (+ `B*.verify.txt`)
    against the task's frozen rubric without seeing it, and writes the sheet keyed
    by blind id: `blind_id <TAB> rubric_passed <TAB> rubric_total <TAB>
