@@ -1,0 +1,8 @@
+RUN|BENCH-L0-01-promptkit_os-r1|arm=promptkit_os|model=deepseek/deepseek-v4.1-flash|accepted=1|graded=1|rubric=6/6|tokens_total=442815|wall_clock_seconds=100|rework_loops=2|cpac_usd=1.4772
+RUN|BENCH-L0-01-bare-r1|arm=bare|model=deepseek/deepseek-v4.1-flash|accepted=1|graded=1|rubric=6/6|tokens_total=406461|wall_clock_seconds=112|rework_loops=1|cpac_usd=1.3103
+RUN|BENCH-L1-02-promptkit_os-r1|arm=promptkit_os|model=deepseek/deepseek-v4.1-flash|accepted=1|graded=1|rubric=5/5|tokens_total=587027|wall_clock_seconds=132|rework_loops=1|cpac_usd=1.8942
+RUN|BENCH-L1-02-bare-r1|arm=bare|model=deepseek/deepseek-v4.1-flash|accepted=1|graded=1|rubric=5/5|tokens_total=332155|wall_clock_seconds=124|rework_loops=2|cpac_usd=1.1744
+RUN|BENCH-L2-02-promptkit_os-r1|arm=promptkit_os|model=deepseek/deepseek-v4.1-flash|accepted=1|graded=1|rubric=6/6|tokens_total=3226094|wall_clock_seconds=765|rework_loops=2|cpac_usd=9.9611
+RUN|BENCH-L2-02-bare-r1|arm=bare|model=deepseek/deepseek-v4.1-flash|accepted=1|graded=1|rubric=6/6|tokens_total=1173665|wall_clock_seconds=636|rework_loops=1|cpac_usd=3.6965
+BENCH|SUMMARY|arm=bare|n=3|accepted=3|graded_n=3|accept_rate=1.00|tokens_mean=637427.0|tokens_median=406461.0|wall_mean=290.7|wall_median=124.0|rework_mean=1.33|cpac_n=3|cpac_mean=2.0604|cpac_median=1.3103
+BENCH|SUMMARY|arm=promptkit_os|n=3|accepted=3|graded_n=3|accept_rate=1.00|tokens_mean=1418645.3|tokens_median=587027.0|wall_mean=332.3|wall_median=132.0|rework_mean=1.67|cpac_n=3|cpac_mean=4.4442|cpac_median=1.8942

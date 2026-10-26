@@ -1,0 +1,106 @@
+diff --git a/scripts/measure-per-task-tokens.ps1 b/scripts/measure-per-task-tokens.ps1
+index 9bd121f..edd7a95 100644
+--- a/scripts/measure-per-task-tokens.ps1
++++ b/scripts/measure-per-task-tokens.ps1
+@@ -1,6 +1,8 @@
+ #!/usr/bin/env pwsh
+ # PromptKit OS Per-Task Token Measurement Utility (PowerShell twin)
+ # Measures directive + workflow + gate payload for pk:fix, pk:plan, pk:ship
++# Also reports a Ceremony Artifacts section: execution task record, checkpoint,
++# and handoff templates, as CEREMONY|name|bytes|tokens machine lines.
+ # Uses bytes/4 convention, same as measure-tokens.ps1
+ Set-StrictMode -Version Latest
+ $ErrorActionPreference = "Stop"
+@@ -28,6 +30,11 @@ $KitDir = Resolve-Path (Join-Path $ScriptDir "..")
+ $TemplateFull = Join-Path $KitDir "templates/agent-directive-template.md"
+ $TemplateLite = Join-Path $KitDir "templates/agent-directive-lite-template.md"
+ 
++# Ceremony artifacts (static slice of issue 607)
++$TemplateTaskRecord = Join-Path $KitDir "templates/execution-task-record-template.md"
++$TemplateCheckpoint = Join-Path $KitDir "templates/execution-checkpoint-template.md"
++$TemplateHandoff = Join-Path $KitDir "templates/execution-handoff-template.md"
++
+ function Measure-File {
+     param([string]$File)
+     if (-not (Test-Path $File -PathType Leaf)) {
+@@ -85,6 +92,18 @@ Write-Output "  plan.md: $PLAN_TOK tok"
+ Write-Output "  ship.md: $SHIP_TOK tok (after extraction, was ~8,292 tok before)"
+ Write-Output ""
+ 
++Write-Output "Ceremony Artifacts:"
++$CEREMONY_TASK_RECORD_BYTES = Get-ByteCount $TemplateTaskRecord
++$CEREMONY_TASK_RECORD_TOK = [Math]::Floor(($CEREMONY_TASK_RECORD_BYTES + 2) / 4)
++Write-Output "CEREMONY|task-record|$CEREMONY_TASK_RECORD_BYTES|$CEREMONY_TASK_RECORD_TOK"
++$CEREMONY_CHECKPOINT_BYTES = Get-ByteCount $TemplateCheckpoint
++$CEREMONY_CHECKPOINT_TOK = [Math]::Floor(($CEREMONY_CHECKPOINT_BYTES + 2) / 4)
++Write-Output "CEREMONY|checkpoint|$CEREMONY_CHECKPOINT_BYTES|$CEREMONY_CHECKPOINT_TOK"
++$CEREMONY_HANDOFF_BYTES = Get-ByteCount $TemplateHandoff
++$CEREMONY_HANDOFF_TOK = [Math]::Floor(($CEREMONY_HANDOFF_BYTES + 2) / 4)
++Write-Output "CEREMONY|handoff|$CEREMONY_HANDOFF_BYTES|$CEREMONY_HANDOFF_TOK"
++Write-Output ""
++
+ # Calculate per-task payloads
+ $BASELINE_FIX = 12861
+ $BASELINE_PLAN = 24666
+diff --git a/scripts/measure-per-task-tokens.sh b/scripts/measure-per-task-tokens.sh
+index d82eca6..d86e32d 100755
+--- a/scripts/measure-per-task-tokens.sh
++++ b/scripts/measure-per-task-tokens.sh
+@@ -1,6 +1,8 @@
+ #!/usr/bin/env bash
+ # PromptKit OS Per-Task Token Measurement Utility
+ # Measures directive + workflow + gate payload for pk:fix, pk:plan, pk:ship
++# Also reports a Ceremony Artifacts section: execution task record, checkpoint,
++# and handoff templates, as CEREMONY|name|bytes|tokens machine lines.
+ # Uses bytes/4 convention, same as measure-tokens.sh
+ set -euo pipefail
+ 
+@@ -25,17 +27,27 @@ KIT_DIR="$SCRIPT_DIR/.."
+ TEMPLATE_FULL="$KIT_DIR/templates/agent-directive-template.md"
+ TEMPLATE_LITE="$KIT_DIR/templates/agent-directive-lite-template.md"
+ 
+-measure_file() {
++measure_bytes() {
+     local file="$1"
+     if [[ ! -f "$file" ]]; then
+         echo "MEASURE_ERROR|MISSING|$file" >&2
+         exit 2
+     fi
++    tr -d '\r' < "$file" | wc -c | tr -d ' '
++}
++
++measure_file() {
++    local file="$1"
+     local bytes
+-    bytes=$(tr -d '\r' < "$file" | wc -c | tr -d ' ')
++    bytes=$(measure_bytes "$file")
+     echo $(( (bytes + 2) / 4 ))
+ }
+ 
++# Ceremony artifacts (static slice of issue 607)
++TEMPLATE_TASK_RECORD="$KIT_DIR/templates/execution-task-record-template.md"
++TEMPLATE_CHECKPOINT="$KIT_DIR/templates/execution-checkpoint-template.md"
++TEMPLATE_HANDOFF="$KIT_DIR/templates/execution-handoff-template.md"
++
+ # Measure directives
+ FULL_TOK=$(measure_file "$TEMPLATE_FULL")
+ LITE_TOK=$(measure_file "$TEMPLATE_LITE")
+@@ -69,6 +81,18 @@ echo "  plan.md: $PLAN_TOK tok"
+ echo "  ship.md: $SHIP_TOK tok (after extraction, was ~8,292 tok before)"
+ echo ""
+ 
++echo "Ceremony Artifacts:"
++CEREMONY_TASK_RECORD_BYTES=$(measure_bytes "$TEMPLATE_TASK_RECORD")
++CEREMONY_TASK_RECORD_TOK=$(( (CEREMONY_TASK_RECORD_BYTES + 2) / 4 ))
++echo "CEREMONY|task-record|${CEREMONY_TASK_RECORD_BYTES}|${CEREMONY_TASK_RECORD_TOK}"
++CEREMONY_CHECKPOINT_BYTES=$(measure_bytes "$TEMPLATE_CHECKPOINT")
++CEREMONY_CHECKPOINT_TOK=$(( (CEREMONY_CHECKPOINT_BYTES + 2) / 4 ))
++echo "CEREMONY|checkpoint|${CEREMONY_CHECKPOINT_BYTES}|${CEREMONY_CHECKPOINT_TOK}"
++CEREMONY_HANDOFF_BYTES=$(measure_bytes "$TEMPLATE_HANDOFF")
++CEREMONY_HANDOFF_TOK=$(( (CEREMONY_HANDOFF_BYTES + 2) / 4 ))
++echo "CEREMONY|handoff|${CEREMONY_HANDOFF_BYTES}|${CEREMONY_HANDOFF_TOK}"
++echo ""
++
+ # Calculate per-task payloads
+ # Baseline = old behavior: directive (1882) + route (6962) + workflow + gate + template
+ # New = directive (full or lite) + workflow + gate + template (no route)

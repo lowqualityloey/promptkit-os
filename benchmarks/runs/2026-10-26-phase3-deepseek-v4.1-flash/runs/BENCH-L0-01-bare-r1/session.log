@@ -1,0 +1,3 @@
+Added the subsection at the end of §7 in `docs/BENCHMARKS.md`. It records that per-level ceremony artifact overhead is not yet measured, names `execution-task-record-template.md`, `execution-checkpoint-template.md`, and `execution-handoff-template.md`, and links issue #607 — with no size or token figure.
+
+`bash scripts/validate-references.sh . --strict` exits 0, and only `docs/BENCHMARKS.md` changed (4 added lines).

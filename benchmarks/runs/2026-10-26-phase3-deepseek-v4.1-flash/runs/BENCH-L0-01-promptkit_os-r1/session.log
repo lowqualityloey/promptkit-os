@@ -1,0 +1,7 @@
+Added the subsection at the end of §7 (the ceremony section) in `docs/BENCHMARKS.md` only — 6 added lines, no tables, no numeric size or token figure:
+
+- States plainly that per-level ceremony artifact overhead is not yet measured and no figure is published.
+- Names `execution-task-record-template.md`, `execution-checkpoint-template.md`, and `execution-handoff-template.md` (each link resolves to `templates/`).
+- Links https://github.com/lowqualityloey/promptkit-os/issues/607.
+
+`bash scripts/validate-references.sh . --strict` passes with 0 errors and 0 warnings (exit 0). All existing figures, tables, and the provenance banner are untouched; PROMPTKIT.md was already modified before this session and I left it alone.

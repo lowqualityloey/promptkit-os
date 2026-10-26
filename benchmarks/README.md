@@ -3,9 +3,16 @@
 Paired-run benchmarking of PromptKit OS against bare Command Code, implementing the
 Dual-Condition Evaluation Protocol in [`docs/BENCHMARK-METHODOLOGY.md`](../docs/BENCHMARK-METHODOLOGY.md)
 §4 with the CPAC telemetry pipeline (`scripts/measure-cpac.sh` +
-`scripts/extract-commandcode-telemetry.sh`). The harness exists to turn the methodology's
-claims into measured evidence; until runs are executed and published, no performance claim
-is made here.
+`scripts/extract-commandcode-telemetry.sh`). The harness exists to turn the methodology'sclaims into measured evidence; until runs are executed and published, no performance claim is
+made here.
+
+## Published batches
+
+- [2026-10-26 Phase 3 live batch](runs/2026-10-26-phase3-deepseek-v4.1-flash/README.md) —
+  three real backlog tasks (L0/L1/L2) × two arms × one repeat on
+  `deepseek/deepseek-v4.1-flash`; all six runs accepted, with higher token/CPAC
+  means for the PromptKit arm and both L2 sessions at the 900-second cap. Read the
+  batch report before reusing any number from it.
 
 ## Protocol (what the driver enforces)
 

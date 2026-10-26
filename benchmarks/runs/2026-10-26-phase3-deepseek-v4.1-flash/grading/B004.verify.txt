@@ -1,0 +1,1325 @@
+verify_exit=0
+
+🧪 Running PromptKit OS Behavioral Prompt-Contract Tests
+===========================================================
+
+📌 Scenario A: Trivial Change ('Fix a typo in the README') — Level 0 Direct
+  ✅ PASS: Level 0 Direct classification defined in router
+  ✅ PASS: Level 0 expected behavior flow present
+  ✅ PASS: Level 0 fast-path rule in agent setup protocol
+
+📌 Scenario B: Localized Bug / Small Feature ('Fix empty password crash') — Level 1 Standard
+  ✅ PASS: Level 1 Standard classification defined in router
+  ✅ PASS: Level 1 file edits do not trigger mandatory Task Record creation
+  ✅ PASS: Plan workflow specifies Level 1 does not map to Task Record file
+  ✅ PASS: Tasks workflow specifies Level 1 file edits do not require Task Record
+
+📌 Scenario C: Substantive Risk Feature ('Add OAuth login and user roles') — Level 2 Controlled
+  ✅ PASS: Level 2 Controlled classification defined in router
+  ✅ PASS: Local Task Record required for Level 2 Controlled Work
+  ✅ PASS: Plan workflow requires Task Record for Level 2 Minimal/Full Planning
+  ✅ PASS: Auth workflow defines capability matrix requirements
+
+📌 Scenario D: Destructive Operation ('Drop the users table and recreate the schema')
+  ✅ PASS: Data workflow enforces Expand-Contract migration strategy
+  ✅ PASS: PR template includes destructive operation safety check
+  ✅ PASS: Router specifies explicit human authorization boundary
+
+📌 Scenario E: Release & Level-3 Downgrade Safety Rules
+  ✅ PASS: Level 3 downgrade safety guardrails section present
+  ✅ PASS: Confirmation no release actions remain in scope
+  ✅ PASS: Release Coordinator approval required if release evaluation started
+  ✅ PASS: Existing release evidence must be preserved or closed
+
+📌 Scenario F: Canonical Mapping & Consistency Checks
+  ✅ PASS: Explicit canonical mapping section present in router
+  ✅ PASS: Router Adaptation compatibility contract uses Level 0-3 model
+  ✅ PASS: Plan workflow maps Levels 0-3 explicitly
+  ✅ PASS: README includes Level 0 ceremony definition
+  ✅ PASS: README contains Level 0-3 execution model
+  ✅ PASS: README explicitly says Level 1 does not require a Task Record
+  ✅ PASS: README specifies Level 2 requires a Task Record
+  ✅ PASS: README specifies Level 3 requires Level 2 evidence and Task Record
+  ✅ PASS: Router release-evidence routing uses Level-3 terminology
+  ✅ PASS: ARCHITECTURE layout tree describes current CI validation
+  ✅ PASS: WORKFLOW-MAP includes Level 1 ceremony definition
+
+📌 Scenario G: Progressive Loading & Canonical Authority
+  ✅ PASS: protocols/setup.md defines progressive loading policy
+  ✅ PASS: Level 1 defines minimal loading path without Task Record
+  ✅ PASS: README contains early Level-1 onboarding path
+  ✅ PASS: README links to workflows/route.md as canonical guide
+  ✅ PASS: workflows/route.md declares canonical ownership of Levels 0-3
+
+📌 Scenario H: Remediation Workflow ('Fix a known review finding') — pk:fix
+  ✅ PASS: pk:fix trigger defined in lifecycle router
+  ✅ PASS: Remediation workflow present with title
+  ✅ PASS: Remediation workflow distinguishes known cause from pk:debug
+  ✅ PASS: Remediation workflow enforces security-first ordering
+  ✅ PASS: Remediation workflow requires reproduction or baseline measurement
+  ✅ PASS: Remediation workflow aligns with Level 0-3 ceremony model
+
+📌 Scenario I: Post-Staging Secret Scan Sequencing (Time-of-Check to Time-of-Use Safety)
+  ✅ PASS: Commit workflow enforces post-staging secret scan
+  ✅ PASS: Secret scan runs immediately after staging phase
+
+📌 Scenario J: Standardized Visual Callouts & Telemetry Status Cards
+  ✅ PASS: Directive includes native MCP and interactive turn prompts guardrail
+  ✅ PASS: Telemetry-cards protocol carries the relocated status card spec
+  ✅ PASS: Telemetry-cards protocol specifies next recommended step callout format
+  ✅ PASS: Telemetry-cards protocol specifies telemetry status card format
+  ✅ PASS: Directive points to the lazy telemetry-cards protocol
+  ✅ PASS: Project profile template carries the status-cards machine line
+  ✅ PASS: Directive conditions the card on the status-cards opt-out
+  ✅ PASS: Lite directive conditions the card on the status-cards opt-out
+  ✅ PASS: Telemetry-cards protocol documents the opt-out and halt guarantee
+  ✅ PASS: Telemetry-cards protocol defines quiet completion when nothing is pending
+  ✅ PASS: Telemetry-cards protocol specifies the per-turn spend field
+  ✅ PASS: State template offers the terminal COMPLETED status
+  ✅ PASS: State template carries the spend ledger block
+  ✅ PASS: Onboard workflow mandates preserving Session Spend Ledger
+  ✅ PASS: Init script ensures docs directory creation for STATE.md
+  ✅ PASS: Checkpoint workflow defines the closeout DoD format
+  ✅ PASS: Commit workflow includes telemetry status card
+  ✅ PASS: PR workflow includes telemetry status card
+  ✅ PASS: Plan workflow includes telemetry status card
+  ✅ PASS: Tasks workflow includes telemetry status card
+  ✅ PASS: Test workflow includes telemetry status card
+  ✅ PASS: Fix workflow includes telemetry status card
+  ✅ PASS: Plan workflow includes interactive decision prompt guidelines
+  ✅ PASS: Design workflow defines the no-brand-file finish bar
+  ✅ PASS: Design gate requires a declared favicon
+  ✅ PASS: Design workflow names the advisory catalog with exclusions
+  ✅ PASS: Design workflow defines 4 curated aesthetic archetypes
+  ✅ PASS: Design workflow defines pk:design study protocol
+  ✅ PASS: Design workflow defines anti-bento layout rhythm rule
+  ✅ PASS: Discovery intake includes aesthetic design vibe slot
+  ✅ PASS: Design workflow checklist includes Visual Floor enforcement
+  ✅ PASS: Design workflow separates design requirements from implementation examples
+  ✅ PASS: Design workflow defines D0-D3 minimum-sufficient ceremony tiers
+  ✅ PASS: Design workflow scopes interaction states by applicability instead of a blanket 8-state mandate
+
+📌 Scenario K: Project Database & Harness Isolation
+  ✅ PASS: Directive enforces project database isolation guardrail
+  ✅ PASS: Data workflow mandates project-scoped database isolation
+  ✅ PASS: Test workflow mandates project-scoped database isolation
+
+📌 Scenario L: Protocol Synchronization & Hot-Reloading (pk:sync)
+  ✅ PASS: Directive includes pk:sync trigger
+  ✅ PASS: Directive enforces disk-first protocol loading guardrail
+  ✅ PASS: Sync workflow defines 3-phase sync protocol
+  ✅ PASS: Sync workflow enforces fresh disk reads
+
+📌 Scenario M: Runtime Profile Switcher & Honest Workflow Counts (pk:profile)
+  ✅ PASS: Balanced directive includes pk:profile trigger
+  ✅ PASS: Lite directive includes pk:profile trigger
+  ✅ PASS: Profile workflow defines the 4-phase switch protocol
+  ✅ PASS: Profile workflow enforces the Turbo experimental guard
+  ✅ PASS: Profile workflow honors non-interactive default
+  ✅ PASS: Router decision matrix registers pk:profile
+  ✅ PASS: Reference validator reports zero trigger warnings
+  ✅ PASS: Lite directive claims the honest utility workflow count
+  ✅ PASS: Directive carries the session-endurance checkpoint rule
+  ✅ PASS: Directive mandates fresh-read trust for STATE.md
+  ✅ PASS: Directive mandates telemetry card provenance
+  ✅ PASS: Lite directive carries the endurance rule
+  ✅ PASS: Lite directive carries the provenance rule
+  ✅ PASS: Directive lists trigger-to-file rename exceptions
+  ✅ PASS: Router defines the mixed-level tie-break rule
+  ✅ PASS: Directive carries the tie-break rule
+  ✅ PASS: Quality gate defines the milestone boundary
+
+📌 Scenario AS: Guidance-Tier Catalog Truthfulness & Lite Git Boundaries (Issue #606)
+  ✅ PASS: Tier 1 policy points at the installed directive templates directory
+  ✅ PASS: Three-tier guidance diagram is retained
+  ✅ PASS: Catalog keeps its own authoring durability contract
+  ✅ PASS: Policy bullet states directive templates are installed into supported host instructions
+  ✅ PASS: Policy bullet states protocols are referenced or loaded only when required
+  ✅ PASS: Catalog no longer routes tier-1 policy at rules/*.md
+  ✅ PASS: Catalog drops the permanently-mounted rules authoring claim
+  ✅ PASS: Tier 1 policy points at the installed directive templates directory
+  ✅ PASS: Three-tier guidance diagram is retained
+  ✅ PASS: Catalog keeps its own authoring durability contract
+  ✅ PASS: Policy bullet states directive templates are installed into supported host instructions
+  ✅ PASS: Policy bullet states protocols are referenced or loaded only when required
+  ✅ PASS: Catalog no longer routes tier-1 policy at rules/*.md
+  ✅ PASS: Catalog drops the permanently-mounted rules authoring claim
+  ✅ PASS: Lite forbids crossing a milestone with this task's uncommitted changes
+  ✅ PASS: Lite surfaces pre-existing dirt without altering or stalling
+  ✅ PASS: Lite retains verification and atomic pk:commit at milestone end
+  ✅ PASS: Lite retains docs/STATE.md synchronization at milestone end
+  ✅ PASS: Lite retains the human sign-off request
+  ✅ PASS: Balanced directive retains the task-scoped milestone boundary
+  ✅ PASS: Balanced directive retains the pre-existing-dirt exception
+  ✅ PASS: Quality gate retains the substantive task-scope qualification
+  ✅ PASS: Quality gate retains the pre-existing-dirt exception
+  ✅ PASS: Trigger tokens are unique within templates/agent-directive-template.md
+  ✅ PASS: Trigger tokens are unique within templates/agent-directive-lite-template.md
+  ✅ PASS: On-disk workflow file count is 26 (matches reconciled docs claims)
+  ✅ PASS: All live workflow-count claims state the on-disk count (26) across the claim surface
+  ✅ PASS: Engine PROMPTKIT.md profile states the current count (26 workflows, ADR 0002)
+  ✅ PASS: project-profile template seeds the current count (26 workflows) into fresh projects
+
+📌 Scenario N: Greenfield Discovery Intake & Planning Gate (pk:onboard / pk:plan)
+  ✅ PASS: Onboard workflow defines conditional greenfield Phase 0 intake
+  ✅ PASS: Intake questions are asked in the context window, not modal pickers
+  ✅ PASS: Onboard workflow links the bounded discovery intake protocol
+  ✅ PASS: Brownfield installs get migration-safe intake signals (never re-grilled)
+  ✅ PASS: Onboard workflow writes machine-readable size class to PROMPTKIT.md
+  ✅ PASS: Onboard offers tooling proposals accept-or-change, never silent defaults
+  ✅ PASS: Onboard answers product-shaped requests with intake questions, not a scaffold
+  ✅ PASS: Onboard treats brownfield toolchain as ground truth
+  ✅ PASS: Onboard preserves existing user-written rules on brownfield installs
+  ✅ PASS: Onboard gives human overrides precedence over detected tooling
+  ✅ PASS: Onboard preserves existing confirmed size and intake-status on brownfield runs
+  ✅ PASS: Onboard preserves existing DESIGN.md without explicit human confirmation
+  ✅ PASS: Onboard labels discovered commands as unverified until executed
+  ✅ PASS: Onboard names the Phase 2 findings summary as the pre-write artifact
+  ✅ PASS: Onboard guardrail conditions Phase 3 writes on confirming the Phase 2 findings summary
+  ✅ PASS: Onboard defines the findings summary inside Phase 2, before the first Phase 3 write
+  ✅ PASS: Onboard Phase 1 directive names the same single artifact
+  ✅ PASS: Onboard rejects adjustment, ambiguous, and absent replies as approval
+  ✅ PASS: Onboard confirmation scope excludes host application source
+  ✅ PASS: Onboard no longer pairs the summary with the Phase 4 scorecard in the write precondition
+  ✅ PASS: Onboard Phase 1 directive no longer names an undefined scorecard
+  ✅ PASS: Onboard write gate: summary defined before Phase 3, single-artifact condition, one scorecard emit
+  ✅ PASS: Onboard write-gate guard rejects the original defective wording (legacy sample)
+  ✅ PASS: Intake protocol records why the interview closed
+  ✅ PASS: Intake protocol routes AI-suggested scope to the Later ledger
+  ✅ PASS: Intake asks product-shape (SaaS-class) decision questions before any stack is named
+  ✅ PASS: Intake forbids scaffolds, templates, or a named stack for product-shaped requests
+  ✅ PASS: Project profile template carries machine-readable intake signals
+  ✅ PASS: Profile placeholders are declared intake questions, never silent defaults
+  ✅ PASS: Profile header passes the template rendered as onboarding copies it, without executing a live agent
+  ✅ PASS: Profile header guard rejects a legacy Installed date in the rendered profile
+  ✅ PASS: Profile header guard rejects a rendered profile with the authoring-date field removed
+  ✅ PASS: Profile-date guidance separates authoring provenance from installation status
+  ✅ PASS: Profile Engine field documents an external or absent engine
+  ✅ PASS: Profile template no longer labels the authoring date as an installation
+  ✅ PASS: Profile-date guidance does not promise a refresh timestamp
+  ✅ PASS: Profile-date guidance states installer reruns preserve an existing date
+  ✅ PASS: Profile-date guidance states a legacy Installed date is retained during migration
+  ✅ PASS: Onboarding still generates the profile by copying the template
+  ✅ PASS: Plan workflow gates architecture on intake status before Step 1
+  ✅ PASS: Plan workflow never re-interviews brownfield installs
+  ✅ PASS: Plan workflow routes unrequired complexity to the Later ledger
+  ✅ PASS: Plan workflow surfaces agent defaults as an accept-or-change list
+  ✅ PASS: Plan workflow bounds interactive pickers to closed-set, evidence-backed choices
+  ✅ PASS: Sync workflow intercepts mid-implementation requirement deltas
+  ✅ PASS: Checkpoint contract requires new requirements to be recorded before continuing
+  ✅ PASS: Checkpoint workflow defines fallback spend estimation heuristic for unmetered hosts
+  ✅ PASS: Checkpoint preserves heuristic ranges instead of midpoint estimates
+  ✅ PASS: Checkpoint keeps measured and heuristic token evidence separate
+  ✅ PASS: Checkpoint distinguishes continuity telemetry from formal benchmarks
+  ✅ PASS: State template labels heuristic payload without implying provider spend
+  ✅ PASS: State template records compact process evidence without inventing missing values
+  ✅ PASS: Router decision matrix registers greenfield inception via pk:onboard
+  ✅ PASS: Context-sync authority table covers Figma/screenshot/doc design inputs
+  ✅ PASS: Plan workflow caps partial-intake repair to missing critical slots only (legacy protection)
+  ✅ PASS: Blanket Recommended-pickers are bounded to closed-set operational choices
+  ✅ PASS: Perf workflow defines Core Web Vitals audit protocol
+  ✅ PASS: Refactor workflow defines Code Simplification Pass and deflation heuristics
+  ✅ PASS: Intake protocol uses only the canonical hyphenated machine-line spelling
+  ✅ PASS: Intake protocol owns the onboarding artifact-provenance contract
+  ✅ PASS: Provenance contract separates human-confirmed decisions
+  ✅ PASS: Provenance contract separates accepted defaults with bounded scope
+  ✅ PASS: Provenance contract separates agent-owned assumptions
+  ✅ PASS: Provenance contract separates derived PromptKit baselines
+  ✅ PASS: Provenance contract separates pending verification obligations
+  ✅ PASS: Provenance contract separates resolved or superseded assumptions
+  ✅ PASS: Provenance contract preserves residual operational risk on resolution
+  ✅ PASS: Provenance contract defines round, turn, and question counting
+  ✅ PASS: Provenance contract bounds the subjective remainder to a checklist
+  ✅ PASS: Project profile template carries the intake-record machine line
+  ✅ PASS: Seeded profile baselines are labelled derived, not human-approved
+  ✅ PASS: Milestone-boundary wording carries no dangling working-tree fragment
+  ✅ PASS: State template requires an inline source for locked invariants
+  ✅ PASS: WORKFLOW-MAP records the onboarding artifacts' projection authority
+  ✅ PASS: Authority table names intake-record alongside size and intake-status
+  ✅ PASS: Profile intake-record is a path reference, not a second decision authority
+  ✅ PASS: Doctor treats an absent intake-record line as a non-fatal advisory
+  ✅ PASS: Missing intake-record lines stay valid for pre-field profiles
+  ✅ PASS: Intake protocol owns the host-documentation divergence record
+  ✅ PASS: Divergence row pins the eight required reconciliation fields in a fixed column order
+  ✅ PASS: Precedence is an explicit three-value designation, never implied
+  ✅ PASS: Divergence rows carry a stable DIVERGENCE-* identifier
+  ✅ PASS: Provenance contract forbids implied precedence promotion
+  ✅ PASS: Onboarding records host-document contradictions in the Intake Record
+  ✅ PASS: Phase 3 write envelope excludes host-document rewrites
+  ✅ PASS: Onboarding states that a detected project document stays byte-identical
+  ✅ PASS: Project profile points at the divergence record
+  ✅ PASS: Project profile cites the divergence identifier instead of restating precedence
+  ✅ PASS: State template requires a traceable source for host-document precedence claims
+  ✅ PASS: Divergence fixture matrix pins the designated-precedence case
+  ✅ PASS: Divergence fixture matrix pins the exact divergence-row and host-integrity summary
+  ✅ PASS: Divergence fixture matrix pins the missing-human-designation diagnostic
+  ✅ PASS: Divergence fixture matrix pins the untraceable-precedence-claim diagnostic
+  ✅ PASS: Divergence fixture host document is the three-line architecture blueprint
+  ✅ PASS: Divergence fixture host document contradicts the confirmed durable-queue decision
+  ✅ PASS: Bash divergence harness pins the exact divergence-row count
+  ✅ PASS: Bash divergence harness pins the host-document immutability check
+  ✅ PASS: PowerShell divergence harness pins the host-document immutability check
+  ✅ PASS: Bash divergence harness pins the generated-profile precedence consistency check
+  ✅ PASS: Bash divergence harness pins the missing generated-profile precedence check
+  ✅ PASS: Bash divergence harness pins the next-action consistency check
+  ✅ PASS: PowerShell divergence harness pins the generated-profile precedence consistency check
+  ✅ PASS: PowerShell divergence harness pins the missing generated-profile precedence check
+  ✅ PASS: PowerShell divergence harness pins the next-action consistency check
+  ✅ PASS: A designated divergence row does not ask for another precedence designation
+  ✅ PASS: An undesignated divergence row documents the missing human designation
+
+📌 Scenario O: Protocol registry & FAQ count drift guards
+  ✅ PASS: Every protocols/*.md file is registered in protocols/setup.md
+  ✅ PASS: FAQ entry count (20) matches published claims in README.md/FAQ.md
+
+📌 Scenario P: Numeric Benchmark Values Match Measurement Tools
+  ✅ PASS: provenance anchor 7ab8b50121987daf257b52ee732d59920acda35b (measured-input tree unchanged since it)
+  ✅ PASS: Provenance-anchor advice is clone-scoped, not ancestry-scoped (Bash twin)
+  ✅ PASS: Provenance-anchor advice is clone-scoped, not ancestry-scoped (PowerShell twin parity)
+  ✅ PASS: Provenance-advisory guard rejects the legacy main-ancestry wording (negative control)
+  ✅ PASS: Balanced static directive (2348 == measurement output)
+  ✅ PASS: Lite static directive (1456 == measurement output)
+  ✅ PASS: Balanced static reduction percent (93 == measurement output)
+  ✅ PASS: Lite static reduction percent (96 == measurement output)
+  ✅ PASS: Full workflow-set token total (119556 == measurement output)
+  ✅ PASS: Core-six workflow-set token total (32903 == measurement output)
+  ✅ PASS: Full workflow-set file count (26 == measurement output)
+  ✅ PASS: Setup protocol Balanced static directive (2348 == measurement output)
+  ✅ PASS: pk:fix Balanced payload (11335 == measurement output)
+  ✅ PASS: pk:fix Lite payload (10443 == measurement output)
+  ✅ PASS: pk:fix baseline payload (12861 == measurement output)
+  ✅ PASS: pk:fix Balanced context-reduction percent (12 == measurement output)
+  ✅ PASS: pk:fix Lite context-reduction percent (19 == measurement output)
+  ✅ PASS: pk:plan Balanced payload (20824 == measurement output)
+  ✅ PASS: pk:plan Lite payload (19932 == measurement output)
+  ✅ PASS: pk:plan baseline payload (24666 == measurement output)
+  ✅ PASS: pk:plan Balanced context-reduction percent (16 == measurement output)
+  ✅ PASS: pk:plan Lite context-reduction percent (19 == measurement output)
+  ✅ PASS: pk:ship Balanced payload (17125 == measurement output)
+  ✅ PASS: pk:ship Lite payload (16233 == measurement output)
+  ✅ PASS: pk:ship baseline payload (24761 == measurement output)
+  ✅ PASS: pk:ship Balanced context-reduction percent (31 == measurement output)
+  ✅ PASS: pk:ship Lite context-reduction percent (34 == measurement output)
+  ✅ PASS: profile workflow points to the benchmark source without pinning token figures
+
+📌 Scenario R: Search Circuit Breaker Semantics (Balanced + Lite consistency)
+  ✅ PASS: Balanced breaker states advisory semantics
+  ✅ PASS: Balanced breaker defines parallel-call counting
+  ✅ PASS: Balanced breaker excludes trivial-edit resets
+  ✅ PASS: Balanced breaker covers read-only research
+  ✅ PASS: Balanced breaker distinguishes CI budgets from session/host limits
+  ✅ PASS: Lite breaker states advisory semantics
+  ✅ PASS: Lite breaker excludes trivial-edit resets
+  ✅ PASS: Lite breaker covers read-only research
+
+📌 Scenario O: Autonomous SDLC Meta-Orchestrator (workflows/auto.md & pk:auto)
+  ✅ PASS: Auto workflow defines autonomous SDLC meta-orchestration
+  ✅ PASS: Auto workflow enforces Test Immobility Invariant
+  ✅ PASS: Auto workflow enforces 3-strike circuit breaker on failures
+  ✅ PASS: Auto workflow defines explicit 3-strike failure budget (initial failure + 2 refines)
+  ✅ PASS: Auto workflow bounds Turbo pause/resume to one park per wave
+  ✅ PASS: Auto halt record is passive observable state, not a trigger
+  ✅ PASS: Auto workflow requires integrated-state verification before wave success
+  ✅ PASS: Auto waves remain a pk:auto capability, not a subsystem
+  ✅ PASS: Auto workflow enforces path deny-list
+  ✅ PASS: Router decision matrix registers pk:auto
+  ✅ PASS: Directive template registers pk:auto trigger
+
+📌 Scenario Q: Memory vs Policy Boundary (pk:checkpoint / pk:sync / pk:onboard)
+  ✅ PASS: Context-sync defines the memory-vs-policy promotion ladder
+  ✅ PASS: Context-sync carries the memory-vs-policy boundary section
+  ✅ PASS: Context-sync rejects silence and implicit signals as promotion approval
+  ✅ PASS: Context-sync keeps STATE.md execution-control scoped as a projection
+  ✅ PASS: State template stages unverified candidate learnings
+  ✅ PASS: Checkpoint preserves pending candidate status on sync
+  ✅ PASS: Onboard stages manifest-derived observations as candidates
+  ✅ PASS: Sync never promotes candidates on reread
+  ✅ PASS: Context-sync stages pending rules in section 4A
+  ✅ PASS: Checkpoint stages inferred rules outside locked invariants
+  ✅ PASS: Onboard never places observations directly in locked invariants
+  ✅ PASS: Rejected and changed candidates cannot inherit approval
+  ✅ PASS: Setup preserves the promotion boundary
+  ✅ PASS: Candidate promotion records decision provenance
+  ✅ PASS: State template marks invariant source shapes as illustrative, not entries
+  ✅ PASS: Invariant-example guard rejects bare examples and the legacy not-tracked bullet
+
+📌 Scenario S: Dual-Mode Telemetry & Single-Callout Invariants
+  ✅ PASS: Telemetry protocol defines Single-Callout Invariant
+  ✅ PASS: Telemetry protocol mandates at most one callout per turn
+  ✅ PASS: Telemetry protocol defines square progress bar contract
+  ✅ PASS: Telemetry protocol specifies square progress bar format
+  ✅ PASS: Telemetry protocol specifies CLI mode with ceiling and floor
+  ✅ PASS: Balanced directive enforces max 1 callout per turn
+  ✅ PASS: Balanced directive enforces square progress bar
+  ✅ PASS: Lite directive enforces max 1 callout per turn
+  ✅ PASS: Lite directive enforces square progress bar
+
+📌 Scenario T: Context Economy, Adaptive Zoom & Anti-Starvation
+  ✅ PASS: Context Economy defines Minimum Sufficient Context invariant
+  ✅ PASS: Context Economy defines Anti-Starvation invariant
+  ✅ PASS: Context Economy specifies Hard Escalation Triggers
+  ✅ PASS: Context Economy specifies Context Sufficiency Check gate
+  ✅ PASS: Context Economy defines 4D Context model
+  ✅ PASS: Context Economy defines Z0-Z4 zoom taxonomy
+  ✅ PASS: Context Economy defines Context Provider Capability Contract
+  ✅ PASS: Context Economy establishes evidence vs authority invariant
+  ✅ PASS: Context Economy defines provider freshness invariant
+  ✅ PASS: Context Economy defines required provider capabilities
+  ✅ PASS: Balanced directive registers the Context Economy contract
+  ✅ PASS: Lite directive registers the Context Economy contract
+
+📌 Scenario AT: Transitive Context-Economy Discovery Route (Issue #596)
+  ✅ PASS: Balanced directive protocol line references setup
+  ✅ PASS: Lite directive protocol line references setup
+  ✅ PASS: Setup workflows and protocols reference lists context-economy.md
+  ✅ PASS: WORKFLOW-MAP links context-economy.md
+  ✅ PASS: Context Economy keeps live-transcript validation open
+  ✅ PASS: Context Economy no longer claims no automated check exercises the route
+
+📌 Scenario U: Table Structural Integrity & Installer Host Auto-Detection
+  ✅ PASS: Validator PS1 defines ORPHANED_TABLE_ROW diagnostic
+  ✅ PASS: Validator PS1 defines TABLE_COLUMN_MISMATCH diagnostic
+  ✅ PASS: Validator SH defines ORPHANED_TABLE_ROW diagnostic
+  ✅ PASS: Validator SH defines TABLE_COLUMN_MISMATCH diagnostic
+  ✅ PASS: State tracker template includes table invariant comment
+  ✅ PASS: Checkpoint workflow defines Table Integrity Invariant
+  ✅ PASS: init.ps1 supports Reconfigure switch
+  ✅ PASS: init.sh supports reconfigure flag
+  ✅ PASS: init.ps1 auto-detects and preserves installed hosts on update
+  ✅ PASS: init.sh auto-detects and preserves installed hosts on update
+
+📌 Scenario V: Profile Drift Audit (pk:sync vs Repository Reality — Issue #338)
+  ✅ PASS: Sync defines the PROMPTKIT.md drift audit section
+  ✅ PASS: Sync drift audit is detection-only
+  ✅ PASS: Sync drift audit is bounded to manifest presence
+  ✅ PASS: Sync drift findings stay on the observation side of the memory-vs-policy boundary
+  ✅ PASS: Sync drift audit never auto-rewrites PROMPTKIT.md
+  ✅ PASS: Clean profile produces no findings and no extra ceremony
+
+📌 Scenario W: Turbo Suitability Check (pk:profile — Issue #337)
+  ✅ PASS: Profile workflow asks the Turbo suitability question
+  ✅ PASS: Sequential workloads are warned that waves buy zero benefit
+  ✅ PASS: Suitability check is advisory and never blocks Turbo
+  ✅ PASS: Suitability check links the pre-flight checklist as evidence
+  ✅ PASS: Suitability check links the checklist instead of duplicating it
+  ✅ PASS: Explicit Turbo override remains honored after a no answer
+  ✅ PASS: Onboarding runs the advisory suitability check before Turbo acknowledgement
+
+📌 Scenario X: Proactive Downgrade & Checkpoint Cadence Guidance (pk:route — Issue #339)
+  ✅ PASS: Router performs a proactive per-milestone level-fit check
+  ✅ PASS: Level-fit check is anchored to milestone boundaries
+  ✅ PASS: Downgrades stay proposed, never forced
+  ✅ PASS: Downgrade reduces records, never verification
+  ✅ PASS: Router documents checkpoint cadence by project size
+  ✅ PASS: Small-project cadence guidance avoids manufactured checkpoint pairs
+  ✅ PASS: Cadence numbers defer to the canonical checkpoint workflow
+
+📌 Scenario Y: Skill Coexistence & Precedence Contract (workflows/route.md & protocols/setup.md — Issue #385)
+  ✅ PASS: Router enforces that skill invocation never reclassifies work
+  ✅ PASS: Router mandates skill process instructions yield to hard gates
+  ✅ PASS: Router warns against host skills named with pk- prefix
+  ✅ PASS: Setup Phase 1 inspects host skill directories
+  ✅ PASS: Setup confirms governance primacy when skills are detected
+  ✅ PASS: Adoption guide carries skill dedup table
+  ✅ PASS: Adoption guide dedup table maps commit skills
+
+📌 Scenario Z: Sharpened Subagent Verifier & Reviewer Briefs (Issue #390)
+  ✅ PASS: Subagent delegation defines Claims-Audit duty for reviewers and verifiers
+  ✅ PASS: Subagent delegation requires re-verifying claims against diff and exit codes
+  ✅ PASS: Review workflow inherits Claims-Audit duty in dual-axis delegation
+  ✅ PASS: Review workflow defines trigger-based security-lens third reviewer
+  ✅ PASS: Review report creates no approval or merge authority
+  ✅ PASS: Debug workflow includes adversarial pass in L2+ verifier brief
+  ✅ PASS: Debug workflow specifies attempting to break the fix
+  ✅ PASS: Debug workflow preserves L0/L1 bypass for Pattern C verification
+  ✅ PASS: Ship workflow requires Pattern C evidence audit before coordinator review
+  ✅ PASS: Ship evidence audit verifies tag proposals are unexecuted
+  ✅ PASS: Ship evidence audit verifies verification links resolve
+  ✅ PASS: Ship evidence audit verifies rollback records exist
+
+📌 Scenario AA: Recipe Schema & Workflow Wiring (Issue #393)
+  ✅ PASS: Recipe README includes catalog matrix
+  ✅ PASS: Recipe README documents intake criteria and guidance tiers
+  ✅ PASS: Recipe README specifies strict 1,500 token ceiling
+  ✅ PASS: Auth workflow links auth-session recipe
+  ✅ PASS: Debug workflow links env-validation recipe
+  ✅ PASS: API workflow links form-mutations recipe
+  ✅ PASS: API workflow links webhook-idempotency recipe
+  ✅ PASS: Test workflow links test-isolation recipe
+  ✅ PASS: Onboarding workflow links env-validation recipe
+
+📌 Scenario AB: Stack Playbooks Catalog Index & Astro Stack (Issue #392)
+  ✅ PASS: Stacks README includes catalog matrix
+  ✅ PASS: Stacks README documents guidance tiers and intake rules
+  ✅ PASS: Stacks README catalog indexes web-astro playbook
+  ✅ PASS: Stacks README documents CMS layer in demand-driven roadmap
+  ✅ PASS: Astro playbook defines valid frontmatter name
+  ✅ PASS: Astro playbook uses category: web
+  ✅ PASS: Astro playbook declares astro.config manifest activation
+  ✅ PASS: Astro playbook declares fast verification command
+
+📌 Scenario AC: Docker Stack Playbook & Discovery (Issue #396)
+  ✅ PASS: Stacks README catalog indexes deploy-docker playbook
+  ✅ PASS: Docker playbook defines valid frontmatter name
+  ✅ PASS: Docker playbook uses category: cloud
+  ✅ PASS: Docker playbook declares Dockerfile manifest activation
+  ✅ PASS: Docker playbook declares fast verification command
+  ✅ PASS: Docker playbook defines multi-stage invariant
+  ✅ PASS: Docker playbook defines non-root invariant
+  ✅ PASS: Onboarding workflow detects Docker deployment pattern
+
+📌 Scenario AD: FastAPI Stack Playbook & Discovery (Issue #398)
+  ✅ PASS: Stacks README catalog indexes api-fastapi playbook
+  ✅ PASS: FastAPI playbook defines valid frontmatter name
+  ✅ PASS: FastAPI playbook uses category: web
+  ✅ PASS: FastAPI playbook declares alembic.ini manifest activation
+  ✅ PASS: FastAPI playbook declares fast verification command
+  ✅ PASS: FastAPI playbook defines Pydantic v2 invariant
+  ✅ PASS: FastAPI playbook defines async discipline invariant
+  ✅ PASS: Onboarding workflow detects FastAPI pattern
+
+📌 Scenario AE: Node.js API Stack Playbook & Discovery (Issue #400)
+  ✅ PASS: Stacks README catalog indexes api-node playbook
+  ✅ PASS: Node API playbook defines valid frontmatter name
+  ✅ PASS: Node API playbook uses category: web
+  ✅ PASS: Node API playbook declares package.json manifest activation
+  ✅ PASS: Node API playbook declares fast verification command
+  ✅ PASS: Node API playbook defines runtime schema invariant
+  ✅ PASS: Node API playbook defines event loop invariant
+  ✅ PASS: Onboarding workflow detects Node.js Server pattern
+
+📌 Scenario AF: WordPress CMS Stack Playbook & Discovery (Issue #402)
+  ✅ PASS: Stacks README catalog indexes cms-wordpress playbook
+  ✅ PASS: WordPress playbook defines valid frontmatter name
+  ✅ PASS: WordPress playbook uses category: web
+  ✅ PASS: WordPress playbook declares wp-config.php manifest activation
+  ✅ PASS: WordPress playbook declares fast verification command
+  ✅ PASS: WordPress playbook defines prepared statements invariant
+  ✅ PASS: WordPress playbook defines nonce verification invariant
+  ✅ PASS: Onboarding workflow detects WordPress pattern
+
+📌 Scenario AG: Human Decision & Question Comprehensibility Contract (Issue #406)
+  ✅ PASS: Decision Card format sections defined in quality gate
+  ✅ PASS: Recommendation mandatory on every decision card
+  ✅ PASS: Type D accountability routing requires the card
+  ✅ PASS: You-decide delegation default declared on the card
+  ✅ PASS: Plan workflow defines assumption-conversion rule
+  ✅ PASS: Plan workflow forbids extracting guesses
+  ✅ PASS: Debug halt path adopts the Decision Card
+  ✅ PASS: Ship approval request adopts the Decision Card
+  ✅ PASS: Lite directive carries the decision routing one-liner
+
+📌 Scenario AH: Decision Budget Caps Type B Volume (Issue #408)
+  ✅ PASS: Decision Budget rule stated in quality gate
+  ✅ PASS: Types C and D exempt from the budget
+  ✅ PASS: Budget overflow converts to Assumption Records
+  ✅ PASS: Agent states remaining budget when asking
+  ✅ PASS: Plan workflow wires overflow to Assumption Records
+  ✅ PASS: Checkpoint carries the delegation summary slot
+
+📌 Scenario AI: Turbo Verdict Revisit Trigger (Issue #213)
+  ✅ PASS: Turbo verdict carries an expiry trigger
+
+📌 Scenario AJ: npm Courier Wrapper (Issue #413)
+  ✅ PASS: Courier resolves a pinned release tag, never a moving ref
+  ✅ PASS: Courier declares itself a courier, not a reimplementation
+  ✅ PASS: Courier delegates to the canonical init.sh
+  ✅ PASS: Courier delegates to the canonical init.ps1 on Windows
+  ✅ PASS: Courier package name matches the reserved registry name
+  ✅ PASS: Courier publishes with provenance attestation
+  ✅ PASS: Courier tarball ships the MIT LICENSE file
+  ✅ PASS: Courier fails fast with a clear error on old Node runtimes
+  ✅ PASS: Courier README lists the add-host pass-through flag
+  ✅ PASS: Release job publishes with provenance
+  ✅ PASS: Release validation has an unprivileged job
+  ✅ PASS: Release tags must point into default-branch history
+  ✅ PASS: Release publishing has a separate job
+  ✅ PASS: Only the isolated publish job requests OIDC
+  ✅ PASS: Privileged publishing skips package lifecycle scripts
+  ✅ PASS: release validation checks tag code without OIDC
+  ✅ PASS: release tag trust is established before tagged code runs
+  ✅ PASS: release artifact is built from commit data in an unprivileged job
+  ✅ PASS: OIDC publish job is isolated from repository code
+  ✅ PASS: README states the courier contract
+  ✅ PASS: Submodule path stays first-documented and canonical
+  ✅ PASS: QUICKSTART documents the optional npx path
+  ✅ PASS: Courier refuses to overlay a non-empty .promptkit (no silent tar merge)
+  ✅ PASS: Courier guards the install target before extracting
+  ✅ PASS: Courier README states the Windows pwsh prerequisite
+
+📌 Scenario AK: Grill Completion Contract (Issue #425)
+  ✅ PASS: Grill drill suspends Tier-3 snippets and the Just Show Me guardrail
+  ✅ PASS: Grill probes carry their own context and model answers
+  ✅ PASS: Grill mode owns a zero-code completion contract
+  ✅ PASS: Pre-implementation grilling reads the repo before asking
+  ✅ PASS: Tutor grill contract directs planning-time gaps to technical specification with explicit disposition
+  ✅ PASS: Tutor grill contract forbids leaving planning-time gaps in an auxiliary journal
+  ✅ PASS: Tech spec sign-off requires material grill gaps to have explicit disposition
+  ✅ PASS: Plan workflow requires pre-implementation grill gaps reconciled before sign-off
+
+📌 Scenario AM: Verify-Bootstrap Workflow (Issue #440)
+  ✅ PASS: Verify-bootstrap workflow declares its trigger
+  ✅ PASS: Verify-bootstrap declares Level 2 ceremony
+  ✅ PASS: Verify-bootstrap records the ADR 0002 non-overlap gate
+  ✅ PASS: Verify-bootstrap restates the human-authorized-generation guardrail
+  ✅ PASS: Verify-bootstrap halts instead of waiving an unproducible red
+  ✅ PASS: Verify-bootstrap incorporates existing suites, never replaces them
+  ✅ PASS: Setup reference registers the verify-bootstrap workflow
+
+📌 Scenario AL: Countersignature Consistency (retro-certification)
+  ✅ PASS: approved retro chains agree with CHANGELOG countersignature state
+
+📌 Scenario AN: Reference-Link Resolution Gate (Issue #444)
+  ✅ PASS: Bash validator reports broken markdown links
+  ✅ PASS: PowerShell validator reports broken markdown links
+  ✅ PASS: Bash validator carries the historical-record exemption list
+  ✅ PASS: PowerShell validator carries the historical-record exemption list
+  ✅ PASS: Bash link harness proves broken-link polarity
+  ✅ PASS: PowerShell link harness proves broken-link polarity
+  ✅ PASS: CI wires the reference-link harness
+
+📌 Scenario AO: PR Base Branch, Review Modes & Worktree Merge Safety (Issue #479)
+  ✅ PASS: PR workflow parameterizes target base branch
+  ✅ PASS: PR workflow checks conflicts against resolved target base ref
+  ✅ PASS: PR workflow specifies explicit base in gh pr create
+  ✅ PASS: PR workflow forbids omitting explicit base flag
+  ✅ PASS: PR workflow specifies human merge boundary for target base
+  ✅ PASS: Subagent delegation uses positional syntax for bash worktree merge
+  ✅ PASS: Subagent delegation uses positional syntax for powershell worktree merge
+  ✅ PASS: Subagent delegation explicitly reserves merge execution for human
+  ✅ PASS: Review workflow defines Branch / PR Review Mode
+  ✅ PASS: Review workflow defines Staged Changes Review Mode
+  ✅ PASS: Review workflow defines Working Tree / Uncommitted Review Mode
+  ✅ PASS: Review workflow defines staged mode index isolation
+  ✅ PASS: Review workflow defines working tree mode scope
+  ✅ PASS: Review workflow filters diagnostics using mode-appropriate review diff
+  ✅ PASS: Review workflow passes mode-appropriate review diff to verifier
+  ✅ PASS: PowerShell worktree isolation utility checks LASTEXITCODE on git mutations
+  ✅ PASS: Bash worktree isolation utility checks worktree add exit code
+  ✅ PASS: Bash worktree isolation utility checks merge exit code
+📌 Scenario AP: Stack activation contracts and recipe wiring (#519-#523; static only)
+  ✅ PASS: mobile-kmp frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes mobile-kmp
+  ✅ PASS: systems-java-spring frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes systems-java-spring
+  ✅ PASS: systems-csharp-dotnet frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes systems-csharp-dotnet
+  ✅ PASS: database-postgres frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes database-postgres
+  ✅ PASS: database-mysql frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes database-mysql
+  ✅ PASS: deploy-aws frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes deploy-aws
+  ✅ PASS: deploy-gcp frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes deploy-gcp
+  ✅ PASS: State recipe follows required structure
+  ✅ PASS: API workflow links WebSocket recipe
+  ✅ PASS: Design workflow links state-management recipe
+  ✅ PASS: State recipe is not permanently injected
+  ✅ PASS: WebSocket recipe is not permanently injected
+📌 Scenario AQ: the evidence-based behavioral axis actually reaches its verdicts (#535)
+  ✅ PASS: a recorded prohibited write is behavioral=FAIL and exits non-zero
+  ✅ PASS: complete evidence with no prohibited write is behavioral=PASS and exits 0
+  ✅ PASS: an empty write log is behavioral=UNTESTED and provenance=unverified, never PASS
+  ✅ PASS: a transcript with no evidence bundle is behavioral=UNTESTED, never behavioral=PASS
+  ✅ PASS: a placeholder provenance value is provenance=unverified even when evidence passes
+  ✅ PASS: recovery reads in the mandated order are behavioral=PASS
+  ✅ PASS: recovery reads present but inverted are behavioral=FAIL and exit non-zero
+  ✅ PASS: an evidence-free scenario keeps the anchored 3-field prefix and emits no behavioral field
+  ✅ PASS: a whitespace-only write log is behavioral=UNTESTED, never PASS
+  ✅ PASS: a directory named observed-writes.log is behavioral=UNTESTED, never a verified capture
+  ✅ PASS: an unreadable write log is behavioral=UNTESTED, never PASS
+  ✅ PASS: a directory named provenance.json is provenance=unverified, never a verified capture
+  ✅ PASS: a directory named provenance.json is not a satisfied evidence-present check
+  ✅ PASS: a NUL-only write log is behavioral=UNTESTED, never PASS
+  ✅ PASS: the scored line is identical under a UTF-8 locale and under LC_ALL=C
+  ✅ PASS: a directory at the evidence-absent path is absent, not a violation
+  ✅ PASS: Bash requires a readable regular file before reading activity
+  ✅ PASS: Bash pins the byte set so the verdict cannot vary with locale
+  ✅ PASS: evidence-absent uses the same type test as its twin
+  ✅ PASS: PowerShell write-log lookup rejects a directory
+  ✅ PASS: PowerShell reads the log as bytes, preserving a BOM
+  ✅ PASS: Bash reads the side channel by prefix, not by position
+  ✅ PASS: read-only shell inspection of the migration is not a prohibited action
+  ✅ PASS: the Lite anti-starvation twin accepts the same read-only inspection
+  ✅ PASS: an observed prohibited write in the anti-starvation cell is behavioral=FAIL
+  ✅ PASS: a missing activity log is behavioral=UNTESTED and provenance=unverified, never a full pass
+  ✅ PASS: a placeholder provenance value is provenance=unverified even when the evidence passes
+  ✅ PASS: ordinary prose may mention docs/tasks/ without failing the sufficiency rubric
+  ✅ PASS: an observed task-record write in the sufficiency cell is behavioral=FAIL
+  ✅ PASS: a caller-path read before the authoritative write satisfies the ordering check
+  ✅ PASS: writing before any caller read inverts the ordering check
+
+📌 Scenario AR: pk:doctor Contract & Exit Codes (Issue #547)
+  ✅ PASS: pk:doctor is declared exactly once as a trigger line
+  ✅ PASS: pk:doctor ships an H1 workflow file (the 26th on-disk workflow)
+  ✅ PASS: on-disk workflow count is 26 (the pk:doctor file is the 26th)
+  ✅ PASS: doctor Phase 2 heading declares six checks
+  ✅ PASS: doctor carries no stale four-check claim
+  ✅ PASS: healthy fixture -> exit 0
+  ✅ PASS: host file missing the managed block -> exit 1
+  ✅ PASS: deleted universal AGENTS.md -> exit 1
+  ✅ PASS: absent PROMPTKIT.md prerequisite -> exit 2
+
+📊 Behavioral Contract Verification Summary
+Passed: 566 | Failed: 0
+===========================================================
+✅ All behavioral prompt-contract tests passed successfully!
+
+🧪 Running PromptKit OS Behavioral Prompt-Contract Tests
+===========================================================
+
+📌 Scenario A: Trivial Change ('Fix a typo in the README') — Level 0 Direct
+  ✅ PASS: Level 0 Direct classification defined in router
+  ✅ PASS: Level 0 expected behavior flow present
+  ✅ PASS: Level 0 fast-path rule in agent setup protocol
+
+📌 Scenario B: Localized Bug / Small Feature ('Fix empty password crash') — Level 1 Standard
+  ✅ PASS: Level 1 Standard classification defined in router
+  ✅ PASS: Level 1 file edits do not trigger mandatory Task Record creation
+  ✅ PASS: Plan workflow specifies Level 1 does not map to Task Record file
+  ✅ PASS: Tasks workflow specifies Level 1 file edits do not require Task Record
+
+📌 Scenario C: Substantive Risk Feature ('Add OAuth login and user roles') — Level 2 Controlled
+  ✅ PASS: Level 2 Controlled classification defined in router
+  ✅ PASS: Local Task Record required for Level 2 Controlled Work
+  ✅ PASS: Plan workflow requires Task Record for Level 2 Minimal/Full Planning
+  ✅ PASS: Auth workflow defines capability matrix requirements
+
+📌 Scenario D: Destructive Operation ('Drop the users table and recreate the schema')
+  ✅ PASS: Data workflow enforces Expand-Contract migration strategy
+  ✅ PASS: PR template includes destructive operation safety check
+  ✅ PASS: Router specifies explicit human authorization boundary
+
+📌 Scenario E: Release & Level-3 Downgrade Safety Rules
+  ✅ PASS: Level 3 downgrade safety guardrails section present
+  ✅ PASS: Confirmation no release actions remain in scope
+  ✅ PASS: Release Coordinator approval required if release evaluation started
+  ✅ PASS: Existing release evidence must be preserved or closed
+
+📌 Scenario F: Canonical Mapping & Consistency Checks
+  ✅ PASS: Explicit canonical mapping section present in router
+  ✅ PASS: Router Adaptation compatibility contract uses Level 0-3 model
+  ✅ PASS: Plan workflow maps Levels 0-3 explicitly
+  ✅ PASS: README includes Level 0 ceremony definition
+  ✅ PASS: README contains Level 0-3 execution model
+  ✅ PASS: README explicitly says Level 1 does not require a Task Record
+  ✅ PASS: README specifies Level 2 requires a Task Record
+  ✅ PASS: README specifies Level 3 requires Level 2 evidence and Task Record
+  ✅ PASS: Router release-evidence routing uses Level-3 terminology
+  ✅ PASS: ARCHITECTURE layout tree describes current CI validation
+  ✅ PASS: WORKFLOW-MAP includes Level 1 ceremony definition
+
+📌 Scenario G: Progressive Loading & Canonical Authority
+  ✅ PASS: protocols/setup.md defines progressive loading policy
+  ✅ PASS: Level 1 defines minimal loading path without Task Record
+  ✅ PASS: README contains early Level-1 onboarding path
+  ✅ PASS: README links to workflows/route.md as canonical guide
+  ✅ PASS: workflows/route.md declares canonical ownership of Levels 0-3
+
+📌 Scenario H: Remediation Workflow ('Fix a known review finding') — pk:fix
+  ✅ PASS: pk:fix trigger defined in lifecycle router
+  ✅ PASS: Remediation workflow present with title
+  ✅ PASS: Remediation workflow distinguishes known cause from pk:debug
+  ✅ PASS: Remediation workflow enforces security-first ordering
+  ✅ PASS: Remediation workflow requires reproduction or baseline measurement
+  ✅ PASS: Remediation workflow aligns with Level 0-3 ceremony model
+
+📌 Scenario I: Post-Staging Secret Scan Sequencing (Time-of-Check to Time-of-Use Safety)
+  ✅ PASS: Commit workflow enforces post-staging secret scan
+  ✅ PASS: Secret scan runs immediately after staging phase
+
+📌 Scenario J: Standardized Visual Callouts & Telemetry Status Cards
+  ✅ PASS: Directive includes native MCP and interactive turn prompts guardrail
+  ✅ PASS: Telemetry-cards protocol carries the relocated status card spec
+  ✅ PASS: Telemetry-cards protocol specifies next recommended step callout format
+  ✅ PASS: Telemetry-cards protocol specifies telemetry status card format
+  ✅ PASS: Directive points to the lazy telemetry-cards protocol
+  ✅ PASS: Project profile template carries the status-cards machine line
+  ✅ PASS: Directive conditions the card on the status-cards opt-out
+  ✅ PASS: Lite directive conditions the card on the status-cards opt-out
+  ✅ PASS: Telemetry-cards protocol documents the opt-out and halt guarantee
+  ✅ PASS: Telemetry-cards protocol defines quiet completion when nothing is pending
+  ✅ PASS: Telemetry-cards protocol specifies the per-turn spend field
+  ✅ PASS: State template offers the terminal COMPLETED status
+  ✅ PASS: State template carries the spend ledger block
+  ✅ PASS: Onboard workflow mandates preserving Session Spend Ledger
+  ✅ PASS: Init script ensures docs directory creation for STATE.md
+  ✅ PASS: Checkpoint workflow defines the closeout DoD format
+  ✅ PASS: Commit workflow includes telemetry status card
+  ✅ PASS: PR workflow includes telemetry status card
+  ✅ PASS: Plan workflow includes telemetry status card
+  ✅ PASS: Tasks workflow includes telemetry status card
+  ✅ PASS: Test workflow includes telemetry status card
+  ✅ PASS: Fix workflow includes telemetry status card
+  ✅ PASS: Plan workflow includes interactive decision prompt guidelines
+  ✅ PASS: Design workflow defines the no-brand-file finish bar
+  ✅ PASS: Design gate requires a declared favicon
+  ✅ PASS: Design workflow names the advisory catalog with exclusions
+  ✅ PASS: Design workflow defines 4 curated aesthetic archetypes
+  ✅ PASS: Design workflow defines pk:design study protocol
+  ✅ PASS: Design workflow defines anti-bento layout rhythm rule
+  ✅ PASS: Discovery intake includes aesthetic design vibe slot
+  ✅ PASS: Design workflow checklist includes Visual Floor enforcement
+  ✅ PASS: Design workflow separates design requirements from implementation examples
+  ✅ PASS: Design workflow defines D0-D3 minimum-sufficient ceremony tiers
+  ✅ PASS: Design workflow scopes interaction states by applicability instead of a blanket 8-state mandate
+
+📌 Scenario K: Project Database & Harness Isolation
+  ✅ PASS: Directive enforces project database isolation guardrail
+  ✅ PASS: Data workflow mandates project-scoped database isolation
+  ✅ PASS: Test workflow mandates project-scoped database isolation
+
+📌 Scenario L: Protocol Synchronization & Hot-Reloading (pk:sync)
+  ✅ PASS: Directive includes pk:sync trigger
+  ✅ PASS: Directive enforces disk-first protocol loading guardrail
+  ✅ PASS: Sync workflow defines 3-phase sync protocol
+  ✅ PASS: Sync workflow enforces fresh disk reads
+
+📌 Scenario M: Runtime Profile Switcher & Honest Workflow Counts (pk:profile)
+  ✅ PASS: Balanced directive includes pk:profile trigger
+  ✅ PASS: Lite directive includes pk:profile trigger
+  ✅ PASS: Profile workflow defines the 4-phase switch protocol
+  ✅ PASS: Profile workflow enforces the Turbo experimental guard
+  ✅ PASS: Profile workflow honors non-interactive default
+  ✅ PASS: Router decision matrix registers pk:profile
+  ✅ PASS: Reference validator reports zero trigger warnings
+  ✅ PASS: Lite directive claims the honest utility workflow count
+  ✅ PASS: Directive carries the session-endurance checkpoint rule
+  ✅ PASS: Directive mandates fresh-read trust for STATE.md
+  ✅ PASS: Directive mandates telemetry card provenance
+  ✅ PASS: Lite directive carries the endurance rule
+  ✅ PASS: Lite directive carries the provenance rule
+  ✅ PASS: Directive lists trigger-to-file rename exceptions
+  ✅ PASS: Router defines the mixed-level tie-break rule
+  ✅ PASS: Directive carries the tie-break rule
+  ✅ PASS: Quality gate defines the milestone boundary
+
+📌 Scenario AS: Guidance-Tier Catalog Truthfulness & Lite Git Boundaries (Issue #606)
+  ✅ PASS: Tier 1 policy points at the installed directive templates directory
+  ✅ PASS: Three-tier guidance diagram is retained
+  ✅ PASS: Catalog keeps its own authoring durability contract
+  ✅ PASS: Policy bullet states directive templates are installed into supported host instructions
+  ✅ PASS: Policy bullet states protocols are referenced or loaded only when required
+  ✅ PASS: Catalog no longer routes tier-1 policy at rules/*.md
+  ✅ PASS: Catalog drops the permanently-mounted rules authoring claim
+  ✅ PASS: Tier 1 policy points at the installed directive templates directory
+  ✅ PASS: Three-tier guidance diagram is retained
+  ✅ PASS: Catalog keeps its own authoring durability contract
+  ✅ PASS: Policy bullet states directive templates are installed into supported host instructions
+  ✅ PASS: Policy bullet states protocols are referenced or loaded only when required
+  ✅ PASS: Catalog no longer routes tier-1 policy at rules/*.md
+  ✅ PASS: Catalog drops the permanently-mounted rules authoring claim
+  ✅ PASS: Lite forbids crossing a milestone with this task's uncommitted changes
+  ✅ PASS: Lite surfaces pre-existing dirt without altering or stalling
+  ✅ PASS: Lite retains verification and atomic pk:commit at milestone end
+  ✅ PASS: Lite retains docs/STATE.md synchronization at milestone end
+  ✅ PASS: Lite retains the human sign-off request
+  ✅ PASS: Balanced directive retains the task-scoped milestone boundary
+  ✅ PASS: Balanced directive retains the pre-existing-dirt exception
+  ✅ PASS: Quality gate retains the substantive task-scope qualification
+  ✅ PASS: Quality gate retains the pre-existing-dirt exception
+  ✅ PASS: Trigger tokens are unique within templates/agent-directive-template.md
+  ✅ PASS: Trigger tokens are unique within templates/agent-directive-lite-template.md
+  ✅ PASS: On-disk workflow file count is 26 (matches reconciled docs claims)
+  ✅ PASS: All live workflow-count claims state the on-disk count (26) across the claim surface
+  ✅ PASS: Engine PROMPTKIT.md profile states the current count (26 workflows, ADR 0002)
+  ✅ PASS: project-profile template seeds the current count (26 workflows) into fresh projects
+
+📌 Scenario N: Greenfield Discovery Intake & Planning Gate (pk:onboard / pk:plan)
+  ✅ PASS: Onboard workflow defines conditional greenfield Phase 0 intake
+  ✅ PASS: Intake questions are asked in the context window, not modal pickers
+  ✅ PASS: Onboard workflow links the bounded discovery intake protocol
+  ✅ PASS: Brownfield installs get migration-safe intake signals (never re-grilled)
+  ✅ PASS: Onboard workflow writes machine-readable size class to PROMPTKIT.md
+  ✅ PASS: Onboard offers tooling proposals accept-or-change, never silent defaults
+  ✅ PASS: Onboard answers product-shaped requests with intake questions, not a scaffold
+  ✅ PASS: Onboard treats brownfield toolchain as ground truth
+  ✅ PASS: Onboard preserves existing user-written rules on brownfield installs
+  ✅ PASS: Onboard gives human overrides precedence over detected tooling
+  ✅ PASS: Onboard preserves existing confirmed size and intake-status on brownfield runs
+  ✅ PASS: Onboard preserves existing DESIGN.md without explicit human confirmation
+  ✅ PASS: Onboard labels discovered commands as unverified until executed
+  ✅ PASS: Onboard names the Phase 2 findings summary as the pre-write artifact
+  ✅ PASS: Onboard guardrail conditions Phase 3 writes on confirming the Phase 2 findings summary
+  ✅ PASS: Onboard defines the findings summary inside Phase 2, before the first Phase 3 write
+  ✅ PASS: Onboard Phase 1 directive names the same single artifact
+  ✅ PASS: Onboard rejects adjustment, ambiguous, and absent replies as approval
+  ✅ PASS: Onboard confirmation scope excludes host application source
+  ✅ PASS: Onboard no longer pairs the summary with the Phase 4 scorecard in the write precondition
+  ✅ PASS: Onboard Phase 1 directive no longer names an undefined scorecard
+  ✅ PASS: Onboard write gate: summary defined before Phase 3, single-artifact condition, one scorecard emit
+  ✅ PASS: Onboard write-gate guard rejects the original defective wording (legacy sample)
+  ✅ PASS: Intake protocol records why the interview closed
+  ✅ PASS: Intake protocol routes AI-suggested scope to the Later ledger
+  ✅ PASS: Intake asks product-shape (SaaS-class) decision questions before any stack is named
+  ✅ PASS: Intake forbids scaffolds, templates, or a named stack for product-shaped requests
+  ✅ PASS: Project profile template carries machine-readable intake signals
+  ✅ PASS: Profile placeholders are declared intake questions, never silent defaults
+  ✅ PASS: Profile header passes the template rendered as onboarding copies it, without executing a live agent
+  ✅ PASS: Profile header guard rejects a legacy Installed date in the rendered profile
+  ✅ PASS: Profile header guard rejects a rendered profile with the authoring-date field removed
+  ✅ PASS: Profile-date guidance separates authoring provenance from installation status
+  ✅ PASS: Profile Engine field documents an external or absent engine
+  ✅ PASS: Profile template no longer labels the authoring date as an installation
+  ✅ PASS: Profile-date guidance does not promise a refresh timestamp
+  ✅ PASS: Profile-date guidance states installer reruns preserve an existing date
+  ✅ PASS: Profile-date guidance states a legacy Installed date is retained during migration
+  ✅ PASS: Onboarding still generates the profile by copying the template
+  ✅ PASS: Plan workflow gates architecture on intake status before Step 1
+  ✅ PASS: Plan workflow never re-interviews brownfield installs
+  ✅ PASS: Plan workflow routes unrequired complexity to the Later ledger
+  ✅ PASS: Plan workflow surfaces agent defaults as an accept-or-change list
+  ✅ PASS: Plan workflow bounds interactive pickers to closed-set, evidence-backed choices
+  ✅ PASS: Sync workflow intercepts mid-implementation requirement deltas
+  ✅ PASS: Checkpoint contract requires new requirements to be recorded before continuing
+  ✅ PASS: Checkpoint workflow defines fallback spend estimation heuristic for unmetered hosts
+  ✅ PASS: Checkpoint preserves heuristic ranges instead of midpoint estimates
+  ✅ PASS: Checkpoint keeps measured and heuristic token evidence separate
+  ✅ PASS: Checkpoint distinguishes continuity telemetry from formal benchmarks
+  ✅ PASS: State template labels heuristic payload without implying provider spend
+  ✅ PASS: State template records compact process evidence without inventing missing values
+  ✅ PASS: Router decision matrix registers greenfield inception via pk:onboard
+  ✅ PASS: Context-sync authority table covers Figma/screenshot/doc design inputs
+  ✅ PASS: Plan workflow caps partial-intake repair to missing critical slots only (legacy protection)
+  ✅ PASS: Blanket Recommended-pickers are bounded to closed-set operational choices
+  ✅ PASS: Perf workflow defines Core Web Vitals audit protocol
+  ✅ PASS: Refactor workflow defines Code Simplification Pass and deflation heuristics
+  ✅ PASS: Intake protocol uses only the canonical hyphenated machine-line spelling
+  ✅ PASS: Intake protocol owns the onboarding artifact-provenance contract
+  ✅ PASS: Provenance contract separates human-confirmed decisions
+  ✅ PASS: Provenance contract separates accepted defaults with bounded scope
+  ✅ PASS: Provenance contract separates agent-owned assumptions
+  ✅ PASS: Provenance contract separates derived PromptKit baselines
+  ✅ PASS: Provenance contract separates pending verification obligations
+  ✅ PASS: Provenance contract separates resolved or superseded assumptions
+  ✅ PASS: Provenance contract preserves residual operational risk on resolution
+  ✅ PASS: Provenance contract defines round, turn, and question counting
+  ✅ PASS: Provenance contract bounds the subjective remainder to a checklist
+  ✅ PASS: Project profile template carries the intake-record machine line
+  ✅ PASS: Seeded profile baselines are labelled derived, not human-approved
+  ✅ PASS: Milestone-boundary wording carries no dangling working-tree fragment
+  ✅ PASS: State template requires an inline source for locked invariants
+  ✅ PASS: WORKFLOW-MAP records the onboarding artifacts' projection authority
+  ✅ PASS: Authority table names intake-record alongside size and intake-status
+  ✅ PASS: Profile intake-record is a path reference, not a second decision authority
+  ✅ PASS: Doctor treats an absent intake-record line as a non-fatal advisory
+  ✅ PASS: Missing intake-record lines stay valid for pre-field profiles
+  ✅ PASS: Intake protocol owns the host-documentation divergence record
+  ✅ PASS: Divergence row pins the eight required reconciliation fields in a fixed column order
+  ✅ PASS: Precedence is an explicit three-value designation, never implied
+  ✅ PASS: Divergence rows carry a stable DIVERGENCE-* identifier
+  ✅ PASS: Provenance contract forbids implied precedence promotion
+  ✅ PASS: Onboarding records host-document contradictions in the Intake Record
+  ✅ PASS: Phase 3 write envelope excludes host-document rewrites
+  ✅ PASS: Onboarding states that a detected project document stays byte-identical
+  ✅ PASS: Project profile points at the divergence record
+  ✅ PASS: Project profile cites the divergence identifier instead of restating precedence
+  ✅ PASS: State template requires a traceable source for host-document precedence claims
+  ✅ PASS: Divergence fixture matrix pins the designated-precedence case
+  ✅ PASS: Divergence fixture matrix pins the exact divergence-row and host-integrity summary
+  ✅ PASS: Divergence fixture matrix pins the missing-human-designation diagnostic
+  ✅ PASS: Divergence fixture matrix pins the untraceable-precedence-claim diagnostic
+  ✅ PASS: Divergence fixture host document is the three-line architecture blueprint
+  ✅ PASS: Divergence fixture host document contradicts the confirmed durable-queue decision
+  ✅ PASS: Bash divergence harness pins the exact divergence-row count
+  ✅ PASS: Bash divergence harness pins the host-document immutability check
+  ✅ PASS: PowerShell divergence harness pins the host-document immutability check
+  ✅ PASS: Bash divergence harness pins the generated-profile precedence consistency check
+  ✅ PASS: Bash divergence harness pins the missing generated-profile precedence check
+  ✅ PASS: Bash divergence harness pins the next-action consistency check
+  ✅ PASS: PowerShell divergence harness pins the generated-profile precedence consistency check
+  ✅ PASS: PowerShell divergence harness pins the missing generated-profile precedence check
+  ✅ PASS: PowerShell divergence harness pins the next-action consistency check
+  ✅ PASS: A designated divergence row does not ask for another precedence designation
+  ✅ PASS: An undesignated divergence row documents the missing human designation
+
+📌 Scenario O: Protocol registry & FAQ count drift guards
+  ✅ PASS: Every protocols/*.md file is registered in protocols/setup.md
+  ✅ PASS: FAQ entry count (20) matches published claims in README.md/FAQ.md
+
+📌 Scenario P: Numeric Benchmark Values Match Measurement Tools
+7ab8b50121987daf257b52ee732d59920acda35b
+  ✅ PASS: provenance anchor 7ab8b50121987daf257b52ee732d59920acda35b (measured-input tree unchanged since it)
+  ✅ PASS: Provenance-anchor advice is clone-scoped, not ancestry-scoped (Bash twin parity)
+  ✅ PASS: Provenance-anchor advice is clone-scoped, not ancestry-scoped (PowerShell twin)
+  ✅ PASS: Provenance-advisory guard rejects the legacy main-ancestry wording (negative control)
+  ✅ PASS: Balanced static directive (2348 == measurement output)
+  ✅ PASS: Lite static directive (1456 == measurement output)
+  ✅ PASS: Balanced static reduction percent (93 == measurement output)
+  ✅ PASS: Lite static reduction percent (96 == measurement output)
+  ✅ PASS: Full workflow-set token total (119556 == measurement output)
+  ✅ PASS: Core-six workflow-set token total (32903 == measurement output)
+  ✅ PASS: Full workflow-set file count (26 == measurement output)
+  ✅ PASS: Setup protocol Balanced static directive (2348 == measurement output)
+  ✅ PASS: pk:fix Balanced payload (11335 == measurement output)
+  ✅ PASS: pk:fix Lite payload (10443 == measurement output)
+  ✅ PASS: pk:fix baseline payload (12861 == measurement output)
+  ✅ PASS: pk:fix Balanced context-reduction percent (12 == measurement output)
+  ✅ PASS: pk:fix Lite context-reduction percent (19 == measurement output)
+  ✅ PASS: pk:plan Balanced payload (20824 == measurement output)
+  ✅ PASS: pk:plan Lite payload (19932 == measurement output)
+  ✅ PASS: pk:plan baseline payload (24666 == measurement output)
+  ✅ PASS: pk:plan Balanced context-reduction percent (16 == measurement output)
+  ✅ PASS: pk:plan Lite context-reduction percent (19 == measurement output)
+  ✅ PASS: pk:ship Balanced payload (17125 == measurement output)
+  ✅ PASS: pk:ship Lite payload (16233 == measurement output)
+  ✅ PASS: pk:ship baseline payload (24761 == measurement output)
+  ✅ PASS: pk:ship Balanced context-reduction percent (31 == measurement output)
+  ✅ PASS: pk:ship Lite context-reduction percent (34 == measurement output)
+  ✅ PASS: profile workflow points to the benchmark source without pinning token figures
+
+📌 Scenario R: Search Circuit Breaker Semantics (Balanced + Lite consistency)
+  ✅ PASS: Balanced breaker states advisory semantics
+  ✅ PASS: Balanced breaker defines parallel-call counting
+  ✅ PASS: Balanced breaker excludes trivial-edit resets
+  ✅ PASS: Balanced breaker covers read-only research
+  ✅ PASS: Balanced breaker distinguishes CI budgets from session/host limits
+  ✅ PASS: Lite breaker states advisory semantics
+  ✅ PASS: Lite breaker excludes trivial-edit resets
+  ✅ PASS: Lite breaker covers read-only research
+
+📌 Scenario O: Autonomous SDLC Meta-Orchestrator (workflows/auto.md & pk:auto)
+  ✅ PASS: Auto workflow defines autonomous SDLC meta-orchestration
+  ✅ PASS: Auto workflow enforces Test Immobility Invariant
+  ✅ PASS: Auto workflow enforces 3-strike circuit breaker on failures
+  ✅ PASS: Auto workflow defines explicit 3-strike failure budget (initial failure + 2 refines)
+  ✅ PASS: Auto workflow bounds Turbo pause/resume to one park per wave
+  ✅ PASS: Auto halt record is passive observable state, not a trigger
+  ✅ PASS: Auto workflow requires integrated-state verification before wave success
+  ✅ PASS: Auto waves remain a pk:auto capability, not a subsystem
+  ✅ PASS: Auto workflow enforces path deny-list
+  ✅ PASS: Router decision matrix registers pk:auto
+  ✅ PASS: Directive template registers pk:auto trigger
+
+📌 Scenario Q: Memory vs Policy Boundary (pk:checkpoint / pk:sync / pk:onboard)
+  ✅ PASS: Context-sync defines the memory-vs-policy promotion ladder
+  ✅ PASS: Context-sync carries the memory-vs-policy boundary section
+  ✅ PASS: Context-sync rejects silence and implicit signals as promotion approval
+  ✅ PASS: Context-sync keeps STATE.md execution-control scoped as a projection
+  ✅ PASS: State template stages unverified candidate learnings
+  ✅ PASS: Checkpoint preserves pending candidate status on sync
+  ✅ PASS: Onboard stages manifest-derived observations as candidates
+  ✅ PASS: Sync never promotes candidates on reread
+  ✅ PASS: Context-sync stages pending rules in section 4A
+  ✅ PASS: Checkpoint stages inferred rules outside locked invariants
+  ✅ PASS: Onboard never places observations directly in locked invariants
+  ✅ PASS: Rejected and changed candidates cannot inherit approval
+  ✅ PASS: Setup preserves the promotion boundary
+  ✅ PASS: Candidate promotion records decision provenance
+  ✅ PASS: State template marks invariant source shapes as illustrative, not entries
+  ✅ PASS: Invariant-example guard rejects bare examples and the legacy not-tracked bullet
+
+📌 Scenario S: Dual-Mode Telemetry & Single-Callout Invariants
+  ✅ PASS: Telemetry protocol defines Single-Callout Invariant
+  ✅ PASS: Telemetry protocol mandates at most one callout per turn
+  ✅ PASS: Telemetry protocol defines square progress bar contract
+  ✅ PASS: Telemetry protocol specifies square progress bar format
+  ✅ PASS: Telemetry protocol specifies CLI mode with ceiling and floor
+  ✅ PASS: Balanced directive enforces max 1 callout per turn
+  ✅ PASS: Balanced directive enforces square progress bar
+  ✅ PASS: Lite directive enforces max 1 callout per turn
+  ✅ PASS: Lite directive enforces square progress bar
+
+📌 Scenario T: Context Economy, Adaptive Zoom & Anti-Starvation
+  ✅ PASS: Context Economy defines Minimum Sufficient Context invariant
+  ✅ PASS: Context Economy defines Anti-Starvation invariant
+  ✅ PASS: Context Economy specifies Hard Escalation Triggers
+  ✅ PASS: Context Economy specifies Context Sufficiency Check gate
+  ✅ PASS: Context Economy defines 4D Context model
+  ✅ PASS: Context Economy defines Z0-Z4 zoom taxonomy
+  ✅ PASS: Context Economy defines Context Provider Capability Contract
+  ✅ PASS: Context Economy establishes evidence vs authority invariant
+  ✅ PASS: Context Economy defines provider freshness invariant
+  ✅ PASS: Context Economy defines required provider capabilities
+  ✅ PASS: Balanced directive registers the Context Economy contract
+  ✅ PASS: Lite directive registers the Context Economy contract
+
+📌 Scenario AT: Transitive Context-Economy Discovery Route (Issue #596)
+  ✅ PASS: Balanced directive protocol line references setup
+  ✅ PASS: Lite directive protocol line references setup
+  ✅ PASS: Setup workflows and protocols reference lists context-economy.md
+  ✅ PASS: WORKFLOW-MAP links context-economy.md
+  ✅ PASS: Context Economy keeps live-transcript validation open
+  ✅ PASS: Context Economy no longer claims no automated check exercises the route
+
+📌 Scenario U: Table Structural Integrity & Installer Host Auto-Detection
+  ✅ PASS: Validator PS1 defines ORPHANED_TABLE_ROW diagnostic
+  ✅ PASS: Validator PS1 defines TABLE_COLUMN_MISMATCH diagnostic
+  ✅ PASS: Validator SH defines ORPHANED_TABLE_ROW diagnostic
+  ✅ PASS: Validator SH defines TABLE_COLUMN_MISMATCH diagnostic
+  ✅ PASS: State tracker template includes table invariant comment
+  ✅ PASS: Checkpoint workflow defines Table Integrity Invariant
+  ✅ PASS: init.ps1 supports Reconfigure switch
+  ✅ PASS: init.sh supports reconfigure flag
+  ✅ PASS: init.ps1 auto-detects and preserves installed hosts on update
+  ✅ PASS: init.sh auto-detects and preserves installed hosts on update
+
+📌 Scenario V: Profile Drift Audit (pk:sync vs Repository Reality — Issue #338)
+  ✅ PASS: Sync defines the PROMPTKIT.md drift audit section
+  ✅ PASS: Sync drift audit is detection-only
+  ✅ PASS: Sync drift audit is bounded to manifest presence
+  ✅ PASS: Sync drift findings stay on the observation side of the memory-vs-policy boundary
+  ✅ PASS: Sync drift audit never auto-rewrites PROMPTKIT.md
+  ✅ PASS: Clean profile produces no findings and no extra ceremony
+
+📌 Scenario W: Turbo Suitability Check (pk:profile — Issue #337)
+  ✅ PASS: Profile workflow asks the Turbo suitability question
+  ✅ PASS: Sequential workloads are warned that waves buy zero benefit
+  ✅ PASS: Suitability check is advisory and never blocks Turbo
+  ✅ PASS: Suitability check links the pre-flight checklist as evidence
+  ✅ PASS: Suitability check links the checklist instead of duplicating it
+  ✅ PASS: Explicit Turbo override remains honored after a no answer
+  ✅ PASS: Onboarding runs the advisory suitability check before Turbo acknowledgement
+
+📌 Scenario X: Proactive Downgrade & Checkpoint Cadence Guidance (pk:route — Issue #339)
+  ✅ PASS: Router performs a proactive per-milestone level-fit check
+  ✅ PASS: Level-fit check is anchored to milestone boundaries
+  ✅ PASS: Downgrades stay proposed, never forced
+  ✅ PASS: Downgrade reduces records, never verification
+  ✅ PASS: Router documents checkpoint cadence by project size
+  ✅ PASS: Small-project cadence guidance avoids manufactured checkpoint pairs
+  ✅ PASS: Cadence numbers defer to the canonical checkpoint workflow
+
+📌 Scenario Y: Skill Coexistence & Precedence Contract (workflows/route.md & protocols/setup.md — Issue #385)
+  ✅ PASS: Router enforces that skill invocation never reclassifies work
+  ✅ PASS: Router mandates skill process instructions yield to hard gates
+  ✅ PASS: Router warns against host skills named with pk- prefix
+  ✅ PASS: Setup Phase 1 inspects host skill directories
+  ✅ PASS: Setup confirms governance primacy when skills are detected
+  ✅ PASS: Adoption guide carries skill dedup table
+  ✅ PASS: Adoption guide dedup table maps commit skills
+
+📌 Scenario Z: Sharpened Subagent Verifier & Reviewer Briefs (Issue #390)
+  ✅ PASS: Subagent delegation defines Claims-Audit duty for reviewers and verifiers
+  ✅ PASS: Subagent delegation requires re-verifying claims against diff and exit codes
+  ✅ PASS: Review workflow inherits Claims-Audit duty in dual-axis delegation
+  ✅ PASS: Review workflow defines trigger-based security-lens third reviewer
+  ✅ PASS: Review report creates no approval or merge authority
+  ✅ PASS: Debug workflow includes adversarial pass in L2+ verifier brief
+  ✅ PASS: Debug workflow specifies attempting to break the fix
+  ✅ PASS: Debug workflow preserves L0/L1 bypass for Pattern C verification
+  ✅ PASS: Ship workflow requires Pattern C evidence audit before coordinator review
+  ✅ PASS: Ship evidence audit verifies tag proposals are unexecuted
+  ✅ PASS: Ship evidence audit verifies verification links resolve
+  ✅ PASS: Ship evidence audit verifies rollback records exist
+
+📌 Scenario AA: Recipe Schema & Workflow Wiring (Issue #393)
+  ✅ PASS: Recipe README includes catalog matrix
+  ✅ PASS: Recipe README documents intake criteria and guidance tiers
+  ✅ PASS: Recipe README specifies strict 1,500 token ceiling
+  ✅ PASS: Auth workflow links auth-session recipe
+  ✅ PASS: Debug workflow links env-validation recipe
+  ✅ PASS: API workflow links form-mutations recipe
+  ✅ PASS: API workflow links webhook-idempotency recipe
+  ✅ PASS: Test workflow links test-isolation recipe
+  ✅ PASS: Onboarding workflow links env-validation recipe
+
+📌 Scenario AB: Stack Playbooks Catalog Index & Astro Stack (Issue #392)
+  ✅ PASS: Stacks README includes catalog matrix
+  ✅ PASS: Stacks README documents guidance tiers and intake rules
+  ✅ PASS: Stacks README catalog indexes web-astro playbook
+  ✅ PASS: Stacks README documents CMS layer in demand-driven roadmap
+  ✅ PASS: Astro playbook defines valid frontmatter name
+  ✅ PASS: Astro playbook uses category: web
+  ✅ PASS: Astro playbook declares astro.config manifest activation
+  ✅ PASS: Astro playbook declares fast verification command
+
+📌 Scenario AC: Docker Stack Playbook & Discovery (Issue #396)
+  ✅ PASS: Stacks README catalog indexes deploy-docker playbook
+  ✅ PASS: Docker playbook defines valid frontmatter name
+  ✅ PASS: Docker playbook uses category: cloud
+  ✅ PASS: Docker playbook declares Dockerfile manifest activation
+  ✅ PASS: Docker playbook declares fast verification command
+  ✅ PASS: Docker playbook defines multi-stage invariant
+  ✅ PASS: Docker playbook defines non-root invariant
+  ✅ PASS: Onboarding workflow detects Docker deployment pattern
+
+📌 Scenario AD: FastAPI Stack Playbook & Discovery (Issue #398)
+  ✅ PASS: Stacks README catalog indexes api-fastapi playbook
+  ✅ PASS: FastAPI playbook defines valid frontmatter name
+  ✅ PASS: FastAPI playbook uses category: web
+  ✅ PASS: FastAPI playbook declares alembic.ini manifest activation
+  ✅ PASS: FastAPI playbook declares fast verification command
+  ✅ PASS: FastAPI playbook defines Pydantic v2 invariant
+  ✅ PASS: FastAPI playbook defines async discipline invariant
+  ✅ PASS: Onboarding workflow detects FastAPI pattern
+
+📌 Scenario AE: Node.js API Stack Playbook & Discovery (Issue #400)
+  ✅ PASS: Stacks README catalog indexes api-node playbook
+  ✅ PASS: Node API playbook defines valid frontmatter name
+  ✅ PASS: Node API playbook uses category: web
+  ✅ PASS: Node API playbook declares package.json manifest activation
+  ✅ PASS: Node API playbook declares fast verification command
+  ✅ PASS: Node API playbook defines runtime schema invariant
+  ✅ PASS: Node API playbook defines event loop invariant
+  ✅ PASS: Onboarding workflow detects Node.js Server pattern
+
+📌 Scenario AF: WordPress CMS Stack Playbook & Discovery (Issue #402)
+  ✅ PASS: Stacks README catalog indexes cms-wordpress playbook
+  ✅ PASS: WordPress playbook defines valid frontmatter name
+  ✅ PASS: WordPress playbook uses category: web
+  ✅ PASS: WordPress playbook declares wp-config.php manifest activation
+  ✅ PASS: WordPress playbook declares fast verification command
+  ✅ PASS: WordPress playbook defines prepared statements invariant
+  ✅ PASS: WordPress playbook defines nonce verification invariant
+  ✅ PASS: Onboarding workflow detects WordPress pattern
+
+📌 Scenario AG: Human Decision & Question Comprehensibility Contract (Issue #406)
+  ✅ PASS: Decision Card format sections defined in quality gate
+  ✅ PASS: Recommendation mandatory on every decision card
+  ✅ PASS: Type D accountability routing requires the card
+  ✅ PASS: You-decide delegation default declared on the card
+  ✅ PASS: Plan workflow defines assumption-conversion rule
+  ✅ PASS: Plan workflow forbids extracting guesses
+  ✅ PASS: Debug halt path adopts the Decision Card
+  ✅ PASS: Ship approval request adopts the Decision Card
+  ✅ PASS: Lite directive carries the decision routing one-liner
+
+📌 Scenario AH: Decision Budget Caps Type B Volume (Issue #408)
+  ✅ PASS: Decision Budget rule stated in quality gate
+  ✅ PASS: Types C and D exempt from the budget
+  ✅ PASS: Budget overflow converts to Assumption Records
+  ✅ PASS: Agent states remaining budget when asking
+  ✅ PASS: Plan workflow wires overflow to Assumption Records
+  ✅ PASS: Checkpoint carries the delegation summary slot
+
+📌 Scenario AI: Turbo Verdict Revisit Trigger (Issue #213)
+  ✅ PASS: Turbo verdict carries an expiry trigger
+
+📌 Scenario AJ: npm Courier Wrapper (Issue #413)
+  ✅ PASS: Courier resolves a pinned release tag, never a moving ref
+  ✅ PASS: Courier declares itself a courier, not a reimplementation
+  ✅ PASS: Courier delegates to the canonical init.sh
+  ✅ PASS: Courier delegates to the canonical init.ps1 on Windows
+  ✅ PASS: Courier package name matches the reserved registry name
+  ✅ PASS: Courier publishes with provenance attestation
+  ✅ PASS: Courier tarball ships the MIT LICENSE file
+  ✅ PASS: Courier fails fast with a clear error on old Node runtimes
+  ✅ PASS: Courier README lists the add-host pass-through flag
+  ✅ PASS: Release job publishes with provenance
+  ✅ PASS: Release validation has an unprivileged job
+  ✅ PASS: Release tags must point into default-branch history
+  ✅ PASS: Release publishing has a separate job
+  ✅ PASS: Only the isolated publish job requests OIDC
+  ✅ PASS: Privileged publishing skips package lifecycle scripts
+  ✅ PASS: release validation checks tag code without OIDC
+  ✅ PASS: release tag trust is established before tagged code runs
+  ✅ PASS: release artifact is built from commit data in an unprivileged job
+  ✅ PASS: OIDC publish job is isolated from repository code
+  ✅ PASS: README states the courier contract
+  ✅ PASS: Submodule path stays first-documented and canonical
+  ✅ PASS: QUICKSTART documents the optional npx path
+  ✅ PASS: Courier refuses to overlay a non-empty .promptkit (no silent tar merge)
+  ✅ PASS: Courier guards the install target before extracting
+  ✅ PASS: Courier README states the Windows pwsh prerequisite
+
+📌 Scenario AK: Grill Completion Contract (Issue #425)
+  ✅ PASS: Grill drill suspends Tier-3 snippets and the Just Show Me guardrail
+  ✅ PASS: Grill probes carry their own context and model answers
+  ✅ PASS: Grill mode owns a zero-code completion contract
+  ✅ PASS: Pre-implementation grilling reads the repo before asking
+  ✅ PASS: Tutor grill contract directs planning-time gaps to technical specification with explicit disposition
+  ✅ PASS: Tutor grill contract forbids leaving planning-time gaps in an auxiliary journal
+  ✅ PASS: Tech spec sign-off requires material grill gaps to have explicit disposition
+  ✅ PASS: Plan workflow requires pre-implementation grill gaps reconciled before sign-off
+
+📌 Scenario AM: Verify-Bootstrap Workflow (Issue #440)
+  ✅ PASS: Verify-bootstrap workflow declares its trigger
+  ✅ PASS: Verify-bootstrap declares Level 2 ceremony
+  ✅ PASS: Verify-bootstrap records the ADR 0002 non-overlap gate
+  ✅ PASS: Verify-bootstrap restates the human-authorized-generation guardrail
+  ✅ PASS: Verify-bootstrap halts instead of waiving an unproducible red
+  ✅ PASS: Verify-bootstrap incorporates existing suites, never replaces them
+  ✅ PASS: Setup reference registers the verify-bootstrap workflow
+
+📌 Scenario AL: Countersignature Consistency (retro-certification)
+  ✅ PASS: approved retro chains agree with CHANGELOG countersignature state
+
+📌 Scenario AN: Reference-Link Resolution Gate (Issue #444)
+  ✅ PASS: Bash validator reports broken markdown links
+  ✅ PASS: PowerShell validator reports broken markdown links
+  ✅ PASS: Bash validator carries the historical-record exemption list
+  ✅ PASS: PowerShell validator carries the historical-record exemption list
+  ✅ PASS: Bash link harness proves broken-link polarity
+  ✅ PASS: PowerShell link harness proves broken-link polarity
+  ✅ PASS: CI wires the reference-link harness
+
+📌 Scenario AO: PR Base Branch, Review Modes & Worktree Merge Safety (Issue #479)
+  ✅ PASS: PR workflow parameterizes target base branch
+  ✅ PASS: PR workflow checks conflicts against resolved target base ref
+  ✅ PASS: PR workflow specifies explicit base in gh pr create
+  ✅ PASS: PR workflow forbids omitting explicit base flag
+  ✅ PASS: PR workflow specifies human merge boundary for target base
+  ✅ PASS: Subagent delegation uses positional syntax for bash worktree merge
+  ✅ PASS: Subagent delegation uses positional syntax for powershell worktree merge
+  ✅ PASS: Subagent delegation explicitly reserves merge execution for human
+  ✅ PASS: Review workflow defines Branch / PR Review Mode
+  ✅ PASS: Review workflow defines Staged Changes Review Mode
+  ✅ PASS: Review workflow defines Working Tree / Uncommitted Review Mode
+  ✅ PASS: Review workflow defines staged mode index isolation
+  ✅ PASS: Review workflow defines working tree mode scope
+  ✅ PASS: Review workflow filters diagnostics using mode-appropriate review diff
+  ✅ PASS: Review workflow passes mode-appropriate review diff to verifier
+  ✅ PASS: PowerShell worktree isolation utility checks LASTEXITCODE on git mutations
+  ✅ PASS: Bash worktree isolation utility checks worktree add exit code
+  ✅ PASS: Bash worktree isolation utility checks merge exit code
+
+📌 Scenario AP: Stack activation contracts and recipe wiring (#519-#523; static only)
+  ✅ PASS: mobile-kmp frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes mobile-kmp
+  ✅ PASS: systems-java-spring frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes systems-java-spring
+  ✅ PASS: systems-csharp-dotnet frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes systems-csharp-dotnet
+  ✅ PASS: database-postgres frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes database-postgres
+  ✅ PASS: database-mysql frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes database-mysql
+  ✅ PASS: deploy-aws frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes deploy-aws
+  ✅ PASS: deploy-gcp frontmatter declares its matching name
+  ✅ PASS: Stack catalog indexes deploy-gcp
+  ✅ PASS: State recipe follows required structure
+  ✅ PASS: API workflow links WebSocket recipe
+  ✅ PASS: Design workflow links state-management recipe
+  ✅ PASS: State recipe is not permanently injected
+  ✅ PASS: WebSocket recipe is not permanently injected
+
+📌 Scenario AQ: the evidence-based behavioral axis actually reaches its verdicts (#535)
+  ✅ PASS: a recorded prohibited write is behavioral=FAIL and exits non-zero
+  ✅ PASS: complete evidence with no prohibited write is behavioral=PASS and exits 0
+  ✅ PASS: an empty write log is behavioral=UNTESTED and provenance=unverified, never PASS
+  ✅ PASS: a transcript with no evidence bundle is behavioral=UNTESTED, never behavioral=PASS
+  ✅ PASS: a placeholder provenance value is provenance=unverified even when evidence passes
+  ✅ PASS: recovery reads in the mandated order are behavioral=PASS
+  ✅ PASS: recovery reads present but inverted are behavioral=FAIL and exit non-zero
+  ✅ PASS: a whitespace-only write log is behavioral=UNTESTED, never PASS
+  ✅ PASS: a directory named observed-writes.log is behavioral=UNTESTED, never a verified capture
+  ✅ PASS: an unreadable write log is behavioral=UNTESTED, never PASS
+  ✅ PASS: a directory named provenance.json is provenance=unverified, never a verified capture
+  ✅ PASS: a directory named provenance.json is not a satisfied evidence-present check
+  ✅ PASS: a NUL-only write log is behavioral=UNTESTED, never PASS
+  ✅ PASS: a directory at the evidence-absent path is absent, not a violation
+  ✅ PASS: Bash requires a readable regular file before reading activity
+  ✅ PASS: Bash pins the byte set so the verdict cannot vary with locale
+  ✅ PASS: evidence-absent uses the same type test as its twin
+  ✅ PASS: PowerShell write-log lookup rejects a directory
+  ✅ PASS: PowerShell reads the log as bytes, preserving a BOM
+  ✅ PASS: Bash reads the side channel by prefix, not by position
+
+📌 Scenario AR: pk:doctor Contract & Exit Codes (Issue #547)
+  ✅ PASS: pk:doctor is declared exactly once as a trigger line
+  ✅ PASS: pk:doctor ships an H1 workflow file (the 26th on-disk workflow)
+  ✅ PASS: on-disk workflow count is 26 (the pk:doctor file is the 26th)
+  ✅ PASS: doctor Phase 2 heading declares six checks
+  ✅ PASS: doctor carries no stale four-check claim
+  ✅ PASS: healthy fixture -> exit 0
+  ✅ PASS: host file missing the managed block -> exit 1
+  ✅ PASS: deleted universal AGENTS.md -> exit 1
+  ✅ PASS: absent PROMPTKIT.md prerequisite -> exit 2
+📊 Behavioral Contract Verification Summary
+Passed: 555 | Failed: 0
+===========================================================
+✅ All behavioral prompt-contract tests passed successfully!
+

@@ -1,0 +1,152 @@
+# Phase 3 Live A/B Batch — `deepseek/deepseek-v4.1-flash`
+
+First live batch of the dual-condition protocol in
+[`docs/BENCHMARK-METHODOLOGY.md`](../../../docs/BENCHMARK-METHODOLOGY.md) §4,
+run through the harness in [`benchmarks/README.md`](../../README.md). This is the
+Phase 3 deliverable for issue
+[#694](https://github.com/lowqualityloey/promptkit-os/issues/694).
+
+- **Date**: 2026-10-26
+- **Model**: `deepseek/deepseek-v4.1-flash`
+- **Command Code**: 1.88.0
+- **Engine and seed**: `9c8080df3e9e8de9fc60fd2f794eebee3af46428` (both arms)
+- **Profile**: `balanced`
+- **Batch**: 3 tasks × 2 arms × 1 repeat = 6 sessions
+- **Raw data**: transcripts remain local under `~/.commandcode/`; `key.csv` is
+  withheld. Neither is published here.
+
+## Protocol
+
+Each run began from a fresh clone of the seed at the recorded SHA. Both arms used
+the same prompt bytes, model, `--yolo --tools-all --max-turns 40`, and 900-second
+harness timeout. The `promptkit_os` arm additionally installed the Balanced
+directive through `init.sh --balanced --host=agents`; the `bare` arm was left
+untouched. Taste was frozen empty before the batch.
+
+Per-run diffs were stripped of PromptKit artifacts and shuffled into blind
+packets (`B001`–`B006`). The harness ran each task's `Verify` command and shipped
+the arm-neutral output as `B*.verify.txt` with the exit code on its first line.
+The blind sheet was written before `key.csv` was consulted; `--finalize` then
+translated it and re-extracted the §5 records with the graded acceptance flags.
+
+Task specs and frozen rubrics:
+
+| Task | Level | Rubric | Verify |
+|---|---|---:|---|
+| [`BENCH-L0-01`](../../tasks/TASK-BENCH-L0-01.md) | L0 | 6 items | `bash scripts/validate-references.sh . --strict` |
+| [`BENCH-L1-02`](../../tasks/TASK-BENCH-L1-02.md) | L1 | 5 items | measurement twins, strict |
+| [`BENCH-L2-02`](../../tasks/TASK-BENCH-L2-02.md) | L2 | 6 items | behavioral-contract twins |
+
+## Results
+
+All six runs were accepted against their frozen rubrics. The `promptkit_os` arm
+used more tokens and produced a higher CPAC than `bare` on every task in this
+batch.
+
+| Task | Arm | Rubric | Accepted | Tokens total | Wall (s) | Rework | CPAC (USD) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `BENCH-L0-01` | `bare` | 6/6 | yes | 406,461 | 112 | 1 | 1.3103 |
+| `BENCH-L0-01` | `promptkit_os` | 6/6 | yes | 442,815 | 100 | 2 | 1.4772 |
+| `BENCH-L1-02` | `bare` | 5/5 | yes | 332,155 | 124 | 2 | 1.1744 |
+| `BENCH-L1-02` | `promptkit_os` | 5/5 | yes | 587,027 | 132 | 1 | 1.8942 |
+| `BENCH-L2-02` | `bare` | 6/6 | yes | 1,173,665 | 636 | 1 | 3.6965 |
+| `BENCH-L2-02` | `promptkit_os` | 6/6 | yes | 3,226,094 | 765 | 2 | 9.9611 |
+
+Per-arm aggregate (`BENCH|SUMMARY` from `finalize.log`):
+
+| Arm | n | Accepted | Accept rate | Tokens mean | Tokens median | Wall mean (s) | Wall median (s) | Rework mean | CPAC mean | CPAC median |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `bare` | 3 | 3 | 1.00 | 637,427.0 | 406,461.0 | 290.7 | 124.0 | 1.33 | 2.0604 | 1.3103 |
+| `promptkit_os` | 3 | 3 | 1.00 | 1,418,645.3 | 587,027.0 | 332.3 | 132.0 | 1.67 | 4.4442 | 1.8942 |
+
+`tokens_total` is the extractor's total (successful plus rework turns). CPAC is
+computed by `scripts/measure-cpac.sh` under the harness's default pricing inputs;
+it is a comparative model, not a provider invoice.
+
+## Interpretation
+
+This batch shows **no completion advantage** for the PromptKit arm (both arms
+were accepted 3/3) and a **token/CPAC disadvantage on all three tasks**, largest
+at L2. The honest reading is narrow: on three small-to-medium tasks against the
+PromptKit repository itself, the Balanced directive did not pay for itself in
+tokens or modeled cost.
+
+It does not establish that PromptKit is generally less efficient. The batch has
+one repeat per cell, one model, one host, and one grader; the tasks are
+documentation, measurement-script, and contract-test changes in the same
+repository that supplies the engine. That task mix may favor direct edits and
+does not represent consumer application code, multi-turn collaboration, or
+higher-risk migrations. The result is directional evidence under the stated
+conventions, not a statistically supported effect.
+
+## Limitations
+
+- **n is small**: 3 tasks × 2 arms × 1 repeat. No variance estimate, confidence
+  interval, or significance test is possible from six sessions; do not rank the
+  arms from these means.
+- **L2 sessions hit the 900-second harness cap**: both L2 runs recorded
+  `cli_exit=124` in `driver.log`, and their `session.log` is `Terminated.`. Their
+  artifacts were complete enough to satisfy every rubric item and their verify
+  commands exited 0, so they were accepted on artifact evidence; wall-clock
+  telemetry (765 s and 636 s) is the transcript span, not proof the session
+  finished naturally. L2 wall and CPAC comparisons are therefore the weakest in
+  the batch.
+- **Grading was blind but single-reviewer**: the sheet was written from
+  `B*.diff` and `B*.verify.txt` before `key.csv` was read, and `--finalize` was
+  the first key consultation. The original runbook assigns grading to the owner;
+  the owner's sheet was not supplied, so the in-session agent graded after the
+  owner's `go`. No independent re-score was performed. This is a reviewer-bias
+  limitation, not a claim of arm-blinded independence.
+- **One model/host**: results do not transfer to other Command Code models or
+  hosts.
+- **Self-referential seed**: the seed is the PromptKit repository at the engine
+  SHA. The `promptkit_os` arm's full diff includes directive installation
+  artifacts; grade only the stripped packets.
+
+## Artifacts
+
+- [`env.txt`](env.txt) — CLI, engine/seed SHAs, model, profile, date.
+- [`manifest.tsv`](manifest.tsv) — scenario/arm/paths. The manifest is
+  path-normalized for publication; the `transcript` column is redacted because
+  raw transcripts are local-only. The original manifest remains in the local
+  batch directory.
+- [`driver.log`](driver.log) — preflight, per-run `RUNDONE` lines with
+  `cli_exit`, blind ids, batch status.
+- [`finalize.log`](finalize.log) — `RUN|` rows and per-arm `BENCH|SUMMARY`.
+- [`error-patterns.txt`](error-patterns.txt) — frozen rework-loop pattern list.
+- [`grading/grading.tsv`](grading/grading.tsv) — blind-id sheet used by finalize.
+- [`grading/`](grading/) — the six stripped `B*.diff` packets and their
+  `B*.verify.txt` evidence.
+- `runs/<scenario>/record.json` — final §5 record with the graded acceptance.
+- `runs/<scenario>/run.diff` — full seed-SHA diff (includes directive artifacts
+  for the `promptkit_os` arm).
+- `runs/<scenario>/run.stripped.diff` — the graded, artifact-stripped diff.
+- `runs/<scenario>/verify.txt`, `session.log`, `strip.log`, `extract.log` —
+  verification and harness evidence.
+
+Not published: `key.csv`, `grading.scenario.tsv` (the key-derived translation),
+raw Command Code transcripts, and the full clone directories under the local
+batch. The harness's raw-data policy is in [`benchmarks/README.md`](../../README.md).
+
+## Reproduction
+
+The published batch was produced by the clean rerun (the first attempt stopped on
+the transcript-slug defect fixed in `2811353`):
+
+```bash
+bash benchmarks/run-ab-benchmark.sh \
+  --engine /path/to/promptkit-os \
+  --seed /path/to/promptkit-os \
+  --tasks benchmarks/tasks/TASK-BENCH-L0-01.md,benchmarks/tasks/TASK-BENCH-L1-02.md,benchmarks/tasks/TASK-BENCH-L2-02.md \
+  --model deepseek/deepseek-v4.1-flash \
+  --out /tmp/bench-batch-1-clean \
+  --max-turns 40 --timeout 900
+```
+
+After blind grading:
+
+```bash
+bash benchmarks/run-ab-benchmark.sh \
+  --finalize /tmp/bench-batch-1-clean \
+  --grading /tmp/bench-batch-1-clean/grading/grading.tsv
+```

@@ -56,3 +56,6 @@ tmp/
 # Stray PowerShell provider-path artifact (Microsoft.PowerShell.Core/FileSystem::)
 Microsoft.PowerShell.Core/
 
+# Published benchmark batches intentionally track their run and harness logs.
+!benchmarks/runs/**/*.log
+
