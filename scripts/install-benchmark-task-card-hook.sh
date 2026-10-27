@@ -18,7 +18,10 @@
 #
 # The gate is scoped to the staged card set: a commit that touches no card runs
 # the hook as a no-op, so unrelated work is never blocked by a card elsewhere in
-# the tree.
+# the tree. Each staged card is read from Git's index - `git show :<path>` - into
+# a throwaway tree and the checker runs there, so a partially staged card is
+# judged by the bytes the commit will carry, not by the working-tree copy, and a
+# broken card left unstaged elsewhere cannot block the commit.
 #
 # Exit codes: 0 installed/removed; 2 incomplete (no git repository).
 
@@ -128,7 +131,9 @@ strip_block() {
 }
 
 # The managed block: run the gate only when a card is staged, prefer the Bash
-# checker, fall back to the PowerShell twin where only pwsh exists.
+# checker, fall back to the PowerShell twin where only pwsh exists. The staged
+# cards are materialized from the index into a temp tree first, so the checker
+# sees exactly what the commit would carry.
 # $1 is the original-hook path for the wrapper case, empty otherwise.
 emit_block() {
     local orig="${1:-}" body
@@ -143,14 +148,36 @@ __pk_card_orig="__PK_ORIG__"
 __pk_card_staged="$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -E '^benchmarks/tasks/TASK-.*\.md$' || true)"
 if [ -n "$__pk_card_staged" ]; then
   __pk_card_rc=0
-  if command -v bash >/dev/null 2>&1 && [ -f "$__pk_card_sh" ]; then
-    bash "$__pk_card_sh" --root "$__pk_card_root" || __pk_card_rc=$?
-  elif command -v pwsh >/dev/null 2>&1 && [ -f "$__pk_card_ps1" ]; then
-    pwsh -NoProfile -File "$__pk_card_ps1" -Root "$__pk_card_root" || __pk_card_rc=$?
+  __pk_card_unreadable=0
+  __pk_card_tmp="$(mktemp -d 2>/dev/null || true)"
+  if [ -z "$__pk_card_tmp" ] || ! mkdir -p "$__pk_card_tmp/benchmarks/tasks"; then
+    __pk_card_rc=1
+    __pk_card_unreadable=1
+  else
+    # Judge the staged bytes, not the working tree. The heredoc body and its
+    # delimiter stay unindented because POSIX sh requires that.
+    while IFS= read -r __pk_card_path; do
+      [ -n "$__pk_card_path" ] || continue
+      git -C "$__pk_card_root" show ":$__pk_card_path" > "$__pk_card_tmp/$__pk_card_path" 2>/dev/null || { __pk_card_rc=1; __pk_card_unreadable=1; }
+    done <<__PK_CARD_EOF
+$__pk_card_staged
+__PK_CARD_EOF
+    if [ "$__pk_card_rc" -eq 0 ]; then
+      if command -v bash >/dev/null 2>&1 && [ -f "$__pk_card_sh" ]; then
+        bash "$__pk_card_sh" --root "$__pk_card_tmp" || __pk_card_rc=$?
+      elif command -v pwsh >/dev/null 2>&1 && [ -f "$__pk_card_ps1" ]; then
+        pwsh -NoProfile -File "$__pk_card_ps1" -Root "$__pk_card_tmp" || __pk_card_rc=$?
+      fi
+    fi
   fi
+  [ -n "$__pk_card_tmp" ] && rm -rf -- "$__pk_card_tmp"
   if [ "$__pk_card_rc" -ne 0 ]; then
-    echo "[promptkit] a staged benchmark task card breaks the Verify convention: run the behavioral probe first, run the test suite second, and do not chain them with && or ||." >&2
-    echo "[promptkit] see benchmarks/tasks/TEMPLATE-task.md. Commit blocked." >&2
+    if [ "$__pk_card_unreadable" -eq 1 ]; then
+      echo "[promptkit] could not read a staged benchmark task card from the index; commit blocked." >&2
+    else
+      echo "[promptkit] a staged benchmark task card breaks the Verify convention: run the behavioral probe first, run the test suite second, and do not chain them with && or ||." >&2
+      echo "[promptkit] see benchmarks/tasks/TEMPLATE-task.md. Commit blocked." >&2
+    fi
     exit 1
   fi
 fi

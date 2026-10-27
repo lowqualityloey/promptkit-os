@@ -7,7 +7,7 @@
 # blocks a badly ordered card and lets a compliant one through.
 #
 # Cases are 1:1 with the Bash twin except the executable-bit assertions, which
-# Windows has no mode bit to satisfy (14 here, 15 there).
+# Windows has no mode bit to satisfy (19 here, 21 there).
 
 $ErrorActionPreference = 'Stop'
 $invariant = [System.Globalization.CultureInfo]::InvariantCulture
@@ -68,25 +68,22 @@ function New-Repo {
     & git -C $script:Repo commit -qm seed | Out-Null
 }
 
-function Write-BadCard {
+$script:BadVerify = 'node --test && node --input-type=module -e "1"'
+$script:GoodVerify = 'node --input-type=module -e "1"; probe=$?; node --test; tests=$?; [ "$probe" -eq 0 ] && [ "$tests" -eq 0 ]'
+
+function Write-Card {
+    param([string]$Name, [string]$Id, [string]$Verify)
     $lines = @(
         '# Task Spec: fixture',
         '',
-        '- **Task ID**: `BENCH-T-01`',
-        '- **Verify**: `node --test && node --input-type=module -e "1"`'
+        ('- **Task ID**: `' + $Id + '`'),
+        ('- **Verify**: `' + $Verify + '`')
     )
-    Set-Content -LiteralPath (Join-Path $script:Repo 'benchmarks/tasks/TASK-BENCH-T-01.md') -Value $lines
+    Set-Content -LiteralPath (Join-Path $script:Repo ('benchmarks/tasks/' + $Name)) -Value $lines
 }
 
-function Write-GoodCard {
-    $lines = @(
-        '# Task Spec: fixture',
-        '',
-        '- **Task ID**: `BENCH-T-02`',
-        '- **Verify**: `node --input-type=module -e "1"; probe=$?; node --test; tests=$?; [ "$probe" -eq 0 ] && [ "$tests" -eq 0 ]`'
-    )
-    Set-Content -LiteralPath (Join-Path $script:Repo 'benchmarks/tasks/TASK-BENCH-T-02.md') -Value $lines
-}
+function Write-BadCard { Write-Card -Name 'TASK-BENCH-T-01.md' -Id 'BENCH-T-01' -Verify $script:BadVerify }
+function Write-GoodCard { Write-Card -Name 'TASK-BENCH-T-02.md' -Id 'BENCH-T-02' -Verify $script:GoodVerify }
 
 function Test-Status([string]$Expected) {
     $want = [int]$Expected
@@ -261,6 +258,41 @@ try {
     Invoke-Scenario 'missing repository fails closed' {
         (Test-Status 2) -and (Test-Contains 'TASK_CARD_HOOK|INCOMPLETE|NO_REPO')
     }
+
+    # --- 11. a card is judged as staged, not as it sits on disk -----------
+    New-Repo 'staged-not-worktree'
+    Invoke-Installer
+    Write-BadCard
+    & git -C $script:Repo add benchmarks/tasks/TASK-BENCH-T-01.md | Out-Null
+    Write-Card -Name 'TASK-BENCH-T-01.md' -Id 'BENCH-T-01' -Verify $script:GoodVerify
+    $headBefore = Get-Head
+    Invoke-Commit 'bad card staged, fixed only on disk'
+    Invoke-Scenario 'a bad card staged and fixed only on disk is blocked' {
+        (Test-NonZero 'x') -and (Test-Contains 'Commit blocked') -and (Test-Contains 'runs before the behavioral probe')
+    }
+    if ((Get-Head) -eq $headBefore) { Write-Pass 'partial-staging block leaves HEAD untouched' }
+    else { Write-Fail 'partial-staging block leaves HEAD untouched' }
+
+    # --- 12. a compliant staged card survives a broken working-tree copy --
+    New-Repo 'worktree-not-staged'
+    Invoke-Installer
+    Write-GoodCard
+    & git -C $script:Repo add benchmarks/tasks/TASK-BENCH-T-02.md | Out-Null
+    Write-Card -Name 'TASK-BENCH-T-02.md' -Id 'BENCH-T-02' -Verify $script:BadVerify
+    Invoke-Commit 'good card staged, broken only on disk'
+    Invoke-Scenario 'a compliant staged card commits despite a broken working-tree copy' { (Test-Status 0) }
+    $blob = (& git -C $script:Repo show 'HEAD:benchmarks/tasks/TASK-BENCH-T-02.md' 2>$null | Out-String)
+    if ($blob.Contains('probe=$?')) { Write-Pass 'the committed blob is the staged compliant card' }
+    else { Write-Fail 'the committed blob is the staged compliant card' }
+
+    # --- 13. an unstaged card cannot block a staged one -------------------
+    New-Repo 'staged-only'
+    Invoke-Installer
+    Write-BadCard
+    Write-GoodCard
+    & git -C $script:Repo add benchmarks/tasks/TASK-BENCH-T-02.md | Out-Null
+    Invoke-Commit 'staged good card beside an unstaged bad card'
+    Invoke-Scenario 'an unstaged card elsewhere in the tree does not block' { (Test-Status 0) }
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {

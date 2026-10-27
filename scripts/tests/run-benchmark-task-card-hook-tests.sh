@@ -59,21 +59,20 @@ make_repo() {
     git -C "$REPO" commit -qm seed
 }
 
-write_bad_card() {
+BAD_VERIFY='node --test && node --input-type=module -e "1"'
+GOOD_VERIFY='node --input-type=module -e "1"; probe=$?; node --test; tests=$?; [ "$probe" -eq 0 ] && [ "$tests" -eq 0 ]'
+
+# write_card <file-name> <task-id> <verify-command>
+write_card() {
     {
         printf '# Task Spec: fixture\n\n'
-        printf -- '- **Task ID**: `BENCH-T-01`\n'
-        printf -- '- **Verify**: `node --test && node --input-type=module -e "1"`\n'
-    } > "$REPO/benchmarks/tasks/TASK-BENCH-T-01.md"
+        printf -- '- **Task ID**: `%s`\n' "$2"
+        printf -- '- **Verify**: `%s`\n' "$3"
+    } > "$REPO/benchmarks/tasks/$1"
 }
 
-write_good_card() {
-    {
-        printf '# Task Spec: fixture\n\n'
-        printf -- '- **Task ID**: `BENCH-T-02`\n'
-        printf -- '- **Verify**: `node --input-type=module -e "1"; probe=$?; node --test; tests=$?; [ "$probe" -eq 0 ] && [ "$tests" -eq 0 ]`\n'
-    } > "$REPO/benchmarks/tasks/TASK-BENCH-T-02.md"
-}
+write_bad_card() { write_card TASK-BENCH-T-01.md BENCH-T-01 "$BAD_VERIFY"; }
+write_good_card() { write_card TASK-BENCH-T-02.md BENCH-T-02 "$GOOD_VERIFY"; }
 
 want_status() {
     if [ "$STATUS" -eq "$1" ]; then return 0; fi
@@ -266,6 +265,52 @@ install_hook
 scenario "missing repository fails closed" \
     "want_status 2" "want_contains TASK_CARD_HOOK|INCOMPLETE|NO_REPO"
 
+# --- 12. a card is judged as staged, not as it sits on disk ----------------
+# The bypass this pins: stage a badly ordered card, then fix the working-tree
+# copy without re-staging. The commit would carry the bad card, so the gate must
+# block it even though benchmarks/tasks/ on disk looks compliant.
+make_repo staged-not-worktree
+install_hook
+write_bad_card
+git -C "$REPO" add benchmarks/tasks/TASK-BENCH-T-01.md
+write_card TASK-BENCH-T-01.md BENCH-T-01 "$GOOD_VERIFY"
+HEAD_BEFORE="$(head_of)"
+commit "bad card staged, fixed only on disk"
+scenario "a bad card staged and fixed only on disk is blocked" \
+    "want_nonzero x" "want_contains Commit blocked" \
+    "want_contains runs before the behavioral probe"
+if [ "$(head_of)" = "$HEAD_BEFORE" ]; then
+    pass "partial-staging block leaves HEAD untouched"
+else
+    fail "partial-staging block leaves HEAD untouched"
+fi
+
+# --- 13. a compliant staged card survives a broken working-tree copy ------
+# The mirror: stage the compliant bytes, then break the file on disk. The commit
+# carries the compliant card, so the gate must let it through and the committed
+# blob must be the staged one.
+make_repo worktree-not-staged
+install_hook
+write_good_card
+git -C "$REPO" add benchmarks/tasks/TASK-BENCH-T-02.md
+write_card TASK-BENCH-T-02.md BENCH-T-02 "$BAD_VERIFY"
+commit "good card staged, broken only on disk"
+scenario "a compliant staged card commits despite a broken working-tree copy" "want_status 0"
+if git -C "$REPO" show "HEAD:benchmarks/tasks/TASK-BENCH-T-02.md" 2>/dev/null | grep -qF 'probe=$?'; then
+    pass "the committed blob is the staged compliant card"
+else
+    fail "the committed blob is the staged compliant card"
+fi
+
+# --- 14. an unstaged card cannot block a staged one ----------------------
+# A broken card left in the tree is not part of this commit; validating it would
+# block unrelated work, which is what tree-wide scanning used to do.
+make_repo staged-only
+install_hook
+write_bad_card                                        # broken card in the tree ...
+write_good_card
+git -C "$REPO" add benchmarks/tasks/TASK-BENCH-T-02.md   # ... another card staged
+commit "staged good card beside an unstaged bad card"
+scenario "an unstaged card elsewhere in the tree does not block" "want_status 0"
+
 printf 'RESULTS|passed=%s|failed=%s\n' "$PASS" "$FAIL"
-if [ "$FAIL" -gt 0 ]; then exit 1; fi
-exit 0
