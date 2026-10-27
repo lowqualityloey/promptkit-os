@@ -123,10 +123,17 @@ is_shell_interpreter() {
 # Stream filter: drop lines between the managed markers (inclusive), wherever
 # they appear. Reads stdin, writes stdout.
 strip_block() {
+    # A hook edited on Windows (or checked out under core.autocrlf) carries \r on
+    # every line. Compare on a copy with the bare CR stripped, but print the
+    # original line so the rest of the file keeps its bytes.
     awk -v s="$START" -v e="$END" '
-        $0==s {inblk=1; next}
-        inblk && $0==e {inblk=0; next}
-        !inblk {print}
+        {
+            line = $0
+            sub(/\r$/, "", line)
+            if (line == s) { inblk=1; next }
+            if (inblk && line == e) { inblk=0; next }
+            if (!inblk) print
+        }
     '
 }
 
@@ -137,14 +144,15 @@ strip_block() {
 # $1 is the original-hook path for the wrapper case, empty otherwise.
 emit_block() {
     local orig="${1:-}" body
-    body="$(sed -e "s|__PK_CHECKER_SH__|$checker_sh|g" \
-                -e "s|__PK_CHECKER_PS1__|$checker_ps1|g" \
-                -e "s|__PK_ORIG__|$orig|g" <<'BLOCK'
+    body="$(
+        cat <<'HEAD'
 # Managed by PromptKit OS. Remove with scripts/install-benchmark-task-card-hook.sh --remove.
 __pk_card_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-__pk_card_sh="__PK_CHECKER_SH__"
-__pk_card_ps1="__PK_CHECKER_PS1__"
-__pk_card_orig="__PK_ORIG__"
+HEAD
+        printf '__pk_card_sh="%s"\n' "$checker_sh"
+        printf '__pk_card_ps1="%s"\n' "$checker_ps1"
+        printf '__pk_card_orig="%s"\n' "$orig"
+        cat <<'TAIL'
 __pk_card_staged="$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -E '^benchmarks/tasks/TASK-.*\.md$' || true)"
 if [ -n "$__pk_card_staged" ]; then
   __pk_card_rc=0
@@ -181,8 +189,8 @@ __PK_CARD_EOF
     exit 1
   fi
 fi
-BLOCK
-)"
+TAIL
+    )"
     printf '%s\n' "$START"
     printf '%s\n' "$body"
     printf '%s\n' "$END"

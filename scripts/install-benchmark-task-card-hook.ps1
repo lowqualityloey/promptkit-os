@@ -118,13 +118,24 @@ function Test-IsShellInterpreter {
     return @('sh', 'bash', 'dash', 'ash', 'ksh', 'mksh', 'zsh', 'posh', 'busybox') -contains $Name
 }
 
+function Test-ManagedStart {
+    param([string[]]$Lines)
+    foreach ($line in $Lines) {
+        if ($line.TrimEnd("`r") -ceq $start) { return $true }
+    }
+    return $false
+}
+
 function Remove-ManagedBlock {
     param([string[]]$Lines)
     $kept = [System.Collections.Generic.List[string]]::new()
     $inBlock = $false
     foreach ($line in $Lines) {
-        if ($line -ceq $start) { $inBlock = $true; continue }
-        if ($inBlock -and $line -ceq $end) { $inBlock = $false; continue }
+        # A CRLF hook carries \r on every line; compare the trimmed copy so a
+        # Windows-edited hook is still recognized, and keep the original line.
+        $trimmed = $line.TrimEnd("`r")
+        if ($trimmed -ceq $start) { $inBlock = $true; continue }
+        if ($inBlock -and $trimmed -ceq $end) { $inBlock = $false; continue }
         if (-not $inBlock) { $kept.Add($line) }
     }
     return $kept
@@ -182,7 +193,7 @@ if ($Remove) {
         $rawText = Get-Content -LiteralPath $hookPath -Raw -ErrorAction SilentlyContinue
         $lines = @()
         if ($null -ne $rawText) { $lines = @($rawText -split "`n") }
-        if ($lines -contains $start) {
+        if (Test-ManagedStart -Lines $lines) {
             if (Test-Path -LiteralPath $origPath -PathType Leaf) {
                 Move-Item -LiteralPath $origPath -Destination $hookPath -Force
             }
@@ -193,7 +204,9 @@ if ($Remove) {
                     Remove-Item -LiteralPath $hookPath -Force
                 }
                 else {
-                    [IO.File]::WriteAllText($hookPath, ($kept -join "`n"), [Text.UTF8Encoding]::new($false))
+                    $newline = if ($rawText.Contains("`r`n")) { "`r`n" } else { "`n" }
+                    $keptBody = @($kept | ForEach-Object { $_.TrimEnd("`r") })
+                    [IO.File]::WriteAllText($hookPath, ($keptBody -join $newline), [Text.UTF8Encoding]::new($false))
                 }
             }
             Write-Output "TASK_CARD_HOOK|REMOVED|$hookPath"

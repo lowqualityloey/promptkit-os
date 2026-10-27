@@ -114,10 +114,17 @@ is_shell_interpreter() {
 # Stream filter: drop lines between the managed markers (inclusive), wherever
 # they appear. Reads stdin, writes stdout.
 strip_block() {
+    # A hook edited on Windows (or checked out under core.autocrlf) carries \r on
+    # every line. Compare on a copy with the bare CR stripped, but print the
+    # original line so the rest of the file keeps its bytes.
     awk -v s="$START" -v e="$END" '
-        $0==s {inblk=1; next}
-        inblk && $0==e {inblk=0; next}
-        !inblk {print}
+        {
+            line = $0
+            sub(/\r$/, "", line)
+            if (line == s) { inblk=1; next }
+            if (inblk && line == e) { inblk=0; next }
+            if (!inblk) print
+        }
     '
 }
 

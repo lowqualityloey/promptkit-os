@@ -293,6 +293,20 @@ try {
     & git -C $script:Repo add benchmarks/tasks/TASK-BENCH-T-02.md | Out-Null
     Invoke-Commit 'staged good card beside an unstaged bad card'
     Invoke-Scenario 'an unstaged card elsewhere in the tree does not block' { (Test-Status 0) }
+
+    # --- 14. remove strips a CRLF hook ------------------------------------
+    # A hook edited on Windows carries `r on every line; the marker match used
+    # to fail, so -Remove reported success and left the managed block in place.
+    New-Repo 'crlf-remove'
+    Invoke-Installer
+    $crlfHook = Join-Path $script:Repo '.git/hooks/pre-commit'
+    $crlfText = (Get-Content -LiteralPath $crlfHook -Raw) -replace "`r?`n", "`r`n"
+    [IO.File]::WriteAllText($crlfHook, $crlfText, [Text.UTF8Encoding]::new($false))
+    Invoke-Installer @('--remove')
+    Invoke-Scenario 'remove strips a CRLF hook' { (Test-Status 0) -and (Test-Contains 'TASK_CARD_HOOK|REMOVED') }
+    $crlfLeft = if (Test-Path -LiteralPath $crlfHook) { (Get-Content -LiteralPath $crlfHook -Raw) } else { '' }
+    if (-not $crlfLeft.Contains('PROMPTKIT_TASK_CARD_GATE')) { Write-Pass 'CRLF remove left no managed block' }
+    else { Write-Fail 'CRLF remove left no managed block' }
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {

@@ -301,6 +301,23 @@ begin; d4; report 'D4 human co-authors and ordinary discussion preserved'
 begin; d5; report 'D5 malformed rules and missing payload fail closed'
 begin; h1; report 'H1 install blocks an AI-trailer commit'
 begin; h2; report 'H2 human co-author commit passes the hook'
+# H9: --remove strips the managed block from a CRLF hook. The marker match used
+# to fail on a hook edited on Windows, so --remove reported success and left the
+# policy installed.
+h9() {
+    local root hook out leftover
+    root="$(make_repo h9 off)"
+    hook="$root/.git/hooks/commit-msg"
+    bash "$HOOK_INSTALLER" --root "$root" >/dev/null
+awk '{ printf "%s\r\n", $0 }' "$hook" > "$TMP/h9-crlf"
+    cat "$TMP/h9-crlf" > "$hook"
+    out="$(bash "$HOOK_INSTALLER" --root "$root" --remove 2>&1)"
+    scenario_check "$([[ "$out" == *"AI_ATTRIBUTION_HOOK|REMOVED"* ]] && printf 1 || printf 0)" "CRLF remove did not report REMOVED: $out"
+    leftover=0
+    if [[ -f "$hook" ]] && grep -qF 'PROMPTKIT_AI_ATTRIBUTION' "$hook"; then leftover=1; fi
+    scenario_check "$([[ "$leftover" -eq 0 ]] && printf 1 || printf 0)" "CRLF remove left the managed block behind"
+}
+
 begin; h3; report 'H3 pre-existing hook preserved and chained'
 begin; h4; report 'H4 idempotent install; remove strips only the block'
 begin; d6; report 'D6 invalid regex fails closed; multi-MB payload prohibited'
@@ -309,6 +326,7 @@ begin; h5; report 'H5 remove preserves exec bit; restored hook runs without warn
 begin; h6; report 'H6 install honors core.hooksPath'
 begin; h7; report 'H7 non-shell python hook preserved, chained, and enforced'
 begin; h8; report 'H8 a repository under HOME installs at the single effective path'
+begin; h9; report 'H9 remove strips a CRLF hook'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1

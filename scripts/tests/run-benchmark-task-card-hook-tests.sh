@@ -313,4 +313,38 @@ git -C "$REPO" add benchmarks/tasks/TASK-BENCH-T-02.md   # ... another card stag
 commit "staged good card beside an unstaged bad card"
 scenario "an unstaged card elsewhere in the tree does not block" "want_status 0"
 
+# --- 15. remove strips a CRLF hook ---------------------------------------
+# A hook edited on Windows carries \r on every line. The marker match used to
+# fail, so --remove reported REMOVED and left the gate installed.
+make_repo crlf-remove
+install_hook
+awk '{ printf "%s\r\n", $0 }' "$REPO/.git/hooks/pre-commit" > "$TMP/crlf-hook"
+cat "$TMP/crlf-hook" > "$REPO/.git/hooks/pre-commit"
+install_hook --remove
+scenario "remove strips a CRLF hook" "want_status 0" "want_contains TASK_CARD_HOOK|REMOVED"
+if [ -f "$REPO/.git/hooks/pre-commit" ] && grep -qF 'PROMPTKIT_TASK_CARD_GATE' "$REPO/.git/hooks/pre-commit"; then
+    fail "CRLF remove left the managed block behind"
+else
+    pass "CRLF remove left no managed block"
+fi
+
+# --- 16. an install path with sed metacharacters is emitted literally ------
+# `sed` read `&` in the replacement as the matched text and broke on its `|`
+# delimiter, so such a checkout produced a hook naming a path that does not
+# exist - the gate then silently did nothing.
+WEIRD="$TMP/kit & pipe|dir"
+mkdir -p "$WEIRD"
+cp "$REPO_ROOT/scripts/install-benchmark-task-card-hook.sh" "$WEIRD/"
+cp "$REPO_ROOT/scripts/check-benchmark-task-cards.sh" "$WEIRD/"
+cp "$REPO_ROOT/scripts/check-benchmark-task-cards.ps1" "$WEIRD/"
+make_repo weird-path
+STATUS=0
+OUT="$(bash "$WEIRD/install-benchmark-task-card-hook.sh" --root "$REPO" 2>&1)" || STATUS=$?
+scenario "an install path with sed metacharacters is emitted literally" "want_status 0" "want_contains TASK_CARD_HOOK|INSTALLED"
+if grep -qF "$WEIRD/check-benchmark-task-cards.sh" "$REPO/.git/hooks/pre-commit"; then
+    pass "the emitted hook names the real checker path"
+else
+    fail "the emitted hook names the real checker path"
+fi
+
 printf 'RESULTS|passed=%s|failed=%s\n' "$PASS" "$FAIL"
