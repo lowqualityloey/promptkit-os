@@ -134,7 +134,6 @@ else
     notok "batch run (rc=$rc, out=$(printf '%s' "$out" | tail -3 | tr '\n' ' '))"
 fi
 
-" ",")" >&2
 # --- prompt extraction is byte-clean ------------------------------------------
 bad="$(grep -c '[`"]$' "$FAKE_HOME/stub-prompts.log" || true)"
 last="$(tail -1 "$FAKE_HOME/stub-prompts.log")"
@@ -381,8 +380,6 @@ expect_preflight_ok() {
     fi
 }
 
-" ",")" >&2
-" ",")" >&2
 for variant in agents leak dirty promptkit promptkitdir ghinstr; do cp -a "$SEED" "$TMP_DIR/seed-$variant"; done
 printf '# Global instructions\n' > "$TMP_DIR/seed-agents/AGENTS.md"
 git -C "$TMP_DIR/seed-agents" add AGENTS.md
