@@ -134,6 +134,7 @@ else
     notok "batch run (rc=$rc, out=$(printf '%s' "$out" | tail -3 | tr '\n' ' '))"
 fi
 
+" ",")" >&2
 # --- prompt extraction is byte-clean ------------------------------------------
 bad="$(grep -c '[`"]$' "$FAKE_HOME/stub-prompts.log" || true)"
 last="$(tail -1 "$FAKE_HOME/stub-prompts.log")"
@@ -161,6 +162,47 @@ if [[ "$(cat "$strip_a")" != *"AGENTS.md"* && "$(cat "$strip_a")" == *"STUB-LINE
     ok "PromptKit artifacts stripped from the directive arm's grading packet"
 else
     notok "strip in batch (a-has-agents=$(grep -c AGENTS.md "$strip_a" || true))"
+fi
+
+# --- treatment arm: the staged kit makes the directive's refs real ------------
+# init.sh renders KIT_DIR_REL=".promptkit" whenever the engine sits outside the
+# project and copies nothing itself, so before staging every mandatory
+# Disk-First read in the pk arm was an ENOENT -- which the extractor scores as a
+# rework loop and prices as CPAC.
+pk_run="$(printf '%s' "$row_a" | cut -f3)"
+bare_run="$(printf '%s' "$row_b" | cut -f3)"
+if [[ -f "$pk_run/.promptkit/workflows/route.md" \
+        && -f "$pk_run/.promptkit/templates/project-profile-template.md" \
+        && -f "$pk_run/.promptkit/scripts/check-setup-assert.sh" \
+        && -f "$pk_run/.promptkit/init.sh" ]]; then
+    ok "pk arm: staged kit satisfies the directive's ./.promptkit references"
+else
+    notok "pk arm: staged kit is missing a surface the directive names"
+fi
+
+if [[ -f "$pk_run/.promptkit/init.sh" && ! -e "$pk_run/.promptkit/benchmarks" && ! -e "$pk_run/.promptkit/docs" \
+        && ! -e "$pk_run/.promptkit/scripts/tests" && ! -e "$pk_run/.promptkit/.git" ]]; then
+    ok "pk arm: staged kit excludes the rubrics, methodology, fixtures, and .git"
+else
+    notok "pk arm: staged kit leaks a blinding surface"
+fi
+
+if [[ ! -e "$bare_run/.promptkit" && ! -e "$bare_run/AGENTS.md" && ! -e "$bare_run/PROMPTKIT.md" ]]; then
+    ok "bare arm starts from the neutral seed with no kit and no directive"
+else
+    notok "bare arm carries a PromptKit surface"
+fi
+
+if ! grep -q '^diff --git a/\.promptkit' "$diff_a" 2>/dev/null; then
+    ok "the staged kit never enters the graded run diff"
+else
+    notok "staged kit leaked into run.diff"
+fi
+
+if grep -q '^ASSERT|courier|tree|OK$' "$OUT/runs/BENCH-DRIVER-01-promptkit_os-r1-init.log" 2>/dev/null; then
+    ok "pk arm: the install door asserts as a complete courier tree before the session"
+else
+    notok "pk arm: door assert did not report ASSERT|courier|tree|OK"
 fi
 
 # --- blind packets: shuffled 1:1 mapping + verify evidence ---------------------
@@ -339,6 +381,8 @@ expect_preflight_ok() {
     fi
 }
 
+" ",")" >&2
+" ",")" >&2
 for variant in agents leak dirty promptkit promptkitdir ghinstr; do cp -a "$SEED" "$TMP_DIR/seed-$variant"; done
 printf '# Global instructions\n' > "$TMP_DIR/seed-agents/AGENTS.md"
 git -C "$TMP_DIR/seed-agents" add AGENTS.md
@@ -604,6 +648,26 @@ if [[ $rc -eq 0 && -n "$sha_a" && "$sha_a" == "$sha_b" ]]; then
     ok "two builds of the same content produce the same seed SHA"
 else
     notok "builder determinism (rc=$rc, a=$sha_a, b=$sha_b)"
+fi
+
+# Host git configuration must not reach the seed commit. A global core.hooksPath
+# commit-msg hook rewrote the message and changed the SHA, and an injected
+# template hook can abort the build; either breaks the cross-host pin Appendix B
+# depends on. --template= and --no-verify are what make this case pass.
+mkdir -p "$TMP_DIR/hostile-hooks" "$TMP_DIR/hostile-template/hooks"
+printf '#!/bin/sh\nprintf "Extra: hostile\n" >> "$1"\n' > "$TMP_DIR/hostile-hooks/commit-msg"
+printf '#!/bin/sh\nexit 1\n' > "$TMP_DIR/hostile-hooks/pre-commit"
+chmod +x "$TMP_DIR/hostile-hooks/commit-msg" "$TMP_DIR/hostile-hooks/pre-commit"
+cp "$TMP_DIR/hostile-hooks/commit-msg" "$TMP_DIR/hostile-template/hooks/commit-msg"
+printf '[core]\n\thooksPath = %s\n[init]\n\ttemplateDir = %s\n' \
+    "$TMP_DIR/hostile-hooks" "$TMP_DIR/hostile-template" > "$TMP_DIR/hostile.gitconfig"
+out="$(GIT_CONFIG_GLOBAL="$TMP_DIR/hostile.gitconfig" GIT_CONFIG_NOSYSTEM=1 \
+    bash "$BUILDER" "$TMP_DIR/built-hostile" 2>&1)"; rc=$?
+sha_h="$(git -C "$TMP_DIR/built-hostile" rev-parse HEAD 2>/dev/null || true)"
+if [[ $rc -eq 0 && -n "$sha_a" && "$sha_a" == "$sha_h" ]]; then
+    ok "a hostile global git config cannot change the seed SHA"
+else
+    notok "hostile-config determinism (rc=$rc, clean=$sha_a, hostile=$sha_h)"
 fi
 
 # The built seed must satisfy the driver's own guard: no instruction surface,

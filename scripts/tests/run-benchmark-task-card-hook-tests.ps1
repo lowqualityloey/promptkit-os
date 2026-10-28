@@ -7,7 +7,7 @@
 # blocks a badly ordered card and lets a compliant one through.
 #
 # Cases are 1:1 with the Bash twin except the executable-bit assertions, which
-# Windows has no mode bit to satisfy (19 here, 21 there).
+# Windows has no mode bit to satisfy (23 here, 27 there).
 
 $ErrorActionPreference = 'Stop'
 $invariant = [System.Globalization.CultureInfo]::InvariantCulture
@@ -307,6 +307,22 @@ try {
     $crlfLeft = if (Test-Path -LiteralPath $crlfHook) { (Get-Content -LiteralPath $crlfHook -Raw) } else { '' }
     if (-not $crlfLeft.Contains('PROMPTKIT_TASK_CARD_GATE')) { Write-Pass 'CRLF remove left no managed block' }
     else { Write-Fail 'CRLF remove left no managed block' }
+
+    # --- 15. a non-ASCII card name is still gated -------------------------
+    # git C-quotes a non-ASCII path unless core.quotepath=false, so the
+    # staged-card lookup saw no card and the gate skipped the commit.
+    New-Repo 'unicode-card'
+    Invoke-Installer
+    $u = [char]0x00DC
+    $uName = "TASK-BENCH-$u-01.md"
+    Write-Card -Name $uName -Id "BENCH-$u-01" -Verify $script:BadVerify
+    & git -C $script:Repo add "benchmarks/tasks/$uName" | Out-Null
+    $uBefore = Get-Head
+    Invoke-Commit 'badly ordered card with a non-ASCII filename'
+    Invoke-Scenario 'a non-ASCII card name is still gated' { (Test-NonZero '') }
+    if ((Get-Head) -eq $uBefore) { Write-Pass 'the non-ASCII blocked commit left HEAD untouched' }
+    else { Write-Fail 'the non-ASCII blocked commit left HEAD untouched' }
+
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {

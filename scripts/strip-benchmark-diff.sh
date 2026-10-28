@@ -13,7 +13,7 @@
 set -euo pipefail
 export LC_ALL=C
 
-DROP_PATTERNS="PROMPTKIT.md|AGENTS.md|docs/STATE.md|docs/tasks/|docs/specs/|docs/adrs/|docs/reviews/|docs/releases/|docs/tests/|.promptkit/|.github/pull_request_template.md|.github/ISSUE_TEMPLATE/"
+DROP_PATTERNS="PROMPTKIT.md|AGENTS.md|docs/STATE.md|docs/tasks/|docs/specs/|docs/adrs/|docs/reviews/|docs/releases/|docs/tests/|.promptkit/|.promptkit|.github/pull_request_template.md|.github/ISSUE_TEMPLATE/"
 TARGET_FILE=""
 
 usage() {

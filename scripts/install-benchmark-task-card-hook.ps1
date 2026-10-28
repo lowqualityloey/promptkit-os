@@ -149,7 +149,7 @@ function Get-BlockLines {
         ('__pk_card_sh="' + $checkerSh + '"'),
         ('__pk_card_ps1="' + $checkerPs1 + '"'),
         ('__pk_card_orig="' + $OrigSh + '"'),
-        '__pk_card_staged="$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -E ''^benchmarks/tasks/TASK-.*\.md$'' || true)"',
+        '__pk_card_staged="$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -E ''^benchmarks/tasks/TASK-.*\.md$'' || true)"',
         'if [ -n "$__pk_card_staged" ]; then',
         '  __pk_card_rc=0',
         '  __pk_card_unreadable=0',

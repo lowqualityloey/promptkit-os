@@ -55,7 +55,8 @@ A paired, randomized block design:
 
 - **6 tasks** × **2 arms** × **3 repeats** = **36 primary sessions** (30 under the five-task `Phase 3b-L1L2` fallback in §2.1).
 - Task blocks: **1 L0** (cost-only), **2 L1**, **2 L2**, **1 L3**.
-- The arm is the only intended difference: `promptkit_os` receives
+- The arm is the only intended difference: `promptkit_os` receives the engine's
+  consumer surface staged at `./.promptkit` and
   `init.sh --balanced --host=agents`; `bare` receives no PromptKit install.
 - All other variables are frozen: seed SHA, engine SHA, model, CLI version,
   prompt bytes, permission mode, tools, max turns, timeout, host profile, and
@@ -140,11 +141,18 @@ Preferred: a **neutral consumer repository** with a real backlog. Fallback: a
   `PROMPTKIT.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.clinerules`,
   `.cursor/rules`, `.claude/`, `.promptkit/`, `.github/instructions/`,
   `.github/copilot-instructions.md`, and any `heyloey` reference. A tracked
-  `PROMPTKIT.md` or `.promptkit/` is a PromptKit install marker: `init.sh`
-  treats it as an existing install and keeps its profile, so it is not a
-  neutral surface for either arm.
+  `PROMPTKIT.md` is the install marker `init.sh` reads (it keeps the `profile:`
+  line); a tracked `.promptkit/` is a leaked kit rather than something the
+  driver reads. Neither is a neutral surface for either arm.
 - The bare arm starts from this neutral seed. The treatment arm's
-  `init.sh --balanced --host=agents` writes the only PromptKit directive.
+  `init.sh --balanced --host=agents` writes the only PromptKit directive, and
+  the driver first stages the engine's consumer surface at `./.promptkit`:
+  `init.sh` renders that path from a foreign engine location but copies nothing
+  itself, so without the staged tree every mandatory Disk-First read is an
+  `ENOENT` that the extractor scores as a rework loop. The staged tree excludes
+  `benchmarks/` (the rubrics and `Verify` probes), `docs/`, `scripts/tests/`,
+  and `.git`, is kept out of the clone's index through `.git/info/exclude`, and
+  is asserted as a complete courier install before the session starts.
 - The seed's tests must pass after neutralization; the task specs and `Verify`
   commands must run against the neutral seed.
 - Record the neutral seed commit SHA and the neutralization procedure. Do not
@@ -342,7 +350,7 @@ replacements and the 42-session ceiling are unchanged.
 - [ ] Isolation preflight guard passes.
 - [x] Driver preregistration passes its tests: seeded task/arm/repeat order,
   the complete pre-session plan, both required seeds, and the isolation guard
-  (33/33 in `scripts/tests/run-benchmark-driver-tests.sh`, merged as
+  (57/57 in `scripts/tests/run-benchmark-driver-tests.sh`, merged as
   `13f7567`).
 - [ ] Task specs frozen; bundle hash recorded.
 - [ ] `--preflight-only` passes; zero spend.
@@ -422,7 +430,7 @@ Slate notes:
   cycle; `run-ab-benchmark.sh` writes the engine clone's `rev-parse HEAD` to `env.txt`, so
   a stale pin here makes the frozen parameters disagree with every run.
 - Seed SHA: `16b3cf74c809c23dd48466da2212bd3e67a530ed`
-- Neutralization procedure SHA: `843ecc47249e2cf0914ce594fc77ac45b5a5f55c1c993c559cbf8e5d85703d3f` (`benchmarks/seed/neutralize.sh`); the seed was produced by `benchmarks/seed/build-phase3b-seed.sh` at `aecfff209793cf6dba35ae33ea810efc71675bbb42ecf054cc62c3d478bcbd12` and accepted by `neutralize.sh` with `removed=0`
+- Neutralization procedure SHA: `7b79660dfb36e1cc1cdeed88a2e4886c2dbfcaa57158e7ad7ae9f72800f377c4` (`benchmarks/seed/neutralize.sh`); the seed was produced by `benchmarks/seed/build-phase3b-seed.sh` at `cf65228e7f66727bdc34ecb59ffed67109dddbe483d4fcd709a58877a7d41dd4` and accepted by `neutralize.sh` with `removed=0`
 - Task bundle SHA-256: `c82822c86c236447b9ac6481d375ec069ed2797a047dba10cb6dcc8266e3ad9f`
 - Blind-id shuffle seed: `90613245`
 - Task/arm order seed: `20261027`

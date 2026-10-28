@@ -50,6 +50,30 @@ else
     notok "strip CRLF (err=$(cat "$TMP_DIR/strip2.err" 2>/dev/null))"
 fi
 
+# A 160000 gitlink for the kit has no trailing slash, so the directory pattern
+# missed it and the plugin tree would have reached a blind grader.
+printf '%s\n' \
+    'diff --git a/.promptkit b/.promptkit' \
+    'new file mode 160000' \
+    'index 0000000..1234567' \
+    '--- /dev/null' \
+    '+++ b/.promptkit' \
+    '@@ -0,0 +1 @@' \
+    '+Subproject commit 1234567890123456789012345678901234567890' \
+    'diff --git a/src/app.ts b/src/app.ts' \
+    '--- a/src/app.ts' \
+    '+++ b/src/app.ts' \
+    '@@ -1 +1,2 @@' \
+    ' export function main() { return 1; }' \
+    '+export const x = 1;' > "$TMP_DIR/gitlink.diff"
+out="$(strip "$TMP_DIR/gitlink.diff" 2>"$TMP_DIR/strip3.err")"; rc=$?
+if [[ $rc -eq 0 && "$(cat "$TMP_DIR/strip3.err")" == "STRIP|OK|in_files=2|out_files=1|dropped=1" ]] \
+        && [[ "$out" != *".promptkit"* ]]; then
+    ok "a bare .promptkit gitlink is dropped, not leaked to the grader"
+else
+    notok "strip gitlink (err=$(cat "$TMP_DIR/strip3.err" 2>/dev/null))"
+fi
+
 out="$(strip "$FIXTURES/not-a-diff.txt" 2>&1)"; rc=$?
 if [[ $rc -eq 2 && "$out" == *"STRIP|ERROR|NOT_A_DIFF"* ]]; then
     ok "non-diff input fails closed (exit 2)"

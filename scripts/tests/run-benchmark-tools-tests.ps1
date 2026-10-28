@@ -62,6 +62,32 @@ try {
         NotOk "strip CRLF (rc=$($r.Rc))"
     }
 
+    # A 160000 gitlink has no trailing slash, so the directory pattern missed it
+    # and the plugin tree would have reached a blind grader.
+    $gitlink = Join-Path $tmp "gitlink.diff"
+    $gitlinkLines = @(
+        'diff --git a/.promptkit b/.promptkit'
+        'new file mode 160000'
+        'index 0000000..1234567'
+        '--- /dev/null'
+        '+++ b/.promptkit'
+        '@@ -0,0 +1 @@'
+        '+Subproject commit 1234567890123456789012345678901234567890'
+        'diff --git a/src/app.ts b/src/app.ts'
+        '--- a/src/app.ts'
+        '+++ b/src/app.ts'
+        '@@ -1 +1,2 @@'
+        ' export function main() { return 1; }'
+        '+export const x = 1;'
+    ) -join "`n"
+    [System.IO.File]::WriteAllText($gitlink, $gitlinkLines + "`n")
+    $r = Invoke-ToolMerged -Script $stripScript -ScriptArgs @("-TargetPath", $gitlink)
+    if ($r.Rc -eq 0 -and $r.Out.Contains("STRIP|OK|in_files=2|out_files=1|dropped=1") -and -not $r.Out.Contains(".promptkit")) {
+        Ok "a bare .promptkit gitlink is dropped, not leaked to the grader"
+    } else {
+        NotOk "strip gitlink (rc=$($r.Rc))"
+    }
+
     $r = Invoke-ToolMerged -Script $stripScript -ScriptArgs @("-TargetPath", (Join-Path $fixtures "not-a-diff.txt"))
     if ($r.Rc -eq 2 -and $r.Out.Contains("STRIP|ERROR|NOT_A_DIFF")) { Ok "non-diff input fails closed (exit 2)" } else { NotOk "strip non-diff (rc=$($r.Rc))" }
 

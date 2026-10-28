@@ -28,9 +28,15 @@ For every task × arm × repeat:
      because `-p` mode withholds tools by default), same turn cap (`--max-turns`), same
      timeout, same prompt text byte-for-byte (`benchmarks/tasks/*.md` is the single source).
    - `--skip-onboarding` prevents taste onboarding from differentiating the arms.
-   - Arm `promptkit_os` additionally installs the directive via the engine's
+   - Arm `promptkit_os` additionally receives the engine's consumer surface staged at
+     `./.promptkit` and installs the directive via the engine's
      `init.sh --balanced --host=agents` from the pinned engine checkout; arm `bare` receives
-     no PromptKit installation. Neither arm is a vanilla CLI: every clone carries the
+     no PromptKit installation. Staging is what makes the directive's
+     `./.promptkit/workflows/...` and `./.promptkit/protocols/...` references resolvable,
+     because `init.sh` renders that path but copies nothing itself; the staged tree omits
+     `benchmarks/`, `docs/`, `scripts/tests/`, and `.git`, so the arm can read its kit but
+     not the rubrics, the probes, or the engine's history. It is listed in
+     `.git/info/exclude`, so it never reaches a graded diff. Neither arm is a vanilla CLI: every clone carries the
      seed's checked-in instruction files, and host-level `~/.commandcode` instruction,
      skill, and hook surfaces may apply to both. See Limitations.
 3. **Taste freeze**: `~/.commandcode/taste/taste.md` is snapshotted before the batch and

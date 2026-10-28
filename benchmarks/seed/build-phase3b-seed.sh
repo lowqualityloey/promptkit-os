@@ -550,8 +550,14 @@ test('parseFlags returns the parsed pairs', () => {
 });
 APPTEST
 
-git -C "$dest" -c init.defaultBranch=main init -q || die "git init failed"
-git -C "$dest" add -A || die "git add failed"
+# --template= and --no-verify keep host git configuration out of this commit:
+# init.templateDir can inject hooks, and a global core.hooksPath pre-commit or
+# commit-msg hook can abort or rewrite the message, either of which changes the
+# SHA this script promises is host-independent. core.autocrlf=false belongs on
+# the add as well as the commit -- setting it only on commit is too late,
+# because the index is already written.
+git -C "$dest" -c init.defaultBranch=main init -q --template= || die "git init failed"
+git -C "$dest" -c core.autocrlf=false -c core.filemode=false add -A || die "git add failed"
 
 # Fixed identity and timestamps: identical content must produce an identical SHA
 # on any host, so Appendix B can pin the seed the batch actually ran against.
@@ -559,7 +565,7 @@ GIT_AUTHOR_DATE='2000-01-01T00:00:00+0000' \
 GIT_COMMITTER_DATE='2000-01-01T00:00:00+0000' \
 git -C "$dest" -c user.name='promptkit-bench' -c user.email='bench@invalid' \
     -c commit.gpgsign=false -c core.autocrlf=false \
-    commit -q -m 'feat: add the neutral Phase 3b benchmark seed' \
+    commit -q --no-verify -m 'feat: add the neutral Phase 3b benchmark seed' \
     || die "seed commit failed"
 
 sha=$(git -C "$dest" rev-parse HEAD) || die "cannot read seed SHA"

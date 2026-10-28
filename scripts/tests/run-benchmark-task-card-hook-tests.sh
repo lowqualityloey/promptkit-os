@@ -347,4 +347,21 @@ else
     fail "the emitted hook names the real checker path"
 fi
 
+# --- 17. a non-ASCII card name is still gated ------------------------------
+# `git diff --cached --name-only` C-quotes a non-ASCII path unless
+# core.quotepath=false, so the staged-card lookup saw no card and the gate
+# skipped a commit it should have blocked.
+make_repo unicode-card
+install_hook
+write_card "TASK-BENCH-Ü-01.md" "BENCH-Ü-01" "$BAD_VERIFY"
+git -C "$REPO" add "benchmarks/tasks/TASK-BENCH-Ü-01.md"
+before="$(head_of)"
+commit "badly ordered card with a non-ASCII filename"
+scenario "a non-ASCII card name is still gated" "want_nonzero"
+if [ "$(head_of)" = "$before" ]; then
+    pass "the non-ASCII blocked commit left HEAD untouched"
+else
+    fail "the non-ASCII blocked commit left HEAD untouched"
+fi
+
 printf 'RESULTS|passed=%s|failed=%s\n' "$PASS" "$FAIL"

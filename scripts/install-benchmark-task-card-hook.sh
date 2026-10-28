@@ -153,7 +153,7 @@ HEAD
         printf '__pk_card_ps1="%s"\n' "$checker_ps1"
         printf '__pk_card_orig="%s"\n' "$orig"
         cat <<'TAIL'
-__pk_card_staged="$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -E '^benchmarks/tasks/TASK-.*\.md$' || true)"
+__pk_card_staged="$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -E '^benchmarks/tasks/TASK-.*\.md$' || true)"
 if [ -n "$__pk_card_staged" ]; then
   __pk_card_rc=0
   __pk_card_unreadable=0
