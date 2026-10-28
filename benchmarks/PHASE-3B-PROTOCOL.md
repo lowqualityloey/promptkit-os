@@ -418,17 +418,18 @@ Slate notes:
 
 ## Appendix B — Frozen parameters (fill before run)
 
-- Protocol commit: `TBD` — record the commit that freezes this document in the docs-only
-  sign-off commit (§10). A pin taken while the draft was still moving names code no
-  session will run.
-- Freeze date: 2026-10-27 (slate and parameters drafted; frozen by the Approval signature)
-- Owner approval: **PENDING** — see the Approval section
+- Protocol commit: `f6a58f0c1c4593742bad5279363b0e2962c3bb8c` — the commit that froze
+  this document, recorded here in the docs-only commit §10 requires. A pin taken while the
+  draft was still moving would name code no session runs; this one is the revision
+  immediately before the pin record.
+- Freeze date: 2026-10-28 (signed; the slate and parameters are frozen as of this commit)
+- Owner approval: **SIGNED** 2026-10-28 — see the Approval section
 - Model: `deepseek/deepseek-v4.1-flash`
 - Command Code version: `1.88.0`
-- Engine SHA: `TBD` — the commit the `promptkit_os` arm runs, recorded at sign-off. The
-  sign-off commit's parent is the only value that can be written without a self-hash
-  cycle; `run-ab-benchmark.sh` writes the engine clone's `rev-parse HEAD` to `env.txt`, so
-  a stale pin here makes the frozen parameters disagree with every run.
+- Engine SHA: `f6a58f0c1c4593742bad5279363b0e2962c3bb8c` — the commit the `promptkit_os` arm
+  runs, and this commit's parent: the only value writable without a self-hash cycle.
+  `run-ab-benchmark.sh` writes the engine clone's `rev-parse HEAD` to `env.txt`, so a stale
+  pin here would make the frozen parameters disagree with every run.
 - Seed SHA: `16b3cf74c809c23dd48466da2212bd3e67a530ed`
 - Neutralization procedure SHA: `7b79660dfb36e1cc1cdeed88a2e4886c2dbfcaa57158e7ad7ae9f72800f377c4` (`benchmarks/seed/neutralize.sh`); the seed was produced by `benchmarks/seed/build-phase3b-seed.sh` at `cf65228e7f66727bdc34ecb59ffed67109dddbe483d4fcd709a58877a7d41dd4` and accepted by `neutralize.sh` with `removed=0`
 - Task bundle SHA-256: `c82822c86c236447b9ac6481d375ec069ed2797a047dba10cb6dcc8266e3ad9f`
@@ -516,7 +517,7 @@ both arms before the run; every `Verify` command was exercised on both.
 - [ ] I approve the 42-session / 24-hour / $25 cap in §9.
 - [ ] I confirm the neutral seed and clean host preflight passed.
 
-**Owner signature / date**: ______________________________
+**Owner signature / date**: Jonell Balanay — 2026-10-28
 
 ---
 
