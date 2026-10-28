@@ -282,6 +282,22 @@ try {
         Remove-Item Env:PK_PY_MARKER -ErrorAction SilentlyContinue
     }
     Report-Scenario 'H7 non-shell python hook preserved, chained, and enforced'
+
+    # H9: -Remove strips a CRLF hook. A hook edited on Windows carries `r on
+    # every line; the marker match used to fail, so -Remove reported success and
+    # left the managed block installed.
+    Begin-Scenario
+    $rootH9 = New-Repo 'h9' 'off'
+    $h9Hook = Join-Path $rootH9 '.git/hooks/commit-msg'
+    & pwsh -NoProfile -File $hookInstaller -Root $rootH9 | Out-Null
+    $h9Text = (Get-Content -LiteralPath $h9Hook -Raw) -replace "`r?`n", "`r`n"
+    [IO.File]::WriteAllText($h9Hook, $h9Text, $utf8)
+    $h9Raw = @(& pwsh -NoProfile -File $hookInstaller -Root $rootH9 -Remove 2>&1)
+    $h9Out = ((@($h9Raw | ForEach-Object { $_.ToString() }) -join "`n")).Replace("`r", '')
+    Assert-Scenario ($h9Out.Contains('AI_ATTRIBUTION_HOOK|REMOVED')) 'CRLF remove did not report REMOVED'
+    $h9Left = if (Test-Path -LiteralPath $h9Hook -PathType Leaf) { Get-Content -LiteralPath $h9Hook -Raw } else { '' }
+    Assert-Scenario (-not $h9Left.Contains('PROMPTKIT_AI_ATTRIBUTION')) 'CRLF remove left the managed block behind'
+    Report-Scenario 'H9 remove strips a CRLF hook'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }

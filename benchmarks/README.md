@@ -28,9 +28,15 @@ For every task × arm × repeat:
      because `-p` mode withholds tools by default), same turn cap (`--max-turns`), same
      timeout, same prompt text byte-for-byte (`benchmarks/tasks/*.md` is the single source).
    - `--skip-onboarding` prevents taste onboarding from differentiating the arms.
-   - Arm `promptkit_os` additionally installs the directive via the engine's
+   - Arm `promptkit_os` additionally receives the engine's consumer surface staged at
+     `./.promptkit` and installs the directive via the engine's
      `init.sh --balanced --host=agents` from the pinned engine checkout; arm `bare` receives
-     no PromptKit installation. Neither arm is a vanilla CLI: every clone carries the
+     no PromptKit installation. Staging is what makes the directive's
+     `./.promptkit/workflows/...` and `./.promptkit/protocols/...` references resolvable,
+     because `init.sh` renders that path but copies nothing itself; the staged tree omits
+     `benchmarks/`, `docs/`, `scripts/tests/`, and `.git`, so the arm can read its kit but
+     not the rubrics, the probes, or the engine's history. It is listed in
+     `.git/info/exclude`, so it never reaches a graded diff. Neither arm is a vanilla CLI: every clone carries the
      seed's checked-in instruction files, and host-level `~/.commandcode` instruction,
      skill, and hook surfaces may apply to both. See Limitations.
 3. **Taste freeze**: `~/.commandcode/taste/taste.md` is snapshotted before the batch and
@@ -42,7 +48,13 @@ For every task × arm × repeat:
    agent-instruction file, when the seed tree is dirty, or when the host `HOME` carries
    instruction/skill/hook/MCP configuration or `heyloey` on `PATH`. Phase 3b therefore runs
    from a neutralized seed (`benchmarks/seed/neutralize.sh`, which removes exactly the
-   surfaces the guard refuses) under an isolated `HOME`; there is no override flag. The
+   surfaces the guard refuses) under an isolated `HOME`; there is no override flag. This
+   repository cannot serve as that seed: 26 tracked files carry a `heyloey` reference and 18
+   of them are dated release, review, and transcript records that must not be rewritten to
+   manufacture a clean seed, so `neutralize.sh` refuses it. `benchmarks/seed/build-phase3b-seed.sh`
+   writes the purpose-built alternative — a dependency-free Node service with no instruction
+   surface, deterministic to a fixed SHA, which `neutralize.sh` accepts with `removed=0`.
+   A batch run against it is labeled synthetic: it has a backlog, but not a real one. The
    Phase 3 pilot predates the guard and inherited the seed's `AGENTS.md` and host surfaces,
    so its report records the resulting `heyloey` hook confound.
 4. **Telemetry**: headless sessions persist to `~/.commandcode/projects/<slug>/` and record
@@ -60,7 +72,16 @@ For every task × arm × repeat:
    writing the packet, so a Verify command that prints its cwd cannot leak the
    arm. The grader never needs the arm-revealing session log for evidence-gated
    rubric items, and a successful-but-silent command still yields gradeable
-   evidence. The blind→scenario mapping lives in `grading/key.csv` and is never
+   evidence. A card that needs execution proof runs its behavioral probe
+   **before** its test suite and exits non-zero if either fails: chaining them
+   with `&&` lets one red suite suppress the probe, which leaves the packet
+   holding only test output and turns the rubric's behavioral items into
+   guesswork. The probe's output therefore leads the packet, the
+   `VERIFY|probe=<n>|tests=<n>` line records both statuses, and `verify_exit`
+   means "both passed". The exact shape is in
+   `benchmarks/tasks/TEMPLATE-task.md`, and every card in the frozen slate
+   follows it.
+   The blind→scenario mapping lives in `grading/key.csv` and is never
    printed to the terminal; the grader scores `B*.diff` (+ `B*.verify.txt`)
    against the task's frozen rubric without seeing it, and writes the sheet keyed
    by blind id: `blind_id <TAB> rubric_passed <TAB> rubric_total <TAB>

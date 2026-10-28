@@ -163,6 +163,47 @@ else
     notok "strip in batch (a-has-agents=$(grep -c AGENTS.md "$strip_a" || true))"
 fi
 
+# --- treatment arm: the staged kit makes the directive's refs real ------------
+# init.sh renders KIT_DIR_REL=".promptkit" whenever the engine sits outside the
+# project and copies nothing itself, so before staging every mandatory
+# Disk-First read in the pk arm was an ENOENT -- which the extractor scores as a
+# rework loop and prices as CPAC.
+pk_run="$(printf '%s' "$row_a" | cut -f3)"
+bare_run="$(printf '%s' "$row_b" | cut -f3)"
+if [[ -f "$pk_run/.promptkit/workflows/route.md" \
+        && -f "$pk_run/.promptkit/templates/project-profile-template.md" \
+        && -f "$pk_run/.promptkit/scripts/check-setup-assert.sh" \
+        && -f "$pk_run/.promptkit/init.sh" ]]; then
+    ok "pk arm: staged kit satisfies the directive's ./.promptkit references"
+else
+    notok "pk arm: staged kit is missing a surface the directive names"
+fi
+
+if [[ -f "$pk_run/.promptkit/init.sh" && ! -e "$pk_run/.promptkit/benchmarks" && ! -e "$pk_run/.promptkit/docs" \
+        && ! -e "$pk_run/.promptkit/scripts/tests" && ! -e "$pk_run/.promptkit/.git" ]]; then
+    ok "pk arm: staged kit excludes the rubrics, methodology, fixtures, and .git"
+else
+    notok "pk arm: staged kit leaks a blinding surface"
+fi
+
+if [[ ! -e "$bare_run/.promptkit" && ! -e "$bare_run/AGENTS.md" && ! -e "$bare_run/PROMPTKIT.md" ]]; then
+    ok "bare arm starts from the neutral seed with no kit and no directive"
+else
+    notok "bare arm carries a PromptKit surface"
+fi
+
+if ! grep -q '^diff --git a/\.promptkit' "$diff_a" 2>/dev/null; then
+    ok "the staged kit never enters the graded run diff"
+else
+    notok "staged kit leaked into run.diff"
+fi
+
+if grep -q '^ASSERT|courier|tree|OK$' "$OUT/runs/BENCH-DRIVER-01-promptkit_os-r1-init.log" 2>/dev/null; then
+    ok "pk arm: the install door asserts as a complete courier tree before the session"
+else
+    notok "pk arm: door assert did not report ASSERT|courier|tree|OK"
+fi
+
 # --- blind packets: shuffled 1:1 mapping + verify evidence ---------------------
 nblind="$(ls "$OUT/grading"/B*.diff 2>/dev/null | wc -l)"
 nverify="$(ls "$OUT/grading"/B*.verify.txt 2>/dev/null | wc -l)"
@@ -579,6 +620,100 @@ if [[ $rc -eq 2 && "$out" == *"heyloey reference survives"* && ! -e "$TMP_DIR/he
     ok "a surviving heyloey reference is refused and no seed is produced"
 else
     notok "heyloey refusal (rc=$rc, out=${out:0:160})"
+fi
+
+# --- neutral seed builder (benchmarks/seed/build-phase3b-seed.sh) ------------
+BUILDER="$REPO_ROOT/benchmarks/seed/build-phase3b-seed.sh"
+
+out="$(bash "$BUILDER" "$TMP_DIR/built-a" 2>&1)"; rc=$?
+BUILT_A="$TMP_DIR/built-a"
+sha_a="$(git -C "$BUILT_A" rev-parse HEAD 2>/dev/null || true)"
+if [[ $rc -eq 0 && "$out" == SEED\|OK\|sha=* && -n "$sha_a" \
+        && "$(git -C "$BUILT_A" ls-files | wc -l | tr -d ' ')" == "12" \
+        && "$(git -C "$BUILT_A" rev-list --count HEAD)" == "1" \
+        && -z "$(git -C "$BUILT_A" status --porcelain)" ]]; then
+    ok "builder writes a clean single-commit seed of 12 tracked files"
+else
+    notok "builder output (rc=$rc, out=${out:0:200})"
+fi
+
+# Identical content must produce an identical SHA, or Appendix B cannot pin a
+# seed across hosts.
+out="$(bash "$BUILDER" "$TMP_DIR/built-b" 2>&1)"; rc=$?
+sha_b="$(git -C "$TMP_DIR/built-b" rev-parse HEAD 2>/dev/null || true)"
+if [[ $rc -eq 0 && -n "$sha_a" && "$sha_a" == "$sha_b" ]]; then
+    ok "two builds of the same content produce the same seed SHA"
+else
+    notok "builder determinism (rc=$rc, a=$sha_a, b=$sha_b)"
+fi
+
+# Host git configuration must not reach the seed commit. A global core.hooksPath
+# commit-msg hook rewrote the message and changed the SHA, and an injected
+# template hook can abort the build; either breaks the cross-host pin Appendix B
+# depends on. --template= and --no-verify are what make this case pass.
+mkdir -p "$TMP_DIR/hostile-hooks" "$TMP_DIR/hostile-template/hooks"
+printf '#!/bin/sh\nprintf "Extra: hostile\n" >> "$1"\n' > "$TMP_DIR/hostile-hooks/commit-msg"
+printf '#!/bin/sh\nexit 1\n' > "$TMP_DIR/hostile-hooks/pre-commit"
+chmod +x "$TMP_DIR/hostile-hooks/commit-msg" "$TMP_DIR/hostile-hooks/pre-commit"
+cp "$TMP_DIR/hostile-hooks/commit-msg" "$TMP_DIR/hostile-template/hooks/commit-msg"
+printf '[core]\n\thooksPath = %s\n[init]\n\ttemplateDir = %s\n' \
+    "$TMP_DIR/hostile-hooks" "$TMP_DIR/hostile-template" > "$TMP_DIR/hostile.gitconfig"
+out="$(GIT_CONFIG_GLOBAL="$TMP_DIR/hostile.gitconfig" GIT_CONFIG_NOSYSTEM=1 \
+    bash "$BUILDER" "$TMP_DIR/built-hostile" 2>&1)"; rc=$?
+sha_h="$(git -C "$TMP_DIR/built-hostile" rev-parse HEAD 2>/dev/null || true)"
+if [[ $rc -eq 0 && -n "$sha_a" && "$sha_a" == "$sha_h" ]]; then
+    ok "a hostile global git config cannot change the seed SHA"
+else
+    notok "hostile-config determinism (rc=$rc, clean=$sha_a, hostile=$sha_h)"
+fi
+
+# The built seed must satisfy the driver's own guard: no instruction surface,
+# no heyloey reference. A builder that emitted either would produce a seed the
+# driver refuses at preflight, which is the failure this pins.
+hit="$(git -c core.quotepath=false -C "$BUILT_A" ls-files 2>/dev/null \
+    | grep -E -i -m1 '(^|/)(AGENTS\.md|CLAUDE\.md|PROMPTKIT\.md|GEMINI\.md|\.cursorrules|\.windsurfrules|\.clinerules|copilot-instructions\.md)$|(^|/)(\.cursor/rules|\.claude|\.promptkit|\.github/instructions)/' \
+    || true)"
+leak="$(git -C "$BUILT_A" grep -I -i -l -e heyloey -- . 2>/dev/null | head -1 || true)"
+if [[ -z "$hit" && -z "$leak" ]]; then
+    ok "built seed carries no instruction surface and no heyloey reference"
+else
+    notok "built seed is not neutral (surface=$hit, heyloey=$leak)"
+fi
+
+# Section 3.1 requires the neutral seed's tests to pass. The seed has no
+# dependencies, so this runs its suite directly; a host without node still
+# exercises the structure above rather than failing the harness.
+if command -v node >/dev/null 2>&1; then
+    out="$(cd "$BUILT_A" && node --test 2>&1)"; rc=$?
+    # The default spec reporter prefixes its counts with a glyph, so match the
+    # count text rather than a reporter-specific line prefix.
+    if [[ $rc -eq 0 && "$out" == *"fail 0"* && "$out" == *"pass 28"* ]]; then
+        ok "the built seed's own test suite passes"
+    else
+        notok "seed test suite (rc=$rc)"
+    fi
+else
+    ok "seed test suite skipped (node not on PATH)"
+fi
+
+# neutralize.sh must accept a seed that was never contaminated, and the seed SHA
+# it reports must be the builder's own commit - that is what Appendix B pins.
+out="$(bash "$NEUTRALIZE" "$BUILT_A" "$TMP_DIR/built-neutral" 2>&1)"; rc=$?
+if [[ $rc -eq 0 && "$out" == *"|removed=0|"* && "$out" == *"seed=$sha_a"* \
+        && -d "$TMP_DIR/built-neutral/.git" ]]; then
+    ok "neutralize accepts the built seed with removed=0 and the same SHA"
+else
+    notok "neutralize of built seed (rc=$rc, out=${out:0:200})"
+fi
+
+# A dest this script did not create is never overwritten.
+before="$(git -C "$BUILT_A" rev-parse HEAD)"
+out="$(bash "$BUILDER" "$BUILT_A" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"dest exists"* \
+        && "$(git -C "$BUILT_A" rev-parse HEAD)" == "$before" ]]; then
+    ok "an existing dest is refused and left untouched"
+else
+    notok "existing dest refusal (rc=$rc, out=${out:0:160})"
 fi
 
 echo ""

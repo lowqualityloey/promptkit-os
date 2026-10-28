@@ -96,7 +96,7 @@ if [[ -n "$(git -C "$clone" status --porcelain)" ]]; then
     GIT_COMMITTER_DATE='2000-01-01T00:00:00+0000' \
     git -c user.name='promptkit-bench' -c user.email='bench@invalid' \
         -c commit.gpgsign=false -c core.autocrlf=false \
-        -C "$clone" commit -q -m 'chore: neutralize seed for Phase 3b' \
+        -C "$clone" commit -q --no-verify -m 'chore: neutralize seed for Phase 3b' \
         || die "neutralization commit failed"
 fi
 

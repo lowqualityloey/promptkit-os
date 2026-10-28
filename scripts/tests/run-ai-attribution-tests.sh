@@ -270,6 +270,30 @@ h7() {
     unset PK_PY_MARKER
 }
 
+# H8: a repository under $HOME keeps a single-prefix hook path. An unquoted
+# `~/*` case pattern is tilde-expanded to "$HOME/*", which matches an absolute
+# hook path under HOME and used to write the hook to "$HOME/<abs path>".
+# Bash-only: the PowerShell twin compares a literal string prefix and never
+# expands a pattern, so it has no equivalent defect to pin.
+h8() {
+    local root expected out
+    root="$TMP/home/repo-h8"
+    mkdir -p "$root"
+    git -C "$root" init -q
+    git -C "$root" config user.name Fixture
+    git -C "$root" config user.email fixture@example.invalid
+    printf 'profile: balanced\nai-attribution: off\n' > "$root/PROMPTKIT.md"
+    printf 'x\n' > "$root/f.txt"
+    git -C "$root" add -A
+    git -C "$root" commit -qm base
+    expected="$(git -C "$root" rev-parse --path-format=absolute --git-path hooks)/commit-msg"
+    out="$(bash "$HOOK_INSTALLER" --root "$root" 2>&1)"
+    scenario_check "$([[ "$out" == *"AI_ATTRIBUTION_HOOK|INSTALLED|$expected" ]] && printf 1 || printf 0)" "reported path is not the effective git-path: $out"
+    scenario_check "$([[ -f "$expected" ]] && printf 1 || printf 0)" "hook not installed at the effective git-path under HOME: $expected"
+    scenario_check "$([[ ! -e "$HOME/${expected#/}" ]] && printf 1 || printf 0)" "hook also written to a doubled path under HOME"
+    bash "$HOOK_INSTALLER" --root "$root" --remove >/dev/null
+}
+
 begin; d1; report 'D1 host-default/missing preference never newly blocks'
 begin; d2; report 'D2 off: AI co-author trailer prohibited with diagnostics'
 begin; d3; report 'D3 off: AI promotional footer prohibited'
@@ -277,6 +301,23 @@ begin; d4; report 'D4 human co-authors and ordinary discussion preserved'
 begin; d5; report 'D5 malformed rules and missing payload fail closed'
 begin; h1; report 'H1 install blocks an AI-trailer commit'
 begin; h2; report 'H2 human co-author commit passes the hook'
+# H9: --remove strips the managed block from a CRLF hook. The marker match used
+# to fail on a hook edited on Windows, so --remove reported success and left the
+# policy installed.
+h9() {
+    local root hook out leftover
+    root="$(make_repo h9 off)"
+    hook="$root/.git/hooks/commit-msg"
+    bash "$HOOK_INSTALLER" --root "$root" >/dev/null
+awk '{ printf "%s\r\n", $0 }' "$hook" > "$TMP/h9-crlf"
+    cat "$TMP/h9-crlf" > "$hook"
+    out="$(bash "$HOOK_INSTALLER" --root "$root" --remove 2>&1)"
+    scenario_check "$([[ "$out" == *"AI_ATTRIBUTION_HOOK|REMOVED"* ]] && printf 1 || printf 0)" "CRLF remove did not report REMOVED: $out"
+    leftover=0
+    if [[ -f "$hook" ]] && grep -qF 'PROMPTKIT_AI_ATTRIBUTION' "$hook"; then leftover=1; fi
+    scenario_check "$([[ "$leftover" -eq 0 ]] && printf 1 || printf 0)" "CRLF remove left the managed block behind"
+}
+
 begin; h3; report 'H3 pre-existing hook preserved and chained'
 begin; h4; report 'H4 idempotent install; remove strips only the block'
 begin; d6; report 'D6 invalid regex fails closed; multi-MB payload prohibited'
@@ -284,6 +325,8 @@ begin; d7; report 'D7 human Claude Martin passes; bot Claude trailers prohibited
 begin; h5; report 'H5 remove preserves exec bit; restored hook runs without warning'
 begin; h6; report 'H6 install honors core.hooksPath'
 begin; h7; report 'H7 non-shell python hook preserved, chained, and enforced'
+begin; h8; report 'H8 a repository under HOME installs at the single effective path'
+begin; h9; report 'H9 remove strips a CRLF hook'
 
 printf 'Passed: %s | Failed: %s\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1

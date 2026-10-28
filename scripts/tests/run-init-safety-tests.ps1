@@ -820,6 +820,26 @@ try {
         if (-not $standalone.Output.Contains('ASSERT|standalone|tree|OK')) { throw "Failed Test 31 (standalone): missing ASSERT line." }
         if (-not $standalone.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 31 (standalone): missing banner." }
 
+        # Test 31a: kit root == project root renders the relative root reference.
+        # An absolute value is emitted as './/abs/path', which is not a path.
+        $standaloneAgents = [System.IO.File]::ReadAllText((Join-Path $standaloneKit 'AGENTS.md'), [System.Text.Encoding]::UTF8)
+        if (-not $standaloneAgents.Contains('(`./.`)')) { throw 'Failed Test 31a (standalone): kit reference is not the relative root.' }
+        if ($standaloneAgents.Contains('.//') -or $standaloneAgents.Contains($standaloneKit)) { throw 'Failed Test 31a (standalone): kit reference rendered an absolute path.' }
+
+        # Test 31b: the kit reference is path-bounded: kit '...\kitref_project-kit'
+        # merely starts with project root '...\kitref_project', so a bare
+        # StartsWith plus Substring emitted a truncated reference ('ject').
+        $kitRefProj = Join-Path $TestRoot 'kitref_project'
+        $kitRefKit = Join-Path $TestRoot 'kitref_project-kit'
+        New-AssertKitCopy $kitRefKit
+        New-Item -ItemType Directory -Path $kitRefProj -Force | Out-Null
+        $kitRef = Invoke-InitAssert -InitPath (Join-Path $kitRefKit 'init.ps1') -ProjectPath $kitRefProj
+        if ($kitRef.ExitCode -ne 0) { throw 'Failed Test 31b (kit reference): expected exit 0.' }
+        $kitRefAgents = [System.IO.File]::ReadAllText((Join-Path $kitRefProj 'AGENTS.md'), [System.Text.Encoding]::UTF8)
+        if (-not $kitRefAgents.Contains('(`./.promptkit`)')) { throw 'Failed Test 31b (kit reference): sibling kit did not fall back to .promptkit.' }
+        if ($kitRefAgents.Contains('.//') -or $kitRefAgents.Contains($kitRefKit)) { throw 'Failed Test 31b (kit reference): sibling kit path leaked into the directive.' }
+        if ($kitRef.Output.Contains((Join-Path $kitRefKit 'init.ps1'))) { throw 'Failed Test 31b (kit reference): sibling kit path leaked into the upgrade hint.' }
+
         # Test 32: Opt-out - PROMPTKIT_NO_PREFLIGHT=1 yields SKIP and proceeds.
         $env:PROMPTKIT_NO_PREFLIGHT = '1'
         $optout = Invoke-InitAssert -InitPath (Join-Path $courierKit 'init.ps1') -ProjectPath $courierProj

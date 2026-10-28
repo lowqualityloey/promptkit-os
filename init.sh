@@ -750,8 +750,16 @@ for dest in "${ALL_DESTINATIONS[@]}"; do
 done
 
 # 5. Directive Block Template Preparation
+# The kit reference is project-relative only when the kit sits strictly inside
+# the project. A bare string prefix also matches a sibling directory (project
+# "$X/pro", kit "$X/project"), which leaves the absolute source path in
+# KIT_DIR_REL: the template then renders it as ".//abs/path" and the banner
+# advertises a foreign checkout. When the kit root IS the project root, "." is
+# the only truthful relative reference.
 KIT_DIR_REL=".promptkit"
-if [[ "$SCRIPT_DIR" == "$PROJECT_ROOT"* ]]; then
+if [[ "$SCRIPT_DIR" == "$PROJECT_ROOT" ]]; then
+    KIT_DIR_REL="."
+elif [[ "$SCRIPT_DIR" == "$PROJECT_ROOT"/* ]]; then
     KIT_DIR_REL="${SCRIPT_DIR#"$PROJECT_ROOT"/}"
 fi
 

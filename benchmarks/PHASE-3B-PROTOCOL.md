@@ -55,7 +55,8 @@ A paired, randomized block design:
 
 - **6 tasks** × **2 arms** × **3 repeats** = **36 primary sessions** (30 under the five-task `Phase 3b-L1L2` fallback in §2.1).
 - Task blocks: **1 L0** (cost-only), **2 L1**, **2 L2**, **1 L3**.
-- The arm is the only intended difference: `promptkit_os` receives
+- The arm is the only intended difference: `promptkit_os` receives the engine's
+  consumer surface staged at `./.promptkit` and
   `init.sh --balanced --host=agents`; `bare` receives no PromptKit install.
 - All other variables are frozen: seed SHA, engine SHA, model, CLI version,
   prompt bytes, permission mode, tools, max turns, timeout, host profile, and
@@ -140,11 +141,18 @@ Preferred: a **neutral consumer repository** with a real backlog. Fallback: a
   `PROMPTKIT.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.clinerules`,
   `.cursor/rules`, `.claude/`, `.promptkit/`, `.github/instructions/`,
   `.github/copilot-instructions.md`, and any `heyloey` reference. A tracked
-  `PROMPTKIT.md` or `.promptkit/` is a PromptKit install marker: `init.sh`
-  treats it as an existing install and keeps its profile, so it is not a
-  neutral surface for either arm.
+  `PROMPTKIT.md` is the install marker `init.sh` reads (it keeps the `profile:`
+  line); a tracked `.promptkit/` is a leaked kit rather than something the
+  driver reads. Neither is a neutral surface for either arm.
 - The bare arm starts from this neutral seed. The treatment arm's
-  `init.sh --balanced --host=agents` writes the only PromptKit directive.
+  `init.sh --balanced --host=agents` writes the only PromptKit directive, and
+  the driver first stages the engine's consumer surface at `./.promptkit`:
+  `init.sh` renders that path from a foreign engine location but copies nothing
+  itself, so without the staged tree every mandatory Disk-First read is an
+  `ENOENT` that the extractor scores as a rework loop. The staged tree excludes
+  `benchmarks/` (the rubrics and `Verify` probes), `docs/`, `scripts/tests/`,
+  and `.git`, is kept out of the clone's index through `.git/info/exclude`, and
+  is asserted as a complete courier install before the session starts.
 - The seed's tests must pass after neutralization; the task specs and `Verify`
   commands must run against the neutral seed.
 - Record the neutral seed commit SHA and the neutralization procedure. Do not
@@ -342,7 +350,7 @@ replacements and the 42-session ceiling are unchanged.
 - [ ] Isolation preflight guard passes.
 - [x] Driver preregistration passes its tests: seeded task/arm/repeat order,
   the complete pre-session plan, both required seeds, and the isolation guard
-  (33/33 in `scripts/tests/run-benchmark-driver-tests.sh`, merged as
+  (57/57 in `scripts/tests/run-benchmark-driver-tests.sh`, merged as
   `13f7567`).
 - [ ] Task specs frozen; bundle hash recorded.
 - [ ] `--preflight-only` passes; zero spend.
@@ -370,32 +378,111 @@ An **Inconclusive** or **Worse** result closes this line without Phase 4.
 
 | Slot | Level | Task ID | Issue | Seed area | Rubric | Verify | Status |
 |---|---|---|---|---|---|---|---|
-| 1 | L0 | TBD | TBD | TBD | TBD | TBD | new task; cost-only |
-| 2 | L1 | TBD | TBD | TBD | TBD | TBD | new task; executable code |
-| 3 | L1 | TBD | TBD | TBD | TBD | TBD | new task |
-| 4 | L2 | TBD | TBD | TBD | TBD | TBD | new task |
-| 5 | L2 | TBD | TBD | TBD | TBD | TBD | new task |
-| 6 | L3 | TBD | TBD | TBD | TBD | TBD | owner-approved scope/rollback |
+| 1 | L0 | `BENCH-L0-02` | seed `BACKLOG.md` 1: `queue.peek()` | `src/queue.js` | `TASK-BENCH-L0-02.md` R1–R5 | `node --test` + peek probe | new; cost-only; executable |
+| 2 | L1 | `BENCH-L1-03` | seed `BACKLOG.md` 3: dispatch counts | `src/dispatcher.js` | `TASK-BENCH-L1-03.md` R1–R5 | `node --test` + counts probe | new; executable |
+| 3 | L1 | `BENCH-L1-04` | seed `BACKLOG.md` 5: `--DRY_RUN` | `src/app.js` | `TASK-BENCH-L1-04.md` R1–R6 | `node --test` + dry-run probe | new; executable |
+| 4 | L2 | `BENCH-L2-03` | seed `BACKLOG.md` 4: unbounded capacity | `src/config.js`, `src/queue.js` | `TASK-BENCH-L2-03.md` R1–R6 | `node --test` + unbounded probe | new; executable |
+| 5 | L2 | `BENCH-L2-04` | seed `BACKLOG.md` 6: atomic `enqueueMany` | `src/queue.js` | `TASK-BENCH-L2-04.md` R1–R6 | `node --test` + atomicity probe | new; executable |
+| 6 | L3 | `BENCH-L3-01` | seed `BACKLOG.md` 2: retry with backoff | `src/dispatcher.js` | `TASK-BENCH-L3-01.md` R1–R7 | `node --test` + retry probe | new; owner sign-off required |
 
 Rules: no pilot task; at least two executable-code tasks; no benchmark-artifact
 edits; if no L3, use five tasks and label `Phase 3b-L1L2`.
 
+Slate notes:
+
+- All six are new tasks drawn from the neutral seed's own `BACKLOG.md`; none is a
+  Phase 3 pilot task and none is a benchmark-artifact edit. Every one changes
+  executable code, and each card carries the exact prompt, frozen rubric, and a
+  deterministic `Verify` command.
+- The seed is **synthetic** — it has a backlog, but not a real one — so the batch
+  is labeled **synthetic-seed**. Nothing here transfers to consumer code, and
+  §12's limitation on other models, hosts, and consumer codebases applies in
+  full.
+- Task IDs continue the published sequence rather than reusing one:
+  `BENCH-L0-01` through `BENCH-L2-02` belong to the pilot, and `BENCH-L3-01` is
+  the first L3 id.
+- Slot 6 is conditional, because §2.3 requires an owner-approved scope and
+  rollback plan for the L3 cell. The card carries both and the Approval section
+  approves them. If the owner declines, drop slot 6, run the five-task
+  `Phase 3b-L1L2` slate (30 primary sessions), and make no L3 claim; do not
+  relabel an L2 task as L3.
+- Every `Verify` command was exercised before this slate was written, through
+  the driver's own field parser, against a compliant artifact (exit 0) and
+  against the untouched seed (non-zero), on Node 18.19.1 and 24.22.1. Each
+  card's Notes name the specific defect its probe is meant to catch. The six
+  cards amended by the pre-freeze revision (Appendix B) were re-exercised the
+  same way, on Node 18.19.1 and 24.22.1: each passes on a reference
+  implementation and fails on the untouched seed with its own probe message,
+  and a deliberately failing suite reports `VERIFY|probe=0|tests=1` instead of
+  hiding the behavioral result.
+
 ## Appendix B — Frozen parameters (fill before run)
 
-- Protocol commit: __________
-- Freeze date: __________
-- Owner approval: __________
-- Model: __________
-- Command Code version: __________
-- Engine SHA: __________
-- Seed SHA: __________
-- Neutralization procedure SHA: __________
-- Task bundle SHA-256: __________
-- Blind-id shuffle seed: __________
-- Task/arm order seed: __________
+- Protocol commit: `f6a58f0c1c4593742bad5279363b0e2962c3bb8c` — the commit that froze
+  this document, recorded here in the docs-only commit §10 requires. A pin taken while the
+  draft was still moving would name code no session runs; this one is the revision
+  immediately before the pin record.
+- Freeze date: 2026-10-28 (signed; the slate and parameters are frozen as of this commit)
+- Owner approval: **SIGNED** 2026-10-28 — see the Approval section
+- Model: `deepseek/deepseek-v4.1-flash`
+- Command Code version: `1.88.0`
+- Engine SHA: `f6a58f0c1c4593742bad5279363b0e2962c3bb8c` — the commit the `promptkit_os` arm
+  runs, and this commit's parent: the only value writable without a self-hash cycle.
+  `run-ab-benchmark.sh` writes the engine clone's `rev-parse HEAD` to `env.txt`, so a stale
+  pin here would make the frozen parameters disagree with every run.
+- Seed SHA: `16b3cf74c809c23dd48466da2212bd3e67a530ed`
+- Neutralization procedure SHA: `7b79660dfb36e1cc1cdeed88a2e4886c2dbfcaa57158e7ad7ae9f72800f377c4` (`benchmarks/seed/neutralize.sh`); the seed was produced by `benchmarks/seed/build-phase3b-seed.sh` at `cf65228e7f66727bdc34ecb59ffed67109dddbe483d4fcd709a58877a7d41dd4` and accepted by `neutralize.sh` with `removed=0`
+- Task bundle SHA-256: `c82822c86c236447b9ac6481d375ec069ed2797a047dba10cb6dcc8266e3ad9f`
+- Blind-id shuffle seed: `90613245`
+- Task/arm order seed: `20261027`
 - Price inputs: $3.00/$15.00/$0.05; cache-read reported only
 - Thresholds: quality 1-run aggregate / 2-repeat task loss; cost 1.25/1.50
 - Spend cap: 42 sessions / 24 hours / $25 actual-cost guardrail
+
+Bundle recipe: the digest above is `sha256sum` of the six lines
+`<task-id> TAB <sha256 of that card>`, in Appendix A slot order:
+
+```sh
+for id in BENCH-L0-02 BENCH-L1-03 BENCH-L1-04 BENCH-L2-03 BENCH-L2-04 BENCH-L3-01; do
+  printf '%s\t%s\n' "$id" "$(sha256sum "benchmarks/tasks/TASK-$id.md" | cut -d' ' -f1)"
+done | sha256sum | cut -d' ' -f1
+```
+
+Pre-freeze revision (2026-10-27, before the owner signature): the digest above is
+the corrected bundle. The cards were amended after reading the frozen rubrics
+against the two artifacts a blind grader actually receives, the stripped diff and
+`B<nnn>.verify.txt`.
+
+- `BENCH-L1-04` — the `Verify` probe asserted a returned `config` the prompt never
+  asked for, so a compliant `{ exitCode: 0 }` return failed `verify_exit` for a
+  reason no rubric item stated. The prompt now states the return shape, requires
+  `parseFlags` to accept the flag, and pins both the bare and `=<value>` spellings;
+  the probe exercises each.
+- `BENCH-L3-01` — R1, R2, and R4 claimed more than the probe observed. Nothing
+  checked the queue's size after a refused option object, so a `drain()`-first
+  loop passed while emptying the queue; nothing pinned the default `maxAttempts`,
+  `Number.isInteger` enforcement, or that the failed entry carries the final
+  attempt's error. The probe now asserts all four.
+- All six — every `Verify` command ran `node --test && <probe>`, so a failing
+  suite short-circuited the probe and the packet held only test output: the
+  behavior was untested and `rubric_passed` stopped saying why a task failed.
+  Each command now runs the probe first, runs the suite second, prints
+  `VERIFY|probe=<n>|tests=<n>`, and exits non-zero if either failed.
+
+No session had run, so no result is invalidated, and the revision touches
+neither the slate, the seed, the thresholds, nor the cap. A change to any card after the
+signature is an Appendix C deviation.
+
+Owner decisions recorded as proposed values: two entries are the owner's to
+confirm rather than the repository's to derive. The model is kept at the Phase 3
+model so that Phase 4 remains the cross-model phase, and the two seeds are
+pre-registered integers chosen before the slate existed, not derived from any
+run. The signature below freezes them; a change after freeze is an Appendix C
+deviation.
+
+Host runtime: the seed declares Node ≥ 20. This host resolves 18.19.1 on the
+default `PATH` and 24.22.1 through nvm, so the operator pins one interpreter for
+both arms before the run; every `Verify` command was exercised on both.
 
 ## Appendix C — Deviations log
 
@@ -430,7 +517,7 @@ edits; if no L3, use five tasks and label `Phase 3b-L1L2`.
 - [ ] I approve the 42-session / 24-hour / $25 cap in §9.
 - [ ] I confirm the neutral seed and clean host preflight passed.
 
-**Owner signature / date**: ______________________________
+**Owner signature / date**: Jonell Balanay — 2026-10-28
 
 ---
 

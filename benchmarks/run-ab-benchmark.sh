@@ -32,6 +32,16 @@
 # when the host HOME/PATH carries global instructions, skills, hooks, MCP
 # servers, or heyloey (Phase 3b protocol 3).
 #
+# Treatment arm: init.sh renders the kit path as ".promptkit" whenever the
+# engine sits outside the project, and copies nothing itself, so the driver
+# materializes the engine's consumer surface there before installing
+# (workflows, protocols, templates, scripts, and the two init doors) and keeps
+# it out of the clone's index. benchmarks/, docs/, and scripts/tests/ are
+# deliberately absent: they hold the frozen rubrics, the Verify probes, the
+# methodology, and fixtures that name the slate, and a blind arm must read none
+# of them. The staged tree is asserted as a complete courier install before the
+# session starts.
+#
 # Modes:
 #   run batch:   run-ab-benchmark.sh --engine E --seed S --tasks a.md,b.md \
 #                  --model M --out DIR --order-seed N --shuffle-seed N
@@ -292,7 +302,11 @@ guard_host() {
 # complete schedule is written, so a dry run exercises those too)
 command -v command-code >/dev/null 2>&1 || bench_error "PREFLIGHT" "command-code not on PATH"
 CC_VERSION="$(command-code --version 2>/dev/null | tail -1 || echo unknown)"
-if ! command-code --list-models 2>/dev/null | grep -qF "$MODEL"; then
+# Capture the list before matching: `grep -q` exits at the first hit, and under
+# `set -o pipefail` the CLI then dies of SIGPIPE (141), which reads as a failed
+# lookup and aborts a valid preflight at random.
+CC_MODELS="$(command-code --list-models 2>/dev/null || true)"
+if [[ "$CC_MODELS" != *"$MODEL"* ]]; then
     bench_error "PREFLIGHT" "model not in --list-models: $MODEL"
 fi
 TASTE="${HOME}/.commandcode/taste/taste.md"
@@ -453,6 +467,50 @@ printf 'Error:|error:|ERROR:|No tool named|command not found|Traceback|Exception
 declare -a RUN_SCENARIOS=()
 RUNS=0
 
+# Stage the consumer runtime surface of the engine at <project>/.promptkit.
+#
+# init.sh derives KIT_DIR_REL from the relationship between the kit directory
+# and the project root: with the engine outside the project (how this driver
+# invokes it) the directive names ".promptkit", the courier layout. init.sh
+# copies nothing, so the tree has to be materialized here or the directive
+# under test points at a directory that does not exist.
+#
+# The copy is filtered on purpose. benchmarks/ holds the frozen rubrics and the
+# Verify probes, docs/ holds the methodology, and scripts/tests/ holds fixtures
+# that name the task slate: a blind arm able to read any of them is not blind.
+# scripts/ itself stays, because the kit's quality gates and its install-door
+# assert live there. No .git is copied, so the tree stays a courier install
+# (scripts/check-setup-assert.sh classifies a non-git tree as such) and the
+# parent repository never sees a nested repository.
+stage_engine_kit() {
+    local dest="$1" rel
+    rm -rf "$dest" || return 1
+    mkdir -p "$dest" || return 1
+    for rel in init.sh init.ps1 LICENSE VERSION; do
+        if [[ -f "$ENGINE/$rel" ]]; then
+            cp -p "$ENGINE/$rel" "$dest/$rel" || return 1
+        fi
+    done
+    for rel in workflows protocols templates scripts; do
+        if [[ -d "$ENGINE/$rel" ]]; then
+            cp -Rp "$ENGINE/$rel" "$dest/$rel" || return 1
+        fi
+    done
+    rm -rf "$dest/scripts/tests"
+    return 0
+}
+
+# Keep the staged kit out of the clone's index without touching a tracked file:
+# .git/info/exclude is per-clone, so the agent's own `git add -A` cannot pick
+# the kit up and the graded diff stays code-only.
+exclude_kit() {
+    local rundir="$1" exclude="$1/.git/info/exclude"
+    [[ -d "$rundir/.git/info" ]] || return 1
+    [[ -f "$exclude" ]] || : > "$exclude" || return 1
+    grep -qxF '/.promptkit/' "$exclude" 2>/dev/null && return 0
+    echo '/.promptkit/' >> "$exclude"
+}
+
 for ((pi = 0; pi < PLAN_COUNT; pi++)); do
     IFS=$'\t' read -r POSITION taskid arm r <<< "${PLAN_LINES[$pi]}"
     order_idx="${PLAN_TASK_IDX[$pi]}"
@@ -469,9 +527,24 @@ for ((pi = 0; pi < PLAN_COUNT; pi++)); do
         ( cd "$rundir" && bash -c "$setup" ) || bench_error "SETUP_FAILED" "$scenario"
     fi
     if [[ "$arm" == "promptkit_os" ]]; then
+        # The directive init.sh writes names the kit at ./.promptkit, so the
+        # surface has to exist before the install renders it.
+        stage_engine_kit "$rundir/.promptkit" \
+            || bench_error "KIT_STAGE_FAILED" "$scenario"
+        exclude_kit "$rundir" || bench_error "KIT_EXCLUDE_FAILED" "$scenario"
         PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 \
             bash "$INIT" "--$PROFILE" --host=agents "$rundir" \
             > "$OUT/runs/$scenario-init.log" 2>&1 || bench_error "INIT_FAILED" "$scenario"
+        # The preflight opt-out above also silences init.sh's own door assert,
+        # so run it explicitly against the staged tree. It classifies the
+        # install as the courier door and fails closed on a partial copy or a
+        # stray .git, before any session spends.
+        if ! env -u PROMPTKIT_NO_PREFLIGHT \
+                bash "$rundir/.promptkit/scripts/check-setup-assert.sh" \
+                    "$rundir" "$rundir/.promptkit" ".promptkit" \
+                >> "$OUT/runs/$scenario-init.log" 2>&1; then
+            bench_error "ASSERT_FAILED" "$scenario"
+        fi
     fi
     # Anchor the grading diff to the SEED commit: under --yolo the agent
     # may commit, and `git diff --cached` against a moved HEAD would
