@@ -347,13 +347,13 @@ replacements and the 42-session ceiling are unchanged.
 - [ ] Neutral seed built; instruction surfaces removed; seed SHA recorded.
 - [ ] Clean host verified: empty taste, no instructions/skills/hooks/MCP, no
   `heyloey`, same environment both arms.
-- [ ] Isolation preflight guard passes.
+- [x] Isolation preflight guard passes.
 - [x] Driver preregistration passes its tests: seeded task/arm/repeat order,
   the complete pre-session plan, both required seeds, and the isolation guard
   (57/57 in `scripts/tests/run-benchmark-driver-tests.sh`, merged as
   `13f7567`).
 - [ ] Task specs frozen; bundle hash recorded.
-- [ ] `--preflight-only` passes; zero spend.
+- [x] `--preflight-only` passes; zero spend.
 - [ ] Blind key generated and stored outside the grading workspace.
 - [ ] Batch runs within cap; all operational failures logged.
 - [ ] Blinding audit passes; grading sheet written and hashed before
@@ -488,7 +488,7 @@ both arms before the run; every `Verify` command was exercised on both.
 
 | Date | Change | Reason | Before/after | Impact | Approved by |
 |---|---|---|---|---|---|
-| | | | | | |
+| 2026-10-28 | Ticked the §11 preflight items and Approval item 4, and added the preflight record in Appendix D. | The preflight ran after the freeze commit `f6a58f0`, so confirming it edits a frozen document. | Preflight unrecorded and both checkbox sets unticked → record added and boxes ticked. | Documentation only; no change to Appendix A, the Appendix B parameters, the task cards, the thresholds, or the cap. Zero sessions had run, so no result is affected. | Owner (J. Balanay) |
 
 ## Appendix D — Preflight checklist
 
@@ -510,12 +510,46 @@ both arms before the run; every `Verify` command was exercised on both.
 - [ ] Key is outside the grading workspace.
 - [ ] Spend cap and stop rules are recorded.
 
+### Preflight record
+
+`--preflight-only` executed 2026-10-28T12:08:37Z; the driver exited before the
+first session. Fields below are copied from `<out>/env.txt`:
+
+```text
+command-code: 1.88.0
+engine: f6a58f0c1c4593742bad5279363b0e2962c3bb8c
+seed: 16b3cf74c809c23dd48466da2212bd3e67a530ed
+model: deepseek/deepseek-v4.1-flash
+profile: balanced
+order_seed: 20261027
+shuffle_seed: 90613245
+order_plan_sha256: 6ac712a95506521723a62db35bd86cc0559c9eae61b738e02107b55f3fd452be
+order_plan_rows: 12
+```
+
+- Seed: rebuilt by `benchmarks/seed/build-phase3b-seed.sh` to the pinned SHA
+  above; working tree clean; no instruction surfaces and no `heyloey`
+  references; `neutralize.sh` accepted it with `removed=0`.
+- Host: `env -i` with a throwaway `HOME` containing only `.commandcode` auth;
+  no instruction surfaces, MCP servers, or hooks; taste empty; `heyloey`
+  absent from `PATH`.
+- Engine: checked out at `f6a58f0c…`.
+- Plan: 12 task×arm rows (six tasks × two arms) written to `order.tsv` before
+  the preflight exit; the digest above is that file's `sha256sum`.
+- Spend: zero. `runs/` is empty, and no `manifest*` or `*.jsonl` exists.
+
+**CLI caveat.** The run used `command-code` 1.88.0 installed into an isolated
+prefix, because this host's default install is 1.88.1. The frozen version was
+satisfied for the run but is not yet durable, so Appendix D's `command-code
+--version` check stays unticked until that install is made permanent or
+Appendix B is revised to 1.88.1 under a further Appendix C entry.
+
 ## Approval
 
 - [ ] I approve the task slate in Appendix A.
 - [ ] I approve the thresholds in §7.
 - [ ] I approve the 42-session / 24-hour / $25 cap in §9.
-- [ ] I confirm the neutral seed and clean host preflight passed.
+- [x] I confirm the neutral seed and clean host preflight passed.
 
 **Owner signature / date**: Jonell Balanay — 2026-10-28
 
