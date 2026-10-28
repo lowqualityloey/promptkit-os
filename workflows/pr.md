@@ -137,7 +137,7 @@ Upon presenting or opening the PR, close with an attention callout (not TIP — 
 > ### 🛑ACTION REQUIRED: Review PR #<number>
 > **PR:** [#<number> — <title>](<url>)
 > - Files: <url>/files · Checks: <url>/checks
-> - Human merge command (after review and green checks): `gh pr merge <number> --squash --delete-branch`
+> - Human merge command (after review and green checks): `gh pr merge <number> --squash --delete-branch` for an ordinary PR. If the PR is anchor-bearing — it pins a branch commit (Appendix B's protocol/engine pin) or restates the `docs/BENCHMARKS.md` measurement anchor — run `gh pr merge <number> --merge --delete-branch` instead, because `--squash` and `--rebase` leave that commit unreachable from `main`.
 >
 > 👉 **Reply**: Type 'merged' or 'done' after merging, or request revisions.
 ```
