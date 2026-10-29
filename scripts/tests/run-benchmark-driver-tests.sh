@@ -48,7 +48,10 @@ if [[ -n "${STUB_SNAPSHOT_OUT:-}" && ! -f "$HOME/order-at-first-session.tsv" \
     cp "$STUB_SNAPSHOT_OUT/order.tsv" "$HOME/order-at-first-session.tsv"
 fi
 # A run invocation: record the prompt, write a schema-v3 transcript, edit +
-# COMMIT a file (proving the seed-SHA diff anchor), exit 0.
+# COMMIT a file (proving the seed-SHA diff anchor), exit 0. The full argv goes
+# to stub-argv.log with a unit separator so the harness can compare the two
+# arms' invocations byte for byte.
+{ for a in "$@"; do printf '%s\x1f' "$a"; done; printf '\n'; } >> "$HOME/stub-argv.log"
 printf '%s\n' "${@: -1}" >> "$HOME/stub-prompts.log"
 cwd="$(pwd)"
 # Real Command Code slugifies the working directory with
@@ -141,6 +144,19 @@ if [[ "$bad" -eq 0 && "$last" == "Append the line STUB-LINE to src/app.ts. Do no
     ok "task prompt reaches the CLI byte-clean (no trailing backtick/quote)"
 else
     notok "prompt extraction (bad-tails=$bad, last=[$last])"
+fi
+
+# --- cross-arm equality end to end: the CLI receives identical argv ----------
+mapfile -t argv_lines < "$FAKE_HOME/stub-argv.log"
+argv_want='Append the line STUB-LINE to src/app.ts. Do not change any other file.'
+if [[ "${#argv_lines[@]}" -eq 2 && "${argv_lines[0]}" == "${argv_lines[1]}" ]] \
+        && [[ "${argv_lines[0]}" == *$'--yolo\x1f'* ]] \
+        && [[ "${argv_lines[0]}" == *$'--tools-all\x1f'* ]] \
+        && [[ "${argv_lines[0]}" == *$'--max-turns\x1f5\x1f'* ]] \
+        && [[ "${argv_lines[0]}" == *"${argv_want}"$'\x1f'* ]]; then
+    ok "both arms pass byte-identical argv to the CLI"
+else
+    notok "cross-arm argv (lines=${#argv_lines[@]} first=[${argv_lines[0]:0:80}])"
 fi
 
 # --- diff anchored to the seed SHA despite the agent's commit ------------------
@@ -475,6 +491,49 @@ if [[ $rc -eq 0 && "$out" == *"ISOLATION|OK"* && "$out" == *"PREFLIGHT|OK"* ]] \
     ok "clean preflight records isolation evidence and starts no session"
 else
     notok "clean preflight (rc=$rc, out=${out:0:200})"
+fi
+
+# --- cross-arm equality: preflight renders both arms and records hashes ------
+OUT_CROSS="$TMP_DIR/out-cross"
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
+    --model stub/model-a --out "$OUT_CROSS" --max-turns 5 --timeout 60 \
+    --order-seed 7 --shuffle-seed 7 --preflight-only 2>&1)"; rc=$?
+cross_row="$(awk -F'\t' '$1=="BENCH-DRIVER-01"' "$OUT_CROSS/crossarm.txt" 2>/dev/null)"
+cross_prompt_sha="$(printf '%s' "$cross_row" | cut -f2)"
+cross_argv_sha="$(printf '%s' "$cross_row" | cut -f3)"
+want_prompt_sha="$(printf '%s' "$argv_want" | sha256sum | cut -d' ' -f1)"
+if [[ $rc -eq 0 && "$out" == *"CROSSARM|OK|tasks=1|arms=2|cells=2|max_turns=5|timeout=60"* ]] \
+        && [[ "$cross_prompt_sha" == "$want_prompt_sha" ]] \
+        && [[ "$cross_argv_sha" =~ ^[0-9a-f]{64}$ ]] \
+        && grep -q '^permission_mode: yolo$' "$OUT_CROSS/crossarm.txt" \
+        && grep -q '^tools: all$' "$OUT_CROSS/crossarm.txt" \
+        && grep -q '^verdict: identical$' "$OUT_CROSS/crossarm.txt" \
+        && grep -q '^cross_arm: identical (prompt/tools/permission_mode/max_turns/timeout)$' \
+            "$OUT_CROSS/isolation.txt" \
+        && grep -q '^max_turns: 5$' "$OUT_CROSS/env.txt" \
+        && grep -q '^timeout: 60$' "$OUT_CROSS/env.txt"; then
+    ok "cross-arm preflight records the shared prompt and argv hashes"
+else
+    notok "cross-arm preflight (rc=$rc, out=${out:0:200})"
+fi
+
+# The plan must stay balanced when repeats scale: one cell per arm per repeat.
+OUT_CROSS_REP="$TMP_DIR/out-cross-repeat"
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
+    --model stub/model-a --out "$OUT_CROSS_REP" --max-turns 5 --timeout 60 \
+    --repeats 2 --order-seed 7 --shuffle-seed 7 --preflight-only 2>&1)"; rc=$?
+cross_rows="$(awk -F'\t' '$1=="BENCH-DRIVER-01"' "$OUT_CROSS_REP/crossarm.txt" 2>/dev/null | wc -l)"
+if [[ $rc -eq 0 && "$out" == *"CROSSARM|OK|tasks=1|arms=2|cells=4"* ]] \
+        && grep -q '^repeats: 2$' "$OUT_CROSS_REP/crossarm.txt" \
+        && grep -q '^promptkit_os_cells: 2$' "$OUT_CROSS_REP/crossarm.txt" \
+        && grep -q '^bare_cells: 2$' "$OUT_CROSS_REP/crossarm.txt" \
+        && [[ "$cross_rows" -eq 1 ]] \
+        && [[ "$(($(wc -l < "$OUT_CROSS_REP/order.tsv") - 1))" -eq 4 ]]; then
+    ok "cross-arm preflight stays balanced when repeats scale"
+else
+    notok "cross-arm repeats (rc=$rc, rows=$cross_rows, out=${out:0:160})"
 fi
 
 # --- seed neutralization (benchmarks/seed/neutralize.sh) ---------------------
