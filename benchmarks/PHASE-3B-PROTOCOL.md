@@ -495,20 +495,25 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-28 | Ticked the §11 preflight items and Approval item 4, and added the preflight record in Appendix D. | The preflight ran after the freeze commit `f6a58f0`, so confirming it edits a frozen document. | Preflight unrecorded and both checkbox sets unticked → record added and boxes ticked. | Documentation only; no change to Appendix A, the Appendix B parameters, the task cards, the thresholds, or the cap. Zero sessions had run, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-29 | Reconciled the Status header, the Appendix A and Appendix B headings, the Appendix B signature line, and the closing gate note. | `e72947a` recorded the freeze and the owner signature, but the header still read "DRAFT — not frozen, not signed", and Appendix B called the signature an "approval" while the items it gates stayed unticked. | Header denied the freeze it described; Appendix B conflated the signature with per-item approval → one status states frozen-and-signed with items 1–3 open, and Appendix B says what the signature enacts. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. Zero sessions had run, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-29 | Pinned `command-code` 1.88.0 at a durable npm prefix, recorded the pin (dependency and updater constraints) in Appendix D, and ticked its CLI check. | The earlier preflight satisfied 1.88.0 from an ephemeral prefix, so the check stayed unticked and the frozen version was not reproducible for a batch. | Ephemeral prefix plus an unticked CLI check → pinned install with the `@opentelemetry/semantic-conventions` and `autoUpdate` constraints recorded, box ticked after a second zero-spend preflight. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The re-run spent nothing and reproduced the frozen plan digest, so no result is affected. | Owner (J. Balanay) |
+| 2026-10-29 | Ticked the Appendix D model, seed, host, and `heyloey`-on-`PATH` checks against the re-run's guard output, and recorded which check backs each tick. | The checks passed on 2026-10-28 and again on the 2026-10-29 re-run, but the boxes stayed unticked, so the frozen checklist understated a preflight it had already passed. | Checks passed but boxes unticked → boxes ticked from the run's own `guard_seed`/`guard_host`/`--list-models` output, with the still-open boxes mapped to the steps that own them. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
 
 ## Appendix D — Preflight checklist
 
 - [x] `command-code --version` matches the frozen version — from the pinned
   install described under the preflight record, not the login shell's CLI.
-- [ ] Model is pinned and available.
-- [ ] Seed is neutral: no tracked `AGENTS.md`, `CLAUDE.md`, `PROMPTKIT.md`,
+- [x] Model is pinned and available — `deepseek/deepseek-v4.1-flash` is in
+  `--list-models` on the pinned CLI and is the model `env.txt` records.
+- [x] Seed is neutral: no tracked `AGENTS.md`, `CLAUDE.md`, `PROMPTKIT.md`,
   `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.clinerules`,
   `copilot-instructions.md`, `.cursor/rules/`, `.claude/`, `.promptkit/`,
   `.github/instructions/`, and no `heyloey` reference - produced by
-  `benchmarks/seed/neutralize.sh` rather than by hand.
-- [ ] Host `HOME` has only auth (an updater config with auto-update off is
-  also present); taste is empty; no hooks/skills/MCP/global instructions.
-- [ ] `heyloey` is absent from `PATH`.
+  `benchmarks/seed/neutralize.sh` rather than by hand — `guard_seed` found no
+  tracked surface, no `heyloey` reference, and a clean tree.
+- [x] Host `HOME` has only auth (an updater config with auto-update off is
+  also present); taste is empty; no hooks/skills/MCP/global instructions —
+  `guard_host` found no surface, MCP server, or hook; taste is absent.
+- [x] `heyloey` is absent from `PATH` — `guard_host` resolved it to nothing in
+  the run environment.
 - [ ] Both arms see the same prompt bytes, tools, permission mode, max turns,
   and timeout.
 - [ ] Task `Verify` commands pass on a known-good artifact and fail on a
@@ -545,6 +550,16 @@ order_plan_rows: 12
 - Plan: 12 task×arm rows (six tasks × two arms) written to `order.tsv` before
   the preflight exit; the digest above is that file's `sha256sum`.
 - Spend: zero. `runs/` is empty, and no `manifest*` or `*.jsonl` exists.
+
+Every tick in the checklist above is one check from that run, not a reading of
+this document: `command-code --version`; the `--list-models` membership test;
+`guard_seed` (tracked instruction surfaces, `heyloey` references, clean tree);
+and `guard_host` (global instruction surfaces, MCP servers, hooks, empty taste,
+`heyloey` off `PATH`). The boxes still open are the ones no preflight
+exercises: cross-arm equality is a property of how the driver builds each
+session, the `Verify` good/bad artifacts and the blinding audit are run before
+and after sessions, the blind key does not exist until §11 generates it, and
+the spend cap is a §9 record rather than a host check.
 
 ### CLI pin
 
