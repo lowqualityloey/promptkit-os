@@ -506,6 +506,7 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-29 | Ticked the Appendix D model, seed, host, and `heyloey`-on-`PATH` checks against the re-run's guard output, and recorded which check backs each tick. | The checks passed on 2026-10-28 and again on the 2026-10-29 re-run, but the boxes stayed unticked, so the frozen checklist understated a preflight it had already passed. | Checks passed but boxes unticked → boxes ticked from the run's own `guard_seed`/`guard_host`/`--list-models` output, with the still-open boxes mapped to the steps that own them. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-29 | Ticked §11's seed and host items to match Appendix D, and split "same environment both arms" out into its own open item. | The previous entry ticked Appendix D's seed and host checks but left §11's copies of the same checks unticked, so the execution checklist contradicted the preflight checklist; the host item also bundled a cross-arm equality claim the preflight never tested. | §11 seed and host unticked while Appendix D had both ticked → both ticked in §11 on the same `guard_seed`/`guard_host` evidence, with the untested cross-arm clause promoted to a separate open item worded like Appendix D's. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-30 | Added the driver's cross-arm equality check and ticked its Appendix D box and the matching §11 item. | The box asserted a property of the driver's launch path that no preflight tested; ticking it without a check would have been a reading of the code. | Cross-arm equality unverified → `guard_cross_arm` fails closed on an unbalanced plan, an arm-dependent argv byte, a non-verbatim prompt, or a missing or duplicated parity flag, and records per-task digests in `crossarm.txt`. | Documentation and preflight only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The re-run spent nothing and reproduced the frozen plan digest, so no result is affected. | Owner (J. Balanay) |
+| 2026-10-30 | Ticked Appendix D's `Verify` check on a good/bad run of all six cards. | The box asserted a property no stored record demonstrated; the cards' probes had only been described as exercised before the slate was written. | Verify good/bad unverified → each card's `Verify` ran against a reference clone (exit 0) and the untouched seed (exit 1) on Node 18.19.1 and 24.22.1, recorded under the verify re-run. | Documentation and local probe runs only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
 
 ## Appendix D — Preflight checklist
 
@@ -529,8 +530,11 @@ both arms before the run; every `Verify` command was exercised on both.
   from the cross-arm re-run below: the plan gives every task one cell per arm,
   and the one launch builder renders byte-identical argv for both arms, with
   each task's prompt and argv SHA-256 in `<out>/crossarm.txt`.
-- [ ] Task `Verify` commands pass on a known-good artifact and fail on a
-  known-bad artifact.
+- [x] Task `Verify` commands pass on a known-good artifact and fail on a
+  known-bad artifact — all six cards, on Node 18.19.1 and 24.22.1: exit 0 with
+  `VERIFY|probe=0|tests=0` on a reference implementation and exit 1 with
+  `VERIFY|probe=1|tests=0` on the untouched seed, each failing on its own probe
+  (table under the verify re-run below).
 - [ ] Blinding audit passes on a dry-run packet.
 - [ ] Key is outside the grading workspace.
 - [ ] Spend cap and stop rules are recorded.
@@ -568,12 +572,13 @@ Every tick in the checklist above is one check from one of those runs, not a
 reading of this document: `command-code --version`; the `--list-models`
 membership test; `guard_seed` (tracked instruction surfaces, `heyloey`
 references, clean tree); `guard_host` (global instruction surfaces, MCP
-servers, hooks, empty taste, `heyloey` off `PATH`); and, from the cross-arm
-re-run below, `guard_cross_arm` (a balanced task × arm × repeat plan and one
-arm-agnostic invocation builder). The boxes still open are the ones no
-preflight exercises: the `Verify` good/bad artifacts and the blinding audit
-are run before and after sessions, the blind key does not exist until §11
-generates it, and the spend cap is a §9 record rather than a host check.
+servers, hooks, empty taste, `heyloey` off `PATH`); `guard_cross_arm` (a
+balanced task × arm × repeat plan and one arm-agnostic invocation builder);
+and, from the verify re-run below, each card's `Verify` command on both
+artifacts and both interpreters. The boxes still open are the ones no
+preflight exercises: the blinding audit runs after sessions, the blind key
+does not exist until §11 generates it, and the spend cap is a §9 record rather
+than a host check.
 
 ### Cross-arm re-run
 
@@ -600,6 +605,39 @@ rendered argv byte differs between arms, the card's prompt is not the bytes
 handed to `-p`, or `--yolo`, `--tools-all`, or `--max-turns` is missing or
 duplicated. It covers the invocation, not the CLI's behaviour after a session
 starts.
+
+### Verify good/bad re-run
+
+No session exists at this point, so this check runs the cards directly rather
+than through `--preflight-only`. Each `Verify` value was extracted with the
+same single-line rule the driver's `parse_field` uses, then executed in a
+throwaway clone carrying a reference implementation and in a second, untouched
+clone of the same seed.
+
+Executed 2026-10-29T23:35:30Z on Node 18.19.1 and 24.22.1 against the seed at
+`16b3cf7…`. Exits are Node 18.19.1 / 24.22.1; every good run ended
+`VERIFY|probe=0|tests=0` and every bad run ended `VERIFY|probe=1|tests=0`, so
+the bad run's suite still passed and the non-zero exit is the probe.
+
+```text
+task         good exit   bad exit   bad probe message
+BENCH-L0-02  0 / 0       1 / 1      q.peek is not a function
+BENCH-L1-03  0 / 0       1 / 1      counts missing
+BENCH-L1-04  0 / 0       1 / 1      unknown flag: --DRY_RUN
+BENCH-L2-03  0 / 0       1 / 1      QUEUE_CAPACITY must be a positive integer, got: unbounded
+BENCH-L2-04  0 / 0       1 / 1      q.enqueueMany is not a function
+BENCH-L3-01  0 / 0       1 / 1      retry bucket
+```
+
+The reference clones changed only the files each card allows and added the
+tests the card requires: `queue.test.js` for L0-02 and L2-04, `config.test.js`
+and `queue.test.js` for L2-03, `dispatcher.test.js` for L1-03 and L3-01, and
+`app.test.js` for L1-04. Each clone's `git status` matched that file set, and
+the untouched clone stayed clean at the seed SHA. The reference clones were
+disposable and are not committed: this table is the record, and the cards'
+probes are the reproduction path. The check proves each `Verify` passes on
+compliant behaviour and fails on the seed's; it does not grade the rubric
+items a human reads, and it says nothing about model-generated artifacts.
 
 ### CLI pin
 
