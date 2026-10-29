@@ -345,9 +345,14 @@ replacements and the 42-session ceiling are unchanged.
 ## 11. Execution checklist
 
 - [ ] Owner approves task slate, thresholds, and spend cap.
-- [ ] Neutral seed built; instruction surfaces removed; seed SHA recorded.
-- [ ] Clean host verified: empty taste, no instructions/skills/hooks/MCP, no
-  `heyloey`, same environment both arms.
+- [x] Neutral seed built; instruction surfaces removed; seed SHA recorded
+  (`16b3cf74c809c23dd48466da2212bd3e67a530ed`, rebuilt by the seed builder and
+  accepted by `neutralize.sh` with `removed=0`; `guard_seed` found no tracked
+  surface and a clean tree).
+- [x] Clean host verified: empty taste, no instructions/skills/hooks/MCP, no
+  `heyloey` (`guard_host`).
+- [ ] Same environment both arms: identical prompt bytes, tools, permission
+  mode, max turns, and timeout.
 - [x] Isolation preflight guard passes.
 - [x] Driver preregistration passes its tests: seeded task/arm/repeat order,
   the complete pre-session plan, both required seeds, and the isolation guard
@@ -496,6 +501,7 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-29 | Reconciled the Status header, the Appendix A and Appendix B headings, the Appendix B signature line, and the closing gate note. | `e72947a` recorded the freeze and the owner signature, but the header still read "DRAFT — not frozen, not signed", and Appendix B called the signature an "approval" while the items it gates stayed unticked. | Header denied the freeze it described; Appendix B conflated the signature with per-item approval → one status states frozen-and-signed with items 1–3 open, and Appendix B says what the signature enacts. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. Zero sessions had run, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-29 | Pinned `command-code` 1.88.0 at a durable npm prefix, recorded the pin (dependency and updater constraints) in Appendix D, and ticked its CLI check. | The earlier preflight satisfied 1.88.0 from an ephemeral prefix, so the check stayed unticked and the frozen version was not reproducible for a batch. | Ephemeral prefix plus an unticked CLI check → pinned install with the `@opentelemetry/semantic-conventions` and `autoUpdate` constraints recorded, box ticked after a second zero-spend preflight. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The re-run spent nothing and reproduced the frozen plan digest, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-29 | Ticked the Appendix D model, seed, host, and `heyloey`-on-`PATH` checks against the re-run's guard output, and recorded which check backs each tick. | The checks passed on 2026-10-28 and again on the 2026-10-29 re-run, but the boxes stayed unticked, so the frozen checklist understated a preflight it had already passed. | Checks passed but boxes unticked → boxes ticked from the run's own `guard_seed`/`guard_host`/`--list-models` output, with the still-open boxes mapped to the steps that own them. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
+| 2026-10-29 | Ticked §11's seed and host items to match Appendix D, and split "same environment both arms" out into its own open item. | The previous entry ticked Appendix D's seed and host checks but left §11's copies of the same checks unticked, so the execution checklist contradicted the preflight checklist; the host item also bundled a cross-arm equality claim the preflight never tested. | §11 seed and host unticked while Appendix D had both ticked → both ticked in §11 on the same `guard_seed`/`guard_host` evidence, with the untested cross-arm clause promoted to a separate open item worded like Appendix D's. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
 
 ## Appendix D — Preflight checklist
 
