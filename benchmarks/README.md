@@ -145,6 +145,16 @@ stop leaves the full pre-registration on disk rather than a truncated prefix. Th
 seeds reproduce the same plan and blind key; the order and the blinding are part of the
 pre-registration, not operator choices made at run time.
 
+Cross-arm equality is checked too, not assumed. Every session argv comes from one
+arm-agnostic builder; the preflight requires the plan to give each task exactly one cell
+per arm per repeat and renders both arms through that builder, failing closed on any byte
+difference, a prompt that is not the card's, or a missing or duplicated `--yolo`,
+`--tools-all`, or `--max-turns`. `<out>/crossarm.txt` records a prompt and argv SHA-256
+per task plus the shared flags, permission mode, tools, model, max turns, and timeout,
+and `CROSSARM|OK` precedes `PREFLIGHT|OK`. Because the check inspects the plan and the
+builder rather than a live session, it proves the invocation is arm-independent, not how
+the CLI behaves once it starts.
+
 Before any session, the isolation guard fails closed (`BENCH|ERROR|PREFLIGHT|...`) when:
 
 - the seed has a tracked agent-instruction surface (`AGENTS.md`, `CLAUDE.md`,

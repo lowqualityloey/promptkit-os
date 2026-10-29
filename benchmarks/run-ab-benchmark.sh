@@ -101,6 +101,27 @@ need_value() {
     [[ "$#" -ge 2 && -n "$2" ]] || bench_error "MISSING_VALUE" "$1"
 }
 
+# The single session invocation both arms run. Parity bindings live here and
+# nowhere else: verbatim prompt bytes from the card, the same model, `--yolo`
+# (permission mode), `--tools-all` (`-p` withholds tools by default), the same
+# `--max-turns` cap, `--skip-onboarding`, and the updater disabled so the CLI
+# cannot replace itself mid-batch. The caller's shell applies the per-session
+# `timeout`, so it is not an argv element.
+#
+# `arm` is accepted only so the preflight check and the session loop share one
+# signature; the body must never read it. `guard_cross_arm` renders both arms
+# through this function and fails closed on any byte difference, so an
+# arm-conditional token added here is refused before a session starts.
+session_argv() {
+    # session_argv <task-index> <arm>
+    local task_idx="$1"
+    : "${2:-}"
+    printf '%s\0' command-code \
+        -t --yolo --tools-all --skip-onboarding --no-auto-update \
+        -m "$MODEL" --max-turns "$MAXTURNS" \
+        -p "${TASK_PROMPTS[$task_idx]}"
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --engine=*) ENGINE="${1#--engine=}" ;;
@@ -298,6 +319,87 @@ guard_host() {
     [[ -z "$hp" ]] || guard_stop "host" "heyloey on PATH: $hp"
 }
 
+# Cross-arm equality (benchmarks/PHASE-3B-PROTOCOL.md Appendix D): both arms
+# must see the same prompt bytes, tools, permission mode, max turns, and
+# timeout. Two properties are checked, and both fail closed:
+#   1. the materialized plan is balanced - every task gets exactly one cell per
+#      arm per repeat, so both arms run the same slate;
+#   2. the one launch builder renders byte-identical argv for both arms, with
+#      the card's prompt verbatim and each parity binding present exactly once.
+# The session loop executes that same rendering, and <out>/crossarm.txt records
+# a prompt and argv SHA-256 per task as the evidence the checklist cites.
+crossarm_stop() {
+    bench_error "PREFLIGHT" "cross-arm equality: $1"
+}
+
+guard_cross_arm() {
+    local i arm j seen flag tid prompt_sha argv_sha mt_ok
+    local -a render_pk=() render_bare=()
+    local -A cells=()
+    local tmp="$OUT/crossarm.txt.tmp"
+
+    while IFS=$'\t' read -r _pos tid a _r; do
+        [[ -n "${tid:-}" ]] || continue
+        cells["$tid|$a"]=$(( ${cells["$tid|$a"]:-0} + 1 ))
+    done < <(printf '%s\n' "${PLAN_LINES[@]}")
+
+    printf 'task_id\tprompt_sha256\targv_sha256\n' > "$tmp"
+    for i in "${!TASK_IDS[@]}"; do
+        tid="${TASK_IDS[$i]}"
+        for arm in promptkit_os bare; do
+            [[ "${cells["$tid|$arm"]:-0}" -eq "$REPEATS" ]] || crossarm_stop \
+                "plan gives $arm ${cells["$tid|$arm"]:-0} cell(s) for $tid (expected $REPEATS)"
+        done
+        mapfile -d '' -t render_pk < <(session_argv "$i" promptkit_os)
+        mapfile -d '' -t render_bare < <(session_argv "$i" bare)
+        [[ "${#render_pk[@]}" -eq "${#render_bare[@]}" ]] || crossarm_stop \
+            "invocation length differs for $tid (${#render_pk[@]} vs ${#render_bare[@]} arguments)"
+        for ((j = 0; j < ${#render_pk[@]}; j++)); do
+            [[ "${render_pk[$j]}" == "${render_bare[$j]}" ]] || crossarm_stop \
+                "invocation argument $((j + 1)) differs for $tid"
+        done
+        [[ "${render_pk[${#render_pk[@]}-1]}" == "${TASK_PROMPTS[$i]}" ]] || crossarm_stop \
+            "prompt bytes for $tid are not the task card's prompt"
+        for flag in --yolo --tools-all --max-turns; do
+            seen=0
+            for ((j = 0; j < ${#render_pk[@]}; j++)); do
+                if [[ "${render_pk[$j]}" == "$flag" ]]; then seen=$((seen + 1)); fi
+            done
+            [[ "$seen" -eq 1 ]] || crossarm_stop \
+                "$flag appears $seen time(s) in the invocation (expected 1)"
+        done
+        mt_ok=0
+        for ((j = 0; j < ${#render_pk[@]} - 1; j++)); do
+            if [[ "${render_pk[$j]}" == "--max-turns" && "${render_pk[$((j + 1))]}" == "$MAXTURNS" ]]; then
+                mt_ok=$((mt_ok + 1))
+            fi
+        done
+        [[ "$mt_ok" -eq 1 ]] || crossarm_stop \
+            "--max-turns is not set to $MAXTURNS exactly once"
+        prompt_sha="$(printf '%s' "${TASK_PROMPTS[$i]}" | sha256sum | cut -d' ' -f1)"
+        argv_sha="$(printf '%s\0' "${render_pk[@]}" | sha256sum | cut -d' ' -f1)"
+        printf '%s\t%s\t%s\n' "$tid" "$prompt_sha" "$argv_sha" >> "$tmp"
+    done
+
+    {
+        printf 'flags: -t --yolo --tools-all --skip-onboarding --no-auto-update\n'
+        printf 'permission_mode: yolo\n'
+        printf 'tools: all\n'
+        printf 'model: %s\n' "$MODEL"
+        printf 'max_turns: %s\n' "$MAXTURNS"
+        printf 'timeout: %s\n' "$TIMEOUT"
+        printf 'arms: promptkit_os,bare\n'
+        printf 'repeats: %s\n' "$REPEATS"
+        printf 'cells: %s\n' "$PLAN_COUNT"
+        printf 'promptkit_os_cells: %s\n' "$((PLAN_COUNT / 2))"
+        printf 'bare_cells: %s\n' "$((PLAN_COUNT / 2))"
+        printf 'verdict: identical\n'
+    } >> "$tmp"
+    mv "$tmp" "$OUT/crossarm.txt"
+    printf 'CROSSARM|OK|tasks=%s|arms=2|cells=%s|max_turns=%s|timeout=%s\n' \
+        "${#TASK_IDS[@]}" "$PLAN_COUNT" "$MAXTURNS" "$TIMEOUT"
+}
+
 # Preflight checks (--preflight-only exits after the task slate is parsed and the
 # complete schedule is written, so a dry run exercises those too)
 command -v command-code >/dev/null 2>&1 || bench_error "PREFLIGHT" "command-code not on PATH"
@@ -418,12 +520,18 @@ mkdir -p "$OUT/grading" "$OUT/runs"
 } > "$OUT/order.tsv"
 PLAN_SHA="$(sha256sum "$OUT/order.tsv" | cut -d' ' -f1)"
 
+# Cross-arm equality is checked against the materialized plan, before the
+# preflight exit, so a full run and a dry run assert the same invocation.
+guard_cross_arm
+
 printf '%s\n' "$ENGINE" > "$OUT/engine-path.txt"
 {
     echo "command-code: $CC_VERSION"
     echo "engine: $(git -C "$ENGINE" rev-parse HEAD 2>/dev/null || echo unknown)"
     echo "seed: $(git -C "$SEED" rev-parse HEAD 2>/dev/null || echo unknown)"
     echo "model: $MODEL"
+    echo "max_turns: $MAXTURNS"
+    echo "timeout: $TIMEOUT"
     echo "profile: $PROFILE"
     echo "order_seed: $ORDER_SEED"
     echo "shuffle_seed: $SHUFFLE_SEED"
@@ -441,6 +549,7 @@ printf '%s\n' "$ENGINE" > "$OUT/engine-path.txt"
     echo "host_mcp_servers: none"
     echo "host_hooks: none"
     echo "taste: empty"
+    echo "cross_arm: identical (prompt/tools/permission_mode/max_turns/timeout)"
     echo "order_seed: $ORDER_SEED"
     echo "shuffle_seed: $SHUFFLE_SEED"
     echo "order_plan_sha256: $PLAN_SHA"
@@ -515,7 +624,6 @@ for ((pi = 0; pi < PLAN_COUNT; pi++)); do
     IFS=$'\t' read -r POSITION taskid arm r <<< "${PLAN_LINES[$pi]}"
     order_idx="${PLAN_TASK_IDX[$pi]}"
     level="${TASK_LEVELS[$order_idx]}"
-    prompt="${TASK_PROMPTS[$order_idx]}"
     setup="${TASK_SETUPS[$order_idx]}"
     verify_cmd="${TASK_VERIFIES[$order_idx]}"
     printf 'ORDER|RUN|%s|task=%s|arm=%s|repeat=%s\n' "$POSITION" "$taskid" "$arm" "$r"
@@ -551,10 +659,12 @@ for ((pi = 0; pi < PLAN_COUNT; pi++)); do
     # return an empty diff, silently losing every committed change.
     seed_sha="$(git -C "$rundir" rev-parse HEAD)"
     th1="$(sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo none)"
+    # Materialize argv through the builder guard_cross_arm checked; no
+    # arm-conditional token can enter the invocation here.
+    mapfile -d '' -t SESSION_ARGV < <(session_argv "$order_idx" "$arm")
     set +e
-    ( cd "$rundir" && timeout "$TIMEOUT" command-code -t --yolo --tools-all \
-        --skip-onboarding --no-auto-update -m "$MODEL" --max-turns "$MAXTURNS" \
-        -p "$prompt" ) > "$OUT/runs/$scenario/session.log" 2>&1
+    ( cd "$rundir" && timeout "$TIMEOUT" "${SESSION_ARGV[@]}" ) \
+        > "$OUT/runs/$scenario/session.log" 2>&1
     rc=$?
     set -e
     th2="$(sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo none2)"
