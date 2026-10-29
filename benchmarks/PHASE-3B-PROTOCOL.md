@@ -494,18 +494,20 @@ both arms before the run; every `Verify` command was exercised on both.
 |---|---|---|---|---|---|
 | 2026-10-28 | Ticked the §11 preflight items and Approval item 4, and added the preflight record in Appendix D. | The preflight ran after the freeze commit `f6a58f0`, so confirming it edits a frozen document. | Preflight unrecorded and both checkbox sets unticked → record added and boxes ticked. | Documentation only; no change to Appendix A, the Appendix B parameters, the task cards, the thresholds, or the cap. Zero sessions had run, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-29 | Reconciled the Status header, the Appendix A and Appendix B headings, the Appendix B signature line, and the closing gate note. | `e72947a` recorded the freeze and the owner signature, but the header still read "DRAFT — not frozen, not signed", and Appendix B called the signature an "approval" while the items it gates stayed unticked. | Header denied the freeze it described; Appendix B conflated the signature with per-item approval → one status states frozen-and-signed with items 1–3 open, and Appendix B says what the signature enacts. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. Zero sessions had run, so no result is affected. | Owner (J. Balanay) |
+| 2026-10-29 | Pinned `command-code` 1.88.0 at a durable npm prefix, recorded the pin (dependency and updater constraints) in Appendix D, and ticked its CLI check. | The earlier preflight satisfied 1.88.0 from an ephemeral prefix, so the check stayed unticked and the frozen version was not reproducible for a batch. | Ephemeral prefix plus an unticked CLI check → pinned install with the `@opentelemetry/semantic-conventions` and `autoUpdate` constraints recorded, box ticked after a second zero-spend preflight. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The re-run spent nothing and reproduced the frozen plan digest, so no result is affected. | Owner (J. Balanay) |
 
 ## Appendix D — Preflight checklist
 
-- [ ] `command-code --version` matches the frozen version.
+- [x] `command-code --version` matches the frozen version — from the pinned
+  install described under the preflight record, not the login shell's CLI.
 - [ ] Model is pinned and available.
 - [ ] Seed is neutral: no tracked `AGENTS.md`, `CLAUDE.md`, `PROMPTKIT.md`,
   `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.clinerules`,
   `copilot-instructions.md`, `.cursor/rules/`, `.claude/`, `.promptkit/`,
   `.github/instructions/`, and no `heyloey` reference - produced by
   `benchmarks/seed/neutralize.sh` rather than by hand.
-- [ ] Host `HOME` has only auth; taste is empty; no hooks/skills/MCP/global
-  instructions.
+- [ ] Host `HOME` has only auth (an updater config with auto-update off is
+  also present); taste is empty; no hooks/skills/MCP/global instructions.
 - [ ] `heyloey` is absent from `PATH`.
 - [ ] Both arms see the same prompt bytes, tools, permission mode, max turns,
   and timeout.
@@ -535,19 +537,46 @@ order_plan_rows: 12
 - Seed: rebuilt by `benchmarks/seed/build-phase3b-seed.sh` to the pinned SHA
   above; working tree clean; no instruction surfaces and no `heyloey`
   references; `neutralize.sh` accepted it with `removed=0`.
-- Host: `env -i` with a throwaway `HOME` containing only `.commandcode` auth;
-  no instruction surfaces, MCP servers, or hooks; taste empty; `heyloey`
-  absent from `PATH`.
+- Host: `env -i` with a throwaway `HOME` containing only `.commandcode` auth
+  (plus, from the 2026-10-29 re-run, an `updates.json` with `autoUpdate: false`);
+  no instruction surfaces, MCP servers, or hooks; taste empty; `heyloey` absent
+  from `PATH`.
 - Engine: checked out at `f6a58f0c…`.
 - Plan: 12 task×arm rows (six tasks × two arms) written to `order.tsv` before
   the preflight exit; the digest above is that file's `sha256sum`.
 - Spend: zero. `runs/` is empty, and no `manifest*` or `*.jsonl` exists.
 
-**CLI caveat.** The run used `command-code` 1.88.0 installed into an isolated
-prefix, because this host's default install is 1.88.1. The frozen version was
-satisfied for the run but is not yet durable, so Appendix D's `command-code
---version` check stays unticked until that install is made permanent or
-Appendix B is revised to 1.88.1 under a further Appendix C entry.
+### CLI pin
+
+The frozen CLI is installed at `~/.local/opt/command-code/1.88.0` as an npm
+prefix whose `package.json` pins both packages exactly:
+
+```sh
+npm install --prefix ~/.local/opt/command-code/1.88.0 --save-exact \
+  command-code@1.88.0 @opentelemetry/semantic-conventions@1.30.0
+```
+
+`@opentelemetry/semantic-conventions` is part of the pin, not an implementation
+detail: 1.88.0's bundle imports a default export from it, and a bare
+`npm install command-code@1.88.0` resolves the declared `^1.30.0` to 1.44.0,
+whose ESM entry has no default, so the CLI exits on
+`SyntaxError: The requested module '@opentelemetry/semantic-conventions' does
+not provide an export named 'default'` before it prints a version. The floor of
+the declared range, 1.30.0, resolves and runs.
+
+A run then starts from `env -i` with `PATH=<prefix>/node_modules/.bin:<nvm node
+bin>:/usr/local/bin:/usr/bin:/bin` and a throwaway `HOME` holding only
+`.commandcode/auth.json` plus an `updates.json` with `autoUpdate: false`.
+Disabling the updater is required rather than cosmetic: on a five-minute
+throttle the CLI applies a pending update inline and re-execs (observed on this
+host as `Updated 1.88.1 -> 1.88.2`, reporting `1.88.2`), so a self-updating host
+would replace the frozen CLI partway through a batch and every later session
+would run a version Appendix B does not pin.
+
+Re-run 2026-10-29T02:32:59Z on that install: `PREFLIGHT|OK|engine=f6a58f0|
+seed=16b3cf7|model=deepseek/deepseek-v4.1-flash|cli=1.88.0`, plan `6ac712a9…`
+unchanged at 12 rows, zero spend. The login shell's `command-code` is a separate,
+self-updating install and is not what a session runs.
 
 ## Approval
 
