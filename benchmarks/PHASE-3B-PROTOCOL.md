@@ -351,13 +351,16 @@ replacements and the 42-session ceiling are unchanged.
   surface and a clean tree).
 - [x] Clean host verified: empty taste, no instructions/skills/hooks/MCP, no
   `heyloey` (`guard_host`).
-- [ ] Same environment both arms: identical prompt bytes, tools, permission
-  mode, max turns, and timeout.
+- [x] Same environment both arms: identical prompt bytes, tools, permission
+  mode, max turns, and timeout (`CROSSARM|OK` in the cross-arm re-run below;
+  one arm-agnostic launch builder, a plan balanced per task × arm, and
+  per-task prompt and argv digests in `<out>/crossarm.txt`).
 - [x] Isolation preflight guard passes.
 - [x] Driver preregistration passes its tests: seeded task/arm/repeat order,
-  the complete pre-session plan, both required seeds, and the isolation guard
-  (57/57 in `scripts/tests/run-benchmark-driver-tests.sh`, merged as
-  `13f7567`).
+  the complete pre-session plan, both required seeds, the isolation guard, and
+  cross-arm equality (60/60 in `scripts/tests/run-benchmark-driver-tests.sh`;
+  the preregistration cases merged as `13f7567`, the cross-arm cases in
+  `66d6d31`).
 - [ ] Task specs frozen; bundle hash recorded.
 - [x] `--preflight-only` passes; zero spend.
 - [ ] Blind key generated and stored outside the grading workspace.
@@ -502,6 +505,7 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-29 | Pinned `command-code` 1.88.0 at a durable npm prefix, recorded the pin (dependency and updater constraints) in Appendix D, and ticked its CLI check. | The earlier preflight satisfied 1.88.0 from an ephemeral prefix, so the check stayed unticked and the frozen version was not reproducible for a batch. | Ephemeral prefix plus an unticked CLI check → pinned install with the `@opentelemetry/semantic-conventions` and `autoUpdate` constraints recorded, box ticked after a second zero-spend preflight. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The re-run spent nothing and reproduced the frozen plan digest, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-29 | Ticked the Appendix D model, seed, host, and `heyloey`-on-`PATH` checks against the re-run's guard output, and recorded which check backs each tick. | The checks passed on 2026-10-28 and again on the 2026-10-29 re-run, but the boxes stayed unticked, so the frozen checklist understated a preflight it had already passed. | Checks passed but boxes unticked → boxes ticked from the run's own `guard_seed`/`guard_host`/`--list-models` output, with the still-open boxes mapped to the steps that own them. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-29 | Ticked §11's seed and host items to match Appendix D, and split "same environment both arms" out into its own open item. | The previous entry ticked Appendix D's seed and host checks but left §11's copies of the same checks unticked, so the execution checklist contradicted the preflight checklist; the host item also bundled a cross-arm equality claim the preflight never tested. | §11 seed and host unticked while Appendix D had both ticked → both ticked in §11 on the same `guard_seed`/`guard_host` evidence, with the untested cross-arm clause promoted to a separate open item worded like Appendix D's. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
+| 2026-10-30 | Added the driver's cross-arm equality check and ticked its Appendix D box and the matching §11 item. | The box asserted a property of the driver's launch path that no preflight tested; ticking it without a check would have been a reading of the code. | Cross-arm equality unverified → `guard_cross_arm` fails closed on an unbalanced plan, an arm-dependent argv byte, a non-verbatim prompt, or a missing or duplicated parity flag, and records per-task digests in `crossarm.txt`. | Documentation and preflight only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The re-run spent nothing and reproduced the frozen plan digest, so no result is affected. | Owner (J. Balanay) |
 
 ## Appendix D — Preflight checklist
 
@@ -520,8 +524,11 @@ both arms before the run; every `Verify` command was exercised on both.
   `guard_host` found no surface, MCP server, or hook; taste is absent.
 - [x] `heyloey` is absent from `PATH` — `guard_host` resolved it to nothing in
   the run environment.
-- [ ] Both arms see the same prompt bytes, tools, permission mode, max turns,
-  and timeout.
+- [x] Both arms see the same prompt bytes, tools, permission mode, max turns,
+  and timeout — `CROSSARM|OK|tasks=6|arms=2|cells=12|max_turns=40|timeout=1800`
+  from the cross-arm re-run below: the plan gives every task one cell per arm,
+  and the one launch builder renders byte-identical argv for both arms, with
+  each task's prompt and argv SHA-256 in `<out>/crossarm.txt`.
 - [ ] Task `Verify` commands pass on a known-good artifact and fail on a
   known-bad artifact.
 - [ ] Blinding audit passes on a dry-run packet.
@@ -557,15 +564,42 @@ order_plan_rows: 12
   the preflight exit; the digest above is that file's `sha256sum`.
 - Spend: zero. `runs/` is empty, and no `manifest*` or `*.jsonl` exists.
 
-Every tick in the checklist above is one check from that run, not a reading of
-this document: `command-code --version`; the `--list-models` membership test;
-`guard_seed` (tracked instruction surfaces, `heyloey` references, clean tree);
-and `guard_host` (global instruction surfaces, MCP servers, hooks, empty taste,
-`heyloey` off `PATH`). The boxes still open are the ones no preflight
-exercises: cross-arm equality is a property of how the driver builds each
-session, the `Verify` good/bad artifacts and the blinding audit are run before
-and after sessions, the blind key does not exist until §11 generates it, and
-the spend cap is a §9 record rather than a host check.
+Every tick in the checklist above is one check from one of those runs, not a
+reading of this document: `command-code --version`; the `--list-models`
+membership test; `guard_seed` (tracked instruction surfaces, `heyloey`
+references, clean tree); `guard_host` (global instruction surfaces, MCP
+servers, hooks, empty taste, `heyloey` off `PATH`); and, from the cross-arm
+re-run below, `guard_cross_arm` (a balanced task × arm × repeat plan and one
+arm-agnostic invocation builder). The boxes still open are the ones no
+preflight exercises: the `Verify` good/bad artifacts and the blinding audit
+are run before and after sessions, the blind key does not exist until §11
+generates it, and the spend cap is a §9 record rather than a host check.
+
+### Cross-arm re-run
+
+`--preflight-only` re-executed 2026-10-29T23:04:57Z with the driver at
+`66d6d31` against the frozen engine worktree at `f6a58f0c…` — the driver commit
+changes only how the preflight and the session argv are built, so the treatment
+arm's staged surface stays at the Appendix B SHA — the rebuilt seed at
+`16b3cf7…`, and the six Appendix A cards:
+
+```text
+CROSSARM|OK|tasks=6|arms=2|cells=12|max_turns=40|timeout=1800
+ISOLATION|OK|seed=16b3cf7|home=/tmp/pk-home-crossarm
+PREFLIGHT|OK|engine=f6a58f0|seed=16b3cf7|model=deepseek/deepseek-v4.1-flash|cli=1.88.0
+ORDER|PLAN|seed=20261027|shuffle_seed=90613245|rows=12|sha256=6ac712a95506521723a62db35bd86cc0559c9eae61b738e02107b55f3fd452be
+```
+
+The plan digest is the 2026-10-28 plan unchanged. The run wrote only
+`order.tsv`, `env.txt`, `isolation.txt`, `crossarm.txt`, and `engine-path.txt`
+— no `manifest.tsv` and no `runs/` — so spend stayed zero. `crossarm.txt`
+records a prompt SHA-256 and an argv SHA-256 per task, the shared flags,
+permission mode, tools, model, max turns, timeout, per-arm cell counts, and
+`verdict: identical`. The guard fails closed if the plan loses an arm cell, a
+rendered argv byte differs between arms, the card's prompt is not the bytes
+handed to `-p`, or `--yolo`, `--tools-all`, or `--max-turns` is missing or
+duplicated. It covers the invocation, not the CLI's behaviour after a session
+starts.
 
 ### CLI pin
 
