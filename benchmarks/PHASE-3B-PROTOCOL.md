@@ -1,9 +1,10 @@
-# Phase 3b — Confirmatory A/B Protocol (Draft)
+# Phase 3b — Confirmatory A/B Protocol
 
-- **Status**: DRAFT — not frozen, not signed, not run. The document
-  structure was approved on 2026-10-26; Phase 3b execution approval remains
-  pending.
-- **Date drafted**: 2026-10-26
+- **Status**: FROZEN and signed 2026-10-28, not run. Appendix B's parameters are
+  pinned to `f6a58f0`, and the owner signature is recorded in the Approval
+  section. Execution is not yet approved: Approval items 1–3 (task slate,
+  thresholds, spend cap) are unticked.
+- **Date drafted**: 2026-10-26 (document structure approved that day)
 - **Owner**: repository owner
 - **Supersedes for decisions**: the Phase 3 pilot (`n=6`); the pilot remains
   published as a pilot, not as confirmatory evidence.
@@ -374,7 +375,7 @@ replacements and the 42-session ceiling are unchanged.
 Phase 4 cross-model work starts only after a **Keep** or **Tradeoff** decision.
 An **Inconclusive** or **Worse** result closes this line without Phase 4.
 
-## Appendix A — Frozen task slate (fill before run)
+## Appendix A — Frozen task slate
 
 | Slot | Level | Task ID | Issue | Seed area | Rubric | Verify | Status |
 |---|---|---|---|---|---|---|---|
@@ -416,14 +417,17 @@ Slate notes:
   and a deliberately failing suite reports `VERIFY|probe=0|tests=1` instead of
   hiding the behavioral result.
 
-## Appendix B — Frozen parameters (fill before run)
+## Appendix B — Frozen parameters
 
 - Protocol commit: `f6a58f0c1c4593742bad5279363b0e2962c3bb8c` — the commit that froze
   this document, recorded here in the docs-only commit §10 requires. A pin taken while the
   draft was still moving would name code no session runs; this one is the revision
   immediately before the pin record.
 - Freeze date: 2026-10-28 (signed; the slate and parameters are frozen as of this commit)
-- Owner approval: **SIGNED** 2026-10-28 — see the Approval section
+- Owner signature: **SIGNED** 2026-10-28 — it enacts the freeze. The Approval
+  section's per-item assertions are separate statements by the signer, and items
+  1–3 (task slate, thresholds, spend cap) are unticked, so execution is not yet
+  approved.
 - Model: `deepseek/deepseek-v4.1-flash`
 - Command Code version: `1.88.0`
 - Engine SHA: `f6a58f0c1c4593742bad5279363b0e2962c3bb8c` — the commit the `promptkit_os` arm
@@ -489,6 +493,7 @@ both arms before the run; every `Verify` command was exercised on both.
 | Date | Change | Reason | Before/after | Impact | Approved by |
 |---|---|---|---|---|---|
 | 2026-10-28 | Ticked the §11 preflight items and Approval item 4, and added the preflight record in Appendix D. | The preflight ran after the freeze commit `f6a58f0`, so confirming it edits a frozen document. | Preflight unrecorded and both checkbox sets unticked → record added and boxes ticked. | Documentation only; no change to Appendix A, the Appendix B parameters, the task cards, the thresholds, or the cap. Zero sessions had run, so no result is affected. | Owner (J. Balanay) |
+| 2026-10-29 | Reconciled the Status header, the Appendix A and Appendix B headings, the Appendix B signature line, and the closing gate note. | `e72947a` recorded the freeze and the owner signature, but the header still read "DRAFT — not frozen, not signed", and Appendix B called the signature an "approval" while the items it gates stayed unticked. | Header denied the freeze it described; Appendix B conflated the signature with per-item approval → one status states frozen-and-signed with items 1–3 open, and Appendix B says what the signature enacts. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. Zero sessions had run, so no result is affected. | Owner (J. Balanay) |
 
 ## Appendix D — Preflight checklist
 
@@ -555,7 +560,8 @@ Appendix B is revised to 1.88.1 under a further Appendix C entry.
 
 ---
 
-This document is the protocol. Phase 3b must not run until Appendix A and
-Appendix B are filled, the owner signs the Approval section, and the protocol is
-frozen by commit. That approval does not authorize benchmark spend or the
-harness patch; those are separate, explicit steps.
+This document is the protocol. The three conditions for a run are met: Appendix
+A and Appendix B are filled, the owner has signed the Approval section, and the
+protocol is frozen by commit. Execution still requires Approval items 1–3 to be
+ticked, and none of this authorizes benchmark spend or the harness patch; those
+are separate, explicit steps.
