@@ -19,7 +19,8 @@
 # the task declares a Verify command) with ids assigned by a shuffle across ALL
 # runs of the batch; verify output is scrubbed of the run directory, output
 # root, and scenario id so a Verify command that prints its cwd cannot reveal
-# the arm. The blind->scenario mapping lives in grading/key.csv and is
+# the arm. The blind->scenario mapping is written to --key-out, which the driver
+# requires outside <out> so the key never sits beside the packets, and is
 # consulted only by --finalize. The grading sheet is keyed by BLIND ID.
 #
 # Order and isolation: the schedule is derived from two pre-registered,
@@ -44,17 +45,19 @@
 #
 # Modes:
 #   run batch:   run-ab-benchmark.sh --engine E --seed S --tasks a.md,b.md \
-#                  --model M --out DIR --order-seed N --shuffle-seed N
+#                  --model M --out DIR --order-seed N --shuffle-seed N \
+#                  --key-out FILE          (required: outside DIR, no overwrite)
 #                  [--max-turns N] [--repeats N] [--profile lite|balanced]
 #   dry run:     ... --preflight-only   (validates environment, spends nothing)
 #   finalize:    run-ab-benchmark.sh --finalize DIR --grading DIR/grading/grading.tsv
-#                (translates the blind-id sheet via key.csv, re-extracts each
+#                  [--key FILE]          (default: DIR/key-location.txt)
+#                (translates the blind-id sheet via the recorded key, re-extracts each
 #                 run with its graded accepted flag, then runs the aggregator
 #                 with a scenario-keyed sheet as cross-check)
 set -euo pipefail
 export LC_ALL=C
 
-ENGINE="" SEED="" TASKS_CSV="" MODEL="" OUT="" MAXTURNS=40 TIMEOUT=900 REPEATS=1 PROFILE=balanced PREFLIGHT_ONLY=0 FINALIZE=0 GRADING="" ORDER_SEED="" SHUFFLE_SEED="${BENCH_SHUFFLE_SEED:-}"
+ENGINE="" SEED="" TASKS_CSV="" MODEL="" OUT="" MAXTURNS=40 TIMEOUT=900 REPEATS=1 PROFILE=balanced PREFLIGHT_ONLY=0 FINALIZE=0 GRADING="" ORDER_SEED="" SHUFFLE_SEED="${BENCH_SHUFFLE_SEED:-}" KEY_OUT="" KEY_ARG=""
 
 usage() {
     echo "Usage: run-ab-benchmark.sh --engine <promptkit-repo> --seed <seed-repo>"
@@ -62,8 +65,10 @@ usage() {
     echo "       [--max-turns N] [--timeout S] [--repeats N] [--profile lite|balanced]"
     echo "       --order-seed N   (required: pre-registered task/arm/repeat order)"
     echo "       --shuffle-seed N (required: pre-registered blind-id shuffle)"
+    echo "       --key-out FILE   (required for a batch: blind key outside <out>)"
     echo "       [--preflight-only]"
     echo "       run-ab-benchmark.sh --finalize <dir> --grading <dir/grading/grading.tsv>"
+    echo "       [--key FILE]  (default: <dir>/key-location.txt recorded at batch time)"
 }
 
 bench_error() {
@@ -148,6 +153,10 @@ while [[ $# -gt 0 ]]; do
         --order-seed) need_value "$1" "${2:-}"; ORDER_SEED="$2"; shift ;;
         --shuffle-seed=*) SHUFFLE_SEED="${1#--shuffle-seed=}" ;;
         --shuffle-seed) need_value "$1" "${2:-}"; SHUFFLE_SEED="$2"; shift ;;
+        --key-out=*) KEY_OUT="${1#--key-out=}" ;;
+        --key-out) need_value "$1" "${2:-}"; KEY_OUT="$2"; shift ;;
+        --key=*) KEY_ARG="${1#--key=}" ;;
+        --key) need_value "$1" "${2:-}"; KEY_ARG="$2"; shift ;;
         --preflight-only) PREFLIGHT_ONLY=1 ;;
         --finalize)
             # consumes its <dir> operand per the documented invocation
@@ -172,9 +181,30 @@ if [[ "$FINALIZE" -eq 1 ]]; then
     EXTRACT="$ENGINE/scripts/extract-commandcode-telemetry.sh"
     AGG="$ENGINE/scripts/aggregate-benchmark-runs.sh"
     [[ -f "$EXTRACT" && -f "$AGG" ]] || bench_error "UNREADABLE" "engine scripts under $ENGINE"
-    KEY="$OUT/grading/key.csv"
     MANIFEST="$OUT/manifest.tsv"
-    [[ -s "$KEY" && -s "$MANIFEST" ]] || bench_error "UNREADABLE" "key.csv/manifest.tsv"
+    # Key resolution: an explicit --key wins, then the location the batch
+    # recorded, then the legacy in-workspace copy. Whatever the source, the
+    # sha256 is checked against the batch record when one exists, so grading a
+    # batch with a substituted key fails instead of silently mislabelling arms.
+    KEY_RECORD="$OUT/key-location.txt"
+    KEY_RECORDED_SHA=""
+    if [[ -s "$KEY_RECORD" ]]; then
+        KEY_RECORDED_SHA="$(sed -n 's/^key_sha256: //p' "$KEY_RECORD" | head -1)"
+    fi
+    if [[ -n "$KEY_ARG" ]]; then
+        KEY="$KEY_ARG"
+    elif [[ -s "$OUT/grading/key.csv" ]]; then
+        KEY="$OUT/grading/key.csv"
+    elif [[ -s "$KEY_RECORD" ]]; then
+        KEY="$(sed -n 's/^key_path: //p' "$KEY_RECORD" | head -1)"
+    else
+        bench_error "UNREADABLE" "key (pass --key, or record one with --key-out at batch time)"
+    fi
+    [[ -s "$KEY" && -s "$MANIFEST" ]] || bench_error "UNREADABLE" "key/manifest.tsv"
+    if [[ -n "$KEY_RECORDED_SHA" ]]; then
+        [[ "$(sha256sum "$KEY" | cut -d' ' -f1)" == "$KEY_RECORDED_SHA" ]] \
+            || bench_error "KEY_HASH_MISMATCH" "$KEY does not match $KEY_RECORD"
+    fi
 
     # blind -> scenario map from the withheld key (first consultation point)
     declare -A S2B=()
@@ -238,6 +268,33 @@ fi
 # and recorded alongside --order-seed (BENCH_SHUFFLE_SEED remains a fallback).
 if [[ ! "$SHUFFLE_SEED" =~ ^[0-9]+$ ]]; then
     bench_error "MISSING" "shuffle-seed (pre-register one; see benchmarks/PHASE-3B-PROTOCOL.md section 2.2)"
+fi
+# The blind key must not live where the packets are handed out. The driver
+# writes it to --key-out and refuses a path inside <out>, the seed, or the
+# engine, because a key beside <out>/grading/B*.diff is one `cat` away from the
+# grader the protocol tells not to read it. The path is validated before the
+# first session, and an existing file is never overwritten: a second batch
+# directed at the same file would destroy the first batch's only record of which
+# arm produced which packet.
+if [[ -n "$KEY_OUT" ]]; then
+    # Lexical resolution first: <out> may not exist yet, and a key path inside
+    # it must be reported as such rather than as a missing directory.
+    KEY_OUT_ABS="$(realpath -m -- "$KEY_OUT")"
+    key_out_root="$(realpath -m -- "$OUT")"
+    key_out_seed="$(realpath -m -- "$SEED")"
+    key_out_engine="$(realpath -m -- "$ENGINE")"
+    for key_forbidden in "$key_out_root" "$key_out_seed" "$key_out_engine"; do
+        case "$KEY_OUT_ABS" in
+            "$key_forbidden"/*) bench_error "KEY_INSIDE_WORKSPACE" "$KEY_OUT_ABS is inside $key_forbidden; store the key outside every workspace the batch or a grader reads" ;;
+        esac
+    done
+    key_dir="$(dirname -- "$KEY_OUT_ABS")"
+    [[ -d "$key_dir" ]] || bench_error "UNREADABLE" "key-out directory $key_dir (create it first, mode 700)"
+    [[ -w "$key_dir" ]] || bench_error "KEY_UNWRITABLE" "$key_dir"
+    [[ ! -e "$KEY_OUT_ABS" ]] || bench_error "KEY_EXISTS" "$KEY_OUT_ABS (refusing to overwrite a recorded blind key)"
+    KEY_OUT="$KEY_OUT_ABS"
+elif [[ "$PREFLIGHT_ONLY" -ne 1 ]]; then
+    bench_error "MISSING" "key-out (required for a batch; keep the blind key outside <out> - benchmarks/PHASE-3B-PROTOCOL.md section 4)"
 fi
 
 EXTRACT="$ENGINE/scripts/extract-commandcode-telemetry.sh"
@@ -730,8 +787,8 @@ for ((i = n - 1; i > 0; i--)); do
     RUN_SCENARIOS[$i]="${RUN_SCENARIOS[$j]}"
     RUN_SCENARIOS[$j]="$tmp"
 done
-: > "$OUT/grading/key.csv"
-printf 'blind,scenario\n' >> "$OUT/grading/key.csv"
+tmp_key="$(mktemp "$key_dir/.blind-key.XXXXXX")" || bench_error "KEY_UNWRITABLE" "$key_dir"
+printf 'blind,scenario\n' > "$tmp_key"
 idx=1
 for scenario in "${RUN_SCENARIOS[@]}"; do
     blind="$(printf 'B%03d' "$idx")"
@@ -743,22 +800,41 @@ for scenario in "${RUN_SCENARIOS[@]}"; do
     if [[ -n "$verify_out" && -f "$verify_out" ]]; then
         cp "$verify_out" "$OUT/grading/$blind.verify.txt"
     fi
-    printf '%s,%s\n' "$blind" "$scenario" >> "$OUT/grading/key.csv"
-    # The blind->scenario mapping lives ONLY in key.csv: printing it to the
+    printf '%s,%s\n' "$blind" "$scenario" >> "$tmp_key"
+    # The blind->scenario mapping lives ONLY in the key file: printing it to the
     # terminal would hand a single operator+grader the key in scrollback
     # right before grading.
     printf 'BLIND|%s\n' "$blind"
     idx=$((idx + 1))
 done
 
+mv -- "$tmp_key" "$KEY_OUT" || bench_error "KEY_WRITE_FAILED" "$KEY_OUT"
+chmod 600 "$KEY_OUT" 2>/dev/null || true
+key_rows=$((idx - 1))
+key_sha="$(sha256sum "$KEY_OUT" | cut -d' ' -f1)"
+# The batch record names where the key went and hashes it, so --finalize can
+# prove it is reading the key this batch produced, not a substitute. It holds
+# the location and digest only - never a mapping row.
+{
+    echo "key_path: $KEY_OUT"
+    echo "key_sha256: $key_sha"
+    echo "key_rows: $key_rows"
+    echo "created_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+} > "$OUT/key-location.txt"
+# Belt and braces: nothing may have left a copy in the grading directory.
+[[ ! -e "$OUT/grading/key.csv" ]] \
+    || bench_error "KEY_IN_GRADING_DIR" "$OUT/grading/key.csv"
+printf 'BLIND|KEY|path=%s|rows=%s|sha256=%s\n' "$KEY_OUT" "$key_rows" "$key_sha"
+
 printf 'BATCH|OK|runs=%d|out=%s\n' "$RUNS" "$OUT"
 cat <<'EOF'
 Next steps (operator):
 1. Grade each $OUT/grading/B*.diff (+ B*.verify.txt when present) against the
-   task rubric WITHOUT reading $OUT/grading/key.csv; write
+   task rubric WITHOUT opening the key recorded in $OUT/key-location.txt; write
    $OUT/grading/grading.tsv as
    blind_id<TAB>rubric_passed<TAB>rubric_total<TAB>accepted(true|false).
 2. Finalize (translates blind ids via the key, re-extracts records with the
    graded acceptance, then aggregates with the sheet as cross-check):
    bash benchmarks/run-ab-benchmark.sh --finalize "$OUT" --grading "$OUT/grading/grading.tsv"
+   (the key is read from $OUT/key-location.txt unless --key names it)
 EOF

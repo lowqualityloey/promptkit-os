@@ -31,6 +31,11 @@ BINDIR="$TMP_DIR/bin"
 CLEAN_PATH="$BINDIR:/usr/bin:/bin"
 SEED="$TMP_DIR/seed"
 OUT="$TMP_DIR/out"
+# The blind key is written outside every workspace the driver is given, as the
+# protocol requires; the harness keeps each batch's key in its own directory.
+KEYS="$TMP_DIR/keys"
+mkdir -p "$KEYS"
+chmod 700 "$KEYS"
 mkdir -p "$FAKE_HOME/.commandcode/taste" "$BINDIR"
 : > "$FAKE_HOME/.commandcode/taste/taste.md"   # preflight requires empty
 
@@ -130,7 +135,7 @@ TASK2EOF
 out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
     --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
     --model stub/model-a --out "$OUT" --max-turns 5 --timeout 60 \
-    --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
+    --key-out "$KEYS/batch.csv" --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
 if [[ $rc -eq 0 && "$out" == *"PREFLIGHT|OK"* && "$out" == *"BATCH|OK|runs=2"* ]]; then
     ok "batch runs both arms end-to-end against the stub CLI"
 else
@@ -232,18 +237,70 @@ fi
 # --- blind packets: shuffled 1:1 mapping + verify evidence ---------------------
 nblind="$(ls "$OUT/grading"/B*.diff 2>/dev/null | wc -l)"
 nverify="$(ls "$OUT/grading"/B*.verify.txt 2>/dev/null | wc -l)"
-nkey=$(( $(wc -l < "$OUT/grading/key.csv") - 1 ))
+nkey=$(( $(wc -l < "$KEYS/batch.csv") - 1 ))
 vexit_ok="$(grep -l "^verify_exit=0$" "$OUT/grading"/B*.verify.txt 2>/dev/null | wc -l)"
 if [[ "$nblind" -eq 2 && "$nkey" -eq 2 && "$nverify" -eq 2 && "$vexit_ok" -eq 2 ]] \
-        && grep -q "promptkit_os" "$OUT/grading/key.csv" && grep -q ",BENCH-DRIVER-01-bare-r1" "$OUT/grading/key.csv"; then
-    ok "blind packets, key.csv (1:1), and verify packets (exit code recorded) for all runs"
+        && grep -q "promptkit_os" "$KEYS/batch.csv" && grep -q ",BENCH-DRIVER-01-bare-r1" "$KEYS/batch.csv"; then
+    ok "blind packets, external key (1:1), and verify packets (exit code recorded) for all runs"
 else
     notok "blind packets (diffs=$nblind key=$nkey verify=$nverify vexit=$vexit_ok)"
 fi
 
+# --- the key never lands where the packets are handed out --------------------
+# A key in <out>/grading/ sits beside the B*.diff files the grader is told to
+# grade, one `cat` from unblinding; key-location.txt names the real path, hashes
+# it, and carries no mapping row, and the terminal output never prints one.
+key_sha_now="$(sha256sum "$KEYS/batch.csv" | cut -d' ' -f1)"
+key_recorded="$(sed -n 's/^key_sha256: //p' "$OUT/key-location.txt" 2>/dev/null | head -1)"
+if [[ ! -e "$OUT/grading/key.csv" ]] \
+        && [[ "$(sed -n 's/^key_path: //p' "$OUT/key-location.txt" 2>/dev/null)" == "$KEYS/batch.csv" ]] \
+        && [[ -n "$key_sha_now" && "$key_recorded" == "$key_sha_now" ]] \
+        && [[ "$out" == *"BLIND|KEY|"* ]] \
+        && ! printf '%s\n' "$out" | grep -qE '^B[0-9]{3},'; then
+    ok "the key is outside the run workspace, hashed in key-location.txt, and never printed"
+else
+    notok "key placement/record (in-grading=$([[ -e "$OUT/grading/key.csv" ]] && echo yes || echo no) recorded=${key_recorded:0:12} out-rows=$(printf '%s\n' "$out" | grep -cE '^B[0-9]{3},'))"
+fi
+
+# --- a full batch cannot be started without an external key path -------------
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
+    --model stub/model-a --out "$TMP_DIR/out-nokey" --max-turns 5 --timeout 60 \
+    --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|MISSING|key-out"* && ! -e "$TMP_DIR/out-nokey" ]] \
+        && ! printf '%s\n' "$out" | grep -q '^RUNDONE|'; then
+    ok "a batch without --key-out is refused before any session"
+else
+    notok "missing key-out refusal (rc=$rc, out=${out:0:160})"
+fi
+
+# --- a key inside the run workspace is refused, not silently relocated -------
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
+    --model stub/model-a --out "$TMP_DIR/out-inside" --max-turns 5 --timeout 60 \
+    --key-out "$TMP_DIR/out-inside/key.csv" --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|KEY_INSIDE_WORKSPACE"* && ! -e "$TMP_DIR/out-inside/manifest.tsv" ]]; then
+    ok "a key path inside <out> is refused before any session"
+else
+    notok "inside-out key refusal (rc=$rc, out=${out:0:200})"
+fi
+
+# --- an existing key file is never overwritten -------------------------------
+before_sha="$key_sha_now"
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
+    --model stub/model-a --out "$TMP_DIR/out-clobber" --max-turns 5 --timeout 60 \
+    --key-out "$KEYS/batch.csv" --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|KEY_EXISTS"* \
+        && "$(sha256sum "$KEYS/batch.csv" | cut -d' ' -f1)" == "$before_sha" ]]; then
+    ok "an existing blind key is refused and left byte-identical"
+else
+    notok "key clobber refusal (rc=$rc, out=${out:0:200})"
+fi
+
 # --- finalize end-to-end: blind-keyed sheet -> aggregates ----------------------
-b1="$(grep -m1 B "$OUT/grading/key.csv" | cut -d, -f1)"
-b2="$(tail -1 "$OUT/grading/key.csv" | cut -d, -f1)"
+b1="$(grep -m1 B "$KEYS/batch.csv" | cut -d, -f1)"
+b2="$(tail -1 "$KEYS/batch.csv" | cut -d, -f1)"
 printf '%s\t3\t3\ttrue\n' "$b1" "$b2" > "$OUT/grading/grading.tsv"
 out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
     --finalize "$OUT" --grading "$OUT/grading/grading.tsv" 2>&1)"; rc=$?
@@ -261,6 +318,19 @@ if grep -q "^${b1}	" "$OUT/grading/grading.tsv" && ! grep -q "BENCH-DRIVER" "$OU
     ok "operator grading sheet stays blind-keyed (no scenario/arm ids)"
 else
     notok "grading sheet blinding"
+fi
+
+# --- finalize verifies the key it reads against the batch record -------------
+# A substituted key must fail loudly: silently grading with the wrong mapping
+# would report the wrong arm's rubric result and invalidate the batch.
+TAMPERED="$KEYS/tampered.csv"
+sed 's/,BENCH-DRIVER-01-/,BENCH-DRIVER-99-/' "$KEYS/batch.csv" > "$TAMPERED"
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --finalize "$OUT" --grading "$OUT/grading/grading.tsv" --key "$TAMPERED" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|KEY_HASH_MISMATCH"* && "$out" != *"BENCH|SUMMARY|"* ]]; then
+    ok "--finalize refuses a key whose sha256 differs from the batch record"
+else
+    notok "tampered key refusal (rc=$rc, out=${out:0:200})"
 fi
 
 # --- verify packets: scrub the run directory and scenario id -----------------
@@ -327,7 +397,7 @@ rm -f "$FAKE_HOME/order-at-first-session.tsv"
 out_sched="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" STUB_SNAPSHOT_OUT="$OUT_SCHED" bash "$DRIVER" \
     --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
     --model stub/model-a --out "$OUT_SCHED" --max-turns 5 --timeout 60 \
-    --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
+    --key-out "$KEYS/sched.csv" --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
 plan="$OUT_SCHED/order.tsv"
 snap_rows=$(( $(wc -l < "$FAKE_HOME/order-at-first-session.tsv" 2>/dev/null || echo 0) - 1 ))
 if [[ "$snap_rows" -eq 2 ]] && cmp -s "$FAKE_HOME/order-at-first-session.tsv" "$plan"; then
@@ -349,9 +419,9 @@ OUT_REPEAT="$TMP_DIR/out-repeat"
 out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
     --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" \
     --model stub/model-a --out "$OUT_REPEAT" --max-turns 5 --timeout 60 \
-    --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
+    --key-out "$KEYS/repeat.csv" --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
 if [[ $rc -eq 0 && "$(cat "$OUT_REPEAT/order.tsv")" == "$(cat "$plan")" ]] \
-        && cmp -s "$OUT_REPEAT/grading/key.csv" "$OUT/grading/key.csv"; then
+        && cmp -s "$KEYS/repeat.csv" "$KEYS/batch.csv"; then
     ok "the same seeds reproduce a byte-identical plan and blind key"
 else
     notok "plan/key reproducibility (rc=$rc)"
@@ -362,7 +432,7 @@ OUT_MULTI="$TMP_DIR/out-multi"
 out_multi="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
     --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK,$TASK2" \
     --model stub/model-a --out "$OUT_MULTI" --max-turns 5 --timeout 60 \
-    --order-seed 11 --shuffle-seed 7 2>&1)"; rc=$?
+    --key-out "$KEYS/multi.csv" --order-seed 11 --shuffle-seed 7 2>&1)"; rc=$?
 planned_multi="$(tail -n +2 "$OUT_MULTI/order.tsv" | awk -F'\t' '{print $2"-"$3"-r"$4}')"
 executed_multi="$(printf '%s\n' "$out_multi" | grep '^RUNDONE|' | cut -d'|' -f2)"
 first_01="$(awk -F'\t' '$2=="BENCH-DRIVER-01"{print $3; exit}' "$OUT_MULTI/order.tsv")"

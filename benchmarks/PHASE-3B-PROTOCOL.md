@@ -4,8 +4,9 @@
   Appendix B's parameters are pinned to `f6a58f0`; the batch stages `76e7594` by
   the 2026-10-31 Appendix C decision. All four Approval items are ticked, so the
   batch is authorized up to §9's cap (42 sessions / 24 hours / $25 actual
-  `transcript_cost_usd`). One pre-batch step remains — §11's batch-time blind-key
-  location — and no session has run.
+  `transcript_cost_usd`). Appendix D is complete and the blind key's path is
+  reserved outside the grading workspace; §11's five remaining items are all
+  batch-time. No session has run.
 - **Date drafted**: 2026-10-26 (document structure approved that day)
 - **Owner**: repository owner
 - **Supersedes for decisions**: the Phase 3 pilot (`n=6`); the pilot remains
@@ -186,8 +187,12 @@ passes in any formatting while any non-empty value fails closed.
 
 ## 4. Blinding and grading
 
-- Blind ids assigned by a whole-batch shuffle; key stored outside the grading
-  workspace.
+- Blind ids assigned by a whole-batch shuffle; the key is written to the
+  operator's `--key-out` path outside `<out>`. The driver requires that flag,
+  refuses a path inside `<out>`, the seed, or the engine, and never leaves a key
+  where the packets are handed out. `<out>/key-location.txt` records the path,
+  its SHA-256, and its row count — no mapping row — and `--finalize` refuses a
+  key whose digest does not match it.
 - Grader receives only the task rubric, `B*.diff`, and `B*.verify.txt`; no
   manifest, scenario names, session logs, report, or key.
 - Before grading, scan every packet for `promptkit_os`, `bare`, `BENCH-L`,
@@ -373,7 +378,15 @@ replacements and the 42-session ceiling are unchanged.
   card has changed since the freeze commit). The L3 card's owner sign-off is
   Approval item 1, not this item.
 - [x] `--preflight-only` passes; zero spend.
-- [ ] Blind key generated and stored outside the grading workspace.
+- [x] Blind key generated and stored outside the grading workspace — the driver
+  now requires `--key-out` and refuses any path inside `<out>`, the seed, or the
+  engine, so no batch can put a key beside its own packets. A zero-spend stub
+  run wrote a two-row key to the reserved store with `<out>/grading/` holding
+  none (Appendix D, key-store check), and the store is
+  `/home/heyloey/.local/state/promptkit/phase3b-keys` (mode 700, outside the
+  repository). The mapping rows are written when the last session ends: the
+  shuffle runs over the sessions the batch executed, so a pre-batch copy would
+  be invalidated by any replacement run.
 - [ ] Batch runs within cap; all operational failures logged.
 - [ ] Blinding audit passes; grading sheet written and hashed before
   unblinding.
@@ -524,7 +537,8 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-30 | Reconciled the blinding-audit record's control wording with the committed script. | The box said the control fired "all 11 scanners", but the scan carries 14 labels (ten fixed surfaces plus one per key row); the 2026-10-30 control planted ten surfaces and one scenario id, and the script now plants every scenario id and reports `control=14/14`. A reader running the command saw a number the record did not explain, and the old wording implied coverage the control did not have. | Control scope overstated -> the box and the run record now state that 11 labels were planted and three scenario scanners were uncontrolled, and the re-run paragraph says the script's control is stronger (14/14). No scanner, fixture, or recorded result changed. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The audit's pass result is unchanged. | Owner (J. Balanay) |
 | 2026-10-30 | Ticked §11's task-spec item and Appendix D's spend-cap item. | Both were satisfied but unticked: the bundle hash recomputes to the recorded `c82822c8...e3ad9f` with no card commit since `f6a58f0`, and §9 has carried the cap and stop rules since the freeze. Unticked boxes made the protocol look further from a run than it is. | Frozen specs and recorded cap -> §11 now cites the recomputed bundle and the empty card history, and Appendix D restates the 42-session / 24-hour / $25 cap with the stop rules. The only Appendix D box left open is the batch-time key location. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and no execution is authorized by it. | Owner (J. Balanay) |
 | 2026-10-31 | Re-ran `--preflight-only` against the merged engine at `76e7594` and recorded the run under Appendix D's merged-engine re-run, deciding that the batch runs that SHA. | Appendix B pins the engine at `f6a58f0`, but the repository a batch would run is `76e7594`, so a pin naming a commit no session runs would make the frozen parameters disagree with every run's `env.txt`. The protocol requires that difference logged before the first session. | Engine pinned at `f6a58f0` with a preflight record only for that SHA → the same six cards, plan seeds, model, and timeout preflighted at `76e7594`: `engine=76e7594`, `seed=16b3cf7`, `cli=1.88.0`, plan digest `6ac712a9…` unchanged at 12 rows, zero spend. | No change to Appendix A, the task cards (bundle `c82822c8…` recomputes), the seed, the thresholds, or the cap. The staged treatment surface differs from the pinned commit in one file, `workflows/pr.md` (`3cd97fe`), while `init.sh`, `protocols/`, `templates/`, and `scripts/` outside the excluded `scripts/tests/` are unchanged. No session has run, so no result is affected. The batch runs `76e7594`: the one delta is a PR-workflow callout that no Appendix A card invokes, and a worktree at `f6a58f0` would record an engine that is not what ships. Appendix B keeps the freeze-time SHA and points here, so the 2026-10-28 signature still covers the values it signed. | Owner (J. Balanay), 2026-10-31 |
-| 2026-10-31 | Ticked Approval items 1–3 (task slate, §7 thresholds, §9 cap) and rewrote the four passages that still described them as open, plus Appendix D's stale open-boxes sentence. | The three items were the only written gate on execution, and the slate, thresholds, and cap they approve had been complete since the freeze. Ticking the checkboxes alone would have left the Status header, Appendix B's signature bullet, §11's first item, and the closing gate note asserting the opposite of the boxes directly above them — the drift every earlier reconciliation row in this table was written to repair. Appendix D's open-boxes paragraph had also still listed the spend cap as open after that box was ticked on 2026-10-30. | Items 1–3 unticked and four passages saying so, with a fifth stale about the spend cap → all four items ticked, the slate/thresholds/cap approved 2026-10-31 on a dated line separate from the 2026-10-28 freeze signature, the four passages rewritten to the approved state, and Appendix D's paragraph reduced to the one box a preflight cannot exercise. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and no session has run. The approval authorizes spend up to §9's 42 sessions / 24 hours / $25 and nothing beyond it; it does not authorize a change to the protocol after the first session (§10). §11 now stands at 8 of 14 ticked with 6 open — 5 of those post-batch by construction and 1 the batch-time key location; Appendix D stands at 9 of 10 with that same key location open. | Owner (J. Balanay), 2026-10-31 |
+| 2026-10-31 | Ticked Approval items 1–3 (task slate, §7 thresholds, §9 cap) and rewrote the four passages that still described them as open, plus Appendix D's stale open-boxes sentence. | The three items were the only written gate on execution, and the slate, thresholds, and cap they approve had been complete since the freeze. Ticking the checkboxes alone would have left the Status header, Appendix B's signature bullet, §11's first item, and the closing gate note asserting the opposite of the boxes directly above them — the drift every earlier reconciliation row in this table was written to repair. Appendix D's open-boxes paragraph had also still listed the spend cap as open after that box was ticked on 2026-10-30. | Items 1–3 unticked and four passages saying so, with a fifth stale about the spend cap → all four items ticked, the slate/thresholds/cap approved 2026-10-31 on a dated line separate from the 2026-10-28 freeze signature, the four passages rewritten to the approved state, and Appendix D's paragraph reduced to the one box a preflight cannot exercise. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and no session has run. The approval authorizes spend up to §9's 42 sessions / 24 hours / $25 and nothing beyond it; it does not authorize a change to the protocol after the first session (§10). §11 stood at 8 of 14 ticked with 6 open — 5 of those post-batch by construction and 1 the then-open key location; Appendix D stood at 9 of 10 with that same box open. | Owner (J. Balanay), 2026-10-31 |
+| 2026-10-31 | Required `--key-out` for a batch, refused a key path inside `<out>`, the seed, or the engine, reserved an external key store, and ticked §11's and Appendix D's key-location items. | The box was open because the driver wrote `grading/key.csv` into the directory holding the `B*.diff` packets the operator is told to grade without reading the key: that is one `cat` from unblinding, not "outside the grading workspace". Ticking it on the strength of the audit's `key=outside_delivery` label would have been a reading — the audit only proved the key was outside the copied delivery, not outside the workspace a grader works in. | Key beside the packets → the key is written to `--key-out` (mode 600), `<out>/grading/key.csv` is absent by construction, `<out>/key-location.txt` records the path, SHA-256, and row count with no mapping row, `--finalize` reads that record and refuses a digest mismatch (`KEY_HASH_MISMATCH`), and the audit fails on a key in `<out>/grading/` or a record that names another path or digest (`key_store=outside_out`). Harnesses: driver 61 → 66 cases, blinding audit 12 cases, both green. | Change to the instrument only — `benchmarks/run-ab-benchmark.sh`, `benchmarks/audit-blinding.sh`, and two test harnesses. No change to Appendix A, the Appendix B parameter values, the task cards, the seed, the thresholds, or the cap, and no session has run. The staged treatment-arm surface (`init.sh`, `workflows/`, `protocols/`, `templates/`, `scripts/`) is unchanged, so the measured engine is untouched. §11 stands at 9 of 14 ticked with 5 open, all post-batch by construction; Appendix D is 10 of 10. | Owner (J. Balanay), 2026-10-31 |
 
 ## Appendix D — Preflight checklist
 
@@ -564,7 +578,14 @@ both arms before the run; every `Verify` command was exercised on both.
   other three scenario scanners uncontrolled; the committed
   `benchmarks/audit-blinding.sh` plants every scenario id and reports
   `control=14/14`. Record under the blinding-audit re-run below.
-- [ ] Key is outside the grading workspace.
+- [x] Key is outside the grading workspace — the batch's key path is
+  `--key-out`, which the driver requires and refuses inside `<out>`, the seed,
+  or the engine; the reserved store is
+  `/home/heyloey/.local/state/promptkit/phase3b-keys` (mode 700, outside the
+  repository). A zero-spend run wrote its key there (mode 600) with
+  `<out>/grading/key.csv` absent and only `<out>/key-location.txt` naming the
+  path, which carries the digest but no mapping row. Record under the key-store
+  check below.
 - [x] Spend cap and stop rules are recorded — §9's table: 36 primary sessions
   (six tasks × two arms × three repeats; 30 for the five-task fallback), 6
   infrastructure replacements, 42 CLI sessions in total, 24 wall-clock hours,
@@ -610,13 +631,16 @@ references, clean tree); `guard_host` (global instruction surfaces, MCP
 servers, hooks, empty taste, `heyloey` off `PATH`); `guard_cross_arm` (a
 balanced task × arm × repeat plan and one arm-agnostic invocation builder);
 from the verify re-run below, each card's `Verify` command on both artifacts
-and both interpreters; and, from the blinding-audit re-run below, the §4 scan
-over a dry-run delivery. The one box still open is the one a preflight cannot
-exercise: the blind key does not exist until §11 generates it and stores it
-outside the grading workspace. The spend-cap box is ticked because §9 carries the
-cap text — a record, not a host probe — which is why this paragraph no longer
-lists it as open. The pre-grading audit over the real delivery is §11's step, not
-this checklist's, which is why the audit box above is scoped to a dry-run packet.
+and both interpreters; from the blinding-audit re-run below, the §4 scan over a
+dry-run delivery; and, for the key-location box, the store and zero-spend run
+described under the key-store check. That last box is the one a preflight cannot
+exercise on its content — the mapping's rows do not exist until the batch's last
+session, because the shuffle runs over the sessions that actually executed — so
+it is checked where it can be: the mechanism, the reserved path, and a run
+through it. The spend-cap box is ticked because §9 carries the cap text — a
+record, not a host probe. The pre-grading audit over the real delivery is §11's
+step, not this checklist's, which is why the audit box above is scoped to a
+dry-run packet.
 
 ### Cross-arm re-run
 
@@ -747,6 +771,10 @@ Limitations: the stub produces a one-file diff and no tool traffic, so this
 exercises the harness's packet construction and the scan, not a real session's
 content; a model that writes a path naming a canonical surface is caught by the
 same scan only when the pre-grading audit over the real delivery runs (§11).
+This record predates the 2026-10-31 key-store change and describes that run as
+it happened: the key was then `grading/key.csv`, outside the copied delivery
+but inside the workspace. It now goes to `--key-out` instead, and the committed
+audit fails if a key is present in `<out>/grading/` (key-store check).
 
 ### CLI pin
 
@@ -837,6 +865,60 @@ ORDER|PLAN|seed=20261027|shuffle_seed=90613245|rows=12|sha256=6ac712a95506521723
   points here. If the owner prefers the worktree instead, that row is where
   to change it, and it must change before the first session.
 
+### Key-store check
+
+Appendix D's last box is about where the key lives, not when its rows exist, and
+those are different questions. The driver shuffles the blind ids across the
+sessions the batch actually ran, so the mapping is written when the last session
+ends; a copy made before the first session would be invalidated by any
+replacement run, which is why no pre-batch mapping is recorded here. What can be
+checked before the batch is the location, and that is checked rather than
+asserted.
+
+The reserved store is `/home/heyloey/.local/state/promptkit/phase3b-keys` —
+mode `700`, owner `heyloey`, outside the repository and outside every `/tmp`
+run root. The batch's key path will be `<store>/phase3b-batch.csv`;
+`<out>/key-location.txt` records that path, its SHA-256, and its row count, and
+holds no mapping row.
+
+A zero-spend run through `benchmarks/run-ab-benchmark.sh` (stub CLI, synthetic
+`BENCH-PROOF-01` card, two sessions, no model contacted) exercised the reserved
+path end to end on 2026-10-31:
+
+```text
+PREFLIGHT|OK|engine=83f82e9|seed=14e80bc|model=stub/model-a|cli=stub-1.0.0
+BLIND|KEY|path=/home/heyloey/.local/state/promptkit/phase3b-keys/proof-fixture-20261031.csv|rows=2|sha256=e854b71b7b9f627ec58400aba3efb3ce331ccbba91fab0045261cc1735f38281
+BATCH|OK|runs=2|out=/tmp/pk-keyproof.YNX6hQ/out
+```
+
+`engine=83f82e9` is the checkout this check ran from, not a change to the batch
+engine: placement does not depend on the staged kit, and the batch still stages
+`76e7594` by the merged-engine decision above.
+
+Read back after the run: the key existed at the reserved path with mode `600`
+and two rows; `<out>/grading/key.csv` was absent; `key-location.txt` named the
+same path and digest and reported `key_rows: 2`; no mapping row appeared in the
+terminal stream; and a search for the key path under `<out>` matched exactly one
+file, the `key-location.txt` record itself. The proof key was then removed, so
+the store holds no mapping and the digest above names what was produced rather
+than something a later reader can open.
+
+The property is pinned in CI rather than left to this one run. The driver
+harness grew from 61 to 66 cases: the key lands outside `<out>` with a hashed
+record, a batch without `--key-out` is refused before any session, a key path
+inside `<out>` is refused before any session, an existing key is refused
+byte-identical, and `--finalize` refuses a key whose digest differs from the
+record. `benchmarks/audit-blinding.sh` now also fails when `key.csv` is present
+in `<out>/grading/`, when `key-location.txt` names another path, or when its
+digest does not match the key, and reports `key_store=outside_out`. Both suites
+pass at those counts: `Benchmark driver harness (Bash): 66 passed, 0 failed` and
+`Benchmark blinding harness (Bash): 12 passed, 0 failed`.
+
+Limitation: this checks placement and record integrity, not secrecy. The store
+is a directory on this host; a reader with the operator's account can open it,
+so §4's "the operator must not grade" remains a procedural control, not one the
+driver can enforce.
+
 ## Approval
 
 - [x] I approve the task slate in Appendix A.
@@ -861,6 +943,7 @@ authorizes the batch up to §9's cap — 42 CLI sessions, 24 wall-clock hours, $
 actual `transcript_cost_usd` — and nothing past it: no extra repeat, no re-run of
 a surprising result, no extension without a new protocol. A change after the
 first session is a §10 matter rather than an Appendix C row, and one logged after
-unblinding invalidates the confirmatory claim. The batch starts only once §11's
-blind key exists outside the grading workspace, which is the one checklist box
-still open.
+unblinding invalidates the confirmatory claim. Appendix D is complete: every
+preflight box is ticked, and the blind key has a reserved path outside every
+workspace the batch or a grader reads, with its rows written when the last
+session ends (key-store check). What remains is execution, not preparation.
