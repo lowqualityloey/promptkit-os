@@ -1,9 +1,11 @@
 # Phase 3b — Confirmatory A/B Protocol
 
-- **Status**: FROZEN and signed 2026-10-28, not run. Appendix B's parameters are
-  pinned to `f6a58f0`, and the owner signature is recorded in the Approval
-  section. Execution is not yet approved: Approval items 1–3 (task slate,
-  thresholds, spend cap) are unticked.
+- **Status**: FROZEN and signed 2026-10-28, approved 2026-10-31, not run.
+  Appendix B's parameters are pinned to `f6a58f0`; the batch stages `76e7594` by
+  the 2026-10-31 Appendix C decision. All four Approval items are ticked, so the
+  batch is authorized up to §9's cap (42 sessions / 24 hours / $25 actual
+  `transcript_cost_usd`). One pre-batch step remains — §11's batch-time blind-key
+  location — and no session has run.
 - **Date drafted**: 2026-10-26 (document structure approved that day)
 - **Owner**: repository owner
 - **Supersedes for decisions**: the Phase 3 pilot (`n=6`); the pilot remains
@@ -344,7 +346,10 @@ replacements and the 42-session ceiling are unchanged.
 
 ## 11. Execution checklist
 
-- [ ] Owner approves task slate, thresholds, and spend cap.
+- [x] Owner approves task slate, thresholds, and spend cap — Approval items 1–3,
+  ticked 2026-10-31: the slate is Appendix A, the thresholds are §7's 1.25/1.50
+  cost ratios and 2-repeat / 1-of-15 quality rules, and the cap is §9's 42
+  sessions / 24 hours / $25.
 - [x] Neutral seed built; instruction surfaces removed; seed SHA recorded
   (`16b3cf74c809c23dd48466da2212bd3e67a530ed`, rebuilt by the seed builder and
   accepted by `neutralize.sh` with `removed=0`; `guard_seed` found no tracked
@@ -438,9 +443,9 @@ Slate notes:
   immediately before the pin record.
 - Freeze date: 2026-10-28 (signed; the slate and parameters are frozen as of this commit)
 - Owner signature: **SIGNED** 2026-10-28 — it enacts the freeze. The Approval
-  section's per-item assertions are separate statements by the signer, and items
-  1–3 (task slate, thresholds, spend cap) are unticked, so execution is not yet
-  approved.
+  section's per-item assertions are separate statements by the signer: items 1–3
+  (task slate, thresholds, spend cap) were approved 2026-10-31 and are ticked, so
+  the batch is authorized up to §9's cap and not beyond it.
 - Model: `deepseek/deepseek-v4.1-flash`
 - Command Code version: `1.88.0`
 - Engine SHA: `f6a58f0c1c4593742bad5279363b0e2962c3bb8c` — the commit the `promptkit_os` arm
@@ -519,6 +524,7 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-30 | Reconciled the blinding-audit record's control wording with the committed script. | The box said the control fired "all 11 scanners", but the scan carries 14 labels (ten fixed surfaces plus one per key row); the 2026-10-30 control planted ten surfaces and one scenario id, and the script now plants every scenario id and reports `control=14/14`. A reader running the command saw a number the record did not explain, and the old wording implied coverage the control did not have. | Control scope overstated -> the box and the run record now state that 11 labels were planted and three scenario scanners were uncontrolled, and the re-run paragraph says the script's control is stronger (14/14). No scanner, fixture, or recorded result changed. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The audit's pass result is unchanged. | Owner (J. Balanay) |
 | 2026-10-30 | Ticked §11's task-spec item and Appendix D's spend-cap item. | Both were satisfied but unticked: the bundle hash recomputes to the recorded `c82822c8...e3ad9f` with no card commit since `f6a58f0`, and §9 has carried the cap and stop rules since the freeze. Unticked boxes made the protocol look further from a run than it is. | Frozen specs and recorded cap -> §11 now cites the recomputed bundle and the empty card history, and Appendix D restates the 42-session / 24-hour / $25 cap with the stop rules. The only Appendix D box left open is the batch-time key location. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and no execution is authorized by it. | Owner (J. Balanay) |
 | 2026-10-31 | Re-ran `--preflight-only` against the merged engine at `76e7594` and recorded the run under Appendix D's merged-engine re-run, deciding that the batch runs that SHA. | Appendix B pins the engine at `f6a58f0`, but the repository a batch would run is `76e7594`, so a pin naming a commit no session runs would make the frozen parameters disagree with every run's `env.txt`. The protocol requires that difference logged before the first session. | Engine pinned at `f6a58f0` with a preflight record only for that SHA → the same six cards, plan seeds, model, and timeout preflighted at `76e7594`: `engine=76e7594`, `seed=16b3cf7`, `cli=1.88.0`, plan digest `6ac712a9…` unchanged at 12 rows, zero spend. | No change to Appendix A, the task cards (bundle `c82822c8…` recomputes), the seed, the thresholds, or the cap. The staged treatment surface differs from the pinned commit in one file, `workflows/pr.md` (`3cd97fe`), while `init.sh`, `protocols/`, `templates/`, and `scripts/` outside the excluded `scripts/tests/` are unchanged. No session has run, so no result is affected. The batch runs `76e7594`: the one delta is a PR-workflow callout that no Appendix A card invokes, and a worktree at `f6a58f0` would record an engine that is not what ships. Appendix B keeps the freeze-time SHA and points here, so the 2026-10-28 signature still covers the values it signed. | Owner (J. Balanay), 2026-10-31 |
+| 2026-10-31 | Ticked Approval items 1–3 (task slate, §7 thresholds, §9 cap) and rewrote the four passages that still described them as open, plus Appendix D's stale open-boxes sentence. | The three items were the only written gate on execution, and the slate, thresholds, and cap they approve had been complete since the freeze. Ticking the checkboxes alone would have left the Status header, Appendix B's signature bullet, §11's first item, and the closing gate note asserting the opposite of the boxes directly above them — the drift every earlier reconciliation row in this table was written to repair. Appendix D's open-boxes paragraph had also still listed the spend cap as open after that box was ticked on 2026-10-30. | Items 1–3 unticked and four passages saying so, with a fifth stale about the spend cap → all four items ticked, the slate/thresholds/cap approved 2026-10-31 on a dated line separate from the 2026-10-28 freeze signature, the four passages rewritten to the approved state, and Appendix D's paragraph reduced to the one box a preflight cannot exercise. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and no session has run. The approval authorizes spend up to §9's 42 sessions / 24 hours / $25 and nothing beyond it; it does not authorize a change to the protocol after the first session (§10). §11 now stands at 8 of 14 ticked with 6 open — 5 of those post-batch by construction and 1 the batch-time key location; Appendix D stands at 9 of 10 with that same key location open. | Owner (J. Balanay), 2026-10-31 |
 
 ## Appendix D — Preflight checklist
 
@@ -605,11 +611,12 @@ servers, hooks, empty taste, `heyloey` off `PATH`); `guard_cross_arm` (a
 balanced task × arm × repeat plan and one arm-agnostic invocation builder);
 from the verify re-run below, each card's `Verify` command on both artifacts
 and both interpreters; and, from the blinding-audit re-run below, the §4 scan
-over a dry-run delivery. The boxes still open are the ones no preflight can
-exercise: the blind key does not exist until §11 generates it, and the spend
-cap is a §9 record rather than a host check. The pre-grading audit over the
-real delivery is §11's step, not this checklist's, which is why the audit box
-above is scoped to a dry-run packet.
+over a dry-run delivery. The one box still open is the one a preflight cannot
+exercise: the blind key does not exist until §11 generates it and stores it
+outside the grading workspace. The spend-cap box is ticked because §9 carries the
+cap text — a record, not a host probe — which is why this paragraph no longer
+lists it as open. The pre-grading audit over the real delivery is §11's step, not
+this checklist's, which is why the audit box above is scoped to a dry-run packet.
 
 ### Cross-arm re-run
 
@@ -832,17 +839,28 @@ ORDER|PLAN|seed=20261027|shuffle_seed=90613245|rows=12|sha256=6ac712a95506521723
 
 ## Approval
 
-- [ ] I approve the task slate in Appendix A.
-- [ ] I approve the thresholds in §7.
-- [ ] I approve the 42-session / 24-hour / $25 cap in §9.
+- [x] I approve the task slate in Appendix A.
+- [x] I approve the thresholds in §7.
+- [x] I approve the 42-session / 24-hour / $25 cap in §9.
 - [x] I confirm the neutral seed and clean host preflight passed.
 
-**Owner signature / date**: Jonell Balanay — 2026-10-28
+**Owner signature / date**: Jonell Balanay — 2026-10-28 (the freeze signature;
+items 1–3 were not part of it and are dated below)
+
+**Items 1–3 approved**: Jonell Balanay — 2026-10-31 (task slate, §7 thresholds,
+§9 cap). Recorded on its own line because the freeze act and the per-item
+approval happened on different dates, and redating the signature 2026-10-31
+would misstate when it was made.
 
 ---
 
-This document is the protocol. The three conditions for a run are met: Appendix
-A and Appendix B are filled, the owner has signed the Approval section, and the
-protocol is frozen by commit. Execution still requires Approval items 1–3 to be
-ticked, and none of this authorizes benchmark spend or the harness patch; those
-are separate, explicit steps.
+This document is the protocol. The conditions for a run are met: Appendix A and
+Appendix B are filled, the owner has signed the Approval section, Approval items
+1–3 were approved 2026-10-31, and the protocol is frozen by commit. That approval
+authorizes the batch up to §9's cap — 42 CLI sessions, 24 wall-clock hours, $25
+actual `transcript_cost_usd` — and nothing past it: no extra repeat, no re-run of
+a surprising result, no extension without a new protocol. A change after the
+first session is a §10 matter rather than an Appendix C row, and one logged after
+unblinding invalidates the confirmatory claim. The batch starts only once §11's
+blind key exists outside the grading workspace, which is the one checklist box
+still open.
