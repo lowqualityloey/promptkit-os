@@ -446,7 +446,9 @@ Slate notes:
 - Engine SHA: `f6a58f0c1c4593742bad5279363b0e2962c3bb8c` — the commit the `promptkit_os` arm
   runs, and this commit's parent: the only value writable without a self-hash cycle.
   `run-ab-benchmark.sh` writes the engine clone's `rev-parse HEAD` to `env.txt`, so a stale
-  pin here would make the frozen parameters disagree with every run.
+  pin here would make the frozen parameters disagree with every run. The batch runs
+  `76e7594` by the 2026-10-31 Appendix C decision (see the merged-engine re-run);
+  this freeze-time value stays as the signed pin rather than being rewritten.
 - Seed SHA: `16b3cf74c809c23dd48466da2212bd3e67a530ed`
 - Neutralization procedure SHA: `7b79660dfb36e1cc1cdeed88a2e4886c2dbfcaa57158e7ad7ae9f72800f377c4` (`benchmarks/seed/neutralize.sh`); the seed was produced by `benchmarks/seed/build-phase3b-seed.sh` at `cf65228e7f66727bdc34ecb59ffed67109dddbe483d4fcd709a58877a7d41dd4` and accepted by `neutralize.sh` with `removed=0`
 - Task bundle SHA-256: `c82822c86c236447b9ac6481d375ec069ed2797a047dba10cb6dcc8266e3ad9f`
@@ -516,6 +518,7 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-30 | Made the dry-run blinding audit a re-runnable script with a CI harness, and pointed this record at it. | The audit was a one-off: a reviewer could read the result but not reproduce the scan. | Audit unrerunnable -> `benchmarks/audit-blinding.sh` builds the same delivery from a stub CLI and scans it with a 14/14 control; `scripts/tests/run-benchmark-blinding-tests.sh` (12 cases) pins the pass and the `session.log` regression in CI. | Documentation and harness only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and the recorded audit result is unchanged. | Owner (J. Balanay) |
 | 2026-10-30 | Reconciled the blinding-audit record's control wording with the committed script. | The box said the control fired "all 11 scanners", but the scan carries 14 labels (ten fixed surfaces plus one per key row); the 2026-10-30 control planted ten surfaces and one scenario id, and the script now plants every scenario id and reports `control=14/14`. A reader running the command saw a number the record did not explain, and the old wording implied coverage the control did not have. | Control scope overstated -> the box and the run record now state that 11 labels were planted and three scenario scanners were uncontrolled, and the re-run paragraph says the script's control is stronger (14/14). No scanner, fixture, or recorded result changed. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The audit's pass result is unchanged. | Owner (J. Balanay) |
 | 2026-10-30 | Ticked §11's task-spec item and Appendix D's spend-cap item. | Both were satisfied but unticked: the bundle hash recomputes to the recorded `c82822c8...e3ad9f` with no card commit since `f6a58f0`, and §9 has carried the cap and stop rules since the freeze. Unticked boxes made the protocol look further from a run than it is. | Frozen specs and recorded cap -> §11 now cites the recomputed bundle and the empty card history, and Appendix D restates the 42-session / 24-hour / $25 cap with the stop rules. The only Appendix D box left open is the batch-time key location. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and no execution is authorized by it. | Owner (J. Balanay) |
+| 2026-10-31 | Re-ran `--preflight-only` against the merged engine at `76e7594` and recorded the run under Appendix D's merged-engine re-run, deciding that the batch runs that SHA. | Appendix B pins the engine at `f6a58f0`, but the repository a batch would run is `76e7594`, so a pin naming a commit no session runs would make the frozen parameters disagree with every run's `env.txt`. The protocol requires that difference logged before the first session. | Engine pinned at `f6a58f0` with a preflight record only for that SHA → the same six cards, plan seeds, model, and timeout preflighted at `76e7594`: `engine=76e7594`, `seed=16b3cf7`, `cli=1.88.0`, plan digest `6ac712a9…` unchanged at 12 rows, zero spend. | No change to Appendix A, the task cards (bundle `c82822c8…` recomputes), the seed, the thresholds, or the cap. The staged treatment surface differs from the pinned commit in one file, `workflows/pr.md` (`3cd97fe`), while `init.sh`, `protocols/`, `templates/`, and `scripts/` outside the excluded `scripts/tests/` are unchanged. No session has run, so no result is affected. The batch runs `76e7594`: the one delta is a PR-workflow callout that no Appendix A card invokes, and a worktree at `f6a58f0` would record an engine that is not what ships. Appendix B keeps the freeze-time SHA and points here, so the 2026-10-28 signature still covers the values it signed. | Owner (J. Balanay), 2026-10-31 |
 
 ## Appendix D — Preflight checklist
 
@@ -769,6 +772,63 @@ Re-run 2026-10-29T02:32:59Z on that install: `PREFLIGHT|OK|engine=f6a58f0|
 seed=16b3cf7|model=deepseek/deepseek-v4.1-flash|cli=1.88.0`, plan `6ac712a9…`
 unchanged at 12 rows, zero spend. The login shell's `command-code` is a separate,
 self-updating install and is not what a session runs.
+
+### Merged-engine re-run
+
+`--preflight-only` re-executed 2026-10-30T12:24:57Z (2026-10-31T01:24 NZDT)
+against the merged engine at `76e7594` — the commit the repository is on now,
+and so the tree a batch would stage — with the seed rebuilt to the pinned SHA,
+the six Appendix A cards, and the frozen plan seeds, model, and timeout:
+
+```sh
+env -i HOME=<throwaway> \
+  PATH=~/.local/opt/command-code/1.88.0/node_modules/.bin:<nvm node bin>:/usr/local/bin:/usr/bin:/bin \
+  bash benchmarks/run-ab-benchmark.sh --engine <repo> --seed <rebuilt seed> \
+    --tasks <six Appendix A cards> --model deepseek/deepseek-v4.1-flash \
+    --out <tmp>/phase3b-merged-76e7594 --order-seed 20261027 \
+    --shuffle-seed 90613245 --timeout 1800 --profile balanced --preflight-only
+```
+
+```text
+CROSSARM|OK|tasks=6|arms=2|cells=12|max_turns=40|timeout=1800
+ISOLATION|OK|seed=16b3cf7|home=/tmp/pk-home-merged
+PREFLIGHT|OK|engine=76e7594|seed=16b3cf7|model=deepseek/deepseek-v4.1-flash|cli=1.88.0
+ORDER|PLAN|seed=20261027|shuffle_seed=90613245|rows=12|sha256=6ac712a95506521723a62db35bd86cc0559c9eae61b738e02107b55f3fd452be|file=/tmp/pk-out-merged-76e7594/order.tsv
+```
+
+- Seed: rebuilt by `benchmarks/seed/build-phase3b-seed.sh` to `16b3cf7…`
+  (`SEED|OK|sha=16b3cf74…|files=12`), clean tree, no tracked instruction
+  surface and no `heyloey` reference, so `guard_seed` passed.
+- Host: throwaway `HOME` at `/tmp/pk-home-merged` holding only
+  `.commandcode/auth.json` and an `updates.json` with `autoUpdate: false`;
+  `guard_host` found no global instruction surface, MCP server, or hook,
+  taste absent, and `heyloey` absent from `PATH`.
+- CLI: 1.88.0 from the pinned prefix above, not the login shell's install.
+- Plan: the 2026-10-28 plan unchanged — same `order.tsv` digest, 12 rows —
+  so the merged engine did not disturb the pre-registration.
+- Spend: zero. `<out>` holds `order.tsv`, `env.txt`, `isolation.txt`,
+  `crossarm.txt`, `engine-path.txt`, and empty `grading/` and `runs/`; no
+  `manifest.tsv`, no `*.jsonl`, and no session was invoked. `env.txt`
+  records `engine: 76e7594e…`, `seed: 16b3cf74…`, `command-code: 1.88.0`,
+  `max_turns: 40`, `timeout: 1800`, and `profile: balanced`.
+- Difference from the pin: `git diff --name-only f6a58f0..76e7594` touches
+  `.github/workflows/ci.yml`, `CHANGELOG.md`, `CONTRIBUTING.md`,
+  `benchmarks/`, `docs/BENCHMARKS.md`, `scripts/tests/`, and
+  `workflows/pr.md`. Restricted to the surface `stage_engine_kit` copies
+  (`init.sh`, `init.ps1`, `LICENSE`, `VERSION`, `workflows/`, `protocols/`,
+  `templates/`, `scripts/` minus `scripts/tests/`), that is exactly one
+  file: `workflows/pr.md` (`3cd97fe`). The run itself stages nothing — it
+  exits before the session loop — so this describes the batch, not the
+  preflight.
+- Decision: the batch runs `76e7594`. The surface under test is unchanged
+  between the two commits except `workflows/pr.md`, which no Appendix A
+  card invokes, so a worktree at `f6a58f0` would measure the same behavior
+  while recording an engine that is not what ships; running the merged SHA
+  also keeps `env.txt`'s `engine:` field equal to the commit a reader can
+  check out. This is a substitution authorized by the 2026-10-31 Appendix C
+  row, not a rewrite of the signed pin: Appendix B keeps `f6a58f0` and
+  points here. If the owner prefers the worktree instead, that row is where
+  to change it, and it must change before the first session.
 
 ## Approval
 
