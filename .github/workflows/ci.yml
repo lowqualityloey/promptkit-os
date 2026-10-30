@@ -81,6 +81,8 @@ jobs:
           bash -n scripts/aggregate-benchmark-runs.sh
           bash -n scripts/tests/run-benchmark-tools-tests.sh
           bash -n scripts/tests/run-benchmark-driver-tests.sh
+          bash -n benchmarks/audit-blinding.sh
+          bash -n scripts/tests/run-benchmark-blinding-tests.sh
           bash -n scripts/check-benchmark-task-cards.sh
           bash -n scripts/tests/run-benchmark-task-card-tests.sh
           bash -n scripts/install-benchmark-task-card-hook.sh
@@ -257,6 +259,9 @@ jobs:
 
       - name: Run Benchmark Driver Regression Harness (Bash)
         run: bash scripts/tests/run-benchmark-driver-tests.sh
+
+      - name: Run Blinding Audit Harness (Bash)
+        run: bash scripts/tests/run-benchmark-blinding-tests.sh
 
       - name: Assert Benchmark Task-Card Verify Convention (Bash)
         run: bash scripts/check-benchmark-task-cards.sh --root .
