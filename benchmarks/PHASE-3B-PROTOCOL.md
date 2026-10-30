@@ -508,6 +508,7 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-30 | Added the driver's cross-arm equality check and ticked its Appendix D box and the matching §11 item. | The box asserted a property of the driver's launch path that no preflight tested; ticking it without a check would have been a reading of the code. | Cross-arm equality unverified → `guard_cross_arm` fails closed on an unbalanced plan, an arm-dependent argv byte, a non-verbatim prompt, or a missing or duplicated parity flag, and records per-task digests in `crossarm.txt`. | Documentation and preflight only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The re-run spent nothing and reproduced the frozen plan digest, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-30 | Ticked Appendix D's `Verify` check on a good/bad run of all six cards. | The box asserted a property no stored record demonstrated; the cards' probes had only been described as exercised before the slate was written. | Verify good/bad unverified → each card's `Verify` ran against a reference clone (exit 0) and the untouched seed (exit 1) on Node 18.19.1 and 24.22.1, recorded under the verify re-run. | Documentation and local probe runs only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-30 | Ran the blinding audit on a dry-run delivery, ticked its Appendix D box, and fixed the packet defect the audit found. | The box required a dry-run audit no record demonstrated; the audit then found that every packet carried the harness's own `session.log`, because the driver staged the clone with `git add -A`. | Blinding audit unrecorded -> a four-packet delivery built through the driver from a stub CLI scanned clean on 11 surfaces with an 11/11 positive control, and `/session.log` is now excluded in the clone before the session stages it (`c3f13d7`); the same audit fails 5 checks on the parent engine. | Documentation and a zero-spend harness run; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No packet had been graded, so no result is affected. The pre-grading audit over the real delivery remains §11's step. | Owner (J. Balanay) |
+| 2026-10-30 | Made the dry-run blinding audit a re-runnable script with a CI harness, and pointed this record at it. | The audit was a one-off: a reviewer could read the result but not reproduce the scan. | Audit unrerunnable -> `benchmarks/audit-blinding.sh` builds the same delivery from a stub CLI and scans it with a 14/14 control; `scripts/tests/run-benchmark-blinding-tests.sh` (12 cases) pins the pass and the `session.log` regression in CI. | Documentation and harness only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and the recorded audit result is unchanged. | Owner (J. Balanay) |
 
 ## Appendix D — Preflight checklist
 
@@ -673,6 +674,13 @@ BLIND|B004
 AUDIT|SUMMARY|packets=4|verify=2|key_rows=4|blind_ids=4|delivery_files=6
 BLINDING_AUDIT|OK|packets=4|verify=2|blind_ids=4|leaks=0|control=11/11|key=outside_delivery
 ```
+
+`bash benchmarks/audit-blinding.sh` re-runs this audit: the same fixture, the
+same scanners, and the same control, exiting 0 on a clean delivery and 1 on a
+finding. A re-run builds its own fixture, so the fixture seed SHA differs from
+the one above; the packet shape does not. `scripts/tests/run-benchmark-blinding-tests.sh`
+pins it in CI, including a case that points the audit at a driver whose
+`session.log` exclusion is removed and requires it to fail.
 
 The scanned set is exactly the delivery directory: the four `B*.diff` and two
 `B*.verify.txt` copied out of `<out>/grading/`, with `key.csv` and every driver

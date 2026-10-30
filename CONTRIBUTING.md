@@ -79,6 +79,10 @@ bash scripts/tests/run-benchmark-tools-tests.sh
 # Benchmark driver regression (mock CLI, isolated HOME — run+finalize paths)
 bash scripts/tests/run-benchmark-driver-tests.sh
 
+# Blinding audit (dry-run delivery through the driver; §4 scan + control)
+bash benchmarks/audit-blinding.sh
+bash scripts/tests/run-benchmark-blinding-tests.sh
+
 # Benchmark task-card lint (probe before suite; no && between the halves)
 # Opt-in local enforcement: scripts/install-benchmark-task-card-hook.sh --root . (--remove to uninstall)
 bash scripts/check-benchmark-task-cards.sh --root .

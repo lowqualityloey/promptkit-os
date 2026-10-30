@@ -75,8 +75,11 @@ For every task × arm × repeat:
    `.git/info/exclude` before the session starts; the dry-run blinding audit
    found it in all four packets before that exclusion existed. The grader never
    needs the arm-revealing session log for evidence-gated rubric items, and a
-   successful-but-silent command still yields gradeable evidence. A card that
-   needs execution proof runs its behavioral probe
+   successful-but-silent command still yields gradeable evidence. The scan
+   itself is a command: `bash benchmarks/audit-blinding.sh` builds such a
+   delivery from a stub CLI (no model call, zero spend) and scans it, with a
+   control that plants every surface so a clean result is measured.
+   A card that needs execution proof runs its behavioral probe
    **before** its test suite and exits non-zero if either fails: chaining them
    with `&&` lets one red suite suppress the probe, which leaves the packet
    holding only test output and turns the rubric's behavioral items into
