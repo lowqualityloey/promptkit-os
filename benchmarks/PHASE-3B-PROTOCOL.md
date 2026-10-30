@@ -361,7 +361,12 @@ replacements and the 42-session ceiling are unchanged.
   cross-arm equality (61/61 in `scripts/tests/run-benchmark-driver-tests.sh`;
   the preregistration cases merged as `13f7567`, the cross-arm cases in
   `66d6d31`, and the packet-set case in `c3f13d7`).
-- [ ] Task specs frozen; bundle hash recorded.
+- [x] Task specs frozen; bundle hash recorded
+  (`c82822c86c236447b9ac6481d375ec069ed2797a047dba10cb6dcc8266e3ad9f`,
+  recomputed from the six cards with the Appendix B recipe and identical to the
+  recorded value; `git log f6a58f0..HEAD -- benchmarks/tasks/` is empty, so no
+  card has changed since the freeze commit). The L3 card's owner sign-off is
+  Approval item 1, not this item.
 - [x] `--preflight-only` passes; zero spend.
 - [ ] Blind key generated and stored outside the grading workspace.
 - [ ] Batch runs within cap; all operational failures logged.
@@ -509,6 +514,8 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-30 | Ticked Appendix D's `Verify` check on a good/bad run of all six cards. | The box asserted a property no stored record demonstrated; the cards' probes had only been described as exercised before the slate was written. | Verify good/bad unverified → each card's `Verify` ran against a reference clone (exit 0) and the untouched seed (exit 1) on Node 18.19.1 and 24.22.1, recorded under the verify re-run. | Documentation and local probe runs only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-30 | Ran the blinding audit on a dry-run delivery, ticked its Appendix D box, and fixed the packet defect the audit found. | The box required a dry-run audit no record demonstrated; the audit then found that every packet carried the harness's own `session.log`, because the driver staged the clone with `git add -A`. | Blinding audit unrecorded -> a four-packet delivery built through the driver from a stub CLI scanned clean on 11 surfaces with an 11/11 positive control, and `/session.log` is now excluded in the clone before the session stages it (`c3f13d7`); the same audit fails 5 checks on the parent engine. | Documentation and a zero-spend harness run; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No packet had been graded, so no result is affected. The pre-grading audit over the real delivery remains §11's step. | Owner (J. Balanay) |
 | 2026-10-30 | Made the dry-run blinding audit a re-runnable script with a CI harness, and pointed this record at it. | The audit was a one-off: a reviewer could read the result but not reproduce the scan. | Audit unrerunnable -> `benchmarks/audit-blinding.sh` builds the same delivery from a stub CLI and scans it with a 14/14 control; `scripts/tests/run-benchmark-blinding-tests.sh` (12 cases) pins the pass and the `session.log` regression in CI. | Documentation and harness only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and the recorded audit result is unchanged. | Owner (J. Balanay) |
+| 2026-10-30 | Reconciled the blinding-audit record's control wording with the committed script. | The box said the control fired "all 11 scanners", but the scan carries 14 labels (ten fixed surfaces plus one per key row); the 2026-10-30 control planted ten surfaces and one scenario id, and the script now plants every scenario id and reports `control=14/14`. A reader running the command saw a number the record did not explain, and the old wording implied coverage the control did not have. | Control scope overstated -> the box and the run record now state that 11 labels were planted and three scenario scanners were uncontrolled, and the re-run paragraph says the script's control is stronger (14/14). No scanner, fixture, or recorded result changed. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The audit's pass result is unchanged. | Owner (J. Balanay) |
+| 2026-10-30 | Ticked §11's task-spec item and Appendix D's spend-cap item. | Both were satisfied but unticked: the bundle hash recomputes to the recorded `c82822c8...e3ad9f` with no card commit since `f6a58f0`, and §9 has carried the cap and stop rules since the freeze. Unticked boxes made the protocol look further from a run than it is. | Frozen specs and recorded cap -> §11 now cites the recomputed bundle and the empty card history, and Appendix D restates the 42-session / 24-hour / $25 cap with the stop rules. The only Appendix D box left open is the batch-time key location. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and no execution is authorized by it. | Owner (J. Balanay) |
 
 ## Appendix D — Preflight checklist
 
@@ -540,13 +547,23 @@ both arms before the run; every `Verify` command was exercised on both.
 - [x] Blinding audit passes on a dry-run packet — the §4 scan ran over a
   delivery the driver itself built from a stub CLI (four packets, two tasks,
   both arms, zero spend): no hit for `promptkit_os`, `bare`, `BENCH-L`, either
-  absolute root, either scenario id, `AGENTS.md`, `PROMPTKIT.md`, `.promptkit/`,
-  the `docs/` artifact trees, or `session.log`; every packet's changed-file set
-  is the agent's own file, and `key.csv` stayed outside the delivery. A positive
-  control planted one instance of each surface and fired all 11 scanners
-  (`control=11/11`). Record under the blinding-audit re-run below.
+  absolute root, any of the four scenario ids, `AGENTS.md`, `PROMPTKIT.md`,
+  `.promptkit/`, the `docs/` artifact trees, or `session.log`; every packet's
+  changed-file set is the agent's own file, and `key.csv` stayed outside the
+  delivery. Its control planted the ten fixed surfaces plus the bare row's
+  scenario id and fired all 11 labels it planted (`control=11/11`), leaving the
+  other three scenario scanners uncontrolled; the committed
+  `benchmarks/audit-blinding.sh` plants every scenario id and reports
+  `control=14/14`. Record under the blinding-audit re-run below.
 - [ ] Key is outside the grading workspace.
-- [ ] Spend cap and stop rules are recorded.
+- [x] Spend cap and stop rules are recorded — §9's table: 36 primary sessions
+  (six tasks × two arms × three repeats; 30 for the five-task fallback), 6
+  infrastructure replacements, 42 CLI sessions in total, 24 wall-clock hours,
+  1,800 seconds per session, 40 turns, and a $25 actual `transcript_cost_usd`
+  guardrail. The stop rules are whichever of 42 sessions, 24 hours, or $25 is
+  hit first, plus six infrastructure failures; no extra runs, no "just one more
+  repeat", no re-run because a result was surprising, and no extension without
+  a new protocol (§7.3, §9).
 
 ### Preflight record
 
@@ -675,20 +692,22 @@ AUDIT|SUMMARY|packets=4|verify=2|key_rows=4|blind_ids=4|delivery_files=6
 BLINDING_AUDIT|OK|packets=4|verify=2|blind_ids=4|leaks=0|control=11/11|key=outside_delivery
 ```
 
-`bash benchmarks/audit-blinding.sh` re-runs this audit: the same fixture, the
-same scanners, and the same control, exiting 0 on a clean delivery and 1 on a
-finding. A re-run builds its own fixture, so the fixture seed SHA differs from
-the one above; the packet shape does not. `scripts/tests/run-benchmark-blinding-tests.sh`
-pins it in CI, including a case that points the audit at a driver whose
-`session.log` exclusion is removed and requires it to fail.
+`bash benchmarks/audit-blinding.sh` re-runs this audit: the same fixture and
+scanners, with a stronger control - it plants every scenario id as well as the
+ten fixed surfaces, so it reports `control=14/14` where the run above reports
+`control=11/11`. It exits 0 on a clean delivery and 1 on a finding. A re-run
+builds its own fixture, so the fixture seed SHA differs from the one above; the
+packet shape does not. `scripts/tests/run-benchmark-blinding-tests.sh` pins it
+in CI, including a case that points the audit at a driver whose `session.log`
+exclusion is removed and requires it to fail.
 
 The scanned set is exactly the delivery directory: the four `B*.diff` and two
 `B*.verify.txt` copied out of `<out>/grading/`, with `key.csv` and every driver
 file left behind. Scanners, each its own label and each silent: `promptkit_os`,
 `bare` (word-bounded), `BENCH-L`, the absolute run root, the absolute fixture
 root, `AGENTS.md`, `PROMPTKIT.md`, `.promptkit/`,
-`docs/(adrs|reviews|releases|tests)/`, `session.log`, and both scenario ids from
-`key.csv` as literal strings. Structural checks: four packets and two verify
+`docs/(adrs|reviews|releases|tests)/`, `session.log`, and every scenario id in
+`key.csv` as a literal string. Structural checks: four packets and two verify
 files for four key rows, four unique `B###` ids, no other file in the delivery,
 no `key.csv`, `manifest.tsv`, `order.tsv`, `env.txt`, `isolation.txt`, or
 `crossarm.txt`, each packet's `diff --git` set equal to `src/app.ts` alone with
@@ -696,9 +715,12 @@ the agent's line present, and `cwd=<rundir>` in each verify packet.
 
 Zero hits is evidence only if the patterns can hit, so the audit also ran a
 positive control: a copy of the delivery with one instance of every scanner's
-target appended to one packet, plus the bare arm's scenario id. All 11 labels
-fired, so the clean result above is a measured silence rather than a matcher
-that never matches.
+target appended to one packet, plus the bare row's scenario id. It fired the 11
+labels it planted, so the clean result above is a measured silence rather than a
+matcher that never matches. What it planted was the ten fixed surfaces and that
+one scenario id, so the other three scenario scanners were not positively
+exercised - the committed script closes that gap by planting every scenario id
+and expecting `14/14`.
 
 The same audit against the parent engine, `fce54c7`, fails 5 checks: all four
 packets carried `session.log`, because the driver wrote the session stream into
