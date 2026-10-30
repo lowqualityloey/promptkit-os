@@ -70,9 +70,13 @@ For every task × arm × repeat:
    first line (`verify_exit=`). The harness replaces the run directory, output
    root, and scenario id with `<rundir>`, `<out>`, and `<scenario>` before
    writing the packet, so a Verify command that prints its cwd cannot leak the
-   arm. The grader never needs the arm-revealing session log for evidence-gated
-   rubric items, and a successful-but-silent command still yields gradeable
-   evidence. A card that needs execution proof runs its behavioral probe
+   arm. The session log never enters a packet either: the run directory is
+   staged with `git add -A`, so the driver lists `/session.log` in the clone's
+   `.git/info/exclude` before the session starts; the dry-run blinding audit
+   found it in all four packets before that exclusion existed. The grader never
+   needs the arm-revealing session log for evidence-gated rubric items, and a
+   successful-but-silent command still yields gradeable evidence. A card that
+   needs execution proof runs its behavioral probe
    **before** its test suite and exits non-zero if either fails: chaining them
    with `&&` lets one red suite suppress the probe, which leaves the packet
    holding only test output and turns the rubric's behavioral items into

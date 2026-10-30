@@ -179,6 +179,15 @@ else
     notok "strip in batch (a-has-agents=$(grep -c AGENTS.md "$strip_a" || true))"
 fi
 
+# --- blinding: the harness's own session log never enters the packet ----------
+packet_paths_a="$(grep '^diff --git ' "$strip_a" | awk '{print $3}' | sed 's#^a/##' | sort -u)"
+packet_paths_b="$(grep '^diff --git ' "$strip_b" | awk '{print $3}' | sed 's#^a/##' | sort -u)"
+if [[ "$packet_paths_a" == "src/app.ts" && "$packet_paths_b" == "src/app.ts" ]] && ! grep -q 'session.log' "$strip_a" && ! grep -q 'session.log' "$strip_b"; then
+    ok "graded packets carry only the agent change, not the harness session log"
+else
+    notok "packet file set (a=[$packet_paths_a] b=[$packet_paths_b])"
+fi
+
 # --- treatment arm: the staged kit makes the directive's refs real ------------
 # init.sh renders KIT_DIR_REL=".promptkit" whenever the engine sits outside the
 # project and copies nothing itself, so before staging every mandatory

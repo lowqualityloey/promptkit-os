@@ -609,15 +609,18 @@ stage_engine_kit() {
     return 0
 }
 
-# Keep the staged kit out of the clone's index without touching a tracked file:
-# .git/info/exclude is per-clone, so the agent's own `git add -A` cannot pick
-# the kit up and the graded diff stays code-only.
-exclude_kit() {
+# Keep harness-owned files out of the clone's index without touching a tracked
+# file: .git/info/exclude is per-clone, so the agent's own `git add -A` cannot
+# pick them up and the graded diff stays code-only. The staged kit is a harness
+# surface; session.log is the harness's capture of the CLI stream, and letting
+# it into the packet would both pollute the artifact and risk unblinding it
+# with arm-specific output.
+exclude_run_artifacts() {
     local rundir="$1" exclude="$1/.git/info/exclude"
     [[ -d "$rundir/.git/info" ]] || return 1
     [[ -f "$exclude" ]] || : > "$exclude" || return 1
-    grep -qxF '/.promptkit/' "$exclude" 2>/dev/null && return 0
-    echo '/.promptkit/' >> "$exclude"
+    grep -qxF '/.promptkit/' "$exclude" 2>/dev/null || echo '/.promptkit/' >> "$exclude"
+    grep -qxF '/session.log' "$exclude" 2>/dev/null || echo '/session.log' >> "$exclude"
 }
 
 for ((pi = 0; pi < PLAN_COUNT; pi++)); do
@@ -634,12 +637,13 @@ for ((pi = 0; pi < PLAN_COUNT; pi++)); do
     if [[ -n "$setup" ]]; then
         ( cd "$rundir" && bash -c "$setup" ) || bench_error "SETUP_FAILED" "$scenario"
     fi
+    # Both arms get the exclude entries before the session writes its log.
+    exclude_run_artifacts "$rundir" || bench_error "EXCLUDE_FAILED" "$scenario"
     if [[ "$arm" == "promptkit_os" ]]; then
         # The directive init.sh writes names the kit at ./.promptkit, so the
         # surface has to exist before the install renders it.
         stage_engine_kit "$rundir/.promptkit" \
             || bench_error "KIT_STAGE_FAILED" "$scenario"
-        exclude_kit "$rundir" || bench_error "KIT_EXCLUDE_FAILED" "$scenario"
         PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 \
             bash "$INIT" "--$PROFILE" --host=agents "$rundir" \
             > "$OUT/runs/$scenario-init.log" 2>&1 || bench_error "INIT_FAILED" "$scenario"
