@@ -358,9 +358,9 @@ replacements and the 42-session ceiling are unchanged.
 - [x] Isolation preflight guard passes.
 - [x] Driver preregistration passes its tests: seeded task/arm/repeat order,
   the complete pre-session plan, both required seeds, the isolation guard, and
-  cross-arm equality (60/60 in `scripts/tests/run-benchmark-driver-tests.sh`;
+  cross-arm equality (61/61 in `scripts/tests/run-benchmark-driver-tests.sh`;
   the preregistration cases merged as `13f7567`, the cross-arm cases in
-  `66d6d31`).
+  `66d6d31`, and the packet-set case in `c3f13d7`).
 - [ ] Task specs frozen; bundle hash recorded.
 - [x] `--preflight-only` passes; zero spend.
 - [ ] Blind key generated and stored outside the grading workspace.
@@ -507,6 +507,7 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-29 | Ticked §11's seed and host items to match Appendix D, and split "same environment both arms" out into its own open item. | The previous entry ticked Appendix D's seed and host checks but left §11's copies of the same checks unticked, so the execution checklist contradicted the preflight checklist; the host item also bundled a cross-arm equality claim the preflight never tested. | §11 seed and host unticked while Appendix D had both ticked → both ticked in §11 on the same `guard_seed`/`guard_host` evidence, with the untested cross-arm clause promoted to a separate open item worded like Appendix D's. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-30 | Added the driver's cross-arm equality check and ticked its Appendix D box and the matching §11 item. | The box asserted a property of the driver's launch path that no preflight tested; ticking it without a check would have been a reading of the code. | Cross-arm equality unverified → `guard_cross_arm` fails closed on an unbalanced plan, an arm-dependent argv byte, a non-verbatim prompt, or a missing or duplicated parity flag, and records per-task digests in `crossarm.txt`. | Documentation and preflight only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. The re-run spent nothing and reproduced the frozen plan digest, so no result is affected. | Owner (J. Balanay) |
 | 2026-10-30 | Ticked Appendix D's `Verify` check on a good/bad run of all six cards. | The box asserted a property no stored record demonstrated; the cards' probes had only been described as exercised before the slate was written. | Verify good/bad unverified → each card's `Verify` ran against a reference clone (exit 0) and the untouched seed (exit 1) on Node 18.19.1 and 24.22.1, recorded under the verify re-run. | Documentation and local probe runs only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No session has run, so no result is affected. | Owner (J. Balanay) |
+| 2026-10-30 | Ran the blinding audit on a dry-run delivery, ticked its Appendix D box, and fixed the packet defect the audit found. | The box required a dry-run audit no record demonstrated; the audit then found that every packet carried the harness's own `session.log`, because the driver staged the clone with `git add -A`. | Blinding audit unrecorded -> a four-packet delivery built through the driver from a stub CLI scanned clean on 11 surfaces with an 11/11 positive control, and `/session.log` is now excluded in the clone before the session stages it (`c3f13d7`); the same audit fails 5 checks on the parent engine. | Documentation and a zero-spend harness run; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap. No packet had been graded, so no result is affected. The pre-grading audit over the real delivery remains §11's step. | Owner (J. Balanay) |
 
 ## Appendix D — Preflight checklist
 
@@ -535,7 +536,14 @@ both arms before the run; every `Verify` command was exercised on both.
   `VERIFY|probe=0|tests=0` on a reference implementation and exit 1 with
   `VERIFY|probe=1|tests=0` on the untouched seed, each failing on its own probe
   (table under the verify re-run below).
-- [ ] Blinding audit passes on a dry-run packet.
+- [x] Blinding audit passes on a dry-run packet — the §4 scan ran over a
+  delivery the driver itself built from a stub CLI (four packets, two tasks,
+  both arms, zero spend): no hit for `promptkit_os`, `bare`, `BENCH-L`, either
+  absolute root, either scenario id, `AGENTS.md`, `PROMPTKIT.md`, `.promptkit/`,
+  the `docs/` artifact trees, or `session.log`; every packet's changed-file set
+  is the agent's own file, and `key.csv` stayed outside the delivery. A positive
+  control planted one instance of each surface and fired all 11 scanners
+  (`control=11/11`). Record under the blinding-audit re-run below.
 - [ ] Key is outside the grading workspace.
 - [ ] Spend cap and stop rules are recorded.
 
@@ -574,11 +582,13 @@ membership test; `guard_seed` (tracked instruction surfaces, `heyloey`
 references, clean tree); `guard_host` (global instruction surfaces, MCP
 servers, hooks, empty taste, `heyloey` off `PATH`); `guard_cross_arm` (a
 balanced task × arm × repeat plan and one arm-agnostic invocation builder);
-and, from the verify re-run below, each card's `Verify` command on both
-artifacts and both interpreters. The boxes still open are the ones no
-preflight exercises: the blinding audit runs after sessions, the blind key
-does not exist until §11 generates it, and the spend cap is a §9 record rather
-than a host check.
+from the verify re-run below, each card's `Verify` command on both artifacts
+and both interpreters; and, from the blinding-audit re-run below, the §4 scan
+over a dry-run delivery. The boxes still open are the ones no preflight can
+exercise: the blind key does not exist until §11 generates it, and the spend
+cap is a §9 record rather than a host check. The pre-grading audit over the
+real delivery is §11's step, not this checklist's, which is why the audit box
+above is scoped to a dry-run packet.
 
 ### Cross-arm re-run
 
@@ -638,6 +648,65 @@ disposable and are not committed: this table is the record, and the cards'
 probes are the reproduction path. The check proves each `Verify` passes on
 compliant behaviour and fails on the seed's; it does not grade the rubric
 items a human reads, and it says nothing about model-generated artifacts.
+
+### Blinding-audit re-run
+
+§4 requires the scan before grading, and the checklist scopes this box to a
+dry-run packet: no session exists yet, so the audit builds its own delivery and
+scans exactly what a grader receives.
+
+Executed 2026-10-30T00:08:23Z through `benchmarks/run-ab-benchmark.sh` itself,
+with two throwaway cards (one with a `Verify` value, one `None`), both arms, one
+repeat, and a stub `command-code` on `PATH` that answers `--version` and
+`--list-models`, writes a minimal transcript where the CLI writes one, appends
+one line to `src/app.ts`, and stages it with `git add -A` - the same staging
+step that produces a real packet. No model was contacted. The fixture seed
+(`9caafaa`) and the cards are synthetic and exist only for this run; neither is
+the Appendix B seed or the Appendix A slate.
+
+```text
+PREFLIGHT|OK|engine=c3f13d7|seed=9caafaa|model=stub/model-a|cli=stub-1.0.0
+BLIND|B001
+BLIND|B002
+BLIND|B003
+BLIND|B004
+AUDIT|SUMMARY|packets=4|verify=2|key_rows=4|blind_ids=4|delivery_files=6
+BLINDING_AUDIT|OK|packets=4|verify=2|blind_ids=4|leaks=0|control=11/11|key=outside_delivery
+```
+
+The scanned set is exactly the delivery directory: the four `B*.diff` and two
+`B*.verify.txt` copied out of `<out>/grading/`, with `key.csv` and every driver
+file left behind. Scanners, each its own label and each silent: `promptkit_os`,
+`bare` (word-bounded), `BENCH-L`, the absolute run root, the absolute fixture
+root, `AGENTS.md`, `PROMPTKIT.md`, `.promptkit/`,
+`docs/(adrs|reviews|releases|tests)/`, `session.log`, and both scenario ids from
+`key.csv` as literal strings. Structural checks: four packets and two verify
+files for four key rows, four unique `B###` ids, no other file in the delivery,
+no `key.csv`, `manifest.tsv`, `order.tsv`, `env.txt`, `isolation.txt`, or
+`crossarm.txt`, each packet's `diff --git` set equal to `src/app.ts` alone with
+the agent's line present, and `cwd=<rundir>` in each verify packet.
+
+Zero hits is evidence only if the patterns can hit, so the audit also ran a
+positive control: a copy of the delivery with one instance of every scanner's
+target appended to one packet, plus the bare arm's scenario id. All 11 labels
+fired, so the clean result above is a measured silence rather than a matcher
+that never matches.
+
+The same audit against the parent engine, `fce54c7`, fails 5 checks: all four
+packets carried `session.log`, because the driver wrote the session stream into
+the clone and then staged the clone with `git add -A`. On a real session that
+file holds the arm's CLI output inside the blinded artifact. The fix
+(`c3f13d7`) puts `/session.log` in the clone's `.git/info/exclude` beside
+`/.promptkit/`, before the session starts, so the agent's own `git add -A`
+cannot sweep it into the graded diff, and
+`scripts/tests/run-benchmark-driver-tests.sh` pins the resulting packet file set
+(61 cases). No packet had been graded, which is why this audit runs before the
+batch.
+
+Limitations: the stub produces a one-file diff and no tool traffic, so this
+exercises the harness's packet construction and the scan, not a real session's
+content; a model that writes a path naming a canonical surface is caught by the
+same scan only when the pre-grading audit over the real delivery runs (§11).
 
 ### CLI pin
 
