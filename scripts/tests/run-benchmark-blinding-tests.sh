@@ -76,12 +76,13 @@ else
     notok "fixture left behind without --keep"
 fi
 
-# --- --keep leaves an inspectable fixture, key still outside the delivery ---
+# --- --keep leaves an inspectable fixture, key outside delivery and <out> ---
 out="$(bash "$AUDIT" --keep 2>&1)"; rc=$?
 kept="$(printf '%s\n' "$out" | sed -n 's/^AUDIT|KEPT|//p')"
 if [[ $rc -eq 0 && -n "$kept" && -d "$kept" \
-        && ! -e "$kept/delivery/key.csv" && -f "$kept/out/grading/key.csv" ]]; then
-    ok "--keep preserves the fixture with key.csv outside the delivery"
+        && ! -e "$kept/delivery/key.csv" && ! -e "$kept/out/grading/key.csv" \
+        && -f "$kept/keys/audit-key.csv" ]]; then
+    ok "--keep preserves the fixture with the key outside both the delivery and <out>"
 else
     notok "--keep fixture (rc=$rc, kept=${kept:-none})"
 fi

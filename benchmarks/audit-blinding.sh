@@ -31,15 +31,15 @@ Usage: bash benchmarks/audit-blinding.sh [--engine DIR] [--driver PATH] [--keep]
 
 Builds a graded delivery through benchmarks/run-ab-benchmark.sh with a stub
 CLI (no model call, zero spend) and scans exactly what a grader receives:
-the B*.diff and B*.verify.txt copied out of <out>/grading/, with key.csv and
-every driver file left outside.
+the B*.diff and B*.verify.txt copied out of <out>/grading/, with the blind key
+and every driver file left outside.
 
 Scanned surfaces: promptkit_os, bare, BENCH-L, the absolute run and fixture
 roots, AGENTS.md, PROMPTKIT.md, .promptkit/, docs/(adrs|reviews|releases|tests)/,
-session.log, and every scenario id in key.csv. Structural checks cover the
+session.log, and every scenario id in the key. Structural checks cover the
 packet count, verify count, blind-id shape and uniqueness, the delivery file
-set, key.csv's absence, each packet's changed-file set, and the <rundir>
-scrub in each verify packet.
+set, the key's absence from both the delivery and <out>, each packet's
+changed-file set, and the <rundir> scrub in each verify packet.
 
 A positive control plants one instance of every surface in a copy of the
 delivery and requires every scanner to fire, so a clean result is measured
@@ -68,6 +68,10 @@ done
 [[ -f "$DRIVER" ]] || { echo "AUDIT|USAGE|driver not found: $DRIVER"; exit 2; }
 
 TMP="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/phase3b-blind-audit.XXXXXX")"
+# The audit keeps the key where a real batch must: outside <out>.
+mkdir -p "$TMP/keys"
+chmod 700 "$TMP/keys"
+KEY="$TMP/keys/audit-key.csv"
 cleanup() {
     if [[ "$KEEP" -eq 0 ]]; then
         rm -rf "$TMP"
@@ -141,6 +145,7 @@ CARD
 PATH="$BIN:/usr/bin:/bin" HOME="$FAKE_HOME" bash "$DRIVER" \
     --engine "$ENGINE" --seed "$SEED" --tasks "$T1,$T2" --model stub/model-a \
     --out "$OUT" --max-turns 5 --timeout 60 --order-seed 7 --shuffle-seed 7 \
+    --key-out "$KEY" \
     > "$TMP/run.log" 2>&1
 run_rc=$?
 if [[ $run_rc -ne 0 ]]; then
@@ -166,7 +171,7 @@ fail() { printf 'AUDIT|FAIL|%s\n' "$1"; fails=$((fails + 1)); }
 packets=$(find "$DELIV" -maxdepth 1 -type f -name 'B*.diff' | wc -l | tr -d ' ')
 verifies=$(find "$DELIV" -maxdepth 1 -type f -name 'B*.verify.txt' | wc -l | tr -d ' ')
 delivery_files=$(find "$DELIV" -maxdepth 1 -type f | wc -l | tr -d ' ')
-rows=$(($(wc -l < "$OUT/grading/key.csv") - 1))
+rows=$(($(wc -l < "$KEY") - 1))
 : > "$TMP/blinds.txt"
 for f in "$DELIV"/B*.diff; do
     basename "$f" .diff >> "$TMP/blinds.txt"
@@ -188,6 +193,14 @@ extra=$(find "$DELIV" -maxdepth 1 -type f ! -name 'B*.diff' ! -name 'B*.verify.t
 for f in key.csv manifest.tsv order.tsv env.txt isolation.txt crossarm.txt; do
     [[ ! -e "$DELIV/$f" ]] || fail "$f inside delivery"
 done
+# Section 4 stores the key outside the grading workspace; a copy in <out> is
+# the failure mode a delivery-only scan cannot see.
+[[ ! -e "$OUT/grading/key.csv" ]] || fail "key.csv inside <out>/grading"
+[[ "$(sed -n 's/^key_path: //p' "$OUT/key-location.txt" 2>/dev/null)" == "$KEY" ]] \
+    || fail "key-location.txt does not name the external key"
+[[ "$(sha256sum "$KEY" | cut -d' ' -f1)" \
+        == "$(sed -n 's/^key_sha256: //p' "$OUT/key-location.txt" 2>/dev/null)" ]] \
+    || fail "key-location.txt sha256 does not match the key"; 
 
 # --- scanners ---------------------------------------------------------------
 # $1 label, $2 pattern, $3 grep mode (E regex, F literal). SCAN_DIR is global so
@@ -224,7 +237,7 @@ scan_all() {
     while IFS=, read -r blind scenario; do
         [[ "$blind" == "blind" ]] && continue
         [[ -n "${scenario:-}" ]] && check "scenario:$blind" "$scenario" F
-    done < "$OUT/grading/key.csv"
+    done < "$KEY"
 }
 
 # The delivery is exactly what a grader gets; any hit stops the batch.
@@ -265,7 +278,7 @@ while IFS=, read -r blind scenario; do
     [[ -n "${scenario:-}" ]] || continue
     echo "+CONTROL $blind $scenario" >> "$B1"
     EXPECT="$EXPECT scenario:$blind"
-done < "$OUT/grading/key.csv"
+done < "$KEY"
 
 HITS=""
 SCAN_DIR="$CONTROL"
@@ -290,6 +303,6 @@ if [[ "$fails" -ne 0 ]]; then
     printf 'AUDIT|FAILED|%s\n' "$fails"
     exit 1
 fi
-printf 'BLINDING_AUDIT|OK|packets=%s|verify=%s|blind_ids=%s|leaks=0|control=%s/%s|key=outside_delivery\n' \
+printf 'BLINDING_AUDIT|OK|packets=%s|verify=%s|blind_ids=%s|leaks=0|control=%s/%s|key=outside_delivery|key_store=outside_out\n' \
     "$packets" "$verifies" "$uniq_blinds" "$expected" "$expected"
 exit 0

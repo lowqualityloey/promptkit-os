@@ -73,7 +73,12 @@ For every task × arm × repeat:
    arm. The session log never enters a packet either: the run directory is
    staged with `git add -A`, so the driver lists `/session.log` in the clone's
    `.git/info/exclude` before the session starts; the dry-run blinding audit
-   found it in all four packets before that exclusion existed. The grader never
+   found it in all four packets before that exclusion existed. The key is not
+   stored with the packets: a batch requires `--key-out`, which the driver
+   refuses to place inside `<out>`, the seed, or the engine, writes mode `600`,
+   and records in `<out>/key-location.txt` as a path, a SHA-256, and a row count
+   with no mapping row; `--finalize` reads that record and refuses a key whose
+   digest differs. The grader never
    needs the arm-revealing session log for evidence-gated rubric items, and a
    successful-but-silent command still yields gradeable evidence. The scan
    itself is a command: `bash benchmarks/audit-blinding.sh` builds such a
@@ -88,8 +93,8 @@ For every task × arm × repeat:
    means "both passed". The exact shape is in
    `benchmarks/tasks/TEMPLATE-task.md`, and every card in the frozen slate
    follows it.
-   The blind→scenario mapping lives in `grading/key.csv` and is never
-   printed to the terminal; the grader scores `B*.diff` (+ `B*.verify.txt`)
+   The blind→scenario mapping lives in the `--key-out` file, outside `<out>`,
+   and is never printed to the terminal; the grader scores `B*.diff` (+ `B*.verify.txt`)
    against the task's frozen rubric without seeing it, and writes the sheet keyed
    by blind id: `blind_id <TAB> rubric_passed <TAB> rubric_total <TAB>
    accepted`. The mapping is withheld during grading, not secret after
@@ -198,13 +203,16 @@ bash benchmarks/run-ab-benchmark.sh --engine /path/to/promptkit-os \
   --model <model> --out /tmp/bench-batch-1 \
   --order-seed 20261026 --shuffle-seed 20261027 --preflight-only
 
-# Run a batch (spends the plan)
+# Run a batch (spends the plan). --key-out is required and must point outside
+# <out>: the blind key is written there, never beside the packets.
 bash benchmarks/run-ab-benchmark.sh --engine ... --seed ... --tasks a.md,b.md \
   --model <model> --out /tmp/bench-batch-1 \
-  --order-seed 20261026 --shuffle-seed 20261027
+  --order-seed 20261026 --shuffle-seed 20261027 \
+  --key-out ~/.local/state/promptkit/phase3b-keys/batch-1.csv
 
 # After grading B*.diff (+ B*.verify.txt) into grading/grading.tsv
-# (blind_id <TAB> rubric_passed <TAB> rubric_total <TAB> accepted):
+# (blind_id <TAB> rubric_passed <TAB> rubric_total <TAB> accepted). The key is
+# read from <out>/key-location.txt unless --key names it:
 bash benchmarks/run-ab-benchmark.sh --finalize /tmp/bench-batch-1 \
   --grading /tmp/bench-batch-1/grading/grading.tsv
 ```
