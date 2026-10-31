@@ -1,0 +1,110 @@
+diff --git a/src/config.js b/src/config.js
+index f2f9dd6..dc0633d 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -16,6 +16,12 @@ function positiveInt(raw, fallback, name) {
+   return value;
+ }
+ 
++function capacityValue(raw) {
++  if (raw === undefined || raw === '') return 100;
++  if (String(raw).toLowerCase() === 'unbounded') return Number.POSITIVE_INFINITY;
++  return positiveInt(raw, 100, 'QUEUE_CAPACITY');
++}
++
+ export function loadConfig(env = {}) {
+   const port = positiveInt(env.PORT, 8080, 'PORT');
+   if (port > 65535) {
+@@ -27,7 +33,7 @@ export function loadConfig(env = {}) {
+     throw new ConfigError(`LOG_LEVEL must be one of ${LEVELS.join(', ')}, got: ${env.LOG_LEVEL}`);
+   }
+ 
+-  const capacity = positiveInt(env.QUEUE_CAPACITY, 100, 'QUEUE_CAPACITY');
++  const capacity = capacityValue(env.QUEUE_CAPACITY);
+ 
+   return Object.freeze({ port, level, capacity });
+ }
+diff --git a/src/queue.js b/src/queue.js
+index 940e972..1c7a1cb 100644
+--- a/src/queue.js
++++ b/src/queue.js
+@@ -7,7 +7,7 @@ export class QueueFullError extends Error {
+ }
+ 
+ export function createQueue({ capacity = 100 } = {}) {
+-  if (!Number.isInteger(capacity) || capacity < 1) {
++  if (capacity !== Number.POSITIVE_INFINITY && (!Number.isInteger(capacity) || capacity < 1)) {
+     throw new RangeError(`capacity must be a positive integer, got: ${capacity}`);
+   }
+ 
+diff --git a/test/config.test.js b/test/config.test.js
+index 5ec8d49..979ebad 100644
+--- a/test/config.test.js
++++ b/test/config.test.js
+@@ -46,6 +46,29 @@ test('rejects a non-positive capacity', () => {
+   assert.throws(() => loadConfig({ QUEUE_CAPACITY: '0' }), ConfigError);
+ });
+ 
++test('accepts QUEUE_CAPACITY=unbounded case-insensitively as infinite capacity', () => {
++  for (const raw of ['unbounded', 'UNBOUNDED', 'Unbounded', 'unBoUnDeD']) {
++    const config = loadConfig({ QUEUE_CAPACITY: raw });
++    assert.equal(config.capacity, Number.POSITIVE_INFINITY, `QUEUE_CAPACITY=${raw}`);
++    assert.deepEqual(config, {
++      port: 8080,
++      level: 'info',
++      capacity: Number.POSITIVE_INFINITY,
++    });
++  }
++});
++
++test('still rejects capacities that are not positive integers', () => {
++  for (const raw of ['0', '-1', '1.5', 'abc', 'infinite']) {
++    assert.throws(() => loadConfig({ QUEUE_CAPACITY: raw }), ConfigError, `QUEUE_CAPACITY=${raw}`);
++  }
++});
++
++test('defaults an absent or empty QUEUE_CAPACITY to 100', () => {
++  assert.equal(loadConfig({}).capacity, 100);
++  assert.equal(loadConfig({ QUEUE_CAPACITY: '' }).capacity, 100);
++});
++
+ test('returns a frozen configuration object', () => {
+   const config = loadConfig({});
+   assert.ok(Object.isFrozen(config));
+diff --git a/test/queue.test.js b/test/queue.test.js
+index 1c5b0d9..94d2da0 100644
+--- a/test/queue.test.js
++++ b/test/queue.test.js
+@@ -61,3 +61,32 @@ test('rejects a capacity below one', () => {
+   assert.throws(() => createQueue({ capacity: 0 }), RangeError);
+   assert.throws(() => createQueue({ capacity: -5 }), RangeError);
+ });
++
++test('accepts an infinite capacity and never reports full', () => {
++  const queue = createQueue({ capacity: Number.POSITIVE_INFINITY });
++  assert.equal(queue.capacity, Number.POSITIVE_INFINITY);
++  assert.equal(queue.isFull, false);
++
++  for (let i = 0; i < 1000; i += 1) {
++    assert.equal(queue.enqueue(i), i + 1);
++    assert.equal(queue.isFull, false);
++  }
++
++  assert.equal(queue.size, 1000);
++  assert.equal(queue.dequeue(), 0);
++  assert.equal(queue.isFull, false);
++  assert.deepEqual(queue.drain(), Array.from({ length: 999 }, (_, i) => i + 1));
++  assert.equal(queue.size, 0);
++  assert.equal(queue.isFull, false);
++});
++
++test('an infinite capacity queue still dequeues in FIFO order', () => {
++  const queue = createQueue({ capacity: Number.POSITIVE_INFINITY });
++  queue.enqueue('a');
++  queue.enqueue('b');
++
++  assert.equal(queue.dequeue(), 'a');
++  assert.equal(queue.dequeue(), 'b');
++  assert.equal(queue.dequeue(), undefined);
++  assert.equal(queue.size, 0);
++});

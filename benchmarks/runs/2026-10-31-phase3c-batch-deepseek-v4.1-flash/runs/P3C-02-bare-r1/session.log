@@ -1,0 +1,7 @@
+Done. I added `--dry-run` as an accepted spelling that normalizes to the existing internal `DRY_RUN` flag, so both spellings take the exact same dry-run path and print the identical line.
+
+- `src/cli.js` — registers the `dry-run` alias, maps it to `DRY_RUN`, and exposes `deprecationWarnings()` (at most one warning, regardless of repeats or both spellings).
+- `src/app.js` — emits that single warning to the error sink when `--DRY_RUN` appears; `--dry-run` is silent.
+- Tests added for alias parsing, warning-once behavior, and silent new spelling; all 69 unit tests pass.
+
+`specs/backpressure.spec.js` still fails, but that's pre-existing — it imports a `BackpressureError` that `src/app.js` doesn't export, unrelated to this change.

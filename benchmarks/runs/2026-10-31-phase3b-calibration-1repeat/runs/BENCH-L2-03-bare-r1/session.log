@@ -1,0 +1,7 @@
+All 31 tests pass. Changes:
+
+- `src/config.js`: new `capacityValue` maps `QUEUE_CAPACITY` case-insensitively to `"unbounded"` → `Number.POSITIVE_INFINITY`; empty/absent still 100 and `positiveInt` still guards zero, negatives, fractions, and non-numerics.
+- `src/queue.js`: `createQueue` accepts `Infinity` in its capacity validation; since `items.length >= Infinity` is always false, `isFull` stays false and `QueueFullError` never fires.
+- Tests added for both modules covering casing variants, the infallible enqueue path, and unchanged default/rejection behavior.
+
+`src/app.js` untouched, so the ready line now prints `capacity=Infinity` only when that value is configured.

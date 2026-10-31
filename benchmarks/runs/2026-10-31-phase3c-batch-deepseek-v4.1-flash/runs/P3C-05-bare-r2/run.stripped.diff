@@ -1,0 +1,106 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..940105c 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -2,17 +2,33 @@ import { CliError, parseArgs } from './cli.js';
+ import { ConfigError, loadConfig } from './config.js';
+ import { dispatch } from './dispatcher.js';
+ import { createMetrics } from './metrics.js';
+-import { createQueue } from './queue.js';
++import { QueueFullError, createQueue } from './queue.js';
+ import { createStore } from './store.js';
+ 
++export class BackpressureError extends Error {
++  constructor(attempted, cause) {
++    super(`store rejected a batch of ${attempted} job(s)`, { cause });
++    this.name = 'BackpressureError';
++    this.attempted = attempted;
++  }
++}
++
+ // Wires a store, a queue and the counters together. `run` drains the queue,
+ // records each job's outcome, and returns the dispatcher's result.
+ export function createRunner({ store, queue, metrics = createMetrics(), now = () => Date.now(), log = () => {} } = {}) {
+   async function enqueue(ids) {
+-    for (const id of ids) {
+-      store.append({ type: 'enqueue', id, at: now() });
+-      queue.enqueue({ id });
++    const batch = [...ids];
++    if (queue.size + batch.length > queue.capacity) {
++      throw new QueueFullError(queue.capacity);
++    }
++    try {
++      for (const id of batch) {
++        store.append({ type: 'enqueue', id, at: now() });
++      }
++    } catch (error) {
++      throw new BackpressureError(batch.length, error);
+     }
++    queue.enqueueMany(batch.map((id) => ({ id })));
+     return queue.size;
+   }
+ 
+diff --git a/test/integration.test.js b/test/integration.test.js
+index 79921ae..b2db688 100644
+--- a/test/integration.test.js
++++ b/test/integration.test.js
+@@ -3,8 +3,8 @@ import assert from 'node:assert';
+ import { tmpdir } from 'node:os';
+ import { join } from 'node:path';
+ 
+-import { createRunner, main } from '../src/app.js';
+-import { createQueue } from '../src/queue.js';
++import { BackpressureError, createRunner, main } from '../src/app.js';
++import { QueueFullError, createQueue } from '../src/queue.js';
+ import { createStore } from '../src/store.js';
+ 
+ function fakeIo(initial = '') {
+@@ -70,6 +70,48 @@ test('a runner with a non-empty store still runs the jobs it was given', async (
+   assert.deepEqual(ran, ['fresh']);
+ });
+ 
++test('a batch that does not fit the queue is refused without writing or enqueueing', async () => {
++  const { io, store, queue, runner } = runnerOn([]);
++  await runner.enqueue(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
++  const written = io.readFileSync('jobs.jsonl');
++  const size = queue.size;
++
++  await assert.rejects(
++    () => runner.enqueue(['i', 'j', 'k']),
++    (error) => error instanceof QueueFullError && error.capacity === 10,
++  );
++
++  assert.equal(queue.size, size);
++  assert.equal(io.readFileSync('jobs.jsonl'), written);
++  assert.deepEqual(store.readAll().map((record) => record.id), [
++    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
++  ]);
++});
++
++test('a batch the store refuses leaves the queue unchanged', async () => {
++  const written = [];
++  let calls = 0;
++  const store = {
++    append(record) {
++      calls += 1;
++      if (calls > 1) throw new Error('store is unavailable');
++      written.push(record);
++      return record;
++    },
++    readAll: () => written,
++  };
++  const queue = createQueue({ capacity: 10 });
++  const runner = createRunner({ store, queue });
++
++  await assert.rejects(
++    () => runner.enqueue(['a', 'b', 'c']),
++    (error) => error instanceof BackpressureError && error.attempted === 3,
++  );
++
++  assert.equal(queue.size, 0);
++  assert.equal(written.length, 1);
++});
++
+ test('main prints a dry-run line and returns without touching the store', async () => {
+   const out = [];
+   const result = await main(['--DRY_RUN=1', '--PORT=9090'], {}, { out: (line) => out.push(line), err: () => {} });

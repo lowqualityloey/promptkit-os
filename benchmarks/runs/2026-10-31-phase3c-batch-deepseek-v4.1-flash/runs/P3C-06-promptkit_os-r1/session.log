@@ -1,0 +1,8 @@
+All 72 tests pass.
+
+Done. Here's what changed:
+
+- **`src/dispatcher.js`**: `dispatch` now returns `counts: { processed, failed, total }` (integers derived from the result arrays) alongside the unchanged `processed`, `failed`, and `total`.
+- **`src/scheduler.js`**: added an exported `sweep(queue, handler, options)` that drains the queue through `dispatch` and returns `result.counts.total`. It forwards dispatch options, so retries still count as one job.
+- **CLI unchanged**: `app.js` still prints `processed=… failed=… total=…`, and the integration test covering that line passes as-is.
+- **Tests added**: counts for mixed outcomes, empty queue, and retried failures in `test/dispatcher.test.js`; drain/return, failure counting, retry-as-one-job, and empty-queue cases for `sweep` in `test/scheduler.test.js`.

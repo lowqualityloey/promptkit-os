@@ -211,8 +211,8 @@ needed a replacement.
 - [`grading/grading.tsv`](grading/grading.tsv) — the hashed blind-id sheet
 - [`grading/GRADING.md`](grading/GRADING.md) — grading method, item counts, judgement calls
 - [`finalize.log`](finalize.log) — 36 `RUN|` lines and both `BENCH|SUMMARY|` lines
-- `runs/<scenario>/record.json` — §5 record with the graded acceptance
-- `runs/<scenario>/run.diff`, `run.stripped.diff`, `verify.txt`, `session.log` — full and artifact-stripped diffs plus harness evidence
+- `runs/<scenario>-run.diff`, `runs/<scenario>-init.log` — full diff and PromptKit install log (the bare arm has no install log)
+- `runs/<scenario>/record.json`, `run.stripped.diff`, `verify.txt`, `session.log`, `extract.log`, `strip.log` — §5 record with the graded acceptance, artifact-stripped diff, and harness evidence
 
 Not published: the blind key (`~/.local/state/promptkit/phase3b-keys/phase3b-batch-r3.csv`,
 36 rows, mode 600), raw Command Code transcripts, and the run clones. The mapping

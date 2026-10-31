@@ -1,0 +1,6 @@
+Fixed. The counter was being bumped inside the retry loop in `src/dispatcher.js`, so a job with N attempts contributed N to `jobs`.
+
+- `metrics.inc('jobs')` now fires once, right after `queue.dequeue()` — the counters are told the truth by the dispatcher and `metrics.js` is unchanged (still exactly `jobs`, `processed`, `failed`).
+- Added a test in `test/dispatcher.test.js` where two jobs each run three attempts (one succeeds, one fails) and asserts `{ jobs: 2, processed: 1, failed: 1 }`.
+
+`node --test`: 66 passing, 0 failing.

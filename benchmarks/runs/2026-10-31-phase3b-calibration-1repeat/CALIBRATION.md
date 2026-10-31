@@ -30,11 +30,21 @@ discrepancy; the graded batch re-runs the full design.
 ## Records that predate the rename
 
 This directory was written as `2026-10-31-phase3b-deepseek-v4.1-flash` and
-renamed on relabel. `manifest.tsv` and each `record.json` embed absolute paths
-under the old name; their contents are otherwise untouched and the files they
-name moved with the directory. Read those prefixes as this path.
+renamed on relabel. `manifest.tsv` embeds absolute paths under the old name; its
+contents are otherwise untouched and the files it names moved with the
+directory. Read those prefixes as this path. The `record.json` files carry no
+paths and are unaffected by the rename.
 
 The blind key lives outside the repository at
 `/home/heyloey/.local/state/promptkit/phase3b-keys/phase3b-calibration-1repeat.csv`
 (mode 600, sha256 `8b3345e2…`, 12 rows). It was renamed from `phase3b-batch.csv`
 at relabel and is never applied to the graded batch.
+
+## Published packet
+
+`runs/<scenario>/` carries the per-run `record.json`, `run.stripped.diff`,
+`verify.txt`, `session.log`, `extract.log`, and `strip.log`; the full diff and
+install log are at `runs/<scenario>-run.diff` and `runs/<scenario>-init.log`.
+Every `record.json` carries `accepted=false` and no `grading` block because no
+`--finalize` ran. That is the pre-grading default, not a result. The run clones
+and raw transcripts are not published.

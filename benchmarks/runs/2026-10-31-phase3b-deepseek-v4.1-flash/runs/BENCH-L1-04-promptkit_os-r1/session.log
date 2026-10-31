@@ -1,0 +1,3 @@
+Added `--DRY_RUN` support. `parseFlags` now accepts it (normalizing both bare and valued forms to `DRY_RUN: true`), and `main` strips it before `loadConfig`, then on presence validates, prints one `dry-run port=... level=... capacity=...` line, and returns `{ exitCode: 0, config }` without a queue. Invalid config still hits the existing error path (`exitCode: 2`, one err line, no queue), and absent-flag behavior is untouched.
+
+Added three tests (bare, valued, invalid under dry-run) — `node --test` passes 31/31.

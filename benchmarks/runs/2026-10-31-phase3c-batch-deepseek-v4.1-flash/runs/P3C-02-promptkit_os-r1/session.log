@@ -1,0 +1,8 @@
+Done. `--dry-run` is now the accepted spelling and `--DRY_RUN` keeps working.
+
+**Changes:**
+- `src/cli.js`: added a `FLAG_ALIASES` map (`dry-run` → internal `DRY_RUN`) so both spellings populate the same flag, plus a `DEPRECATED_FLAGS` map. `parseArgs` accepts an optional `{ warn }` sink and emits at most one deprecation line after a successful parse, so both spellings together still yield exactly one warning and a failing parse yields none.
+- `src/app.js`: passes `io.err` as the warn sink.
+- `CLI_FLAGS` now lists both `DRY_RUN` and `dry-run`.
+
+Verified: new spelling prints no warning; old spelling prints one line to stderr naming `--dry-run`; both together print one warning and one identical dry-run line; other flags (including their lowercase variants) behave exactly as before. Full suite passes (65/65).

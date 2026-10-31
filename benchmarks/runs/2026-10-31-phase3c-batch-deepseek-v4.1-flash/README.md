@@ -316,6 +316,22 @@ which is why no existing case could catch this. The pre-registered plan, seeds,
 slate and caps were unchanged by the fix — the relaunch reproduced plan
 `b0871816…` exactly.
 
+## Artifacts
+
+- [`env.txt`](env.txt), [`isolation.txt`](isolation.txt), [`crossarm.txt`](crossarm.txt) — CLI, engine/seed SHAs, model, profile, isolation verdicts, cross-arm prompt/argv digests
+- [`PREREGISTRATION.md`](PREREGISTRATION.md), [`order.tsv`](order.tsv), [`manifest.tsv`](manifest.tsv) — seed derivation, the 60-row plan, and scenario/arm/paths
+- [`key-location.txt`](key-location.txt) — key path, SHA-256, row count (no mapping row)
+- `grading/B001`–`B060` — the blind packets (`.diff` + `.verify.txt`)
+- [`grading/grading.tsv`](grading/grading.tsv) — the hashed blind-id sheet
+- `grading/grading.scenario.tsv` — the scenario-keyed cross-check used by finalize (contains the arm mapping; not for a blind grader)
+- [`grading/GRADING.md`](grading/GRADING.md) — grading method, item counts, every rejected item
+- [`finalize.log`](finalize.log) — 60 `RUN|` lines and both `BENCH|SUMMARY|` lines
+- `runs/<scenario>-run.diff`, `runs/<scenario>-init.log` — full diff and PromptKit install log (the bare arm has no install log)
+- `runs/<scenario>/record.json`, `run.stripped.diff`, `verify.txt`, `session.log`, `extract.log`, `strip.log` — §5 record, artifact-stripped diff, and harness evidence. The provider-aborted `P3C-10-bare-r2` has an empty diff and no `strip.log`
+
+Not published: the blind key (`~/.local/state/promptkit/phase3c-keys/phase3c-batch-1.csv`,
+60 rows), raw Command Code transcripts, and the run clones.
+
 ## Limitations
 
 - **Graded by a machine.** Every rubric item was applied to a packet artifact,

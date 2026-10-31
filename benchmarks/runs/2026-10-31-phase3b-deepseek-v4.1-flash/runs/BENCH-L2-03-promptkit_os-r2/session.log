@@ -1,0 +1,1 @@
+Done. `loadConfig` now maps `QUEUE_CAPACITY=unbounded` (any casing) to `Number.POSITIVE_INFINITY`, and `createQueue` accepts that capacity, so `isFull` stays false and `enqueue` never throws while size/enqueue/dequeue/drain are untouched. All other capacity rules are unchanged, and `node --test` passes 33/33.

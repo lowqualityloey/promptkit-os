@@ -1,0 +1,3 @@
+Done. In `src/store.js`, `append` now stamps every new record with `version: 2` (without mutating the caller's object), while `readAll` treats a missing `version` as 1 and throws `StoreError` for anything outside `{1, 2}`. Existing lines are never rewritten.
+
+Added tests in `test/store.test.js` covering v2 writes, a v1-only file reading back as version 1, appending to a v1 file without touching prior bytes, a mixed v1/v2 file, and unknown versions (including a string `"2"`). `node --test` passes: 70/70.

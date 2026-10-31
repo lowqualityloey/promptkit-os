@@ -1,0 +1,3 @@
+Fixed batch intake in `src/app.js`: `enqueue` now preflights `queue.size + batch.length` against capacity before touching the store, throws `QueueFullError` if it won't fit, and otherwise writes all enqueue records then takes the whole batch via atomic `queue.enqueueMany`. I also added `BackpressureError` for store rejections so the existing `specs/backpressure.spec.js` contract passes.
+
+Added the refused-batch test to `test/integration.test.js` — it verifies the store bytes and queue contents are unchanged. `node --test` passes (66/66) and the backpressure spec passes (3/3).

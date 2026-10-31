@@ -1,0 +1,7 @@
+All 34 tests pass. I extended `dispatch` with retry/backoff:
+
+- Validates `maxAttempts` (positive int, default 3) and `baseDelayMs` (non-negative int, default 100) up front, throwing `RangeError` before any dequeue.
+- Attempts each job up to `maxAttempts`, sleeping `baseDelayMs * 2 ** (attempt - 1)` only when another attempt follows (defaults to a real `setTimeout` promise).
+- Every `processed`/`failed` entry now carries `attempts`; each job logs exactly once at its final outcome, and `total` still counts jobs.
+
+Added tests in `test/dispatcher.test.js` for retry-then-succeed, exhaustion with last error, exponential backoff (`[7, 14, 28]`), `maxAttempts: 1` behavior, single final log line, and pre-dequeue validation. No other files touched.

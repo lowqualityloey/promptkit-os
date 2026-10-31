@@ -1,0 +1,3 @@
+Fixed batch intake in `src/app.js`: capacity is now checked before any write, so a batch that can't fit throws `QueueFullError` leaving store and queue untouched. Store failures mid-batch now throw `BackpressureError` (with `attempted`) without touching the queue, and accepted batches write one enqueue record per job then queue all of them.
+
+Added a refused-batch regression test in `test/integration.test.js`. `node --test` passes (66 tests), and `node --test specs/backpressure.spec.js` passes (3 tests).

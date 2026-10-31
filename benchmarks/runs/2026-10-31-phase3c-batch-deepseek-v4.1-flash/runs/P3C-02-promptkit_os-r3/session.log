@@ -1,0 +1,8 @@
+Done. I added `--dry-run` to the accepted flags in `src/cli.js`, and in `src/app.js`:
+
+- The new spelling triggers the identical dry-run line with no warning.
+- The old `--DRY_RUN` works exactly as before and emits one `warning: --DRY_RUN is deprecated; use --dry-run instead` line to the error sink.
+- Passing both emits exactly one warning, and either spelling enables the dry run.
+- `--dry-run` is excluded from config overrides, so all other flags parse unchanged.
+
+Verified end-to-end through `src/bin.js` and with `node --test` (68 passing, including new coverage).

@@ -1,0 +1,42 @@
+verify_exit=0
+ENQUEUEMANY|OK
+✔ starts with defaults and prints one ready line (3.952495ms)
+✔ a flag overrides the environment (0.327225ms)
+✔ the environment applies when no flag is given (0.396264ms)
+✔ an unknown flag exits 2 and names the flag (0.677459ms)
+✔ a bare flag is accepted as the string true and then validated (0.338117ms)
+✔ an invalid value exits 2 (0.257996ms)
+✔ a positional argument is rejected (0.278942ms)
+✔ parseFlags returns the parsed pairs (0.225119ms)
+✔ defaults when the environment is empty (2.46068ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.387767ms)
+✔ accepts LOG_LEVEL case-insensitively (0.238966ms)
+✔ exposes the accepted levels (0.415545ms)
+✔ rejects a PORT that is not a positive integer (1.012495ms)
+✔ rejects a PORT above the port range (0.358554ms)
+✔ rejects an unknown log level and names the accepted set (0.378512ms)
+✔ rejects a non-positive capacity (0.295786ms)
+✔ returns a frozen configuration object (0.751693ms)
+✔ processes every job in order (2.569025ms)
+✔ records a failure without stopping the batch (2.394067ms)
+✔ logs one line per job (0.692518ms)
+✔ returns empty results for an empty queue (0.393768ms)
+✔ dequeues in FIFO order (1.632559ms)
+✔ returns undefined when empty (0.223272ms)
+✔ reports size after enqueue and dequeue (0.207916ms)
+✔ refuses to exceed capacity and names the capacity (0.657614ms)
+✔ reports isFull at the capacity boundary (0.433644ms)
+✔ drain empties the queue and returns the items in order (1.097119ms)
+✔ enqueueMany appends every item in order and returns the new size (0.343828ms)
+✔ enqueueMany throws QueueFullError without partially appending (0.250488ms)
+✔ enqueueMany with an empty array is a no-op (0.295226ms)
+✔ rejects a capacity below one (0.415223ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 31
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 130.698311
+VERIFY|probe=0|tests=0

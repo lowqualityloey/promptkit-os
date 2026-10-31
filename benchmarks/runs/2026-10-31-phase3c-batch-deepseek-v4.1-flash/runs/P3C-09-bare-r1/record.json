@@ -1,0 +1,32 @@
+{
+  "scenario_id": "P3C-09-bare-r1",
+  "condition": "bare",
+  "model": "deepseek/deepseek-v4.1-flash",
+  "timestamp": "2026-10-31T06:47:06.577Z",
+  "metrics": {
+    "tokens_in": 230082,
+    "tokens_out": 4376,
+    "tokens_total": 262673,
+    "cache_read_tokens": 216832,
+    "tool_calls_total": 12,
+    "tool_calls_search": 8,
+    "tool_calls_edit": 2,
+    "tool_calls_verify": 1,
+    "tool_calls_other": 1,
+    "rework_loops": 1,
+    "rework_tokens_in": 26701,
+    "rework_tokens_out": 1514,
+    "wall_clock_seconds": 53,
+    "invariants_checked": 0,
+    "invariants_passed": 0,
+    "human_interventions": 0,
+    "accepted": false
+  },
+  "costs": {
+    "transcript_cost_usd": 0.01
+  },
+  "grading": {
+    "grader": "machine",
+    "human_accepted": false
+  }
+}

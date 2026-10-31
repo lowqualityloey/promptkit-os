@@ -1,0 +1,1 @@
+Added `--DRY_RUN` support in `src/app.js` and two dry-run tests in `test/app.test.js`. Dry runs validate config, emit `dry-run port=... level=... capacity=...`, and return `{ exitCode: 0, config }` without a queue; invalid config still exits 2 with no queue. All 31 tests pass.

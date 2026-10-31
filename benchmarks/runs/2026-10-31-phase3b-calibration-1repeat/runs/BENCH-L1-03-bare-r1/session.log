@@ -1,0 +1,1 @@
+All 30 tests pass. `dispatch` now returns a `counts` object alongside the unchanged `processed`, `failed`, and `total` fields, and I added tests for a mixed batch (2 successes, 1 failure) and the empty queue.

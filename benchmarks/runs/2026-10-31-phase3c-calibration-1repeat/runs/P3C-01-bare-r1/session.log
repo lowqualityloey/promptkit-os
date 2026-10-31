@@ -1,0 +1,1 @@
+Fixed. `jobs` was being incremented inside the retry loop, so I moved it to once per dequeued job in `src/dispatcher.js`. The counter set, snapshot shape, and `recordJob` outcomes are untouched — no filtering or dedupe added. Added two tests in `test/dispatcher.test.js`: a retried success and an exhausted-retries failure, each asserting a single `jobs` count. All 67 tests pass.

@@ -1,0 +1,3 @@
+Intake in `src/app.js` now replays the store first: ids with a `done`/`failed` record are skipped, while an id with only an `enqueue` record is still queued (without writing a duplicate enqueue record). Added an integration test with one finished and one unfinished job that runs the same list twice.
+
+`node --test` passes: 66 tests, 0 failures.

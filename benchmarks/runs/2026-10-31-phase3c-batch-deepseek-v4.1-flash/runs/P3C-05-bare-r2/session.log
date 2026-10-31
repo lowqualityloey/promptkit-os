@@ -1,0 +1,3 @@
+Fixed. `createRunner.enqueue` now checks `queue.size + batch.length > queue.capacity` before any store write, then writes all `enqueue` records and commits the batch atomically with `queue.enqueueMany`. A queue-full batch throws `QueueFullError` with store and queue untouched; a store write failure is wrapped in `BackpressureError` before the queue is touched.
+
+Added tests in `test/integration.test.js` covering both refusals. All 67 `node --test` cases pass, and `specs/backpressure.spec.js` passes too.

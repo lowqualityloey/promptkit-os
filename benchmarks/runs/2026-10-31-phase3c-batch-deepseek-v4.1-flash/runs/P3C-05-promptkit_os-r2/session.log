@@ -1,0 +1,3 @@
+Fixed in `src/app.js`: `enqueue` now checks `queue.size + ids.length > queue.capacity` and throws `QueueFullError` before touching either side, writes all `enqueue` records first, then adds every job with a single atomic `queue.enqueueMany`. A store write failure surfaces as `BackpressureError` without leaving jobs queued.
+
+Tests: added two cases in `test/integration.test.js` — a refused batch leaves the store file uncreated and the queue untouched, and an accepted batch writes exactly one record per job and queues all of them. `node --test` is 67/67, and the frozen `specs/backpressure.spec.js` now passes 3/3 as well.

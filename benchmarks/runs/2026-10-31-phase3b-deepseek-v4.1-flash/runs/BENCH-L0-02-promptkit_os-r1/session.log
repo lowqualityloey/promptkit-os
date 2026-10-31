@@ -1,0 +1,1 @@
+Added `peek()` to the queue object in `src/queue.js` (returns `items[0]`, or `undefined` when empty) and a test in `test/queue.test.js` covering both the non-empty case (including that size and later dequeues are unaffected) and the empty case. `node --test` passes: 29/29.

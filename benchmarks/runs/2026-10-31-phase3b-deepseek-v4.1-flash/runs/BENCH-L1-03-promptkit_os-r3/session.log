@@ -1,0 +1,1 @@
+Done. `dispatch` now returns a `counts` object (`processed`, `failed`, `total`) alongside the unchanged top-level fields, and I added tests for a mixed 2-success/2-failure batch and the empty queue. All 30 tests pass under `node --test`; no other files changed.

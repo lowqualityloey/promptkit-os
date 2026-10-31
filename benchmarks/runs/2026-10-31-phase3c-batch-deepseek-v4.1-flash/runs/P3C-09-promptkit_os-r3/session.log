@@ -1,0 +1,8 @@
+`specs/backpressure.spec.js` passes unmodified (hash still `2cb1e930...d32e9b`), and `node --test` is green at 72/72.
+
+What I changed:
+
+- **`src/app.js`** — batch intake is now two-phase. `enqueue` returns `queue.size` for an empty batch (no store writes), pre-checks capacity so an oversized batch fails before any write, writes every store record while touching nothing else, then commits the whole batch via `queue.enqueueMany`. A store failure mid-batch becomes `BackpressureError` with `attempted = ids.length` (the offered batch, not the records written) and the original error as `cause`; the queue is byte-for-byte untouched. Partial store records remain, as the spec requires (the log is append-only).
+- **`test/app.test.js`** — new tests for mid-batch rejection (first write and later writes), queue left exactly intact including a pre-existing item, `attempted` naming the batch size, retry after recovery, accepted-batch ordering, empty-batch no-op returning current size, and queue-overflow failing before any store write.
+
+The old per-item `store.append` + `queue.enqueue` loop was the bug: it mutated the queue before the write that could fail, leaving partial jobs queued.

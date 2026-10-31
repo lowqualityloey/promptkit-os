@@ -1,0 +1,32 @@
+{
+  "scenario_id": "P3C-10-bare-r2",
+  "condition": "bare",
+  "model": "unknown",
+  "timestamp": "2026-10-31T07:41:32.203Z",
+  "metrics": {
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "tokens_total": 0,
+    "cache_read_tokens": 0,
+    "tool_calls_total": 0,
+    "tool_calls_search": 0,
+    "tool_calls_edit": 0,
+    "tool_calls_verify": 0,
+    "tool_calls_other": 0,
+    "rework_loops": 0,
+    "rework_tokens_in": 0,
+    "rework_tokens_out": 0,
+    "wall_clock_seconds": 61,
+    "invariants_checked": 0,
+    "invariants_passed": 0,
+    "human_interventions": 0,
+    "accepted": false
+  },
+  "costs": {
+    "transcript_cost_usd": 0.00
+  },
+  "grading": {
+    "grader": "machine",
+    "human_accepted": false
+  }
+}

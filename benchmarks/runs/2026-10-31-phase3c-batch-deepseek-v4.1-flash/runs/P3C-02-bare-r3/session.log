@@ -1,0 +1,7 @@
+Done. `--dry-run` is now accepted as an alias for `--DRY_RUN`, both normalize to the same flag, and the old spelling emits exactly one deprecation warning to stderr naming `--dry-run`.
+
+- `src/cli.js`: added the `dry-run` alias mapping to `DRY_RUN`; unknown-flag behavior unchanged.
+- `src/app.js`: detects the old spelling in argv and warns once, regardless of whether both spellings are present.
+- Tests added for alias parsing, warning/no-warning, identical dry-run output, and single warning with both.
+
+`node --test`: 69 passed.

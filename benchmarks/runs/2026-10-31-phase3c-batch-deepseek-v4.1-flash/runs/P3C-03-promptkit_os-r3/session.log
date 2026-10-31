@@ -1,0 +1,5 @@
+Fixed. The `status()` view in `src/app.js` now replays the log per job id: an `enqueue` opens a job as pending, and a `done`/`failed` record closes it, so each job counts in exactly one bucket while still reading from the store.
+
+- Added a regression test in `test/integration.test.js` for a store with one finished (`enqueue` + `done`) and one unfinished (`enqueue` only) job.
+- `node --test`: 66 passed, 0 failed.
+- CLI check on a mixed store prints `pending=1 done=1 failed=0`.

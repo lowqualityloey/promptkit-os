@@ -34,6 +34,19 @@ recorded limitations; the harness itself makes no general performance claim.
   `human_accepted: false`; the human primary grading is still open.
   Pre-registration and decision rule: [`PHASE-3C-DESIGN.md`](PHASE-3C-DESIGN.md).
 
+## Calibration runs (not published batches)
+
+These runs are retained for cost, duration, and packet calibration only. They are
+ungraded, are never aggregated with a batch, and are not evidence about either arm.
+
+- [2026-10-31 Phase 3b calibration](runs/2026-10-31-phase3b-calibration-1repeat/CALIBRATION.md) —
+  12 sessions, one repeat per task × arm, run before the 3b batch was corrected
+  from one repeat to three. Its 12 packets were never graded or unblinded.
+- [2026-10-31 Phase 3c calibration](runs/2026-10-31-phase3c-calibration-1repeat/CALIBRATION.md) —
+  six sessions over three cards × two arms, run to prove the 3c seed, cards, and
+  driver could carry a 60-session batch. Its six packets were never graded or
+  unblinded.
+
 ## Protocol (what the driver enforces)
 
 For every task × arm × repeat:
@@ -146,9 +159,12 @@ packet and is graded `accepted=false` — it never aborts the batch.
 Raw Command Code transcripts record real code and stay on the operator's machine
 (`~/.commandcode/`); they are **never committed**. `benchmarks/runs/<batch>/` publishes
 only: §5 telemetry records (numeric aggregates), full and stripped diffs, run logs, the
-grading sheet, and the manifest. Diffs for tasks against private code are published only
-at the operator's discretion — the driver writes them to the run directory, not to the
-repository, until `--publish` copies a batch into `benchmarks/runs/`.
+grading sheet, and the manifest. The driver writes a batch to its `--out` directory;
+publishing it means committing the packet set the driver produced: each
+`runs/<scenario>/record.json`, `run.stripped.diff`, `verify.txt`, `session.log`,
+`extract.log`, and `strip.log`, plus the batch's full diffs and install logs. The run
+clone itself, including its `.git`, is local scratch and is ignored by Git. Diffs for
+tasks against private code are published only at the operator's discretion.
 
 ## Operator-local by design
 

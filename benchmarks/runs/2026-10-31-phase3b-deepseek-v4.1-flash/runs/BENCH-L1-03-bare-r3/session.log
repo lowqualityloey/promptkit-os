@@ -1,0 +1,1 @@
+All 30 tests pass. `dispatch` now returns `counts: { processed, failed, total }` derived from the array lengths, with `processed`/`failed`/`total` and the log/failure behavior unchanged. Only `src/dispatcher.js` and `test/dispatcher.test.js` were touched.

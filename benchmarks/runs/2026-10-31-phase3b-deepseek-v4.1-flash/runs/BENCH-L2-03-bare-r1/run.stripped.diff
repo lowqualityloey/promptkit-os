@@ -1,0 +1,117 @@
+diff --git a/src/config.js b/src/config.js
+index f2f9dd6..ffe67ab 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -16,6 +16,18 @@ function positiveInt(raw, fallback, name) {
+   return value;
+ }
+ 
++function capacityValue(raw) {
++  if (raw === undefined || raw === '') return 100;
++  if (typeof raw === 'string' && raw.toLowerCase() === 'unbounded') {
++    return Number.POSITIVE_INFINITY;
++  }
++  const value = Number(raw);
++  if (!Number.isInteger(value) || value < 1) {
++    throw new ConfigError(`QUEUE_CAPACITY must be a positive integer, got: ${raw}`);
++  }
++  return value;
++}
++
+ export function loadConfig(env = {}) {
+   const port = positiveInt(env.PORT, 8080, 'PORT');
+   if (port > 65535) {
+@@ -27,7 +39,7 @@ export function loadConfig(env = {}) {
+     throw new ConfigError(`LOG_LEVEL must be one of ${LEVELS.join(', ')}, got: ${env.LOG_LEVEL}`);
+   }
+ 
+-  const capacity = positiveInt(env.QUEUE_CAPACITY, 100, 'QUEUE_CAPACITY');
++  const capacity = capacityValue(env.QUEUE_CAPACITY);
+ 
+   return Object.freeze({ port, level, capacity });
+ }
+diff --git a/src/queue.js b/src/queue.js
+index 940e972..159a16f 100644
+--- a/src/queue.js
++++ b/src/queue.js
+@@ -7,7 +7,8 @@ export class QueueFullError extends Error {
+ }
+ 
+ export function createQueue({ capacity = 100 } = {}) {
+-  if (!Number.isInteger(capacity) || capacity < 1) {
++  const unbounded = capacity === Number.POSITIVE_INFINITY;
++  if (!unbounded && (!Number.isInteger(capacity) || capacity < 1)) {
+     throw new RangeError(`capacity must be a positive integer, got: ${capacity}`);
+   }
+ 
+diff --git a/test/config.test.js b/test/config.test.js
+index 5ec8d49..812a2d7 100644
+--- a/test/config.test.js
++++ b/test/config.test.js
+@@ -46,6 +46,29 @@ test('rejects a non-positive capacity', () => {
+   assert.throws(() => loadConfig({ QUEUE_CAPACITY: '0' }), ConfigError);
+ });
+ 
++test('defaults the capacity when QUEUE_CAPACITY is absent or empty', () => {
++  assert.equal(loadConfig({}).capacity, 100);
++  assert.equal(loadConfig({ QUEUE_CAPACITY: '' }).capacity, 100);
++});
++
++test('accepts an unbounded capacity case-insensitively', () => {
++  for (const raw of ['unbounded', 'UNBOUNDED', 'Unbounded', 'unBounded']) {
++    assert.equal(loadConfig({ QUEUE_CAPACITY: raw }).capacity, Number.POSITIVE_INFINITY, `QUEUE_CAPACITY=${raw}`);
++  }
++});
++
++test('rejects negative, fractional, and non-numeric capacities', () => {
++  for (const raw of ['-1', '1.5', 'abc', 'unboundedx']) {
++    assert.throws(() => loadConfig({ QUEUE_CAPACITY: raw }), ConfigError, `QUEUE_CAPACITY=${raw}`);
++  }
++});
++
++test('keeps a numeric capacity finite', () => {
++  const config = loadConfig({ QUEUE_CAPACITY: '7' });
++  assert.equal(config.capacity, 7);
++  assert.ok(Number.isFinite(config.capacity));
++});
++
+ test('returns a frozen configuration object', () => {
+   const config = loadConfig({});
+   assert.ok(Object.isFrozen(config));
+diff --git a/test/queue.test.js b/test/queue.test.js
+index 1c5b0d9..1af4785 100644
+--- a/test/queue.test.js
++++ b/test/queue.test.js
+@@ -61,3 +61,32 @@ test('rejects a capacity below one', () => {
+   assert.throws(() => createQueue({ capacity: 0 }), RangeError);
+   assert.throws(() => createQueue({ capacity: -5 }), RangeError);
+ });
++
++test('accepts an unbounded capacity and never reports full', () => {
++  const queue = createQueue({ capacity: Number.POSITIVE_INFINITY });
++  assert.equal(queue.capacity, Number.POSITIVE_INFINITY);
++  assert.equal(queue.isFull, false);
++
++  for (let i = 0; i < 500; i += 1) {
++    assert.equal(queue.enqueue(i), i + 1);
++    assert.equal(queue.isFull, false);
++  }
++  assert.equal(queue.size, 500);
++});
++
++test('an unbounded queue dequeues, drains, and keeps FIFO order', () => {
++  const queue = createQueue({ capacity: Number.POSITIVE_INFINITY });
++  for (const item of ['a', 'b', 'c', 'd']) queue.enqueue(item);
++
++  assert.equal(queue.dequeue(), 'a');
++  assert.equal(queue.size, 3);
++  assert.equal(queue.isFull, false);
++  assert.deepEqual(queue.drain(), ['b', 'c', 'd']);
++  assert.equal(queue.size, 0);
++  assert.equal(queue.dequeue(), undefined);
++});
++
++test('still rejects fractional and non-numeric capacities', () => {
++  assert.throws(() => createQueue({ capacity: 1.5 }), RangeError);
++  assert.throws(() => createQueue({ capacity: Number.NaN }), RangeError);
++});

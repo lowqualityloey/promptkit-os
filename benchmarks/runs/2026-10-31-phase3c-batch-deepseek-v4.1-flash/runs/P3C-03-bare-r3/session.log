@@ -1,0 +1,3 @@
+Fixed the status view: `status()` in `src/app.js` now replays records into per-job states, so an `enqueue` only counts as pending when no `done`/`failed` record closes it. Each job lands in exactly one bucket (`done` wins if a malformed store holds both), and counts still come straight from `store.readAll()`.
+
+Added `status counts a finished job as done and an unfinished job as pending` to `test/integration.test.js`; all 66 tests pass.

@@ -1,0 +1,1 @@
+Done. The dispatcher now computes `Math.min(baseDelayMs * 2 ** (attempt - 1), jitterCapMs)` before a single `jitter()` draw per wait, so retries stay reproducible and bounded. Added a capped-schedule test (delays `[50, 75, 75]`, 3 draws, all ≤ cap); all 66 tests pass.

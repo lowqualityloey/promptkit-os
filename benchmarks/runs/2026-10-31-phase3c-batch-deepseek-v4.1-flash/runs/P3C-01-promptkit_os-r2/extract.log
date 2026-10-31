@@ -1,0 +1,3 @@
+EXTRACT|NOTE|accepted defaulted to false — pass --accepted=true only after human acceptance
+EXTRACT|OK|session=c70489e8-512b-4e67-a7c6-9658591cb09e|model=deepseek/deepseek-v4.1-flash|tokens_in=233987|tokens_out=3118|rework_loops=2|tool_calls=29|wall_clock_seconds=40
+EXTRACT|OK|session=c70489e8-512b-4e67-a7c6-9658591cb09e|model=deepseek/deepseek-v4.1-flash|tokens_in=233987|tokens_out=3118|rework_loops=2|tool_calls=29|wall_clock_seconds=40

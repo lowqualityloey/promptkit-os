@@ -1,0 +1,44 @@
+verify_exit=0
+RETRY|OK
+✔ starts with defaults and prints one ready line (8.705718ms)
+✔ a flag overrides the environment (0.410271ms)
+✔ the environment applies when no flag is given (0.297181ms)
+✔ an unknown flag exits 2 and names the flag (0.430833ms)
+✔ a bare flag is accepted as the string true and then validated (0.302199ms)
+✔ an invalid value exits 2 (0.233747ms)
+✔ a positional argument is rejected (0.290959ms)
+✔ parseFlags returns the parsed pairs (0.302271ms)
+✔ defaults when the environment is empty (2.151424ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.528357ms)
+✔ accepts LOG_LEVEL case-insensitively (0.338216ms)
+✔ exposes the accepted levels (0.371132ms)
+✔ rejects a PORT that is not a positive integer (1.084132ms)
+✔ rejects a PORT above the port range (0.411413ms)
+✔ rejects an unknown log level and names the accepted set (0.43065ms)
+✔ rejects a non-positive capacity (0.323681ms)
+✔ returns a frozen configuration object (0.630175ms)
+✔ processes every job in order (4.945137ms)
+✔ records a failure without stopping the batch (302.503424ms)
+✔ logs one line per job (303.30706ms)
+✔ returns empty results for an empty queue (0.475962ms)
+✔ retries a failing job and records it once in processed (0.515045ms)
+✔ records an exhausted job once in failed with its last error (0.571696ms)
+✔ backs off exponentially from baseDelayMs between attempts (0.432081ms)
+✔ maxAttempts of 1 never retries or sleeps (0.243776ms)
+✔ rejects invalid retry options before dequeuing (0.949128ms)
+✔ dequeues in FIFO order (1.408844ms)
+✔ returns undefined when empty (0.290868ms)
+✔ reports size after enqueue and dequeue (0.460751ms)
+✔ refuses to exceed capacity and names the capacity (1.020351ms)
+✔ reports isFull at the capacity boundary (0.416563ms)
+✔ drain empties the queue and returns the items in order (1.645528ms)
+✔ rejects a capacity below one (0.40056ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 724.861339
+VERIFY|probe=0|tests=0

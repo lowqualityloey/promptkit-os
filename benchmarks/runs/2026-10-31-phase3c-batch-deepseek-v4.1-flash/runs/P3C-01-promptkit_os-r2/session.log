@@ -1,0 +1,5 @@
+All 66 tests pass, including the new retry test.
+
+Fixed it at the increment site: `src/dispatcher.js` now calls `metrics.inc('jobs')` once per dequeued job, outside the attempt loop. A retried job therefore counts once, `processed`/`failed` still count final outcomes, and `metrics.js` keeps exactly `jobs`, `processed`, `failed` — no filter, set, or dedupe added.
+
+Added `test/dispatcher.test.js` — "counts a retried job once, however many attempts it takes" — which drives a job through two failures to success and asserts `{ jobs: 1, processed: 1, failed: 0 }`.

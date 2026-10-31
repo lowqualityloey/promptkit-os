@@ -1,0 +1,1 @@
+All 66 tests pass. I fixed the backoff in `src/dispatcher.js` to `Math.floor(jitter() * Math.min(baseDelayMs * 2 ** (attempts - 1), jitterCapMs))`, drawing the injected random source exactly once per wait. Added a capped-schedule test (`maxAttempts: 4`, base 100, cap 250, jitter 0.5) asserting `[50, 100, 125]` and that no delay exceeds the cap.

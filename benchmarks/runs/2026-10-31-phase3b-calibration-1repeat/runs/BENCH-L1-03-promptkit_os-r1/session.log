@@ -1,0 +1,1 @@
+Done. `dispatch` now returns `counts: { processed, failed, total }` alongside the unchanged `processed`, `failed`, and `total` fields (log lines and failure handling untouched), and I added a mixed success/failure test plus an empty-queue counts test. All 30 tests pass.

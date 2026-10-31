@@ -1,0 +1,6 @@
+Done. `src/app.js` changes:
+
+- Added exported `BackpressureError` with `attempted` set to the batch length (and the store failure as `cause`).
+- `enqueue` now snapshots the batch, returns `queue.size` for an empty batch without touching the store, refuses a too-large batch before any write, stages every `enqueue` record first, and only then calls `queue.enqueueMany` — so a mid-batch store failure leaves the queue untouched.
+
+Added `test/backpressure.test.js` covering mid-batch rejection with pre-existing queue contents, rejection on the first write, the wrapped cause, pre-write capacity refusal, and empty batches. `specs/backpressure.spec.js` still hashes to `2cb1e930…d32e9b`; spec 3/3 and `node --test` 70/70 pass.

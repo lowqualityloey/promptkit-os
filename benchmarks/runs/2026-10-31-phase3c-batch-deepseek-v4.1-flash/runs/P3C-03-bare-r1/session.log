@@ -1,0 +1,3 @@
+Fixed. `status()` now replays the store per job id: `done`/`failed` close a job, and only an `enqueue` with no close remains pending, so each job lands in exactly one bucket while counts still come from `store.readAll()`.
+
+Added tests covering a store with one finished + one unfinished job (1 pending / 1 done) and a failed job staying out of pending. `node --test`: 67 passed.

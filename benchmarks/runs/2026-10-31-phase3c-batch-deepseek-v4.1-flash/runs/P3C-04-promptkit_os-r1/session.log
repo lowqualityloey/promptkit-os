@@ -1,0 +1,3 @@
+Fixed intake in `src/app.js`: it now replays the store, skips ids that have a `done` or `failed` record, accepts ids with only an `enqueue` record (unfinished) without duplicating the enqueue record, and keeps a per-runner guard so the same id isn't queued twice.
+
+Added a test in `test/integration.test.js` with a store holding one finished and one unfinished job: the unfinished job dispatches once across two list runs, exactly one finish record is appended, and the finished job's records are untouched. All 66 `node --test` tests pass, and a real two-run CLI check confirms `processed=2` then `processed=0` with no duplicate records.

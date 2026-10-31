@@ -1,0 +1,1 @@
+Done. `drain()` now uses `items.splice(0)` — one operation that removes and returns all remaining items — so it's O(n) instead of O(n²). Order is preserved, the queue ends empty, and an empty queue returns `[]`. Added a test draining 100,000 items in order and verified all 66 tests pass.

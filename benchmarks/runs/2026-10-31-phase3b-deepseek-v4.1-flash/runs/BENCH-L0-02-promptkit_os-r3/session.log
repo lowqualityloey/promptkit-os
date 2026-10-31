@@ -1,0 +1,1 @@
+Done — added `peek()` to `createQueue` in `src/queue.js` (returns `items[0]`, `undefined` when empty) and two tests in `test/queue.test.js` covering the head-without-removal case and the empty case. All 30 tests pass with `node --test`; no other files touched.

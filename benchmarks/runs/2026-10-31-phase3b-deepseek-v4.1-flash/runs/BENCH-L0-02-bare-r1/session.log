@@ -1,0 +1,1 @@
+Added `peek()` to `createQueue` — it returns `items[0]` without mutating the queue, or `undefined` when empty. Added two tests in `test/queue.test.js` covering both cases (head item without removal, and empty queue). All 30 tests pass.

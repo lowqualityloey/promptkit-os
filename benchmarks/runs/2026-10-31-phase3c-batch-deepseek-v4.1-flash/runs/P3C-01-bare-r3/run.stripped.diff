@@ -1,0 +1,53 @@
+diff --git a/src/dispatcher.js b/src/dispatcher.js
+index 46ef44a..9f22dcd 100644
+--- a/src/dispatcher.js
++++ b/src/dispatcher.js
+@@ -27,6 +27,7 @@ export async function dispatch(
+   while (queue.size > 0) {
+     const job = queue.dequeue();
+     const id = job && job.id !== undefined ? job.id : 'job';
++    if (metrics) metrics.inc('jobs');
+     let attempts = 0;
+     let lastError;
+     let result;
+@@ -34,7 +35,6 @@ export async function dispatch(
+ 
+     while (attempts < maxAttempts) {
+       attempts += 1;
+-      if (metrics) metrics.inc('jobs');
+       try {
+         result = await handler(job);
+         ok = true;
+diff --git a/test/dispatcher.test.js b/test/dispatcher.test.js
+index 1452e38..be81a4d 100644
+--- a/test/dispatcher.test.js
++++ b/test/dispatcher.test.js
+@@ -131,6 +131,28 @@ test('counts one job per job when nothing is retried', async () => {
+   assert.deepEqual(metrics.snapshot(), { jobs: 2, processed: 2, failed: 0 });
+ });
+ 
++test('counts a retried job once, by its final outcome', async () => {
++  const queue = queueWith('flaky', 'doomed');
++  const metrics = createMetrics();
++  let calls = 0;
++
++  await dispatch(
++    queue,
++    async (job) => {
++      if (job.id === 'doomed') throw new Error('nope');
++      calls += 1;
++      if (calls < 2) throw new Error('transient');
++      return 'ok';
++    },
++    { metrics, sleep: async () => {} },
++  );
++
++  assert.equal(calls, 2);
++  const snapshot = metrics.snapshot();
++  assert.deepEqual(snapshot, { jobs: 2, processed: 1, failed: 1 });
++  assert.deepEqual(Object.keys(snapshot).sort(), ['failed', 'jobs', 'processed']);
++});
++
+ test('returns an empty result for an empty queue', async () => {
+   const result = await dispatch(createQueue(), async () => 'ok');
+   assert.deepEqual(result.processed, []);

@@ -1,0 +1,7 @@
+Done. The fix is in `src/app.js`: batch intake now writes every `enqueue` record to the store first, and only once all of them land does it append to the queue via the atomic `enqueueMany`. A store rejection at any point is wrapped in a new `BackpressureError` carrying `attempted` = batch length, leaving the queue untouched (including any jobs already in it). Empty batches return `queue.size` without touching the store or `now()`, and a batch that can't fit is refused before any store write.
+
+Results:
+- `node --test specs/backpressure.spec.js`: 3/3 pass
+- `node --test`: 70/70 pass
+- `specs/backpressure.spec.js` untouched (sha256 unchanged, absent from `git diff`)
+- Added 5 regression tests in `test/integration.test.js`: mid-batch rejection with a pre-populated queue, late reject with a 4-job batch, accepted batch ordering, empty-batch return value, and capacity refusal leaving the store unwritten.

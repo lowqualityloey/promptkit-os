@@ -1,0 +1,3 @@
+Moved `metrics.inc('jobs')` out of the retry loop in `src/dispatcher.js` so it fires once per dequeued job, with `processed`/`failed` still recorded once at final outcome. `metrics.js` is untouched, so the counter set and snapshots remain exactly `jobs`, `processed`, `failed`.
+
+Added two tests in `test/dispatcher.test.js`: a job that succeeds on its third attempt counts as `{ jobs: 1, processed: 1, failed: 0 }`, and one that exhausts retries counts as `{ jobs: 1, processed: 0, failed: 1 }`. All 67 tests pass.

@@ -1,0 +1,1 @@
+Done. `drain()` now uses a single `splice(0)`, so it lifts the remaining items out in one operation instead of shifting each one — O(n) rather than O(n²) — preserving FIFO order and leaving the queue empty (empty queue returns `[]`). Enqueue, dequeue, and peek are untouched, and all 67 tests pass, including the new large-queue drain test.

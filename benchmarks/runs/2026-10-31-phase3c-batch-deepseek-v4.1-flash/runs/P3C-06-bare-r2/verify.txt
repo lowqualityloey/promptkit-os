@@ -1,0 +1,90 @@
+verify_exit=1
+file://<rundir>/[eval1]:1
+import { dispatch } from './src/dispatcher.js'; import { createQueue } from './src/queue.js'; import { createScheduler } from './src/scheduler.js'; const q = createQueue({ capacity: 3 }); q.enqueue({ id: 'a' }); q.enqueue({ id: 'b' }); const r = await dispatch(q, async () => 'ok', { sleep: async () => {} }); if (r.total !== 2) throw new Error('total ' + r.total); if (!r.counts || r.counts.total !== 2 || r.counts.processed !== 2 || r.counts.failed !== 0) throw new Error('counts ' + JSON.stringify(r.counts)); if (!Number.isInteger(r.counts.total) || !Number.isInteger(r.counts.processed) || !Number.isInteger(r.counts.failed)) throw new Error('counts are not integers'); const scheduler = createScheduler({ now: () => 0 }); const q2 = createQueue({ capacity: 3 }); q2.enqueue({ id: 'x' }); const swept = await scheduler.sweep(q2, async () => 'ok'); if (swept !== 1) throw new Error('sweep returned ' + swept); const q3 = createQueue({ capacity: 3 }); q3.enqueue({ id: 'y' }); q3.enqueue({ id: 'z' }); const swept2 = await scheduler.sweep(q3, async () => { throw new Error('nope'); }, { maxAttempts: 1 }); if (swept2 !== 2) throw new Error('sweep counted ' + swept2 + ' for two failing jobs'); console.log('COUNTS|OK');
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ^
+
+TypeError: scheduler.sweep is not a function
+    at file://<rundir>/[eval1]:1:825
+
+Node.js v24.22.1
+✔ defaults to the run command with no flags (3.403519ms)
+✔ parses values, bare flags and a job list (0.848378ms)
+✔ rejects an unknown flag by name (3.157936ms)
+✔ rejects an empty flag name and a non-string argument (0.498943ms)
+✔ rejects a positional argument that is not a command (0.47104ms)
+✔ exposes the command and flag names (0.467958ms)
+✔ defaults when the environment is empty (1.61338ms)
+✔ reads PORT, LOG_LEVEL, QUEUE_CAPACITY, JITTER_CAP_MS and STORE_PATH (2.483806ms)
+✔ accepts LOG_LEVEL case-insensitively (0.415517ms)
+✔ exposes the accepted levels (1.331788ms)
+✔ rejects a PORT that is not a positive integer, and one above the range (1.626ms)
+✔ rejects an unknown log level and names the accepted set (0.341759ms)
+✔ rejects a non-positive capacity and a non-positive jitter cap (0.361325ms)
+✔ returns a frozen configuration object (0.379629ms)
+✔ processes every job in order and records one attempt each (3.773291ms)
+✔ records a failure with its last error and attempt count (0.728384ms)
+✔ retries a failing job and records it once when it succeeds (0.758648ms)
+✔ waits between attempts and not before the first or after the last (1.082622ms)
+✔ maxAttempts of 1 makes a single attempt without sleeping (0.555207ms)
+✔ writes exactly one log line per job, at its final outcome (0.837299ms)
+✔ counts one job per job when nothing is retried (1.285162ms)
+✔ returns an empty result for an empty queue (0.606298ms)
+✔ reports integer counts that match the outcome arrays (0.772919ms)
+✔ counts jobs rather than attempts when a job is retried (2.797272ms)
+✔ counts are zero for an empty queue (0.581458ms)
+✔ falls back to a placeholder id when a job carries none (0.402997ms)
+✔ a run records a done record for every job that succeeded (3.592544ms)
+✔ a run records a failed record with the job id (55.52711ms)
+✔ status reports the number of finished jobs (1.203778ms)
+✔ a runner with a non-empty store still runs the jobs it was given (1.822425ms)
+✔ main prints a dry-run line and returns without touching the store (1.105911ms)
+✔ main runs a job list and reports the totals (1.471099ms)
+✔ main exits 2 and reports the reason for a bad flag or config (0.776591ms)
+✔ starts at zero (4.428346ms)
+✔ increments a counter and reports its new value (0.5337ms)
+✔ refuses an unknown counter and a non-integer increment (4.164368ms)
+✔ records a job outcome and refuses anything else (0.727693ms)
+✔ exposes the counter names (0.466727ms)
+✔ a snapshot is frozen and a copy, and reset clears the counters (0.344641ms)
+✔ dequeues in FIFO order and reports size (6.310034ms)
+✔ returns undefined when empty (0.282642ms)
+✔ refuses to exceed capacity and names the capacity (0.701242ms)
+✔ reports isFull at the capacity boundary (0.266359ms)
+✔ rejects a capacity below one and a fractional capacity (0.452917ms)
+✔ accepts an unbounded capacity and never reports full (0.455539ms)
+✔ enqueueMany appends in order and returns the new size (1.537461ms)
+✔ enqueueMany is atomic when the batch does not fit (0.29283ms)
+✔ enqueueMany with an empty batch is a no-op (0.670588ms)
+✔ peek returns the head without consuming it (0.753293ms)
+✔ drain empties the queue and returns the items in order (0.401146ms)
+✔ loads every js file and keys plugins by name (5.102912ms)
+✔ fails closed on a plugin without a name or a run function (1.477453ms)
+✔ refuses a duplicate plugin name (0.529227ms)
+✔ ignores files that are not js and wraps a listing failure (0.606668ms)
+✔ requires a directory (0.49559ms)
+✔ reports what is due at the current time (3.706839ms)
+✔ orders entries by due time regardless of insertion order (0.629187ms)
+✔ tick runs the due jobs in order, removes them, and reports how many ran (0.539495ms)
+✔ size tracks what is scheduled (0.298735ms)
+✔ refuses a runAt that is not a finite number (0.546281ms)
+✔ sweep drains the queue through the handler and reports how many jobs ran (0.536162ms)
+✔ sweep reports zero for an empty queue (0.255761ms)
+✔ sweep counts jobs rather than attempts when a job is retried (0.434852ms)
+✔ sweep passes the dispatch options through (0.473953ms)
+✔ appends one JSON line per record (3.405711ms)
+✔ creates the parent directory when it is missing (0.466457ms)
+✔ reads an absent store as empty (0.292711ms)
+✔ reads records back in order (0.347844ms)
+✔ fails closed on a line that is not JSON (0.669217ms)
+✔ fails closed on a record without a type (0.238168ms)
+✔ wraps a failing write in a StoreError (0.315968ms)
+✔ refuses a non-object record and an empty path (0.239349ms)
+ℹ tests 72
+ℹ suites 0
+ℹ pass 72
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 234.918432
+VERIFY|probe=1|tests=0

@@ -1,0 +1,3 @@
+Done. `QUEUE_CAPACITY` now compares case-insensitively against `unbounded` and yields `Number.POSITIVE_INFINITY`, while all other validation is untouched. `createQueue` accepts positive infinity, so `isFull` stays false and `enqueue` never throws `QueueFullError`; negative infinity still raises `RangeError`.
+
+Added unbounded tests to both test files, and `node --test` passes 34/34. Only the four requested files were modified.

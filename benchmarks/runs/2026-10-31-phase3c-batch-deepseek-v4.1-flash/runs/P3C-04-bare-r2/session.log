@@ -1,0 +1,1 @@
+All 66 tests pass. Intake now replays the store's records: ids with a `done` or `failed` record are skipped entirely, while an id with only an `enqueue` record is queued without opening a duplicate record, so repeat runs dispatch it once and append a single closing record.

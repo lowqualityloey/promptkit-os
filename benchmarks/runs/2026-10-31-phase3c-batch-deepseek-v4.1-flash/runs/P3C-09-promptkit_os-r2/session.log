@@ -1,0 +1,7 @@
+Done. `specs/backpressure.spec.js` is untouched (zero diff) and all 3 spec tests plus the full 69-test suite pass.
+
+What changed:
+- `src/app.js`: added exported `BackpressureError` (carrying `attempted`), and rewrote `enqueue` to be store-first and atomic — it preflights queue capacity, appends the whole batch before touching the queue, and wraps any store failure in `BackpressureError(ids.length, { cause })`. Empty batches return `queue.size` immediately; accepted batches use `queue.enqueueMany`.
+- `test/integration.test.js`: added four tests covering mid-batch rejection (queue untouched, `attempted` correct), rejection with pre-existing queued jobs, accepted-batch ordering, and the empty-batch no-op.
+
+The queue is only mutated after every store append succeeds, so a rejected write leaves it exactly as it was while the append-only log keeps the records already written.

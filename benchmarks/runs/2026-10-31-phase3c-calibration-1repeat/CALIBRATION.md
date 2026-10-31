@@ -85,6 +85,15 @@ tool's observed output (`P3C-08` → `p3-c-08`, `AbC9dE` → `ab-c9d-e`,
 end-to-end and requires its transcript to resolve under `p3-c-08`. Harness:
 75 passed, 0 failed.
 
+## Published packet
+
+`runs/<scenario>/` carries the per-run `record.json`, `run.stripped.diff`,
+`verify.txt`, `session.log`, `extract.log`, and `strip.log`; the full diff and
+install log are at `runs/<scenario>-run.diff` and `runs/<scenario>-init.log`.
+Every `record.json` carries `accepted=false` and no `grading` block because no
+`--finalize` ran. That is the pre-grading default, not a result. The run clones
+and raw transcripts are not published.
+
 ## What this does not establish
 
 - Anything about either arm. Six ungraded sessions cannot measure quality, and

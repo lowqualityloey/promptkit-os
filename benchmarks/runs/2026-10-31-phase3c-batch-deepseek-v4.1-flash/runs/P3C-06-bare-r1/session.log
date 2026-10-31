@@ -1,0 +1,6 @@
+All 70 tests pass.
+
+- `src/dispatcher.js`: `dispatch` now returns `counts: { processed, failed, total }` (integers) alongside the existing `processed`/`failed` arrays and `total` number.
+- `src/scheduler.js`: exported `sweep(queue, handler, options)` that drains through `dispatch` and returns `result.counts.total`.
+- CLI summary in `src/app.js` is untouched, so it prints `processed=… failed=… total=…` exactly as before.
+- Added dispatcher tests for counts (empty, mixed outcomes, retried job) and scheduler tests for sweep (drain/return, option pass-through with failures, empty queue).

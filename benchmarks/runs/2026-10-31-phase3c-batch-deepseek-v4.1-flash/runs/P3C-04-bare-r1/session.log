@@ -1,0 +1,3 @@
+Done. Intake now replays the store before accepting each batch: job ids closed by a `done` or `failed` record are skipped, ids with only an `enqueue` record stay eligible, and an id already waiting in the queue is added once. After a drain, the queued marker is cleared so outcomes are recorded exactly once.
+
+Added `intake skips a finished job and dispatches an unfinished one once` to `test/integration.test.js`, covering a store with one finished and one unfinished job plus a repeated intake/run cycle. All 66 tests pass via `node --test`.

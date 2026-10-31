@@ -1,0 +1,3 @@
+Done. `drain` now uses `items.splice(0, items.length)` — one operation that returns the remaining items in FIFO order and empties the queue in place, so the cost is linear in the number of items returned instead of quadratic. Empty drains return `[]`, and `enqueue`/`dequeue`/`peek` are untouched.
+
+Added two tests: one for the empty-queue case and one that drains 20,000 items and verifies order, size zero, and a follow-up empty drain. All 67 tests pass.

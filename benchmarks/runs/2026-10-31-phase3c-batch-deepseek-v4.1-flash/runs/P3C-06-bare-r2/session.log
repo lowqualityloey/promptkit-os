@@ -1,0 +1,6 @@
+Done. The changes:
+
+- `src/dispatcher.js`: `dispatch` now also returns `counts: { processed, failed, total }` — integer job counts that mirror the existing `processed`/`failed`/`total` fields, which are unchanged.
+- `src/scheduler.js`: added exported `sweep(queue, handler, options)` that drains the queue via `dispatch` and returns `result.counts.total`.
+- CLI summary untouched; it still prints `processed=… failed=… total=…`.
+- Added tests for counts (outcome mix, retry-single-count, empty queue) and sweep (drains/returns count, empty queue, retry counts one, options pass-through). `node --test` passes 72/72.

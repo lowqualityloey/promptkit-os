@@ -1,0 +1,4 @@
+All 69 tests pass. Here's what I changed:
+
+- `src/store.js`: `append` stamps every new record with `version: 2`; `readAll` treats a missing version as generation 1 (reading it back as `version: 1`) and throws `StoreError` for any version not in `{1, 2}`. Reads never write, so existing lines stay untouched.
+- `test/store.test.js`: added coverage for a v1 file, a mixed v1/v2 file (asserting bytes unchanged), an unknown version, and the v2 write stamp.

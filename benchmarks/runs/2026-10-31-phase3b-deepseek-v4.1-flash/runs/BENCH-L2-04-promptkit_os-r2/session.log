@@ -1,0 +1,1 @@
+Done. I added `enqueueMany` in `src/queue.js` that pre-checks `items.length + newItems.length > capacity` before pushing, so overflow throws `QueueFullError` atomically with no partial append, and an empty batch returns the current size. Added success, overflow, and empty-case tests to `test/queue.test.js`; all 31 tests pass.

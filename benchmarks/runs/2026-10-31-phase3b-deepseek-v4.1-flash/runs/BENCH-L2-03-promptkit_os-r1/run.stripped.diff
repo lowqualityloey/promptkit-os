@@ -1,0 +1,99 @@
+diff --git a/src/config.js b/src/config.js
+index f2f9dd6..38cac8e 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -27,7 +27,11 @@ export function loadConfig(env = {}) {
+     throw new ConfigError(`LOG_LEVEL must be one of ${LEVELS.join(', ')}, got: ${env.LOG_LEVEL}`);
+   }
+ 
+-  const capacity = positiveInt(env.QUEUE_CAPACITY, 100, 'QUEUE_CAPACITY');
++  const rawCapacity = env.QUEUE_CAPACITY;
++  const capacity =
++    typeof rawCapacity === 'string' && rawCapacity.toLowerCase() === 'unbounded'
++      ? Number.POSITIVE_INFINITY
++      : positiveInt(rawCapacity, 100, 'QUEUE_CAPACITY');
+ 
+   return Object.freeze({ port, level, capacity });
+ }
+diff --git a/src/queue.js b/src/queue.js
+index 940e972..fe45ce8 100644
+--- a/src/queue.js
++++ b/src/queue.js
+@@ -7,8 +7,8 @@ export class QueueFullError extends Error {
+ }
+ 
+ export function createQueue({ capacity = 100 } = {}) {
+-  if (!Number.isInteger(capacity) || capacity < 1) {
+-    throw new RangeError(`capacity must be a positive integer, got: ${capacity}`);
++  if (capacity !== Number.POSITIVE_INFINITY && (!Number.isInteger(capacity) || capacity < 1)) {
++    throw new RangeError(`capacity must be a positive integer or Infinity, got: ${capacity}`);
+   }
+ 
+   const items = [];
+diff --git a/test/config.test.js b/test/config.test.js
+index 5ec8d49..73a2f8f 100644
+--- a/test/config.test.js
++++ b/test/config.test.js
+@@ -46,6 +46,23 @@ test('rejects a non-positive capacity', () => {
+   assert.throws(() => loadConfig({ QUEUE_CAPACITY: '0' }), ConfigError);
+ });
+ 
++test('accepts unbounded capacity case-insensitively', () => {
++  for (const raw of ['unbounded', 'UNBOUNDED', 'Unbounded', 'uNbOuNdEd']) {
++    const config = loadConfig({ QUEUE_CAPACITY: raw });
++    assert.equal(config.capacity, Number.POSITIVE_INFINITY, `QUEUE_CAPACITY=${raw}`);
++  }
++});
++
++test('defaults capacity to 100 when QUEUE_CAPACITY is empty', () => {
++  assert.equal(loadConfig({ QUEUE_CAPACITY: '' }).capacity, 100);
++});
++
++test('rejects fractional and non-numeric capacities', () => {
++  for (const raw of ['-1', '1.5', 'abc', 'infinity']) {
++    assert.throws(() => loadConfig({ QUEUE_CAPACITY: raw }), ConfigError, `QUEUE_CAPACITY=${raw}`);
++  }
++});
++
+ test('returns a frozen configuration object', () => {
+   const config = loadConfig({});
+   assert.ok(Object.isFrozen(config));
+diff --git a/test/queue.test.js b/test/queue.test.js
+index 1c5b0d9..53ee6ad 100644
+--- a/test/queue.test.js
++++ b/test/queue.test.js
+@@ -61,3 +61,34 @@ test('rejects a capacity below one', () => {
+   assert.throws(() => createQueue({ capacity: 0 }), RangeError);
+   assert.throws(() => createQueue({ capacity: -5 }), RangeError);
+ });
++
++test('accepts an unbounded capacity and never reports full', () => {
++  const queue = createQueue({ capacity: Number.POSITIVE_INFINITY });
++  assert.equal(queue.capacity, Number.POSITIVE_INFINITY);
++  assert.equal(queue.isFull, false);
++
++  for (let i = 0; i < 1000; i += 1) {
++    assert.equal(queue.isFull, false);
++    assert.equal(queue.enqueue(i), i + 1);
++    assert.equal(queue.isFull, false);
++  }
++
++  assert.equal(queue.size, 1000);
++  assert.equal(queue.dequeue(), 0);
++  assert.equal(queue.size, 999);
++  assert.equal(queue.isFull, false);
++});
++
++test('drains an unbounded queue in order', () => {
++  const queue = createQueue({ capacity: Number.POSITIVE_INFINITY });
++  queue.enqueue('a');
++  queue.enqueue('b');
++
++  assert.equal(queue.isFull, false);
++  assert.deepEqual(queue.drain(), ['a', 'b']);
++  assert.equal(queue.size, 0);
++});
++
++test('rejects a negative infinite capacity', () => {
++  assert.throws(() => createQueue({ capacity: Number.NEGATIVE_INFINITY }), RangeError);
++});
