@@ -139,7 +139,126 @@ rejected runs score `INF (REJECTED)` and drop out of the median, so the arm that
 fails more often has its most expensive runs removed from its own median. The
 token ratio keeps every run and does not have that problem; per-task CPAC ratios
 in this batch are not like-for-like, and `BENCH|SUMMARY` reports `cpac_n=22` and
-`cpac_n=26` for that reason.
+`cpac_n=26` for that reason. The interval and sensitivity section below measures
+that effect: 0.980 accepted-only against 1.135 when every artifact run is kept.
+
+## Interval and sensitivity (descriptive)
+
+§8 asks for a task-cluster interval and four sensitivity cuts; this section adds
+them to the machine-graded sheet, plus two exploratory additions (an
+acceptance-difference interval and an all-artifact CPAC cut). They are
+descriptive, not significance tests, and they do not settle the decision rule.
+
+Each card is one cluster. The cost intervals resample the ten task ratios with
+replacement 10,000 times and take the 2.5th and 97.5th percentiles of the
+resampled medians; the CPAC accepted-only interval uses the nine cards where both
+arms have an accepted run. The acceptance interval resamples the ten cards and
+pools the repeats per arm within each draw; the complete-case cut drops the
+aborted bare run from the denominator for that arm. Seeds are the first four
+bytes, big-endian, of SHA-256 over a fixed metric tag and the batch label
+(`phase3c-task-cluster-bootstrap|2026-10-31-phase3c-batch-deepseek-v4.1-flash`
+and `phase3c-acceptance-bootstrap|2026-10-31-phase3c-batch-deepseek-v4.1-flash`):
+`2135913078` for the cost ratios and `125716171` for acceptance, so they were
+derived rather than chosen after the ratios were seen. Percentiles use linear
+interpolation. No new tool or dependency was added.
+
+### Cost ratios
+
+| Statistic | Clusters | Median | Mean | 95% interval |
+|---|---:|---:|---:|---:|
+| Token ratio, ITT | 10 | 1.115 | 1.179 | 0.912 to 1.457 |
+| Token ratio, complete-case | 10 | 1.115 | 1.164 | 0.912 to 1.383 |
+| Token ratio, cache reads excluded | 10 | 1.206 | 1.214 | 0.945 to 1.510 |
+| CPAC ratio, accepted runs only (harness) | 9 | 0.980 | 1.049 | 0.829 to 1.309 |
+| CPAC ratio, all artifact runs (exploratory) | 10 | 1.135 | 1.154 | 0.917 to 1.357 |
+
+Every interval includes 1.0 and the 1.05 cost bar, so none of these cuts resolves
+the cost direction at this sample size; the point medians are what the rule uses,
+and the interval is descriptive.
+
+### Acceptance difference (exploratory interval)
+
+| Statistic | Clusters | Point | 95% interval |
+|---|---:|---:|---:|
+| Acceptance difference, ITT | 10 | +13.3 points | +3.3 to +23.3 |
+| Acceptance difference, complete-case | 10 | +10.8 points | +0.7 to +20.9 |
+
+### Per-task inputs
+
+These are the ten (or nine) ratios the intervals resample. `n/a` means at least
+one arm had no accepted run, so the harness CPAC is `INF` and no ratio exists;
+`P3C-06` is therefore excluded from the nine-cluster accepted-only CPAC
+interval. The all-artifact column keeps every packet that produced a diff,
+including rejected packets, and always excludes the provider-aborted cell
+because it produced no artifact and no measurable work.
+
+| Card | Level | Token ratio (ITT) | Token ratio (cache excluded) | CPAC ratio (accepted) | CPAC ratio (all artifacts, exploratory) |
+|---|---:|---:|---:|---:|---:|
+| P3C-01 | L1 | 0.912 | 1.170 | 0.920 | 0.920 |
+| P3C-02 | L1 | 0.824 | 0.945 | 0.829 | 0.829 |
+| P3C-03 | L1 | 1.318 | 1.242 | 1.280 | 1.280 |
+| P3C-04 | L2 | 1.702 | 1.512 | 1.160 | 1.619 |
+| P3C-05 | L2 | 1.375 | 1.822 | 1.309 | 1.357 |
+| P3C-06 | L2 | 1.090 | 0.913 | n/a | 1.129 |
+| P3C-07 | L3 | 0.992 | 1.510 | 0.980 | 0.980 |
+| P3C-08 | L3 | 0.841 | 0.747 | 0.853 | 0.853 |
+| P3C-09 | L3 | 1.139 | 0.991 | 0.682 | 1.141 |
+| P3C-10 | L3 | 1.596 | 1.293 | 1.430 | 1.430 |
+
+### What the cuts show
+
+- **Cache reads move the token result.** 14,059,520 of 16,510,136 tokens (85.2%)
+  are cache reads. Excluding them (`tokens_total - cache_read_tokens`, so
+  rework-loop tokens stay in) raises the median task ratio from 1.115 to 1.206
+  and shifts the interval from 0.912–1.457 to 0.945–1.510. The direction is
+  unchanged, but the size is not cache-neutral; the pre-registered token ratio
+  keeps the §2 convention (cache reads included), and this cut shows the
+  convention matters.
+- **The CPAC figure is selection-sensitive.** The harness scores rejected runs
+  `INF`; the accepted-only median is 0.980 over nine cards. Keeping the modeled
+  cost of every artifact run (rejected packets included, the aborted cell
+  excluded) raises it to 1.135 over ten cards. That is the selection effect the
+  earlier note named, now measured: the arm that fails more often has more of its
+  expensive runs removed. The 1.135 figure is a sensitivity, not the
+  pre-registered CPAC, and it does not replace the 0.980 used in the rule.
+- **The aborted cell changes the tail, not the point.** Excluding
+  `P3C-10-bare-r2` leaves the token median at 1.115 and narrows the upper bound
+  from 1.457 to 1.383. Acceptance moves from 22/30 (73.3%) to 22/29 (75.9%), so
+  the gap falls from 13.3 to 10.8 points. The missing-cell bounds are 10.0 to
+  13.3 points: 22/30 if a replacement would have been rejected, 23/30 if it
+  would have been accepted. No session timed out; the only missing artifact is
+  this provider abort, so the artifact-graded cut is the aborted-cell exclusion.
+  No replacement was run, under §6.
+- **Acceptance has the widest interval.** The task-cluster interval for the
+  13.3-point ITT difference is +3.3 to +23.3 points; complete-case it is +0.7 to
+  +20.9. The point estimate clears the 5-point bar in both cuts, but the interval
+  includes values below it, so the margin is not stable across task clusters.
+  With ten clusters that is expected, and it is why the interval is descriptive.
+- **Actual cost is coarse but points the same way as tokens.** The reported
+  `transcript_cost_usd` totals are $0.26 for `bare` and $0.29 for
+  `promptkit_os` ($0.55 total), a 1.115 aggregate ratio. The field is rounded to
+  two decimals, so the per-run median is $0.01 for both arms and only the
+  aggregate is stable; it agrees in direction with the token ratio and the
+  all-artifact CPAC, not with the accepted-only CPAC.
+
+Per level, the L2 block carries the acceptance gap; the token medians are not the
+sum-based rollup in the table above, because the rollup weights by tokens and the
+median treats each card equally:
+
+| Level | Cards | Accepted, `bare` | Accepted, `promptkit_os` | Token ratio, median of cards | CPAC ratio, median of cards |
+|---|---:|---:|---:|---:|---:|
+| L1 | 3 | 9/9 (100.0%) | 9/9 (100.0%) | 0.912 | 0.920 |
+| L2 | 3 | 4/9 (44.4%) | 7/9 (77.8%) | 1.375 | 1.234 (n=2) |
+| L3 | 4 | 9/12 (75.0%) | 10/12 (83.3%) | 1.066 | 0.917 |
+
+The interval is descriptive and does not enter the rule, but the CPAC sensitivity
+shows the fork is also a choice of population. Under the harness CPAC (rejected
+runs `INF`) the **both ratios** reading is still **Inconclusive**; under the
+all-artifact sensitivity both ratios are above 1.05, so that reading would be
+**Tradeoff**, and the **either ratio** reading is **Tradeoff** on both cuts. The
+CPAC population therefore has to be named before the next pre-registration. No
+decision is claimed, because the primary endpoint still requires the human
+grader §7 names.
 
 ## Blinding of the delivery
 
@@ -203,6 +322,10 @@ slate and caps were unchanged by the fix — the relaunch reproduced plan
   but the grader is the coding agent that ran the batch, so this is a secondary
   check and not independent acceptance. The human primary grading and the second
   grader sample are both outstanding.
+- **The interval and sensitivity were computed after the batch.** The method was
+  pre-registered in §8, but the bootstrap seeds were derived from the batch label
+  rather than frozen before the run; the intervals are descriptive and do not
+  change the pre-registered rule or substitute for human acceptance.
 - One model, one host, one **synthetic** repository. This is not evidence about
   real consumer codebases.
 - One of 60 sessions is an infrastructure loss and is counted, not replaced.
