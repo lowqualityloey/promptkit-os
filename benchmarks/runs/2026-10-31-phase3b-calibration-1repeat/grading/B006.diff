@@ -1,0 +1,74 @@
+diff --git a/src/queue.js b/src/queue.js
+index 940e972..6272b0b 100644
+--- a/src/queue.js
++++ b/src/queue.js
+@@ -26,6 +26,11 @@ export function createQueue({ capacity = 100 } = {}) {
+       items.push(item);
+       return items.length;
+     },
++    enqueueMany(incoming) {
++      if (items.length + incoming.length > capacity) throw new QueueFullError(capacity);
++      for (const item of incoming) items.push(item);
++      return items.length;
++    },
+     dequeue() {
+       return items.length === 0 ? undefined : items.shift();
+     },
+diff --git a/test/queue.test.js b/test/queue.test.js
+index 1c5b0d9..75c37c9 100644
+--- a/test/queue.test.js
++++ b/test/queue.test.js
+@@ -39,6 +39,53 @@ test('refuses to exceed capacity and names the capacity', () => {
+   assert.equal(queue.size, 1);
+ });
+ 
++test('enqueueMany appends every item in order and returns the new size', () => {
++  const queue = createQueue({ capacity: 5 });
++  queue.enqueue('a');
++
++  assert.equal(queue.enqueueMany(['b', 'c']), 3);
++  assert.equal(queue.size, 3);
++  assert.deepEqual(queue.drain(), ['a', 'b', 'c']);
++});
++
++test('enqueueMany fills the queue exactly to capacity', () => {
++  const queue = createQueue({ capacity: 2 });
++
++  assert.equal(queue.enqueueMany(['a', 'b']), 2);
++  assert.equal(queue.isFull, true);
++});
++
++test('enqueueMany throws QueueFullError and appends nothing when the batch does not fit', () => {
++  const queue = createQueue({ capacity: 3 });
++  queue.enqueue('head');
++  queue.enqueue('second');
++
++  assert.throws(
++    () => queue.enqueueMany(['x', 'y']),
++    (error) => error instanceof QueueFullError && error.capacity === 3,
++  );
++  assert.equal(queue.size, 2);
++  assert.deepEqual(queue.drain(), ['head', 'second']);
++});
++
++test('enqueueMany throws when a full queue receives a non-empty batch', () => {
++  const queue = createQueue({ capacity: 1 });
++  queue.enqueue('only');
++
++  assert.throws(() => queue.enqueueMany(['overflow']), QueueFullError);
++  assert.equal(queue.size, 1);
++  assert.equal(queue.dequeue(), 'only');
++});
++
++test('enqueueMany with an empty array is a no-op that returns the current size', () => {
++  const queue = createQueue({ capacity: 2 });
++  queue.enqueue('a');
++
++  assert.equal(queue.enqueueMany([]), 1);
++  assert.equal(queue.size, 1);
++  assert.equal(queue.dequeue(), 'a');
++});
++
+ test('reports isFull at the capacity boundary', () => {
+   const queue = createQueue({ capacity: 2 });
+   assert.equal(queue.isFull, false);

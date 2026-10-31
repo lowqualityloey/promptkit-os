@@ -1,14 +1,17 @@
 # Phase 3b — Confirmatory A/B Protocol
 
-- **Status**: FROZEN and signed 2026-10-28, approved 2026-10-31, not run.
-  Appendix B's parameters are pinned to `f6a58f0`; the batch stages `b23159d`,
-  the merged HEAD that carries the required `--key-out` driver, by the
-  2026-10-31 Appendix C row that supersedes the `76e7594` decision. All four
-  Approval items are ticked, so the
-  batch is authorized up to §9's cap (42 sessions / 24 hours / $25 actual
-  `transcript_cost_usd`). Appendix D is complete and the blind key's path is
-  reserved outside the grading workspace; §11's five remaining items are all
-  batch-time. No session has run.
+- **Status**: FROZEN and signed 2026-10-28, approved 2026-10-31, run but not
+  graded. Appendix B's parameters are pinned to `f6a58f0`; the batch ran
+  `84f9747`, three commits past the `b23159d` decision with no file changed on
+  the surface `stage_engine_kit` copies, by the 2026-10-31 Appendix C row. The
+  pre-registered plan is the three-repeat plan (36 rows, `e3727d97…`), and its 36
+  primary sessions completed on 2026-10-31 with zero session failures, 4,959,454
+  `tokens_total`, 833 s of session wall clock, and $0.10 actual
+  `transcript_cost_usd` against §9's 54-session / 24-hour / $25 cap. The 12
+  sessions that ran at one repeat are a calibration run, never graded or
+  unblinded (Appendix D). The blind key is outside the grading workspace (36
+  rows, `de6dcc04…`) and the delivery is 36 packets, `B001`–`B036`. What remains
+  is grading and the report.
 - **Date drafted**: 2026-10-26 (document structure approved that day)
 - **Owner**: repository owner
 - **Supersedes for decisions**: the Phase 3 pilot (`n=6`); the pilot remains
@@ -77,7 +80,8 @@ A paired, randomized block design:
 ### 2.1 Why six tasks, not the original 8–12
 
 Six tasks is the minimum confirmatory subset that doubles the pilot's task
-coverage, triples its repeats, and adds an L3 cell within a 42-session hard cap.
+coverage, triples its repeats, and adds an L3 cell within the 54-session hard
+cap §9 records.
 It is **not** the full 8–12-task Phase 3. If the owner wants the full sample,
 the task slate and cap must be expanded **before** the protocol is frozen; do
 not add tasks after unblinding.
@@ -104,7 +108,7 @@ so.
   cannot truncate the pre-registration. Duplicate `Task ID`s are rejected
   before any session. Alternating would mean A-B, B-A, A-B across the three
   repeats; the driver uses the seeded shuffle instead. A second counterbalanced
-  block would double the sessions and does not fit the 42-session cap; it is
+  block would double the sessions and does not fit the 54-session cap; it is
   not used here.
 - Randomize blind ids across every run in the batch (36, or 30 under
   `Phase 3b-L1L2`), not per task or per arm, seeded from `--shuffle-seed`. The
@@ -300,7 +304,7 @@ includes 1.25; or quality is mixed; or more than two protocol deviations
 occurred; or more than 20% of primary runs are missing. Report the interval and
 counts.
 
-**Stop rules**: 42 sessions, 24 wall-clock hours, or $25 actual
+**Stop rules**: 54 sessions, 24 wall-clock hours, or $25 actual
 `transcript_cost_usd`, whichever comes first. Six infrastructure failures also
 stop the batch. No extension without a new protocol.
 
@@ -324,7 +328,7 @@ stop the batch. No extension without a new protocol.
 |---|---:|
 | Primary sessions | 36 (six tasks) / 30 (`Phase 3b-L1L2`) |
 | Infrastructure replacements | 6 |
-| Total CLI sessions | **42** |
+| Total CLI sessions | **54** |
 | Wall-clock | **24 hours** |
 | Per-session timeout | **1,800 seconds** |
 | Max turns | 40 |
@@ -336,7 +340,9 @@ was surprising.
 
 The primary-session count follows the slate: six tasks give 36, the five-task
 `Phase 3b-L1L2` design gives 30, and either way the 6 infrastructure
-replacements and the 42-session ceiling are unchanged.
+replacements and the 54-session ceiling are unchanged. The ceiling counts the
+12 one-repeat calibration sessions that ran on 2026-10-31: 12 + 36 + 6
+replacements = 54, which is why it is no longer the freeze-time 42.
 
 ## 10. Preregistration and change control
 
@@ -355,7 +361,7 @@ replacements and the 42-session ceiling are unchanged.
 
 - [x] Owner approves task slate, thresholds, and spend cap — Approval items 1–3,
   ticked 2026-10-31: the slate is Appendix A, the thresholds are §7's 1.25/1.50
-  cost ratios and 2-repeat / 1-of-15 quality rules, and the cap is §9's 42
+  cost ratios and 2-repeat / 1-of-15 quality rules, and the cap is §9's 54
   sessions / 24 hours / $25.
 - [x] Neutral seed built; instruction surfaces removed; seed SHA recorded
   (`16b3cf74c809c23dd48466da2212bd3e67a530ed`, rebuilt by the seed builder and
@@ -389,11 +395,30 @@ replacements and the 42-session ceiling are unchanged.
   repository). The mapping rows are written when the last session ends: the
   shuffle runs over the sessions the batch executed, so a pre-batch copy would
   be invalidated by any replacement run.
-- [ ] Batch runs within cap; all operational failures logged.
-- [ ] Blinding audit passes; grading sheet written and hashed before
-  unblinding.
-- [ ] Independent grader completes; second grader samples ≥50%.
-- [ ] Finalize, analyze, and write the report with the decision.
+- [x] Batch runs within cap; all operational failures logged — 36 primary
+  sessions on 2026-10-31 (18 per arm, 3 per cell), zero session failures, the
+  12 calibration sessions, and two infrastructure failures (the expired
+  credential and the relative-`--out` launch) recorded in Appendix C/D; 48 of
+  §9's 54 sessions used.
+- [ ] Blinding audit passes. (The real delivery was scanned directly — see
+  the batch-run record — but `audit-blinding.sh` was not run in its own form,
+  because its `\bbare\b` surface matches the seed's own test name.)
+- [x] Grading sheet written and hashed before unblinding — 2026-10-31,
+  `grading/grading.tsv`, 36 rows, 210 of 210 items passed, all 36 runs
+  accepted, sheet sha256
+  `6e2962a66a448846973d4bc6fb537245dfff2772699d005d14e22883b1c4a85a`, recorded
+  in `grading/GRADING.md` before `--finalize` opened the key. **The grader was
+  the coding agent, not a human**, so under §4 this is a secondary consistency
+  check and not independent acceptance.
+- [ ] Independent human primary grading completes; second grader samples ≥50%.
+- [x] Finalize and analysis run against that sheet (`finalize.log`: 36 of 36
+  accepted, L1+ median ratios 1.075 tokens / 1.115 CPAC). Measurement only —
+  it is not the report the decision rests on.
+- [ ] Report with the decision, written against the human primary sheet. A report
+  exists — `benchmarks/runs/2026-10-31-phase3b-deepseek-v4.1-flash/README.md` —
+  and records the outcome as **Inconclusive** under §7.3 (the L1+ token interval
+  includes 1.25, and more than two deviations occurred). It is not ticked here
+  because it is written against the machine sheet, not a human one.
 - [ ] Only then: Phase 4 or a “no decision” closeout.
 
 ## 12. What Phase 3b does not establish
@@ -477,7 +502,9 @@ Slate notes:
 - Task/arm order seed: `20261027`
 - Price inputs: $3.00/$15.00/$0.05; cache-read reported only
 - Thresholds: quality 1-run aggregate / 2-repeat task loss; cost 1.25/1.50
-- Spend cap: 42 sessions / 24 hours / $25 actual-cost guardrail
+- Spend cap: 54 sessions / 24 hours / $25 actual-cost guardrail (42 at the
+  freeze; raised by the 2026-10-31 Appendix C row to cover the 12 calibration
+  sessions)
 
 Bundle recipe: the digest above is `sha256sum` of the six lines
 `<task-id> TAB <sha256 of that card>`, in Appendix A slot order:
@@ -543,8 +570,11 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-31 | Ticked Approval items 1–3 (task slate, §7 thresholds, §9 cap) and rewrote the four passages that still described them as open, plus Appendix D's stale open-boxes sentence. | The three items were the only written gate on execution, and the slate, thresholds, and cap they approve had been complete since the freeze. Ticking the checkboxes alone would have left the Status header, Appendix B's signature bullet, §11's first item, and the closing gate note asserting the opposite of the boxes directly above them — the drift every earlier reconciliation row in this table was written to repair. Appendix D's open-boxes paragraph had also still listed the spend cap as open after that box was ticked on 2026-10-30. | Items 1–3 unticked and four passages saying so, with a fifth stale about the spend cap → all four items ticked, the slate/thresholds/cap approved 2026-10-31 on a dated line separate from the 2026-10-28 freeze signature, the four passages rewritten to the approved state, and Appendix D's paragraph reduced to the one box a preflight cannot exercise. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and no session has run. The approval authorizes spend up to §9's 42 sessions / 24 hours / $25 and nothing beyond it; it does not authorize a change to the protocol after the first session (§10). §11 stood at 8 of 14 ticked with 6 open — 5 of those post-batch by construction and 1 the then-open key location; Appendix D stood at 9 of 10 with that same box open. | Owner (J. Balanay), 2026-10-31 |
 | 2026-10-31 | Required `--key-out` for a batch, refused a key path inside `<out>`, the seed, or the engine, reserved an external key store, and ticked §11's and Appendix D's key-location items. | The box was open because the driver wrote `grading/key.csv` into the directory holding the `B*.diff` packets the operator is told to grade without reading the key: that is one `cat` from unblinding, not "outside the grading workspace". Ticking it on the strength of the audit's `key=outside_delivery` label would have been a reading — the audit only proved the key was outside the copied delivery, not outside the workspace a grader works in. | Key beside the packets → the key is written to `--key-out` (mode 600), `<out>/grading/key.csv` is absent by construction, `<out>/key-location.txt` records the path, SHA-256, and row count with no mapping row, `--finalize` reads that record and refuses a digest mismatch (`KEY_HASH_MISMATCH`), and the audit fails on a key in `<out>/grading/` or a record that names another path or digest (`key_store=outside_out`). Harnesses: driver 61 → 66 cases, blinding audit 12 cases, both green. | Change to the instrument only — `benchmarks/run-ab-benchmark.sh`, `benchmarks/audit-blinding.sh`, and two test harnesses. No change to Appendix A, the Appendix B parameter values, the task cards, the seed, the thresholds, or the cap, and no session has run. The staged treatment-arm surface (`init.sh`, `workflows/`, `protocols/`, `templates/`, `scripts/`) is unchanged, so the measured engine is untouched. §11 stands at 9 of 14 ticked with 5 open, all post-batch by construction; Appendix D is 10 of 10. | Owner (J. Balanay), 2026-10-31 |
 | 2026-10-31 | Re-ran `--preflight-only` at `b23159d` — the merged HEAD that carries the required `--key-out` driver — and recorded that the batch runs it instead of `76e7594`. | The `76e7594` decision predates #714, which moved HEAD; a worktree at `76e7594` predates `--key-out` and so cannot run the key-location rule §11 now requires. The difference therefore has to be logged before the first session rather than discovered by `env.txt`. | Decision named `76e7594` -> preflight at `b23159d` reproduces the frozen plan digest `6ac712a9…` at 12 rows with `engine=b23159d`, `seed=16b3cf7`, `cli=1.88.0`, `CROSSARM\|OK`, and `ISOLATION\|OK`. | No change to Appendix A, the Appendix B parameter values, the task cards (bundle `c82822c8…` recomputes), the seed, the thresholds, or the cap. `git diff --name-only 76e7594..b23159d` restricted to the surface `stage_engine_kit` copies is empty, so the measured engine is identical; the re-run spent nothing. No session has run, so no result is affected. | Owner (J. Balanay), 2026-10-31 |
-
 | 2026-10-31 | Fixed the taste-stability check to read both sides through one helper, and recorded that the first batch attempt aborted on an expired CLI credential. | The first session died with `TASTE_CHANGED`: the two reads used different fallbacks (`none` and `none2`) on a host whose documented state is taste absent, so every session would have failed the same way before grading. The underlying auth error was separate — the stored key was created 2026-10-08 and is no longer accepted (`Authentication failed` in the operator's own `HOME` too), which `--list-models` cannot detect because it still answers. | Attempt 1: `ORDER\|RUN\|1` then `BENCH\|ERROR\|TASTE_CHANGED`, zero spend, no packet, no `RUNDONE` -> `taste_digest()` returns `absent` for both reads while a taste file created or edited mid-session still fails, with a regression case (driver suite 66 -> 67), and the attempt's artifacts moved out of the repo to the local state store. | Instrument change only, `taste_digest()` and its test; no change to Appendix A, the Appendix B parameter values, the task cards, the seed, the thresholds, or the cap. The failed attempt produced no packet and spent nothing, so no result is affected, and it counts as the first of the six permitted infrastructure failures. The batch cannot run again until `command-code login` refreshes the credential. | Owner (J. Balanay), 2026-10-31 |
+| 2026-10-31 | Corrected the pre-registered plan from the one-repeat plan to the three-repeat plan §2 specifies, and relabelled the 12 sessions that ran at one repeat as a calibration run. | `--repeats` defaults to `1`, and every preflight in Appendix D ran at that default, so the "frozen" 12-row digest was the one-repeat plan rather than the design's. §2 and §9 both specify three repeats = 36 cells. The batch that ran reproduced the recorded plan exactly, so nothing flagged the mismatch; left unrecorded it would have graded one repeat per cell as if it were three. | Plan `6ac712a9…` at 12 rows → the three-repeat plan `e3727d97…` at 36 rows, recomputed by a zero-spend preflight at `84f9747` (`cells=36`, `cli=1.88.0`); the 12 sessions are retained at `benchmarks/runs/2026-10-31-phase3b-calibration-1repeat`, never graded or unblinded, and are not part of the confirmatory sample. | No change to Appendix A, the Appendix B parameter values, the task cards (bundle `c82822c8…` recomputes), the seed, the thresholds, or the design: the correction makes the recorded plan match the design rather than altering it. The calibration run spent $0.03 actual `transcript_cost_usd` and produced 24 blind packets, none of which enter the analysis. | Owner (J. Balanay), 2026-10-31 |
+| 2026-10-31 | Raised §9's total CLI session cap from 42 to 54. | 36 primary sessions, 6 replacements, and the 12 calibration sessions that already ran exceed 42, so the ceiling would have been breached before the first graded session. | Cap `42` → `54` CLI sessions (12 calibration + 36 primary + 6 replacements), with the 24 hours, $25 actual `transcript_cost_usd`, 1,800 s per session, and 40 turns unchanged. | Cap text only: §9's table, §2.1, §2.2, §7's stop rules, §11, Appendix B's summary line, the Approval item, and the closing gate note. No change to the slate, the parameters, the cards, the seed, the thresholds, or the 36-session primary design. | Owner (J. Balanay), 2026-10-31 |
+| 2026-10-31 | Recorded that the batch stages `84f9747` instead of `b23159d`. | The repository moved three commits after the `b23159d` decision (`72cf21b`, `7d269ad`, `84f9747`), all in this protocol, the driver, and `scripts/tests/`. A pin naming a commit no session runs would make `env.txt` disagree with the protocol. | Decision `b23159d` → `84f9747`: `git diff --name-only b23159d..84f9747` restricted to the surface `stage_engine_kit` copies is empty, so the measured engine is identical, and the preflight records `engine=84f9747`. | No change to Appendix A, the Appendix B parameter values, the task cards, the seed, the thresholds, or the cap. The staged treatment-arm surface is byte-identical, so the substitution cannot change a measured result. | Owner (J. Balanay), 2026-10-31 |
+| 2026-10-31 | Recorded the completed 36-session batch and restated the Status header. | The header still read "no graded session has run" after the pre-registered batch finished, which is the drift this table exists to repair, and neither the run's totals nor the failed launch had a record. | No run recorded → Status states the run, Appendix D records 36 of 36 sessions, $0.10 actual spend, the key digest, the 36 packets, and the one failed launch with its retained artifacts. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the seed, the thresholds, or the cap. The batch ran the 36-row plan it pre-registered. | Owner (J. Balanay), 2026-10-31 |
 
 ## Appendix D — Preflight checklist
 
@@ -594,9 +624,10 @@ both arms before the run; every `Verify` command was exercised on both.
   check below.
 - [x] Spend cap and stop rules are recorded — §9's table: 36 primary sessions
   (six tasks × two arms × three repeats; 30 for the five-task fallback), 6
-  infrastructure replacements, 42 CLI sessions in total, 24 wall-clock hours,
+  infrastructure replacements, 54 CLI sessions in total (12 calibration + 36
+  primary + 6 replacements), 24 wall-clock hours,
   1,800 seconds per session, 40 turns, and a $25 actual `transcript_cost_usd`
-  guardrail. The stop rules are whichever of 42 sessions, 24 hours, or $25 is
+  guardrail. The stop rules are whichever of 54 sessions, 24 hours, or $25 is
   hit first, plus six infrastructure failures; no extra runs, no "just one more
   repeat", no re-run because a result was surprising, and no extension without
   a new protocol (§7.3, §9).
@@ -968,11 +999,124 @@ is a directory on this host; a reader with the operator's account can open it,
 so §4's "the operator must not grade" remains a procedural control, not one the
 driver can enforce.
 
+### Repeat-count correction (2026-10-31)
+
+The first graded attempt ran `--repeats` at its default of `1`, so its 12
+sessions covered one repeat of each task × arm cell rather than the three §2
+specifies. The omission was invisible in the record because every preflight in
+this appendix ran at the same default: a plan of **12 rows** is a one-repeat
+plan, so the digest `6ac712a9…` recorded above is the one-repeat plan, not the
+design's. The 12-row digests earlier in this appendix are left as written; this
+section is what corrects them.
+
+`--preflight-only` re-executed 2026-10-31T03:05:01Z at `84f9747`, with the six
+Appendix A cards, the rebuilt seed, the frozen seeds, model, timeout, and
+profile, and `--repeats 3`:
+
+```text
+CROSSARM|OK|tasks=6|arms=2|cells=36|max_turns=40|timeout=1800
+ISOLATION|OK|seed=16b3cf7|home=<throwaway>
+PREFLIGHT|OK|engine=84f9747|seed=16b3cf7|model=deepseek/deepseek-v4.1-flash|cli=1.88.0
+ORDER|PLAN|seed=20261027|shuffle_seed=90613245|rows=36|sha256=e3727d97d5784e03815878d162d7bb9973abe1cb803e5447e064c3475569f538
+```
+
+- Plan: **36 rows**,
+  `e3727d97d5784e03815878d162d7bb9973abe1cb803e5447e064c3475569f538`, from the
+  same two seeds and the same six task ids. The digest does not depend on the
+  CLI: the same 36 rows recompute under 1.88.2.
+- Engine: `84f9747`, three commits past `b23159d`. Only this protocol, the
+  driver, and its test harness changed; the staged surface is empty, so the
+  measured engine is identical.
+- CLI: `1.88.0` from the pinned prefix. PATH order decides this — the nvm
+  `command-code` (1.88.2) shadows the pin when its bin directory comes first,
+  and a preflight taken that way reported `cli=1.88.2` at the same 36-row
+  digest.
+- Spend: zero. `<out>` holds only `order.tsv`, `env.txt`, `isolation.txt`,
+  `crossarm.txt`, and `engine-path.txt`.
+
+The 12 one-repeat sessions are retained at
+`benchmarks/runs/2026-10-31-phase3b-calibration-1repeat` with its own
+`CALIBRATION.md`: 1,697,538 `tokens_total`, 292 s of session wall clock (maximum
+40 s), $0.03 actual `transcript_cost_usd`, and 24 blind packets. It is never
+graded, never unblinded, and is not part of the confirmatory sample. §9's
+ceiling is 54 so the 12 calibration sessions, the 36 primary sessions, and the 6
+permitted replacements all fit.
+
+### Batch run (2026-10-31)
+
+The 36-session batch executed 2026-10-31T03:11:03Z – 03:26:22Z against the plan
+above, with `--key-out` outside the repository:
+
+- Sessions: **36 of 36** `RUNDONE`, every `cli_exit=0`, zero `BENCH|ERROR`, zero
+  replacements — 12 cells × 3 repeats, 18 per arm.
+- Measured: 4,959,454 `tokens_total` (4,269,312 of them cache reads), 222 tool
+  calls, 833 s of session wall clock (maximum 39 s), $0.10 actual
+  `transcript_cost_usd`. `accepted` is `false` on all 36 until grading.
+- Delivery: 36 blind packets, `B001`–`B036`, each a path-normalized `.diff` and
+  a path-scrubbed `.verify.txt`.
+- Key:
+  `/home/heyloey/.local/state/promptkit/phase3b-keys/phase3b-batch-r3.csv`,
+  mode 600, 36 rows, sha256
+  `de6dcc04e1f1bacbf1fa19f192ad5db0f2544418ef87ff8db033874849999c28`, named by
+  `<out>/key-location.txt` with no mapping row.
+- One launch preceded it and failed: it passed `--out` as a relative path, and
+  the driver writes `<rundir>-run.diff` after `cd`-ing into the run directory,
+  so its first session completed and the diff write then failed
+  (`TRANSCRIPT_MISSING`). That scenario is retained outside the repository at
+  `~/.local/state/promptkit/attempt-2-relative-out-20261031T031049Z` and is not
+  part of the sample; it counts as the second of the six permitted
+  infrastructure failures. The batch was re-run from scratch with an absolute
+  `--out`, which is what the records above describe.
+
+Blinding of the real delivery was checked directly, because
+`benchmarks/audit-blinding.sh` builds its own stub delivery instead of scanning
+an existing one. No packet carries an arm label (`arm=bare`, `bare-r`), a
+scenario id, `.promptkit`, `session.log`, an absolute run root, or `/home/`.
+One limitation is recorded rather than hidden: the audit's `\bbare\b` surface
+also matches ordinary English, and the seed's own `test/app.test.js` line 53
+names a test "a bare flag is accepted as the string true and then validated", so
+every packet contains that word in both arms. It reveals nothing about the arm —
+it is identical across all 36 — but a mechanical `\bbare\b` scan of a real
+delivery reports hits, so the pre-grading check has to use arm-label shapes.
+
+### Grading and measurement (2026-10-31)
+
+The 36 packets were graded blind, from `B0nn.diff` and `B0nn.verify.txt` alone,
+with no manifest, key, scenario name, or session log in hand.
+
+- Sheet: `grading/grading.tsv`, blind-id keyed, **hashed before `--finalize`
+  opened the key** — sha256
+  `6e2962a66a448846973d4bc6fb537245dfff2772699d005d14e22883b1c4a85a`, recorded
+  with the method in `grading/GRADING.md`.
+- Result: **210 of 210 rubric items passed, 36 of 36 runs accepted** — every
+  probe `verify_exit=0`, every suite at least 29 of 29 (seed baseline 28), no
+  packet outside its task's allowed files, and no packet deleting a test line.
+- **Grader identity**: the coding agent, not a human. §4 makes that a secondary
+  consistency check rather than the primary grading, so this result does not
+  claim independent acceptance and does not tick the checklist's grading item
+  beyond the sheet.
+- Measured after unblinding (`finalize.log`): L1+ median ratios **1.075 tokens /
+  1.115 CPAC** across the five tasks, both under §7.2's 1.25; 15 of 15 L1+ runs
+  accepted per arm. The point estimates alone would sit in the matrix's
+  *non-inferior, no gain, both ≤ 1.25* row, but the task-cluster bootstrap
+  (10,000 resamples) gives 95% intervals of **0.869–1.375** tokens and
+  **0.934–1.364** CPAC, and the token interval includes 1.25. §7.3 defines that
+  as **Inconclusive**, so the outcome is no decision, no Phase 4, and no public
+  positioning — not a Keep. `BENCH-L2-04` at 1.375 and `BENCH-L0-02` at 1.423
+  against `BENCH-L1-03` at 0.934 and `BENCH-L2-03` at 0.869 are why the interval
+  is that wide: the per-task ratios disagree in direction.
+- Report: `README.md` in the batch directory, carrying this outcome and the
+  deviations list above. Its acceptance figures rest on the machine-graded sheet.
+- **Ceiling result**: both arms solved all six tasks on all three repeats, so
+  this batch separates nothing about quality. It is a non-inferiority and cost
+  measurement, not evidence that the treatment helps.
+
 ## Approval
 
 - [x] I approve the task slate in Appendix A.
 - [x] I approve the thresholds in §7.
-- [x] I approve the 42-session / 24-hour / $25 cap in §9.
+- [x] I approve the 54-session / 24-hour / $25 cap in §9 (raised from 42 to
+  cover the 12 one-repeat calibration sessions; recorded below).
 - [x] I confirm the neutral seed and clean host preflight passed.
 
 **Owner signature / date**: Jonell Balanay — 2026-10-28 (the freeze signature;
@@ -983,12 +1127,16 @@ items 1–3 were not part of it and are dated below)
 approval happened on different dates, and redating the signature 2026-10-31
 would misstate when it was made.
 
+**Cap raised 42 → 54 sessions**: Jonell Balanay — 2026-10-31 (12 calibration
+sessions + 36 primary + 6 replacements; the slate, thresholds, and design are
+unchanged by the raise).
+
 ---
 
 This document is the protocol. The conditions for a run are met: Appendix A and
 Appendix B are filled, the owner has signed the Approval section, Approval items
 1–3 were approved 2026-10-31, and the protocol is frozen by commit. That approval
-authorizes the batch up to §9's cap — 42 CLI sessions, 24 wall-clock hours, $25
+authorizes the batch up to §9's cap — 54 CLI sessions, 24 wall-clock hours, $25
 actual `transcript_cost_usd` — and nothing past it: no extra repeat, no re-run of
 a surprising result, no extension without a new protocol. A change after the
 first session is a §10 matter rather than an Appendix C row, and one logged after

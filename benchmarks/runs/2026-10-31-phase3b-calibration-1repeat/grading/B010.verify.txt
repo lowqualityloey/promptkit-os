@@ -1,0 +1,45 @@
+verify_exit=0
+UNBOUNDED|OK
+✔ starts with defaults and prints one ready line (4.027647ms)
+✔ a flag overrides the environment (0.460494ms)
+✔ the environment applies when no flag is given (0.474228ms)
+✔ an unknown flag exits 2 and names the flag (0.534567ms)
+✔ a bare flag is accepted as the string true and then validated (0.397641ms)
+✔ an invalid value exits 2 (0.311873ms)
+✔ a positional argument is rejected (0.336746ms)
+✔ parseFlags returns the parsed pairs (0.327354ms)
+✔ defaults when the environment is empty (6.390943ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.415727ms)
+✔ accepts LOG_LEVEL case-insensitively (0.277638ms)
+✔ exposes the accepted levels (0.368008ms)
+✔ rejects a PORT that is not a positive integer (0.68932ms)
+✔ rejects a PORT above the port range (0.248224ms)
+✔ rejects an unknown log level and names the accepted set (0.209469ms)
+✔ rejects a non-positive capacity (0.182419ms)
+✔ maps an unbounded capacity to positive infinity (0.242023ms)
+✔ accepts an unbounded capacity case-insensitively (0.346176ms)
+✔ keeps the numeric capacity rules alongside unbounded (0.339697ms)
+✔ returns a frozen configuration object (0.284296ms)
+✔ processes every job in order (2.071042ms)
+✔ records a failure without stopping the batch (1.507468ms)
+✔ logs one line per job (0.334639ms)
+✔ returns empty results for an empty queue (0.213503ms)
+✔ dequeues in FIFO order (2.233865ms)
+✔ returns undefined when empty (0.303117ms)
+✔ reports size after enqueue and dequeue (0.25524ms)
+✔ refuses to exceed capacity and names the capacity (0.783035ms)
+✔ reports isFull at the capacity boundary (0.289822ms)
+✔ drain empties the queue and returns the items in order (1.128469ms)
+✔ rejects a capacity below one (0.307987ms)
+✔ accepts an unbounded capacity without throwing QueueFullError (0.768074ms)
+✔ keeps isFull false at every size when unbounded (0.633304ms)
+✔ drains and dequeues normally when unbounded (0.645338ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 135.30735
+VERIFY|probe=0|tests=0

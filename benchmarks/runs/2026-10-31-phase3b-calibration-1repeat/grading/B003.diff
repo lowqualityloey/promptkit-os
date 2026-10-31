@@ -1,0 +1,62 @@
+diff --git a/src/queue.js b/src/queue.js
+index 940e972..4a04ec2 100644
+--- a/src/queue.js
++++ b/src/queue.js
+@@ -26,6 +26,11 @@ export function createQueue({ capacity = 100 } = {}) {
+       items.push(item);
+       return items.length;
+     },
++    enqueueMany(batch) {
++      if (items.length + batch.length > capacity) throw new QueueFullError(capacity);
++      for (const item of batch) items.push(item);
++      return items.length;
++    },
+     dequeue() {
+       return items.length === 0 ? undefined : items.shift();
+     },
+diff --git a/test/queue.test.js b/test/queue.test.js
+index 1c5b0d9..2792b6e 100644
+--- a/test/queue.test.js
++++ b/test/queue.test.js
+@@ -48,6 +48,41 @@ test('reports isFull at the capacity boundary', () => {
+   assert.equal(queue.isFull, true);
+ });
+ 
++test('enqueueMany appends every item in order and returns the new size', () => {
++  const queue = createQueue({ capacity: 4 });
++  queue.enqueue('a');
++
++  assert.equal(queue.enqueueMany(['b', 'c', 'd']), 4);
++  assert.equal(queue.size, 4);
++  assert.equal(queue.dequeue(), 'a');
++  assert.equal(queue.dequeue(), 'b');
++  assert.equal(queue.dequeue(), 'c');
++  assert.equal(queue.dequeue(), 'd');
++});
++
++test('enqueueMany rejects a batch that does not fit without appending anything', () => {
++  const queue = createQueue({ capacity: 3 });
++  queue.enqueue('a');
++
++  assert.throws(
++    () => queue.enqueueMany(['b', 'c', 'd']),
++    (error) => error instanceof QueueFullError && error.capacity === 3,
++  );
++  assert.equal(queue.size, 1);
++  assert.equal(queue.dequeue(), 'a');
++  assert.equal(queue.size, 0);
++});
++
++test('enqueueMany with an empty array is a no-op returning the current size', () => {
++  const queue = createQueue({ capacity: 2 });
++  assert.equal(queue.enqueueMany([]), 0);
++
++  queue.enqueue('a');
++  assert.equal(queue.enqueueMany([]), 1);
++  assert.equal(queue.size, 1);
++  assert.equal(queue.dequeue(), 'a');
++});
++
+ test('drain empties the queue and returns the items in order', () => {
+   const queue = createQueue();
+   queue.enqueue('a');

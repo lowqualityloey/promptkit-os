@@ -1,0 +1,19 @@
+task_id	prompt_sha256	argv_sha256
+BENCH-L0-02	a78e784b6a8300c8d79b2e9a7731b2c6a50cbfa33fcd2760d7138632ec3848f3	28c3300c4cfefd127c0f9aad078f3da2ac822b8268a46202fc42c38d7ebbcc60
+BENCH-L1-03	62feb5291ba6f2016bfc3e42793ece418c8942b02956f5127fd3191f53fb222c	fda338638e36776057e1283277d1bbec599d65595abd940960b8ae2950175f3a
+BENCH-L1-04	1a8c9a394b6437f0cc9ad744e4cd7eb6f2668e7cba0119df789701b68f9b9b3a	550f4b625d0494e39b41744f77b89bc6d50b1fadfea44aad1394e8a00c266c57
+BENCH-L2-03	1258b6371324a5e251bb245a650d7f1c8576b52798e099c4be83db203c96bacf	975453646acccf64e8295e282095a88aeacac5e832bdace0c20170a592911590
+BENCH-L2-04	520d34d700697f908e8ed060869057ccc3977a0b1e781edced23b4a7fc99e11f	6220abd4154c58d0c0e2d1d901ca8f4b7ae4d8602d372b21e69c797719cdb104
+BENCH-L3-01	bf39404e6e41433ce6b3b6c9c56807d2a01e96d887d3361bfc1a5a5e295c5b98	729d35d44825dcf0dead58ebcd6d328cd0b88daf5a7fbd8fd856475a33631f12
+flags: -t --yolo --tools-all --skip-onboarding --no-auto-update
+permission_mode: yolo
+tools: all
+model: deepseek/deepseek-v4.1-flash
+max_turns: 40
+timeout: 1800
+arms: promptkit_os,bare
+repeats: 3
+cells: 36
+promptkit_os_cells: 18
+bare_cells: 18
+verdict: identical

@@ -1,0 +1,44 @@
+verify_exit=0
+UNBOUNDED|OK
+✔ starts with defaults and prints one ready line (3.61667ms)
+✔ a flag overrides the environment (0.554098ms)
+✔ the environment applies when no flag is given (0.455972ms)
+✔ an unknown flag exits 2 and names the flag (0.421395ms)
+✔ a bare flag is accepted as the string true and then validated (0.293669ms)
+✔ an invalid value exits 2 (0.233762ms)
+✔ a positional argument is rejected (0.246033ms)
+✔ parseFlags returns the parsed pairs (0.256678ms)
+✔ defaults when the environment is empty (3.699102ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.372042ms)
+✔ accepts LOG_LEVEL case-insensitively (0.258204ms)
+✔ exposes the accepted levels (0.348129ms)
+✔ rejects a PORT that is not a positive integer (0.882554ms)
+✔ rejects a PORT above the port range (0.308235ms)
+✔ rejects an unknown log level and names the accepted set (0.322501ms)
+✔ rejects a non-positive capacity (0.475796ms)
+✔ reads QUEUE_CAPACITY=unbounded case-insensitively as an infinite capacity (0.33082ms)
+✔ only the exact unbounded word becomes infinite capacity (0.560463ms)
+✔ keeps defaulting and validating capacity as before (0.387845ms)
+✔ returns a frozen configuration object (0.261058ms)
+✔ processes every job in order (2.511677ms)
+✔ records a failure without stopping the batch (1.947453ms)
+✔ logs one line per job (0.598801ms)
+✔ returns empty results for an empty queue (0.401362ms)
+✔ dequeues in FIFO order (1.389315ms)
+✔ returns undefined when empty (1.338356ms)
+✔ reports size after enqueue and dequeue (0.220973ms)
+✔ refuses to exceed capacity and names the capacity (0.699371ms)
+✔ reports isFull at the capacity boundary (0.393112ms)
+✔ drain empties the queue and returns the items in order (1.231172ms)
+✔ rejects a capacity below one (0.537966ms)
+✔ accepts an infinite capacity (0.232665ms)
+✔ never reports full and never throws for an infinite capacity (1.042912ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 139.721381
+VERIFY|probe=0|tests=0

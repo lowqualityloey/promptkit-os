@@ -1,0 +1,44 @@
+verify_exit=0
+UNBOUNDED|OK
+✔ starts with defaults and prints one ready line (6.254128ms)
+✔ a flag overrides the environment (0.393951ms)
+✔ the environment applies when no flag is given (0.350077ms)
+✔ an unknown flag exits 2 and names the flag (0.551243ms)
+✔ a bare flag is accepted as the string true and then validated (0.335243ms)
+✔ an invalid value exits 2 (0.238426ms)
+✔ a positional argument is rejected (0.255176ms)
+✔ parseFlags returns the parsed pairs (0.338036ms)
+✔ defaults when the environment is empty (4.59294ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.372742ms)
+✔ accepts LOG_LEVEL case-insensitively (0.291897ms)
+✔ exposes the accepted levels (0.300636ms)
+✔ rejects a PORT that is not a positive integer (0.998366ms)
+✔ rejects a PORT above the port range (0.364293ms)
+✔ rejects an unknown log level and names the accepted set (0.403927ms)
+✔ rejects a non-positive capacity (0.30736ms)
+✔ accepts QUEUE_CAPACITY=unbounded case-insensitively as infinite capacity (0.783649ms)
+✔ still rejects capacities that are not positive integers (0.860198ms)
+✔ defaults an absent or empty QUEUE_CAPACITY to 100 (0.390818ms)
+✔ returns a frozen configuration object (0.507318ms)
+✔ processes every job in order (2.337022ms)
+✔ records a failure without stopping the batch (2.563808ms)
+✔ logs one line per job (0.606599ms)
+✔ returns empty results for an empty queue (0.254906ms)
+✔ dequeues in FIFO order (2.002434ms)
+✔ returns undefined when empty (2.595949ms)
+✔ reports size after enqueue and dequeue (0.366936ms)
+✔ refuses to exceed capacity and names the capacity (1.217807ms)
+✔ reports isFull at the capacity boundary (0.591037ms)
+✔ drain empties the queue and returns the items in order (1.537827ms)
+✔ rejects a capacity below one (0.584193ms)
+✔ accepts an infinite capacity and never reports full (1.930636ms)
+✔ an infinite capacity queue still dequeues in FIFO order (0.747969ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 158.903731
+VERIFY|probe=0|tests=0

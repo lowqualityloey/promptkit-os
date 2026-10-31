@@ -1,0 +1,40 @@
+verify_exit=0
+PEEK|OK
+✔ starts with defaults and prints one ready line (6.480272ms)
+✔ a flag overrides the environment (0.271741ms)
+✔ the environment applies when no flag is given (0.260122ms)
+✔ an unknown flag exits 2 and names the flag (0.544275ms)
+✔ a bare flag is accepted as the string true and then validated (0.369448ms)
+✔ an invalid value exits 2 (0.243039ms)
+✔ a positional argument is rejected (0.23921ms)
+✔ parseFlags returns the parsed pairs (0.249001ms)
+✔ defaults when the environment is empty (1.97545ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.681782ms)
+✔ accepts LOG_LEVEL case-insensitively (0.39418ms)
+✔ exposes the accepted levels (0.35398ms)
+✔ rejects a PORT that is not a positive integer (1.022633ms)
+✔ rejects a PORT above the port range (0.31965ms)
+✔ rejects an unknown log level and names the accepted set (0.408866ms)
+✔ rejects a non-positive capacity (0.399878ms)
+✔ returns a frozen configuration object (0.638062ms)
+✔ processes every job in order (3.3305ms)
+✔ records a failure without stopping the batch (2.228219ms)
+✔ logs one line per job (0.793703ms)
+✔ returns empty results for an empty queue (0.424873ms)
+✔ dequeues in FIFO order (2.041143ms)
+✔ returns undefined when empty (5.048159ms)
+✔ peeks at the head without removing it, and returns undefined when empty (0.445491ms)
+✔ reports size after enqueue and dequeue (0.20876ms)
+✔ refuses to exceed capacity and names the capacity (0.871593ms)
+✔ reports isFull at the capacity boundary (0.248025ms)
+✔ drain empties the queue and returns the items in order (1.554873ms)
+✔ rejects a capacity below one (0.327542ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 29
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 125.698825
+VERIFY|probe=0|tests=0

@@ -1,0 +1,46 @@
+verify_exit=0
+RETRY|OK
+✔ starts with defaults and prints one ready line (5.08647ms)
+✔ a flag overrides the environment (0.438435ms)
+✔ the environment applies when no flag is given (0.355032ms)
+✔ an unknown flag exits 2 and names the flag (0.762435ms)
+✔ a bare flag is accepted as the string true and then validated (0.380717ms)
+✔ an invalid value exits 2 (0.437419ms)
+✔ a positional argument is rejected (0.356698ms)
+✔ parseFlags returns the parsed pairs (0.577542ms)
+✔ defaults when the environment is empty (2.008907ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.354527ms)
+✔ accepts LOG_LEVEL case-insensitively (0.1842ms)
+✔ exposes the accepted levels (0.260463ms)
+✔ rejects a PORT that is not a positive integer (0.614067ms)
+✔ rejects a PORT above the port range (0.230255ms)
+✔ rejects an unknown log level and names the accepted set (0.379021ms)
+✔ rejects a non-positive capacity (0.348467ms)
+✔ returns a frozen configuration object (0.566981ms)
+✔ processes every job in order (4.574589ms)
+✔ records a failure without stopping the batch (301.900031ms)
+✔ logs one line per job (302.18818ms)
+✔ returns empty results for an empty queue (0.666242ms)
+✔ retries a failed handler and records it once when it later succeeds (0.844603ms)
+✔ exhausts attempts and records the last error once (0.561453ms)
+✔ backs off exponentially from a custom baseDelayMs (0.37026ms)
+✔ maxAttempts 1 disables retries and never sleeps (0.37726ms)
+✔ records attempts per job independently (0.436357ms)
+✔ throws RangeError before dequeuing when maxAttempts is invalid (0.916562ms)
+✔ throws RangeError before dequeuing when baseDelayMs is invalid (0.624714ms)
+✔ dequeues in FIFO order (2.235324ms)
+✔ returns undefined when empty (0.426416ms)
+✔ reports size after enqueue and dequeue (0.354893ms)
+✔ refuses to exceed capacity and names the capacity (0.72499ms)
+✔ reports isFull at the capacity boundary (0.236612ms)
+✔ drain empties the queue and returns the items in order (1.054326ms)
+✔ rejects a capacity below one (0.247412ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 725.941847
+VERIFY|probe=0|tests=0

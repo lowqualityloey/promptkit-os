@@ -1,0 +1,15 @@
+seed_commit: 16b3cf74c809c23dd48466da2212bd3e67a530ed
+seed_working_tree: clean
+seed_instruction_surfaces: none
+seed_heyloey_references: none
+host_home: /tmp/pk-home-batch2-20261031T025543Z
+host_instruction_surfaces: none
+host_mcp_servers: none
+host_hooks: none
+taste: empty
+cross_arm: identical (prompt/tools/permission_mode/max_turns/timeout)
+order_seed: 20261027
+shuffle_seed: 90613245
+order_plan_sha256: 6ac712a95506521723a62db35bd86cc0559c9eae61b738e02107b55f3fd452be
+order_plan_rows: 12
+checked_at: 2026-10-31T02:55:49Z
