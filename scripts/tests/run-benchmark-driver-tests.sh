@@ -175,6 +175,20 @@ else
     notok "seed-SHA diff (a=$(wc -c <"$diff_a" 2>/dev/null)B b=$(wc -c <"$diff_b" 2>/dev/null)B)"
 fi
 
+# --- a clean host with no taste file is not a taste change ---------------------
+# The documented clean host has taste absent, not empty. Reading absent as a
+# hashing failure made the first session on such a host die with TASTE_CHANGED
+# before anything could be graded, so the batch could not run at all.
+NOTASTE_HOME="$TMP_DIR/home-notaste"
+mkdir -p "$NOTASTE_HOME"
+out_nt="$(PATH="$CLEAN_PATH" HOME="$NOTASTE_HOME" bash "$DRIVER"     --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK"     --model stub/model-a --out "$TMP_DIR/out-notaste" --max-turns 5 --timeout 60     --key-out "$KEYS/notaste.csv" --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
+if [[ $rc -eq 0 && "$out_nt" == *"BATCH|OK|runs=2"* ]] && [[ "$out_nt" != *"TASTE_CHANGED"* ]]; then
+    ok "a host with no taste file is not a taste change"
+else
+    notok "no-taste host (rc=$rc, out=$(printf '%s' "$out_nt" | tail -2 | tr '
+' ' '))"
+fi
+
 # --- blinding: artifacts stripped in the pk arm, kept in bare ------------------
 strip_a="$(printf '%s' "$row_a" | cut -f7)"
 strip_b="$(printf '%s' "$row_b" | cut -f7)"

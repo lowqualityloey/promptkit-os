@@ -469,6 +469,16 @@ if [[ "$CC_MODELS" != *"$MODEL"* ]]; then
     bench_error "PREFLIGHT" "model not in --list-models: $MODEL"
 fi
 TASTE="${HOME}/.commandcode/taste/taste.md"
+# The documented clean host has no taste file at all, so "absent" is a stable
+# state rather than a hashing failure. Both reads must return the same
+# sentinel, or a host that never had taste fails every session as a change.
+taste_digest() {
+    if [[ -f "$TASTE" ]]; then
+        sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo unreadable
+    else
+        echo absent
+    fi
+}
 if [[ -s "$TASTE" ]]; then
     bench_error "PREFLIGHT" "taste file is not empty ($TASTE) — clear or snapshot it first; taste learning during a batch makes arms unequal"
 fi
@@ -719,7 +729,7 @@ for ((pi = 0; pi < PLAN_COUNT; pi++)); do
     # may commit, and `git diff --cached` against a moved HEAD would
     # return an empty diff, silently losing every committed change.
     seed_sha="$(git -C "$rundir" rev-parse HEAD)"
-    th1="$(sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo none)"
+    th1="$(taste_digest)"
     # Materialize argv through the builder guard_cross_arm checked; no
     # arm-conditional token can enter the invocation here.
     mapfile -d '' -t SESSION_ARGV < <(session_argv "$order_idx" "$arm")
@@ -728,7 +738,7 @@ for ((pi = 0; pi < PLAN_COUNT; pi++)); do
         > "$OUT/runs/$scenario/session.log" 2>&1
     rc=$?
     set -e
-    th2="$(sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo none2)"
+    th2="$(taste_digest)"
     [[ "$th1" == "$th2" ]] || bench_error "TASTE_CHANGED" "$scenario"
     ( cd "$rundir" && git add -A && git diff --cached --no-color "$seed_sha" > "$rundir-run.diff"; git reset -q ) \
         || bench_error "DIFF_FAILED" "$scenario"
