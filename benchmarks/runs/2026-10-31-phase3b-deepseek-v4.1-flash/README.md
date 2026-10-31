@@ -10,6 +10,11 @@ under the pre-registered protocol in
 > rubric item is anchored to a probe the harness ran, but the grader was the
 > coding agent that ran the batch. Read every acceptance figure below as a
 > secondary consistency check. §11's independent-grader item is still open.
+>
+> The provenance is recorded, not implied: all 36 §5 records carry
+> `"grading": {"grader": "machine", "human_accepted": false}` beside their
+> `accepted` flag, and `finalize.log` opens with
+> `GRADING|PROVENANCE|grader=machine|human_accepted=false|records=36`.
 
 - **Date**: 2026-10-31, sessions 03:11:03Z – 03:26:22Z
 - **Model**: `deepseek/deepseek-v4.1-flash`

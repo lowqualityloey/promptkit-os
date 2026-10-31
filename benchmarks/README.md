@@ -105,12 +105,16 @@ For every task × arm × repeat:
    publication: published per-scenario stripped diffs are byte-identical to the
    blind packets, so a reader can recover it by content matching. Do not claim
    otherwise.
-6. **Acceptance and aggregation**: after grading, `--finalize` translates the
-   blind-id sheet via the key, re-extracts each run's §5 record with its graded
-   `accepted` flag, and runs `scripts/aggregate-benchmark-runs.sh` with the
-   translated scenario-keyed sheet as a fail-closed cross-check (a mismatch or
-   a record missing from the sheet exits 2) — emitting the per-arm summary
-   (`BENCH|SUMMARY|...`, including `graded_n`).
+6. **Acceptance and aggregation**: after grading, `--finalize --graded-by
+   human|machine` translates the blind-id sheet via the key, re-extracts each
+   run's §5 record with its graded `accepted` flag, stamps the grader into that
+   record, and runs `scripts/aggregate-benchmark-runs.sh` with the translated
+   scenario-keyed sheet as a fail-closed cross-check (a mismatch or a record
+   missing from the sheet exits 2) — emitting the per-arm summary
+   (`BENCH|SUMMARY|...`, including `graded_n`). The flag is required because §5
+   reserves `accepted: true` for human acceptance: the driver cannot know who
+   graded, and Phase 3b's 36 records read as human acceptance until each one
+   carried its own `"grading"` block.
 
 Diff capture is anchored to the **seed commit SHA** recorded before each run:
 under `--yolo` the agent may `git commit`, and a plain `git diff --cached`
@@ -223,7 +227,8 @@ bash benchmarks/run-ab-benchmark.sh --engine ... --seed ... --tasks a.md,b.md \
 # (blind_id <TAB> rubric_passed <TAB> rubric_total <TAB> accepted). The key is
 # read from <out>/key-location.txt unless --key names it:
 bash benchmarks/run-ab-benchmark.sh --finalize /tmp/bench-batch-1 \
-  --grading /tmp/bench-batch-1/grading/grading.tsv
+  --grading /tmp/bench-batch-1/grading/grading.tsv \
+  --graded-by human          # required: human|machine
 ```
 
 The run and finalize paths are regression-tested in CI against a stub CLI with

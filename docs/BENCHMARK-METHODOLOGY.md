@@ -189,9 +189,12 @@ conventions, which any empirical claim must state alongside its numbers:
   need not be assumed to sum to `tool_calls_total`).
 - **Human interventions**: user prompts after the first — the initial request is the task, not an
   intervention.
-- **Acceptance stays human**: the record's `accepted` flag defaults to `false` and may be set to
-  `true` only by an operator after human acceptance; an unaccepted record scores
-  `INF (REJECTED)`.
+- **Acceptance carries its grader**: the record's `accepted` flag is the rubric gate and defaults
+  to `false`. It is written from the graded sheet by `--finalize`, which also stamps a `grading`
+  block beside `costs` — `{"grader": "human" | "machine", "human_accepted": <bool>}` — because the
+  flag alone cannot say who asserted it. `accepted: true` with `"grader": "machine"` is a machine
+  pass: report it as a secondary consistency check and never as the human acceptance this section
+  describes. An unaccepted record scores `INF (REJECTED)`.
 - `costs.transcript_cost_usd` reports the host's own recorded cost for transparency (it reads `0`
   under subscription pricing) and is not part of the CPAC formula.
 

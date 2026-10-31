@@ -111,7 +111,7 @@ echo "🧪 Benchmark Driver Regression Harness (mock CLI)"
 # --- finalize flag-consumption regression ------------------------------------
 # The documented invocation must reach real validation, not UNKNOWN_FLAG.
 out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
-    --finalize "$OUT" --grading "$OUT/grading/grading.tsv" 2>&1)"; rc=$?
+    --finalize "$OUT" --grading "$OUT/grading/grading.tsv" --graded-by machine 2>&1)"; rc=$?
 if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|UNREADABLE"* && "$out" != *"UNKNOWN_FLAG"* ]]; then
     ok "--finalize consumes its <dir> operand (documented invocation parses)"
 else
@@ -391,7 +391,7 @@ b1="$(grep -m1 B "$KEYS/batch.csv" | cut -d, -f1)"
 b2="$(tail -1 "$KEYS/batch.csv" | cut -d, -f1)"
 printf '%s\t3\t3\ttrue\n' "$b1" "$b2" > "$OUT/grading/grading.tsv"
 out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
-    --finalize "$OUT" --grading "$OUT/grading/grading.tsv" 2>&1)"; rc=$?
+    --finalize "$OUT" --grading "$OUT/grading/grading.tsv" --graded-by machine 2>&1)"; rc=$?
 # Stub transcript per run: 900 in / 90 out, no rework, accepted → CPAC = 900*3e-6
 # + 90*15e-6 = 0.00405 → machine line prints 0.0040 or 0.0041 at 4dp; assert the
 # stable prefix rather than the rounding tail.
@@ -408,13 +408,59 @@ else
     notok "grading sheet blinding"
 fi
 
+# --- finalize records who graded the sheet ------------------------------------
+# Section 5 reserves accepted=true for an operator's human acceptance, but the
+# driver cannot know who wrote the sheet: Phase 3b shipped 36 records that read
+# as human acceptance because the flag carried no provenance. Finalize now
+# refuses rather than assert one on the operator's behalf, and stamps the answer
+# into every record it writes.
+rec="$OUT/runs/BENCH-DRIVER-01-bare-r1/record.json"
+if grep -q '"grader": "machine"' "$rec" 2>/dev/null \
+        && grep -q '"human_accepted": false' "$rec" \
+        && grep -q '"accepted": true' "$rec"; then
+    ok "a finalized record names its grader, so accepted=true cannot read as human"
+else
+    notok "record provenance block (rec=${rec})"
+fi
+
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --finalize "$OUT" --grading "$OUT/grading/grading.tsv" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|MISSING|graded-by"* \
+        && "$out" != *"BENCH|SUMMARY|"* ]]; then
+    ok "--finalize refuses a sheet with no --graded-by"
+else
+    notok "missing graded-by refusal (rc=$rc, out=${out:0:200})"
+fi
+
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --finalize "$OUT" --grading "$OUT/grading/grading.tsv" --graded-by robot 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|BAD_VALUE|graded-by"* \
+        && "$out" != *"BENCH|SUMMARY|"* ]]; then
+    ok "--graded-by accepts human|machine and refuses any other value"
+else
+    notok "bad graded-by refusal (rc=$rc, out=${out:0:200})"
+fi
+
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" --model stub/model-a \
+    --out "$TMP_DIR/out-graded-by" --max-turns 5 --timeout 60 \
+    --key-out "$KEYS/batch.csv" --order-seed 7 --shuffle-seed 7 \
+    --graded-by machine 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|BAD_VALUE|graded-by"* ]] \
+        && ! printf '%s\n' "$out" | grep -q '^RUNDONE|'; then
+    ok "--graded-by is refused outside --finalize"
+else
+    notok "graded-by outside finalize (rc=$rc, out=${out:0:200})"
+fi
+
 # --- finalize verifies the key it reads against the batch record -------------
 # A substituted key must fail loudly: silently grading with the wrong mapping
 # would report the wrong arm's rubric result and invalidate the batch.
 TAMPERED="$KEYS/tampered.csv"
 sed 's/,BENCH-DRIVER-01-/,BENCH-DRIVER-99-/' "$KEYS/batch.csv" > "$TAMPERED"
 out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
-    --finalize "$OUT" --grading "$OUT/grading/grading.tsv" --key "$TAMPERED" 2>&1)"; rc=$?
+    --finalize "$OUT" --grading "$OUT/grading/grading.tsv" --key "$TAMPERED" \
+    --graded-by machine 2>&1)"; rc=$?
 if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|KEY_HASH_MISMATCH"* && "$out" != *"BENCH|SUMMARY|"* ]]; then
     ok "--finalize refuses a key whose sha256 differs from the batch record"
 else

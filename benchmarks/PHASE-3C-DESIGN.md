@@ -220,6 +220,11 @@ recorded as a timeout and stays in the ITT denominator.
   re-grade may accompany it as a consistency check and must be labeled as such —
   after 3b, a machine-graded sheet is a secondary check by definition, and it
   cannot carry a decision about quality.
+- The human grade is recorded by finalizing with `--graded-by human`, which
+  writes `"grading": {"grader": "human", "human_accepted": true}` into every §5
+  record; a machine re-grade uses `--graded-by machine` and writes
+  `human_accepted: false`. The flag is required, so a batch cannot be aggregated
+  without saying who asserted the rubric result.
 - A second grader independently samples at least 50% of packets; disagreements are
   reported, not averaged away.
 

@@ -1097,6 +1097,11 @@ with no manifest, key, scenario name, or session log in hand.
   consistency check rather than the primary grading, so this result does not
   claim independent acceptance and does not tick the checklist's grading item
   beyond the sheet.
+- **Recorded provenance**: the batch was finalized with `--graded-by machine`,
+  which stamps `"grading": {"grader": "machine", "human_accepted": false}` into
+  all 36 records and prints
+  `GRADING|PROVENANCE|grader=machine|human_accepted=false|records=36` ahead of
+  the aggregates, so `accepted=18` per arm cannot be read as human acceptance.
 - Measured after unblinding (`finalize.log`): L1+ median ratios **1.075 tokens /
   1.115 CPAC** across the five tasks, both under §7.2's 1.25; 15 of 15 L1+ runs
   accepted per arm. The point estimates alone would sit in the matrix's

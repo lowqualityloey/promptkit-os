@@ -1,3 +1,4 @@
+GRADING|PROVENANCE|grader=machine|human_accepted=false|records=36
 RUN|BENCH-L2-04-promptkit_os-r2|arm=promptkit_os|model=deepseek/deepseek-v4.1-flash|accepted=1|graded=1|rubric=6/6|tokens_total=108503|wall_clock_seconds=17|rework_loops=0|cpac_usd=0.3431
 RUN|BENCH-L2-04-bare-r1|arm=bare|model=deepseek/deepseek-v4.1-flash|accepted=1|graded=1|rubric=6/6|tokens_total=95450|wall_clock_seconds=18|rework_loops=0|cpac_usd=0.3017
 RUN|BENCH-L2-04-bare-r3|arm=bare|model=deepseek/deepseek-v4.1-flash|accepted=1|graded=1|rubric=6/6|tokens_total=96432|wall_clock_seconds=16|rework_loops=0|cpac_usd=0.3048

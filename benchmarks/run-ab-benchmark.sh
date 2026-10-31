@@ -50,14 +50,16 @@
 #                  [--max-turns N] [--repeats N] [--profile lite|balanced]
 #   dry run:     ... --preflight-only   (validates environment, spends nothing)
 #   finalize:    run-ab-benchmark.sh --finalize DIR --grading DIR/grading/grading.tsv
+#                  --graded-by human|machine
 #                  [--key FILE]          (default: DIR/key-location.txt)
 #                (translates the blind-id sheet via the recorded key, re-extracts each
-#                 run with its graded accepted flag, then runs the aggregator
-#                 with a scenario-keyed sheet as cross-check)
+#                 run with its graded accepted flag, stamps who graded that flag into
+#                 the section 5 record, then runs the aggregator with a
+#                 scenario-keyed sheet as cross-check)
 set -euo pipefail
 export LC_ALL=C
 
-ENGINE="" SEED="" TASKS_CSV="" MODEL="" OUT="" MAXTURNS=40 TIMEOUT=900 REPEATS=1 PROFILE=balanced PREFLIGHT_ONLY=0 FINALIZE=0 SCREEN=0 SCREEN_ARM="" GRADING="" ORDER_SEED="" SHUFFLE_SEED="${BENCH_SHUFFLE_SEED:-}" KEY_OUT="" KEY_ARG=""
+ENGINE="" SEED="" TASKS_CSV="" MODEL="" OUT="" MAXTURNS=40 TIMEOUT=900 REPEATS=1 PROFILE=balanced PREFLIGHT_ONLY=0 FINALIZE=0 SCREEN=0 SCREEN_ARM="" GRADING="" ORDER_SEED="" SHUFFLE_SEED="${BENCH_SHUFFLE_SEED:-}" KEY_OUT="" KEY_ARG="" GRADED_BY=""
 
 usage() {
     echo "Usage: run-ab-benchmark.sh --engine <promptkit-repo> --seed <seed-repo>"
@@ -72,6 +74,9 @@ usage() {
     echo "                       seed; refuses a slate whose probes are already green.
     echo "                       Spends nothing: no model, CLI, order seed or key needed)"
     echo "       run-ab-benchmark.sh --finalize <dir> --grading <dir/grading/grading.tsv>"
+    echo "       --graded-by human|machine  (required: who graded the sheet. It is"
+    echo "                       stamped into every record, so a machine grade is"
+    echo "                       recorded as one and cannot read as human acceptance)"
     echo "       [--key FILE]  (default: <dir>/key-location.txt recorded at batch time)"
 }
 
@@ -113,6 +118,41 @@ scrub_verify_output() {
     scrubbed="${scrubbed//"$2"/<out>}"
     scrubbed="${scrubbed//"$3"/<scenario>}"
     printf '%s\n' "$scrubbed"
+}
+
+stamp_grading_provenance() {
+    # stamp_grading_provenance <record.json> <human|machine>
+    # Section 5's `accepted` flag is a rubric gate, and section 5 says who may
+    # assert it. The extractor takes the flag from --accepted and cannot know
+    # who wrote the sheet, so --finalize records that here: a record carrying
+    # `"grader": "machine"` states its own provenance instead of leaving a
+    # reader to assume the human acceptance that section describes. The block is
+    # inserted before the closing brace, so the key order the extractor emits is
+    # untouched and a re-run reproduces the file byte for byte.
+    local rec="$1" grader="$2" human="false" tmp
+    [[ "$grader" == "human" ]] && human="true"
+    tmp="$rec.stamp.$$"
+    awk -v g="$grader" -v h="$human" '
+        { line[NR] = $0 }
+        END {
+            last = 0
+            for (i = NR; i >= 1; i--) if (line[i] ~ /^}[ \t\r]*$/) { last = i; break }
+            if (!last) exit 3
+            prev = last - 1
+            while (prev >= 1 && line[prev] ~ /^[ \t\r]*$/) prev--
+            if (prev < 1) exit 4
+            for (i = 1; i <= last; i++) {
+                if (i == prev) print line[i] ","
+                else if (i < last) print line[i]
+            }
+            print "  \"grading\": {"
+            print "    \"grader\": \"" g "\","
+            print "    \"human_accepted\": " h
+            print "  }"
+            print line[last]
+            for (i = last + 1; i <= NR; i++) print line[i]
+        }' "$rec" > "$tmp" || { rm -f "$tmp"; bench_error "STAMP_FAILED" "$rec"; }
+    mv "$tmp" "$rec"
 }
 
 need_value() {
@@ -171,6 +211,8 @@ while [[ $# -gt 0 ]]; do
         --key-out) need_value "$1" "${2:-}"; KEY_OUT="$2"; shift ;;
         --key=*) KEY_ARG="${1#--key=}" ;;
         --key) need_value "$1" "${2:-}"; KEY_ARG="$2"; shift ;;
+        --graded-by=*) GRADED_BY="${1#--graded-by=}" ;;
+        --graded-by) need_value "$1" "${2:-}"; GRADED_BY="$2"; shift ;;
         --preflight-only) PREFLIGHT_ONLY=1 ;;
         --screen) SCREEN=1 ;;
         --arm=*) SCREEN_ARM="${1#--arm=}" ;;
@@ -192,8 +234,20 @@ if [[ -n "$SCREEN_ARM" && "$SCREEN" -ne 1 ]]; then
     bench_error "BAD_VALUE" "arm (only --screen takes --arm)"
 fi
 
+# Who graded the sheet is part of the evidence, so --finalize has to say. A
+# default would let the driver assert one of two mutually exclusive facts about
+# the same number; Phase 3b showed the cost, when 36 records carried
+# accepted: true from a sheet the coding agent wrote, which section 5 reserves
+# for an operator's human acceptance.
+if [[ -n "$GRADED_BY" && "$FINALIZE" -ne 1 ]]; then
+    bench_error "BAD_VALUE" "graded-by (only --finalize takes --graded-by)"
+fi
+
 if [[ "$FINALIZE" -eq 1 ]]; then
     # ---- finalize mode -------------------------------------------------------
+    [[ -n "$GRADED_BY" ]] || bench_error "MISSING" "graded-by (human|machine)"
+    [[ "$GRADED_BY" == "human" || "$GRADED_BY" == "machine" ]] \
+        || bench_error "BAD_VALUE" "graded-by (human|machine)"
     [[ -n "$OUT" && -d "$OUT" ]] || bench_error "UNREADABLE" "$OUT"
     [[ -n "$GRADING" && -s "$GRADING" ]] || bench_error "UNREADABLE" "$GRADING"
     if [[ -z "$ENGINE" ]]; then
@@ -262,10 +316,15 @@ if [[ "$FINALIZE" -eq 1 ]]; then
         bash "$EXTRACT" "$transcript" --scenario-id="$scenario" --condition="$arm" --accepted="$acc" \
             --error-patterns="$(cat "$OUT/error-patterns.txt")" \
             > "$record" 2>>"$OUT/runs/$scenario/extract.log" || bench_error "EXTRACT_FAILED" "$scenario"
+        stamp_grading_provenance "$record" "$GRADED_BY"
         printf '%s\t%s\t%s\t%s\n' "$scenario" "${G_PASS[$blind]}" "${G_TOT[$blind]}" "$acc" >> "$TRANSLATED"
         RECORDS+=("$record")
     done < "$MANIFEST"
 
+    human="false"
+    [[ "$GRADED_BY" == "human" ]] && human="true"
+    printf 'GRADING|PROVENANCE|grader=%s|human_accepted=%s|records=%d\n' \
+        "$GRADED_BY" "$human" "${#RECORDS[@]}"
     bash "$AGG" --grading "$TRANSLATED" "${RECORDS[@]}"
     exit 0
 fi
