@@ -1,17 +1,19 @@
 # Phase 3b — Confirmatory A/B Protocol
 
-- **Status**: FROZEN and signed 2026-10-28, approved 2026-10-31, run but not
-  graded. Appendix B's parameters are pinned to `f6a58f0`; the batch ran
-  `84f9747`, three commits past the `b23159d` decision with no file changed on
-  the surface `stage_engine_kit` copies, by the 2026-10-31 Appendix C row. The
-  pre-registered plan is the three-repeat plan (36 rows, `e3727d97…`), and its 36
-  primary sessions completed on 2026-10-31 with zero session failures, 4,959,454
-  `tokens_total`, 833 s of session wall clock, and $0.10 actual
-  `transcript_cost_usd` against §9's 54-session / 24-hour / $25 cap. The 12
-  sessions that ran at one repeat are a calibration run, never graded or
+- **Status**: FROZEN and signed 2026-10-28, approved 2026-10-31, run and
+  machine-graded only. Appendix B's parameters are pinned to `f6a58f0`; the
+  batch ran `84f9747`, three commits past the `b23159d` decision with no file
+  changed on the surface `stage_engine_kit` copies, by the 2026-10-31 Appendix C
+  row. The pre-registered plan is the three-repeat plan (36 rows, `e3727d97…`),
+  and its 36 primary sessions completed on 2026-10-31 with zero session
+  failures, 4,959,454 `tokens_total`, 833 s of session wall clock, and $0.10
+  actual `transcript_cost_usd` against §9's 54-session / 24-hour / $25 cap. The
+  12 sessions that ran at one repeat are a calibration run, never graded or
   unblinded (Appendix D). The blind key is outside the grading workspace (36
-  rows, `de6dcc04…`) and the delivery is 36 packets, `B001`–`B036`. What remains
-  is grading and the report.
+  rows, `de6dcc04…`) and the delivery is 36 packets, `B001`–`B036`. A
+  machine-graded sheet covers all 36 packets (Appendix D), and §4 makes that a
+  secondary check rather than acceptance: what remains is the human primary
+  grading and the report built on it.
 - **Date drafted**: 2026-10-26 (document structure approved that day)
 - **Owner**: repository owner
 - **Supersedes for decisions**: the Phase 3 pilot (`n=6`); the pilot remains
