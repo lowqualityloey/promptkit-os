@@ -1,10 +1,13 @@
 # Phase 3c — Design: a slate that can actually separate the arms
 
-Status: **designed, screened, and run — the batch is complete and ungraded.**
-This document is the pre-registration for the Phase 3c batch. It was written
-before any spend, and the slate, the seed SHA, the probes and the decision rule
-below are frozen by it. §10 records what ran; grading (§7) is still open, so no
-result and no decision exist yet.
+Status: **designed, screened, run, and machine-graded — the human primary
+grading is still open.** This document is the pre-registration for the Phase 3c
+batch. It was written before any spend, and the slate, the seed SHA, the probes
+and the decision rule below are frozen by it. §10 records what ran and what the
+machine sheet produced: 48 of 60 packets accepted, `promptkit_os` 26/30 against
+`bare` 22/30, with the rule ambiguous between Tradeoff and Inconclusive. §7
+requires a human primary grader who did not run the batch, so no decision is
+claimed and no Phase 4 follows from this document.
 
 Phase 3b is not rewritten or re-read here. Its result stands as published: 36 of
 36 sessions accepted on a **machine-graded** sheet (18 of 18 per arm, L1+ median
@@ -292,8 +295,19 @@ cross-model work starts only on **Keep** or **Tradeoff**.
   use and the harness pins a relative-`--out` batch (76 cases). One session spent
   as an infrastructure failure; 2 of the 10 replacements are used across 3c.
   The plan SHA (`b0871816…`), slate, seeds and caps are unchanged by the fix.
-- [ ] Blind sheet written and hashed; **human** primary grading.
+- [x] **Machine** grading pass — secondary, not the §7 primary. All 60 packets
+  scored blind against the frozen rubrics; sheet `grading.tsv` hashed
+  (`6bef724e…`) before `--finalize` opened the key; 310 of 336 items passed and
+  48 of 60 packets were accepted. Finalized with `--graded-by machine`, so every
+  record reads `human_accepted: false`. Method, digest and every rejected item:
+  `benchmarks/runs/2026-10-31-phase3c-batch-deepseek-v4.1-flash/grading/GRADING.md`.
+- [ ] **Human** primary grading on the blind sheet. The sheet at
+  `grading/grading.tsv` is the machine pass and does not satisfy this item.
 - [ ] Second grader samples ≥50%.
-- [ ] `--finalize` and analysis.
+- [x] `--finalize --graded-by machine` and the §8 comparison: acceptance 26/30
+  against 22/30, token ratio median 1.115, CPAC ratio median 0.980. The rule does
+  not say whether *Tradeoff* needs both ratios above 1.05 or either one, so it
+  reads as Tradeoff or Inconclusive depending on that; the fork is recorded as a
+  pre-registration defect instead of being settled after the numbers were seen.
 - [ ] Report with the decision.
 - [ ] Only then: Phase 4 or a "no decision" closeout.

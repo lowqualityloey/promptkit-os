@@ -1,15 +1,18 @@
-# Phase 3c batch — 60 primary sessions, ungraded
+# Phase 3c batch — 60 primary sessions, machine-graded
 
-**Status: run complete, not graded.** This directory is the batch record for the
-Phase 3c pre-registration in `benchmarks/PHASE-3C-DESIGN.md`. All 60 planned
+**Status: run complete, machine-graded.** This directory is the batch record for
+the Phase 3c pre-registration in `benchmarks/PHASE-3C-DESIGN.md`. All 60 planned
 primary sessions executed under the frozen plan; 59 exited 0 and one was lost to
 a provider-side network abort. The batch produced 60 blind packets and a 60-row
 key stored outside the repository.
 
-It is **not graded and carries no arm comparison**. Under the design's §7 the
-primary endpoint is acceptance, and acceptance is a human grader's judgment made
-from the packets without opening the key. Nothing in this file, and nothing in
-the telemetry below, substitutes for that.
+It is **graded by a machine, not by the human primary grader the design requires**.
+[`grading/GRADING.md`](grading/GRADING.md) records the sheet, its digest
+(`6bef724e…`, written and hashed before `--finalize` opened the key), and the
+items every rejected packet failed: **48 of 60 packets cleared their frozen
+rubric** (310 of 336 items). `--finalize --graded-by machine` re-extracted all 60
+records with `"grading": {"grader": "machine", "human_accepted": false}`, so no
+record claims human acceptance and none can be cited as one.
 
 ## Pre-registration
 
@@ -83,23 +86,60 @@ These are cost figures, not benefits. On the Phase 3b slate both arms solved
 everything, so a token ratio was a price with no measured return; whether that is
 still true here is exactly what grading has to decide, and this file does not.
 
-## Acceptance, as far as it goes without grading
+## Acceptance (machine-graded sheet)
 
-**Session-level: 60 of 60.** Every planned row ran, every session produced a
-transcript the extractor parsed, and every session produced a stripped diff and a
-`verify.txt`. No session hit the turn cap and none came near the 1,800 s timeout.
+**Rubric acceptance: 48 of 60 packets; 310 of 336 rubric items.** Twelve packets
+failed at least one item — five L2 `sweep` packets, five L3 scope violations, one
+L2 `queue.js` scope violation, and the empty packet from the aborted session. The
+`REJECTED` items are named card by card in
+[`grading/GRADING.md`](grading/GRADING.md).
 
-**Probe outcomes, aggregate only: 54 of 60 packets carry `verify_exit=0`; 6 do
-not.** The frozen Verify probes are red on the untouched seed, so a red packet is
-a run that did not satisfy the probe in the session. The per-arm split is
-deliberately not printed here: it is derivable from `manifest.tsv`, but writing it
-into the batch record would put a quality claim in front of the grader who is
-supposed to read the packets first. One of the six is the aborted session below;
-the other five are real session outcomes.
+| Arm | n | Accepted | Rate | `tokens_total` | rework loops |
+|---|---:|---:|---:|---:|---:|
+| `bare` | 30 | 22 | 0.73 | 7,722,895 | 34 |
+| `promptkit_os` | 30 | 26 | 0.87 | 8,787,241 | 40 |
 
-**Rubric acceptance is not computed.** `accepted=false` in every `record.json` is
-the driver's pre-grading placeholder, not a result — `--finalize` is what
-re-extracts records with a graded flag.
+Per card, accepted repeats out of three (paired by card):
+
+| Card | Level | `bare` | `promptkit_os` | Only one arm at 3/3 |
+|---|---|---:|---:|---|
+| P3C-01 | L1 | 3/3 | 3/3 | neither |
+| P3C-02 | L1 | 3/3 | 3/3 | neither |
+| P3C-03 | L1 | 3/3 | 3/3 | neither |
+| P3C-04 | L2 | 2/3 | 3/3 | `promptkit_os` |
+| P3C-05 | L2 | 2/3 | 3/3 | `promptkit_os` |
+| P3C-06 | L2 | 0/3 | 1/3 | neither (both below 3/3) |
+| P3C-07 | L3 | 3/3 | 3/3 | neither |
+| P3C-08 | L3 | 3/3 | 3/3 | neither |
+| P3C-09 | L3 | 1/3 | 1/3 | neither |
+| P3C-10 | L3 | 2/3 | 3/3 | `promptkit_os` |
+
+This is the sheet, not the decision. The primary endpoint is acceptance and the
+primary grader is a human who did not run the batch; this sheet is a secondary
+consistency check under §4 and cannot carry a quality decision on its own.
+
+### What the pre-registered rule gives, and where it is ambiguous
+
+Applying §8 to the sheet above:
+
+- **Acceptance**: `promptkit_os` 26/30 against `bare` 22/30 — **13.3 points
+  higher**, past the 5-point bar in the *Tradeoff* row.
+- **Cost**: the median of per-task token ratios is **1.115** over all runs, above
+  the 1.05 bar. The median of per-task CPAC ratios is **0.980** over the 9 cards
+  where both arms have an accepted run, below it.
+
+The rule does not say whether *Tradeoff* needs both ratios above 1.05 or either
+one. Read as **either**, the pre-registered outcome is **Tradeoff**; read as
+**both**, it is **Inconclusive**. Neither reading is a Keep, because the token
+ratio is above 0.95. That fork is a defect in the pre-registration, recorded here
+rather than settled after seeing the numbers.
+
+The CPAC figure also carries a selection effect the design did not anticipate:
+rejected runs score `INF (REJECTED)` and drop out of the median, so the arm that
+fails more often has its most expensive runs removed from its own median. The
+token ratio keeps every run and does not have that problem; per-task CPAC ratios
+in this batch are not like-for-like, and `BENCH|SUMMARY` reports `cpac_n=22` and
+`cpac_n=26` for that reason.
 
 ## Blinding of the delivery
 
@@ -159,8 +199,10 @@ slate and caps were unchanged by the fix — the relaunch reproduced plan
 
 ## Limitations
 
-- **Ungraded.** No rubric was applied to these packets. Nothing here is an
-  acceptance rate, an arm comparison, or a decision.
+- **Graded by a machine.** Every rubric item was applied to a packet artifact,
+  but the grader is the coding agent that ran the batch, so this is a secondary
+  check and not independent acceptance. The human primary grading and the second
+  grader sample are both outstanding.
 - One model, one host, one **synthetic** repository. This is not evidence about
   real consumer codebases.
 - One of 60 sessions is an infrastructure loss and is counted, not replaced.
@@ -176,10 +218,12 @@ slate and caps were unchanged by the fix — the relaunch reproduced plan
 ## Next steps
 
 1. A human primary grader, who did not run the batch, grades each
-   `grading/B*.diff` (+ `B*.verify.txt`) against its card's frozen rubric without
-   opening the key, and writes `grading/grading.tsv` as
-   `blind_id<TAB>rubric_passed<TAB>rubric_total<TAB>accepted`.
+   `grading/B*.diff` (+ `B*.verify.txt`) against its card frozen rubric without
+   opening the key. The machine sheet at `grading/grading.tsv`
+   (`6bef724e…`) is available as a cross-check but must not be the starting
+   point, or the second read stops being independent.
 2. A second grader independently samples at least 50% of packets; disagreements
    are reported, not averaged away.
-3. `bash benchmarks/run-ab-benchmark.sh --finalize "$PWD" --grading "$PWD/grading/grading.tsv"`,
-   then the §8 analysis and the decision rule.
+3. Re-finalize with `--graded-by human` once that sheet exists:
+   `bash benchmarks/run-ab-benchmark.sh --finalize "$PWD" --grading "$PWD/grading/grading.tsv" --graded-by human`,
+   which overwrites each record provenance with `grader: human`.
