@@ -1,8 +1,10 @@
 # Phase 3b — Confirmatory A/B Protocol
 
 - **Status**: FROZEN and signed 2026-10-28, approved 2026-10-31, not run.
-  Appendix B's parameters are pinned to `f6a58f0`; the batch stages `76e7594` by
-  the 2026-10-31 Appendix C decision. All four Approval items are ticked, so the
+  Appendix B's parameters are pinned to `f6a58f0`; the batch stages `b23159d`,
+  the merged HEAD that carries the required `--key-out` driver, by the
+  2026-10-31 Appendix C row that supersedes the `76e7594` decision. All four
+  Approval items are ticked, so the
   batch is authorized up to §9's cap (42 sessions / 24 hours / $25 actual
   `transcript_cost_usd`). Appendix D is complete and the blind key's path is
   reserved outside the grading workspace; §11's five remaining items are all
@@ -465,8 +467,9 @@ Slate notes:
   runs, and this commit's parent: the only value writable without a self-hash cycle.
   `run-ab-benchmark.sh` writes the engine clone's `rev-parse HEAD` to `env.txt`, so a stale
   pin here would make the frozen parameters disagree with every run. The batch runs
-  `76e7594` by the 2026-10-31 Appendix C decision (see the merged-engine re-run);
-  this freeze-time value stays as the signed pin rather than being rewritten.
+  `b23159d` by the 2026-10-31 Appendix C row that supersedes the `76e7594`
+  decision (see the batch-time re-run in Appendix D); this freeze-time value stays
+  as the signed pin rather than being rewritten.
 - Seed SHA: `16b3cf74c809c23dd48466da2212bd3e67a530ed`
 - Neutralization procedure SHA: `7b79660dfb36e1cc1cdeed88a2e4886c2dbfcaa57158e7ad7ae9f72800f377c4` (`benchmarks/seed/neutralize.sh`); the seed was produced by `benchmarks/seed/build-phase3b-seed.sh` at `cf65228e7f66727bdc34ecb59ffed67109dddbe483d4fcd709a58877a7d41dd4` and accepted by `neutralize.sh` with `removed=0`
 - Task bundle SHA-256: `c82822c86c236447b9ac6481d375ec069ed2797a047dba10cb6dcc8266e3ad9f`
@@ -539,6 +542,7 @@ both arms before the run; every `Verify` command was exercised on both.
 | 2026-10-31 | Re-ran `--preflight-only` against the merged engine at `76e7594` and recorded the run under Appendix D's merged-engine re-run, deciding that the batch runs that SHA. | Appendix B pins the engine at `f6a58f0`, but the repository a batch would run is `76e7594`, so a pin naming a commit no session runs would make the frozen parameters disagree with every run's `env.txt`. The protocol requires that difference logged before the first session. | Engine pinned at `f6a58f0` with a preflight record only for that SHA → the same six cards, plan seeds, model, and timeout preflighted at `76e7594`: `engine=76e7594`, `seed=16b3cf7`, `cli=1.88.0`, plan digest `6ac712a9…` unchanged at 12 rows, zero spend. | No change to Appendix A, the task cards (bundle `c82822c8…` recomputes), the seed, the thresholds, or the cap. The staged treatment surface differs from the pinned commit in one file, `workflows/pr.md` (`3cd97fe`), while `init.sh`, `protocols/`, `templates/`, and `scripts/` outside the excluded `scripts/tests/` are unchanged. No session has run, so no result is affected. The batch runs `76e7594`: the one delta is a PR-workflow callout that no Appendix A card invokes, and a worktree at `f6a58f0` would record an engine that is not what ships. Appendix B keeps the freeze-time SHA and points here, so the 2026-10-28 signature still covers the values it signed. | Owner (J. Balanay), 2026-10-31 |
 | 2026-10-31 | Ticked Approval items 1–3 (task slate, §7 thresholds, §9 cap) and rewrote the four passages that still described them as open, plus Appendix D's stale open-boxes sentence. | The three items were the only written gate on execution, and the slate, thresholds, and cap they approve had been complete since the freeze. Ticking the checkboxes alone would have left the Status header, Appendix B's signature bullet, §11's first item, and the closing gate note asserting the opposite of the boxes directly above them — the drift every earlier reconciliation row in this table was written to repair. Appendix D's open-boxes paragraph had also still listed the spend cap as open after that box was ticked on 2026-10-30. | Items 1–3 unticked and four passages saying so, with a fifth stale about the spend cap → all four items ticked, the slate/thresholds/cap approved 2026-10-31 on a dated line separate from the 2026-10-28 freeze signature, the four passages rewritten to the approved state, and Appendix D's paragraph reduced to the one box a preflight cannot exercise. | Documentation only; no change to Appendix A, the Appendix B parameter values, the task cards, the thresholds, or the cap, and no session has run. The approval authorizes spend up to §9's 42 sessions / 24 hours / $25 and nothing beyond it; it does not authorize a change to the protocol after the first session (§10). §11 stood at 8 of 14 ticked with 6 open — 5 of those post-batch by construction and 1 the then-open key location; Appendix D stood at 9 of 10 with that same box open. | Owner (J. Balanay), 2026-10-31 |
 | 2026-10-31 | Required `--key-out` for a batch, refused a key path inside `<out>`, the seed, or the engine, reserved an external key store, and ticked §11's and Appendix D's key-location items. | The box was open because the driver wrote `grading/key.csv` into the directory holding the `B*.diff` packets the operator is told to grade without reading the key: that is one `cat` from unblinding, not "outside the grading workspace". Ticking it on the strength of the audit's `key=outside_delivery` label would have been a reading — the audit only proved the key was outside the copied delivery, not outside the workspace a grader works in. | Key beside the packets → the key is written to `--key-out` (mode 600), `<out>/grading/key.csv` is absent by construction, `<out>/key-location.txt` records the path, SHA-256, and row count with no mapping row, `--finalize` reads that record and refuses a digest mismatch (`KEY_HASH_MISMATCH`), and the audit fails on a key in `<out>/grading/` or a record that names another path or digest (`key_store=outside_out`). Harnesses: driver 61 → 66 cases, blinding audit 12 cases, both green. | Change to the instrument only — `benchmarks/run-ab-benchmark.sh`, `benchmarks/audit-blinding.sh`, and two test harnesses. No change to Appendix A, the Appendix B parameter values, the task cards, the seed, the thresholds, or the cap, and no session has run. The staged treatment-arm surface (`init.sh`, `workflows/`, `protocols/`, `templates/`, `scripts/`) is unchanged, so the measured engine is untouched. §11 stands at 9 of 14 ticked with 5 open, all post-batch by construction; Appendix D is 10 of 10. | Owner (J. Balanay), 2026-10-31 |
+| 2026-10-31 | Re-ran `--preflight-only` at `b23159d` — the merged HEAD that carries the required `--key-out` driver — and recorded that the batch runs it instead of `76e7594`. | The `76e7594` decision predates #714, which moved HEAD; a worktree at `76e7594` predates `--key-out` and so cannot run the key-location rule §11 now requires. The difference therefore has to be logged before the first session rather than discovered by `env.txt`. | Decision named `76e7594` -> preflight at `b23159d` reproduces the frozen plan digest `6ac712a9…` at 12 rows with `engine=b23159d`, `seed=16b3cf7`, `cli=1.88.0`, `CROSSARM\|OK`, and `ISOLATION\|OK`. | No change to Appendix A, the Appendix B parameter values, the task cards (bundle `c82822c8…` recomputes), the seed, the thresholds, or the cap. `git diff --name-only 76e7594..b23159d` restricted to the surface `stage_engine_kit` copies is empty, so the measured engine is identical; the re-run spent nothing. No session has run, so no result is affected. | Owner (J. Balanay), 2026-10-31 |
 
 ## Appendix D — Preflight checklist
 
@@ -855,7 +859,8 @@ ORDER|PLAN|seed=20261027|shuffle_seed=90613245|rows=12|sha256=6ac712a95506521723
   file: `workflows/pr.md` (`3cd97fe`). The run itself stages nothing — it
   exits before the session loop — so this describes the batch, not the
   preflight.
-- Decision: the batch runs `76e7594`. The surface under test is unchanged
+- Decision (**superseded 2026-10-31** by the batch-time re-run below): the batch
+  runs `76e7594`. The surface under test is unchanged
   between the two commits except `workflows/pr.md`, which no Appendix A
   card invokes, so a worktree at `f6a58f0` would measure the same behavior
   while recording an engine that is not what ships; running the merged SHA
@@ -864,6 +869,48 @@ ORDER|PLAN|seed=20261027|shuffle_seed=90613245|rows=12|sha256=6ac712a95506521723
   row, not a rewrite of the signed pin: Appendix B keeps `f6a58f0` and
   points here. If the owner prefers the worktree instead, that row is where
   to change it, and it must change before the first session.
+
+### Batch-time re-run (2026-10-31)
+
+`--preflight-only` re-executed on 2026-10-31T02:42:59Z against the merged HEAD
+that carries the required `--key-out` driver, with the six Appendix A cards, the
+rebuilt seed at its pinned SHA, and the frozen plan seeds, model, timeout, and
+profile:
+
+```sh
+env -i HOME=<throwaway> \
+  PATH=~/.local/opt/command-code/1.88.0/node_modules/.bin:<nvm v24 bin>:/usr/local/bin:/usr/bin:/bin \
+  bash benchmarks/run-ab-benchmark.sh --engine <repo> --seed <seed> \
+    --tasks <six Appendix A cards> --model deepseek/deepseek-v4.1-flash \
+    --out <tmp>/pk-out-preflight-20261031T024250Z --order-seed 20261027 \
+    --shuffle-seed 90613245 --max-turns 40 --timeout 1800 \
+    --profile balanced --preflight-only
+```
+
+```text
+CROSSARM|OK|tasks=6|arms=2|cells=12|max_turns=40|timeout=1800
+ISOLATION|OK|seed=16b3cf7|home=/tmp/pk-home-preflight-20261031T024250Z
+PREFLIGHT|OK|engine=b23159d|seed=16b3cf7|model=deepseek/deepseek-v4.1-flash|cli=1.88.0
+ORDER|PLAN|seed=20261027|shuffle_seed=90613245|rows=12|sha256=6ac712a95506521723a62db35bd86cc0559c9eae61b738e02107b55f3fd452be
+```
+
+- Engine: `b23159d` — the commit `#714` left at the tip. The surface
+  `stage_engine_kit` copies (`init.sh`, `init.ps1`, `LICENSE`, `VERSION`,
+  `workflows/`, `protocols/`, `templates/`, `scripts/` minus `scripts/tests/`)
+  is unchanged from `76e7594`: `git diff --name-only 76e7594..b23159d` touches
+  `CHANGELOG.md`, `benchmarks/`, and `scripts/tests/` only. The measured engine
+  is therefore identical to the one the merged-engine decision described.
+- Why not the `76e7594` worktree: that commit predates `--key-out`, and §11 now
+  requires the key to be written outside `<out>`. A driver without that flag
+  cannot run a compliant batch, so the substitution is recorded rather than the
+  worktree being used.
+- Plan: unchanged — the same `order.tsv` digest at 12 rows, so the amendment
+  did not disturb the pre-registration.
+- Spend: zero. `<out>` holds `order.tsv`, `env.txt`, `isolation.txt`,
+  `crossarm.txt`, `engine-path.txt`, and empty `grading/` and `runs/`; `env.txt`
+  records `engine: b23159d570ab82479aa2d320125fc678f4c81760`, `command-code:
+  1.88.0`, `max_turns: 40`, `timeout: 1800`, `profile: balanced`, and the plan
+  digest above. No session was invoked.
 
 ### Key-store check
 
@@ -893,7 +940,7 @@ BATCH|OK|runs=2|out=/tmp/pk-keyproof.YNX6hQ/out
 
 `engine=83f82e9` is the checkout this check ran from, not a change to the batch
 engine: placement does not depend on the staged kit, and the batch still stages
-`76e7594` by the merged-engine decision above.
+`b23159d` by the batch-time re-run above.
 
 Read back after the run: the key existed at the reserved path with mode `600`
 and two rows; `<out>/grading/key.csv` was absent; `key-location.txt` named the
