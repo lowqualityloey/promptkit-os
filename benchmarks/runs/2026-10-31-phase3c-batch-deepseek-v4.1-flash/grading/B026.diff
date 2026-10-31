@@ -1,0 +1,52 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..841dd62 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -28,12 +28,20 @@ export function createRunner({ store, queue, metrics = createMetrics(), now = ()
+   }
+ 
+   function status() {
+-    const records = store.readAll();
+-    return {
+-      pending: records.filter((record) => record.type === 'enqueue').length,
+-      done: records.filter((record) => record.type === 'done').length,
+-      failed: records.filter((record) => record.type === 'failed').length,
+-    };
++    // Replay the log per job. A job opens on its enqueue record and is closed
++    // by its done or failed record, so it counts in exactly one bucket.
++    const states = new Map();
++    for (const record of store.readAll()) {
++      if (record.type === 'enqueue') {
++        if (!states.has(record.id)) states.set(record.id, 'pending');
++      } else if (record.type === 'done' || record.type === 'failed') {
++        states.set(record.id, record.type);
++      }
++    }
++
++    const counts = { pending: 0, done: 0, failed: 0 };
++    for (const state of states.values()) counts[state] += 1;
++    return counts;
+   }
+ 
+   return { enqueue, run, status };
+diff --git a/test/integration.test.js b/test/integration.test.js
+index 79921ae..3f7b66b 100644
+--- a/test/integration.test.js
++++ b/test/integration.test.js
+@@ -59,6 +59,16 @@ test('status reports the number of finished jobs', async () => {
+   assert.equal(runner.status().failed, 0);
+ });
+ 
++test('status does not count a finished job as pending', () => {
++  const { runner } = runnerOn([
++    { type: 'enqueue', id: 'finished', at: 1 },
++    { type: 'done', id: 'finished', at: 2 },
++    { type: 'enqueue', id: 'unfinished', at: 3 },
++  ]);
++
++  assert.deepEqual(runner.status(), { pending: 1, done: 1, failed: 0 });
++});
++
+ test('a runner with a non-empty store still runs the jobs it was given', async () => {
+   const { runner } = runnerOn([{ type: 'enqueue', id: 'old', at: 1 }, { type: 'done', id: 'old', at: 2 }]);
+   const ran = [];

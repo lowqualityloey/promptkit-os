@@ -1,0 +1,53 @@
+diff --git a/src/dispatcher.js b/src/dispatcher.js
+index 46ef44a..68e61dd 100644
+--- a/src/dispatcher.js
++++ b/src/dispatcher.js
+@@ -42,7 +42,7 @@ export async function dispatch(
+       } catch (error) {
+         lastError = error;
+         if (attempts < maxAttempts) {
+-          const base = baseDelayMs * 2 ** (attempts - 1);
++          const base = Math.min(baseDelayMs * 2 ** (attempts - 1), jitterCapMs);
+           await sleep(Math.floor(jitter() * base));
+         }
+       }
+diff --git a/test/dispatcher.test.js b/test/dispatcher.test.js
+index 1452e38..7c9431a 100644
+--- a/test/dispatcher.test.js
++++ b/test/dispatcher.test.js
+@@ -82,6 +82,35 @@ test('waits between attempts and not before the first or after the last', async
+   assert.deepEqual(delays, [50, 100]);
+ });
+ 
++test('caps each backoff delay at jitterCapMs and draws once per wait', async () => {
++  const queue = queueWith('doomed');
++  const delays = [];
++  let draws = 0;
++
++  await dispatch(
++    queue,
++    async () => {
++      throw new Error('nope');
++    },
++    {
++      maxAttempts: 4,
++      baseDelayMs: 100,
++      jitterCapMs: 150,
++      jitter: () => {
++        draws += 1;
++        return 0.5;
++      },
++      sleep: async (delayMs) => {
++        delays.push(delayMs);
++      },
++    },
++  );
++
++  assert.deepEqual(delays, [50, 75, 75]);
++  assert.equal(draws, 3);
++  for (const delayMs of delays) assert.ok(delayMs <= 150);
++});
++
+ test('maxAttempts of 1 makes a single attempt without sleeping', async () => {
+   const queue = queueWith('once');
+   let slept = false;

@@ -1,0 +1,29 @@
+
+[0;36m🚀 Initializing PromptKit OS (balanced profile)...[0m
+   Host Project: /home/heyloey/personal/promptkit-os/benchmarks/runs/2026-10-31-phase3c-batch-deepseek-v4.1-flash/runs/P3C-10-promptkit_os-r1
+   Engine Path:  /home/heyloey/personal/promptkit-os
+   Profile:      balanced
+   Tracking:     local
+
+PREFLIGHT|SKIPPED|USER_OPT_OUT
+  [0;32m[+][0m Added host configuration: AGENTS.md
+  [0;32m[+][0m Created default agent configurations: AGENTS.md
+  [0;32m[+][0m Created directory: docs/tasks
+  [0;32m[+][0m Created directory: docs/specs
+  [0;32m[+][0m Created directory: docs/adrs
+  [0;32m[+][0m Created directory: docs/tests
+  [0;32m[+][0m Created: PROMPTKIT.md (project profile & guardrails)
+  [0;32m[+][0m Set PROMPTKIT.md profile: balanced
+  [0;33m[✓][0m Updated PROMPTKIT.md tracking: local
+  [0;32m[+][0m Created: docs/STATE.md (living project & state tracker)
+  [0;32m[+][0m Created: .github/pull_request_template.md (staff-level PR specification)
+  [0;32m[+][0m Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)
+  [0;32m[+][0m Injected PromptKit OS directives into: AGENTS.md (profile: balanced)
+ASSERT|skipped|USER_OPT_OUT|SKIP
+
+[0;36m✨ PromptKit OS successfully configured for /home/heyloey/personal/promptkit-os/benchmarks/runs/2026-10-31-phase3c-batch-deepseek-v4.1-flash/runs/P3C-10-promptkit_os-r1! (balanced profile)[0m
+   Balanced: 26 workflows, Level 0-3 adaptive ceremony — full power
+   For onboarding: .promptkit/init.sh --lite for minimal setup
+   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'
+
+ASSERT|courier|tree|OK

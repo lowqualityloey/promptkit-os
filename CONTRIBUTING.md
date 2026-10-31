@@ -76,8 +76,11 @@ bash scripts/tests/run-cpac-ingestion-tests.sh
 # Benchmark tools harness (diff stripping + per-arm aggregation)
 bash scripts/tests/run-benchmark-tools-tests.sh
 
-# Benchmark driver regression (mock CLI, isolated HOME — run+finalize paths)
+# Benchmark driver regression (mock CLI, isolated HOME — run+finalize+screen paths)
 bash scripts/tests/run-benchmark-driver-tests.sh
+
+# Phase 3c probe discrimination (every card's Verify: red on the seed, green on its reference)
+bash benchmarks/validate-phase3c-probes.sh
 
 # Blinding audit (dry-run delivery through the driver; §4 scan + control)
 bash benchmarks/audit-blinding.sh

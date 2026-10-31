@@ -1,0 +1,16 @@
+task_id	prompt_sha256	argv_sha256
+P3C-01	a9217ab13e4af6acdf4600166165857ce600f4203a62cdf98b9ae71f2aa87a58	d15b70f9d10ea5bd4ebc4e7f4857af7a6afb2d17e1b5258ae58c618940e758bc
+P3C-06	ec245a19764ad7045a9a68bcefa05997cd58b243690f41b63580b6c4bdca7f9e	30b9ac346f8d5db9a483ee9ba8a0d650cb318d8af49dd1de16275b87794c42f8
+P3C-08	6d8acb03625685ce84700295b22288c36093707806db7b34ce9198c5f23564fd	66883c9c4206528ca3f3b2d982995d60cd8645e17d8e8aefbbbf360392907059
+flags: -t --yolo --tools-all --skip-onboarding --no-auto-update
+permission_mode: yolo
+tools: all
+model: deepseek/deepseek-v4.1-flash
+max_turns: 40
+timeout: 1800
+arms: promptkit_os,bare
+repeats: 1
+cells: 6
+promptkit_os_cells: 3
+bare_cells: 3
+verdict: identical

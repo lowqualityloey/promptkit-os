@@ -1,0 +1,39 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..97f17e1 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -42,14 +42,20 @@ export function createRunner({ store, queue, metrics = createMetrics(), now = ()
+ export async function main(argv = [], env = {}, io = { out: () => {}, err: () => {} }) {
+   try {
+     const { command, flags } = parseArgs(argv);
++    if (Object.hasOwn(flags, 'DRY_RUN')) {
++      io.err?.('warning: --DRY_RUN is deprecated and will be removed; use --dry-run instead');
++    }
++    const requested = (value) => value === true || value === '1' || value === 'true';
++    const dryRun = requested(flags['dry-run']) || requested(flags.DRY_RUN);
++
+     const overrides = {};
+     for (const [name, value] of Object.entries(flags)) {
+-      if (name === 'DRY_RUN' || name === 'JOBS') continue;
++      if (name === 'DRY_RUN' || name === 'dry-run' || name === 'JOBS') continue;
+       overrides[name] = value;
+     }
+     const config = loadConfig({ ...env, ...overrides });
+ 
+-    if (flags.DRY_RUN === true || flags.DRY_RUN === '1' || flags.DRY_RUN === 'true') {
++    if (dryRun === true || dryRun === '1' || dryRun === 'true') {
+       io.out(`dry-run port=${config.port} level=${config.level} capacity=${config.capacity}`);
+       return { exitCode: 0, config };
+     }
+diff --git a/src/cli.js b/src/cli.js
+index cebcb50..9fd8101 100644
+--- a/src/cli.js
++++ b/src/cli.js
+@@ -13,6 +13,7 @@ const FLAGS = new Set([
+   'STORE_PATH',
+   'JOBS',
+   'DRY_RUN',
++  'dry-run',
+ ]);
+ 
+ export function parseArgs(argv = []) {

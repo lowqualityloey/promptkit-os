@@ -90,6 +90,8 @@ jobs:
           bash -n benchmarks/run-ab-benchmark.sh
           bash -n benchmarks/seed/neutralize.sh
           bash -n benchmarks/seed/build-phase3b-seed.sh
+          bash -n benchmarks/seed/build-phase3c-seed.sh
+          bash -n benchmarks/validate-phase3c-probes.sh
           bash -n scripts/tests/run-token-budget-tests.sh
           bash -n scripts/validate-execution-control.sh
           bash -n scripts/validate-authorization-evidence.sh
@@ -259,6 +261,9 @@ jobs:
 
       - name: Run Benchmark Driver Regression Harness (Bash)
         run: bash scripts/tests/run-benchmark-driver-tests.sh
+
+      - name: Validate Phase 3c Probe Discrimination (Bash)
+        run: bash benchmarks/validate-phase3c-probes.sh
 
       - name: Run Blinding Audit Harness (Bash)
         run: bash scripts/tests/run-benchmark-blinding-tests.sh

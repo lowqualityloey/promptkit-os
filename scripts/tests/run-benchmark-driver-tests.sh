@@ -60,10 +60,14 @@ fi
 printf '%s\n' "${@: -1}" >> "$HOME/stub-prompts.log"
 cwd="$(pwd)"
 # Real Command Code slugifies the working directory with
-# @sindresorhus/slugify: lowercase, path separators and underscores become
-# hyphens. Mirror that shape so the driver's transcript lookup is exercised
-# against the same path the real CLI writes.
-slug="$(printf '%s' "$cwd" | sed 's#^/##; s#/#-#g' | tr '[:upper:]' '[:lower:]' | sed 's#_#-#g; s#[^a-z0-9-]#-#g; s#-\{2,\}#-#g; s#^-##; s#-$##')"
+# @sindresorhus/slugify: decamelize (a separator at a lower/digit -> upper
+# boundary and before the last capital of an acronym run), then lowercase, then
+# path separators and underscores become hyphens. Mirror that shape so the
+# driver's transcript lookup is exercised against the same path the real CLI
+# writes.
+slug="$(printf '%s' "$cwd" \
+    | sed -e 's/\([a-z0-9]\)\([A-Z]\)/\1-\2/g' -e 's/\([A-Z]\)\([A-Z][a-z]\)/\1-\2/g' \
+    | sed 's#^/##; s#/#-#g' | tr '[:upper:]' '[:lower:]' | sed 's#_#-#g; s#[^a-z0-9-]#-#g; s#-\{2,\}#-#g; s#^-##; s#-$##')"
 proj="$HOME/.commandcode/projects/$slug"
 mkdir -p "$proj"
 sid="stub-$(date +%s%N)-$RANDOM"
@@ -162,6 +166,76 @@ if [[ "${#argv_lines[@]}" -eq 2 && "${argv_lines[0]}" == "${argv_lines[1]}" ]] \
     ok "both arms pass byte-identical argv to the CLI"
 else
     notok "cross-arm argv (lines=${#argv_lines[@]} first=[${argv_lines[0]:0:80}])"
+fi
+
+# --- transcript lookup mirrors the CLI's slugify, digit->upper split included --
+# Real @sindresorhus/slugify decamelizes before lowercasing, so `P3C-08` becomes
+# `p3-c-08` and a run path under it is written to that directory. A mirror
+# without the split looked for `p3c-08`, and the first Phase 3c calibration
+# session spent a run and then died with TRANSCRIPT_MISSING. Pinned against the
+# real tool's output rather than the stub's, so a shared mistake cannot pass.
+slugfn="$(sed -n '/^slugify_run_path()/,/^}/p' "$DRIVER")"
+got="$(bash -c "$slugfn"'; slugify_run_path /x/runs/P3C-08-bare-r1; echo; slugify_run_path /x/runs/AbC9dE/runs/P3C-10-promptkit_os-r1; echo; slugify_run_path /x/runs/BENCH-L2-04-bare-r1')"
+want=$'x-runs-p3-c-08-bare-r1\nx-runs-ab-c9d-e-runs-p3-c-10-promptkit-os-r1\nx-runs-bench-l2-04-bare-r1'
+if [[ "$got" == "$want" ]]; then
+    ok "transcript path mirror reproduces slugify's digit->upper and acronym splits"
+else
+    notok "slugify mirror (got=[$got])"
+fi
+
+# --- a card whose id carries a digit->upper run completes end to end ----------
+# This is the shape the Phase 3c slate uses; the rule case above pins the
+# alphabet, and this one pins that a whole batch reaches its transcript.
+TASK3="$TMP_DIR/task3.md"
+cat > "$TASK3" <<'TASK3EOF'
+# Task Spec: Driver slug task
+
+- **Task ID**: `P3C-08`
+- **Level**: `L3`
+- **Seed Repository**: `throwaway`
+- **Prompt**: `"Append the line STUB-LINE to src/app.ts. Do not change any other file."`
+- **Setup**: `None`
+- **Verify**: `None`
+
+## Rubric
+
+- [ ] `R1`: src/app.ts contains STUB-LINE.
+TASK3EOF
+OUT_SLUG="$TMP_DIR/out-slug"
+out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK3" \
+    --model stub/model-a --out "$OUT_SLUG" --max-turns 5 --timeout 60 \
+    --key-out "$KEYS/slug.csv" --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
+slug_row="$(grep -m1 $'^P3C-08-bare-r1\t' "$OUT_SLUG/manifest.tsv" 2>/dev/null || true)"
+slug_tr="$(printf '%s' "$slug_row" | cut -f4)"
+if [[ $rc -eq 0 && "$out" == *"BATCH|OK|runs=2"* && -f "$slug_tr" \
+        && "$slug_tr" == *"-p3-c-08-bare-r1/"* ]]; then
+    ok "a task id with a digit->upper run resolves its transcript under p3-c-08"
+else
+    notok "digited task id run (rc=$rc, transcript=[$slug_tr], out=$(printf '%s' "$out" | tail -2 | tr '\n' ' '))"
+fi
+
+# --- a relative --out still resolves its transcripts ---------------------------
+# The CLI keys a transcript on slugify(absolute cwd). Run directories are cloned
+# under <out>, so a relative <out> made the lookup search a slug that cannot
+# exist, and the first row of the Phase 3c batch spent a session before dying
+# with TRANSCRIPT_MISSING. <out> is resolved up front, so the manifest carries
+# an absolute run directory and the transcript is found.
+OUT_REL="$TMP_DIR/rel"
+mkdir -p "$OUT_REL"
+out="$(cd "$OUT_REL" && PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK3" \
+    --model stub/model-a --out rel-out --max-turns 5 --timeout 60 \
+    --key-out "$KEYS/rel.csv" --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
+rel_row="$(grep -m1 $'^P3C-08-bare-r1\t' "$OUT_REL/rel-out/manifest.tsv" 2>/dev/null || true)"
+rel_dir="$(printf '%s' "$rel_row" | cut -f3)"
+rel_tr="$(printf '%s' "$rel_row" | cut -f4)"
+if [[ $rc -eq 0 && "$out" == *"BATCH|OK|runs=2"* \
+        && "$rel_dir" == "$OUT_REL/rel-out/runs/P3C-08-bare-r1" && -f "$rel_tr" \
+        && "$rel_tr" == *"-p3-c-08-bare-r1/"* ]]; then
+    ok "a relative --out resolves transcripts against the CLI's absolute-path slug"
+else
+    notok "relative --out (rc=$rc, dir=[$rel_dir], transcript=[$rel_tr], out=$(printf '%s' "$out" | tail -2 | tr '\n' ' '))"
 fi
 
 # --- diff anchored to the seed SHA despite the agent's commit ------------------
@@ -866,6 +940,82 @@ if [[ $rc -eq 2 && "$out" == *"dest exists"* \
     ok "an existing dest is refused and left untouched"
 else
     notok "existing dest refusal (rc=$rc, out=${out:0:160})"
+fi
+
+# --- screen mode (--screen --arm bare) ---------------------------------------
+# The screen run answers "is this probe red on the bare arm?" without a session.
+# It must work on a host with no command-code on PATH, because it starts no
+# session; PATH here is the system directories only, so the stub is invisible.
+NO_CLI_PATH="/usr/bin:/bin"
+out="$(PATH="$NO_CLI_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --screen --arm bare --seed "$SEED" --tasks "$TASK" 2>&1)"; rc=$?
+if [[ $rc -eq 0 && "$out" == *"SCREEN|BENCH-DRIVER-01|arm=bare|probe=fail"* \
+        && "$out" == *"SCREEN|OK|arm=bare|tasks=1|red=1"* ]]; then
+    ok "--screen runs the probe on the bare seed with no CLI on PATH"
+else
+    notok "screen red case (rc=$rc, out=${out:0:240})"
+fi
+
+# The probe runs in a throwaway copy: a Verify command that writes must not move
+# the pinned seed, or the recorded seed SHA stops describing the batch.
+if [[ -z "$(git -C "$SEED" status --porcelain)" ]]; then
+    ok "--screen leaves the seed working tree clean"
+else
+    notok "screen moved the seed (status=$(git -C "$SEED" status --porcelain | head -2))"
+fi
+
+# A probe that is already green on the bare arm cannot tell the arms apart, so
+# the slate is refused rather than graded later.
+TASK_GREEN="$TMP_DIR/task-green.md"
+cat > "$TASK_GREEN" <<'TASKGREEN'
+# Task Spec: Already satisfied on the seed
+
+- **Task ID**: `BENCH-DRIVER-GREEN`
+- **Level**: `L1`
+- **Seed Repository**: `throwaway`
+- **Prompt**: `"Do nothing."`
+- **Setup**: `None`
+- **Verify**: `grep -q 'export function main' src/app.ts`
+
+## Rubric
+
+- [ ] `R1`: nothing.
+TASKGREEN
+out="$(PATH="$NO_CLI_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --screen --arm bare --seed "$SEED" --tasks "$TASK_GREEN" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH-DRIVER-GREEN|arm=bare|probe=pass"* \
+        && "$out" == *"BENCH|ERROR|GREEN_ON_BARE"* ]]; then
+    ok "--screen refuses a probe that already passes on the bare arm"
+else
+    notok "screen green-on-bare refusal (rc=$rc, out=${out:0:240})"
+fi
+
+# A card with no Verify command cannot be screened: silence would read as a
+# red probe and hand the batch a task nobody can grade.
+out="$(PATH="$NO_CLI_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --screen --seed "$SEED" --tasks "$TASK2" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BAD_TASK"* && "$out" == *"no Verify command to screen"* ]]; then
+    ok "--screen refuses a card without a Verify command"
+else
+    notok "screen missing-Verify refusal (rc=$rc, out=${out:0:200})"
+fi
+
+# --arm selects the arm a probe runs in; on a batch it would be a lie, because a
+# batch always runs both arms. The promptkit_os arm only exists inside a
+# session, so screening it is refused too.
+out="$(PATH="$NO_CLI_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --arm bare --seed "$SEED" --tasks "$TASK" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|BAD_VALUE|arm (only --screen takes --arm)"* ]]; then
+    ok "--arm without --screen is refused"
+else
+    notok "--arm on a batch (rc=$rc, out=${out:0:200})"
+fi
+out="$(PATH="$NO_CLI_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
+    --screen --arm promptkit_os --seed "$SEED" --tasks "$TASK" 2>&1)"; rc=$?
+if [[ $rc -eq 2 && "$out" == *"BENCH|ERROR|BAD_VALUE|arm (screen supports bare"* ]]; then
+    ok "--screen refuses the promptkit_os arm"
+else
+    notok "screen promptkit_os refusal (rc=$rc, out=${out:0:200})"
 fi
 
 echo ""

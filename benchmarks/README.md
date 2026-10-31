@@ -56,7 +56,11 @@ For every task × arm × repeat:
    surface, deterministic to a fixed SHA, which `neutralize.sh` accepts with `removed=0`.
    A batch run against it is labeled synthetic: it has a backlog, but not a real one. The
    Phase 3 pilot predates the guard and inherited the seed's `AGENTS.md` and host surfaces,
-   so its report records the resulting `heyloey` hook confound.
+   so its report records the resulting `heyloey` hook confound. `benchmarks/seed/build-phase3c-seed.sh`
+   is the Phase 3c alternative: nine coupled modules, a docs surface stating three invariants,
+   an executable spec, and ten deliberate defects — none pinned by a seed test — so both arms
+   can fail. Its design, slate, and pre-registered decision rule are in
+   [`PHASE-3C-DESIGN.md`](PHASE-3C-DESIGN.md).
 4. **Telemetry**: headless sessions persist to `~/.commandcode/projects/<slug>/` and record
    per-message usage exactly like interactive sessions (verified on this host), so the §5
    record is extracted mechanically per run (`accepted=false` at extraction — acceptance is
@@ -197,6 +201,11 @@ this harness does not establish general performance.
 ## Usage
 
 ```bash
+# Screen the slate without spending: every card's Verify must be red on the
+# bare arm, or the card cannot tell the arms apart and the batch is refused.
+bash benchmarks/run-ab-benchmark.sh --screen --arm bare \
+  --seed /tmp/p3c-seed --tasks benchmarks/tasks/TASK-P3C-01.md,benchmarks/tasks/TASK-P3C-02.md
+
 # Validate the environment without spending
 bash benchmarks/run-ab-benchmark.sh --engine /path/to/promptkit-os \
   --seed /path/to/seed-repo --tasks benchmarks/tasks/TASK-BENCH-L1-01.md \

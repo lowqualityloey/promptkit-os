@@ -1,0 +1,113 @@
+diff --git a/src/store.js b/src/store.js
+index a7eca7f..989bc8d 100644
+--- a/src/store.js
++++ b/src/store.js
+@@ -10,6 +10,9 @@ export class StoreError extends Error {
+ 
+ const defaultIo = { appendFileSync, existsSync, mkdirSync, readFileSync };
+ 
++const CURRENT_VERSION = 2;
++const READABLE_VERSIONS = new Set([1, CURRENT_VERSION]);
++
+ // An append-only JSONL store. Records are written one per line and are never
+ // rewritten in place: a later reader replays them to work out the state of a
+ // job. `io` is injectable so a test can drive a store without touching disk, and
+@@ -23,16 +26,17 @@ export function createStore({ path, io = defaultIo } = {}) {
+     if (record === null || typeof record !== 'object') {
+       throw new StoreError('record must be an object');
+     }
++    const stored = { ...record, version: CURRENT_VERSION };
+     try {
+       const dir = dirname(path);
+       if (!io.existsSync(dir)) {
+         io.mkdirSync(dir, { recursive: true });
+       }
+-      io.appendFileSync(path, `${JSON.stringify(record)}\n`, 'utf8');
++      io.appendFileSync(path, `${JSON.stringify(stored)}\n`, 'utf8');
+     } catch (error) {
+       throw new StoreError(`append failed: ${error.message}`);
+     }
+-    return record;
++    return stored;
+   }
+ 
+   function readAll() {
+@@ -52,10 +56,17 @@ export function createStore({ path, io = defaultIo } = {}) {
+       } catch {
+         throw new StoreError('store contains a line that is not JSON');
+       }
+-      if (parsed === null || typeof parsed !== 'object' || typeof parsed.type !== 'string') {
++      if (parsed === null || typeof parsed !== 'object') {
++        throw new StoreError('store record is missing its type');
++      }
++      const version = parsed.version === undefined ? 1 : parsed.version;
++      if (!READABLE_VERSIONS.has(version)) {
++        throw new StoreError(`store record has an unknown format version: ${JSON.stringify(version)}`);
++      }
++      if (typeof parsed.type !== 'string') {
+         throw new StoreError('store record is missing its type');
+       }
+-      records.push(parsed);
++      records.push({ ...parsed, version });
+     }
+     return records;
+   }
+diff --git a/test/store.test.js b/test/store.test.js
+index be1a874..d4778f9 100644
+--- a/test/store.test.js
++++ b/test/store.test.js
+@@ -59,6 +59,54 @@ test('reads records back in order', () => {
+   assert.deepEqual(store.readAll().map((record) => record.id), ['a', 'a']);
+ });
+ 
++test('stamps records written now with version 2', () => {
++  const io = memoryIo();
++  const store = createStore({ path: '/s/jobs.jsonl', io });
++  const returned = store.append({ type: 'enqueue', id: 'a' });
++
++  const [line] = io.files.get('/s/jobs.jsonl').split('\n').filter(Boolean);
++  assert.equal(JSON.parse(line).version, 2);
++  assert.equal(returned.version, 2);
++  assert.equal(store.readAll()[0].version, 2);
++});
++
++test('reads a file written before versioning as version 1', () => {
++  const io = memoryIo('{"type":"enqueue","id":"a"}\n{"type":"done","id":"a"}\n');
++  const store = createStore({ path: '/s/jobs.jsonl', io });
++
++  const records = store.readAll();
++  assert.deepEqual(records.map((record) => record.version), [1, 1]);
++  assert.deepEqual(records.map((record) => record.type), ['enqueue', 'done']);
++  assert.deepEqual(records.map((record) => record.id), ['a', 'a']);
++});
++
++test('reads a mixed file by each record\'s own version', () => {
++  const io = memoryIo('{"type":"enqueue","id":"a"}\n{"version":2,"type":"done","id":"a"}\n');
++  const store = createStore({ path: '/s/jobs.jsonl', io });
++
++  const records = store.readAll();
++  assert.deepEqual(records.map((record) => record.version), [1, 2]);
++  assert.deepEqual(records.map((record) => record.type), ['enqueue', 'done']);
++});
++
++test('appending leaves the existing lines exactly as they were', () => {
++  const original = '{"type":"enqueue","id":"a"}\n';
++  const io = memoryIo(original);
++  const store = createStore({ path: '/s/jobs.jsonl', io });
++  store.append({ type: 'done', id: 'a' });
++
++  const written = io.files.get('/s/jobs.jsonl');
++  assert.ok(written.startsWith(original));
++  assert.equal(JSON.parse(written.split('\n')[1]).version, 2);
++});
++
++test('refuses a record from an unknown format version', () => {
++  const io = memoryIo('{"version":3,"type":"enqueue","id":"a"}\n');
++  const store = createStore({ path: '/s/jobs.jsonl', io });
++  assert.throws(() => store.readAll(), StoreError);
++  assert.throws(() => store.readAll(), /unknown format version/);
++});
++
+ test('fails closed on a line that is not JSON', () => {
+   const store = createStore({ path: '/s/jobs.jsonl', io: memoryIo('{"type":"enqueue"}\nnot json\n') });
+   assert.throws(() => store.readAll(), StoreError);

@@ -1,0 +1,149 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..9f28e93 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -2,18 +2,33 @@ import { CliError, parseArgs } from './cli.js';
+ import { ConfigError, loadConfig } from './config.js';
+ import { dispatch } from './dispatcher.js';
+ import { createMetrics } from './metrics.js';
+-import { createQueue } from './queue.js';
++import { QueueFullError, createQueue } from './queue.js';
+ import { createStore } from './store.js';
+ 
++// Raised when the store refuses a write partway through a batch. `attempted` is
++// the size of the batch that was offered, not the number of records written:
++// the caller needs to know what it asked for. The queue is left untouched.
++export class BackpressureError extends Error {
++  constructor(attempted, { cause } = {}) {
++    super(`store rejected a batch of ${attempted} jobs`);
++    this.name = 'BackpressureError';
++    this.attempted = attempted;
++    if (cause !== undefined) this.cause = cause;
++  }
++}
++
+ // Wires a store, a queue and the counters together. `run` drains the queue,
+ // records each job's outcome, and returns the dispatcher's result.
+ export function createRunner({ store, queue, metrics = createMetrics(), now = () => Date.now(), log = () => {} } = {}) {
+   async function enqueue(ids) {
+-    for (const id of ids) {
+-      store.append({ type: 'enqueue', id, at: now() });
+-      queue.enqueue({ id });
++    if (ids.length === 0) return queue.size;
++    if (queue.size + ids.length > queue.capacity) throw new QueueFullError(queue.capacity);
++    try {
++      for (const id of ids) store.append({ type: 'enqueue', id, at: now() });
++    } catch (error) {
++      throw new BackpressureError(ids.length, { cause: error });
+     }
+-    return queue.size;
++    return queue.enqueueMany(ids.map((id) => ({ id })));
+   }
+ 
+   async function run(handler) {
+diff --git a/test/app.test.js b/test/app.test.js
+new file mode 100644
+index 0000000..c653789
+--- /dev/null
++++ b/test/app.test.js
+@@ -0,0 +1,100 @@
++import test from 'node:test';
++import assert from 'node:assert';
++
++import { BackpressureError, createRunner } from '../src/app.js';
++import { QueueFullError, createQueue } from '../src/queue.js';
++
++function storeThatRejectsAfter(accepted) {
++  const written = [];
++  let calls = 0;
++  return {
++    written,
++    append(record) {
++      calls += 1;
++      if (calls > accepted) throw new Error('store is unavailable');
++      written.push(record);
++      return record;
++    },
++    readAll() {
++      return written;
++    },
++  };
++}
++
++function runnerOn({ accepted, capacity = 10, seed = [] }) {
++  const store = storeThatRejectsAfter(accepted);
++  const queue = createQueue({ capacity });
++  const runner = createRunner({ store, queue, now: () => 7 });
++  for (const id of seed) {
++    store.written.push({ type: 'enqueue', id, at: 7 });
++    queue.enqueue({ id });
++  }
++  return { store, queue, runner };
++}
++
++test('a store that rejects mid-batch raises BackpressureError naming the batch size', async () => {
++  const { store, queue, runner } = runnerOn({ accepted: 2 });
++
++  await assert.rejects(
++    () => runner.enqueue(['a', 'b', 'c', 'd']),
++    (error) => error instanceof BackpressureError && error.attempted === 4,
++  );
++  assert.equal(queue.size, 0);
++  assert.deepEqual(store.written.map((record) => record.id), ['a', 'b']);
++});
++
++test('a mid-batch rejection leaves the queue exactly as it was', async () => {
++  const { queue, runner } = runnerOn({ accepted: 1, seed: ['old'] });
++
++  await assert.rejects(() => runner.enqueue(['a', 'b', 'c']), BackpressureError);
++  assert.equal(queue.size, 1);
++  assert.equal(queue.peek().id, 'old');
++});
++
++test('a rejection on the first write leaves the queue untouched and attempts the whole batch', async () => {
++  const { store, queue, runner } = runnerOn({ accepted: 0 });
++
++  await assert.rejects(
++    () => runner.enqueue(['a', 'b']),
++    (error) => error instanceof BackpressureError && error.attempted === 2,
++  );
++  assert.equal(queue.size, 0);
++  assert.equal(store.written.length, 0);
++});
++
++test('a rejected batch can be retried once the store recovers', async () => {
++  const { store, queue, runner } = runnerOn({ accepted: 0 });
++  await assert.rejects(() => runner.enqueue(['a']), BackpressureError);
++
++  store.append = (record) => {
++    store.written.push(record);
++    return record;
++  };
++  assert.equal(await runner.enqueue(['a']), 1);
++  assert.equal(queue.size, 1);
++  assert.deepEqual(queue.peek(), { id: 'a' });
++});
++
++test('an accepted batch appends every job to the queue in order', async () => {
++  const { store, queue, runner } = runnerOn({ accepted: 3 });
++
++  assert.equal(await runner.enqueue(['a', 'b', 'c']), 3);
++  assert.deepEqual(queue.drain(), [{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
++  assert.deepEqual(store.written.map((record) => record.id), ['a', 'b', 'c']);
++});
++
++test('an empty batch is a no-op that returns the current size', async () => {
++  const { store, queue, runner } = runnerOn({ accepted: 0, seed: ['old'] });
++
++  assert.equal(await runner.enqueue([]), 1);
++  assert.equal(queue.size, 1);
++  assert.equal(store.written.length, 1);
++});
++
++test('a batch that cannot fit fails at the queue before writing to the store', async () => {
++  const { store, queue, runner } = runnerOn({ accepted: 10, capacity: 2 });
++
++  await assert.rejects(() => runner.enqueue(['a', 'b', 'c']), QueueFullError);
++  assert.equal(queue.size, 0);
++  assert.equal(store.written.length, 0);
++});

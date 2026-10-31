@@ -1,0 +1,136 @@
+diff --git a/src/dispatcher.js b/src/dispatcher.js
+index 46ef44a..561e5f5 100644
+--- a/src/dispatcher.js
++++ b/src/dispatcher.js
+@@ -59,5 +59,11 @@ export async function dispatch(
+     }
+   }
+ 
+-  return { processed, failed, total: processed.length + failed.length };
++  const counts = {
++    processed: processed.length,
++    failed: failed.length,
++    total: processed.length + failed.length,
++  };
++
++  return { processed, failed, total: counts.total, counts };
+ }
+diff --git a/src/scheduler.js b/src/scheduler.js
+index a975620..9e86cba 100644
+--- a/src/scheduler.js
++++ b/src/scheduler.js
+@@ -1,3 +1,11 @@
++import { dispatch } from './dispatcher.js';
++
++// Drains a queue through the dispatcher and reports how many jobs ran.
++export async function sweep(queue, handler, options = {}) {
++  const result = await dispatch(queue, handler, options);
++  return result.counts.total;
++}
++
+ export function createScheduler({ now = () => Date.now() } = {}) {
+   const entries = [];
+ 
+diff --git a/test/dispatcher.test.js b/test/dispatcher.test.js
+index 1452e38..b0798b1 100644
+--- a/test/dispatcher.test.js
++++ b/test/dispatcher.test.js
+@@ -131,11 +131,32 @@ test('counts one job per job when nothing is retried', async () => {
+   assert.deepEqual(metrics.snapshot(), { jobs: 2, processed: 2, failed: 0 });
+ });
+ 
++test('reports integer counts that agree with the result fields', async () => {
++  const queue = queueWith('a', 'bad');
++  const result = await dispatch(
++    queue,
++    async (job) => {
++      if (job.id === 'bad') throw new Error('nope');
++      return 'ok';
++    },
++    { maxAttempts: 1, sleep: async () => {} },
++  );
++
++  assert.deepEqual(result.counts, { processed: 1, failed: 1, total: 2 });
++  assert.equal(result.counts.processed, result.processed.length);
++  assert.equal(result.counts.failed, result.failed.length);
++  assert.equal(result.counts.total, result.total);
++  for (const value of Object.values(result.counts)) {
++    assert.ok(Number.isInteger(value));
++  }
++});
++
+ test('returns an empty result for an empty queue', async () => {
+   const result = await dispatch(createQueue(), async () => 'ok');
+   assert.deepEqual(result.processed, []);
+   assert.deepEqual(result.failed, []);
+   assert.equal(result.total, 0);
++  assert.deepEqual(result.counts, { processed: 0, failed: 0, total: 0 });
+ });
+ 
+ test('falls back to a placeholder id when a job carries none', async () => {
+diff --git a/test/scheduler.test.js b/test/scheduler.test.js
+index 7621aae..0d160cc 100644
+--- a/test/scheduler.test.js
++++ b/test/scheduler.test.js
+@@ -1,7 +1,8 @@
+ import test from 'node:test';
+ import assert from 'node:assert';
+ 
+-import { createScheduler } from '../src/scheduler.js';
++import { createScheduler, sweep } from '../src/scheduler.js';
++import { createQueue } from '../src/queue.js';
+ 
+ test('reports what is due at the current time', () => {
+   let at = 1000;
+@@ -49,3 +50,51 @@ test('refuses a runAt that is not a finite number', () => {
+   assert.throws(() => scheduler.add({ id: 'a' }, Number.NaN), RangeError);
+   assert.throws(() => scheduler.add({ id: 'a' }, '1000'), RangeError);
+ });
++
++test('sweep drains the queue and returns how many jobs ran', async () => {
++  const queue = createQueue({ capacity: 4 });
++  for (const id of ['a', 'b', 'bad', 'd']) queue.enqueue({ id });
++  const seen = [];
++
++  const ran = await sweep(
++    queue,
++    async (job) => {
++      if (job.id === 'bad') throw new Error('nope');
++      seen.push(job.id);
++      return job.id;
++    },
++    { maxAttempts: 1, sleep: async () => {} },
++  );
++
++  assert.equal(ran, 4);
++  assert.equal(queue.size, 0);
++  assert.deepEqual(seen, ['a', 'b', 'd']);
++});
++
++test('sweep returns zero for an empty queue', async () => {
++  const queue = createQueue();
++  assert.equal(await sweep(queue, async () => 'ok'), 0);
++});
++
++test('sweep forwards the dispatch options, including retries', async () => {
++  const queue = createQueue({ capacity: 2 });
++  queue.enqueue({ id: 'flaky' });
++  queue.enqueue({ id: 'ok' });
++  let calls = 0;
++
++  const ran = await sweep(
++    queue,
++    async (job) => {
++      if (job.id === 'flaky') {
++        calls += 1;
++        if (calls < 3) throw new Error('transient');
++      }
++      return job.id;
++    },
++    { maxAttempts: 3, sleep: async () => {} },
++  );
++
++  assert.equal(ran, 2);
++  assert.equal(calls, 3);
++  assert.equal(queue.size, 0);
++});
