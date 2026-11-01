@@ -14,7 +14,17 @@ $tempRoot = Join-Path $tempBase ('promptkit-ci-triage-' + [guid]::NewGuid().ToSt
 New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
 
 function Fail-Harness { param([string]$Message); throw "HARNESS_FAILURE|$Message" }
-function Get-FileSnapshot { return @(Get-ChildItem -LiteralPath $repoRoot -File -Recurse | Where-Object { $_.FullName -notlike "$repoRoot\.git\*" } | Sort-Object FullName | ForEach-Object { $relative = $_.FullName.Substring($repoRoot.Length).TrimStart([char]92, [char]47) -replace '\\','/'; "$relative|$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash)" }) }
+# Hashes are collected in one Get-FileHash call per snapshot instead of one call
+# per file. A partial mapping would silently weaken the read-only assertion, so
+# a count mismatch fails the harness rather than producing hashless lines.
+function Get-FileSnapshot {
+    $items = @(Get-ChildItem -LiteralPath $repoRoot -File -Recurse | Where-Object { $_.FullName -notlike "$repoRoot\.git\*" } | Sort-Object FullName)
+    if ($items.Count -eq 0) { return @() }
+    $hashes = @{}
+    foreach ($h in (Get-FileHash -LiteralPath $items.FullName -Algorithm SHA256)) { $hashes[$h.Path] = $h.Hash }
+    if ($hashes.Count -ne $items.Count) { Fail-Harness "Snapshot hash mapping incomplete: $($hashes.Count) of $($items.Count) files" }
+    return @($items | ForEach-Object { $relative = $_.FullName.Substring($repoRoot.Length).TrimStart([char]92, [char]47) -replace '\\','/'; "$relative|$($hashes[$_.FullName])" })
+}
 function Get-StatusSnapshot { $status = @(& git -C $repoRoot status --porcelain=v1 --untracked-files=all 2>&1); if ($LASTEXITCODE -ne 0) { Fail-Harness 'Unable to read Git status' }; return @($status | ForEach-Object { $_.ToString() }) }
 function Assert-Unchanged { param([string[]]$BeforeFiles,[string[]]$BeforeStatus,[string]$Label); $afterFiles = @(Get-FileSnapshot); $afterStatus = @(Get-StatusSnapshot); if (($BeforeFiles -join "`n") -ne ($afterFiles -join "`n")) { Fail-Harness "Repository file hashes changed during $Label validation" }; if (($BeforeStatus -join "`n") -ne ($afterStatus -join "`n")) { Fail-Harness "Git status changed during $Label validation" } }
 function Assert-Diagnostics { param([string[]]$Lines,[string]$Expected,[string]$Name); $actual = @($Lines | Where-Object { $_.ToString() -notmatch '^(VALID|FAILED)\|' } | ForEach-Object { $_.ToString() } | Sort-Object); if ($Expected -eq '-') { if ($actual.Count -ne 0) { Fail-Harness "$Name produced unexpected diagnostics" }; return }; $expectedLines = @($Expected -split ';;' | Sort-Object); if (($actual -join "`n") -ne ($expectedLines -join "`n")) { Fail-Harness "$Name complete normalized diagnostic set did not match the shared contract" } }

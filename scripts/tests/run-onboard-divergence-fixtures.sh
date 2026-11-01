@@ -29,10 +29,13 @@ SOURCE_PATTERN='DIVERGENCE-|DECISION-|policy:|docs/specs/'
 ALLOWED_PRECEDENCE='host-doc-authority|decision-authority|unresolved'
 EXPECTED_COLUMNS=8
 
+# One sha256sum invocation per path list instead of one per file. The previous
+# per-file loop forked a process 2,145 times per snapshot and ran twice per
+# fixture case; batching keeps identical coverage at a fraction of the wall clock.
 snapshot_files() {
     local output_file="$1"
-    : > "$output_file"
-    while IFS= read -r file; do printf '%s|' "${file#"$REPO_ROOT"/}" >> "$output_file"; sha256sum "$file" >> "$output_file"; done < <(find "$REPO_ROOT" -path "$REPO_ROOT/.git" -prune -o -type f -print | sort)
+    ( cd "$REPO_ROOT" && find . -path ./.git -prune -o -type f -print0 \
+        | xargs -0 sha256sum | LC_ALL=C sort ) > "$output_file"
 }
 
 snapshot_status() { git -C "$REPO_ROOT" status --porcelain=v1 --untracked-files=all > "$1" || fail "Unable to read Git status"; }
