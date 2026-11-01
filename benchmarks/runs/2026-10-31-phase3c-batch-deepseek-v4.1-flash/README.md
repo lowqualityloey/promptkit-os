@@ -426,5 +426,6 @@ Not published: the blind key (`~/.local/state/promptkit/phase3c-keys/phase3c-bat
    reproduced the batch totals exactly (22/30 against 26/30), and the records now
    sit beside the sheet they were derived from.
 4. **Open — Phase 4.** §8 opens cross-model work on Tradeoff, which this batch
-   now is. The pre-registration is written (`benchmarks/PHASE-4-DESIGN.md`); no
-   Phase 4 session has been run.
+   now is. A draft design is written (`benchmarks/PHASE-4-DESIGN.md`); it is not
+   pre-registered (its model list and Appendix A must be frozen and signed
+   first), and no Phase 4 session has been run.

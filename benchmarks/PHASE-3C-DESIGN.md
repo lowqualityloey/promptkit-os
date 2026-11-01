@@ -348,6 +348,7 @@ cross-model work starts only on **Keep** or **Tradeoff**.
   report. The records carry the owner's authorization, and
   `grading/GRADING-HUMAN.md` still states that the first pass was performed by an
   agent under it.
-- [x] Phase 4 pre-registered: `benchmarks/PHASE-4-DESIGN.md` — cross-model work
-  on the Amendment A cost bar, written before any Phase 4 session is spent.
-  Nothing in Phase 4 has been run.
+- [x] Phase 4 **draft** design written: `benchmarks/PHASE-4-DESIGN.md` — cross-model
+  work on the Amendment A cost bar. It is deliberately not pre-registered: its
+  model list and Appendix A have to be frozen and signed before the first
+  session, and nothing in Phase 4 has been run.
