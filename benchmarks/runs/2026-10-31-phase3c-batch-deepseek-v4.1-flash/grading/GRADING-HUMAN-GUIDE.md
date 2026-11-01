@@ -8,6 +8,7 @@ starting point, or the second read stops being independent.
 
 | File | Purpose |
 |---|---|
+| `grading-human.tsv` | **The primary sheet.** 60 rows, sha256 `e4294ab3…`. Provenance is in `GRADING-HUMAN.md`: owner-authorized, agent-performed first pass. |
 | `grading.tsv` | **Frozen machine sheet — do not edit.** Archived copy: `grading-machine.tsv` (same sha256, verified). |
 | `grading-machine.tsv` | Reference only, for after the human sheet is hashed. |
 | `grading-worksheet.md` | **The docket to grade from.** All 60 packets, one section each: changed-file set vs the card's allowed set, `verify_exit`, probe/suite line, any deleted lines under `test/`, and one blank verdict row per rubric item (336 rows total). It records facts only — it contains no verdicts. |
