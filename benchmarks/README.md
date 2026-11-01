@@ -33,8 +33,12 @@ recorded limitations; the harness itself makes no general performance claim.
   `grading/grading-human.tsv` (`e4294ab3…`, 48/60), owner-authorized with an agent
   first pass: read [`grading/GRADING-HUMAN.md`](runs/2026-10-31-phase3c-batch-deepseek-v4.1-flash/grading/GRADING-HUMAN.md)
   before describing it as human-graded. An independent machine pass on the same
-  packets agrees on every acceptance. The second-grader sample is still outstanding,
-  and `--finalize` has not been re-run, so the §5 records still read `grader: machine`.
+  packets agrees on every acceptance, and a second read of 30 of 60 packets matched
+  the primary sheet 30/30 with no disagreements
+  ([`SECOND-READER.md`](runs/2026-10-31-phase3c-batch-deepseek-v4.1-flash/grading/SECOND-READER.md))
+  — an agent read from the generating model's family, so it is not an independent
+  human review. `--finalize --graded-by human` has been re-run, so all 60 §5 records
+  read `grader: human`.
   Pre-registration and decision rule: [`PHASE-3C-DESIGN.md`](PHASE-3C-DESIGN.md).
 
 ## Calibration runs (not published batches)

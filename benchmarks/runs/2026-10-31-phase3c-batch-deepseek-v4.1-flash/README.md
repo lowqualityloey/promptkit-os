@@ -402,9 +402,12 @@ Not published: the blind key (`~/.local/state/promptkit/phase3c-keys/phase3c-bat
 - Probe reds are artifact facts, not rubric outcomes: a packet can fail its probe
   and still pass every rubric item that is scoped to its diff.
 - The primary grade is owner-authorized agent grading (see
-  `grading/GRADING-HUMAN.md`), and the independent second-grader sample is still
-  outstanding; until it completes the batch is single-grader evidence for
-  acceptance, and should be cited with that qualification.
+  `grading/GRADING-HUMAN.md`). The second read is complete
+  (`grading/SECOND-READER.md`): 30 of 60 packets, 30/30 identical to the primary
+  sheet, 0 disagreements. It was a fresh session of the same model family, so the
+  batch remains single-grader evidence for acceptance and should be cited with
+  that qualification — the agreement shows the rubric was applied consistently,
+  not that an independent grader confirmed it.
 
 ## Next steps
 
@@ -413,11 +416,15 @@ Not published: the blind key (`~/.local/state/promptkit/phase3c-keys/phase3c-bat
    provenance are in [`grading/GRADING-HUMAN.md`](grading/GRADING-HUMAN.md). The
    machine sheet (`grading/GRADING.md`, `6bef724e…`) was kept independent of it
    and is cited as the consistency check.
-2. **Open — second grader.** `grading/second-grader-sample.txt` holds a
-   deterministic 30-packet sample (50%). It has not been scored by anyone other
-   than the pass that produced the primary sheet, so the ≥50% independent sample
-   §7 asks for is still outstanding. Disagreements are to be listed
-   packet-by-packet, never averaged.
+2. **Partly done — second read.** `grading/second-grader-sample.txt` holds a
+   deterministic 30-packet sample (50%); the draw was re-derived and matches.
+   [`grading/SECOND-READER.md`](grading/SECOND-READER.md) records the read:
+   **30 of 30 packets identical to the primary sheet, 0 disagreements**, 25/30
+   accepted and 160/170 items — so §7's ≥50% second sample now exists and found
+   nothing to dispute. What it does not do is satisfy §7's *independence* clause:
+   it ran in a fresh session of the generating model's family, and the primary
+   sheet was in that session's context before scoring. Disagreements were still
+   reported packet-by-packet (there were none), never averaged.
 3. **Done — re-finalized.** `--finalize "$PWD" --grading "$PWD/grading/grading-human.tsv"
    --graded-by human` ran on 2026-11-01 on the host holding
    `~/.local/state/promptkit/phase3c-keys/phase3c-batch-1.csv`. All 60 §5 records

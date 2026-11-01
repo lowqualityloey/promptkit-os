@@ -29,7 +29,7 @@ starting point, or the second read stops being independent.
 1. Changed-file set ⊆ card's allowed files (each card lists them; e.g. P3C-06 allows only `src/dispatcher.js`, `src/scheduler.js`, `src/app.js`, `test/dispatcher.test.js`, `test/scheduler.test.js`). Out-of-scope edit → fail the file-scope item.
 2. No pre-existing assertion deleted or weakened (import rewrites are OK; assertion edits fail the test-scope item).
 3. Probe items: pass only if the `.verify.txt` probe output shows the required behavior and `verify_exit=0`.
-4. `accepted = (rubric_passed == rubric_total)`. Empty diff (e.g. `B054`, the provider-aborted cell) scores `0/N false` — it stays in the ITT denominator per the no-extra-runs rule.
+4. `accepted = (rubric_passed == rubric_total)`. An empty diff is scored item by item like any other packet, not charged with every item: `B054` (the provider-aborted cell) is 4/6 false, because the untouched seed already satisfies R1, R3, R4 and R6 of P3C-10 while R2 and R5 fail. It stays in the ITT denominator per the no-extra-runs rule. (Corrected 2026-11-01 after the second read; the earlier `0/N` rule contradicted the rubric and the primary sheet.)
 
 ## Recording
 

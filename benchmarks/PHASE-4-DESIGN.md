@@ -137,8 +137,10 @@ Carried from 3c and tightened where 3c fell short:
 - **The primary grade must come from a grader who did not produce the first pass.**
   3c's primary sheet was an owner-authorized agent first pass, disclosed in
   `grading/GRADING-HUMAN.md`; that disclosure protected the record but did not
-  satisfy §7's independence requirement, and the second-grader sample is still
-  outstanding. Phase 4 pre-registers the independence requirement as a
+  satisfy §7's independence requirement. The second-grader sample was scored
+  afterwards (`grading/SECOND-READER.md`, 30/30 agreement) but from a fresh session
+  of the generating model's family, which is consistency evidence, not
+  independence. Phase 4 pre-registers the independence requirement as a
   **blocking** item: no Phase 4 batch is considered complete until a second grader
   who did not produce the sheet has scored ≥50% of packets, with disagreements
   reported packet-by-packet.
