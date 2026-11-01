@@ -1,0 +1,44 @@
+verify_exit=0
+RETRY|OK
+✔ starts with defaults and prints one ready line (4.090165ms)
+✔ a flag overrides the environment (0.293576ms)
+✔ the environment applies when no flag is given (0.295892ms)
+✔ an unknown flag exits 2 and names the flag (0.468743ms)
+✔ a bare flag is accepted as the string true and then validated (0.365971ms)
+✔ an invalid value exits 2 (0.233183ms)
+✔ a positional argument is rejected (0.310182ms)
+✔ parseFlags returns the parsed pairs (0.342525ms)
+✔ defaults when the environment is empty (2.686422ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.337713ms)
+✔ accepts LOG_LEVEL case-insensitively (0.231247ms)
+✔ exposes the accepted levels (0.206332ms)
+✔ rejects a PORT that is not a positive integer (0.69918ms)
+✔ rejects a PORT above the port range (0.31215ms)
+✔ rejects an unknown log level and names the accepted set (0.330293ms)
+✔ rejects a non-positive capacity (0.201089ms)
+✔ returns a frozen configuration object (0.531094ms)
+✔ processes every job in order (4.349461ms)
+✔ records a failure without stopping the batch (302.20135ms)
+✔ logs one line per job (301.889177ms)
+✔ returns empty results for an empty queue (0.513028ms)
+✔ retries a failing handler and records one success with its attempt count (0.578536ms)
+✔ exhausts every attempt and records the last error (0.576002ms)
+✔ waits with exponential backoff between attempts (0.531176ms)
+✔ does not sleep when maxAttempts is 1 (0.250867ms)
+✔ rejects invalid retry options before dequeuing anything (0.958713ms)
+✔ dequeues in FIFO order (2.121586ms)
+✔ returns undefined when empty (0.447504ms)
+✔ reports size after enqueue and dequeue (0.814125ms)
+✔ refuses to exceed capacity and names the capacity (1.190622ms)
+✔ reports isFull at the capacity boundary (0.580921ms)
+✔ drain empties the queue and returns the items in order (1.905589ms)
+✔ rejects a capacity below one (0.455802ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 735.074705
+VERIFY|probe=0|tests=0

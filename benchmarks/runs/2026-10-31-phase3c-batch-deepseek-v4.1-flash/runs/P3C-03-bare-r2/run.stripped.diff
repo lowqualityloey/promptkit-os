@@ -1,0 +1,66 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..be8f597 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -29,11 +29,19 @@ export function createRunner({ store, queue, metrics = createMetrics(), now = ()
+ 
+   function status() {
+     const records = store.readAll();
+-    return {
+-      pending: records.filter((record) => record.type === 'enqueue').length,
+-      done: records.filter((record) => record.type === 'done').length,
+-      failed: records.filter((record) => record.type === 'failed').length,
+-    };
++    const jobs = new Map();
++    for (const record of records) {
++      if (record.type === 'enqueue') {
++        if (!jobs.has(record.id)) jobs.set(record.id, 'pending');
++      } else if (record.type === 'done' || record.type === 'failed') {
++        jobs.set(record.id, record.type);
++      }
++    }
++    const counts = { pending: 0, done: 0, failed: 0 };
++    for (const state of jobs.values()) {
++      counts[state] += 1;
++    }
++    return counts;
+   }
+ 
+   return { enqueue, run, status };
+diff --git a/test/integration.test.js b/test/integration.test.js
+index 79921ae..68082a1 100644
+--- a/test/integration.test.js
++++ b/test/integration.test.js
+@@ -59,6 +59,32 @@ test('status reports the number of finished jobs', async () => {
+   assert.equal(runner.status().failed, 0);
+ });
+ 
++test('status counts a closed job as done and an open job as pending', () => {
++  const { runner } = runnerOn([
++    { type: 'enqueue', id: 'finished', at: 1 },
++    { type: 'done', id: 'finished', at: 2 },
++    { type: 'enqueue', id: 'open', at: 3 },
++  ]);
++
++  const counts = runner.status();
++  assert.equal(counts.pending, 1);
++  assert.equal(counts.done, 1);
++  assert.equal(counts.failed, 0);
++  assert.equal(counts.pending + counts.done + counts.failed, 2);
++});
++
++test('status counts a failed job as failed, not pending', () => {
++  const { runner } = runnerOn([
++    { type: 'enqueue', id: 'bad', at: 1 },
++    { type: 'failed', id: 'bad', at: 2 },
++  ]);
++
++  const counts = runner.status();
++  assert.equal(counts.pending, 0);
++  assert.equal(counts.failed, 1);
++  assert.equal(counts.pending + counts.done + counts.failed, 1);
++});
++
+ test('a runner with a non-empty store still runs the jobs it was given', async () => {
+   const { runner } = runnerOn([{ type: 'enqueue', id: 'old', at: 1 }, { type: 'done', id: 'old', at: 2 }]);
+   const ran = [];

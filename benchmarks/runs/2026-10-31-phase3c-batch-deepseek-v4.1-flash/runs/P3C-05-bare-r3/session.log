@@ -1,0 +1,7 @@
+Fixed. `enqueue` now checks `queue.remaining` before touching the store, then writes all enqueue records and calls the atomic `enqueueMany`. A refused batch throws `QueueFullError` with zero side effects; an accepted one still writes one record per job and queues all of them.
+
+Added to `test/integration.test.js`:
+- refused batch: store file byte-identical and queue contents unchanged
+- accepted batch: one enqueue record per job and all jobs queued in order
+
+`node --test`: 67 passing.

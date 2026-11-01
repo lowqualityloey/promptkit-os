@@ -1,0 +1,66 @@
+diff --git a/src/app.js b/src/app.js
+index 0d22ec2..68396b5 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -1,7 +1,7 @@
+ import { ConfigError, loadConfig } from './config.js';
+ import { createQueue } from './queue.js';
+ 
+-const FLAGS = new Set(['PORT', 'LOG_LEVEL', 'QUEUE_CAPACITY']);
++const FLAGS = new Set(['PORT', 'LOG_LEVEL', 'QUEUE_CAPACITY', 'DRY_RUN']);
+ 
+ export function parseFlags(argv = []) {
+   const flags = {};
+@@ -27,7 +27,13 @@ export function parseFlags(argv = []) {
+ 
+ export function main(argv = [], env = {}, io = { out: () => {}, err: () => {} }) {
+   try {
+-    const config = loadConfig({ ...env, ...parseFlags(argv) });
++    const flags = parseFlags(argv);
++    const dryRun = Object.hasOwn(flags, 'DRY_RUN');
++    const config = loadConfig({ ...env, ...flags });
++    if (dryRun) {
++      io.out(`dry-run port=${config.port} level=${config.level} capacity=${config.capacity}`);
++      return { exitCode: 0, config };
++    }
+     const queue = createQueue({ capacity: config.capacity });
+     io.out(`ready port=${config.port} level=${config.level} capacity=${config.capacity}`);
+     return { exitCode: 0, config, queue };
+diff --git a/test/app.test.js b/test/app.test.js
+index f0779f3..c17e7b4 100644
+--- a/test/app.test.js
++++ b/test/app.test.js
+@@ -80,3 +80,33 @@ test('parseFlags returns the parsed pairs', () => {
+     LOG_LEVEL: 'warn',
+   });
+ });
++
++test('a dry run validates the configuration and skips the queue', () => {
++  const sunk = capture();
++  const result = main(['--DRY_RUN', '--PORT=9090'], {}, sunk.io);
++
++  assert.equal(result.exitCode, 0);
++  assert.deepEqual(result.config, { port: 9090, level: 'info', capacity: 100 });
++  assert.equal(result.queue, undefined);
++  assert.deepEqual(sunk.out, ['dry-run port=9090 level=info capacity=100']);
++  assert.deepEqual(sunk.err, []);
++});
++
++test('a dry run with a value still skips the queue', () => {
++  const sunk = capture();
++  const result = main(['--DRY_RUN=1'], {}, sunk.io);
++
++  assert.equal(result.exitCode, 0);
++  assert.equal(result.queue, undefined);
++  assert.deepEqual(sunk.out, ['dry-run port=8080 level=info capacity=100']);
++});
++
++test('a dry run with an invalid configuration exits 2 without a queue', () => {
++  const sunk = capture();
++  const result = main(['--DRY_RUN', '--LOG_LEVEL=verbose'], {}, sunk.io);
++
++  assert.equal(result.exitCode, 2);
++  assert.equal(result.queue, undefined);
++  assert.deepEqual(sunk.out, []);
++  assert.match(sunk.err[0], /LOG_LEVEL must be one of/);
++});

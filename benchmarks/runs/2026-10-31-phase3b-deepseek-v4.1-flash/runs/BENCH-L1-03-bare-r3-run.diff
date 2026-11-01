@@ -1,0 +1,60 @@
+diff --git a/src/dispatcher.js b/src/dispatcher.js
+index f13503d..6a63e88 100644
+--- a/src/dispatcher.js
++++ b/src/dispatcher.js
+@@ -15,5 +15,16 @@ export async function dispatch(queue, handler, { log = () => {} } = {}) {
+     }
+   }
+ 
+-  return { processed, failed, total: processed.length + failed.length };
++  const total = processed.length + failed.length;
++
++  return {
++    processed,
++    failed,
++    total,
++    counts: {
++      processed: processed.length,
++      failed: failed.length,
++      total,
++    },
++  };
+ }
+diff --git a/test/dispatcher.test.js b/test/dispatcher.test.js
+index 53798d9..8b821f0 100644
+--- a/test/dispatcher.test.js
++++ b/test/dispatcher.test.js
+@@ -60,3 +60,33 @@ test('returns empty results for an empty queue', async () => {
+   assert.deepEqual(result.failed, []);
+   assert.equal(result.total, 0);
+ });
++
++test('counts a mixed batch of successes and failures', async () => {
++  const queue = queueWith(
++    { id: 'a' },
++    { id: 'b' },
++    { id: 'c' },
++    { id: 'd' },
++  );
++  const result = await dispatch(queue, async (job) => {
++    if (job.id === 'b' || job.id === 'd') throw new Error('boom');
++    return job.id;
++  });
++
++  assert.deepEqual(result.counts, { processed: 2, failed: 2, total: 4 });
++  assert.equal(result.counts.processed, result.processed.length);
++  assert.equal(result.counts.failed, result.failed.length);
++  assert.equal(result.total, 4);
++  assert.equal(Number.isInteger(result.counts.processed), true);
++  assert.equal(Number.isInteger(result.counts.failed), true);
++  assert.equal(Number.isInteger(result.counts.total), true);
++});
++
++test('counts an empty queue as all zeroes', async () => {
++  const result = await dispatch(createQueue(), async () => 'ok');
++
++  assert.deepEqual(result.counts, { processed: 0, failed: 0, total: 0 });
++  assert.equal(result.total, 0);
++  assert.deepEqual(result.processed, []);
++  assert.deepEqual(result.failed, []);
++});

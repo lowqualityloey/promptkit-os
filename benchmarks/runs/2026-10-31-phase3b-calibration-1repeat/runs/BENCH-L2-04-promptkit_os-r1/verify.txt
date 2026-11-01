@@ -1,0 +1,44 @@
+verify_exit=0
+ENQUEUEMANY|OK
+✔ starts with defaults and prints one ready line (3.144536ms)
+✔ a flag overrides the environment (0.285838ms)
+✔ the environment applies when no flag is given (0.380742ms)
+✔ an unknown flag exits 2 and names the flag (0.468589ms)
+✔ a bare flag is accepted as the string true and then validated (0.306018ms)
+✔ an invalid value exits 2 (0.277117ms)
+✔ a positional argument is rejected (0.256052ms)
+✔ parseFlags returns the parsed pairs (0.24301ms)
+✔ defaults when the environment is empty (2.677351ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.515558ms)
+✔ accepts LOG_LEVEL case-insensitively (0.240879ms)
+✔ exposes the accepted levels (0.219924ms)
+✔ rejects a PORT that is not a positive integer (0.782531ms)
+✔ rejects a PORT above the port range (0.34321ms)
+✔ rejects an unknown log level and names the accepted set (0.373136ms)
+✔ rejects a non-positive capacity (0.235046ms)
+✔ returns a frozen configuration object (0.567256ms)
+✔ processes every job in order (2.079852ms)
+✔ records a failure without stopping the batch (1.385764ms)
+✔ logs one line per job (0.375954ms)
+✔ returns empty results for an empty queue (0.344555ms)
+✔ dequeues in FIFO order (3.222735ms)
+✔ returns undefined when empty (0.291383ms)
+✔ reports size after enqueue and dequeue (0.258301ms)
+✔ refuses to exceed capacity and names the capacity (0.526996ms)
+✔ enqueueMany appends every item in order and returns the new size (1.051852ms)
+✔ enqueueMany fills the queue exactly to capacity (0.212646ms)
+✔ enqueueMany throws QueueFullError and appends nothing when the batch does not fit (0.27857ms)
+✔ enqueueMany throws when a full queue receives a non-empty batch (0.204941ms)
+✔ enqueueMany with an empty array is a no-op that returns the current size (0.2206ms)
+✔ reports isFull at the capacity boundary (0.370956ms)
+✔ drain empties the queue and returns the items in order (0.302443ms)
+✔ rejects a capacity below one (0.278839ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 127.643753
+VERIFY|probe=0|tests=0

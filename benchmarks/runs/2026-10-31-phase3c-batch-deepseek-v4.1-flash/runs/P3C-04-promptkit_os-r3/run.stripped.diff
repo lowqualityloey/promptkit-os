@@ -1,0 +1,102 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..97e67ca 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -5,13 +5,35 @@ import { createMetrics } from './metrics.js';
+ import { createQueue } from './queue.js';
+ import { createStore } from './store.js';
+ 
++// Replays the append-only log into the ids it has opened and closed. A job is
++// closed once a `done` or `failed` record names it; an id with only an
++// `enqueue` record is still unfinished.
++function replay(records) {
++  const opened = new Set();
++  const closed = new Set();
++  for (const record of records) {
++    if (record.id === undefined) continue;
++    if (record.type === 'enqueue') opened.add(record.id);
++    else if (record.type === 'done' || record.type === 'failed') closed.add(record.id);
++  }
++  return { opened, closed };
++}
++
+ // Wires a store, a queue and the counters together. `run` drains the queue,
+ // records each job's outcome, and returns the dispatcher's result.
+ export function createRunner({ store, queue, metrics = createMetrics(), now = () => Date.now(), log = () => {} } = {}) {
++  const queued = new Set();
++
+   async function enqueue(ids) {
++    const { opened, closed } = replay(store.readAll());
+     for (const id of ids) {
+-      store.append({ type: 'enqueue', id, at: now() });
++      if (closed.has(id) || queued.has(id)) continue;
++      if (!opened.has(id)) {
++        store.append({ type: 'enqueue', id, at: now() });
++        opened.add(id);
++      }
+       queue.enqueue({ id });
++      queued.add(id);
+     }
+     return queue.size;
+   }
+@@ -24,13 +46,15 @@ export function createRunner({ store, queue, metrics = createMetrics(), now = ()
+     for (const entry of result.failed) {
+       store.append({ type: 'failed', id: entry.job.id, at: now() });
+     }
++    queued.clear();
+     return result;
+   }
+ 
+   function status() {
+     const records = store.readAll();
++    const { opened, closed } = replay(records);
+     return {
+-      pending: records.filter((record) => record.type === 'enqueue').length,
++      pending: [...opened].filter((id) => !closed.has(id)).length,
+       done: records.filter((record) => record.type === 'done').length,
+       failed: records.filter((record) => record.type === 'failed').length,
+     };
+diff --git a/test/integration.test.js b/test/integration.test.js
+index 79921ae..adadd7b 100644
+--- a/test/integration.test.js
++++ b/test/integration.test.js
+@@ -70,6 +70,39 @@ test('a runner with a non-empty store still runs the jobs it was given', async (
+   assert.deepEqual(ran, ['fresh']);
+ });
+ 
++test('intake skips a finished job and dispatches an unfinished one exactly once', async () => {
++  const { io, runner } = runnerOn([
++    { type: 'enqueue', id: 'finished', at: 1 },
++    { type: 'done', id: 'finished', at: 2 },
++    { type: 'enqueue', id: 'unfinished', at: 3 },
++  ]);
++  const ran = [];
++  const handler = async (job) => {
++    ran.push(job.id);
++    return job.id;
++  };
++
++  assert.equal(runner.status().pending, 1);
++
++  await runner.enqueue(['finished', 'unfinished']);
++  const first = await runner.run(handler);
++  assert.deepEqual(ran, ['unfinished']);
++  assert.equal(first.total, 1);
++
++  await runner.enqueue(['finished', 'unfinished']);
++  const second = await runner.run(handler);
++  assert.deepEqual(ran, ['unfinished']);
++  assert.equal(second.total, 0);
++
++  const records = io.readFileSync('jobs.jsonl').trim().split('\n').map((line) => JSON.parse(line));
++  const count = (type, id) => records.filter((record) => record.type === type && record.id === id).length;
++  assert.equal(count('done', 'finished'), 1);
++  assert.equal(count('done', 'unfinished'), 1);
++  assert.equal(count('enqueue', 'unfinished'), 1);
++  assert.equal(runner.status().done, 2);
++  assert.equal(runner.status().pending, 0);
++});
++
+ test('main prints a dry-run line and returns without touching the store', async () => {
+   const out = [];
+   const result = await main(['--DRY_RUN=1', '--PORT=9090'], {}, { out: (line) => out.push(line), err: () => {} });

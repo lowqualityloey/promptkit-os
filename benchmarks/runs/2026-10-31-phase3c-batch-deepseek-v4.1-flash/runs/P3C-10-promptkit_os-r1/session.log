@@ -1,0 +1,1 @@
+All 67 tests pass. I replaced `drain`'s repeated `shift()` loop with a single `items.splice(0, items.length)`, so it removes everything in one operation that's linear in the returned items instead of quadratic. `enqueue`, `dequeue`, and `peek` are untouched, and the new test drains 50,000 items and asserts exact FIFO order, empty size, and an empty array on the follow-up drain.

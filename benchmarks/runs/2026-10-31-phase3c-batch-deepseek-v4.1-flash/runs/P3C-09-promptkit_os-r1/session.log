@@ -1,0 +1,7 @@
+All green. The pinned spec passes, the full suite passes (70 tests), and the spec's sha256 is unchanged.
+
+What I changed:
+- `src/app.js`: added `BackpressureError` (with `attempted` and the store failure as `cause`), and rewrote `enqueue` to write the whole batch to the store first and only then move jobs onto the queue via the atomic `enqueueMany`. A store rejection now throws `BackpressureError` without touching the queue; a batch that won't fit the queue is rejected before any store write; an empty batch returns the current size without I/O.
+- `test/app.test.js`: new tests for a mid-batch store rejection (including pre-existing queue entries staying in order), accepted batches, empty batches, and the cause chain.
+
+`specs/backpressure.spec.js` is untouched (`2cb1e930…` before and after).

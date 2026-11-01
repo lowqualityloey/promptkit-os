@@ -1,0 +1,7 @@
+All 70 tests pass. I made three changes:
+
+- `src/dispatcher.js`: `dispatch` now returns `counts: { processed, failed, total }` alongside the existing result lists and `total`, all still describing jobs by final outcome.
+- `src/scheduler.js`: added an exported `sweep(queue, handler, options)` that drains the queue through `dispatch` and returns `result.counts.total`.
+- `src/cli.js`/`src/app.js`: left untouched, so the summary line still prints `processed=… failed=… total=…`.
+
+Tests added: counts consistency (including one-job-per-job despite retries and the empty-queue zeros) in `test/dispatcher.test.js`, and sweep drain/pass-through/empty cases in `test/scheduler.test.js`.

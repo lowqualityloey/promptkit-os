@@ -1,0 +1,8 @@
+Done. `node --test` passes all 70 tests.
+
+What changed in `src/store.js`:
+- `append` now writes `{ ...record, version: 2 }`, so every new line carries the v2 marker while returning the stored shape.
+- `readAll` treats a missing `version` as v1 and normalizes it in the returned record, accepts 1 and 2 in any mix, and throws `StoreError` for any other version before interpreting the record.
+- Nothing rewrites existing lines — appends only add new lines.
+
+New tests in `test/store.test.js` cover v2 stamping, a pure v1 file, a mixed v1/v2 file, appending without disturbing existing lines, and rejection of an unknown version.

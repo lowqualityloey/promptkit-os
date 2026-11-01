@@ -1,0 +1,66 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..4fa1cbf 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -41,7 +41,7 @@ export function createRunner({ store, queue, metrics = createMetrics(), now = ()
+ 
+ export async function main(argv = [], env = {}, io = { out: () => {}, err: () => {} }) {
+   try {
+-    const { command, flags } = parseArgs(argv);
++    const { command, flags } = parseArgs(argv, { warn: io.err });
+     const overrides = {};
+     for (const [name, value] of Object.entries(flags)) {
+       if (name === 'DRY_RUN' || name === 'JOBS') continue;
+diff --git a/src/cli.js b/src/cli.js
+index cebcb50..92bdfcc 100644
+--- a/src/cli.js
++++ b/src/cli.js
+@@ -15,10 +15,23 @@ const FLAGS = new Set([
+   'DRY_RUN',
+ ]);
+ 
+-export function parseArgs(argv = []) {
++// Accepted spellings that are not the flag's internal name.
++const FLAG_ALIASES = new Map([['dry-run', 'DRY_RUN']]);
++
++// Spellings that still work but should steer callers to their replacement.
++const DEPRECATED_FLAGS = new Map([['DRY_RUN', 'dry-run']]);
++
++function canonicalFlagName(name) {
++  const canonical = FLAG_ALIASES.get(name) ?? name;
++  if (!FLAGS.has(canonical)) throw new CliError(`unknown flag: --${name}`);
++  return canonical;
++}
++
++export function parseArgs(argv = [], { warn } = {}) {
+   const flags = {};
+   const positional = [];
+   let command = 'run';
++  let deprecatedFlag = null;
+ 
+   for (const arg of argv) {
+     if (typeof arg !== 'string' || arg === '') {
+@@ -30,8 +43,8 @@ export function parseArgs(argv = []) {
+       const name = eq === -1 ? body : body.slice(0, eq);
+       const value = eq === -1 ? true : body.slice(eq + 1);
+       if (name === '') throw new CliError('empty flag name');
+-      if (!FLAGS.has(name)) throw new CliError(`unknown flag: --${name}`);
+-      flags[name] = value;
++      if (DEPRECATED_FLAGS.has(name)) deprecatedFlag = name;
++      flags[canonicalFlagName(name)] = value;
+     } else if (COMMANDS.has(arg) && positional.length === 0) {
+       command = arg;
+     } else {
+@@ -42,8 +55,11 @@ export function parseArgs(argv = []) {
+   if (positional.length > 0) {
+     throw new CliError(`unexpected argument: ${positional[0]}`);
+   }
++  if (deprecatedFlag !== null && warn) {
++    warn(`warning: --${deprecatedFlag} is deprecated; use --${DEPRECATED_FLAGS.get(deprecatedFlag)} instead`);
++  }
+   return { command, flags };
+ }
+ 
+-export const CLI_FLAGS = Object.freeze([...FLAGS]);
++export const CLI_FLAGS = Object.freeze([...FLAGS, ...FLAG_ALIASES.keys()]);
+ export const CLI_COMMANDS = Object.freeze([...COMMANDS]);

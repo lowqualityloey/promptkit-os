@@ -1,0 +1,3 @@
+Extended `dispatch` with retry/backoff covering all specified behavior: option validation before any dequeue (`RangeError` for invalid `maxAttempts`/`baseDelayMs`), up to `maxAttempts` attempts per job, exponential `sleep(baseDelayMs * 2 ** (attempt - 1))` delays, `attempts` on every processed/failed entry, one final-outcome log line per job, and unchanged `total`. Tests cover retry-then-succeed, exhaustion with last error, exact backoff delays, `maxAttempts: 1`, and validation leaving the queue untouched.
+
+`node --test`: 33 passed, 0 failed. Only `src/dispatcher.js` and `test/dispatcher.test.js` were changed.

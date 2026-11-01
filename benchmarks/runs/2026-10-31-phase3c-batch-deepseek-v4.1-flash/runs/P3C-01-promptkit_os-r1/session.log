@@ -1,0 +1,3 @@
+Done. `dispatcher.js` now increments `jobs` once per dequeued job, before the retry loop, and `processed`/`failed` still fire once at the final outcome. `metrics.js` is unchanged — same three counters, same snapshot shape, no dedupe/filter/set.
+
+I added a test with a flaky job (fails once, succeeds on attempt 2) alongside a job that exhausts its retries, asserting `{ jobs: 2, processed: 1, failed: 1 }`. Full suite passes: 66/66.

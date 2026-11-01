@@ -1,0 +1,3 @@
+Done. Intake now replays the store before queueing: `src/app.js` skips ids with a `done`/`failed` record, still queues ids that only have an `enqueue` record, and avoids duplicate `enqueue` writes; `status().pending` now counts only open jobs, matching invariant I2. Added the mixed finished/unfinished regression test in `test/integration.test.js`.
+
+Verified: all 66 `node --test` tests pass, and a real CLI store with `a` finished + `b` unfinished dispatches only `b` once across two identical runs, appending exactly one `done` for it and leaving `a` untouched.

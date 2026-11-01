@@ -1,0 +1,41 @@
+diff --git a/src/queue.js b/src/queue.js
+index 8563215..2f30dbc 100644
+--- a/src/queue.js
++++ b/src/queue.js
+@@ -40,9 +40,7 @@ export function createQueue({ capacity = 100 } = {}) {
+       return items.length === 0 ? undefined : items.shift();
+     },
+     drain() {
+-      const drained = [];
+-      while (items.length > 0) drained.push(items.shift());
+-      return drained;
++      return items.splice(0);
+     },
+   };
+ }
+diff --git a/test/queue.test.js b/test/queue.test.js
+index 9671663..cd46259 100644
+--- a/test/queue.test.js
++++ b/test/queue.test.js
+@@ -88,3 +88,21 @@ test('drain empties the queue and returns the items in order', () => {
+   assert.equal(queue.size, 0);
+   assert.equal(queue.isFull, false);
+ });
++
++test('drain returns an empty array when the queue is empty', () => {
++  const queue = createQueue();
++  assert.deepEqual(queue.drain(), []);
++  assert.equal(queue.size, 0);
++});
++
++test('drain returns a large queue in FIFO order in one pass', () => {
++  const queue = createQueue({ capacity: Number.POSITIVE_INFINITY });
++  const expected = [];
++  for (let i = 0; i < 20000; i += 1) {
++    queue.enqueue(i);
++    expected.push(i);
++  }
++  assert.deepEqual(queue.drain(), expected);
++  assert.equal(queue.size, 0);
++  assert.deepEqual(queue.drain(), []);
++});

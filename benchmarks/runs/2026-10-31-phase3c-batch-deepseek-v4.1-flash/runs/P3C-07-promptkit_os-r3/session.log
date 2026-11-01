@@ -1,0 +1,5 @@
+Added format versioning to `src/store.js`:
+
+- `append` writes `version: 2` on every new line; existing lines are untouched, so the log stays append-only (I1).
+- `readAll` treats a missing version field as legacy version 1, accepts known versions 1 and 2, and throws `StoreError` on any other version.
+- Added tests for a v1 file, a mixed v1/v2 file, unknown-version rejection, and version-2 write/read-back. All 69 tests pass with `node --test`.

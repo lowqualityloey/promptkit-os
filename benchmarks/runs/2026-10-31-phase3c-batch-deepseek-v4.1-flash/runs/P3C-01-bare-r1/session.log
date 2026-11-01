@@ -1,0 +1,3 @@
+Fixed. `metrics.inc('jobs')` now runs once per dequeued job in `src/dispatcher.js`, outside the retry loop, so a retried job moves `jobs` once and `recordJob` still records exactly one final outcome. The counter set and snapshot remain the three fixed names.
+
+Added `counts a retried job once, not once per attempt` in `test/dispatcher.test.js`; it asserts `{ jobs: 1, processed: 1, failed: 0 }` after a two-attempt success and that the snapshot exposes only those three keys. `node --test`: 66 passed, 0 failed.

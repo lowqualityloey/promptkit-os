@@ -1,0 +1,3 @@
+Done. Backoff in `src/dispatcher.js` now computes `base = Math.min(baseDelayMs * 2 ** (attempts - 1), jitterCapMs)` and draws `jitter()` exactly once per wait, so delays are `floor(random() * cappedBase)` and never exceed `jitterCapMs`.
+
+Added a capped-schedule test asserting delays `[50, 60, 60]` for `maxAttempts: 4, baseDelayMs: 100, jitterCapMs: 120`, three draws for three waits, and no delay above the cap. Full suite: 66 passing.

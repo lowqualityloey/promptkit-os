@@ -1,0 +1,3 @@
+Done. The backoff now computes `floor(jitter() * min(baseDelayMs * 2 ** (attempt - 1), jitterCapMs))`.
+
+`src/dispatcher.js:45` adds the cap, drawing from the injected `jitter` source only once per wait and still only between attempts (so `maxAttempts: 1` sleeps zero times). I added `caps the backoff schedule at jitterCapMs` in `test/dispatcher.test.js`, which verifies delays `[90, 135, 135]` for a 4-attempt run and that each delay stays at or below the cap while the source is drawn exactly once per sleep. `node --test`: 66 pass, 0 fail.

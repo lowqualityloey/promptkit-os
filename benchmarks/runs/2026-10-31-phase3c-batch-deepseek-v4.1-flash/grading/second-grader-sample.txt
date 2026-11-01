@@ -1,0 +1,35 @@
+# Second-grader sample: 30 of 60 blind packets (50%)
+# Drawn deterministically: blind IDs ordered by sha256("phase3c-second-sample|2026-10-31-phase3c-batch-deepseek-v4.1-flash|<BID>"), first 30 taken.
+# Card column is the frozen rubric to grade against. No arm information is included.
+# Usage: second grader scores these 30 independently from B*.diff + B*.verify.txt;
+# disagreements with the primary sheet are reported packet-by-packet, not averaged.
+B026	P3C-03
+B050	P3C-07
+B039	P3C-05
+B023	P3C-08
+B005	P3C-10
+B020	P3C-02
+B049	P3C-02
+B034	P3C-03
+B035	P3C-09
+B037	P3C-10
+B010	P3C-03
+B043	P3C-06
+B038	P3C-06
+B053	P3C-04
+B045	P3C-07
+B009	P3C-08
+B024	P3C-04
+B032	P3C-07
+B018	P3C-09
+B044	P3C-05
+B012	P3C-04
+B060	P3C-03
+B028	P3C-01
+B006	P3C-04
+B054	P3C-10
+B016	P3C-08
+B027	P3C-08
+B055	P3C-08
+B015	P3C-09
+B021	P3C-05

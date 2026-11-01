@@ -1,0 +1,8 @@
+Done. `specs/backpressure.spec.js` is untouched (only `src/app.js` modified, plus a new `test/app.test.js`).
+
+What changed in `src/app.js`:
+- Added and exported `BackpressureError` with an `attempted` field set to the batch size, preserving the store error as `cause`.
+- `enqueue` now writes the entire batch to the store first, then calls the atomic `queue.enqueueMany`. If any append throws, it raises `BackpressureError` and the queue is never touched (partial store records remain, which ADR 0001 explicitly allows).
+- An empty batch returns `queue.size` immediately and writes nothing.
+
+`node --test specs/backpressure.spec.js` passes 3/3, and `node --test` passes all 70 tests, including the new mid-batch rejection cases (first-write failure, mid-batch failure, and a pre-populated queue staying intact).

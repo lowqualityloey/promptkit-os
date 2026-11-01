@@ -1,0 +1,7 @@
+Done. `src/dispatcher.js` now retries each job:
+
+- New options: `maxAttempts` (positive int, default 3), `baseDelayMs` (non-negative int, default 100), `sleep` (default real timer). Invalid values throw `RangeError` before the dequeue loop, so the queue is untouched.
+- Failed attempts sleep `baseDelayMs * 2 ** (attempt - 1)` only when another attempt follows; success on retry records one `processed` entry, exhaustion records one `failed` entry with the last error, and each job logs exactly one `ok`/`fail` line at its final outcome.
+- `attempts` is attached to every `processed` and `failed` entry, `total` still counts jobs handled, and `maxAttempts: 1` behaves as before.
+
+Added tests for retry-then-succeed, exhaustion with the last error, exponential backoff sequence (including `baseDelayMs: 0`), single-attempt mode, and pre-dequeue validation; `node --test` passes 34/34 with only those two files modified.

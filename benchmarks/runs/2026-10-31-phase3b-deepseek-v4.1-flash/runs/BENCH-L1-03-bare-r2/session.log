@@ -1,0 +1,1 @@
+Done. `dispatch` now returns `counts: { processed, failed, total }` (integer lengths and their sum) alongside the unchanged `processed`, `failed`, and `total` fields. Added two tests — mixed success/failure batch and empty queue — and all 30 tests pass. Only `src/dispatcher.js` and `test/dispatcher.test.js` were modified.

@@ -1,0 +1,81 @@
+diff --git a/src/app.js b/src/app.js
+index 0d22ec2..652f8d5 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -1,7 +1,7 @@
+ import { ConfigError, loadConfig } from './config.js';
+ import { createQueue } from './queue.js';
+ 
+-const FLAGS = new Set(['PORT', 'LOG_LEVEL', 'QUEUE_CAPACITY']);
++const FLAGS = new Set(['PORT', 'LOG_LEVEL', 'QUEUE_CAPACITY', 'DRY_RUN']);
+ 
+ export function parseFlags(argv = []) {
+   const flags = {};
+@@ -19,7 +19,7 @@ export function parseFlags(argv = []) {
+     if (!name) throw new ConfigError('empty flag name');
+     if (!FLAGS.has(name)) throw new ConfigError(`unknown flag: --${name}`);
+ 
+-    flags[name] = value;
++    flags[name] = name === 'DRY_RUN' ? true : value;
+   }
+ 
+   return flags;
+@@ -27,7 +27,17 @@ export function parseFlags(argv = []) {
+ 
+ export function main(argv = [], env = {}, io = { out: () => {}, err: () => {} }) {
+   try {
+-    const config = loadConfig({ ...env, ...parseFlags(argv) });
++    const flags = parseFlags(argv);
++    const dryRun = flags.DRY_RUN === true;
++    delete flags.DRY_RUN;
++
++    const config = loadConfig({ ...env, ...flags });
++
++    if (dryRun) {
++      io.out(`dry-run port=${config.port} level=${config.level} capacity=${config.capacity}`);
++      return { exitCode: 0, config };
++    }
++
+     const queue = createQueue({ capacity: config.capacity });
+     io.out(`ready port=${config.port} level=${config.level} capacity=${config.capacity}`);
+     return { exitCode: 0, config, queue };
+diff --git a/test/app.test.js b/test/app.test.js
+index f0779f3..170e83b 100644
+--- a/test/app.test.js
++++ b/test/app.test.js
+@@ -80,3 +80,35 @@ test('parseFlags returns the parsed pairs', () => {
+     LOG_LEVEL: 'warn',
+   });
+ });
++
++test('a bare dry-run flag validates and reports without a queue', () => {
++  const sunk = capture();
++  const result = main(['--DRY_RUN'], { LOG_LEVEL: 'warn' }, sunk.io);
++
++  assert.equal(result.exitCode, 0);
++  assert.deepEqual(result.config, { port: 8080, level: 'warn', capacity: 100 });
++  assert.equal(result.queue, undefined);
++  assert.deepEqual(sunk.out, ['dry-run port=8080 level=warn capacity=100']);
++  assert.deepEqual(sunk.err, []);
++});
++
++test('a valued dry-run flag validates and reports without a queue', () => {
++  const sunk = capture();
++  const result = main(['--DRY_RUN=1', '--PORT=9090', '--QUEUE_CAPACITY=7'], {}, sunk.io);
++
++  assert.equal(result.exitCode, 0);
++  assert.deepEqual(result.config, { port: 9090, level: 'info', capacity: 7 });
++  assert.equal(result.queue, undefined);
++  assert.deepEqual(sunk.out, ['dry-run port=9090 level=info capacity=7']);
++  assert.deepEqual(sunk.err, []);
++});
++
++test('an invalid configuration under dry-run exits 2 without a queue', () => {
++  const sunk = capture();
++  const result = main(['--DRY_RUN=1', '--PORT=0'], {}, sunk.io);
++
++  assert.equal(result.exitCode, 2);
++  assert.equal(result.queue, undefined);
++  assert.deepEqual(sunk.out, []);
++  assert.match(sunk.err[0], /configuration error: PORT must be a positive integer/);
++});

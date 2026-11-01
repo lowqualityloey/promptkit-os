@@ -1,0 +1,1 @@
+Added `peek()` to the queue in `src/queue.js` (returns `items[0]`, `undefined` when empty) and two tests in `test/queue.test.js` — one confirming it returns the head without mutating the queue, one for the empty case. All 30 tests pass.

@@ -1,0 +1,89 @@
+diff --git a/src/store.js b/src/store.js
+index a7eca7f..fc5cbaf 100644
+--- a/src/store.js
++++ b/src/store.js
+@@ -10,6 +10,12 @@ export class StoreError extends Error {
+ 
+ const defaultIo = { appendFileSync, existsSync, mkdirSync, readFileSync };
+ 
++// Version 2 is the format written from now on. Version 1 is a legacy line that
++// predates the version field, so it is recognised by the field's absence.
++const CURRENT_VERSION = 2;
++const LEGACY_VERSION = 1;
++const KNOWN_VERSIONS = new Set([LEGACY_VERSION, CURRENT_VERSION]);
++
+ // An append-only JSONL store. Records are written one per line and are never
+ // rewritten in place: a later reader replays them to work out the state of a
+ // job. `io` is injectable so a test can drive a store without touching disk, and
+@@ -28,7 +34,7 @@ export function createStore({ path, io = defaultIo } = {}) {
+       if (!io.existsSync(dir)) {
+         io.mkdirSync(dir, { recursive: true });
+       }
+-      io.appendFileSync(path, `${JSON.stringify(record)}\n`, 'utf8');
++      io.appendFileSync(path, `${JSON.stringify({ ...record, version: CURRENT_VERSION })}\n`, 'utf8');
+     } catch (error) {
+       throw new StoreError(`append failed: ${error.message}`);
+     }
+@@ -55,6 +61,14 @@ export function createStore({ path, io = defaultIo } = {}) {
+       if (parsed === null || typeof parsed !== 'object' || typeof parsed.type !== 'string') {
+         throw new StoreError('store record is missing its type');
+       }
++      // A legacy line has no version field and is read as version 1. Anything
++      // else must be a version this build knows, so an unfamiliar generation
++      // fails closed instead of being mistaken for one of ours.
++      const version = parsed.version === undefined ? LEGACY_VERSION : parsed.version;
++      if (!KNOWN_VERSIONS.has(version)) {
++        throw new StoreError(`unsupported store record version: ${String(version)}`);
++      }
++      parsed.version = version;
+       records.push(parsed);
+     }
+     return records;
+diff --git a/test/store.test.js b/test/store.test.js
+index be1a874..48e8335 100644
+--- a/test/store.test.js
++++ b/test/store.test.js
+@@ -83,3 +83,43 @@ test('refuses a non-object record and an empty path', () => {
+   assert.throws(() => store.append(null), StoreError);
+   assert.throws(() => createStore({ path: '' }), StoreError);
+ });
++
++test('writes records with version 2', () => {
++  const io = memoryIo();
++  const store = createStore({ path: '/s/jobs.jsonl', io });
++  store.append({ type: 'enqueue', id: 'a' });
++  store.append({ type: 'done', id: 'a' });
++
++  const lines = io.files.get('/s/jobs.jsonl').split('\n').filter(Boolean);
++  assert.deepEqual(lines.map((line) => JSON.parse(line).version), [2, 2]);
++  assert.deepEqual(store.readAll().map((record) => record.version), [2, 2]);
++});
++
++test('reads a v1 file: records without a version field read back as version 1', () => {
++  const io = memoryIo('{"type":"enqueue","id":"a","at":1}\n{"type":"done","id":"a","at":2}\n');
++  const store = createStore({ path: '/s/jobs.jsonl', io });
++
++  const records = store.readAll();
++  assert.deepEqual(records.map((record) => record.version), [1, 1]);
++  assert.deepEqual(records.map((record) => record.type), ['enqueue', 'done']);
++});
++
++test('reads a mixed file, telling v1 and v2 records apart', () => {
++  const io = memoryIo(
++    '{"type":"enqueue","id":"a","at":1}\n' +
++      '{"type":"done","id":"a","at":2,"version":2}\n' +
++      '{"type":"enqueue","id":"b","at":3,"version":2}\n' +
++      '{"type":"failed","id":"b","at":4}\n',
++  );
++  const store = createStore({ path: '/s/jobs.jsonl', io });
++
++  const records = store.readAll();
++  assert.deepEqual(records.map((record) => record.version), [1, 2, 2, 1]);
++  assert.deepEqual(records.map((record) => record.id), ['a', 'a', 'b', 'b']);
++});
++
++test('fails closed on a record whose version this build does not know', () => {
++  const store = createStore({ path: '/s/jobs.jsonl', io: memoryIo('{"type":"enqueue","id":"a","version":3}\n') });
++  assert.throws(() => store.readAll(), StoreError);
++  assert.throws(() => store.readAll(), /unsupported store record version: 3/);
++});

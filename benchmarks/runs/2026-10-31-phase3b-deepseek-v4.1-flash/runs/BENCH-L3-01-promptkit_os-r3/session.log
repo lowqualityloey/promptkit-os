@@ -1,0 +1,1 @@
+Done. `dispatch` now validates `maxAttempts`/`baseDelayMs` before touching the queue, retries each job with exponential backoff via an injectable `sleep`, and records `attempts` on every entry. Tests cover retry-then-succeed, exhaustion with the last error, backoff delays, no sleep after the final attempt, and untouched-queue validation; `node --test` passes 34/34.

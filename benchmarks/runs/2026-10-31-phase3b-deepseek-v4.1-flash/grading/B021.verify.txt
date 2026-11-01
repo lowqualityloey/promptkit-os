@@ -1,0 +1,42 @@
+verify_exit=0
+DRYRUN|OK
+✔ starts with defaults and prints one ready line (3.391369ms)
+✔ a flag overrides the environment (0.446704ms)
+✔ the environment applies when no flag is given (0.304808ms)
+✔ an unknown flag exits 2 and names the flag (0.50022ms)
+✔ a bare flag is accepted as the string true and then validated (0.29855ms)
+✔ an invalid value exits 2 (0.230365ms)
+✔ a positional argument is rejected (0.393893ms)
+✔ parseFlags returns the parsed pairs (0.415784ms)
+✔ a dry run validates the configuration and skips the queue (0.659339ms)
+✔ a dry run with a value counts as present (0.541609ms)
+✔ an invalid configuration under a dry run exits 2 without a queue (0.477962ms)
+✔ defaults when the environment is empty (2.710646ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.564642ms)
+✔ accepts LOG_LEVEL case-insensitively (0.329382ms)
+✔ exposes the accepted levels (0.321177ms)
+✔ rejects a PORT that is not a positive integer (0.907104ms)
+✔ rejects a PORT above the port range (0.420671ms)
+✔ rejects an unknown log level and names the accepted set (0.439026ms)
+✔ rejects a non-positive capacity (0.317253ms)
+✔ returns a frozen configuration object (0.961485ms)
+✔ processes every job in order (3.34998ms)
+✔ records a failure without stopping the batch (4.335371ms)
+✔ logs one line per job (0.693755ms)
+✔ returns empty results for an empty queue (0.436056ms)
+✔ dequeues in FIFO order (1.545446ms)
+✔ returns undefined when empty (0.434953ms)
+✔ reports size after enqueue and dequeue (0.958807ms)
+✔ refuses to exceed capacity and names the capacity (1.287404ms)
+✔ reports isFull at the capacity boundary (0.481369ms)
+✔ drain empties the queue and returns the items in order (1.612967ms)
+✔ rejects a capacity below one (0.41937ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 31
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 153.971805
+VERIFY|probe=0|tests=0

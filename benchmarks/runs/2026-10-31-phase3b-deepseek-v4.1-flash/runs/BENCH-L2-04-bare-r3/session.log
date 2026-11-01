@@ -1,0 +1,3 @@
+All 31 tests pass.
+
+I added `enqueueMany(batch)` in `src/queue.js` — it returns the current size for an empty batch, throws `QueueFullError` before touching anything if the batch won't fit, and otherwise appends in order and returns the new size. Added three tests in `test/queue.test.js` covering success/order, overflow (checking size and head are intact), and the empty no-op. No other files touched.

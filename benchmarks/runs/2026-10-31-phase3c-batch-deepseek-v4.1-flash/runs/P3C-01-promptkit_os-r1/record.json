@@ -1,0 +1,32 @@
+{
+  "scenario_id": "P3C-01-promptkit_os-r1",
+  "condition": "promptkit_os",
+  "model": "deepseek/deepseek-v4.1-flash",
+  "timestamp": "2026-10-31T06:59:17.533Z",
+  "metrics": {
+    "tokens_in": 162859,
+    "tokens_out": 1913,
+    "tokens_total": 214977,
+    "cache_read_tokens": 188928,
+    "tool_calls_total": 14,
+    "tool_calls_search": 11,
+    "tool_calls_edit": 2,
+    "tool_calls_verify": 1,
+    "tool_calls_other": 0,
+    "rework_loops": 2,
+    "rework_tokens_in": 49731,
+    "rework_tokens_out": 474,
+    "wall_clock_seconds": 34,
+    "invariants_checked": 0,
+    "invariants_passed": 0,
+    "human_interventions": 0,
+    "accepted": true
+  },
+  "costs": {
+    "transcript_cost_usd": 0.01
+  },
+  "grading": {
+    "grader": "human",
+    "human_accepted": true
+  }
+}

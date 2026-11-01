@@ -1,0 +1,92 @@
+verify_exit=0
+✔ a batch the store rejects leaves the queue unchanged and fails loudly (1.926001ms)
+✔ a batch the store accepts adds every job downstream (1.120063ms)
+✔ an empty batch is a no-op that returns the current size (0.287293ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 89.343956
+✔ a mid-batch rejection raises BackpressureError and leaves the queue untouched (3.560689ms)
+✔ a rejection on the first write still reports the whole batch size (0.614134ms)
+✔ a rejected batch does not disturb jobs already queued (0.88757ms)
+✔ an accepted batch adds every job in order and returns the new size (0.828862ms)
+✔ an empty batch writes nothing and returns the current size (0.403183ms)
+✔ defaults to the run command with no flags (2.745259ms)
+✔ parses values, bare flags and a job list (0.500756ms)
+✔ rejects an unknown flag by name (4.593366ms)
+✔ rejects an empty flag name and a non-string argument (0.290869ms)
+✔ rejects a positional argument that is not a command (0.318325ms)
+✔ exposes the command and flag names (0.271236ms)
+✔ defaults when the environment is empty (1.861468ms)
+✔ reads PORT, LOG_LEVEL, QUEUE_CAPACITY, JITTER_CAP_MS and STORE_PATH (2.662911ms)
+✔ accepts LOG_LEVEL case-insensitively (0.345078ms)
+✔ exposes the accepted levels (1.302764ms)
+✔ rejects a PORT that is not a positive integer, and one above the range (1.147749ms)
+✔ rejects an unknown log level and names the accepted set (0.422907ms)
+✔ rejects a non-positive capacity and a non-positive jitter cap (0.545304ms)
+✔ returns a frozen configuration object (0.364179ms)
+✔ processes every job in order and records one attempt each (4.584269ms)
+✔ records a failure with its last error and attempt count (0.399579ms)
+✔ retries a failing job and records it once when it succeeds (0.343994ms)
+✔ waits between attempts and not before the first or after the last (0.69572ms)
+✔ maxAttempts of 1 makes a single attempt without sleeping (0.539881ms)
+✔ writes exactly one log line per job, at its final outcome (0.735598ms)
+✔ counts one job per job when nothing is retried (0.903547ms)
+✔ returns an empty result for an empty queue (0.347347ms)
+✔ falls back to a placeholder id when a job carries none (1.265762ms)
+✔ a run records a done record for every job that succeeded (2.768467ms)
+✔ a run records a failed record with the job id (52.04905ms)
+✔ status reports the number of finished jobs (0.866772ms)
+✔ a runner with a non-empty store still runs the jobs it was given (1.471658ms)
+✔ main prints a dry-run line and returns without touching the store (0.853336ms)
+✔ main runs a job list and reports the totals (1.57153ms)
+✔ main exits 2 and reports the reason for a bad flag or config (0.834728ms)
+✔ starts at zero (3.054565ms)
+✔ increments a counter and reports its new value (0.507846ms)
+✔ refuses an unknown counter and a non-integer increment (2.252447ms)
+✔ records a job outcome and refuses anything else (0.787853ms)
+✔ exposes the counter names (0.381482ms)
+✔ a snapshot is frozen and a copy, and reset clears the counters (0.411208ms)
+✔ dequeues in FIFO order and reports size (4.254766ms)
+✔ returns undefined when empty (0.387086ms)
+✔ refuses to exceed capacity and names the capacity (0.879928ms)
+✔ reports isFull at the capacity boundary (0.315694ms)
+✔ rejects a capacity below one and a fractional capacity (0.414601ms)
+✔ accepts an unbounded capacity and never reports full (0.305872ms)
+✔ enqueueMany appends in order and returns the new size (1.241364ms)
+✔ enqueueMany is atomic when the batch does not fit (0.331511ms)
+✔ enqueueMany with an empty batch is a no-op (0.85924ms)
+✔ peek returns the head without consuming it (0.637393ms)
+✔ drain empties the queue and returns the items in order (0.415536ms)
+✔ loads every js file and keys plugins by name (3.379176ms)
+✔ fails closed on a plugin without a name or a run function (0.805724ms)
+✔ refuses a duplicate plugin name (0.438452ms)
+✔ ignores files that are not js and wraps a listing failure (0.562638ms)
+✔ requires a directory (0.276006ms)
+✔ reports what is due at the current time (2.280495ms)
+✔ orders entries by due time regardless of insertion order (0.349165ms)
+✔ tick runs the due jobs in order, removes them, and reports how many ran (4.783311ms)
+✔ size tracks what is scheduled (0.406136ms)
+✔ refuses a runAt that is not a finite number (0.864834ms)
+✔ appends one JSON line per record (3.309864ms)
+✔ creates the parent directory when it is missing (0.453074ms)
+✔ reads an absent store as empty (0.480189ms)
+✔ reads records back in order (0.500203ms)
+✔ fails closed on a line that is not JSON (1.324135ms)
+✔ fails closed on a record without a type (0.358203ms)
+✔ wraps a failing write in a StoreError (0.367543ms)
+✔ refuses a non-object record and an empty path (0.308353ms)
+ℹ tests 70
+ℹ suites 0
+ℹ pass 70
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 228.933701
+VERIFY|probe=0|tests=0
+SPEC|PINNED

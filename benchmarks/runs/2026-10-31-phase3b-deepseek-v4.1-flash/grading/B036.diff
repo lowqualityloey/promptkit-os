@@ -1,0 +1,155 @@
+diff --git a/src/dispatcher.js b/src/dispatcher.js
+index f13503d..511a496 100644
+--- a/src/dispatcher.js
++++ b/src/dispatcher.js
+@@ -1,17 +1,44 @@
+-export async function dispatch(queue, handler, { log = () => {} } = {}) {
++const realSleep = (delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs));
++
++export async function dispatch(
++  queue,
++  handler,
++  { log = () => {}, maxAttempts = 3, baseDelayMs = 100, sleep = realSleep } = {},
++) {
++  if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
++    throw new RangeError(`maxAttempts must be a positive integer, got: ${maxAttempts}`);
++  }
++  if (!Number.isInteger(baseDelayMs) || baseDelayMs < 0) {
++    throw new RangeError(`baseDelayMs must be a non-negative integer, got: ${baseDelayMs}`);
++  }
++
+   const processed = [];
+   const failed = [];
+ 
+   while (queue.size > 0) {
+     const job = queue.dequeue();
+     const id = job && job.id !== undefined ? job.id : 'job';
+-    try {
+-      const result = await handler(job);
+-      processed.push({ job, result });
+-      log(`ok ${id}`);
+-    } catch (error) {
+-      failed.push({ job, error });
+-      log(`fail ${id}: ${error.message}`);
++    let succeeded = false;
++    let lastError;
++
++    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
++      try {
++        const result = await handler(job);
++        processed.push({ job, result, attempts: attempt });
++        log(`ok ${id}`);
++        succeeded = true;
++        break;
++      } catch (error) {
++        lastError = error;
++        if (attempt < maxAttempts) {
++          await sleep(baseDelayMs * 2 ** (attempt - 1));
++        }
++      }
++    }
++
++    if (!succeeded) {
++      failed.push({ job, error: lastError, attempts: maxAttempts });
++      log(`fail ${id}: ${lastError.message}`);
+     }
+   }
+ 
+diff --git a/test/dispatcher.test.js b/test/dispatcher.test.js
+index 53798d9..19fc80d 100644
+--- a/test/dispatcher.test.js
++++ b/test/dispatcher.test.js
+@@ -54,6 +54,93 @@ test('logs one line per job', async () => {
+   assert.deepEqual(lines, ['ok a', 'fail b: nope']);
+ });
+ 
++test('retries a failing job and records the attempt that succeeded', async () => {
++  const queue = queueWith({ id: 'flaky' });
++  const attempts = [];
++  const lines = [];
++  const result = await dispatch(
++    queue,
++    async (job) => {
++      attempts.push(job.id);
++      if (attempts.length < 3) throw new Error('transient');
++      return 'recovered';
++    },
++    { sleep: async () => {}, log: (line) => lines.push(line) },
++  );
++
++  assert.equal(attempts.length, 3);
++  assert.equal(result.processed.length, 1);
++  assert.equal(result.processed[0].result, 'recovered');
++  assert.equal(result.processed[0].attempts, 3);
++  assert.equal(result.failed.length, 0);
++  assert.equal(result.total, 1);
++  assert.deepEqual(lines, ['ok flaky']);
++});
++
++test('exhausts maxAttempts and records the last error once', async () => {
++  const queue = queueWith({ id: 'doomed' });
++  let calls = 0;
++  const lines = [];
++  const result = await dispatch(
++    queue,
++    async () => {
++      calls += 1;
++      throw new Error(`boom ${calls}`);
++    },
++    { maxAttempts: 3, sleep: async () => {}, log: (line) => lines.push(line) },
++  );
++
++  assert.equal(calls, 3);
++  assert.equal(result.processed.length, 0);
++  assert.equal(result.failed.length, 1);
++  assert.equal(result.failed[0].job.id, 'doomed');
++  assert.equal(result.failed[0].attempts, 3);
++  assert.equal(result.failed[0].error.message, 'boom 3');
++  assert.equal(result.total, 1);
++  assert.deepEqual(lines, ['fail doomed: boom 3']);
++});
++
++test('backs off exponentially between attempts', async () => {
++  const queue = queueWith({ id: 'slow-fail' });
++  const delays = [];
++  await dispatch(queue, async () => { throw new Error('nope'); }, {
++    maxAttempts: 4,
++    baseDelayMs: 100,
++    sleep: async (delayMs) => { delays.push(delayMs); },
++  });
++
++  assert.deepEqual(delays, [100, 200, 400]);
++});
++
++test('does not sleep after the final failed attempt', async () => {
++  const queue = queueWith({ id: 'only' });
++  const delays = [];
++  await dispatch(queue, async () => { throw new Error('nope'); }, {
++    maxAttempts: 1,
++    sleep: async (delayMs) => { delays.push(delayMs); },
++  });
++
++  assert.deepEqual(delays, []);
++});
++
++test('rejects an invalid maxAttempts before dequeuing', async () => {
++  const queue = queueWith({ id: 'a' }, { id: 'b' });
++  await assert.rejects(
++    dispatch(queue, async () => 'ok', { maxAttempts: 0 }),
++    RangeError,
++  );
++  assert.equal(queue.size, 2);
++});
++
++test('rejects an invalid baseDelayMs before dequeuing', async () => {
++  const queue = queueWith({ id: 'a' }, { id: 'b' });
++  await assert.rejects(
++    dispatch(queue, async () => 'ok', { baseDelayMs: -1 }),
++    RangeError,
++  );
++  assert.equal(queue.size, 2);
++});
++
+ test('returns empty results for an empty queue', async () => {
+   const result = await dispatch(createQueue(), async () => 'ok');
+   assert.deepEqual(result.processed, []);

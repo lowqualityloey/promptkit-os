@@ -1,0 +1,3 @@
+Versioned the store log in `src/store.js`: `append` now stamps every new line with `version: 2` (overriding any caller-supplied version), and `readAll` treats a missing field as legacy version 1, returning each record with its resolved version. Any other version value — including `3`, `"2"`, and `null` — throws `StoreError` instead of being guessed at.
+
+Because versions are resolved only during replay, old lines are never touched. I added tests covering a v1 file (and that its bytes are unchanged), an append into a v1 file, a mixed v1/v2 file, and unknown/malformed versions. `node --test` passes: 70/70.

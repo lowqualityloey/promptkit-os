@@ -1,0 +1,73 @@
+diff --git a/src/dispatcher.js b/src/dispatcher.js
+index 46ef44a..400a64b 100644
+--- a/src/dispatcher.js
++++ b/src/dispatcher.js
+@@ -7,7 +7,8 @@ export const RETRY_DEFAULTS = Object.freeze({
+ const realSleep = (delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs));
+ 
+ // Drains a queue through a handler, retrying a failed job up to `maxAttempts`
+-// times. `sleep` and `jitter` are injectable so a test never waits for a timer.
++// times. `sleep` and `random` are injectable so a test never waits for a timer;
++// `jitter` is kept as an alias for the same random source.
+ export async function dispatch(
+   queue,
+   handler,
+@@ -15,6 +16,7 @@ export async function dispatch(
+     log = () => {},
+     sleep = realSleep,
+     jitter = Math.random,
++    random = jitter,
+     metrics = null,
+     maxAttempts = RETRY_DEFAULTS.maxAttempts,
+     baseDelayMs = RETRY_DEFAULTS.baseDelayMs,
+@@ -43,7 +45,7 @@ export async function dispatch(
+         lastError = error;
+         if (attempts < maxAttempts) {
+           const base = baseDelayMs * 2 ** (attempts - 1);
+-          await sleep(Math.floor(jitter() * base));
++          await sleep(Math.floor(random() * Math.min(base, jitterCapMs)));
+         }
+       }
+     }
+diff --git a/test/dispatcher.test.js b/test/dispatcher.test.js
+index 1452e38..be120ec 100644
+--- a/test/dispatcher.test.js
++++ b/test/dispatcher.test.js
+@@ -82,6 +82,37 @@ test('waits between attempts and not before the first or after the last', async
+   assert.deepEqual(delays, [50, 100]);
+ });
+ 
++test('caps the exponential base at jitterCapMs and draws once per wait', async () => {
++  const queue = queueWith('stuck');
++  const delays = [];
++  const draws = [];
++  const samples = [0.5, 0.5, 0.5];
++
++  await dispatch(
++    queue,
++    async () => {
++      throw new Error('stuck');
++    },
++    {
++      maxAttempts: 4,
++      baseDelayMs: 100,
++      jitterCapMs: 150,
++      random: () => {
++        const sample = samples[draws.length];
++        draws.push(sample);
++        return sample;
++      },
++      sleep: async (delayMs) => {
++        delays.push(delayMs);
++      },
++    },
++  );
++
++  assert.equal(draws.length, 3);
++  assert.deepEqual(delays, [50, 75, 75]);
++  for (const delay of delays) assert.ok(delay <= 150);
++});
++
+ test('maxAttempts of 1 makes a single attempt without sleeping', async () => {
+   const queue = queueWith('once');
+   let slept = false;

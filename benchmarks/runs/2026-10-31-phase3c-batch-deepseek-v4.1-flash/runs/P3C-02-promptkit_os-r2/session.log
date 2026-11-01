@@ -1,0 +1,6 @@
+Done. Changes:
+
+- `src/cli.js`: added `dry-run` to the accepted flag set, so it parses alongside the existing flags (and appears in `CLI_FLAGS`).
+- `src/app.js`: detects `DRY_RUN` via `Object.hasOwn` and emits exactly one deprecation line to the error sink naming `--dry-run`; the dry-run branch triggers when either spelling has the old truthy values (`true`, `'1'`, `'true'`), so both print the identical `dry-run port=...` line. Passing both still yields one warning since the warning is keyed on the old flag's presence.
+
+Verified manually: new spelling = dry-run line only, old = same line plus one warning, both = same line plus one warning. All 65 tests pass.

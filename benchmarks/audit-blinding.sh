@@ -67,7 +67,12 @@ done
 [[ -n "$DRIVER" ]] || DRIVER="$ENGINE/benchmarks/run-ab-benchmark.sh"
 [[ -f "$DRIVER" ]] || { echo "AUDIT|USAGE|driver not found: $DRIVER"; exit 2; }
 
-TMP="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/phase3b-blind-audit.XXXXXX")"
+# The fixture root deliberately carries a lower/digit -> upper boundary
+# (`3bB`), so the stub CLI's slug mirror below is exercised against a path the
+# decamelize step actually rewrites. A lowercase-only root made the mirror
+# disagree with the driver for only some `mktemp` suffixes, which is a
+# regression detector that fires one run in three instead of every run.
+TMP="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/phase3bBlindAudit.XXXXXX")"
 # The audit keeps the key where a real batch must: outside <out>.
 mkdir -p "$TMP/keys"
 chmod 700 "$TMP/keys"
@@ -97,7 +102,14 @@ cat > "$BIN/command-code" <<'STUB'
 if [[ "${1:-}" == "--version" ]]; then echo "stub-1.0.0"; exit 0; fi
 if [[ "${1:-}" == "--list-models" ]]; then echo "stub/model-a"; exit 0; fi
 cwd="$(pwd)"
-slug="$(printf '%s' "$cwd" | sed 's#^/##; s#/#-#g' | tr '[:upper:]' '[:lower:]' | sed 's#_#-#g; s#[^a-z0-9-]#-#g; s#-\{2,\}#-#g; s#^-##; s#-$##')"
+# Mirror the driver's slugify_run_path exactly, decamelize included: a real CLI
+# records under @sindresorhus/slugify(cwd), which splits a lower/digit -> upper
+# boundary (`p3c-08` -> `p3-c-08`). A mirror without that step writes a
+# transcript the driver never looks in, so every row fails TRANSCRIPT_MISSING
+# and the audit reports a blinding failure that is really fixture drift.
+slug="$(printf '%s' "$cwd" \
+    | sed -e 's/\([a-z0-9]\)\([A-Z]\)/\1-\2/g' -e 's/\([A-Z]\)\([A-Z][a-z]\)/\1-\2/g' \
+    | sed 's#^/##; s#/#-#g' | tr '[:upper:]' '[:lower:]' | sed 's#_#-#g; s#[^a-z0-9-]#-#g; s#-\{2,\}#-#g; s#^-##; s#-$##')"
 proj="$HOME/.commandcode/projects/$slug"
 mkdir -p "$proj"
 sid="stub-$(date +%s%N)-$RANDOM"

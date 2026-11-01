@@ -1,0 +1,3 @@
+Fixed. `status()` now replays the log into per-job states: `enqueue` opens a job as pending only if it isn't already known, and `done`/`failed` close it, so each job lands in exactly one bucket. Counts are still derived from `store.readAll()`.
+
+Added `status does not count a finished job as pending` in `test/integration.test.js` covering one finished and one unfinished job. `node --test` passes 66/66.

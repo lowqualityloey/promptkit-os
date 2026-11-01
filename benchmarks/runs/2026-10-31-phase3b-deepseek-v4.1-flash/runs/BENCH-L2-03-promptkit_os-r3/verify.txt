@@ -1,0 +1,46 @@
+verify_exit=0
+UNBOUNDED|OK
+✔ starts with defaults and prints one ready line (5.185747ms)
+✔ a flag overrides the environment (0.492396ms)
+✔ the environment applies when no flag is given (0.443707ms)
+✔ an unknown flag exits 2 and names the flag (0.577324ms)
+✔ a bare flag is accepted as the string true and then validated (0.413748ms)
+✔ an invalid value exits 2 (0.316847ms)
+✔ a positional argument is rejected (0.406553ms)
+✔ parseFlags returns the parsed pairs (0.290365ms)
+✔ defaults when the environment is empty (5.717436ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.272549ms)
+✔ accepts LOG_LEVEL case-insensitively (0.190404ms)
+✔ exposes the accepted levels (0.230985ms)
+✔ rejects a PORT that is not a positive integer (0.533215ms)
+✔ rejects a PORT above the port range (0.198174ms)
+✔ rejects an unknown log level and names the accepted set (0.263359ms)
+✔ rejects a non-positive capacity (0.213894ms)
+✔ accepts an unbounded capacity case-insensitively (0.465061ms)
+✔ still defaults to 100 when the capacity is absent or empty (0.64047ms)
+✔ rejects zero, negative, fractional, and non-numeric capacities (0.515637ms)
+✔ leaves the unbounded keyword invalid for PORT (0.344441ms)
+✔ returns a frozen configuration object (0.654123ms)
+✔ processes every job in order (2.448555ms)
+✔ records a failure without stopping the batch (5.331744ms)
+✔ logs one line per job (0.42594ms)
+✔ returns empty results for an empty queue (0.37274ms)
+✔ dequeues in FIFO order (1.441764ms)
+✔ returns undefined when empty (0.302509ms)
+✔ reports size after enqueue and dequeue (0.224537ms)
+✔ refuses to exceed capacity and names the capacity (0.572445ms)
+✔ reports isFull at the capacity boundary (0.28188ms)
+✔ drain empties the queue and returns the items in order (1.048505ms)
+✔ rejects a capacity below one (0.372919ms)
+✔ accepts an unbounded capacity (0.312574ms)
+✔ never fills or throws when the capacity is unbounded (1.563695ms)
+✔ still rejects other non-integer capacities (1.239039ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 140.734971
+VERIFY|probe=0|tests=0

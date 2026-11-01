@@ -1,0 +1,3 @@
+All 67 tests pass.
+
+`status()` now replays the store into a per-job state map instead of counting raw record types: an `enqueue` opens a job as `pending`, and a `done` or `failed` record closes it, so a finished job never counts as pending and each job lands in exactly one bucket. Counts are still derived purely from `store.readAll()`, and I added tests covering a store with one finished plus one unfinished job (1 pending, 1 done) and a failed-only job (1 failed, 0 pending).

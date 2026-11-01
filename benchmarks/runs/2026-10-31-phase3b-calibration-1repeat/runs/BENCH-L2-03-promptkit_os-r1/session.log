@@ -1,0 +1,7 @@
+Done — all 34 tests pass.
+
+- `src/config.js`: added `capacityValue`, which maps a case-insensitive `unbounded` string to `Number.POSITIVE_INFINITY`; everything else still flows through `positiveInt`, so defaults of 100 and the `ConfigError` rejections for `0`/negative/fractional/non-numeric are unchanged.
+- `src/queue.js`: the capacity guard now admits `Infinity`. `isFull`/`enqueue` already compare `items.length >= capacity`, which is always false for `Infinity`, so no further changes were needed.
+- Added unbounded tests to `test/config.test.js` (mapping, case variants, preserved numeric rules) and `test/queue.test.js` (accepts Infinity, never throws `QueueFullError`/`isFull` stays false across sizes, FIFO/dequeue/drain intact).
+
+`src/app.js` untouched; its ready line still prints `capacity=Infinity` via normal string interpolation.

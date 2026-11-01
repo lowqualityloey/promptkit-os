@@ -59,3 +59,15 @@ Microsoft.PowerShell.Core/
 # Published benchmark batches intentionally track their run and harness logs.
 !benchmarks/runs/**/*.log
 
+# A benchmark run directory holds a complete seed clone plus the packet files
+# the batch publishes. Track only the packet; the clone (including its .git)
+# stays local. Batch-root `runs/<scenario>-run.diff` and `-init.log` are not
+# matched here and stay publishable.
+benchmarks/runs/*/runs/*/**
+!benchmarks/runs/*/runs/*/record.json
+!benchmarks/runs/*/runs/*/run.stripped.diff
+!benchmarks/runs/*/runs/*/verify.txt
+!benchmarks/runs/*/runs/*/session.log
+!benchmarks/runs/*/runs/*/extract.log
+!benchmarks/runs/*/runs/*/strip.log
+

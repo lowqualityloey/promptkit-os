@@ -1,0 +1,7 @@
+Done. Intake now replays the store before accepting a list:
+
+- **Closed jobs are skipped** — anything with a `done` or `failed` record is never re-queued, so a restart doesn't re-dispatch finished work.
+- **Unfinished jobs are accepted** — an id with only an `enqueue` record (or no record at all) is queued; a pre-existing `enqueue` record isn't duplicated.
+- **Within a live runner**, an id already in the queue is ignored, so enqueuing the same list twice dispatches each unfinished job once and appends exactly one closing record.
+
+`jobStates` lives in `store.js` (the designated reader) and the new integration test covers a store holding one finished and one unfinished job run twice. `node --test`: 66/66 passing.

@@ -1,0 +1,7 @@
+Done. All 70 tests pass, and the CLI still prints `processed=2 failed=0 total=2`.
+
+- `dispatch` now returns `counts: { processed, failed, total }` as integers alongside the unchanged `processed`/`failed` arrays and numeric `total`.
+- Added `sweep(queue, handler, options)` to `src/scheduler.js`: it drains through `dispatch` with the options passed through and returns `result.counts.total`.
+- Tests cover counts (success/failure mix, retried job counted once, empty queue) and sweep (drain + count, option pass-through with a retried failure, empty queue).
+
+`src/app.js` and its summary line are untouched.

@@ -1,0 +1,1 @@
+Done. `dispatch` now returns `counts: { processed, failed, total }` alongside the unchanged `processed`, `failed`, and `total` fields, with log lines and failure handling untouched. I added two tests in `test/dispatcher.test.js` — a 4-job batch with 2 successes and 2 failures, and the empty-queue case — and all 30 tests pass.

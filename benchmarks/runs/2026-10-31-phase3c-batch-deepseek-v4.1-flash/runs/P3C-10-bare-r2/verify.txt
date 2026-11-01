@@ -1,0 +1,87 @@
+verify_exit=1
+file://<rundir>/[eval1]:1
+import { createQueue } from './src/queue.js'; const queue = createQueue({ capacity: 5000 }); for (let i = 0; i < 3000; i += 1) queue.enqueue(i); const original = Array.prototype.shift; let shifts = 0; Array.prototype.shift = function patched() { shifts += 1; return original.call(this); }; let drained; try { drained = queue.drain(); } finally { Array.prototype.shift = original; } if (drained.length !== 3000) throw new Error('drained ' + drained.length); if (drained[0] !== 0 || drained[2999] !== 2999) throw new Error('order changed'); if (shifts !== 0) throw new Error('shift called ' + shifts + ' times during drain'); if (queue.size !== 0) throw new Error('size after drain ' + queue.size); const empty = createQueue({ capacity: 2 }); const none = empty.drain(); if (!Array.isArray(none) || none.length !== 0) throw new Error('empty drain ' + JSON.stringify(none)); const again = createQueue({ capacity: 3 }); again.enqueue('a'); again.enqueue('b'); const first = again.drain(); again.enqueue('c'); if (JSON.stringify(first) !== JSON.stringify(['a', 'b'])) throw new Error('first drain ' + JSON.stringify(first)); if (again.size !== 1 || again.peek() !== 'c') throw new Error('queue not reusable after drain'); console.log('DRAIN|OK');
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   ^
+
+Error: shift called 3000 times during drain
+    at file://<rundir>/[eval1]:1:564
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:223:26
+    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:220:20)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.22.1
+✔ defaults to the run command with no flags (2.572446ms)
+✔ parses values, bare flags and a job list (0.440405ms)
+✔ rejects an unknown flag by name (2.171303ms)
+✔ rejects an empty flag name and a non-string argument (0.270933ms)
+✔ rejects a positional argument that is not a command (0.277552ms)
+✔ exposes the command and flag names (0.29086ms)
+✔ defaults when the environment is empty (1.853423ms)
+✔ reads PORT, LOG_LEVEL, QUEUE_CAPACITY, JITTER_CAP_MS and STORE_PATH (1.916987ms)
+✔ accepts LOG_LEVEL case-insensitively (0.354657ms)
+✔ exposes the accepted levels (1.782373ms)
+✔ rejects a PORT that is not a positive integer, and one above the range (1.516832ms)
+✔ rejects an unknown log level and names the accepted set (0.34317ms)
+✔ rejects a non-positive capacity and a non-positive jitter cap (0.493097ms)
+✔ returns a frozen configuration object (0.384062ms)
+✔ processes every job in order and records one attempt each (4.129244ms)
+✔ records a failure with its last error and attempt count (0.433283ms)
+✔ retries a failing job and records it once when it succeeds (0.393075ms)
+✔ waits between attempts and not before the first or after the last (0.650608ms)
+✔ maxAttempts of 1 makes a single attempt without sleeping (0.455997ms)
+✔ writes exactly one log line per job, at its final outcome (0.486448ms)
+✔ counts one job per job when nothing is retried (0.694065ms)
+✔ returns an empty result for an empty queue (0.283275ms)
+✔ falls back to a placeholder id when a job carries none (0.388518ms)
+✔ a run records a done record for every job that succeeded (2.166636ms)
+✔ a run records a failed record with the job id (35.35353ms)
+✔ status reports the number of finished jobs (0.860701ms)
+✔ a runner with a non-empty store still runs the jobs it was given (1.565792ms)
+✔ main prints a dry-run line and returns without touching the store (0.854655ms)
+✔ main runs a job list and reports the totals (1.030717ms)
+✔ main exits 2 and reports the reason for a bad flag or config (0.423505ms)
+✔ starts at zero (1.940337ms)
+✔ increments a counter and reports its new value (0.416292ms)
+✔ refuses an unknown counter and a non-integer increment (1.78189ms)
+✔ records a job outcome and refuses anything else (0.364657ms)
+✔ exposes the counter names (0.198152ms)
+✔ a snapshot is frozen and a copy, and reset clears the counters (0.268558ms)
+✔ dequeues in FIFO order and reports size (3.12779ms)
+✔ returns undefined when empty (0.238822ms)
+✔ refuses to exceed capacity and names the capacity (0.555587ms)
+✔ reports isFull at the capacity boundary (0.195737ms)
+✔ rejects a capacity below one and a fractional capacity (0.372845ms)
+✔ accepts an unbounded capacity and never reports full (0.394513ms)
+✔ enqueueMany appends in order and returns the new size (1.032387ms)
+✔ enqueueMany is atomic when the batch does not fit (0.253449ms)
+✔ enqueueMany with an empty batch is a no-op (0.841427ms)
+✔ peek returns the head without consuming it (0.570605ms)
+✔ drain empties the queue and returns the items in order (0.243461ms)
+✔ loads every js file and keys plugins by name (3.287717ms)
+✔ fails closed on a plugin without a name or a run function (0.705262ms)
+✔ refuses a duplicate plugin name (0.380843ms)
+✔ ignores files that are not js and wraps a listing failure (0.473863ms)
+✔ requires a directory (0.287038ms)
+✔ reports what is due at the current time (1.820518ms)
+✔ orders entries by due time regardless of insertion order (0.28926ms)
+✔ tick runs the due jobs in order, removes them, and reports how many ran (1.25959ms)
+✔ size tracks what is scheduled (0.192368ms)
+✔ refuses a runAt that is not a finite number (0.506547ms)
+✔ appends one JSON line per record (2.778595ms)
+✔ creates the parent directory when it is missing (0.355684ms)
+✔ reads an absent store as empty (0.276636ms)
+✔ reads records back in order (0.275007ms)
+✔ fails closed on a line that is not JSON (0.732439ms)
+✔ fails closed on a record without a type (0.256084ms)
+✔ wraps a failing write in a StoreError (0.294814ms)
+✔ refuses a non-object record and an empty path (0.222435ms)
+ℹ tests 65
+ℹ suites 0
+ℹ pass 65
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 200.877935
+VERIFY|probe=1|tests=0

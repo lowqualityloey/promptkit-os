@@ -1,0 +1,105 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..11b470b 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -39,17 +39,24 @@ export function createRunner({ store, queue, metrics = createMetrics(), now = ()
+   return { enqueue, run, status };
+ }
+ 
++function isDryRunValue(value) {
++  return value === true || value === '1' || value === 'true';
++}
++
+ export async function main(argv = [], env = {}, io = { out: () => {}, err: () => {} }) {
+   try {
+     const { command, flags } = parseArgs(argv);
++    if ('DRY_RUN' in flags) {
++      io.err('warning: --DRY_RUN is deprecated; use --dry-run instead');
++    }
+     const overrides = {};
+     for (const [name, value] of Object.entries(flags)) {
+-      if (name === 'DRY_RUN' || name === 'JOBS') continue;
++      if (name === 'DRY_RUN' || name === 'dry-run' || name === 'JOBS') continue;
+       overrides[name] = value;
+     }
+     const config = loadConfig({ ...env, ...overrides });
+ 
+-    if (flags.DRY_RUN === true || flags.DRY_RUN === '1' || flags.DRY_RUN === 'true') {
++    if (isDryRunValue(flags.DRY_RUN) || isDryRunValue(flags['dry-run'])) {
+       io.out(`dry-run port=${config.port} level=${config.level} capacity=${config.capacity}`);
+       return { exitCode: 0, config };
+     }
+diff --git a/src/cli.js b/src/cli.js
+index cebcb50..9fd8101 100644
+--- a/src/cli.js
++++ b/src/cli.js
+@@ -13,6 +13,7 @@ const FLAGS = new Set([
+   'STORE_PATH',
+   'JOBS',
+   'DRY_RUN',
++  'dry-run',
+ ]);
+ 
+ export function parseArgs(argv = []) {
+diff --git a/test/cli.test.js b/test/cli.test.js
+index 44bb181..4ced609 100644
+--- a/test/cli.test.js
++++ b/test/cli.test.js
+@@ -14,6 +14,8 @@ test('parses values, bare flags and a job list', () => {
+   assert.deepEqual(parsed.flags, { PORT: '9090', JOBS: 'a,b', QUEUE_CAPACITY: '5' });
+   assert.equal(parseArgs(['--DRY_RUN']).flags.DRY_RUN, true);
+   assert.equal(parseArgs(['--DRY_RUN=1']).flags.DRY_RUN, '1');
++  assert.equal(parseArgs(['--dry-run']).flags['dry-run'], true);
++  assert.equal(parseArgs(['--dry-run=true']).flags['dry-run'], 'true');
+ });
+ 
+ test('rejects an unknown flag by name', () => {
+@@ -34,4 +36,5 @@ test('exposes the command and flag names', () => {
+   assert.deepEqual([...CLI_COMMANDS], ['run', 'status']);
+   assert.ok(CLI_FLAGS.includes('JOBS'));
+   assert.ok(CLI_FLAGS.includes('DRY_RUN'));
++  assert.ok(CLI_FLAGS.includes('dry-run'));
+ });
+diff --git a/test/integration.test.js b/test/integration.test.js
+index 79921ae..04dcaee 100644
+--- a/test/integration.test.js
++++ b/test/integration.test.js
+@@ -80,6 +80,38 @@ test('main prints a dry-run line and returns without touching the store', async
+   assert.deepEqual(out, ['dry-run port=9090 level=info capacity=100']);
+ });
+ 
++test('--dry-run prints the dry-run line without a warning', async () => {
++  const out = [];
++  const err = [];
++  const result = await main(['--dry-run', '--PORT=9090'], {}, { out: (line) => out.push(line), err: (line) => err.push(line) });
++
++  assert.equal(result.exitCode, 0);
++  assert.deepEqual(out, ['dry-run port=9090 level=info capacity=100']);
++  assert.deepEqual(err, []);
++});
++
++test('--DRY_RUN warns once and names --dry-run', async () => {
++  const out = [];
++  const err = [];
++  const result = await main(['--DRY_RUN=1', '--PORT=9090'], {}, { out: (line) => out.push(line), err: (line) => err.push(line) });
++
++  assert.equal(result.exitCode, 0);
++  assert.deepEqual(out, ['dry-run port=9090 level=info capacity=100']);
++  assert.equal(err.length, 1);
++  assert.match(err[0], /deprecated/);
++  assert.match(err[0], /--dry-run/);
++});
++
++test('passing both spellings warns exactly once', async () => {
++  const out = [];
++  const err = [];
++  const result = await main(['--DRY_RUN', '--dry-run', '--PORT=9090'], {}, { out: (line) => out.push(line), err: (line) => err.push(line) });
++
++  assert.equal(result.exitCode, 0);
++  assert.deepEqual(out, ['dry-run port=9090 level=info capacity=100']);
++  assert.equal(err.length, 1);
++});
++
+ test('main runs a job list and reports the totals', async () => {
+   const dir = join(tmpdir(), `phase3c-seed-${process.pid}-${Date.now()}.jsonl`);
+   const out = [];

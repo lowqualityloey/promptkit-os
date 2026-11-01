@@ -1,0 +1,125 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..ca2974b 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -1,4 +1,4 @@
+-import { CliError, parseArgs } from './cli.js';
++import { CliError, deprecationWarnings, parseArgs } from './cli.js';
+ import { ConfigError, loadConfig } from './config.js';
+ import { dispatch } from './dispatcher.js';
+ import { createMetrics } from './metrics.js';
+@@ -42,6 +42,9 @@ export function createRunner({ store, queue, metrics = createMetrics(), now = ()
+ export async function main(argv = [], env = {}, io = { out: () => {}, err: () => {} }) {
+   try {
+     const { command, flags } = parseArgs(argv);
++    for (const warning of deprecationWarnings(argv)) {
++      io.err(warning);
++    }
+     const overrides = {};
+     for (const [name, value] of Object.entries(flags)) {
+       if (name === 'DRY_RUN' || name === 'JOBS') continue;
+diff --git a/src/cli.js b/src/cli.js
+index cebcb50..8d99ed5 100644
+--- a/src/cli.js
++++ b/src/cli.js
+@@ -13,8 +13,14 @@ const FLAGS = new Set([
+   'STORE_PATH',
+   'JOBS',
+   'DRY_RUN',
++  'dry-run',
+ ]);
+ 
++const ALIASES = new Map([['dry-run', 'DRY_RUN']]);
++
++const DEPRECATED_DRY_RUN = 'DRY_RUN';
++const DEPRECATION_WARNING = 'warning: --DRY_RUN is deprecated; use --dry-run instead';
++
+ export function parseArgs(argv = []) {
+   const flags = {};
+   const positional = [];
+@@ -31,7 +37,7 @@ export function parseArgs(argv = []) {
+       const value = eq === -1 ? true : body.slice(eq + 1);
+       if (name === '') throw new CliError('empty flag name');
+       if (!FLAGS.has(name)) throw new CliError(`unknown flag: --${name}`);
+-      flags[name] = value;
++      flags[ALIASES.get(name) ?? name] = value;
+     } else if (COMMANDS.has(arg) && positional.length === 0) {
+       command = arg;
+     } else {
+@@ -45,5 +51,15 @@ export function parseArgs(argv = []) {
+   return { command, flags };
+ }
+ 
++export function deprecationWarnings(argv = []) {
++  for (const arg of argv) {
++    if (typeof arg !== 'string' || !arg.startsWith('--')) continue;
++    const eq = arg.indexOf('=');
++    const name = eq === -1 ? arg.slice(2) : arg.slice(2, eq);
++    if (name === DEPRECATED_DRY_RUN) return [DEPRECATION_WARNING];
++  }
++  return [];
++}
++
+ export const CLI_FLAGS = Object.freeze([...FLAGS]);
+ export const CLI_COMMANDS = Object.freeze([...COMMANDS]);
+diff --git a/test/cli.test.js b/test/cli.test.js
+index 44bb181..a57e645 100644
+--- a/test/cli.test.js
++++ b/test/cli.test.js
+@@ -16,6 +16,13 @@ test('parses values, bare flags and a job list', () => {
+   assert.equal(parseArgs(['--DRY_RUN=1']).flags.DRY_RUN, '1');
+ });
+ 
++test('accepts --dry-run as an alias for DRY_RUN', () => {
++  assert.equal(parseArgs(['--dry-run']).flags.DRY_RUN, true);
++  assert.equal(parseArgs(['--dry-run=1']).flags.DRY_RUN, '1');
++  assert.equal(parseArgs(['--dry-run=1', '--DRY_RUN=1']).flags.DRY_RUN, '1');
++  assert.ok(CLI_FLAGS.includes('dry-run'));
++});
++
+ test('rejects an unknown flag by name', () => {
+   assert.throws(() => parseArgs(['--BOGUS=1']), /unknown flag: --BOGUS/);
+ });
+diff --git a/test/integration.test.js b/test/integration.test.js
+index 79921ae..919bf78 100644
+--- a/test/integration.test.js
++++ b/test/integration.test.js
+@@ -80,6 +80,38 @@ test('main prints a dry-run line and returns without touching the store', async
+   assert.deepEqual(out, ['dry-run port=9090 level=info capacity=100']);
+ });
+ 
++test('main warns once for the deprecated --DRY_RUN spelling', async () => {
++  const out = [];
++  const err = [];
++  const result = await main(['--DRY_RUN=1', '--PORT=9090'], {}, { out: (line) => out.push(line), err: (line) => err.push(line) });
++
++  assert.equal(result.exitCode, 0);
++  assert.deepEqual(out, ['dry-run port=9090 level=info capacity=100']);
++  assert.equal(err.length, 1);
++  assert.match(err[0], /deprecated/);
++  assert.match(err[0], /--dry-run/);
++});
++
++test('main accepts --dry-run without warning and prints the same line', async () => {
++  const out = [];
++  const err = [];
++  const result = await main(['--dry-run=1', '--PORT=9090'], {}, { out: (line) => out.push(line), err: (line) => err.push(line) });
++
++  assert.equal(result.exitCode, 0);
++  assert.deepEqual(out, ['dry-run port=9090 level=info capacity=100']);
++  assert.deepEqual(err, []);
++});
++
++test('main warns once when both dry-run spellings are passed together', async () => {
++  const out = [];
++  const err = [];
++  const result = await main(['--dry-run', '--DRY_RUN'], {}, { out: (line) => out.push(line), err: (line) => err.push(line) });
++
++  assert.equal(result.exitCode, 0);
++  assert.deepEqual(out, ['dry-run port=8080 level=info capacity=100']);
++  assert.equal(err.length, 1);
++});
++
+ test('main runs a job list and reports the totals', async () => {
+   const dir = join(tmpdir(), `phase3c-seed-${process.pid}-${Date.now()}.jsonl`);
+   const out = [];

@@ -1,0 +1,1 @@
+Backoff now computes `Math.floor(jitter() * Math.min(baseDelayMs * 2 ** (attempts - 1), jitterCapMs))`, drawing once per wait only between attempts. Added a capped-schedule test asserting `[50, 75, 75]` for `baseDelayMs 100`, `jitterCapMs 150`; all 66 tests pass.

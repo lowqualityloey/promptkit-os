@@ -1,0 +1,6 @@
+All 72 tests pass. Summary of changes:
+
+- `src/dispatcher.js`: `dispatch` now also returns `counts: { processed, failed, total }` — integer mirrors of the existing arrays/total, which keep their meaning untouched.
+- `src/scheduler.js`: added exported `sweep(queue, handler, options)` that runs `dispatch` and returns `result.counts.total`.
+- `src/app.js`: unchanged, so the CLI still prints `processed=N failed=N total=N`.
+- Tests: 3 `counts` tests in `test/dispatcher.test.js` (mirroring, empty queue, retried job counted once) and 4 `sweep` tests in `test/scheduler.test.js` (drains + returns count, empty queue, failures included, options forwarded).

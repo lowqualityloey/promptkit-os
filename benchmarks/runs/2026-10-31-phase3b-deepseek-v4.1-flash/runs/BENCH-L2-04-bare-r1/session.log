@@ -1,0 +1,1 @@
+Added `enqueueMany` to `src/queue.js` — it checks capacity before pushing, so an overflow throws `QueueFullError` with zero mutation, and `[]` returns the current size. Added the three tests to `test/queue.test.js`. All 31 tests pass, and no other files were touched.

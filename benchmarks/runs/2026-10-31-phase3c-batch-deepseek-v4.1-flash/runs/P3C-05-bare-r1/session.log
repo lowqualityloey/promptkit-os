@@ -1,0 +1,7 @@
+Fixed. Batch intake now checks the queue's remaining capacity before touching either side:
+
+- If the batch doesn't fit, `QueueFullError` is thrown immediately — no store records and no queue changes.
+- If it fits, all `enqueue` records are written first, then the whole batch is queued atomically via `enqueueMany`. A store write failure surfaces as `BackpressureError` (with `attempted`) and leaves the queue untouched.
+- Empty batches remain a no-op returning the current size.
+
+All 66 `node --test` tests pass, the new refused-batch test passes, and `specs/backpressure.spec.js` now passes too (3/3).

@@ -50,14 +50,16 @@
 #                  [--max-turns N] [--repeats N] [--profile lite|balanced]
 #   dry run:     ... --preflight-only   (validates environment, spends nothing)
 #   finalize:    run-ab-benchmark.sh --finalize DIR --grading DIR/grading/grading.tsv
+#                  --graded-by human|machine
 #                  [--key FILE]          (default: DIR/key-location.txt)
 #                (translates the blind-id sheet via the recorded key, re-extracts each
-#                 run with its graded accepted flag, then runs the aggregator
-#                 with a scenario-keyed sheet as cross-check)
+#                 run with its graded accepted flag, stamps who graded that flag into
+#                 the section 5 record, then runs the aggregator with a
+#                 scenario-keyed sheet as cross-check)
 set -euo pipefail
 export LC_ALL=C
 
-ENGINE="" SEED="" TASKS_CSV="" MODEL="" OUT="" MAXTURNS=40 TIMEOUT=900 REPEATS=1 PROFILE=balanced PREFLIGHT_ONLY=0 FINALIZE=0 GRADING="" ORDER_SEED="" SHUFFLE_SEED="${BENCH_SHUFFLE_SEED:-}" KEY_OUT="" KEY_ARG=""
+ENGINE="" SEED="" TASKS_CSV="" MODEL="" OUT="" MAXTURNS=40 TIMEOUT=900 REPEATS=1 PROFILE=balanced PREFLIGHT_ONLY=0 FINALIZE=0 SCREEN=0 SCREEN_ARM="" GRADING="" ORDER_SEED="" SHUFFLE_SEED="${BENCH_SHUFFLE_SEED:-}" KEY_OUT="" KEY_ARG="" GRADED_BY=""
 
 usage() {
     echo "Usage: run-ab-benchmark.sh --engine <promptkit-repo> --seed <seed-repo>"
@@ -67,7 +69,14 @@ usage() {
     echo "       --shuffle-seed N (required: pre-registered blind-id shuffle)"
     echo "       --key-out FILE   (required for a batch: blind key outside <out>)"
     echo "       [--preflight-only]"
+    echo "       run-ab-benchmark.sh --screen --seed <seed-repo> --tasks <task.md,...>"
+    echo "       [--arm bare]   (runs every Verify probe on a throwaway copy of the
+    echo "                       seed; refuses a slate whose probes are already green.
+    echo "                       Spends nothing: no model, CLI, order seed or key needed)"
     echo "       run-ab-benchmark.sh --finalize <dir> --grading <dir/grading/grading.tsv>"
+    echo "       --graded-by human|machine  (required: who graded the sheet. It is"
+    echo "                       stamped into every record, so a machine grade is"
+    echo "                       recorded as one and cannot read as human acceptance)"
     echo "       [--key FILE]  (default: <dir>/key-location.txt recorded at batch time)"
 }
 
@@ -78,10 +87,20 @@ bench_error() {
 
 slugify_run_path() {
     # Command Code records transcripts under @sindresorhus/slugify(cwd):
-    # lowercase, path separators and underscores become hyphens, repeated
-    # separators collapse. The driver owns this path alphabet, so an ASCII
-    # mirror is sufficient; revisit if run paths may contain non-ASCII text.
+    # decamelize, then lowercase, then path separators/underscores become
+    # hyphens and repeated separators collapse. The driver owns this path
+    # alphabet, so an ASCII mirror is sufficient; revisit if run paths may
+    # contain non-ASCII text.
+    #
+    # The decamelize step is not cosmetic. slugify splits a digit -> upper
+    # boundary, so a task id like `P3C-08` lands under `p3-c-08`, and an
+    # earlier mirror that skipped the split looked for `p3c-08` and aborted the
+    # first Phase 3c calibration session with TRANSCRIPT_MISSING after spending
+    # it. Encoded here as unicode-free ASCII classes; LC_ALL=C is exported at
+    # the top of this file.
     printf '%s' "$1" \
+        | sed -e 's/\([a-z0-9]\)\([A-Z]\)/\1-\2/g' \
+              -e 's/\([A-Z]\)\([A-Z][a-z]\)/\1-\2/g' \
         | sed 's#^/##; s#/#-#g' \
         | tr '[:upper:]' '[:lower:]' \
         | sed 's#_#-#g; s#[^a-z0-9-]#-#g; s#-\{2,\}#-#g; s#^-##; s#-$##'
@@ -99,6 +118,41 @@ scrub_verify_output() {
     scrubbed="${scrubbed//"$2"/<out>}"
     scrubbed="${scrubbed//"$3"/<scenario>}"
     printf '%s\n' "$scrubbed"
+}
+
+stamp_grading_provenance() {
+    # stamp_grading_provenance <record.json> <human|machine>
+    # Section 5's `accepted` flag is a rubric gate, and section 5 says who may
+    # assert it. The extractor takes the flag from --accepted and cannot know
+    # who wrote the sheet, so --finalize records that here: a record carrying
+    # `"grader": "machine"` states its own provenance instead of leaving a
+    # reader to assume the human acceptance that section describes. The block is
+    # inserted before the closing brace, so the key order the extractor emits is
+    # untouched and a re-run reproduces the file byte for byte.
+    local rec="$1" grader="$2" human="false" tmp
+    [[ "$grader" == "human" ]] && human="true"
+    tmp="$rec.stamp.$$"
+    awk -v g="$grader" -v h="$human" '
+        { line[NR] = $0 }
+        END {
+            last = 0
+            for (i = NR; i >= 1; i--) if (line[i] ~ /^}[ \t\r]*$/) { last = i; break }
+            if (!last) exit 3
+            prev = last - 1
+            while (prev >= 1 && line[prev] ~ /^[ \t\r]*$/) prev--
+            if (prev < 1) exit 4
+            for (i = 1; i <= last; i++) {
+                if (i == prev) print line[i] ","
+                else if (i < last) print line[i]
+            }
+            print "  \"grading\": {"
+            print "    \"grader\": \"" g "\","
+            print "    \"human_accepted\": " h
+            print "  }"
+            print line[last]
+            for (i = last + 1; i <= NR; i++) print line[i]
+        }' "$rec" > "$tmp" || { rm -f "$tmp"; bench_error "STAMP_FAILED" "$rec"; }
+    mv "$tmp" "$rec"
 }
 
 need_value() {
@@ -157,7 +211,12 @@ while [[ $# -gt 0 ]]; do
         --key-out) need_value "$1" "${2:-}"; KEY_OUT="$2"; shift ;;
         --key=*) KEY_ARG="${1#--key=}" ;;
         --key) need_value "$1" "${2:-}"; KEY_ARG="$2"; shift ;;
+        --graded-by=*) GRADED_BY="${1#--graded-by=}" ;;
+        --graded-by) need_value "$1" "${2:-}"; GRADED_BY="$2"; shift ;;
         --preflight-only) PREFLIGHT_ONLY=1 ;;
+        --screen) SCREEN=1 ;;
+        --arm=*) SCREEN_ARM="${1#--arm=}" ;;
+        --arm) need_value "$1" "${2:-}"; SCREEN_ARM="$2"; shift ;;
         --finalize)
             # consumes its <dir> operand per the documented invocation
             need_value "$1" "${2:-}"
@@ -169,8 +228,26 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+# --arm names the arm a screen probe runs in, so it is meaningless (and
+# misleading) on a batch or a finalize, which always run both arms.
+if [[ -n "$SCREEN_ARM" && "$SCREEN" -ne 1 ]]; then
+    bench_error "BAD_VALUE" "arm (only --screen takes --arm)"
+fi
+
+# Who graded the sheet is part of the evidence, so --finalize has to say. A
+# default would let the driver assert one of two mutually exclusive facts about
+# the same number; Phase 3b showed the cost, when 36 records carried
+# accepted: true from a sheet the coding agent wrote, which section 5 reserves
+# for an operator's human acceptance.
+if [[ -n "$GRADED_BY" && "$FINALIZE" -ne 1 ]]; then
+    bench_error "BAD_VALUE" "graded-by (only --finalize takes --graded-by)"
+fi
+
 if [[ "$FINALIZE" -eq 1 ]]; then
     # ---- finalize mode -------------------------------------------------------
+    [[ -n "$GRADED_BY" ]] || bench_error "MISSING" "graded-by (human|machine)"
+    [[ "$GRADED_BY" == "human" || "$GRADED_BY" == "machine" ]] \
+        || bench_error "BAD_VALUE" "graded-by (human|machine)"
     [[ -n "$OUT" && -d "$OUT" ]] || bench_error "UNREADABLE" "$OUT"
     [[ -n "$GRADING" && -s "$GRADING" ]] || bench_error "UNREADABLE" "$GRADING"
     if [[ -z "$ENGINE" ]]; then
@@ -239,20 +316,37 @@ if [[ "$FINALIZE" -eq 1 ]]; then
         bash "$EXTRACT" "$transcript" --scenario-id="$scenario" --condition="$arm" --accepted="$acc" \
             --error-patterns="$(cat "$OUT/error-patterns.txt")" \
             > "$record" 2>>"$OUT/runs/$scenario/extract.log" || bench_error "EXTRACT_FAILED" "$scenario"
+        stamp_grading_provenance "$record" "$GRADED_BY"
         printf '%s\t%s\t%s\t%s\n' "$scenario" "${G_PASS[$blind]}" "${G_TOT[$blind]}" "$acc" >> "$TRANSLATED"
         RECORDS+=("$record")
     done < "$MANIFEST"
 
+    human="false"
+    [[ "$GRADED_BY" == "human" ]] && human="true"
+    printf 'GRADING|PROVENANCE|grader=%s|human_accepted=%s|records=%d\n' \
+        "$GRADED_BY" "$human" "${#RECORDS[@]}"
     bash "$AGG" --grading "$TRANSLATED" "${RECORDS[@]}"
     exit 0
 fi
 
 # ---- run mode -------------------------------------------------------------
-[[ -n "$ENGINE" && -d "$ENGINE" ]] || bench_error "UNREADABLE" "engine"
+[[ "$SCREEN" -eq 1 || ( -n "$ENGINE" && -d "$ENGINE" ) ]] || bench_error "UNREADABLE" "engine"
 [[ -n "$SEED" && -d "$SEED/.git" ]] || bench_error "UNREADABLE" "seed repo (must be a git clone)"
 [[ -n "$TASKS_CSV" ]] || bench_error "MISSING" "tasks"
-[[ -n "$MODEL" ]] || bench_error "MISSING" "model (spend control: the driver refuses to guess)"
-[[ -n "$OUT" ]] || bench_error "MISSING" "out"
+# A screen run starts no session, so it needs neither a spend model nor an
+# output directory: only the seed, the cards, and an arm.
+[[ "$SCREEN" -eq 1 || -n "$MODEL" ]] || bench_error "MISSING" "model (spend control: the driver refuses to guess)"
+[[ "$SCREEN" -eq 1 || -n "$OUT" ]] || bench_error "MISSING" "out"
+# Resolve <out> to an absolute path before anything uses it. Run directories are
+# cloned under <out>, and the CLI records a transcript under
+# slugify(absolute cwd), so a relative <out> produced a run path whose slug could
+# never match the CLI's project directory: the first row of the Phase 3c batch
+# spent a session and then aborted with TRANSCRIPT_MISSING. realpath -m
+# canonicalizes lexically, so the directory need not exist yet, and the key
+# checks below compare like with like.
+if [[ "$SCREEN" -ne 1 ]]; then
+    OUT="$(realpath -m -- "$OUT")"
+fi
 [[ "$PROFILE" == "lite" || "$PROFILE" == "balanced" ]] || bench_error "BAD_VALUE" "profile"
 [[ "$MAXTURNS" =~ ^[0-9]+$ && "$MAXTURNS" -gt 0 ]] || bench_error "BAD_VALUE" "max-turns"
 [[ "$TIMEOUT" =~ ^[0-9]+$ && "$TIMEOUT" -gt 0 ]] || bench_error "BAD_VALUE" "timeout"
@@ -260,13 +354,13 @@ fi
 # The order seed is the batch's pre-registration. An unseeded run silently
 # falls back to the fixed promptkit_os-then-bare order that Phase 3b exists to
 # remove, so the driver refuses to guess one.
-if [[ ! "$ORDER_SEED" =~ ^[0-9]+$ ]]; then
+if [[ "$SCREEN" -ne 1 && ! "$ORDER_SEED" =~ ^[0-9]+$ ]]; then
     bench_error "MISSING" "order-seed (pre-register one; see benchmarks/PHASE-3B-PROTOCOL.md section 2.2)"
 fi
 # The blind-id shuffle is part of the pre-registration too. An unrecorded RNG
 # seed makes the packet mapping unreproducible, so --shuffle-seed is required
 # and recorded alongside --order-seed (BENCH_SHUFFLE_SEED remains a fallback).
-if [[ ! "$SHUFFLE_SEED" =~ ^[0-9]+$ ]]; then
+if [[ "$SCREEN" -ne 1 && ! "$SHUFFLE_SEED" =~ ^[0-9]+$ ]]; then
     bench_error "MISSING" "shuffle-seed (pre-register one; see benchmarks/PHASE-3B-PROTOCOL.md section 2.2)"
 fi
 # The blind key must not live where the packets are handed out. The driver
@@ -293,7 +387,7 @@ if [[ -n "$KEY_OUT" ]]; then
     [[ -w "$key_dir" ]] || bench_error "KEY_UNWRITABLE" "$key_dir"
     [[ ! -e "$KEY_OUT_ABS" ]] || bench_error "KEY_EXISTS" "$KEY_OUT_ABS (refusing to overwrite a recorded blind key)"
     KEY_OUT="$KEY_OUT_ABS"
-elif [[ "$PREFLIGHT_ONLY" -ne 1 ]]; then
+elif [[ "$PREFLIGHT_ONLY" -ne 1 && "$SCREEN" -ne 1 ]]; then
     bench_error "MISSING" "key-out (required for a batch; keep the blind key outside <out> - benchmarks/PHASE-3B-PROTOCOL.md section 4)"
 fi
 
@@ -301,9 +395,12 @@ EXTRACT="$ENGINE/scripts/extract-commandcode-telemetry.sh"
 STRIP="$ENGINE/scripts/strip-benchmark-diff.sh"
 AGG="$ENGINE/scripts/aggregate-benchmark-runs.sh"
 INIT="$ENGINE/init.sh"
-for f in "$EXTRACT" "$STRIP" "$AGG" "$INIT"; do
-    [[ -f "$f" ]] || bench_error "UNREADABLE" "$f"
-done
+# Those scripts are the batch's telemetry path; a screen run extracts nothing.
+if [[ "$SCREEN" -ne 1 ]]; then
+    for f in "$EXTRACT" "$STRIP" "$AGG" "$INIT"; do
+        [[ -f "$f" ]] || bench_error "UNREADABLE" "$f"
+    done
+fi
 
 # ---- isolation guard (benchmarks/PHASE-3B-PROTOCOL.md section 3) ----------
 # A "neutral-ish" batch is not a batch: any instruction surface, skill, hook,
@@ -459,6 +556,13 @@ guard_cross_arm() {
 
 # Preflight checks (--preflight-only exits after the task slate is parsed and the
 # complete schedule is written, so a dry run exercises those too)
+# The CLI, model and taste checks describe the session environment, and a screen
+# run starts no session: it only runs the cards' probes against the seed, so it
+# must stay usable on a host with no CLI installed. The seed and host isolation
+# guards below apply to both modes, because a seed that cannot host a blind arm
+# cannot be screened credibly either.
+CC_VERSION="not-run"
+if [[ "$SCREEN" -ne 1 ]]; then
 command -v command-code >/dev/null 2>&1 || bench_error "PREFLIGHT" "command-code not on PATH"
 CC_VERSION="$(command-code --version 2>/dev/null | tail -1 || echo unknown)"
 # Capture the list before matching: `grep -q` exits at the first hit, and under
@@ -469,11 +573,26 @@ if [[ "$CC_MODELS" != *"$MODEL"* ]]; then
     bench_error "PREFLIGHT" "model not in --list-models: $MODEL"
 fi
 TASTE="${HOME}/.commandcode/taste/taste.md"
+# The documented clean host has no taste file at all, so "absent" is a stable
+# state rather than a hashing failure. Both reads must return the same
+# sentinel, or a host that never had taste fails every session as a change.
+taste_digest() {
+    if [[ -f "$TASTE" ]]; then
+        sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo unreadable
+    else
+        echo absent
+    fi
+}
 if [[ -s "$TASTE" ]]; then
     bench_error "PREFLIGHT" "taste file is not empty ($TASTE) — clear or snapshot it first; taste learning during a batch makes arms unequal"
 fi
+fi
 guard_seed
-guard_host
+# The host guard exists so a started session cannot inherit a global instruction
+# surface. A screen run starts none, so it is the one check a screen run skips;
+# the seed guard still applies, because a seed that cannot host a blind arm
+# cannot be screened credibly either.
+[[ "$SCREEN" -eq 1 ]] || guard_host
 
 parse_field() {
     # parse_field <file> <label>: the single-line field value, backticks stripped
@@ -523,6 +642,45 @@ for tf in "${TASKFILES[@]}"; do
     TASK_SETUPS+=("$setup")
     TASK_VERIFIES+=("$verify_cmd")
 done
+
+if [[ "$SCREEN" -eq 1 ]]; then
+    # ---- screen mode ---------------------------------------------------------
+    # Answers one question without spending anything: is every card's Verify
+    # probe still red on the arm it is aimed at? A probe that already passes on
+    # the untouched seed cannot tell the arms apart, so it is refused here
+    # instead of being discovered at grading time. The probe runs in a throwaway
+    # copy of the seed, because a Verify command may write (the append-only
+    # store probe does) and the pinned seed must not move.
+    [[ -n "$SCREEN_ARM" ]] || SCREEN_ARM=bare
+    [[ "$SCREEN_ARM" == "bare" ]] || bench_error "BAD_VALUE" \
+        "arm (screen supports bare: the promptkit_os arm is staged from the engine and only exists inside a session)"
+    [[ "${#TASK_IDS[@]}" -gt 0 ]] || bench_error "MISSING" "tasks"
+    screen_tmp="$(mktemp -d "${TMPDIR:-/tmp}/bench-screen.XXXXXX")" \
+        || bench_error "SCREEN" "cannot create a temporary directory"
+    trap 'rm -rf -- "$screen_tmp"' EXIT
+    screen_cases=0
+    screen_green=""
+    for i in "${!TASK_IDS[@]}"; do
+        sid="${TASK_IDS[$i]}"
+        scmd="${TASK_VERIFIES[$i]}"
+        [[ -n "$scmd" ]] || bench_error "BAD_TASK" "$sid (no Verify command to screen)"
+        stree="$screen_tmp/$sid"
+        cp -a -- "$SEED" "$stree" || bench_error "SCREEN" "cannot stage $sid"
+        if (cd -- "$stree" && eval "$scmd") >/dev/null 2>&1; then
+            soutcome=pass
+            screen_green="$screen_green $sid"
+        else
+            soutcome=fail
+        fi
+        printf 'SCREEN|%s|arm=%s|probe=%s\n' "$sid" "$SCREEN_ARM" "$soutcome"
+        screen_cases=$((screen_cases + 1))
+    done
+    [[ -z "$screen_green" ]] || bench_error "GREEN_ON_BARE" \
+        "probe passes on the $SCREEN_ARM arm (not discriminating):$screen_green"
+    printf 'SCREEN|OK|arm=%s|tasks=%s|red=%s|seed=%s\n' "$SCREEN_ARM" \
+        "$screen_cases" "$screen_cases" "$(git -C "$SEED" rev-parse --short HEAD 2>/dev/null || echo '?')"
+    exit 0
+fi
 
 # Seeded schedule. SHA-256 is the PRF: sorting digests of the pre-registered
 # order seed plus the block/cell identity is the shuffle, so the plan is
@@ -719,7 +877,7 @@ for ((pi = 0; pi < PLAN_COUNT; pi++)); do
     # may commit, and `git diff --cached` against a moved HEAD would
     # return an empty diff, silently losing every committed change.
     seed_sha="$(git -C "$rundir" rev-parse HEAD)"
-    th1="$(sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo none)"
+    th1="$(taste_digest)"
     # Materialize argv through the builder guard_cross_arm checked; no
     # arm-conditional token can enter the invocation here.
     mapfile -d '' -t SESSION_ARGV < <(session_argv "$order_idx" "$arm")
@@ -728,7 +886,7 @@ for ((pi = 0; pi < PLAN_COUNT; pi++)); do
         > "$OUT/runs/$scenario/session.log" 2>&1
     rc=$?
     set -e
-    th2="$(sha256sum "$TASTE" 2>/dev/null | cut -d' ' -f1 || echo none2)"
+    th2="$(taste_digest)"
     [[ "$th1" == "$th2" ]] || bench_error "TASTE_CHANGED" "$scenario"
     ( cd "$rundir" && git add -A && git diff --cached --no-color "$seed_sha" > "$rundir-run.diff"; git reset -q ) \
         || bench_error "DIFF_FAILED" "$scenario"

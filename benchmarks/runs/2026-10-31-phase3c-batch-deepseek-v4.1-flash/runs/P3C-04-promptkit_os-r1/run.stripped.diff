@@ -1,0 +1,80 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..5779112 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -8,16 +8,30 @@ import { createStore } from './store.js';
+ // Wires a store, a queue and the counters together. `run` drains the queue,
+ // records each job's outcome, and returns the dispatcher's result.
+ export function createRunner({ store, queue, metrics = createMetrics(), now = () => Date.now(), log = () => {} } = {}) {
++  const queued = new Set();
++
+   async function enqueue(ids) {
++    const closed = new Set();
++    const opened = new Set();
++    for (const record of store.readAll()) {
++      if (record.type === 'done' || record.type === 'failed') closed.add(record.id);
++      else if (record.type === 'enqueue') opened.add(record.id);
++    }
+     for (const id of ids) {
+-      store.append({ type: 'enqueue', id, at: now() });
++      if (closed.has(id) || queued.has(id)) continue;
++      if (!opened.has(id)) {
++        store.append({ type: 'enqueue', id, at: now() });
++        opened.add(id);
++      }
+       queue.enqueue({ id });
++      queued.add(id);
+     }
+     return queue.size;
+   }
+ 
+   async function run(handler) {
+     const result = await dispatch(queue, handler, { metrics, log });
++    queued.clear();
+     for (const entry of result.processed) {
+       store.append({ type: 'done', id: entry.job.id, at: now() });
+     }
+diff --git a/test/integration.test.js b/test/integration.test.js
+index 79921ae..f031d8a 100644
+--- a/test/integration.test.js
++++ b/test/integration.test.js
+@@ -70,6 +70,39 @@ test('a runner with a non-empty store still runs the jobs it was given', async (
+   assert.deepEqual(ran, ['fresh']);
+ });
+ 
++test('intake skips a finished job and accepts an unfinished one across a restart', async () => {
++  const { io, runner } = runnerOn([
++    { type: 'enqueue', id: 'finished', at: 1 },
++    { type: 'done', id: 'finished', at: 2 },
++    { type: 'enqueue', id: 'unfinished', at: 3 },
++  ]);
++  const ran = [];
++  const handler = async (job) => {
++    ran.push(job.id);
++    return job.id;
++  };
++
++  await runner.enqueue(['finished', 'unfinished']);
++  await runner.run(handler);
++  assert.deepEqual(ran, ['unfinished']);
++
++  await runner.enqueue(['finished', 'unfinished']);
++  await runner.run(handler);
++  assert.deepEqual(ran, ['unfinished']);
++
++  const records = io
++    .readFileSync('jobs.jsonl')
++    .split('\n')
++    .filter(Boolean)
++    .map((line) => JSON.parse(line));
++  assert.equal(records.filter((record) => record.id === 'finished').length, 2);
++  assert.equal(
++    records.filter((record) => record.type === 'enqueue' && record.id === 'unfinished').length,
++    1,
++  );
++  assert.equal(records.filter((record) => record.type === 'done' && record.id === 'unfinished').length, 1);
++});
++
+ test('main prints a dry-run line and returns without touching the store', async () => {
+   const out = [];
+   const result = await main(['--DRY_RUN=1', '--PORT=9090'], {}, { out: (line) => out.push(line), err: () => {} });

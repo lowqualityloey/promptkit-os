@@ -14,6 +14,41 @@ recorded limitations; the harness itself makes no general performance claim.
   `deepseek/deepseek-v4.1-flash`; all six runs accepted, with higher token/CPAC
   means for the PromptKit arm and both L2 sessions at the 900-second cap. Read the
   batch report before reusing any number from it.
+- [2026-10-31 Phase 3b machine-graded batch](runs/2026-10-31-phase3b-deepseek-v4.1-flash/README.md) —
+  six tasks (L0/L1/L2/L3) × two arms × three repeats, 36 of 36 sessions accepted on
+  a sheet the coding agent graded blind. A machine sheet is a secondary consistency
+  check under §4, not human acceptance, and every record carries
+  `"grading": {"grader": "machine", "human_accepted": false}`. L1+ median ratios are
+  1.075 tokens and 1.115 CPAC, but both arms solved all six tasks on all three
+  repeats, so the batch measures cost and non-inferiority rather than quality; the
+  task-cluster interval (tokens 0.869 to 1.375) makes the decision **Inconclusive**.
+- [2026-10-31 Phase 3c batch](runs/2026-10-31-phase3c-batch-deepseek-v4.1-flash/README.md) —
+  ten discriminating cards × two arms × three repeats on a purpose-built seed
+  (`b0ef652d…`), 60 primary sessions over 62 minutes, 59 exited 0 with one provider
+  abort kept in the denominator. **48 of 60 packets cleared their frozen rubrics**;
+  `promptkit_os` accepted 26 of 30 runs against 22 of 30 for `bare` (13.3 points) at
+  a token-ratio median of 1.115. Under **Amendment A** — which binds the cost bar to
+  the ITT token ratio after the original rule left `either`/`both` open — the outcome
+  is **Tradeoff**, and §8 opens Phase 4. The primary sheet is
+  `grading/grading-human.tsv` (`e4294ab3…`, 48/60), owner-authorized with an agent
+  first pass: read [`grading/GRADING-HUMAN.md`](runs/2026-10-31-phase3c-batch-deepseek-v4.1-flash/grading/GRADING-HUMAN.md)
+  before describing it as human-graded. An independent machine pass on the same
+  packets agrees on every acceptance. The second-grader sample is still outstanding,
+  and `--finalize` has not been re-run, so the §5 records still read `grader: machine`.
+  Pre-registration and decision rule: [`PHASE-3C-DESIGN.md`](PHASE-3C-DESIGN.md).
+
+## Calibration runs (not published batches)
+
+These runs are retained for cost, duration, and packet calibration only. They are
+ungraded, are never aggregated with a batch, and are not evidence about either arm.
+
+- [2026-10-31 Phase 3b calibration](runs/2026-10-31-phase3b-calibration-1repeat/CALIBRATION.md) —
+  12 sessions, one repeat per task × arm, run before the 3b batch was corrected
+  from one repeat to three. Its 12 packets were never graded or unblinded.
+- [2026-10-31 Phase 3c calibration](runs/2026-10-31-phase3c-calibration-1repeat/CALIBRATION.md) —
+  six sessions over three cards × two arms, run to prove the 3c seed, cards, and
+  driver could carry a 60-session batch. Its six packets were never graded or
+  unblinded.
 
 ## Protocol (what the driver enforces)
 
@@ -56,7 +91,11 @@ For every task × arm × repeat:
    surface, deterministic to a fixed SHA, which `neutralize.sh` accepts with `removed=0`.
    A batch run against it is labeled synthetic: it has a backlog, but not a real one. The
    Phase 3 pilot predates the guard and inherited the seed's `AGENTS.md` and host surfaces,
-   so its report records the resulting `heyloey` hook confound.
+   so its report records the resulting `heyloey` hook confound. `benchmarks/seed/build-phase3c-seed.sh`
+   is the Phase 3c alternative: nine coupled modules, a docs surface stating three invariants,
+   an executable spec, and ten deliberate defects — none pinned by a seed test — so both arms
+   can fail. Its design, slate, and pre-registered decision rule are in
+   [`PHASE-3C-DESIGN.md`](PHASE-3C-DESIGN.md).
 4. **Telemetry**: headless sessions persist to `~/.commandcode/projects/<slug>/` and record
    per-message usage exactly like interactive sessions (verified on this host), so the §5
    record is extracted mechanically per run (`accepted=false` at extraction — acceptance is
@@ -101,12 +140,16 @@ For every task × arm × repeat:
    publication: published per-scenario stripped diffs are byte-identical to the
    blind packets, so a reader can recover it by content matching. Do not claim
    otherwise.
-6. **Acceptance and aggregation**: after grading, `--finalize` translates the
-   blind-id sheet via the key, re-extracts each run's §5 record with its graded
-   `accepted` flag, and runs `scripts/aggregate-benchmark-runs.sh` with the
-   translated scenario-keyed sheet as a fail-closed cross-check (a mismatch or
-   a record missing from the sheet exits 2) — emitting the per-arm summary
-   (`BENCH|SUMMARY|...`, including `graded_n`).
+6. **Acceptance and aggregation**: after grading, `--finalize --graded-by
+   human|machine` translates the blind-id sheet via the key, re-extracts each
+   run's §5 record with its graded `accepted` flag, stamps the grader into that
+   record, and runs `scripts/aggregate-benchmark-runs.sh` with the translated
+   scenario-keyed sheet as a fail-closed cross-check (a mismatch or a record
+   missing from the sheet exits 2) — emitting the per-arm summary
+   (`BENCH|SUMMARY|...`, including `graded_n`). The flag is required because §5
+   reserves `accepted: true` for human acceptance: the driver cannot know who
+   graded, and Phase 3b's 36 records read as human acceptance until each one
+   carried its own `"grading"` block.
 
 Diff capture is anchored to the **seed commit SHA** recorded before each run:
 under `--yolo` the agent may `git commit`, and a plain `git diff --cached`
@@ -119,9 +162,12 @@ packet and is graded `accepted=false` — it never aborts the batch.
 Raw Command Code transcripts record real code and stay on the operator's machine
 (`~/.commandcode/`); they are **never committed**. `benchmarks/runs/<batch>/` publishes
 only: §5 telemetry records (numeric aggregates), full and stripped diffs, run logs, the
-grading sheet, and the manifest. Diffs for tasks against private code are published only
-at the operator's discretion — the driver writes them to the run directory, not to the
-repository, until `--publish` copies a batch into `benchmarks/runs/`.
+grading sheet, and the manifest. The driver writes a batch to its `--out` directory;
+publishing it means committing the packet set the driver produced: each
+`runs/<scenario>/record.json`, `run.stripped.diff`, `verify.txt`, `session.log`,
+`extract.log`, and `strip.log`, plus the batch's full diffs and install logs. The run
+clone itself, including its `.git`, is local scratch and is ignored by Git. Diffs for
+tasks against private code are published only at the operator's discretion.
 
 ## Operator-local by design
 
@@ -197,6 +243,11 @@ this harness does not establish general performance.
 ## Usage
 
 ```bash
+# Screen the slate without spending: every card's Verify must be red on the
+# bare arm, or the card cannot tell the arms apart and the batch is refused.
+bash benchmarks/run-ab-benchmark.sh --screen --arm bare \
+  --seed /tmp/p3c-seed --tasks benchmarks/tasks/TASK-P3C-01.md,benchmarks/tasks/TASK-P3C-02.md
+
 # Validate the environment without spending
 bash benchmarks/run-ab-benchmark.sh --engine /path/to/promptkit-os \
   --seed /path/to/seed-repo --tasks benchmarks/tasks/TASK-BENCH-L1-01.md \
@@ -214,7 +265,8 @@ bash benchmarks/run-ab-benchmark.sh --engine ... --seed ... --tasks a.md,b.md \
 # (blind_id <TAB> rubric_passed <TAB> rubric_total <TAB> accepted). The key is
 # read from <out>/key-location.txt unless --key names it:
 bash benchmarks/run-ab-benchmark.sh --finalize /tmp/bench-batch-1 \
-  --grading /tmp/bench-batch-1/grading/grading.tsv
+  --grading /tmp/bench-batch-1/grading/grading.tsv \
+  --graded-by human          # required: human|machine
 ```
 
 The run and finalize paths are regression-tested in CI against a stub CLI with

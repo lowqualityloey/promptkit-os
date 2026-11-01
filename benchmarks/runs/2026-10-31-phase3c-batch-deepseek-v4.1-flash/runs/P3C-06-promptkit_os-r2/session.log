@@ -1,0 +1,8 @@
+Done. Changes:
+
+- `src/dispatcher.js` — dispatch now also returns `counts: { processed, failed, total }` as integers; `processed`, `failed`, `total` keep their existing shapes/meaning.
+- `src/scheduler.js` — added `sweep(queue, handler, options)` which runs the queue through `dispatch` and returns `result.counts.total`. It's exported and available on the scheduler object.
+- `src/app.js` — untouched; the CLI still prints `processed=... failed=... total=...`.
+- Tests — added counts assertions (including empty result and integer checks) in `test/dispatcher.test.js` and four sweep tests in `test/scheduler.test.js`.
+
+All 70 tests pass under `node --test`.

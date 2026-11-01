@@ -1,0 +1,6 @@
+EXTRACT|NOTE|accepted defaulted to false — pass --accepted=true only after human acceptance
+EXTRACT|OK|session=9802ed0f-2d33-4494-b032-e45bca6b03b6|model=unknown|tokens_in=0|tokens_out=0|rework_loops=0|tool_calls=0|wall_clock_seconds=61
+EXTRACT|NOTE|accepted defaulted to false — pass --accepted=true only after human acceptance
+EXTRACT|OK|session=9802ed0f-2d33-4494-b032-e45bca6b03b6|model=unknown|tokens_in=0|tokens_out=0|rework_loops=0|tool_calls=0|wall_clock_seconds=61
+EXTRACT|NOTE|accepted defaulted to false — pass --accepted=true only after human acceptance
+EXTRACT|OK|session=9802ed0f-2d33-4494-b032-e45bca6b03b6|model=unknown|tokens_in=0|tokens_out=0|rework_loops=0|tool_calls=0|wall_clock_seconds=61

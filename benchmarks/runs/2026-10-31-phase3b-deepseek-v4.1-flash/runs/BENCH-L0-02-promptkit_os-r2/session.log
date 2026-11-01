@@ -1,0 +1,1 @@
+Added `peek()` to `src/queue.js` returning `items[0]` without shifting, undefined when empty, plus a test in `test/queue.test.js` covering both cases. Full suite passes: 29/29.

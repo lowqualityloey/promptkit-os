@@ -1,0 +1,124 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..8e5411c 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -3,15 +3,25 @@ import { ConfigError, loadConfig } from './config.js';
+ import { dispatch } from './dispatcher.js';
+ import { createMetrics } from './metrics.js';
+ import { createQueue } from './queue.js';
+-import { createStore } from './store.js';
++import { createStore, jobStates } from './store.js';
+ 
+ // Wires a store, a queue and the counters together. `run` drains the queue,
+ // records each job's outcome, and returns the dispatcher's result.
+ export function createRunner({ store, queue, metrics = createMetrics(), now = () => Date.now(), log = () => {} } = {}) {
++  const queued = new Set();
++
+   async function enqueue(ids) {
++    const states = jobStates(store.readAll());
+     for (const id of ids) {
+-      store.append({ type: 'enqueue', id, at: now() });
++      const state = states.get(id);
++      if (state === 'done' || state === 'failed') continue;
++      if (queued.has(id)) continue;
++      if (state !== 'pending') {
++        store.append({ type: 'enqueue', id, at: now() });
++        states.set(id, 'pending');
++      }
+       queue.enqueue({ id });
++      queued.add(id);
+     }
+     return queue.size;
+   }
+@@ -20,9 +30,11 @@ export function createRunner({ store, queue, metrics = createMetrics(), now = ()
+     const result = await dispatch(queue, handler, { metrics, log });
+     for (const entry of result.processed) {
+       store.append({ type: 'done', id: entry.job.id, at: now() });
++      queued.delete(entry.job.id);
+     }
+     for (const entry of result.failed) {
+       store.append({ type: 'failed', id: entry.job.id, at: now() });
++      queued.delete(entry.job.id);
+     }
+     return result;
+   }
+diff --git a/src/store.js b/src/store.js
+index a7eca7f..d1ebf7e 100644
+--- a/src/store.js
++++ b/src/store.js
+@@ -10,6 +10,22 @@ export class StoreError extends Error {
+ 
+ const defaultIo = { appendFileSync, existsSync, mkdirSync, readFileSync };
+ 
++// Replays records into the state of each job: `enqueue` opens a job as pending,
++// and the first `done` or `failed` closes it. A later `enqueue` never reopens a
++// closed job, so a closed job stays closed however many generations of records
++// are mixed together.
++export function jobStates(records) {
++  const states = new Map();
++  for (const record of records) {
++    if (record.type === 'enqueue') {
++      if (!states.has(record.id)) states.set(record.id, 'pending');
++    } else if (record.type === 'done' || record.type === 'failed') {
++      states.set(record.id, record.type);
++    }
++  }
++  return states;
++}
++
+ // An append-only JSONL store. Records are written one per line and are never
+ // rewritten in place: a later reader replays them to work out the state of a
+ // job. `io` is injectable so a test can drive a store without touching disk, and
+diff --git a/test/integration.test.js b/test/integration.test.js
+index 79921ae..96de0c7 100644
+--- a/test/integration.test.js
++++ b/test/integration.test.js
+@@ -70,6 +70,48 @@ test('a runner with a non-empty store still runs the jobs it was given', async (
+   assert.deepEqual(ran, ['fresh']);
+ });
+ 
++test('intake skips a finished job and dispatches an unfinished one once', async () => {
++  const { io, runner } = runnerOn([
++    { type: 'enqueue', id: 'finished', at: 1 },
++    { type: 'done', id: 'finished', at: 2 },
++    { type: 'enqueue', id: 'unfinished', at: 1 },
++  ]);
++
++  const ran = [];
++  const handler = async (job) => {
++    ran.push(job.id);
++    return job.id;
++  };
++
++  for (let pass = 0; pass < 2; pass += 1) {
++    await runner.enqueue(['finished', 'unfinished']);
++    await runner.run(handler);
++  }
++
++  assert.deepEqual(ran, ['unfinished']);
++
++  const records = io
++    .readFileSync('jobs.jsonl')
++    .split('\n')
++    .filter(Boolean)
++    .map((line) => JSON.parse(line));
++
++  assert.deepEqual(
++    records.filter((record) => record.id === 'finished'),
++    [
++      { type: 'enqueue', id: 'finished', at: 1 },
++      { type: 'done', id: 'finished', at: 2 },
++    ],
++  );
++  assert.deepEqual(
++    records.filter((record) => record.id === 'unfinished'),
++    [
++      { type: 'enqueue', id: 'unfinished', at: 1 },
++      { type: 'done', id: 'unfinished', at: 7 },
++    ],
++  );
++});
++
+ test('main prints a dry-run line and returns without touching the store', async () => {
+   const out = [];
+   const result = await main(['--DRY_RUN=1', '--PORT=9090'], {}, { out: (line) => out.push(line), err: () => {} });

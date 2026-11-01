@@ -1,0 +1,45 @@
+verify_exit=0
+RETRY|OK
+✔ starts with defaults and prints one ready line (4.469958ms)
+✔ a flag overrides the environment (0.587464ms)
+✔ the environment applies when no flag is given (0.486253ms)
+✔ an unknown flag exits 2 and names the flag (0.786579ms)
+✔ a bare flag is accepted as the string true and then validated (0.64503ms)
+✔ an invalid value exits 2 (0.325998ms)
+✔ a positional argument is rejected (0.295139ms)
+✔ parseFlags returns the parsed pairs (0.260873ms)
+✔ defaults when the environment is empty (2.965434ms)
+✔ reads PORT, LOG_LEVEL, and QUEUE_CAPACITY from the environment (0.90946ms)
+✔ accepts LOG_LEVEL case-insensitively (0.429995ms)
+✔ exposes the accepted levels (0.453937ms)
+✔ rejects a PORT that is not a positive integer (1.129142ms)
+✔ rejects a PORT above the port range (0.307855ms)
+✔ rejects an unknown log level and names the accepted set (0.304035ms)
+✔ rejects a non-positive capacity (0.216665ms)
+✔ returns a frozen configuration object (0.474332ms)
+✔ processes every job in order (4.451795ms)
+✔ records a failure without stopping the batch (302.808157ms)
+✔ logs one line per job (302.767655ms)
+✔ returns empty results for an empty queue (0.763972ms)
+✔ retries a failing job and records the attempt count on success (1.216873ms)
+✔ gives up after maxAttempts and carries the last error (1.189865ms)
+✔ backs off exponentially from baseDelayMs between attempts (0.632325ms)
+✔ does not wait when baseDelayMs is zero (0.356375ms)
+✔ maxAttempts of 1 makes a single attempt without sleeping (0.430727ms)
+✔ rejects invalid retry options before dequeuing anything (1.085277ms)
+✔ dequeues in FIFO order (2.373548ms)
+✔ returns undefined when empty (0.444659ms)
+✔ reports size after enqueue and dequeue (0.642416ms)
+✔ refuses to exceed capacity and names the capacity (1.124922ms)
+✔ reports isFull at the capacity boundary (0.291892ms)
+✔ drain empties the queue and returns the items in order (1.15005ms)
+✔ rejects a capacity below one (0.495812ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 732.700609
+VERIFY|probe=0|tests=0

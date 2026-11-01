@@ -1,0 +1,64 @@
+diff --git a/src/queue.js b/src/queue.js
+index 940e972..4243ec9 100644
+--- a/src/queue.js
++++ b/src/queue.js
+@@ -26,6 +26,14 @@ export function createQueue({ capacity = 100 } = {}) {
+       items.push(item);
+       return items.length;
+     },
++    enqueueMany(newItems) {
++      if (newItems.length === 0) return items.length;
++      if (items.length + newItems.length > capacity) {
++        throw new QueueFullError(capacity);
++      }
++      items.push(...newItems);
++      return items.length;
++    },
+     dequeue() {
+       return items.length === 0 ? undefined : items.shift();
+     },
+diff --git a/test/queue.test.js b/test/queue.test.js
+index 1c5b0d9..c4c5e8b 100644
+--- a/test/queue.test.js
++++ b/test/queue.test.js
+@@ -61,3 +61,40 @@ test('rejects a capacity below one', () => {
+   assert.throws(() => createQueue({ capacity: 0 }), RangeError);
+   assert.throws(() => createQueue({ capacity: -5 }), RangeError);
+ });
++
++test('enqueueMany appends items in order and returns the new size', () => {
++  const queue = createQueue({ capacity: 5 });
++  queue.enqueue('a');
++
++  assert.equal(queue.enqueueMany(['b', 'c']), 3);
++  assert.equal(queue.size, 3);
++  assert.equal(queue.dequeue(), 'a');
++  assert.equal(queue.dequeue(), 'b');
++  assert.equal(queue.dequeue(), 'c');
++});
++
++test('enqueueMany throws QueueFullError and leaves the queue untouched when they do not all fit', () => {
++  const queue = createQueue({ capacity: 3 });
++  queue.enqueue('a');
++  queue.enqueue('b');
++
++  assert.throws(
++    () => queue.enqueueMany(['c', 'd']),
++    (error) => error instanceof QueueFullError && error.capacity === 3,
++  );
++  assert.equal(queue.size, 2);
++  assert.equal(queue.dequeue(), 'a');
++  assert.equal(queue.dequeue(), 'b');
++  assert.equal(queue.dequeue(), undefined);
++});
++
++test('enqueueMany with an empty array is a no-op that returns the current size', () => {
++  const queue = createQueue({ capacity: 2 });
++  assert.equal(queue.enqueueMany([]), 0);
++
++  queue.enqueue('a');
++  queue.enqueue('b');
++  assert.equal(queue.enqueueMany([]), 2);
++  assert.equal(queue.size, 2);
++  assert.equal(queue.dequeue(), 'a');
++});

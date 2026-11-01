@@ -1,0 +1,32 @@
+{
+  "scenario_id": "BENCH-L1-03-bare-r2",
+  "condition": "bare",
+  "model": "deepseek/deepseek-v4.1-flash",
+  "timestamp": "2026-10-31T03:24:54.281Z",
+  "metrics": {
+    "tokens_in": 113712,
+    "tokens_out": 1227,
+    "tokens_total": 114939,
+    "cache_read_tokens": 98816,
+    "tool_calls_total": 5,
+    "tool_calls_search": 2,
+    "tool_calls_edit": 2,
+    "tool_calls_verify": 1,
+    "tool_calls_other": 0,
+    "rework_loops": 0,
+    "rework_tokens_in": 0,
+    "rework_tokens_out": 0,
+    "wall_clock_seconds": 15,
+    "invariants_checked": 0,
+    "invariants_passed": 0,
+    "human_interventions": 0,
+    "accepted": true
+  },
+  "costs": {
+    "transcript_cost_usd": 0.00
+  },
+  "grading": {
+    "grader": "machine",
+    "human_accepted": false
+  }
+}

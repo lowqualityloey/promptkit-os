@@ -1,0 +1,7 @@
+Done. `QUEUE_CAPACITY=unbounded` (any case) now resolves to `Number.POSITIVE_INFINITY`, and the queue accepts it.
+
+- `src/config.js`: `QUEUE_CAPACITY` gets its own `capacityValue()` parser — `'unbounded'` case-insensitively returns `Infinity`; absence/empty stays 100; `0`, negatives, fractions, and non-numerics still throw `ConfigError`. `PORT` still uses `positiveInt`, so `PORT=unbounded` is unaffected.
+- `src/queue.js`: validation admits `Infinity`; `isFull` and `enqueue` use the existing `>=` comparisons, so they never trip for an unbounded queue. Size, dequeue, drain unchanged.
+- Added tests for case-insensitive parsing, defaults, invalid values, and unbounded enqueue/dequeue/drain plus `isFull` staying false at 500 items.
+
+`node --test` passes: 35 tests, 0 failures. `src/app.js` untouched.

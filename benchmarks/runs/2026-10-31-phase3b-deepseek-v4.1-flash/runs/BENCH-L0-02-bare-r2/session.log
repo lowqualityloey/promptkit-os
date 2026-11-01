@@ -1,0 +1,1 @@
+Added `peek()` to the queue in `src/queue.js` (returns `items[0]`, so `undefined` when empty) plus two tests in `test/queue.test.js` covering the populated head-without-removing case and the empty case. All 30 tests pass; no other files touched.

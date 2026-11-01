@@ -1,0 +1,65 @@
+diff --git a/src/app.js b/src/app.js
+index 18b5a5f..aae928b 100644
+--- a/src/app.js
++++ b/src/app.js
+@@ -28,12 +28,24 @@ export function createRunner({ store, queue, metrics = createMetrics(), now = ()
+   }
+ 
+   function status() {
+-    const records = store.readAll();
+-    return {
+-      pending: records.filter((record) => record.type === 'enqueue').length,
+-      done: records.filter((record) => record.type === 'done').length,
+-      failed: records.filter((record) => record.type === 'failed').length,
+-    };
++    const states = new Map();
++    for (const record of store.readAll()) {
++      if (typeof record.id !== 'string') continue;
++      const current = states.get(record.id);
++      if (record.type === 'done') {
++        states.set(record.id, 'done');
++      } else if (record.type === 'failed') {
++        if (current !== 'done') states.set(record.id, 'failed');
++      } else if (record.type === 'enqueue') {
++        if (current === undefined) states.set(record.id, 'pending');
++      }
++    }
++
++    const counts = { pending: 0, done: 0, failed: 0 };
++    for (const state of states.values()) {
++      counts[state] += 1;
++    }
++    return counts;
+   }
+ 
+   return { enqueue, run, status };
+diff --git a/test/integration.test.js b/test/integration.test.js
+index 79921ae..e4d61a1 100644
+--- a/test/integration.test.js
++++ b/test/integration.test.js
+@@ -59,6 +59,25 @@ test('status reports the number of finished jobs', async () => {
+   assert.equal(runner.status().failed, 0);
+ });
+ 
++test('status keeps one finished and one unfinished job in separate buckets', () => {
++  const { runner } = runnerOn([
++    { type: 'enqueue', id: 'finished', at: 1 },
++    { type: 'done', id: 'finished', at: 2 },
++    { type: 'enqueue', id: 'unfinished', at: 3 },
++  ]);
++
++  assert.deepEqual(runner.status(), { pending: 1, done: 1, failed: 0 });
++});
++
++test('status does not leave a failed job pending', () => {
++  const { runner } = runnerOn([
++    { type: 'enqueue', id: 'broken', at: 1 },
++    { type: 'failed', id: 'broken', at: 2 },
++  ]);
++
++  assert.deepEqual(runner.status(), { pending: 0, done: 0, failed: 1 });
++});
++
+ test('a runner with a non-empty store still runs the jobs it was given', async () => {
+   const { runner } = runnerOn([{ type: 'enqueue', id: 'old', at: 1 }, { type: 'done', id: 'old', at: 2 }]);
+   const ran = [];

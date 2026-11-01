@@ -1,0 +1,62 @@
+diff --git a/src/dispatcher.js b/src/dispatcher.js
+index 46ef44a..4055769 100644
+--- a/src/dispatcher.js
++++ b/src/dispatcher.js
+@@ -32,9 +32,10 @@ export async function dispatch(
+     let result;
+     let ok = false;
+ 
++    if (metrics) metrics.inc('jobs');
++
+     while (attempts < maxAttempts) {
+       attempts += 1;
+-      if (metrics) metrics.inc('jobs');
+       try {
+         result = await handler(job);
+         ok = true;
+diff --git a/test/dispatcher.test.js b/test/dispatcher.test.js
+index 1452e38..6868c8e 100644
+--- a/test/dispatcher.test.js
++++ b/test/dispatcher.test.js
+@@ -131,6 +131,41 @@ test('counts one job per job when nothing is retried', async () => {
+   assert.deepEqual(metrics.snapshot(), { jobs: 2, processed: 2, failed: 0 });
+ });
+ 
++test('counts a retried job once, by its final outcome', async () => {
++  const queue = queueWith('flaky');
++  const metrics = createMetrics();
++  let calls = 0;
++
++  const result = await dispatch(
++    queue,
++    async () => {
++      calls += 1;
++      if (calls < 3) throw new Error('transient');
++      return 'ok';
++    },
++    { metrics, sleep: async () => {} },
++  );
++
++  assert.equal(calls, 3);
++  assert.equal(result.processed[0].attempts, 3);
++  assert.deepEqual(metrics.snapshot(), { jobs: 1, processed: 1, failed: 0 });
++});
++
++test('counts a job that exhausts its retries once as failed', async () => {
++  const queue = queueWith('doomed');
++  const metrics = createMetrics();
++
++  await dispatch(
++    queue,
++    async () => {
++      throw new Error('nope');
++    },
++    { metrics, maxAttempts: 3, sleep: async () => {} },
++  );
++
++  assert.deepEqual(metrics.snapshot(), { jobs: 1, processed: 0, failed: 1 });
++});
++
+ test('returns an empty result for an empty queue', async () => {
+   const result = await dispatch(createQueue(), async () => 'ok');
+   assert.deepEqual(result.processed, []);

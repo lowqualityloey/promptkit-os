@@ -1,0 +1,15 @@
+seed_commit: b0ef652d91b20c57965eb4257cab93301ff68999
+seed_working_tree: clean
+seed_instruction_surfaces: none
+seed_heyloey_references: none
+host_home: /tmp/pk-home-p3c-batch-20261031T062930Z
+host_instruction_surfaces: none
+host_mcp_servers: none
+host_hooks: none
+taste: empty
+cross_arm: identical (prompt/tools/permission_mode/max_turns/timeout)
+order_seed: 60564652
+shuffle_seed: 760853
+order_plan_sha256: b08718167f9ba691f528cedb504c5fc68bd35d9a727b50307bde21a041003722
+order_plan_rows: 60
+checked_at: 2026-10-31T06:43:35Z

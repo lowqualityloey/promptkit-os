@@ -1,0 +1,3 @@
+Added `enqueueMany(items)` to `createQueue` in `src/queue.js`: it checks `items.length + incoming.length > capacity` before touching the array, throws `QueueFullError(capacity)` on overflow, and otherwise appends in order and returns the new size (empty array just returns `items.length`). Capacity check comes first, so overflow leaves size, head, and contents untouched.
+
+Five tests in `test/queue.test.js` cover ordered success, exact-fit-to-capacity, overflow with no partial append (verified via `drain()` preserving `['head','second']`), overflow on an already-full queue, and the empty-array no-op. `node --test` passes: 33/33. Only those two files changed.

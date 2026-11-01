@@ -1,0 +1,1 @@
+Done. `--DRY_RUN` is now in the allowed flag set, and `main` checks for it after validation, writing `dry-run port=… level=… capacity=…` and returning `{ exitCode: 0, config }` with no queue. Invalid config still throws from `loadConfig` before any queue creation, so it hits the existing error path. All 31 tests pass.
