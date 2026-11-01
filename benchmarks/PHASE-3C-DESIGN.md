@@ -255,6 +255,18 @@ Decision rule:
 | **Worse** | `promptkit_os` acceptance is at least 5 points lower than `bare` |
 | **Inconclusive** | Anything else |
 
+**Amendment A (2026-11-01) — the Tradeoff cost bar, settled before human grading.**
+Owner-authorized: the *Tradeoff* cost bar is the ITT per-task median **token ratio
+above 1.05**. The accepted-only CPAC median is reported alongside with its
+selection caveat (rejected runs score `INF` and drop out, so the arm that fails
+more has its most expensive runs removed) plus the all-artifact sensitivity cut,
+but it is not a second gate. Rationale, on principle rather than outcome: the
+*Keep* row already binds cost to the token ratio alone (≤ 0.95), and only the ITT
+token ratio keeps every run — an accepted-only gate can be satisfied partly by
+failing more, which is incoherent as a cost bar. This amendment applies to the
+forthcoming human-graded figures; it does not re-grade or re-interpret the
+machine sheet, which still claims no decision.
+
 **Worse** closes this line without Phase 4. **Inconclusive** does too, unless a
 named design defect — not a disappointing number — justifies a new batch. Phase 4
 cross-model work starts only on **Keep** or **Tradeoff**.
@@ -309,5 +321,9 @@ cross-model work starts only on **Keep** or **Tradeoff**.
   not say whether *Tradeoff* needs both ratios above 1.05 or either one, so it
   reads as Tradeoff or Inconclusive depending on that; the fork is recorded as a
   pre-registration defect instead of being settled after the numbers were seen.
+- [x] Cost-bar reading settled by Amendment A above (owner-authorized 2026-11-01,
+  before human grading): *Tradeoff* needs acceptance ≥ 5 points higher **and** the
+  ITT token ratio above 1.05; CPAC stays reported context. Applies prospectively
+  to the human-graded figures only.
 - [ ] Report with the decision.
 - [ ] Only then: Phase 4 or a "no decision" closeout.
