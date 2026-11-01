@@ -10,6 +10,7 @@ starting point, or the second read stops being independent.
 |---|---|
 | `grading.tsv` | **Frozen machine sheet — do not edit.** Archived copy: `grading-machine.tsv` (same sha256, verified). |
 | `grading-machine.tsv` | Reference only, for after the human sheet is hashed. |
+| `grading-worksheet.md` | **The docket to grade from.** All 60 packets, one section each: changed-file set vs the card's allowed set, `verify_exit`, probe/suite line, any deleted lines under `test/`, and one blank verdict row per rubric item (336 rows total). It records facts only — it contains no verdicts. |
 | `grading-human-blank.tsv` | Template for the human sheet. `rubric_total` is prefilled from the frozen cards; fill `rubric_passed` and `accepted` per packet, then save the completed sheet as `grading-human.tsv`. |
 | `packets-to-cards.tsv` | Blind helper: `blind_id → card` (e.g. `B001 → P3C-06`). Derived from the already-published `GRADING.md` per-task table. **No arm, no scenario, no repeat info.** Use it to pick the rubric. |
 | `second-grader-sample.txt` | 30 blind IDs (+ card) for the required ≥50% second read. |
