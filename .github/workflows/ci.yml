@@ -587,12 +587,8 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-onboarding-provenance-fixtures.ps1
 
-      - name: Run init.ps1 Safety Regression Tests (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-init-safety-tests.ps1
-
   windows-code-d:
-    name: Windows Code Shard - Syntax & Gates
+    name: Windows Code Shard - Syntax, Gates & Init Safety
     if: needs.changes.outputs.lane == 'full' && github.event_name != 'push'
     needs: [changes]
     runs-on: windows-latest
@@ -763,6 +759,10 @@ jobs:
             throw "Directive duplicated: expected 1 occurrence, found $($matches.Count)"
           }
           Write-Host "Windows setup dry-run and idempotency verified successfully."
+
+      - name: Run init.ps1 Safety Regression Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-init-safety-tests.ps1
 
   staged-secret-scan:
     name: Staged Secret Scan (PR Diff)
