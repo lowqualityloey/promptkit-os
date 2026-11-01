@@ -118,7 +118,7 @@ difference is recorded rather than smoothed over.
 | Sheet | `grading-human.tsv`, sha256 `e4294ab3…` |
 | Blind | yes — no key, manifest, order, scenario sheet or `runs/` opened |
 | Finalize | **run 2026-11-01** — 60 records re-extracted with `grader=human` |
-| Second grader (≥50%) | sample drawn (`second-grader-sample.txt`), not yet scored |
+| Second grader (≥50%) | **run 2026-11-01** — [`SECOND-READER.md`](SECOND-READER.md): 30/30 packets identical to this sheet, 0 disagreements. Agent read from the generating model's family, not an independent human |
 | Per-arm split and the §8 decision | carried from the machine sheet; acceptance identical packet-for-packet |
 
 Acceptance is the preregistered primary endpoint and it is measured here at 48/60

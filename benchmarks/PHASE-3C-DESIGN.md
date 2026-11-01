@@ -2,9 +2,14 @@
 
 Status: **designed, screened, run, and graded — outcome Tradeoff under Amendment
 A.** The primary sheet is `grading/grading-human.tsv` (48/60, owner-authorized,
-agent first pass, provenance recorded in `grading/GRADING-HUMAN.md`); the second
-grader sample and the re-finalize remain open. This document isthe pre-registration for the Phase 3c batch. It was written before any spend, and
-the slate, the seed SHA, the probes and the decision rule below are frozen by it.
+agent first pass, provenance recorded in `grading/GRADING-HUMAN.md`); the re-finalize
+ran on 2026-11-01, so every §5 record now reads `grader: human`. A second read of
+30 of 60 packets matched the primary sheet 30/30 with no disagreements
+(`grading/SECOND-READER.md`), but it ran in a fresh session of the generating
+model's family, so it does not satisfy §7's independence clause.
+This document is the pre-registration for the Phase 3c batch. It was written
+before any spend, and the slate, the seed SHA, the probes and the decision rule
+below are frozen by it.
 §10 records what ran and what the sheets produced: 48 of 60 packets accepted,
 `promptkit_os` 26/30 against `bare` 22/30, at a token-ratio median of 1.115.
 Amendment A settles the cost bar the original rule left open, and the outcome is
@@ -12,7 +17,7 @@ Amendment A settles the cost bar the original rule left open, and the outcome is
 1.05. What the decision rests on is qualified in two places and those
 qualifications travel with it — the primary sheet is owner-authorized rather than
 independently human-reviewed (`grading/GRADING-HUMAN.md`), and the second-grader
-sample §7 asks for is still outstanding.
+sample §7 asks for has been read but not independently of the generating model.
 
 Phase 3b is not rewritten or re-read here. Its result stands as published: 36 of
 36 sessions accepted on a **machine-graded** sheet (18 of 18 per arm, L1+ median
@@ -324,9 +329,13 @@ cross-model work starts only on **Keep** or **Tradeoff**.
   performed by an agent; `grading/GRADING-HUMAN.md` states this in full. The
   independent machine sheet (`6bef724e…`) agrees on every packet's acceptance and
   differs on one item count (`B054`, 0/6 against 4/6).
-- [ ] Second grader samples ≥50%. The 30-packet sample is drawn
-  (`grading/second-grader-sample.txt`) but unscored by anyone other than the pass
-  that produced the primary sheet.
+- [x] Second grader samples ≥50% — **scored 2026-11-01**, 30 of 60 packets,
+  **30/30 identical to the primary sheet, 0 disagreements** (25 accepted, 160/170
+  items). Sample draw re-derived and matched; see `grading/SECOND-READER.md` and
+  `grading/grading-second.tsv` (`1d191357…`). **Caveat:** an agent read in a fresh
+  session of the generating model's family, with the primary sheet already in
+  context — consistent, not independent. §7's independence clause is therefore
+  still unmet.
 - [x] `--finalize --graded-by machine` and the §8 comparison: acceptance 26/30
   against 22/30, token ratio median 1.115, CPAC ratio median 0.980. The rule does
   not say whether *Tradeoff* needs both ratios above 1.05 or either one, so it
