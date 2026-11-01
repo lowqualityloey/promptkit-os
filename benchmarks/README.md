@@ -22,16 +22,19 @@ recorded limitations; the harness itself makes no general performance claim.
   1.075 tokens and 1.115 CPAC, but both arms solved all six tasks on all three
   repeats, so the batch measures cost and non-inferiority rather than quality; the
   task-cluster interval (tokens 0.869 to 1.375) makes the decision **Inconclusive**.
-- [2026-10-31 Phase 3c machine-graded batch](runs/2026-10-31-phase3c-batch-deepseek-v4.1-flash/README.md) —
+- [2026-10-31 Phase 3c batch](runs/2026-10-31-phase3c-batch-deepseek-v4.1-flash/README.md) —
   ten discriminating cards × two arms × three repeats on a purpose-built seed
   (`b0ef652d…`), 60 primary sessions over 62 minutes, 59 exited 0 with one provider
-  abort kept in the denominator. **Graded by a machine, not by the human grader
-  the design requires**: 48 of 60 packets cleared their frozen rubrics,
-  `promptkit_os` accepted 26 of 30 runs against 22 of 30 for `bare` (13.3
-  points), at a token ratio median of 1.115. The pre-registered rule reads
-  Tradeoff or Inconclusive depending on whether it wants both cost ratios above
-  1.05 or either, so no decision is claimed. Every record reads
-  `human_accepted: false`; the human primary grading is still open.
+  abort kept in the denominator. **48 of 60 packets cleared their frozen rubrics**;
+  `promptkit_os` accepted 26 of 30 runs against 22 of 30 for `bare` (13.3 points) at
+  a token-ratio median of 1.115. Under **Amendment A** — which binds the cost bar to
+  the ITT token ratio after the original rule left `either`/`both` open — the outcome
+  is **Tradeoff**, and §8 opens Phase 4. The primary sheet is
+  `grading/grading-human.tsv` (`e4294ab3…`, 48/60), owner-authorized with an agent
+  first pass: read [`grading/GRADING-HUMAN.md`](runs/2026-10-31-phase3c-batch-deepseek-v4.1-flash/grading/GRADING-HUMAN.md)
+  before describing it as human-graded. An independent machine pass on the same
+  packets agrees on every acceptance. The second-grader sample is still outstanding,
+  and `--finalize` has not been re-run, so the §5 records still read `grader: machine`.
   Pre-registration and decision rule: [`PHASE-3C-DESIGN.md`](PHASE-3C-DESIGN.md).
 
 ## Calibration runs (not published batches)

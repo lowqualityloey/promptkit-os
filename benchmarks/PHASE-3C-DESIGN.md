@@ -1,13 +1,18 @@
 # Phase 3c — Design: a slate that can actually separate the arms
 
-Status: **designed, screened, run, and machine-graded — the human primary
-grading is still open.** This document is the pre-registration for the Phase 3c
-batch. It was written before any spend, and the slate, the seed SHA, the probes
-and the decision rule below are frozen by it. §10 records what ran and what the
-machine sheet produced: 48 of 60 packets accepted, `promptkit_os` 26/30 against
-`bare` 22/30, with the rule ambiguous between Tradeoff and Inconclusive. §7
-requires a human primary grader who did not run the batch, so no decision is
-claimed and no Phase 4 follows from this document.
+Status: **designed, screened, run, and graded — outcome Tradeoff under Amendment
+A.** The primary sheet is `grading/grading-human.tsv` (48/60, owner-authorized,
+agent first pass, provenance recorded in `grading/GRADING-HUMAN.md`); the second
+grader sample and the re-finalize remain open. This document isthe pre-registration for the Phase 3c batch. It was written before any spend, and
+the slate, the seed SHA, the probes and the decision rule below are frozen by it.
+§10 records what ran and what the sheets produced: 48 of 60 packets accepted,
+`promptkit_os` 26/30 against `bare` 22/30, at a token-ratio median of 1.115.
+Amendment A settles the cost bar the original rule left open, and the outcome is
+**Tradeoff**: acceptance is 13.3 points higher and the ITT token ratio is above
+1.05. What the decision rests on is qualified in two places and those
+qualifications travel with it — the primary sheet is owner-authorized rather than
+independently human-reviewed (`grading/GRADING-HUMAN.md`), and the second-grader
+sample §7 asks for is still outstanding.
 
 Phase 3b is not rewritten or re-read here. Its result stands as published: 36 of
 36 sessions accepted on a **machine-graded** sheet (18 of 18 per arm, L1+ median
@@ -313,9 +318,15 @@ cross-model work starts only on **Keep** or **Tradeoff**.
   48 of 60 packets were accepted. Finalized with `--graded-by machine`, so every
   record reads `human_accepted: false`. Method, digest and every rejected item:
   `benchmarks/runs/2026-10-31-phase3c-batch-deepseek-v4.1-flash/grading/GRADING.md`.
-- [ ] **Human** primary grading on the blind sheet. The sheet at
-  `grading/grading.tsv` is the machine pass and does not satisfy this item.
-- [ ] Second grader samples ≥50%.
+- [x] **Primary grading** on the blind sheet — `grading/grading-human.tsv`
+  (`e4294ab3…`), 48 of 60 accepted, 314 of 336 items. **Provenance caveat:** the
+  owner authorized the sheet, but the first pass across all 60 packets was
+  performed by an agent; `grading/GRADING-HUMAN.md` states this in full. The
+  independent machine sheet (`6bef724e…`) agrees on every packet's acceptance and
+  differs on one item count (`B054`, 0/6 against 4/6).
+- [ ] Second grader samples ≥50%. The 30-packet sample is drawn
+  (`grading/second-grader-sample.txt`) but unscored by anyone other than the pass
+  that produced the primary sheet.
 - [x] `--finalize --graded-by machine` and the §8 comparison: acceptance 26/30
   against 22/30, token ratio median 1.115, CPAC ratio median 0.980. The rule does
   not say whether *Tradeoff* needs both ratios above 1.05 or either one, so it
@@ -325,5 +336,11 @@ cross-model work starts only on **Keep** or **Tradeoff**.
   before human grading): *Tradeoff* needs acceptance ≥ 5 points higher **and** the
   ITT token ratio above 1.05; CPAC stays reported context. Applies prospectively
   to the human-graded figures only.
-- [ ] Report with the decision.
-- [ ] Only then: Phase 4 or a "no decision" closeout.
+- [x] Report with the decision: **Tradeoff**. Acceptance +13.3 points (26/30
+  against 22/30) and the ITT token-ratio median 1.115, which clears Amendment A's
+  `> 1.05` bar. Not Keep (ratio above 0.95), not Worse. Recorded in the batch
+  `README.md` with its limitations: one model, one host, a synthetic seed, a
+  descriptive interval that still spans 1.0, and a primary sheet that is
+  owner-authorized rather than independently human-reviewed.
+- [ ] Phase 4. §8 opens cross-model work on Tradeoff; nothing in Phase 4 has been
+  designed or run.

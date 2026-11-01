@@ -1,18 +1,64 @@
-# Phase 3c batch — 60 primary sessions, machine-graded
+# Phase 3c batch — 60 primary sessions, graded
 
-**Status: run complete, machine-graded.** This directory is the batch record for
-the Phase 3c pre-registration in `benchmarks/PHASE-3C-DESIGN.md`. All 60 planned
-primary sessions executed under the frozen plan; 59 exited 0 and one was lost to
-a provider-side network abort. The batch produced 60 blind packets and a 60-row
+**Status: run complete, primary grade recorded, outcome Tradeoff under
+Amendment A.** This directory is the batch record for the Phase 3c
+pre-registration in `benchmarks/PHASE-3C-DESIGN.md`. All 60 planned primary
+sessions executed under the frozen plan; 59 exited 0 and one was lost to a
+provider-side network abort. The batch produced 60 blind packets and a 60-row
 key stored outside the repository.
 
-It is **graded by a machine, not by the human primary grader the design requires**.
-[`grading/GRADING.md`](grading/GRADING.md) records the sheet, its digest
-(`6bef724e…`, written and hashed before `--finalize` opened the key), and the
-items every rejected packet failed: **48 of 60 packets cleared their frozen
-rubric** (310 of 336 items). `--finalize --graded-by machine` re-extracted all 60
-records with `"grading": {"grader": "machine", "human_accepted": false}`, so no
-record claims human acceptance and none can be cited as one.
+Two grading passes exist over the same packets, and they agree:
+
+- **Primary sheet** — [`grading/grading-human.tsv`](grading/grading-human.tsv),
+  digest `e4294ab3…`, **48 of 60 accepted, 314 of 336 items**. The owner
+  authorized it as the batch's primary grade; the first pass was performed by an
+  agent, and [`grading/GRADING-HUMAN.md`](grading/GRADING-HUMAN.md) states that
+  provenance in full rather than leaving it implied. Read that file before
+  describing this batch as human-graded.
+- **Machine sheet** — [`grading/GRADING.md`](grading/GRADING.md), digest
+  `6bef724e…`, written and hashed before `--finalize` opened the key: **48 of 60
+  accepted, 310 of 336 items**. It is the secondary consistency check §4 asks
+  for, and it was re-extracted with `--finalize --graded-by machine`, so its
+  records carry `"grading": {"grader": "machine", "human_accepted": false}`.
+
+The two sheets agree on **every packet's acceptance** — the same twelve
+rejections — and differ on one item count: `B054` is 0/6 on the machine sheet and
+4/6 on the primary sheet, because the empty packet fails R2 and R5 while the
+untouched seed already satisfies R1, R3, R4 and R6. The acceptance verdict is
+identical either way.
+
+`--finalize` has **not** been re-run with the primary sheet: the blind key is not
+on this host, so all 60 §5 records still carry `grader: machine`. The report below
+is therefore a batch-level result, not a per-record provenance change.
+
+## Decision
+
+The pre-registered rule, as amended by **Amendment A** (settled 2026-11-01, before
+this grading pass). Both conditions are met:
+
+| Rule row | Condition | This batch | Met |
+|---|---|---|---|
+| **Keep** | acceptance not below `bare` **and** token ratio ≤ 0.95 | token ratio 1.115 | no |
+| **Tradeoff** | acceptance ≥ 5 points higher **and** ITT token ratio > 1.05 | +13.3 points, 1.115 | **yes** |
+| **Worse** | acceptance ≥ 5 points lower | +13.3 points | no |
+| **Inconclusive** | anything else | — | — |
+
+**Outcome: Tradeoff.** `promptkit_os` accepted 26 of 30 runs against `bare`'s 22
+of 30 (86.7% against 73.3%) at a token-ratio median of 1.115: it bought acceptance
+with spend, rather than saving spend. The CPAC medians (0.980 accepted-only,
+1.135 across all artifacts) are reported as context and are not a second gate,
+per Amendment A.
+
+The per-arm counts are carried from the machine sheet. This pass graded blind and
+never opened the key, so it cannot unblind its own sheet; because its acceptance
+is identical packet for packet, the per-arm split transfers exactly. It was not
+re-derived independently.
+
+What this decision is not: it is one model, one host, one synthetic repository,
+with a descriptive interval that still spans 1.0 (tokens 0.912–1.457), and it rests
+on an owner-authorized agent-graded sheet rather than an independent human review.
+It opens Phase 4 cross-model work under §8; it is not a general claim about
+PromptKit OS.
 
 ## Pre-registration
 
@@ -132,7 +178,9 @@ The rule does not say whether *Tradeoff* needs both ratios above 1.05 or either
 one. Read as **either**, the pre-registered outcome is **Tradeoff**; read as
 **both**, it is **Inconclusive**. Neither reading is a Keep, because the token
 ratio is above 0.95. That fork is a defect in the pre-registration, recorded here
-rather than settled after seeing the numbers.
+rather than settled after seeing the numbers — and it is now closed by
+**Amendment A**, which binds the cost bar to the ITT token ratio (see Decision,
+above). The fork text is kept as history.
 
 The CPAC figure also carries a selection effect the design did not anticipate:
 rejected runs score `INF (REJECTED)` and drop out of the median, so the arm that
@@ -356,13 +404,20 @@ Not published: the blind key (`~/.local/state/promptkit/phase3c-keys/phase3c-bat
 
 ## Next steps
 
-1. A human primary grader, who did not run the batch, grades each
-   `grading/B*.diff` (+ `B*.verify.txt`) against its card frozen rubric without
-   opening the key. The machine sheet at `grading/grading.tsv`
-   (`6bef724e…`) is available as a cross-check but must not be the starting
-   point, or the second read stops being independent.
-2. A second grader independently samples at least 50% of packets; disagreements
-   are reported, not averaged away.
-3. Re-finalize with `--graded-by human` once that sheet exists:
-   `bash benchmarks/run-ab-benchmark.sh --finalize "$PWD" --grading "$PWD/grading/grading.tsv" --graded-by human`,
-   which overwrites each record provenance with `grader: human`.
+1. **Done — primary grade.** `grading/grading-human.tsv` (`e4294ab3…`) is the
+   batch's primary sheet: 48 of 60 accepted. Its method and its agent-first-pass
+   provenance are in [`grading/GRADING-HUMAN.md`](grading/GRADING-HUMAN.md). The
+   machine sheet (`grading/GRADING.md`, `6bef724e…`) was kept independent of it
+   and is cited as the consistency check.
+2. **Open — second grader.** `grading/second-grader-sample.txt` holds a
+   deterministic 30-packet sample (50%). It has not been scored by anyone other
+   than the pass that produced the primary sheet, so the ≥50% independent sample
+   §7 asks for is still outstanding. Disagreements are to be listed
+   packet-by-packet, never averaged.
+3. **Open — re-finalize.** The 60 records still carry `grader: machine` because
+   the blind key is not on the grading host:
+   `bash benchmarks/run-ab-benchmark.sh --finalize "$PWD" --grading "$PWD/grading/grading-human.tsv" --graded-by human`
+   must run where `~/.local/state/promptkit/phase3c-keys/phase3c-batch-1.csv`
+   exists, and it rewrites every record's provenance.
+4. **Open — Phase 4.** §8 opens cross-model work on Tradeoff, which this batch
+   now is. Nothing in Phase 4 has been designed or run.
