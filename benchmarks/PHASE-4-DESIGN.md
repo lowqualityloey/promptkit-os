@@ -1,8 +1,9 @@
 # Phase 4 — Design: does the Phase 3c result hold on other models?
 
-Status: **draft, not frozen.** Nothing here is pre-registered yet, and **no
-session may run until Appendix A is filled and the owner signs it**. This
-document exists because Phase 3c returned **Tradeoff** under Amendment A, and
+Status: **frozen 2026-11-01 — Appendix A filled and signed; no session has run.**
+The model list, engine commit, seeds, CLI version and caps in Appendix A are
+fixed; nothing there may change after the first session. This document exists
+because Phase 3c returned **Tradeoff** under Amendment A, and
 `benchmarks/PHASE-3C-DESIGN.md` §8 opens cross-model work only on Keep or
 Tradeoff.
 
@@ -32,7 +33,7 @@ rough size of the Phase 3c effect survive a change of model.
 | Cards | `TASK-P3C-01` … `TASK-P3C-10`, byte-identical | Editing a card would break comparability with 3c. Known card defects are handled by analysis, not by editing (§5). |
 | Arms | `promptkit_os` and `bare`, same `session_argv` builder, `guard_cross_arm` | Unchanged from 3b/3c. |
 | Repeats | 3 per cell | Same variance structure as 3c. |
-| Driver | `benchmarks/run-ab-benchmark.sh` at a pinned commit | No driver change is proposed by this draft. |
+| Driver | `benchmarks/run-ab-benchmark.sh` at a pinned commit | No driver change is proposed by this phase. |
 | Rubrics and probes | Frozen by the cards | Same instrument, so a difference is a model difference. |
 
 **The engine stays pinned too.** If PromptKit itself changes between 3c and 4,
@@ -48,11 +49,16 @@ three in total, each chosen by a rule rather than by hand after seeing results:
 2. The two highest-capability models the CLI exposes at freeze time, enumerated
    with `command-code --list-models` and recorded verbatim in Appendix A.
 
-**This parameter is deliberately left unfilled in the draft.** It must be frozen
-before the first session, exactly as the 3b/3c seeds were, because a model list
-chosen after a disappointing run would make the whole phase unfalsifiable. If the
-owner would rather name two specific models, that is fine — it just has to happen
-in Appendix A before any spend.
+**Frozen 2026-11-01:** `claude-fable-5-1` (Anthropic) and `gpt-6-astra` (OpenAI),
+copied verbatim from `command-code --list-models` 1.88.2 at freeze. That list
+carries 95 models and no numeric capability field, only prose descriptions, so
+"highest-capability" was instantiated as *the model in each vendor section whose
+description makes an unqualified top-tier claim*, taking two vendors rather than
+one so the phase tests transfer across providers rather than family variation.
+`claude-fable-5-1` is "most capable for demanding reasoning & long-horizon
+agents"; `gpt-6-astra` is "most capable OpenAI model for demanding reasoning &
+agents". The full freeze-time enumeration and the runner-up readings are recorded
+in Appendix A, so the choice can be checked rather than trusted.
 
 ## 4. Pre-registration and spend
 
@@ -71,10 +77,14 @@ in Appendix A before any spend.
 | Max turns | 40 |
 | `transcript_cost_usd` abort threshold | **$80** |
 
-Projection basis: Phase 3c spent $0.55 of reported `transcript_cost_usd` across
-60 sessions in 62 minutes. Doubling the cells roughly doubles both, so ~$1.10 and
-~2 hours of wall clock; the numbers above are the caps, not a forecast. The caps
-bind.
+Projection basis: Phase 3c spent $0.55 across 60 sessions on
+`deepseek/deepseek-v4.1-flash`. That figure does **not** transfer to either frozen
+model — both are flagship-tier and priced far above the 3c flash model — so Phase 4
+does not pretend to forecast its cost from it. The $80 threshold stands, and
+calibration is a **spend gate**: after the 12 calibration sessions, project the
+primary block from the measured per-session cost; if the projection exceeds $80,
+stop before the primary block and re-file the cap rather than abort mid-batch. The
+caps bind.
 
 **No extra runs.** No re-running a task because a model did surprisingly well or
 badly, no dropped task, no fourth repeat. A timeout is recorded and stays in the
@@ -158,7 +168,7 @@ Carried from 3c and tightened where 3c fell short:
 
 ## 9. Status
 
-- [ ] Appendix A filled: models named, engine commit, seed, seed derivation, caps signed.
+- [x] Appendix A filled 2026-11-01: models named, engine commit, seed, seed derivation, caps signed.
 - [ ] Zero-spend preflight (`--preflight-only`) on each model, `CROSSARM|OK` and
       `ISOLATION|OK`.
 - [ ] Probe screen (`--screen --arm bare`) red on all 10 cards for the pinned seed.
@@ -168,16 +178,64 @@ Carried from 3c and tightened where 3c fell short:
 - [ ] Report with a **per-model** outcome and the `P3C-06` sensitivity cut.
 - [ ] Only then: Phase 5 memo or a no-decision closeout.
 
-## Appendix A — Frozen parameters (UNFILLED)
+## Appendix A — Frozen parameters
+
+Frozen 2026-11-01. No Phase 4 session had run when this table was filled; the
+enumeration below is the freeze-time capture, not a later reconstruction.
 
 | Parameter | Value |
 |---|---|
-| Models (verbatim CLI identifiers) | **TBD — must be frozen before the first session** |
+| Models (verbatim CLI identifiers) | **`claude-fable-5-1`** and **`gpt-6-astra`**; anchor `deepseek/deepseek-v4.1-flash` (Phase 3c, not re-run) |
 | Model selection rule | 3c incumbent + the two highest-capability models in `--list-models` at freeze |
-| Engine commit (staged consumer surface) | **TBD** |
+| Enumeration evidence | `benchmarks/PHASE-4-MODELS-2026-11-01.txt` — verbatim `command-code --list-models`, CLI 1.88.2, 95 models, sha256 `8ea2facb67244afc4952948fa457cfad66fb78764ab74c6aa66dbfc409e68543` |
+| Engine commit (staged consumer surface) | `40b69bb9d094ecf10ca576a9746452fdecdf11ca` (main at freeze) |
 | Seed | `b0ef652d91b20c57965eb4257cab93301ff68999` |
-| `order_seed` / `shuffle_seed` | **TBD — derived from the batch label, recorded before any spend** |
-| CLI version | **TBD** |
-| Owner signature and date | **TBD** |
+| Batch label | `phase4-batch` (run directory `2026-11-01-phase4-cross-model`) |
+| `order_seed` | `40662191` |
+| `shuffle_seed` | `21978707` |
+| Seed derivation | `int(sha256("<label>|order")[0:8], 16) mod 100000000`, and the same with `shuffle`; reproduces Phase 3c's recorded `60564652` / `760853` exactly |
+| CLI version | `command-code` 1.88.2 |
+| Owner signature and date | `lowqualityloey`, approved 2026-11-01 |
 
-Nothing in this appendix may be filled after the first session.
+**Batch label.** The seed label is `phase4-batch`, shared by both models so the
+same plan and blind shuffle order apply across them. The run directory is
+`benchmarks/runs/2026-11-01-phase4-cross-model/`.
+
+**Engine.** `40b69bb` is `main` at freeze. It differs from the Phase 3c engine
+commit `84f9747` only in benchmark tooling, CI, changelog and `CONTRIBUTING`
+instructions; the staged promptkit surface is unchanged, so the model remains the
+only variable the phase changes.
+
+### Freeze-time enumeration
+
+`command-code --list-models` lists 95 models in provider sections with prose
+descriptions and **no numeric capability field**, so the rule was applied by
+reading each top-tier claim. The candidates and the reading:
+
+| Model | Description (verbatim) | Reading |
+|---|---|---|
+| `claude-fable-5-1` | "most capable for demanding reasoning & long-horizon agents" | Anthropic's unqualified top claim — **chosen** |
+| `gpt-6-astra` | "most capable OpenAI model for demanding reasoning & agents" | OpenAI's top claim — **chosen** |
+| `claude-opus-5-5` | "most intelligent Opus for agents and coding" | qualified to the Opus line, not the vendor |
+| `gpt-6.1-sol` | "near-Astra performance for complex work at a lower cost" | explicitly below Astra |
+| `google/gemini-4-argon` | "multimodal reasoning for documents and agent workflows" | no supremacy claim |
+| `moonshotai/kimi-k3.1-pro` | "frontier reasoning & agentic coding with 1M context" | frontier, not top |
+| `qwen/qwen3.8-max` | "autonomous long-horizon coding & professional work" | no supremacy claim |
+| `zai-org/glm-5.3` | "frontier coding with emergent cyber capabilities" | frontier, not top |
+| `mistral/mistral-large-4` | "frontier open-weight multimodal model for coding & analysis" | frontier, not top |
+
+Two vendors were taken rather than two models from one vendor: the phase asks
+whether a single-model result survives a change of model, and a single vendor
+would test family variation only. This is a reading of vendor prose, not a
+measured capability ranking — §8's caveat still applies.
+
+### Signature
+
+Owner: `lowqualityloey`. Approved 2026-11-01. The owner instructed this freeze
+and approved the two models named above; an agent transcribed the table in the
+same session, with zero Phase 4 sessions run at the time of signing.
+
+Nothing in this appendix may change after the first session. If a frozen model is
+unavailable at preflight, the phase stops and this appendix is amended **before**
+the first session with the reason recorded — that is not a licence to swap a model
+after results have been seen.

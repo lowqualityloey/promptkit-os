@@ -40,6 +40,8 @@ recorded limitations; the harness itself makes no general performance claim.
   human review. `--finalize --graded-by human` has been re-run, so all 60 §5 records
   read `grader: human`.
   Pre-registration and decision rule: [`PHASE-3C-DESIGN.md`](PHASE-3C-DESIGN.md).
+  Phase 4 is **frozen** at [`PHASE-4-DESIGN.md`](PHASE-4-DESIGN.md):
+  `claude-fable-5-1` and `gpt-6-astra`, engine `40b69bb`, no session run.
 
 ## Calibration runs (not published batches)
 
