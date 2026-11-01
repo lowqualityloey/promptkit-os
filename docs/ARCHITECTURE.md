@@ -263,7 +263,7 @@ Static footprint evidence: [`BENCHMARKS.md`](./BENCHMARKS.md). Engineering cost 
 promptkit-os/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml               # Maintainer CI (script syntax, initialization dry-run/idempotency, workflow structure, reference validation, fixture harnesses, and behavioral-contract tests)
+│       └── ci.yml               # Maintainer CI (diff-classified lanes: documentation gates on every change, plus syntax, installer, fixture-harness and behavioral-contract shards on code changes)
 ├── README.md                    # Project overview, quick start, and documentation index
 ├── CHANGELOG.md                 # Official release provenance adhering to Keep a Changelog
 ├── CONTRIBUTING.md              # Contribution guide, review standards, and release rules
