@@ -193,7 +193,7 @@ enumeration below is the freeze-time capture, not a later reconstruction.
 | Batch label | `phase4-batch` (run directory `2026-11-01-phase4-cross-model`) |
 | `order_seed` | `40662191` |
 | `shuffle_seed` | `21978707` |
-| Seed derivation | `int(sha256("<label>|order")[0:8], 16) mod 100000000`, and the same with `shuffle`; reproduces Phase 3c's recorded `60564652` / `760853` exactly |
+| Seed derivation | `int(sha256("<label>\|order")[0:8], 16) mod 100000000`, and the same with `shuffle`; reproduces Phase 3c's recorded `60564652` / `760853` exactly |
 | CLI version | `command-code` 1.88.2 |
 | Owner signature and date | `lowqualityloey`, approved 2026-11-01 |
 
