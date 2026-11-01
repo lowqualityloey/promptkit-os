@@ -432,7 +432,8 @@ Not published: the blind key (`~/.local/state/promptkit/phase3c-keys/phase3c-bat
    accepted packets and `false` for the 12 rejected ones. The re-extraction
    reproduced the batch totals exactly (22/30 against 26/30), and the records now
    sit beside the sheet they were derived from.
-4. **Open — Phase 4.** §8 opens cross-model work on Tradeoff, which this batch
-   now is. A draft design is written (`benchmarks/PHASE-4-DESIGN.md`); it is not
-   pre-registered (its model list and Appendix A must be frozen and signed
-   first), and no Phase 4 session has been run.
+4. **Frozen — Phase 4.** §8 opens cross-model work on Tradeoff, which this batch
+   now is. The design is frozen (`benchmarks/PHASE-4-DESIGN.md`): Appendix A names
+   `claude-fable-5-1` and `gpt-6-astra`, pins engine `40b69bb`, records seeds
+   `40662191` / `21978707`, and hashes the freeze-time model enumeration. No Phase 4
+   session has been run.

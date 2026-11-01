@@ -357,7 +357,7 @@ cross-model work starts only on **Keep** or **Tradeoff**.
   report. The records carry the owner's authorization, and
   `grading/GRADING-HUMAN.md` still states that the first pass was performed by an
   agent under it.
-- [x] Phase 4 **draft** design written: `benchmarks/PHASE-4-DESIGN.md` — cross-model
-  work on the Amendment A cost bar. It is deliberately not pre-registered: its
-  model list and Appendix A have to be frozen and signed before the first
-  session, and nothing in Phase 4 has been run.
+- [x] Phase 4 design **frozen 2026-11-01**: `benchmarks/PHASE-4-DESIGN.md` —
+  cross-model work on the Amendment A cost bar. Models `claude-fable-5-1` and
+  `gpt-6-astra`, engine `40b69bb`, seeds `40662191` / `21978707`, and the
+  freeze-time enumeration is hashed in Appendix A. Zero Phase 4 sessions have run.
