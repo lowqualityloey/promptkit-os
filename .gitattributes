@@ -3,3 +3,6 @@
 
 # Enforce LF line endings for shell scripts to prevent Bash failures on Windows checkouts
 *.sh text eol=lf
+
+# Freeze-time captures are cited by sha256; keep their bytes identical on every checkout
+benchmarks/PHASE-4-MODELS-*.txt text eol=lf
