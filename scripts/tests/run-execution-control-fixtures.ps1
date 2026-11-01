@@ -27,17 +27,24 @@ function Fail-Harness {
     throw "HARNESS_FAILURE|$Message"
 }
 
+# Hashes are collected in one Get-FileHash call per snapshot instead of one call
+# per file. A partial mapping would silently weaken the read-only assertion, so
+# a count mismatch fails the harness rather than producing hashless lines.
 function Get-RepositorySnapshot {
     $rootPrefix = "$repoRoot\.git\"
-    return @(
+    $items = @(
         Get-ChildItem -LiteralPath $repoRoot -File -Recurse |
             Where-Object { $_.FullName -notlike "$rootPrefix*" } |
-            Sort-Object FullName |
-            ForEach-Object {
-                $relative = $_.FullName.Substring($repoRoot.Length).TrimStart('\', '/') -replace '\\', '/'
-                "$relative|$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash)"
-            }
+            Sort-Object FullName
     )
+    if ($items.Count -eq 0) { return @() }
+    $hashes = @{}
+    foreach ($h in (Get-FileHash -LiteralPath $items.FullName -Algorithm SHA256)) { $hashes[$h.Path] = $h.Hash }
+    if ($hashes.Count -ne $items.Count) { Fail-Harness "Snapshot hash mapping incomplete: $($hashes.Count) of $($items.Count) files" }
+    return @($items | ForEach-Object {
+        $relative = $_.FullName.Substring($repoRoot.Length).TrimStart('\', '/') -replace '\\', '/'
+        "$relative|$($hashes[$_.FullName])"
+    })
 }
 
 function Get-GitStatusSnapshot {
