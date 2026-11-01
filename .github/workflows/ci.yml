@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,53 +16,186 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Lane selection, computed by the `changes` job.
+#
+#   docs  - every changed path is documentation or benchmark run output
+#   full  - anything else, and every scheduled or dispatched run
+#
+# pull_request runs the lane the diff asks for. push to main runs the slim docs
+# lane only: the tree was already validated by the PR, and the nightly schedule
+# runs the full suite on main. Anything not positively recognised as docs takes
+# the full lane.
 jobs:
-  validate-linux:
-    name: Lint & Validate (Linux)
-    if: ${{ always() }}
-    needs: [linux-validate-core, linux-shard-exec-control]
+  changes:
+    name: Change Classification
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      lane: ${{ steps.classify.outputs.lane }}
     steps:
-      - name: Verify all Linux shards succeeded
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Classify Changed Paths
+        id: classify
         env:
-          SHARD_RESULTS: ${{ join(needs.*.result, ' ') }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
-          failed=0
-          for result in $SHARD_RESULTS; do
-            if [ "$result" != "success" ]; then
-              echo "::error::Dependent Linux shard '$result' did not succeed."
-              failed=1
-            fi
-          done
-          if [ "$failed" -ne 0 ]; then
+          set -euo pipefail
+          case "$EVENT_NAME" in
+            pull_request)
+              base="$BASE_SHA"
+              head="$HEAD_SHA"
+              ;;
+            push)
+              base="$BEFORE_SHA"
+              head="$HEAD_SHA"
+              ;;
+            schedule|workflow_dispatch)
+              echo "lane=full" >> "$GITHUB_OUTPUT"
+              echo "Scheduled or manual run: full lane."
+              exit 0
+              ;;
+            *)
+              echo "::error::Unrecognised event '$EVENT_NAME'; refusing to guess a lane."
+              exit 1
+              ;;
+          esac
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            echo "lane=full" >> "$GITHUB_OUTPUT"
+            echo "No usable base revision; defaulting to the full lane."
+            exit 0
+          fi
+          changed="$(git diff --name-only --no-renames "$base" "$head")"
+          if [ -z "$changed" ]; then
+            echo "::error::Empty diff between $base and $head; refusing to guess a lane."
             exit 1
           fi
-          echo "All Linux shards succeeded."
+          lane=docs
+          while IFS= read -r path; do
+            case "$path" in
+              templates/*|workflows/*|protocols/*|examples/*|package/*|.github/*)
+                lane=full
+                break
+                ;;
+              *.md) continue ;;
+              docs/*) continue ;;
+              benchmarks/runs/*) continue ;;
+              benchmarks/*.tsv|benchmarks/*.diff|benchmarks/*.txt|benchmarks/*.json|benchmarks/*.log) continue ;;
+            esac
+            lane=full
+            break
+          done <<< "$changed"
+          echo "lane=$lane" >> "$GITHUB_OUTPUT"
+          echo "Changed paths:"
+          printf '%s\n' "$changed"
+          echo "Lane: $lane"
 
-  validate-windows:
-    name: Lint & Validate (Windows)
-    if: ${{ always() }}
-    needs: [windows-validate-core, windows-shard-init-safety, windows-shard-doc-contract]
-    runs-on: windows-latest
-    timeout-minutes: 5
-    steps:
-      - name: Verify all Windows shards succeeded
-        shell: pwsh
-        env:
-          SHARD_RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          $failed = @($env:SHARD_RESULTS -split '\s+' | Where-Object { $_ -and $_ -ne 'success' })
-          if ($failed.Count -gt 0) {
-            Write-Error "Dependent Windows shard(s) did not succeed: $($failed -join ', ')"
-            exit 1
-          }
-          Write-Host "All Windows shards succeeded."
-
-  linux-validate-core:
-    name: Linux Validate (Core)
+  linux-docs:
+    name: Linux Docs & Contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Run Documentation-Contract Tests (Bash)
+        run: bash scripts/tests/run-behavioral-contract-tests.sh
+
+      - name: Run Playbook Contract Tests (Bash)
+        run: bash scripts/tests/run-playbook-contract-tests.sh
+
+      - name: Run Behavioral Eval Offline Self-Test (Bash)
+        run: bash scripts/run-behavioral-eval.sh --self-test
+
+      - name: Run Reference-Link Harness (Bash)
+        run: bash scripts/tests/run-reference-link-tests.sh
+
+      - name: Run Release-Record Validator Fixtures (Bash)
+        run: |
+          bash scripts/validate-release-records.sh --root scripts/tests/fixtures/release-records/valid --strict
+          bash scripts/validate-release-records.sh --root scripts/tests/fixtures/release-records/empty-range-deferred --strict
+
+      - name: Run Release-Record Property Test Harness (Bash)
+        run: bash scripts/tests/run-release-record-properties.sh
+
+      - name: Run Release-Record Documentation Examples (Bash)
+        run: bash scripts/tests/release-records.examples.sh
+
+      - name: Run Release-Record Self-Validation Wrapper Harness (Bash)
+        run: bash scripts/tests/run-release-self-validation-tests.sh
+
+      - name: Assert Directive Token Budget (Bash)
+        run: bash scripts/measure-tokens.sh --strict
+
+      - name: Assert Per-Task Token Baselines (Bash)
+        run: bash scripts/measure-per-task-tokens.sh --strict
+
+      - name: Assert Turbo Protocol Overhead Claim Window (Bash)
+        run: bash scripts/measure-turbo-overhead.sh --strict
+
+      - name: Assert Benchmark Task-Card Verify Convention (Bash)
+        run: bash scripts/check-benchmark-task-cards.sh --root .
+
+      - name: Run Benchmark Task-Card Lint Tests (Bash)
+        run: bash scripts/tests/run-benchmark-task-card-tests.sh
+
+      - name: Run Release-Record Self-Validation with Grandfather Exemption (Bash)
+        run: |
+          set +e
+          output=$(bash scripts/validate-release-records.sh --root . --strict 2>&1)
+          exit_code=$?
+          set -e
+          printf '%s\n' "$output" | bash scripts/check-release-validation-output.sh --exit-code "$exit_code"
+
+      - name: Prompt Structure & Hygiene Check
+        run: |
+          echo "Validating workflow structure..."
+          for wf in workflows/*.md; do
+            if ! grep -q "^# " "$wf"; then
+              echo "Error: Workflow $wf is missing a top-level H1 heading."
+              exit 1
+            fi
+          done
+          echo "Prompt hygiene check passed: all workflows have valid structural H1 headings."
+
+      - name: Run Reference and Structural Validator (Bash)
+        run: bash scripts/validate-references.sh . --strict
+
+      - name: Run pk:doctor Self-Audit (Bash)
+        run: |
+          audit_root="$(mktemp -d)"
+          mkdir -p "$audit_root/.promptkit/scripts" "$audit_root/.promptkit/templates"
+          cp scripts/check-doctor.sh "$audit_root/.promptkit/scripts/"
+          cp templates/agent-directive-template.md "$audit_root/.promptkit/templates/"
+          printf 'profile: balanced\n' > "$audit_root/PROMPTKIT.md"
+          printf '<!-- PROMPTKIT_START -->\nEngine: v0.0.0 (unverified)\n<!-- PROMPTKIT_END -->\n' > "$audit_root/AGENTS.md"
+          bash "$audit_root/.promptkit/scripts/check-doctor.sh" "$audit_root"
+
+      - name: Assert No Fragile Math Labels (Bash)
+        run: bash scripts/check-math-labels.sh --root .
+
+      - name: Assert CHANGELOG Entry for Behavior-Surface Changes (Bash)
+        run: |
+          git fetch origin main --depth=100
+          git rev-parse --verify --quiet origin/main
+          bash scripts/check-changelog-entry.sh
+
+  linux-code-a:
+    name: Linux Code Shard - Installer & Runtime
+    if: needs.changes.outputs.lane == 'full' && github.event_name != 'push'
+    needs: [changes]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -141,17 +277,8 @@ jobs:
           bash -n scripts/tests/run-ai-attribution-tests.sh
           echo "Bash scripts parsed with 0 syntax errors."
 
-      - name: Run Documentation-Contract Tests (Bash)
-        run: bash scripts/tests/run-behavioral-contract-tests.sh
-
       - name: Run Staged Secret Scan Regression Tests (Bash)
         run: bash scripts/tests/run-staged-secret-scan-tests.sh
-
-      - name: Run Playbook Contract Tests (Bash)
-        run: bash scripts/tests/run-playbook-contract-tests.sh
-
-      - name: Run Behavioral Eval Offline Self-Test (Bash)
-        run: bash scripts/run-behavioral-eval.sh --self-test
 
       - name: Run Harness Security Tests (Bash)
         run: bash scripts/tests/run-harness-security-tests.sh
@@ -189,6 +316,47 @@ jobs:
       - name: Run Installer Terminal Picker Tests (Bash)
         run: bash scripts/tests/run-terminal-picker-tests.sh
 
+      - name: Test init.sh Dry-Run & Idempotency
+        run: |
+          chmod +x init.sh
+          TEST_DIR="/tmp/test-project"
+          mkdir -p "$TEST_DIR"
+          ./init.sh "$TEST_DIR"
+
+          for d in tasks specs adrs tests; do
+            if [ ! -d "$TEST_DIR/docs/$d" ]; then
+              echo "Error: Missing directory docs/$d"
+              exit 1
+            fi
+          done
+
+          test -f "$TEST_DIR/PROMPTKIT.md" || (echo "Error: Missing PROMPTKIT.md" && exit 1)
+          test -f "$TEST_DIR/docs/STATE.md" || (echo "Error: Missing docs/STATE.md" && exit 1)
+          test -f "$TEST_DIR/AGENTS.md" || (echo "Error: Missing AGENTS.md" && exit 1)
+          grep -q "PromptKit OS: Engineering Operating System" "$TEST_DIR/AGENTS.md" || (echo "Error: Directive not found in AGENTS.md" && exit 1)
+
+          # Idempotency re-run
+          ./init.sh "$TEST_DIR"
+          COUNT=$(grep -c "<!-- PROMPTKIT_START -->" "$TEST_DIR/AGENTS.md")
+          if [ "$COUNT" -ne 1 ]; then
+            echo "Error: Directive duplicated: expected 1 occurrence, found $COUNT"
+            exit 1
+          fi
+          echo "Linux setup script and idempotency verified successfully."
+
+  linux-code-b:
+    name: Linux Code Shard - Fixtures & Benchmarks
+    if: needs.changes.outputs.lane == 'full' && github.event_name != 'push'
+    needs: [changes]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
       - name: Run Authorization Evidence Fixture Harness (Bash)
         run: bash scripts/tests/run-authorization-evidence-fixtures.sh
 
@@ -224,32 +392,6 @@ jobs:
       - name: Run LSP Evidence Fixture Harness (Bash)
         run: bash scripts/tests/run-lsp-evidence-fixtures.sh
 
-      - name: Run Reference-Link Harness (Bash)
-        run: bash scripts/tests/run-reference-link-tests.sh
-
-      - name: Run Release-Record Validator Fixtures (Bash)
-        run: |
-          bash scripts/validate-release-records.sh --root scripts/tests/fixtures/release-records/valid --strict
-          bash scripts/validate-release-records.sh --root scripts/tests/fixtures/release-records/empty-range-deferred --strict
-
-      - name: Run Release-Record Property Test Harness (Bash)
-        run: bash scripts/tests/run-release-record-properties.sh
-
-      - name: Run Release-Record Documentation Examples (Bash)
-        run: bash scripts/tests/release-records.examples.sh
-
-      - name: Run Release-Record Self-Validation Wrapper Harness (Bash)
-        run: bash scripts/tests/run-release-self-validation-tests.sh
-
-      - name: Assert Directive Token Budget (Bash)
-        run: bash scripts/measure-tokens.sh --strict
-
-      - name: Assert Per-Task Token Baselines (Bash)
-        run: bash scripts/measure-per-task-tokens.sh --strict
-
-      - name: Assert Turbo Protocol Overhead Claim Window (Bash)
-        run: bash scripts/measure-turbo-overhead.sh --strict
-
       - name: Run Token Budget Gate Regression Tests (Bash)
         run: bash scripts/tests/run-token-budget-tests.sh
 
@@ -268,88 +410,16 @@ jobs:
       - name: Run Blinding Audit Harness (Bash)
         run: bash scripts/tests/run-benchmark-blinding-tests.sh
 
-      - name: Assert Benchmark Task-Card Verify Convention (Bash)
-        run: bash scripts/check-benchmark-task-cards.sh --root .
-
-      - name: Run Benchmark Task-Card Lint Tests (Bash)
-        run: bash scripts/tests/run-benchmark-task-card-tests.sh
-
       - name: Run Benchmark Task-Card Hook Tests (Bash)
         run: bash scripts/tests/run-benchmark-task-card-hook-tests.sh
 
-      - name: Run Release-Record Self-Validation with Grandfather Exemption (Bash)
-        run: |
-          set +e
-          output=$(bash scripts/validate-release-records.sh --root . --strict 2>&1)
-          exit_code=$?
-          set -e
-          printf '%s\n' "$output" | bash scripts/check-release-validation-output.sh --exit-code "$exit_code"
+      - name: Run Agent Execution Control Fixture Harness (Bash)
+        run: bash scripts/tests/run-execution-control-fixtures.sh
 
-      - name: Test init.sh Dry-Run & Idempotency
-        run: |
-          chmod +x init.sh
-          TEST_DIR="/tmp/test-project"
-          mkdir -p "$TEST_DIR"
-          ./init.sh "$TEST_DIR"
-
-          for d in tasks specs adrs tests; do
-            if [ ! -d "$TEST_DIR/docs/$d" ]; then
-              echo "Error: Missing directory docs/$d"
-              exit 1
-            fi
-          done
-
-          test -f "$TEST_DIR/PROMPTKIT.md" || (echo "Error: Missing PROMPTKIT.md" && exit 1)
-          test -f "$TEST_DIR/docs/STATE.md" || (echo "Error: Missing docs/STATE.md" && exit 1)
-          test -f "$TEST_DIR/AGENTS.md" || (echo "Error: Missing AGENTS.md" && exit 1)
-          grep -q "PromptKit OS: Engineering Operating System" "$TEST_DIR/AGENTS.md" || (echo "Error: Directive not found in AGENTS.md" && exit 1)
-
-          # Idempotency re-run
-          ./init.sh "$TEST_DIR"
-          COUNT=$(grep -c "<!-- PROMPTKIT_START -->" "$TEST_DIR/AGENTS.md")
-          if [ "$COUNT" -ne 1 ]; then
-            echo "Error: Directive duplicated: expected 1 occurrence, found $COUNT"
-            exit 1
-          fi
-          echo "Linux setup script and idempotency verified successfully."
-
-      - name: Prompt Structure & Hygiene Check
-        run: |
-          echo "Validating workflow structure..."
-          for wf in workflows/*.md; do
-            if ! grep -q "^# " "$wf"; then
-              echo "Error: Workflow $wf is missing a top-level H1 heading."
-              exit 1
-            fi
-          done
-          echo "Prompt hygiene check passed: all workflows have valid structural H1 headings."
-
-      - name: Run Reference and Structural Validator (Bash)
-        run: bash scripts/validate-references.sh . --strict
-
-      - name: Run pk:doctor Self-Audit (Bash)
-        run: |
-          audit_root="$(mktemp -d)"
-          mkdir -p "$audit_root/.promptkit/scripts" "$audit_root/.promptkit/templates"
-          cp scripts/check-doctor.sh "$audit_root/.promptkit/scripts/"
-          cp templates/agent-directive-template.md "$audit_root/.promptkit/templates/"
-          printf 'profile: balanced\n' > "$audit_root/PROMPTKIT.md"
-          printf '<!-- PROMPTKIT_START -->\nEngine: v0.0.0 (unverified)\n<!-- PROMPTKIT_END -->\n' > "$audit_root/AGENTS.md"
-          bash "$audit_root/.promptkit/scripts/check-doctor.sh" "$audit_root"
-
-      - name: Assert No Fragile Math Labels (Bash)
-        run: bash scripts/check-math-labels.sh --root .
-
-      - name: Assert CHANGELOG Entry for Behavior-Surface Changes (Bash)
-        run: |
-          git fetch origin main --depth=100
-          git rev-parse --verify --quiet origin/main
-          bash scripts/check-changelog-entry.sh
-
-  linux-shard-exec-control:
-    name: Linux Shard - Execution Control Fixtures
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+  windows-docs:
+    name: Windows Docs & Contracts
+    runs-on: windows-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -357,13 +427,172 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Run Agent Execution Control Fixture Harness (Bash)
-        run: bash scripts/tests/run-execution-control-fixtures.sh
+      - name: Run Reference-Link Harness (PowerShell)
+        run: pwsh -NoProfile -File .\scripts\tests\run-reference-link-tests.ps1
 
-  windows-validate-core:
-    name: Windows Validate (Core)
+      - name: Run Release-Record Validator Fixtures (PowerShell)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root .\scripts\tests\fixtures\release-records\valid -Strict
+          pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root .\scripts\tests\fixtures\release-records\empty-range-deferred -Strict
+
+      - name: Run Release-Record Property Test Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-release-record-properties.ps1
+
+      - name: Run Release-Record Documentation Examples (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\release-records.examples.ps1
+
+      - name: Run Release-Record Self-Validation Wrapper Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-release-self-validation-tests.ps1
+
+      - name: Assert Directive Token Budget (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict
+
+      - name: Run Release-Record Self-Validation with Grandfather Exemption (PowerShell)
+        shell: pwsh
+        run: |
+          $res = & pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root . -Strict *>&1
+          $exitCode = $LASTEXITCODE
+          $res | pwsh -NoProfile -File .\scripts\check-release-validation-output.ps1 -ExitCode $exitCode
+
+      - name: Run Reference and Structural Validator (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir . -Strict
+
+      - name: Assert Per-Task Token Baselines (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\measure-per-task-tokens.ps1 -Strict
+
+      - name: Assert Benchmark Task-Card Verify Convention (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\check-benchmark-task-cards.ps1 -Root .
+
+      - name: Run Benchmark Task-Card Lint Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-benchmark-task-card-tests.ps1
+
+      - name: Run Benchmark Task-Card Hook Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-benchmark-task-card-hook-tests.ps1
+
+      - name: Assert Turbo Protocol Overhead Claim Window (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\measure-turbo-overhead.ps1 -Strict
+
+      - name: Assert No Fragile Math Labels (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\check-math-labels.ps1 -Root .
+
+      - name: Assert CHANGELOG Entry for Behavior-Surface Changes (PowerShell)
+        shell: pwsh
+        run: |
+          git fetch origin main --depth=100
+          if ($LASTEXITCODE -ne 0) { throw "fetch of origin/main failed; cannot compute PR range" }
+          git rev-parse --verify --quiet origin/main
+          if ($LASTEXITCODE -ne 0) { throw "base ref origin/main missing after fetch" }
+          pwsh -NoProfile -File .\scripts\check-changelog-entry.ps1
+
+      - name: Run Documentation-Contract Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-behavioral-contract-tests.ps1
+
+  windows-code-a:
+    name: Windows Code Shard - Doctor & Profiles
+    if: needs.changes.outputs.lane == 'full' && github.event_name != 'push'
+    needs: [changes]
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Run Doctor Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-doctor-tests.ps1
+
+      - name: Run init Profile Matrix Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-profile-matrix.ps1
+
+  windows-code-b:
+    name: Windows Code Shard - Command Surface
+    if: needs.changes.outputs.lane == 'full' && github.event_name != 'push'
+    needs: [changes]
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Run Agent Execution Control Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-execution-control-fixtures.ps1
+
+      - name: Run Agent Execution Control Property Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-execution-control-properties.ps1
+
+      - name: Run CI Triage Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-ci-triage-fixtures.ps1
+
+      - name: Run LSP Evidence Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-lsp-evidence-fixtures.ps1
+
+  windows-code-c:
+    name: Windows Code Shard - Harnesses
+    if: needs.changes.outputs.lane == 'full' && github.event_name != 'push'
+    needs: [changes]
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Run Synthetic Base Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-synthetic-base-tests.ps1
+
+      - name: Run pk Route Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-pk-route-tests.ps1
+
+      - name: Run AI Attribution Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-ai-attribution-tests.ps1
+
+      - name: Run Milestone Halt Evidence Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-milestone-halt-evidence-fixtures.ps1
+
+      - name: Run Onboarding Divergence Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-onboard-divergence-fixtures.ps1
+
+      - name: Run Onboarding Provenance Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-onboarding-provenance-fixtures.ps1
+
+  windows-code-d:
+    name: Windows Code Shard - Syntax, Gates & Init Safety
+    if: needs.changes.outputs.lane == 'full' && github.event_name != 'push'
+    needs: [changes]
+    runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -461,14 +690,6 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-checkpoint-ignore-tests.ps1
 
-      - name: Run Synthetic Base Tests (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-synthetic-base-tests.ps1
-
-      - name: Run Doctor Tests (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-doctor-tests.ps1
-
       - name: Run Projection Parity Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-projection-parity-tests.ps1
@@ -477,41 +698,17 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-pk-entry-points-tests.ps1
 
-      - name: Run pk Route Tests (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-pk-route-tests.ps1
-
-      - name: Run AI Attribution Tests (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-ai-attribution-tests.ps1
-
       - name: Run Worktree Isolation Regression Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-worktree-isolation-tests.ps1
-
-      - name: Run init Profile Matrix Tests (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-profile-matrix.ps1
 
       - name: Run Installer Terminal Picker Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-terminal-picker-tests.ps1
 
-      - name: Run Agent Execution Control Fixture Harness (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-execution-control-fixtures.ps1
-
       - name: Run Authorization Evidence Fixture Harness (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-authorization-evidence-fixtures.ps1
-
-      - name: Run Milestone Halt Evidence Fixture Harness (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-milestone-halt-evidence-fixtures.ps1
-
-      - name: Run Agent Execution Control Property Harness (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-execution-control-properties.ps1
 
       - name: Self-Validate Repository Execution Records (PowerShell)
         shell: pwsh
@@ -522,62 +719,6 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($baseline)) { $baseline = "origin/main" }
           pwsh -NoProfile -File .\scripts\validate-execution-control.ps1 -Root . -Strict -AuthorizationBaseline $baseline
 
-      - name: Run CI Triage Fixture Harness (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-ci-triage-fixtures.ps1
-
-      - name: Run LSP Evidence Fixture Harness (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-lsp-evidence-fixtures.ps1
-
-      - name: Run Onboarding Divergence Fixture Harness (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-onboard-divergence-fixtures.ps1
-
-      - name: Run Onboarding Provenance Fixture Harness (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-onboarding-provenance-fixtures.ps1
-
-      - name: Run Reference-Link Harness (PowerShell)
-        run: pwsh -NoProfile -File .\scripts\tests\run-reference-link-tests.ps1
-
-      - name: Run Release-Record Validator Fixtures (PowerShell)
-        shell: pwsh
-        run: |
-          pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root .\scripts\tests\fixtures\release-records\valid -Strict
-          pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root .\scripts\tests\fixtures\release-records\empty-range-deferred -Strict
-
-      - name: Run Release-Record Property Test Harness (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-release-record-properties.ps1
-
-      - name: Run Release-Record Documentation Examples (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\release-records.examples.ps1
-
-      - name: Run Release-Record Self-Validation Wrapper Harness (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-release-self-validation-tests.ps1
-
-      - name: Assert Directive Token Budget (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict
-
-      - name: Run Release-Record Self-Validation with Grandfather Exemption (PowerShell)
-        shell: pwsh
-        run: |
-          $res = & pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root . -Strict *>&1
-          $exitCode = $LASTEXITCODE
-          $res | pwsh -NoProfile -File .\scripts\check-release-validation-output.ps1 -ExitCode $exitCode
-
-      - name: Run Reference and Structural Validator (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\validate-references.ps1 -PromptKitDir . -Strict
-
-      - name: Assert Per-Task Token Baselines (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\measure-per-task-tokens.ps1 -Strict
-
       - name: Run CPAC Ingestion Fixture Harness (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-cpac-ingestion-tests.ps1
@@ -585,35 +726,6 @@ jobs:
       - name: Run Benchmark Tools Fixture Harness (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-benchmark-tools-tests.ps1
-
-      - name: Assert Benchmark Task-Card Verify Convention (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\check-benchmark-task-cards.ps1 -Root .
-
-      - name: Run Benchmark Task-Card Lint Tests (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-benchmark-task-card-tests.ps1
-
-      - name: Run Benchmark Task-Card Hook Tests (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-benchmark-task-card-hook-tests.ps1
-
-      - name: Assert Turbo Protocol Overhead Claim Window (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\measure-turbo-overhead.ps1 -Strict
-
-      - name: Assert No Fragile Math Labels (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\check-math-labels.ps1 -Root .
-
-      - name: Assert CHANGELOG Entry for Behavior-Surface Changes (PowerShell)
-        shell: pwsh
-        run: |
-          git fetch origin main --depth=100
-          if ($LASTEXITCODE -ne 0) { throw "fetch of origin/main failed; cannot compute PR range" }
-          git rev-parse --verify --quiet origin/main
-          if ($LASTEXITCODE -ne 0) { throw "base ref origin/main missing after fetch" }
-          pwsh -NoProfile -File .\scripts\check-changelog-entry.ps1
 
       - name: Test init.ps1 Dry-Run & Idempotency
         shell: pwsh
@@ -648,35 +760,9 @@ jobs:
           }
           Write-Host "Windows setup dry-run and idempotency verified successfully."
 
-  windows-shard-init-safety:
-    name: Windows Shard - Init Safety
-    runs-on: windows-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
       - name: Run init.ps1 Safety Regression Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-init-safety-tests.ps1
-
-  windows-shard-doc-contract:
-    name: Windows Shard - Documentation Contract
-    runs-on: windows-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Run Documentation-Contract Tests (PowerShell)
-        shell: pwsh
-        run: pwsh -NoProfile -File .\scripts\tests\run-behavioral-contract-tests.ps1
 
   staged-secret-scan:
     name: Staged Secret Scan (PR Diff)
@@ -703,3 +789,61 @@ jobs:
             exit 0
           fi
           bash scripts/scan-staged-secrets.sh .
+
+  validate-linux:
+    name: Lint & Validate (Linux)
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: [changes, linux-docs, linux-code-a, linux-code-b]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify the lane's Linux jobs succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          LANE: ${{ needs.changes.outputs.lane }}
+        run: |
+          if ! printf '%s' "$NEEDS" | jq -e --arg lane "$LANE" '
+              (.["changes"].result == "success")
+              and (.["linux-docs"].result == "success")
+              and (if $lane == "full"
+                   then (.["linux-code-a"].result == "success") and (.["linux-code-b"].result == "success")
+                   elif $lane == "docs"
+                   then (.["linux-code-a"].result == "skipped") and (.["linux-code-b"].result == "skipped")
+                   else false end)
+            ' >/dev/null; then
+            printf '%s\n' "$NEEDS"
+            echo "::error::Linux gate failed for lane '$LANE'. Full-lane shards must succeed when the lane is full and must be skipped when it is docs."
+            exit 1
+          fi
+          echo "Linux gate passed for lane '$LANE'."
+
+  validate-windows:
+    name: Lint & Validate (Windows)
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: [changes, windows-docs, windows-code-a, windows-code-b, windows-code-c, windows-code-d]
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify the lane's Windows jobs succeeded
+        shell: pwsh
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          LANE: ${{ needs.changes.outputs.lane }}
+        run: |
+          $needs = $env:NEEDS | ConvertFrom-Json
+          $lane = $env:LANE
+          $problems = @()
+          if ($needs.changes.result -ne 'success') { $problems += "changes=$($needs.changes.result)" }
+          if ($needs.'windows-docs'.result -ne 'success') { $problems += "windows-docs=$($needs.'windows-docs'.result)" }
+          $codeJobs = @('windows-code-a', 'windows-code-b', 'windows-code-c', 'windows-code-d')
+          foreach ($job in $codeJobs) {
+            $result = $needs.$job.result
+            if ($lane -eq 'full' -and $result -ne 'success') { $problems += "$job=$result" }
+            if ($lane -eq 'docs' -and $result -ne 'skipped') { $problems += "$job=$result" }
+            if ($lane -notin @('full', 'docs')) { $problems += "unknown-lane=$lane" }
+          }
+          if ($problems.Count -gt 0) {
+            Write-Error ("Windows gate failed: " + ($problems -join ', '))
+            exit 1
+          }
+          Write-Host "Windows gate passed for lane '$lane'."
