@@ -421,6 +421,8 @@ promptkit-os/
     └── 05-auto-orchestration.md          # Autonomous orchestration simulation kata (pk:auto)
 ```
 
+Maintainer CI is selected by the diff. Documentation-only pull requests run the documentation, token-budget, release-record and link gates on both platforms; code changes add the syntax, installer, fixture-harness and behavioral-contract shards. The two required checks, `Lint & Validate (Linux)` and `Lint & Validate (Windows)`, aggregate whichever set actually ran and fail if a full-lane shard was skipped.
+
 ---
 
 ## Related References
