@@ -342,5 +342,12 @@ cross-model work starts only on **Keep** or **Tradeoff**.
   `README.md` with its limitations: one model, one host, a synthetic seed, a
   descriptive interval that still spans 1.0, and a primary sheet that is
   owner-authorized rather than independently human-reviewed.
-- [ ] Phase 4. §8 opens cross-model work on Tradeoff; nothing in Phase 4 has been
-  designed or run.
+- [x] `--finalize --graded-by human` with the primary sheet: all 60 §5 records
+  re-extracted on 2026-11-01 with `grader=human` and `human_accepted: true` for
+  the 48 accepted packets, so the per-record provenance now matches the batch
+  report. The records carry the owner's authorization, and
+  `grading/GRADING-HUMAN.md` still states that the first pass was performed by an
+  agent under it.
+- [x] Phase 4 pre-registered: `benchmarks/PHASE-4-DESIGN.md` — cross-model work
+  on the Amendment A cost bar, written before any Phase 4 session is spent.
+  Nothing in Phase 4 has been run.

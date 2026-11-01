@@ -52,7 +52,7 @@ P3C-03-promptkit_os-r3	5	5	true
 P3C-03-promptkit_os-r1	5	5	true
 P3C-03-bare-r2	5	5	true
 P3C-03-bare-r3	5	5	true
-P3C-10-bare-r2	0	6	false
+P3C-10-bare-r2	4	6	false
 P3C-10-promptkit_os-r1	6	6	true
 P3C-10-promptkit_os-r3	6	6	true
 P3C-10-promptkit_os-r2	6	6	true

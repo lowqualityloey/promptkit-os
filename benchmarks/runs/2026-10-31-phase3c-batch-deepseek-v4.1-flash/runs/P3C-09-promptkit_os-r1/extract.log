@@ -2,3 +2,5 @@ EXTRACT|NOTE|accepted defaulted to false — pass --accepted=true only after hum
 EXTRACT|OK|session=e368a3e8-fac2-4fe4-86cb-b246a99993bd|model=deepseek/deepseek-v4.1-flash|tokens_in=206747|tokens_out=5290|rework_loops=1|tool_calls=13|wall_clock_seconds=64
 EXTRACT|NOTE|accepted defaulted to false — pass --accepted=true only after human acceptance
 EXTRACT|OK|session=e368a3e8-fac2-4fe4-86cb-b246a99993bd|model=deepseek/deepseek-v4.1-flash|tokens_in=206747|tokens_out=5290|rework_loops=1|tool_calls=13|wall_clock_seconds=64
+EXTRACT|NOTE|accepted defaulted to false — pass --accepted=true only after human acceptance
+EXTRACT|OK|session=e368a3e8-fac2-4fe4-86cb-b246a99993bd|model=deepseek/deepseek-v4.1-flash|tokens_in=206747|tokens_out=5290|rework_loops=1|tool_calls=13|wall_clock_seconds=64

@@ -18,8 +18,8 @@ Two grading passes exist over the same packets, and they agree:
 - **Machine sheet** — [`grading/GRADING.md`](grading/GRADING.md), digest
   `6bef724e…`, written and hashed before `--finalize` opened the key: **48 of 60
   accepted, 310 of 336 items**. It is the secondary consistency check §4 asks
-  for, and it was re-extracted with `--finalize --graded-by machine`, so its
-  records carry `"grading": {"grader": "machine", "human_accepted": false}`.
+  for. It was the pass that finalized first (`--graded-by machine`); the records
+  have since been re-extracted from the primary sheet.
 
 The two sheets agree on **every packet's acceptance** — the same twelve
 rejections — and differ on one item count: `B054` is 0/6 on the machine sheet and
@@ -27,9 +27,11 @@ rejections — and differ on one item count: `B054` is 0/6 on the machine sheet 
 untouched seed already satisfies R1, R3, R4 and R6. The acceptance verdict is
 identical either way.
 
-`--finalize` has **not** been re-run with the primary sheet: the blind key is not
-on this host, so all 60 §5 records still carry `grader: machine`. The report below
-is therefore a batch-level result, not a per-record provenance change.
+`--finalize` ran again on 2026-11-01 with the primary sheet, on the host holding
+the blind key. All 60 §5 records were re-extracted with `"grading": {"grader":
+"human", "human_accepted": <true for the 48 accepted>}`, and the re-extraction
+reproduced the batch totals below exactly (22/30 against 26/30). The per-record
+provenance and the batch-level report now agree.
 
 ## Decision
 
@@ -399,8 +401,10 @@ Not published: the blind key (`~/.local/state/promptkit/phase3c-keys/phase3c-bat
   $0.55 total is a sum of rounded values.
 - Probe reds are artifact facts, not rubric outcomes: a packet can fail its probe
   and still pass every rubric item that is scoped to its diff.
-- The batch is a single-grader artifact until a human grader and a second grader
-  sample complete; until then it is machine-gradeable evidence only.
+- The primary grade is owner-authorized agent grading (see
+  `grading/GRADING-HUMAN.md`), and the independent second-grader sample is still
+  outstanding; until it completes the batch is single-grader evidence for
+  acceptance, and should be cited with that qualification.
 
 ## Next steps
 
@@ -414,10 +418,13 @@ Not published: the blind key (`~/.local/state/promptkit/phase3c-keys/phase3c-bat
    than the pass that produced the primary sheet, so the ≥50% independent sample
    §7 asks for is still outstanding. Disagreements are to be listed
    packet-by-packet, never averaged.
-3. **Open — re-finalize.** The 60 records still carry `grader: machine` because
-   the blind key is not on the grading host:
-   `bash benchmarks/run-ab-benchmark.sh --finalize "$PWD" --grading "$PWD/grading/grading-human.tsv" --graded-by human`
-   must run where `~/.local/state/promptkit/phase3c-keys/phase3c-batch-1.csv`
-   exists, and it rewrites every record's provenance.
+3. **Done — re-finalized.** `--finalize "$PWD" --grading "$PWD/grading/grading-human.tsv"
+   --graded-by human` ran on 2026-11-01 on the host holding
+   `~/.local/state/promptkit/phase3c-keys/phase3c-batch-1.csv`. All 60 §5 records
+   were re-extracted: `"grader": "human"`, `human_accepted: true` for the 48
+   accepted packets and `false` for the 12 rejected ones. The re-extraction
+   reproduced the batch totals exactly (22/30 against 26/30), and the records now
+   sit beside the sheet they were derived from.
 4. **Open — Phase 4.** §8 opens cross-model work on Tradeoff, which this batch
-   now is. Nothing in Phase 4 has been designed or run.
+   now is. The pre-registration is written (`benchmarks/PHASE-4-DESIGN.md`); no
+   Phase 4 session has been run.

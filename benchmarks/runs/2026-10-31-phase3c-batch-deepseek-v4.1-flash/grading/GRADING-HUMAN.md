@@ -117,10 +117,24 @@ difference is recorded rather than smoothed over.
 |---|---|
 | Sheet | `grading-human.tsv`, sha256 `e4294ab3…` |
 | Blind | yes — no key, manifest, order, scenario sheet or `runs/` opened |
-| Finalize | **not run** — the blind key is not on this host |
+| Finalize | **run 2026-11-01** — 60 records re-extracted with `grader=human` |
 | Second grader (≥50%) | sample drawn (`second-grader-sample.txt`), not yet scored |
-| Per-arm split and the §8 decision | not computable without unblinding |
+| Per-arm split and the §8 decision | carried from the machine sheet; acceptance identical packet-for-packet |
 
 Acceptance is the preregistered primary endpoint and it is measured here at 48/60
-overall. The per-arm comparison (26/30 against 22/30 on the machine sheet) cannot
-be recomputed without the key, so no arm-level claim is made in this record.
+overall. The per-arm comparison (26/30 against 22/30) was not re-derived here:
+this pass stayed blind, so `--finalize` translated its blind ids through the key
+on a host that had it. Because both sheets accept and reject the *same* twelve
+packets, the per-arm split transfers exactly — but that transfer is a consequence
+of the identical acceptance set, not an independent computation.
+
+## Finalized state
+
+`bash benchmarks/run-ab-benchmark.sh --finalize <batch> --grading
+grading/grading-human.tsv --graded-by human` ran on 2026-11-01 with the blind key
+present. All 60 §5 records now carry `"grading": {"grader": "human",
+"human_accepted": …}` — true for the 48 accepted packets, false for the 12
+rejected ones — and the re-extraction reproduced the arm totals exactly (22/30
+against 26/30). The proxy statement at the top of this record still applies: what
+`human` encodes is the owner's authorization of this sheet, not an item-by-item
+human re-read.
