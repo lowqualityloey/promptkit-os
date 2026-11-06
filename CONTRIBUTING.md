@@ -100,6 +100,9 @@ bash scripts/validate-execution-control.sh --root .
 # Assert CHANGELOG entry for behavior-surface changes (against origin/main)
 bash scripts/check-changelog-entry.sh
 
+# Regression coverage for the gate's path classification
+bash scripts/tests/run-changelog-gate-tests.sh
+
 # Self-application: this repository's own release records (see the exemption note below)
 bash scripts/validate-release-records.sh --root . --strict
 ```
@@ -168,6 +171,9 @@ pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root .\scripts\tes
 # Assert CHANGELOG entry for behavior-surface changes (against origin/main)
 pwsh -NoProfile -File .\scripts\check-changelog-entry.ps1
 
+# Regression coverage for the gate's path classification
+pwsh -NoProfile -File .\scripts\tests\run-changelog-gate-tests.ps1
+
 # Self-application: this repository's own release records (see the exemption note below)
 pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root . -Strict
 ```
@@ -200,7 +206,7 @@ companion `*-release-notes-record.md`.
 
 Mechanical gates catch most resubmission causes; the rest is judgment. Before opening a pull request:
 
-1. **CHANGELOG entry**: behavior-surface changes (`workflows/`, `templates/`, `protocols/`, `package/`, top-level `scripts/`, `init.sh`/`init.ps1`) carry an `[Unreleased]` entry. Gate: `scripts/check-changelog-entry.sh` (+ `.ps1` twin), CI-wired against `origin/main`.
+1. **CHANGELOG entry**: behavior-surface changes (`workflows/`, `templates/`, `protocols/`, `package/`, top-level `scripts/`, `benchmarks/run-*.sh`, `init.sh`/`init.ps1`) carry an `[Unreleased]` entry. Gate: `scripts/check-changelog-entry.sh` (+ `.ps1` twin), CI-wired against `origin/main`.
 2. **No stale pending language**: "pending <authority action>" text must not survive the merge that resolves it. The countersignature-consistency scenario in the behavioral twins covers retro chains; sweep your own diff for the pattern.
 3. **Twin parity**: every behavior change ships in both `.sh` and `.ps1`; new scripts join both CI syntax lists; new fixture cases register in the shared manifests.
 4. **Measured-figure anchor**: `docs/BENCHMARKS.md` stamps its figures with `**Current measurements:** <date> at `<commit>``. Editing any measured input — `workflows/`, `protocols/code-quality-gate.md`, or a measured template (`agent-directive-template.md`, `agent-directive-lite-template.md`, `tech-spec-template.md`, `release-checklist.md`) — requires restating that anchor to the commit you measured at **and** re-propagating every published figure. The twin suites enforce this: if the anchor does not resolve, or resolves and a measured input changed after it, the run fails — the unresolvable case fails closed (#568), not skipped. The anchor must be a commit **on `main`**: a squash- or rebase-merged PR-branch commit is not on `main`, resolves only while the PR branch is still fetched, and fails the suite (fail-closed, not skipped) once the branch is deleted or unfetched — so **merge anchor-bearing PRs with a merge commit, never squash or rebase**, keeping the anchor commit an ancestor of `main` regardless of whether the PR branch is later retained. `docs/BENCHMARKS.md` §9 (the `bytes/4` vs. real-tokenizer comparison) is the one exception to enforcement: `scripts/measure-tokenizer-delta.sh` always exits 0 and prints `SKIPPED` without `tiktoken`, so no gate can catch it going stale. Re-run it in the same change that touches a measured input — `pip install tiktoken`, then `bash scripts/measure-tokenizer-delta.sh` — and update the table, its `**Provenance:**` line, and any verdict sentence in §9 that quotes a ratio.
