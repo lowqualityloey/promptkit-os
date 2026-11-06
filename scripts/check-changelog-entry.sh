@@ -69,7 +69,7 @@ if [ -z "$files" ]; then
     exit 0
 fi
 
-behavior="$(printf '%s\n' "$files" | grep -E '^(workflows/|templates/|protocols/|package/|init\.sh$|init\.ps1$|scripts/[^/]+$)' || true)"
+behavior="$(printf '%s\n' "$files" | grep -E '^(workflows/|templates/|protocols/|package/|init\.sh$|init\.ps1$|scripts/[^/]+$|benchmarks/run-[^/]+\.sh$)' || true)"
 if [ -z "$behavior" ]; then
     echo "CHANGELOG_GATE|PASS|no behavior-surface paths in range, entry not required"
     exit 0

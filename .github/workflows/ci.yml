@@ -241,6 +241,7 @@ jobs:
           bash -n scripts/tests/run-execution-control-properties.sh
           bash -n scripts/validate-release-records.sh
           bash -n scripts/check-changelog-entry.sh
+          bash -n scripts/tests/run-changelog-gate-tests.sh
           bash -n scripts/check-math-labels.sh
           bash -n scripts/tests/run-release-record-properties.sh
           bash -n scripts/validate-ci-triage.sh
@@ -288,6 +289,9 @@ jobs:
 
       - name: Run Synthetic Base Tests (Bash)
         run: bash scripts/tests/run-synthetic-base-tests.sh
+
+      - name: Run Changelog Gate Regression Tests (Bash)
+        run: bash scripts/tests/run-changelog-gate-tests.sh
 
       - name: Run Doctor Tests (Bash)
         run: bash scripts/tests/run-doctor-tests.sh
@@ -567,6 +571,10 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-synthetic-base-tests.ps1
 
+      - name: Run Changelog Gate Regression Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-changelog-gate-tests.ps1
+
       - name: Run pk Route Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-pk-route-tests.ps1
@@ -613,6 +621,7 @@ jobs:
             "scripts/tests/run-execution-control-properties.ps1",
             "scripts/validate-release-records.ps1",
             "scripts/check-changelog-entry.ps1",
+            "scripts/tests/run-changelog-gate-tests.ps1",
             "scripts/check-math-labels.ps1",
             "scripts/tests/run-release-record-properties.ps1",
             "scripts/validate-ci-triage.ps1",

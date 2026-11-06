@@ -53,7 +53,7 @@ if ($files.Count -eq 0) {
     exit 0
 }
 
-$behavior = @($files | Where-Object { $_ -match '^(workflows/|templates/|protocols/|package/|init\.sh$|init\.ps1$|scripts/[^/]+$)' })
+$behavior = @($files | Where-Object { $_ -match '^(workflows/|templates/|protocols/|package/|init\.sh$|init\.ps1$|scripts/[^/]+$|benchmarks/run-[^/]+\.sh$)' })
 if ($behavior.Count -eq 0) {
     Write-Host "CHANGELOG_GATE|PASS|no behavior-surface paths in range, entry not required"
     exit 0
