@@ -71,6 +71,16 @@ slug="$(printf '%s' "$cwd" \
 proj="$HOME/.commandcode/projects/$slug"
 mkdir -p "$proj"
 sid="stub-$(date +%s%N)-$RANDOM"
+if [[ "${STUB_REFUSE:-0}" == "1" ]]; then
+  # Simulate a pre-inference refusal (plan entitlement or credits): a transcript
+  # exists, but there is no assistant usage and therefore no token.
+  cat > "$proj/$sid.jsonl" <<JSON
+{"type":"session","version":3,"id":"$sid","timestamp":"2026-10-26T12:00:00.000Z","cwd":"$cwd"}
+{"type":"message","id":"u1","parentId":null,"timestamp":"2026-10-26T12:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"task"}],"meta":{"source":"user","createdAt":1,"messageId":"u1"}}}
+JSON
+  echo "Error: Insufficient credits for Command Code." >&2
+  exit 10
+fi
 {
   printf '{"type":"session","version":3,"id":"%s","timestamp":"2026-10-26T12:00:00.000Z","cwd":"%s"}\n' "$sid" "$cwd"
   printf '{"type":"message","id":"u1","parentId":null,"timestamp":"2026-10-26T12:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"task"}],"meta":{"source":"user","createdAt":1,"messageId":"u1"}}}\n'
@@ -144,6 +154,23 @@ if [[ $rc -eq 0 && "$out" == *"PREFLIGHT|OK"* && "$out" == *"BATCH|OK|runs=2"* ]
     ok "batch runs both arms end-to-end against the stub CLI"
 else
     notok "batch run (rc=$rc, out=$(printf '%s' "$out" | tail -3 | tr '\n' ' '))"
+fi
+
+# --- zero-output batch fails closed before a key or packet -------------------
+# Both Phase 4 calibration attempts were refused before inference and still
+# produced a key and six packets per model. A session that produces no token is
+# not a batched run, so the driver must refuse to write the artifacts.
+REFUSE_HOME="$TMP_DIR/refuse-home"
+mkdir -p "$REFUSE_HOME/.commandcode/taste"
+: > "$REFUSE_HOME/.commandcode/taste/taste.md"
+OUT_REFUSE="$TMP_DIR/out-refuse"
+out_ref="$(STUB_REFUSE=1 PATH="$CLEAN_PATH" HOME="$REFUSE_HOME" bash "$DRIVER" --engine "$REPO_ROOT" --seed "$SEED" --tasks "$TASK" --model stub/model-a --out "$OUT_REFUSE" --max-turns 5 --timeout 60 --key-out "$KEYS/refused.csv" --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
+key_state="absent"; [[ -e "$KEYS/refused.csv" ]] && key_state="present"
+packet_state="absent"; compgen -G "$OUT_REFUSE/grading/B*.diff" > /dev/null && packet_state="present"
+if [[ $rc -eq 2 && "$out_ref" == *"BATCH|FAILED|NO_MODEL_OUTPUT|runs=2|sessions_with_tokens=0"* && "$out_ref" != *"BATCH|OK"* && "$key_state" == "absent" && "$packet_state" == "absent" ]]; then
+    ok "zero-token batch fails closed before writing a key or packets"
+else
+    notok "zero-token batch (rc=$rc, key=$key_state, packets=$packet_state, out=$(printf "%s" "$out_ref" | tail -2))"
 fi
 
 # --- prompt extraction is byte-clean ------------------------------------------

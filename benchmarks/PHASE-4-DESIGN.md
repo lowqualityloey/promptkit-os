@@ -346,8 +346,12 @@ session cost. No spend projection can be formed from twelve zero-token refusals,
 and none is offered. The probe tokens from the entitlement pass are not itemised
 by the CLI and are not counted as measurement.
 
-**Harness finding, unchanged.** The driver printed `BATCH|OK|runs=6` and wrote
-six blind packets and a key for each model while every session had failed. Both
-attempts now carry keys and packets that mean nothing; recorded, not fixed.
+**Harness finding, fixed the same day.** The driver printed `BATCH|OK|runs=6`
+and wrote six blind packets and a key for each model while every session had
+failed. It now counts sessions whose record carries a non-zero `tokens_total` and,
+when none does, prints `BATCH|FAILED|NO_MODEL_OUTPUT` and exits 2 before the
+blind-id shuffle, so no key or packet is written for a batch with no model
+output; the driver regression harness pins the case. The keys and packets from
+the two Phase 4 attempts remain void.
 
 Owner instruction: stop the phase pending billing, 2026-11-06.
