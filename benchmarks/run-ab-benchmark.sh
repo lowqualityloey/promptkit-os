@@ -790,6 +790,7 @@ printf 'scenario\tarm\trundir\ttranscript\trecord\tdiff\tstripped\tverify\n' >> 
 printf 'Error:|error:|ERROR:|No tool named|command not found|Traceback|Exception|Permission denied|FAILED|npm ERR!' > "$OUT/error-patterns.txt"
 declare -a RUN_SCENARIOS=()
 RUNS=0
+SESSIONS_WITH_TOKENS=0
 
 # Stage the consumer runtime surface of the engine at <project>/.promptkit.
 #
@@ -914,6 +915,12 @@ for ((pi = 0; pi < PLAN_COUNT; pi++)); do
     bash "$EXTRACT" "$transcript" --scenario-id="$scenario" --condition="$arm" \
         --accepted=false --error-patterns="$(cat "$OUT/error-patterns.txt")" \
         > "$record" 2>>"$OUT/runs/$scenario/extract.log" || bench_error "EXTRACT_FAILED" "$scenario"
+    # Model output, not the CLI exit code, is what makes a session a run: a
+    # max-turns stop (8) or a timeout (124) after real work is still gradeable.
+    tokens_total="$(tr -d "[:space:]" < "$record" | grep -o "tokens_total[^0-9]*[0-9]*" | head -1 | grep -o "[0-9]*$" || true)"
+    if [[ -n "$tokens_total" && "$tokens_total" -gt 0 ]]; then
+        SESSIONS_WITH_TOKENS=$((SESSIONS_WITH_TOKENS + 1))
+    fi
     stripped="$OUT/runs/$scenario/run.stripped.diff"
     if [[ -s "$rundir-run.diff" ]]; then
         bash "$STRIP" "$rundir-run.diff" > "$stripped" 2>>"$OUT/runs/$scenario/strip.log" \
@@ -932,6 +939,16 @@ for ((pi = 0; pi < PLAN_COUNT; pi++)); do
         printf 'BENCH|WARN|MAX_TURNS_HIT|%s\n' "$scenario" >&2
     fi
 done
+
+# A batch in which no session produced a token is not a batch: an entitlement
+# refusal, a credit refusal and a provider outage are indistinguishable here,
+# and every artifact the driver would write next (blind packets and the key)
+# would describe no model output at all. Fail closed BEFORE the shuffle, so a
+# void batch leaves no key and no gradeable packet behind.
+if [[ "$SESSIONS_WITH_TOKENS" -eq 0 ]]; then
+    echo "BATCH|FAILED|NO_MODEL_OUTPUT|runs=$RUNS|sessions_with_tokens=0|out=$OUT"
+    bench_error "NO_MODEL_OUTPUT" "all $RUNS sessions produced zero tokens; no key or packet written (see $OUT/runs for per-session logs)"
+fi
 
 # Blind-id assignment happens AFTER all runs, by shuffle across the whole
 # batch, so id order carries no arm information (a sequential per-run id would

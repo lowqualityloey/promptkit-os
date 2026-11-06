@@ -1,6 +1,6 @@
 # Phase 4 — Design: does the Phase 3c result hold on other models?
 
-Status: **frozen 2026-11-01 — Appendix A filled and signed; no session has run.**
+Status: **frozen 2026-11-01 — Appendix A filled and signed; amended 2026-11-06 (Amendment B and its correction: both model pairs blocked by plan entitlement); STOPPED 2026-11-06 pending billing; no session has reached a model.**
 The model list, engine commit, seeds, CLI version and caps in Appendix A are
 fixed; nothing there may change after the first session. This document exists
 because Phase 3c returned **Tradeoff** under Amendment A, and
@@ -169,9 +169,15 @@ Carried from 3c and tightened where 3c fell short:
 ## 9. Status
 
 - [x] Appendix A filled 2026-11-01: models named, engine commit, seed, seed derivation, caps signed.
-- [ ] Zero-spend preflight (`--preflight-only`) on each model, `CROSSARM|OK` and
-      `ISOLATION|OK`.
-- [ ] Probe screen (`--screen --arm bare`) red on all 10 cards for the pinned seed.
+- [x] Zero-spend preflight (`--preflight-only`) on each model, `CROSSARM|OK` and
+      `ISOLATION|OK`. 2026-11-06: the original pair passed at `cli=1.88.2`
+      (plan `1ebf5715…`, 60 rows each), and the amended pair passed again after
+      Amendment B — `moonshotai/kimi-k3.1-pro` and `qwen/qwen3.8-max`, same
+      digest, same 60 rows each, `$0` spent.
+- [x] Probe screen (`--screen --arm bare`) red on all 10 cards for the pinned seed.
+      2026-11-06: `SCREEN|OK|arm=bare|tasks=10|red=10`, each probe failing on its
+      seeded defect while the seed’s own suite stays green.
+- [ ] Calibration block (12 sessions) — **blocked 2026-11-06**: first pair `403 MODEL_NOT_IN_PLAN` (12/12), amended pair `Insufficient credits` (12/12); no session reached a model. Phase 4 stopped pending billing (Amendment B correction).
 - [ ] Batch run.
 - [ ] Primary grading with a grader independent of the first pass.
 - [ ] Second-grader sample ≥50%.
@@ -185,8 +191,8 @@ enumeration below is the freeze-time capture, not a later reconstruction.
 
 | Parameter | Value |
 |---|---|
-| Models (verbatim CLI identifiers) | **`claude-fable-5-1`** and **`gpt-6-astra`**; anchor `deepseek/deepseek-v4.1-flash` (Phase 3c, not re-run) |
-| Model selection rule | 3c incumbent + the two highest-capability models in `--list-models` at freeze |
+| Models (verbatim CLI identifiers) | **`moonshotai/kimi-k3.1-pro`** and **`qwen/qwen3.8-max`** (amended 2026-11-06 — Amendment B); anchor `deepseek/deepseek-v4.1-flash` (Phase 3c, not re-run). Originally frozen as `claude-fable-5-1` and `gpt-6-astra`. Neither replacement completes a session on current credits (amendment correction); only the anchor runs. |
+| Model selection rule | 3c incumbent + the two highest-capability models in `--list-models` at freeze; re-applied 2026-11-06 to the highest two whose probes answered, superseded the same day when neither ran a session (Amendment B and correction) |
 | Enumeration evidence | `benchmarks/PHASE-4-MODELS-2026-11-01.txt` — verbatim `command-code --list-models`, CLI 1.88.2, 95 models, sha256 `8ea2facb67244afc4952948fa457cfad66fb78764ab74c6aa66dbfc409e68543` |
 | Engine commit (staged consumer surface) | `40b69bb9d094ecf10ca576a9746452fdecdf11ca` (main at freeze) |
 | Seed | `b0ef652d91b20c57965eb4257cab93301ff68999` |
@@ -239,3 +245,113 @@ Nothing in this appendix may change after the first session. If a frozen model i
 unavailable at preflight, the phase stops and this appendix is amended **before**
 the first session with the reason recorded — that is not a licence to swap a model
 after results have been seen.
+
+### Amendment B — 2026-11-06: model pair replaced under a plan-entitlement block
+
+The frozen pair cannot run on this account. The Phase 4 calibration block was
+started on `claude-fable-5-1` and `gpt-6-astra` — three cards, one per level, two
+arms, one repeat, 12 sessions — and all 12 exited `cli_exit=4` with
+`403 MODEL_NOT_IN_PLAN` before inference: zero tokens, `transcript_cost_usd`
+$0.0000, empty bare diffs, and 47,116-byte `promptkit_os` diffs that contain only
+the kit install. No Phase 4 session reached a model, so the clause above applies:
+the phase stops and the appendix is amended before the first session, with the
+reason recorded.
+
+The failure is entitlement, not configuration. `command-code status` reports the
+account authenticated as `lowqualityloey`, `--list-models` still lists both frozen
+models, and the refusal names the plan: "available in Provider and above plans or
+extra on demand usage". Preflight cannot see this: it validates the model
+identifier, the seed, the engine and the CLI, not the plan behind the account.
+
+**Entitlement probe, 2026-11-06.** One turn per candidate with the driver flags
+(`-t --yolo --tools-all --skip-onboarding --no-auto-update --max-turns 1`) under
+the isolated `HOME`, from the depth chart above downward:
+
+| Candidate | Result |
+|---|---|
+| `claude-fable-5-1` | `403 MODEL_NOT_IN_PLAN` — Provider plan or on-demand |
+| `gpt-6-astra` | `403 MODEL_NOT_IN_PLAN` — Provider plan or on-demand |
+| `claude-opus-5-5` | `403 MODEL_NOT_IN_PLAN` — Provider plan or on-demand |
+| `gpt-6.1-sol` | `403 MODEL_NOT_IN_PLAN` — Max plan or on-demand |
+| `google/gemini-4-argon` | `403 MODEL_NOT_IN_PLAN` — Pro plan or on-demand |
+| `zai-org/glm-5.3` | `Insufficient credits` |
+| `mistral/mistral-large-4` | `Insufficient credits` |
+| `moonshotai/kimi-k3.1-pro` | answered |
+| `qwen/qwen3.8-max` | answered |
+| `deepseek/deepseek-v4.1-flash` (anchor) | answered |
+
+**Replacement.** `moonshotai/kimi-k3.1-pro` and `qwen/qwen3.8-max` — the two
+highest entries in the depth chart whose one-turn probes answered, from two
+vendors (Moonshot and Alibaba) rather than one, which keeps the two-vendor
+property the original freeze argued for. The anchor is retained and still
+runnable; it is not re-run, exactly as frozen. The probes answered; sessions did
+not, and the correction below records why a probe was the wrong gate.
+
+**Consequence, stated before results.** Phase 4 now asks whether the 3c effect
+survives a change of model *at the frontier tier this plan can run*, not at
+flagship tier. It supports no flagship claim, and no claim about Claude or OpenAI
+models, which never execute. The §8 caveat widens accordingly: a difference here
+is a difference between two available frontier models, not a capability ranking.
+Cards, seed, engine, repeats, caps, decision rule, analysis cuts and grading
+requirements are unchanged, and the plan is model-independent: both new models
+reproduce the frozen digest `1ebf5715…` at 60 rows, so the schedule and the blind
+shuffle are not recomputed.
+
+**Re-done.** The zero-spend preflight was re-run for each new model because the
+pair changed: `CROSSARM|OK`, `ISOLATION|OK`, `PREFLIGHT|OK|cli=1.88.2`, plan
+`1ebf5715…` at 60 rows each, $0 spent. The probe screen is model-independent and
+stands unamended.
+
+Signature: owner `lowqualityloey`, 2026-11-06, instructed in-session after the
+entitlement block was measured; an agent transcribed the probe table in the same
+session. Twelve sessions had been attempted and none had reached a model at the
+time of signing.
+
+
+#### Correction — 2026-11-06: the replacement pair is blocked at session scale
+
+The replacement was signed on probe evidence, and that evidence was too weak. A
+one-turn probe proves a model answers; it does not prove a session runs. The
+twelve-session calibration block was re-run on the amended pair — three cards, two
+arms, one repeat, six sessions per model — and all twelve exited `cli_exit=10`
+with `Insufficient credits for Command Code.` before inference: zero tokens,
+`transcript_cost_usd` $0.0000, empty bare diffs, and 141,348-byte `promptkit_os`
+diffs holding only the kit install. No Phase 4 session has reached a model.
+
+The block is per-model credit, not an exhausted account. Probed immediately
+afterwards under the same isolated `HOME` with the driver flags:
+
+| Model | One-turn result |
+|---|---|
+| `deepseek/deepseek-v4.1-flash` (anchor) | answered, `exit=0` |
+| `moonshotai/kimi-k3.1-pro` | `Insufficient credits`, `exit=10` |
+
+So the anchor is included in the plan and both replacements are not: they need
+purchased credits, and the allowance that let a single probe through did not
+survive one session. `qwen/qwen3.8-max` failed identically in all six of its
+sessions; the differential probe used one model because the failure text was
+identical in both.
+
+**Consequence.** Phase 4 is **stopped pending billing**. This correction records
+the measurement and does not name a third pair: the only model this account runs
+is the anchor, the design does not re-run the anchor, and choosing again from
+one-turn probes would repeat the error just made. Two pairs have now failed for
+two different reasons, so the next attempt is gated on a **completed paid
+session**, not on a probe. The models row keeps the amended pair as the recorded
+choice and marks it not session-runnable.
+
+**What remains open.** The section 9 batch run, primary grading, second-grader
+sample and per-model report are untouched, and the $80 cap is unspent at $0.00 of
+session cost. No spend projection can be formed from twelve zero-token refusals,
+and none is offered. The probe tokens from the entitlement pass are not itemised
+by the CLI and are not counted as measurement.
+
+**Harness finding, fixed the same day.** The driver printed `BATCH|OK|runs=6`
+and wrote six blind packets and a key for each model while every session had
+failed. It now counts sessions whose record carries a non-zero `tokens_total` and,
+when none does, prints `BATCH|FAILED|NO_MODEL_OUTPUT` and exits 2 before the
+blind-id shuffle, so no key or packet is written for a batch with no model
+output; the driver regression harness pins the case. The keys and packets from
+the two Phase 4 attempts remain void.
+
+Owner instruction: stop the phase pending billing, 2026-11-06.
