@@ -947,7 +947,7 @@ done
 # void batch leaves no key and no gradeable packet behind.
 if [[ "$SESSIONS_WITH_TOKENS" -eq 0 ]]; then
     echo "BATCH|FAILED|NO_MODEL_OUTPUT|runs=$RUNS|sessions_with_tokens=0|out=$OUT"
-    bench_error "NO_MODEL_OUTPUT" "all $RUNS sessions produced zero tokens; no key or packet written (see $OUT/runs/*/session.log)"
+    bench_error "NO_MODEL_OUTPUT" "all $RUNS sessions produced zero tokens; no key or packet written (see $OUT/runs for per-session logs)"
 fi
 
 # Blind-id assignment happens AFTER all runs, by shuffle across the whole
