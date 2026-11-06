@@ -169,9 +169,12 @@ Carried from 3c and tightened where 3c fell short:
 ## 9. Status
 
 - [x] Appendix A filled 2026-11-01: models named, engine commit, seed, seed derivation, caps signed.
-- [ ] Zero-spend preflight (`--preflight-only`) on each model, `CROSSARM|OK` and
-      `ISOLATION|OK`.
-- [ ] Probe screen (`--screen --arm bare`) red on all 10 cards for the pinned seed.
+- [x] Zero-spend preflight (`--preflight-only`) on each model, `CROSSARM|OK` and
+      `ISOLATION|OK`. 2026-11-06: both models at `cli=1.88.2`, plan `1ebf5715…`
+      at 60 rows each (120 primary cells across the batch), `$0` spent.
+- [x] Probe screen (`--screen --arm bare`) red on all 10 cards for the pinned seed.
+      2026-11-06: `SCREEN|OK|arm=bare|tasks=10|red=10`, each probe failing on its
+      seeded defect while the seed’s own suite stays green.
 - [ ] Batch run.
 - [ ] Primary grading with a grader independent of the first pass.
 - [ ] Second-grader sample ≥50%.
