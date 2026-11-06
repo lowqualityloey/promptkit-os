@@ -1,6 +1,6 @@
 # Phase 4 — Design: does the Phase 3c result hold on other models?
 
-Status: **frozen 2026-11-01 — Appendix A filled and signed; no session has run.**
+Status: **frozen 2026-11-01 — Appendix A filled and signed; amended 2026-11-06 (Amendment B: model pair replaced after a plan-entitlement block); no session has reached a model.**
 The model list, engine commit, seeds, CLI version and caps in Appendix A are
 fixed; nothing there may change after the first session. This document exists
 because Phase 3c returned **Tradeoff** under Amendment A, and
@@ -170,8 +170,10 @@ Carried from 3c and tightened where 3c fell short:
 
 - [x] Appendix A filled 2026-11-01: models named, engine commit, seed, seed derivation, caps signed.
 - [x] Zero-spend preflight (`--preflight-only`) on each model, `CROSSARM|OK` and
-      `ISOLATION|OK`. 2026-11-06: both models at `cli=1.88.2`, plan `1ebf5715…`
-      at 60 rows each (120 primary cells across the batch), `$0` spent.
+      `ISOLATION|OK`. 2026-11-06: the original pair passed at `cli=1.88.2`
+      (plan `1ebf5715…`, 60 rows each), and the amended pair passed again after
+      Amendment B — `moonshotai/kimi-k3.1-pro` and `qwen/qwen3.8-max`, same
+      digest, same 60 rows each, `$0` spent.
 - [x] Probe screen (`--screen --arm bare`) red on all 10 cards for the pinned seed.
       2026-11-06: `SCREEN|OK|arm=bare|tasks=10|red=10`, each probe failing on its
       seeded defect while the seed’s own suite stays green.
@@ -188,8 +190,8 @@ enumeration below is the freeze-time capture, not a later reconstruction.
 
 | Parameter | Value |
 |---|---|
-| Models (verbatim CLI identifiers) | **`claude-fable-5-1`** and **`gpt-6-astra`**; anchor `deepseek/deepseek-v4.1-flash` (Phase 3c, not re-run) |
-| Model selection rule | 3c incumbent + the two highest-capability models in `--list-models` at freeze |
+| Models (verbatim CLI identifiers) | **`moonshotai/kimi-k3.1-pro`** and **`qwen/qwen3.8-max`** (amended 2026-11-06 — Amendment B); anchor `deepseek/deepseek-v4.1-flash` (Phase 3c, not re-run). Originally frozen as `claude-fable-5-1` and `gpt-6-astra`. |
+| Model selection rule | 3c incumbent + the two highest-capability models in `--list-models` at freeze; re-applied 2026-11-06 to the highest two the plan can run (Amendment B) |
 | Enumeration evidence | `benchmarks/PHASE-4-MODELS-2026-11-01.txt` — verbatim `command-code --list-models`, CLI 1.88.2, 95 models, sha256 `8ea2facb67244afc4952948fa457cfad66fb78764ab74c6aa66dbfc409e68543` |
 | Engine commit (staged consumer surface) | `40b69bb9d094ecf10ca576a9746452fdecdf11ca` (main at freeze) |
 | Seed | `b0ef652d91b20c57965eb4257cab93301ff68999` |
@@ -242,3 +244,65 @@ Nothing in this appendix may change after the first session. If a frozen model i
 unavailable at preflight, the phase stops and this appendix is amended **before**
 the first session with the reason recorded — that is not a licence to swap a model
 after results have been seen.
+
+### Amendment B — 2026-11-06: model pair replaced under a plan-entitlement block
+
+The frozen pair cannot run on this account. The Phase 4 calibration block was
+started on `claude-fable-5-1` and `gpt-6-astra` — three cards, one per level, two
+arms, one repeat, 12 sessions — and all 12 exited `cli_exit=4` with
+`403 MODEL_NOT_IN_PLAN` before inference: zero tokens, `transcript_cost_usd`
+$0.0000, empty bare diffs, and 47,116-byte `promptkit_os` diffs that contain only
+the kit install. No Phase 4 session reached a model, so the clause above applies:
+the phase stops and the appendix is amended before the first session, with the
+reason recorded.
+
+The failure is entitlement, not configuration. `command-code status` reports the
+account authenticated as `lowqualityloey`, `--list-models` still lists both frozen
+models, and the refusal names the plan: "available in Provider and above plans or
+extra on demand usage". Preflight cannot see this: it validates the model
+identifier, the seed, the engine and the CLI, not the plan behind the account.
+
+**Entitlement probe, 2026-11-06.** One turn per candidate with the driver flags
+(`-t --yolo --tools-all --skip-onboarding --no-auto-update --max-turns 1`) under
+the isolated `HOME`, from the depth chart above downward:
+
+| Candidate | Result |
+|---|---|
+| `claude-fable-5-1` | `403 MODEL_NOT_IN_PLAN` — Provider plan or on-demand |
+| `gpt-6-astra` | `403 MODEL_NOT_IN_PLAN` — Provider plan or on-demand |
+| `claude-opus-5-5` | `403 MODEL_NOT_IN_PLAN` — Provider plan or on-demand |
+| `gpt-6.1-sol` | `403 MODEL_NOT_IN_PLAN` — Max plan or on-demand |
+| `google/gemini-4-argon` | `403 MODEL_NOT_IN_PLAN` — Pro plan or on-demand |
+| `zai-org/glm-5.3` | `Insufficient credits` |
+| `mistral/mistral-large-4` | `Insufficient credits` |
+| `moonshotai/kimi-k3.1-pro` | answered |
+| `qwen/qwen3.8-max` | answered |
+| `deepseek/deepseek-v4.1-flash` (anchor) | answered |
+
+**Replacement.** `moonshotai/kimi-k3.1-pro` and `qwen/qwen3.8-max` — the two
+highest entries in the depth chart that the plan can actually run, from two
+vendors (Moonshot and Alibaba) rather than one, which keeps the two-vendor
+property the original freeze argued for. The anchor is retained and still
+runnable; it is not re-run, exactly as frozen.
+
+**Consequence, stated before results.** Phase 4 now asks whether the 3c effect
+survives a change of model *at the frontier tier this plan can run*, not at
+flagship tier. It supports no flagship claim, and no claim about Claude or OpenAI
+models, which never execute. The §8 caveat widens accordingly: a difference here
+is a difference between two available frontier models, not a capability ranking.
+Cards, seed, engine, repeats, caps, decision rule, analysis cuts and grading
+requirements are unchanged, and the plan is model-independent: both new models
+reproduce the frozen digest `1ebf5715…` at 60 rows, so the schedule and the blind
+shuffle are not recomputed.
+
+**Re-done.** The zero-spend preflight was re-run for each new model because the
+pair changed: `CROSSARM|OK`, `ISOLATION|OK`, `PREFLIGHT|OK|cli=1.88.2`, plan
+`1ebf5715…` at 60 rows each, $0 spent. The probe screen is model-independent and
+stands unamended.
+
+Signature: owner `lowqualityloey`, 2026-11-06, instructed in-session after the
+entitlement block was measured; an agent transcribed the probe table in the same
+session. Twelve sessions had been attempted and none had reached a model at the
+time of signing.
+
+
