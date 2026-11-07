@@ -294,3 +294,17 @@ The Release Coordinator separately and explicitly decides whether to create a ta
 ## Release Boundaries & Storage
 
 Release evidence for PromptKit OS is recorded in `docs/releases/`. Official release notes and tarballs are published via GitHub Releases. The root `CHANGELOG.md` is the published human-readable record (including `BREAKING CHANGE` notices with migration paths); `docs/releases/` holds the underlying evidence chain. Keep the two consistent — never publish one without the other.
+
+---
+
+## Maintainer Notes: Archived Backup Tags
+
+The `backup/*` namespace contains non-release archive tags. The three tags documented below preserve retired branches and their exact commits for history, not release versioning: release lookups must continue to use the `--match 'v[0-9]*'` filter documented in [`workflows/sync.md`](./workflows/sync.md). All three tags are published on `origin`, so a fresh clone receives them; the preserved scaffold branch is published there as well.
+
+| Tag | Commit | What it preserves |
+| :--- | :--- | :--- |
+| `backup/648-pre-rebase-28c347f` | `28c347f17f8c10fa8ae3e8d81d628a5491fa3fc5` | The exact pre-rebase #648 commit (2026-10-22). The commit makes the invariant-source examples in `templates/state-tracker-template.md` explicitly illustrative and adds matching behavioral-contract checks in both test twins. Its four-file change is contained in merged successor `e78e4666f5ac8a210c4450a5034e205e39292048` on `main`, whose own commit changes the same four files by +366/−4, so the tag preserves the exact pre-rebase history rather than unique surviving content. |
+| `backup/auto-workflow-messy-5d05d2b` | `5d05d2b1183cbbb7180418e2216bfd0d1c3b06dd` | The exact merged tip (2026-09-17) of the retired `backup/feat-auto-workflow-messy-2026-09-17` branch, including its full branch-tip tree and the 146-line `workflows/auto.md` snapshot that matches PR #239. Current `main` has a newer 249-line `workflows/auto.md`; the scaffold branch is separately preserved and published as described below. |
+| `backup/scaffold-saas-messy-6626795` | `662679534da23f6b3cf2285c822bdb0ecc5aea65` | The exact tip (2026-09-17) of the preserved `backup/feat-scaffold-saas-messy-2026-09-17` branch. The commit wires the `--saas` flag into both `init.sh` and `init.ps1`, changing two files (11 insertions, 6 deletions). Both the tag and branch are published on `origin`. |
+
+Retain all three tags while the exact commits remain useful for audit or comparison. Each tag is the maintained archive for its snapshot; deleting a tag locally and on `origin`, or deleting the preserved scaffold branch, would remove a durable handle to that commit. Where a snapshot has a merged successor on `main`, that successor remains the content authority.
