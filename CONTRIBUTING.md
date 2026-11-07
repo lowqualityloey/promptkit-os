@@ -299,7 +299,7 @@ Release evidence for PromptKit OS is recorded in `docs/releases/`. Official rele
 
 ## Maintainer Notes: Archived Backup Tags
 
-The `backup/*` namespace contains non-release archive tags. It currently holds two tags whose branches have been retired. They preserve commits for exact history, not release versioning: release lookups must continue to use the `--match 'v[0-9]*'` filter documented in [`workflows/sync.md`](./workflows/sync.md). Both tags are published on `origin`, so a fresh clone receives them.
+The `backup/*` namespace contains non-release archive tags. The two tags documented below preserve retired branches and their exact commits for history, not release versioning: release lookups must continue to use the `--match 'v[0-9]*'` filter documented in [`workflows/sync.md`](./workflows/sync.md). Both tags are published on `origin`, so a fresh clone receives them.
 
 | Tag | Commit | What it preserves |
 | :--- | :--- | :--- |
