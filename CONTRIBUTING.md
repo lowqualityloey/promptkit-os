@@ -294,3 +294,16 @@ The Release Coordinator separately and explicitly decides whether to create a ta
 ## Release Boundaries & Storage
 
 Release evidence for PromptKit OS is recorded in `docs/releases/`. Official release notes and tarballs are published via GitHub Releases. The root `CHANGELOG.md` is the published human-readable record (including `BREAKING CHANGE` notices with migration paths); `docs/releases/` holds the underlying evidence chain. Keep the two consistent — never publish one without the other.
+
+---
+
+## Maintainer Notes: Archived Backup Tags
+
+The `backup/*` namespace contains non-release archive tags. It currently holds two tags whose branches have been retired. They preserve commits for exact history, not release versioning: release lookups must continue to use the `--match 'v[0-9]*'` filter documented in [`workflows/sync.md`](./workflows/sync.md). Both tags are published on `origin`, so a fresh clone receives them.
+
+| Tag | Commit | What it preserves |
+| :--- | :--- | :--- |
+| `backup/648-pre-rebase-28c347f` | `28c347f17f8c10fa8ae3e8d81d628a5491fa3fc5` | The exact pre-rebase #648 commit (2026-10-22). The commit makes the invariant-source examples in `templates/state-tracker-template.md` explicitly illustrative and adds matching behavioral-contract checks in both test twins. Its four-file change is contained in merged successor `e78e4666f5ac8a210c4450a5034e205e39292048` on `main`, which adds 13 lines and removes none on those paths, so the tag preserves the exact pre-rebase history rather than unique surviving content. |
+| `backup/auto-workflow-messy-5d05d2b` | `5d05d2b1183cbbb7180418e2216bfd0d1c3b06dd` | The exact merged tip (2026-09-17) of the retired `backup/feat-auto-workflow-messy-2026-09-17` branch, including its full branch-tip tree and the 146-line `workflows/auto.md` snapshot that matches PR #239. Current `main` has a newer 249-line `workflows/auto.md`; the scaffold branch is separately archived as `backup/feat-scaffold-saas-messy-2026-09-17`. |
+
+Retain both tags while the exact commits remain useful for audit or comparison. Each tag is the maintained archive for its snapshot; deleting it locally and on `origin` would remove the direct handle to that commit. The merged successors on `main` remain the content authority.
