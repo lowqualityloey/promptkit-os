@@ -265,6 +265,7 @@ jobs:
           git show "$TAG_COMMIT:package/package.json" > "$source_dir/package.json"
           git show "$TAG_COMMIT:package/README.md" > "$source_dir/README.md"
           git show "$TAG_COMMIT:package/bin/promptkit-os.js" > "$source_dir/bin/promptkit-os.js"
+          git show "$TAG_COMMIT:package/LICENSE" > "$source_dir/LICENSE"
           node -e '
             const fs = require("fs");
             const path = process.argv[1];
