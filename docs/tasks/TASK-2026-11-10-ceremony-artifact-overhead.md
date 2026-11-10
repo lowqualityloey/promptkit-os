@@ -101,7 +101,7 @@
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Exception Verification**: `N/A - Code Work`
-- **CI Evidence**: `PR #731 run 42797339041 passed 12/12 (4m57s) for the pre-rework commit e8f8033, including the ceremony strict step; the rework commit's CI run is the next observation, and the local gates above are recorded meanwhile`
+- **CI Evidence**: `PR #731 run 42797339041 passed 12/12 (4m57s) for the pre-rework commit e8f8033 and run 42801026295 passed 12/12 for the rework commit 500ed5d, both including the ceremony strict step`
 - **Review Evidence**: `External review (arena.ai, 2026-11-10) requested four changes, all upheld: (1) per-task artifacts were conflated with the shared tracker and the Level 2 formal specification was missing; (2) template size was mislabeled as per-task cost and as a static ceiling; (3) artifact membership was hard-coded with no policy-consistency check; (4) --strict was growth-only, so a reduced template passed (L2 8,660 -> 6,348) and Level 0 was skipped. Fixes: units split and published separately, the specification family measured against a pinned baseline with a published band, five policy anchors asserted with a loud failure mode, and the gate converted to equality with Level 0 compared rather than skipped. Owner review of the rework is the open step.`
 - **Commit Evidence**: `Pending at record-write time: the rework lands as a second commit on feat/607-ceremony-overhead, and this record is committed with it`
 - **Pull Request Evidence**: `PR #731 (open) — the rework commit is pushed to the same branch, updating the PR rather than opening a second one`
