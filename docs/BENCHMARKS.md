@@ -84,6 +84,34 @@ Gate coverage: the static dual-profile budget **and** the per-task baseline gate
 
 ---
 
+### Ceremony Artifact Overhead by Task Level (static, measured)
+
+[`workflows/route.md`](../workflows/route.md) decides what each ceremony level must produce; until now nothing recorded what those mandatory artifacts *weigh*. This section closes the deterministic half of that gap — the canonical templates each level requires, measured from the checked-out tree at `471ebc7` (2026-11-10, `balanced` profile).
+
+| Ceremony Level | Required artifacts | Bytes | Est. tokens (bytes/4) | Growth vs. level below |
+| :--- | ---: | ---: | ---: | :--- |
+| **Level 0 (Direct)** | 0 | 0 | **0 tok** | — (zero ceremony is the level definition) |
+| **Level 1 (Standard)** | 1 | 12,084 | **3,021 tok** | — |
+| **Level 2 (Controlled)** | 3 | 34,641 | **8,660 tok** | **+5,639 tok (2.87× L1)** |
+| **Level 3 (Release-Critical)** | 6 | 65,917 | **16,479 tok** | **+7,819 tok (1.90× L2, 5.45× L1)** |
+
+**Which artifact belongs to which level** — membership is read from the policy, not assigned here:
+
+| Level | Required template | Policy source |
+| :--- | :--- | :--- |
+| L1 | `templates/state-tracker-template.md` (3,021 tok) | `workflows/route.md:54` — tracking in `docs/STATE.md`, no Task Record |
+| L2 | + `templates/execution-task-record-template.md` (4,812 tok), `templates/execution-checkpoint-template.md` (827 tok) | `workflows/route.md:59,61`; `workflows/checkpoint.md:72` |
+| L3 | + `templates/release-checklist.md` (3,409 tok), `templates/release-evaluation-template.md` (3,163 tok), `templates/contract-impact-evidence-template.md` (1,247 tok) | `workflows/route.md:66`; `workflows/ship.md:18,194` |
+
+**Optional artifacts, measured separately** (required only in the condition named): L1 quick-tier checkpoint 827 tok; L2 handoff 978 tok and scope-change 782 tok; L3 additionally CI triage 1,603 tok, conditional on a reported CI failure (`workflows/ship.md:136`). An L2 task that hands off and expands scope carries 1,760 tok beyond its required set.
+
+**Provenance and reproduction.** `bash scripts/measure-ceremony-overhead.sh` prints every artifact line, the per-level totals, and a provenance line; `--strict` compares each required total against the baseline recorded in the script at `471ebc7` and runs in CI as *Assert Ceremony Artifact Baselines*. The measurement is deterministic — same tree, same numbers — and uses the repository convention `floor((bytes after CR stripping + 2) / 4)`. Two consequences follow from that convention: the figures move whenever a mandatory template changes, and they must be restated in the same commit that changes one, exactly as the per-task anchors above are.
+
+> **What these figures are not.** They are the *static ceiling* the ceremony imposes — the size of the blank record an agent must fill — not the token cost of a completed record, and not the cost of the task. An empty Task Record is 4,812 tok; a filled one is larger, and the fill itself costs generation. Live per-level overhead — tool calls, elapsed time, model/host identity, human interventions, revision cycles — is **not measured**: this repository captures no host telemetry, so those fields are reported as `not measured` by the script rather than estimated. Representative L0–L3 tasks profiled at three or more runs per level remain the open acceptance criterion on #607; this section does not claim them.
+
+> **Namespace note.** The bare `CEREMONY|` line prefix is reserved by the benchmark task card [`benchmarks/tasks/TASK-BENCH-L1-02.md`](../benchmarks/tasks/TASK-BENCH-L1-02.md) for `scripts/measure-per-task-tokens.sh`; this measurement emits `CEREMONY_ARTIFACT|`, `CEREMONY_TOTAL|`, `CEREMONY_BASELINE|`, and `CEREMONY_PROVENANCE|` so the two never collide.
+
+---
 ## 3. Dynamic Per-Task Context Economics & Runtime Benchmarks
 
 PromptKit OS benchmarks both the **static footprint** (1,456 tok Lite, 2,348 tok Balanced) and the **dynamic per-task runtime context**.

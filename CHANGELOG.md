@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Ceremony artifact overhead measured by task level**: `scripts/measure-ceremony-overhead.sh` reports the mandatory template load for Levels 0–3 — 0 / 3,021 / 8,660 / 16,479 tokens — grounded in `workflows/route.md` membership rather than assigned by hand, with a `--strict` gate against recorded baselines wired into CI and a `docs/BENCHMARKS.md` section stating provenance. Live per-level cost (tool calls, elapsed time, interventions) is reported as `not measured` rather than estimated; representative-run profiling remains open on #607.
+
 ---
 
 ## [2.1.0] - 2026-11-07
