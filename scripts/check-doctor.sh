@@ -559,6 +559,18 @@ is_placeholder() {
     return 1
 }
 
+# A Task ID may only become a path segment when it matches the canonical
+# grammar scripts/validate-execution-control.sh enforces: the legacy
+# date-prefixed form or the modern slug form. Template prose and free text
+# must never reach docs/tasks/<id>.md even when they do not read as
+# placeholders.
+is_canonical_task_id() {
+    local v="$1"
+    [[ "$v" =~ ^TASK-[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9][a-z0-9-]*$ ]] && return 0
+    [[ "$v" =~ ^TASK-[a-z0-9]+(-[a-z0-9]+)*$ ]] && return 0
+    return 1
+}
+
 check_docs_drift() {
     local state_file="$kit_root/docs/STATE.md"
     if [[ ! -f "$state_file" ]]; then
@@ -575,7 +587,7 @@ check_docs_drift() {
         emit 'docs-drift' 'SKIP(no execution-control projection)' 'docs/STATE.md has no 3A section' 'Populate 3A when using Controlled Work'
         return 0
     fi
-    local task_id task_record rec_rel rec_path rec_text pair p_label r_label p_val r_val diff_field compared
+    local task_id task_record rec_rel rec_path rec_text pair p_label r_label p_val r_val compared
     task_id="$(proj_field "$section" 'Task ID')"
     task_record="$(proj_field "$section" 'Task Record')"
     if is_placeholder "$task_record" && is_placeholder "$task_id"; then
@@ -584,7 +596,12 @@ check_docs_drift() {
     fi
     rec_rel="$task_record"
     if is_placeholder "$rec_rel" && ! is_placeholder "$task_id"; then
-        rec_rel="docs/tasks/$task_id.md"
+        if is_canonical_task_id "$task_id"; then
+            rec_rel="docs/tasks/$task_id.md"
+        else
+            emit 'docs-drift' 'SKIP(no task record)' 'no canonical Task Record referenced (Task ID is not a canonical task identifier)' 'Create docs/tasks/<task-id>.md for Controlled Work'
+            return 0
+        fi
     fi
     if is_placeholder "$rec_rel" || [[ "$rec_rel" == /* || "$rec_rel" == *'..'* ]]; then
         emit 'docs-drift' 'SKIP(no task record)' 'canonical Task Record path is absent or unusable' 'Create docs/tasks/<task-id>.md for Controlled Work'

@@ -24,9 +24,9 @@ git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit;
 
 When run in an interactive terminal, `init.sh` / `init.ps1` opens a keyboard-driven setup wizard. Use ↑/↓ and Enter for profile and task-tracker choices, then Space and Enter to toggle AI-host files. The optional GitHub projection is a checkbox under local tracking. A final review lets you edit a choice, install, or cancel. Existing settings are kept on reruns.
 
-Profile is stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Switch anytime: `.promptkit/init.sh --balanced` or `--lite`.
+Profile is stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Switch anytime: `.promptkit/init.sh --balanced` or `--lite` (PowerShell: `.\.promptkit\init.ps1 --balanced` or `--lite`).
 
-**Fresh project (no code yet)?** Run `pk:onboard` before `pk:plan` — the bounded discovery interview captures MVP intent, surfaces, deployment target, auth & data needs, and design references (Figma, screenshots, docs), then writes `size:` / `intake-status:` into `PROMPTKIT.md`.  
+**Fresh project (no code yet)?** Run `pk:onboard` before `pk:plan` — the bounded discovery interview captures MVP intent, surfaces, deployment target, auth & data needs, and design references (Figma, screenshots, docs), then writes `size:` / `intake-status:` into `PROMPTKIT.md`. Both are Balanced-profile workflows: their files ship in every install, but the Lite directive advertises only its six utility triggers, so switch to Balanced first (`.promptkit/init.sh --balanced`, or `.\.promptkit\init.ps1 --balanced` in PowerShell) if you rely on them.  
 **Prefer quiet completions?** Set `status-cards: off` in `PROMPTKIT.md` to suppress the decorative status card (default `on`; `> [!IMPORTANT]` / `> [!WARNING]` halts still fire). Separately, recommendations go quiet on their own when nothing is pending — and a finished project seals with a closeout record (see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)).
 
 <details>

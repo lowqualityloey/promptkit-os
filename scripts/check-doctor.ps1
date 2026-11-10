@@ -592,6 +592,18 @@ function Test-Placeholder {
     return $false
 }
 
+# A Task ID may only become a path segment when it matches the canonical
+# grammar validate-execution-control.ps1 enforces: the legacy date-prefixed
+# form or the modern slug form. Template prose and free text must never reach
+# docs/tasks/<id>.md even when they do not read as placeholders. -cmatch keeps
+# the comparison case-sensitive like the bash twin's =~.
+function Test-CanonicalTaskId {
+    param([string]$Value)
+    if ($Value -cmatch '^TASK-[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9][a-z0-9-]*$') { return $true }
+    if ($Value -cmatch '^TASK-[a-z0-9]+(-[a-z0-9]+)*$') { return $true }
+    return $false
+}
+
 function Check-DocsDrift {
     $stateFile = Join-Path $kitRoot 'docs/STATE.md'
     if (-not (Test-Path -LiteralPath $stateFile -PathType Leaf)) {
@@ -612,7 +624,14 @@ function Check-DocsDrift {
         return
     }
     $recRel = $taskRecord
-    if ((Test-Placeholder $recRel) -and -not (Test-Placeholder $taskId)) { $recRel = "docs/tasks/$taskId.md" }
+    if ((Test-Placeholder $recRel) -and -not (Test-Placeholder $taskId)) {
+        if (Test-CanonicalTaskId $taskId) {
+            $recRel = "docs/tasks/$taskId.md"
+        } else {
+            Emit 'docs-drift' 'SKIP(no task record)' 'no canonical Task Record referenced (Task ID is not a canonical task identifier)' 'Create docs/tasks/<task-id>.md for Controlled Work'
+            return
+        }
+    }
     if ((Test-Placeholder $recRel) -or $recRel.StartsWith('/') -or $recRel.Contains('..')) {
         Emit 'docs-drift' 'SKIP(no task record)' 'canonical Task Record path is absent or unusable' 'Create docs/tasks/<task-id>.md for Controlled Work'
         return
