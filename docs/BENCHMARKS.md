@@ -84,6 +84,64 @@ Gate coverage: the static dual-profile budget **and** the per-task baseline gate
 
 ---
 
+### Ceremony Artifact Overhead by Task Level (static, measured)
+
+[`workflows/route.md`](../workflows/route.md) decides what each ceremony level must produce; until now nothing recorded what those required artifacts *weigh*. This section closes the deterministic half of that gap — the template set each level requires, measured from the checked-out tree.
+
+Two units are reported separately because they are paid differently:
+
+- **Per-task artifacts** — templates the level obliges the agent to fill for *each* task. Repeated cost.
+- **Shared setup** — `docs/STATE.md` from [`templates/state-tracker-template.md`](../templates/state-tracker-template.md), filled once per project and updated in place afterwards. Counted once below, never inside a per-level total.
+
+| Ceremony Level | Per-task required artifacts | Bytes | Est. tokens (bytes/4) |
+| :--- | ---: | ---: | ---: |
+| **Level 0 (Direct)** | 0 | 0 | **0 tok** |
+| **Level 1 (Standard)** | 0 | 0 | **0 tok** (optional quick-tier checkpoint 267 tok) |
+| **Level 2 (Controlled)** | 2 | 21,488 | **5,372 tok** (Minimal Planning default) |
+| **Level 3 (Release-Critical)** | 5 | 52,764 | **13,191 tok** (Minimal Planning default) |
+| *Shared setup, once per project* | 1 | 12,084 | *3,021 tok* |
+
+**Planning depth is part of the model, not a footnote.** [`workflows/plan.md`](../workflows/plan.md) makes *Minimal Planning* the Level 2 default and stops "without continuing into the full RFC", so a Level 2 task does **not** necessarily produce a specification file. The per-level totals above are therefore the Minimal Planning set — Task Record plus checkpoint — and the specification is published as a band that Full Planning adds:
+
+| Level | Minimal Planning (default) | Full Planning (triggering) |
+| :--- | ---: | ---: |
+| Level 2 | 5,372 tok | 6,351–10,852 tok |
+| Level 3 | 13,191 tok | 14,170–18,671 tok |
+
+Growth from Level 2 to Level 3 is **+7,819 tok (2.46×)** on the Minimal Planning set. There is no ratio against Level 1, because Level 1 has no per-task template surface: [`workflows/checkpoint.md`](../workflows/checkpoint.md) (anchor: `Level 1 (Standard) work updates`) lets Level 1 work "update `docs/STATE.md` or session notes directly without requiring a Task Record file", so its per-task load is the shared tracker already counted once. Three earlier revisions are superseded and recorded here so the correction trail is auditable: the first (L1 3,021 / L2 8,660 / L3 16,479) charged the shared tracker at every level and omitted the Level 2 specification; the second (L2 11,119 / L3 18,938) charged every Level 2 task for a tech spec that Minimal Planning never writes; the third (L2 5,639 / L3 13,458) charged the whole checkpoint template at both levels, although policy gives Level 2 and Level 3 only its Full Tier and reserves the Quick Tier for Level 1.
+
+**The checkpoint has two tiers, and policy names which level gets which.** [`templates/execution-checkpoint-template.md`](../templates/execution-checkpoint-template.md) ships a shared header (476 B / 119 tok), a Quick Tier section (1,069 B / 267 tok) and a Full Tier section (1,763 B / 441 tok). [`workflows/checkpoint.md`](../workflows/checkpoint.md) gives Level 1 the `quick` tier (anchor: `Requires ten canonical labels`) and Level 2 and Level 3 only the `full` tier (anchor: `Mandatory durable execution gate requiring all 20 canonical checkpoint labels`). The figures above therefore charge **the shared header plus the Full Tier section — 2,239 B / 560 tok — to Level 2 and Level 3**, and publish the Quick Tier section on its own (267 tok) as the Level 1 optional artifact. Charging the whole file at every level, as the third revision did, overstates both. The tier boundaries are read from the template's own headings, never from line numbers, and the script asserts that header + quick + full section equals the whole file, so a restructured template fails the run with `MEASURE_ERROR|TIER_SPLIT` instead of being silently mis-split.
+
+**Which artifact belongs to which level** — membership is a curated reading of policy, not a parse:
+
+| Level | Required per-task template | Policy source |
+| :--- | :--- | :--- |
+| L2 | `execution-task-record-template.md` (4,812 tok) and the Full Tier checkpoint (560 tok); a specification from the family below only under Full Planning | [`workflows/route.md`](../workflows/route.md) (anchor: `Requires a Local Task Record`) — "Requires a Local Task Record at `docs/tasks/<task-id>.md` and formal specification (`pk:plan`, `pk:data`, `pk:auth`, `pk:api`)"; [`workflows/checkpoint.md`](../workflows/checkpoint.md) (anchor: `Mandatory durable execution gate requiring all 20 canonical checkpoint labels`) — the `full` tier at Level 2/3; [`workflows/plan.md`](../workflows/plan.md) (anchor: `Minimal Planning (Level 2 default)`) — Minimal Planning is the default |
+| L3 | Level 2 plus `release-checklist.md` (3,409 tok), `release-evaluation-template.md` (3,163 tok), `contract-impact-evidence-template.md` (1,247 tok) | [`workflows/route.md`](../workflows/route.md) (anchor: `Uses full release candidate evaluation`) — "contract impact evidence (`pk:ship`)", release evaluation; [`workflows/route.md`](../workflows/route.md) (anchor: `as supporting references; do not create a new command`) — names `contract-impact-evidence-template.md` and `release-evaluation-template.md` as the supporting references; [`workflows/ship.md`](../workflows/ship.md) (anchor: `Access to`) — the release checklist as a `pk:ship` precondition |
+
+**One required artifact has no shipped template.** [`workflows/review.md`](../workflows/review.md) gives `pk:review` "one durable two-axis report at `docs/reviews/<review-slug>.md`", and no template for it ships in this repository. It is listed as required at Level 2 and Level 3 and reported as `untemplated` with zero measurable bytes — never silently dropped, never estimated. Its absence is why the totals above are a floor on required artifact text, not a complete account of it.
+
+**The Level 2 specification is a family, not one file.** `pk:plan` selects the generic tech spec; `pk:data`, `pk:auth` and `pk:api` select other templates, and a task uses one of them, not all four:
+
+| Sub-trigger | Template | Tokens | L2 total with it |
+| :--- | :--- | ---: | ---: |
+| `pk:plan` — pinned baseline | `tech-spec-template.md` | 5,480 | **10,852 tok** |
+| `pk:data` | `data-model-spec.md` | 1,825 | 7,197 tok |
+| `pk:api` | `api-contract-spec.md` | 1,347 | 6,719 tok |
+| `pk:auth` | `auth-matrix-template.md` | 979 | 6,351 tok |
+
+The band **6,351–10,852 tok** is the size of the Level 2 template set *when Full Planning adds one specification member*; it is not what every Level 2 task costs, because the default path writes no specification at all. The gate pins the largest member so the recorded baseline never depends on which sub-trigger a given task happened to use.
+
+**Optional artifacts, measured separately** (required only in the condition named): L1 quick-tier checkpoint 267 tok; L2 handoff 978 tok and scope-change 782 tok; L3 additionally CI triage 1,603 tok, conditional on a reported CI failure ([`workflows/ship.md`](../workflows/ship.md), anchor: `Evidence-First CI Failure Triage and Release Linkage`), and the QA review checklist 1,534 tok, which is review evidence rather than a per-task record. An L2 task that both hands off and expands scope carries 1,760 tok beyond its required set.
+
+**Provenance and reproduction.** `bash scripts/measure-ceremony-overhead.sh` prints the policy anchors, every artifact line, the shared-setup total, the per-level totals, the specification band, and a provenance line; `scripts/measure-ceremony-overhead.ps1` is its behavioural twin and prints the same lines with the same verdicts. `--strict` / `-Strict` asserts **equality** — not a ceiling — between every published figure and the baseline recorded in the script, and runs in CI as *Assert Ceremony Artifact Baselines* in both the Linux and Windows jobs. Equality is deliberate: growth and reduction both mean a template changed, and every figure published here must be restated in the same commit, so a one-sided gate would let a shrinking template keep a table that has quietly become wrong. Coverage is every figure the gate can derive from a template file — the four per-level totals, the shared setup, **each required artifact on its own**, all four specification variants, all five optional artifacts, and both band endpoints for Level 2 and Level 3. The per-artifact units matter: without them, offsetting drift inside one level cancels out, so adding 400 bytes to `release-evaluation-template.md` while removing 400 from `contract-impact-evidence-template.md` would leave the Level 3 total unchanged and the gate green. With them, both artifacts fail. Padding an `auth-matrix` or a `code-review-checklist` fails too, even though neither appears in a per-level total. A unit with no recorded baseline fails rather than passing unrecorded. The figures this gate does **not** cover are the ones it cannot derive from a file: the growth ratio and the per-sub-trigger "L2 total with it" column are arithmetic over covered units, and the untemplated review report has no bytes to pin. The measurement is deterministic — same tree, same numbers — and uses the repository convention `floor((bytes after CR stripping + 2) / 4)`.
+
+**What the anchors do and do not catch.** Policy names *commands* (`pk:plan`, `pk:ship`), never template filenames, so no parser can derive the artifact list from the text; the selection is curated and documented as such. What the script can assert is that the policy it rests on has not moved: each of the fifteen cited lines is pinned by the SHA-256 of the **whole line**, so rewriting a cited sentence — or appending a requirement to it, as in "…before implementation begins. A Threat Model Record at `docs/threats/<task-id>.md` is also required." — fails the run with `ANCHOR_ERROR|POLICY_DRIFT` instead of leaving a green gate over a stale list. It does **not** catch a requirement added elsewhere in a workflow file, in a different paragraph or a different file: those edits leave every pinned line untouched and the gate green. The artifact list is therefore only as current as the last human reading of the workflows, and this paragraph is the honest statement of that limit rather than a claim of completeness.
+
+> **What these figures are not.** They are the size of the *selected template set* at each level — the text of the artifacts policy makes mandatory. They are not measured task cost, not the cost of filling a record (filling costs generation; reproducing 5,372 tokens of template is not the same as writing a Task Record), and not the runtime cost of the ceremony. Live per-level overhead — tool calls, elapsed time, model/host identity, human interventions, revision cycles — is **not measured**: this repository captures no host telemetry, so those fields are reported as `not measured` by the script rather than estimated. Representative L0–L3 tasks profiled at three or more runs per level remain the open acceptance criterion on #607; this section does not claim them.
+
+> **Namespace note.** The bare `CEREMONY|` line prefix is reserved by the benchmark task card [`benchmarks/tasks/TASK-BENCH-L1-02.md`](../benchmarks/tasks/TASK-BENCH-L1-02.md) for `scripts/measure-per-task-tokens.sh`; this measurement emits `CEREMONY_ANCHOR|`, `CEREMONY_ARTIFACT|`, `CEREMONY_SHARED_SETUP|`, `CEREMONY_TOTAL|`, `CEREMONY_SPEC_BAND|`, `CEREMONY_BASELINE|`, and `CEREMONY_PROVENANCE|` so the two never collide.
+
 ## 3. Dynamic Per-Task Context Economics & Runtime Benchmarks
 
 PromptKit OS benchmarks both the **static footprint** (1,456 tok Lite, 2,348 tok Balanced) and the **dynamic per-task runtime context**.

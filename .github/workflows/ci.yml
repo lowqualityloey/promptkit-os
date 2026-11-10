@@ -140,6 +140,9 @@ jobs:
       - name: Assert Per-Task Token Baselines (Bash)
         run: bash scripts/measure-per-task-tokens.sh --strict
 
+      - name: Assert Ceremony Artifact Baselines (Bash)
+        run: bash scripts/measure-ceremony-overhead.sh --strict
+
       - name: Assert Turbo Protocol Overhead Claim Window (Bash)
         run: bash scripts/measure-turbo-overhead.sh --strict
 
@@ -208,6 +211,7 @@ jobs:
           bash -n init.sh
           bash -n scripts/measure-tokens.sh
           bash -n scripts/measure-per-task-tokens.sh
+          bash -n scripts/measure-ceremony-overhead.sh
           bash -n scripts/measure-tokenizer-delta.sh
           bash -n scripts/measure-turbo-overhead.sh
           bash -n scripts/measure-cpac.sh
@@ -456,6 +460,10 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict
 
+      - name: Assert Ceremony Artifact Baselines (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\measure-ceremony-overhead.ps1 -Strict
+
       - name: Run Release-Record Self-Validation with Grandfather Exemption (PowerShell)
         shell: pwsh
         run: |
@@ -616,6 +624,7 @@ jobs:
             "scripts/terminal-picker.ps1",
             "scripts/measure-tokens.ps1",
             "scripts/measure-tokenizer-delta.ps1",
+            "scripts/measure-ceremony-overhead.ps1",
             "scripts/validate-execution-control.ps1",
             "scripts/tests/run-execution-control-fixtures.ps1",
             "scripts/tests/run-execution-control-properties.ps1",
