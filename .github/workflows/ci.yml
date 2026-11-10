@@ -460,6 +460,10 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict
 
+      - name: Assert Ceremony Artifact Baselines (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\measure-ceremony-overhead.ps1 -Strict
+
       - name: Run Release-Record Self-Validation with Grandfather Exemption (PowerShell)
         shell: pwsh
         run: |
@@ -620,6 +624,7 @@ jobs:
             "scripts/terminal-picker.ps1",
             "scripts/measure-tokens.ps1",
             "scripts/measure-tokenizer-delta.ps1",
+            "scripts/measure-ceremony-overhead.ps1",
             "scripts/validate-execution-control.ps1",
             "scripts/tests/run-execution-control-fixtures.ps1",
             "scripts/tests/run-execution-control-properties.ps1",
