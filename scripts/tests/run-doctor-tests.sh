@@ -914,6 +914,56 @@ s12() {
     want_contains $'host:.cursor/rules/promptkit.mdc\tOK'
 }
 
+# S13: the shipped state-tracker template writes the 3A Task ID with trailing
+# prose after the backticked value; the doctor must treat the whole value as a
+# placeholder and emit the clean SKIP, never deriving a Task Record path from
+# template prose.
+s13() {
+    local root sha
+    root="$(make_kit s13 balanced)"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
+    write_hosts "$root" "$sha" balanced
+    cat > "$root/docs/STATE.md" <<EOF
+# Project State
+- **Engine Version**: v1.2.3 @ $sha
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: \`TASK-<task-slug>\` (preserve \`TASK-YYYY-MM-DD-<slug>\` for legacy/\`none\`-profile records)
+- **Task Record**: \`docs/tasks/<task-id>.md\`
+- **Execution State**: \`[planned]\`
+EOF
+    run_doctor "$root"
+    want_status 0
+    want_contains $'docs-drift\tSKIP(no task record)'
+    want_not_contains 'preserve'
+    want_not_contains 'TASK-<task-slug>'
+    want_not_contains 'DIVERGED'
+}
+
+# S14: a canonical Task ID with a placeholder Task Record path still derives
+# the canonical record path and reports it truthfully when the file is absent
+# — the grammar wall must not over-broaden into rejecting real Task IDs.
+s14() {
+    local root sha
+    root="$(make_kit s14 balanced)"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
+    write_hosts "$root" "$sha" balanced
+    cat > "$root/docs/STATE.md" <<EOF
+# Project State
+- **Engine Version**: v1.2.3 @ $sha
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: \`TASK-2026-11-10-example\`
+- **Task Record**: \`docs/tasks/<task-id>.md\`
+- **Execution State**: \`[planned]\`
+EOF
+    run_doctor "$root"
+    want_status 0
+    want_contains $'docs-drift\tSKIP(no task record)'
+    want_contains 'canonical Task Record not found at docs/tasks/TASK-2026-11-10-example.md'
+    want_not_contains 'DIVERGED'
+}
+
 # N8: a .promptkit gitlink without a .gitmodules mapping is MISSING, exit 1 (#667);
 # with the mapping it is OK, exit 0 — including compact `path=.promptkit` syntax and
 # CRLF line endings (a core.autocrlf=true checkout), which must parse identically.
@@ -958,6 +1008,8 @@ begin; n4; report 'N4 deleted AGENTS.md -> MISSING, exit 1'
 begin; n5; report 'N5 engine outside project root -> kit-dir ignore SKIP, no phantom OK'
 begin; s11; report 'S11 cline directory-form install -> host OK'
 begin; s12; report 'S12 cursor mdc-only install -> host OK'
+begin; s13; report 'S13 template-prose Task ID -> clean docs-drift SKIP'
+begin; s14; report 'S14 canonical-but-missing Task ID -> truthful not-found path'
 begin; p1; report 'P1 completed intake with resolvable record -> provenance OK'
 begin; p2; report 'P2 complete without intake-record -> non-fatal advisory'
 begin; p3; report 'P3 placeholder intake-record -> non-fatal advisory'

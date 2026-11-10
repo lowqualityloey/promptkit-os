@@ -345,6 +345,56 @@ try {
     Want-NotContains 'DIVERGED'
     Report-Scenario 'S4 no handoff and no Task Record -> docs-drift SKIP'
 
+    # S13: the shipped state-tracker template writes the 3A Task ID with trailing
+    # prose after the backticked value; the doctor must treat the whole value as a
+    # placeholder and emit the clean SKIP, never deriving a Task Record path from
+    # template prose.
+    Begin-Scenario
+    $root13 = New-Kit 's13' 'balanced'
+    $sha13 = Get-ShortSha (Join-Path $root13 '.promptkit')
+    Write-Hosts $root13 $sha13
+    $state13 = @'
+# Project State
+- **Engine Version**: v1.2.3 @ __SHA__
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: `TASK-<task-slug>` (preserve `TASK-YYYY-MM-DD-<slug>` for legacy/`none`-profile records)
+- **Task Record**: `docs/tasks/<task-id>.md`
+- **Execution State**: `[planned]`
+'@
+    [IO.File]::WriteAllText((Join-Path $root13 'docs/STATE.md'), $state13.Replace('__SHA__', $sha13), $utf8)
+    Invoke-Doctor -Root $root13
+    Want-Status 0
+    Want-Contains "docs-drift`tSKIP(no task record)"
+    Want-NotContains 'preserve'
+    Want-NotContains 'TASK-<task-slug>'
+    Want-NotContains 'DIVERGED'
+    Report-Scenario 'S13 template-prose Task ID -> clean docs-drift SKIP'
+
+    # S14: a canonical Task ID with a placeholder Task Record path still derives
+    # the canonical record path and reports it truthfully when the file is absent
+    # — the grammar wall must not over-broaden into rejecting real Task IDs.
+    Begin-Scenario
+    $root14 = New-Kit 's14' 'balanced'
+    $sha14 = Get-ShortSha (Join-Path $root14 '.promptkit')
+    Write-Hosts $root14 $sha14
+    $state14 = @'
+# Project State
+- **Engine Version**: v1.2.3 @ __SHA__
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: `TASK-2026-11-10-example`
+- **Task Record**: `docs/tasks/<task-id>.md`
+- **Execution State**: `[planned]`
+'@
+    [IO.File]::WriteAllText((Join-Path $root14 'docs/STATE.md'), $state14.Replace('__SHA__', $sha14), $utf8)
+    Invoke-Doctor -Root $root14
+    Want-Status 0
+    Want-Contains "docs-drift`tSKIP(no task record)"
+    Want-Contains 'canonical Task Record not found at docs/tasks/TASK-2026-11-10-example.md'
+    Want-NotContains 'DIVERGED'
+    Report-Scenario 'S14 canonical-but-missing Task ID -> truthful not-found path'
+
     # S5 (Scenario 5): a Lite install is not flagged for Balanced-only workflows.
     Begin-Scenario
     $root5 = New-HealthyKit 's5' 'lite'

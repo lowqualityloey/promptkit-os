@@ -26,7 +26,7 @@ When run in an interactive terminal, `init.sh` / `init.ps1` opens a keyboard-dri
 
 Profile is stored in `PROMPTKIT.md` as `profile: lite|balanced|turbo`. Switch anytime: `.promptkit/init.sh --balanced` or `--lite`.
 
-**Fresh project (no code yet)?** Run `pk:onboard` before `pk:plan` — the bounded discovery interview captures MVP intent, surfaces, deployment target, auth & data needs, and design references (Figma, screenshots, docs), then writes `size:` / `intake-status:` into `PROMPTKIT.md`.  
+**Fresh project (no code yet)?** Run `pk:onboard` before `pk:plan` — the bounded discovery interview captures MVP intent, surfaces, deployment target, auth & data needs, and design references (Figma, screenshots, docs), then writes `size:` / `intake-status:` into `PROMPTKIT.md`. Both are Balanced-profile workflows: their files ship in every install, but the Lite directive advertises only its six utility triggers, so switch to Balanced first (`.promptkit/init.sh --balanced`) if you rely on them.  
 **Prefer quiet completions?** Set `status-cards: off` in `PROMPTKIT.md` to suppress the decorative status card (default `on`; `> [!IMPORTANT]` / `> [!WARNING]` halts still fire). Separately, recommendations go quiet on their own when nothing is pending — and a finished project seals with a closeout record (see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)).
 
 <details>
