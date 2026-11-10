@@ -964,6 +964,36 @@ EOF
     want_not_contains 'DIVERGED'
 }
 
+# S15: concrete record prose may legitimately contain angle tokens (an HTML
+# element such as <button>); placeholder detection stays scoped to the literal
+# <task-id> token, so such values are still compared and a real divergence is
+# reported instead of being silently skipped as a placeholder.
+s15() {
+    local root sha
+    root="$(make_kit s15 balanced)"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
+    write_hosts "$root" "$sha" balanced
+    cat > "$root/docs/STATE.md" <<EOF
+# Project State
+- **Engine Version**: v1.2.3 @ $sha
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: \`TASK-2026-01-01-s15\`
+- **Task Record**: \`docs/tasks/TASK-2026-01-01-s15.md\`
+- **Execution State**: \`in_progress\`
+- **Next Action**: \`Deploy the application\`
+EOF
+    cat > "$root/docs/tasks/TASK-2026-01-01-s15.md" <<'EOF'
+# Task Record: s15
+- **Task ID**: `TASK-2026-01-01-s15`
+- **Execution State**: `in_progress`
+- **Next Action**: `Fix rendering of <button> before deployment`
+EOF
+    run_doctor "$root"
+    want_status 1
+    want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Next Action)'
+}
+
 # N8: a .promptkit gitlink without a .gitmodules mapping is MISSING, exit 1 (#667);
 # with the mapping it is OK, exit 0 — including compact `path=.promptkit` syntax and
 # CRLF line endings (a core.autocrlf=true checkout), which must parse identically.
@@ -1010,6 +1040,7 @@ begin; s11; report 'S11 cline directory-form install -> host OK'
 begin; s12; report 'S12 cursor mdc-only install -> host OK'
 begin; s13; report 'S13 template-prose Task ID -> clean docs-drift SKIP'
 begin; s14; report 'S14 canonical-but-missing Task ID -> truthful not-found path'
+begin; s15; report 'S15 angle-token record prose still compared -> DIVERGED(Next Action)'
 begin; p1; report 'P1 completed intake with resolvable record -> provenance OK'
 begin; p2; report 'P2 complete without intake-record -> non-fatal advisory'
 begin; p3; report 'P3 placeholder intake-record -> non-fatal advisory'

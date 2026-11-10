@@ -586,13 +586,7 @@ function Test-Placeholder {
     param([string]$Value)
     if ([string]::IsNullOrWhiteSpace($Value)) { return $true }
     if ($Value -eq '-' -or $Value -eq 'not tracked') { return $true }
-    # Any <...> placeholder token anywhere in the value marks it as a template
-    # placeholder, not just the literal <task-id>: the shipped state-tracker
-    # template writes the 3A Task ID as `TASK-<task-slug>` (preserve
-    # `TASK-YYYY-MM-DD-<slug>` for legacy/`none`-profile records) with trailing
-    # prose after the backticked value, and a value like that must never be
-    # used to derive a filesystem path.
-    if ($Value.Contains('<') -and $Value.Contains('>')) { return $true }
+    if ($Value.Contains('<task-id>')) { return $true }
     $first = $Value.Substring(0, 1)
     if ($first -eq '[' -or $first -eq '<') { return $true }
     return $false

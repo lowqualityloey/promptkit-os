@@ -554,13 +554,7 @@ proj_field() {
 is_placeholder() {
     local v="$1"
     if [[ -z "$v" || "$v" == '-' || "$v" == 'not tracked' ]]; then return 0; fi
-    # Any <...> placeholder token anywhere in the value marks it as a template
-    # placeholder, not just the literal <task-id>: the shipped state-tracker
-    # template writes the 3A Task ID as \`TASK-<task-slug>\` (preserve
-    # \`TASK-YYYY-MM-DD-<slug>\` for legacy/\`none\`-profile records) with trailing
-    # prose after the backticked value, and a value like that must never be
-    # used to derive a filesystem path.
-    if [[ "$v" == *'<'* && "$v" == *'>'* ]]; then return 0; fi
+    if [[ "$v" == *'<task-id>'* ]]; then return 0; fi
     if [[ "${v:0:1}" == '[' || "${v:0:1}" == '<' ]]; then return 0; fi
     return 1
 }

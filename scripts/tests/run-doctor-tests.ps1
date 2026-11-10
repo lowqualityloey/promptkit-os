@@ -395,6 +395,37 @@ try {
     Want-NotContains 'DIVERGED'
     Report-Scenario 'S14 canonical-but-missing Task ID -> truthful not-found path'
 
+    # S15: concrete record prose may legitimately contain angle tokens (an HTML
+    # element such as <button>); placeholder detection stays scoped to the literal
+    # <task-id> token, so such values are still compared and a real divergence is
+    # reported instead of being silently skipped as a placeholder.
+    Begin-Scenario
+    $root15 = New-Kit 's15' 'balanced'
+    $sha15 = Get-ShortSha (Join-Path $root15 '.promptkit')
+    Write-Hosts $root15 $sha15
+    $state15 = @'
+# Project State
+- **Engine Version**: v1.2.3 @ __SHA__
+
+## 3A. Execution-Control Projection (Optional)
+- **Task ID**: `TASK-2026-01-01-s15`
+- **Task Record**: `docs/tasks/TASK-2026-01-01-s15.md`
+- **Execution State**: `in_progress`
+- **Next Action**: `Deploy the application`
+'@
+    [IO.File]::WriteAllText((Join-Path $root15 'docs/STATE.md'), $state15.Replace('__SHA__', $sha15), $utf8)
+    $record15 = @'
+# Task Record: s15
+- **Task ID**: `TASK-2026-01-01-s15`
+- **Execution State**: `in_progress`
+- **Next Action**: `Fix rendering of <button> before deployment`
+'@
+    [IO.File]::WriteAllText((Join-Path $root15 'docs/tasks/TASK-2026-01-01-s15.md'), $record15, $utf8)
+    Invoke-Doctor -Root $root15
+    Want-Status 1
+    Want-Contains "docs-drift`tDIVERGED(STATE 3A vs Task Record: Next Action)"
+    Report-Scenario 'S15 angle-token record prose still compared -> DIVERGED(Next Action)'
+
     # S5 (Scenario 5): a Lite install is not flagged for Balanced-only workflows.
     Begin-Scenario
     $root5 = New-HealthyKit 's5' 'lite'
