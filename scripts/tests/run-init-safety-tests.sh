@@ -677,6 +677,9 @@ fi
 [[ "$sub_rc" -eq 0 ]]
 grep -q '^ASSERT|submodule|status|OK$' <<<"$sub_out"
 grep -q 'PromptKit OS successfully configured' <<<"$sub_out"
+# The submodule door stages the kit at .promptkit/, so the relative upgrade
+# hint must still be advertised there (dangling-kit coverage lives in test 36).
+grep -qF '.promptkit/init.sh' <<<"$sub_out"
 
 # Test 31: standalone door — kit run in place with PROJECT_ROOT == SCRIPT_DIR
 STANDALONE_KIT="$TEST_ROOT/standalone_kit"
@@ -720,7 +723,10 @@ if grep -qF './/' "$KITREF_PROJ/AGENTS.md" || grep -qF "$KITREF_KIT" "$KITREF_PR
     echo "Sibling kit directory leaked into the directive: kit reference is not path-bounded." >&2
     exit 1
 fi
-grep -qF '.promptkit/init.sh' <<<"$kitref_out"
+# The sibling-kit scenario leaves .promptkit/ unstaged in the project, so the
+# summary warns about the dangling kit reference instead of advertising an
+# upgrade path that does not exist there.
+grep -qF 'not staged at .promptkit/' <<<"$kitref_out"
 if grep -qF "$KITREF_KIT/init.sh" <<<"$kitref_out"; then
     echo "Sibling kit directory leaked into the upgrade hint." >&2
     exit 1
@@ -761,4 +767,110 @@ if grep -q 'PromptKit OS successfully configured' <<<"$gitfail_out"; then
     exit 1
 fi
 
-echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."
+# Test 34: GitHub template gate — .github PR/issue templates are created only
+# when tracking is GitHub (or GitHub projection); a local-tracking install
+# skips them instead of adding .github noise to a non-GitHub project.
+GATE_PROJ="$TEST_ROOT/template_gate_project"
+GATE_KIT="$TEST_ROOT/template_gate_kit"
+copy_kit "$GATE_KIT"
+mkdir -p "$GATE_PROJ"
+if gate_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$GATE_KIT/init.sh" --balanced "$GATE_PROJ" 2>&1)"; then
+    gate_rc=0
+else
+    gate_rc=$?
+fi
+[[ "$gate_rc" -eq 0 ]]
+[[ ! -e "$GATE_PROJ/.github" ]]
+grep -qF 'Skipped: .github PR/issue templates' <<<"$gate_out"
+GATE_GH_PROJ="$TEST_ROOT/template_gate_github_project"
+GATE_GH_KIT="$TEST_ROOT/template_gate_github_kit"
+copy_kit "$GATE_GH_KIT"
+mkdir -p "$GATE_GH_PROJ"
+if gate_gh_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$GATE_GH_KIT/init.sh" --balanced --tracking=github "$GATE_GH_PROJ" 2>&1)"; then
+    gate_gh_rc=0
+else
+    gate_gh_rc=$?
+fi
+[[ "$gate_gh_rc" -eq 0 ]]
+[[ -f "$GATE_GH_PROJ/.github/pull_request_template.md" ]]
+[[ -f "$GATE_GH_PROJ/.github/ISSUE_TEMPLATE/task.md" ]]
+grep -qF 'Created: .github/pull_request_template.md' <<<"$gate_gh_out"
+grep -qF 'Created: .github/ISSUE_TEMPLATE/task.md' <<<"$gate_gh_out"
+
+# Test 35: freshness-aware hint — a fresh project (no tracked files) is told
+# about pk:onboard repo intake; a project with committed code is not.
+FRESH_PROJ="$TEST_ROOT/fresh_hint_project"
+FRESH_KIT="$TEST_ROOT/fresh_hint_kit"
+copy_kit "$FRESH_KIT"
+mkdir -p "$FRESH_PROJ"
+git -C "$FRESH_PROJ" init -q
+if fresh_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$FRESH_KIT/init.sh" --balanced "$FRESH_PROJ" 2>&1)"; then
+    fresh_rc=0
+else
+    fresh_rc=$?
+fi
+[[ "$fresh_rc" -eq 0 ]]
+grep -qF 'Fresh project (no code yet)?' <<<"$fresh_out"
+grep -qF 'pk:onboard' <<<"$fresh_out"
+BUSY_PROJ="$TEST_ROOT/busy_hint_project"
+BUSY_KIT="$TEST_ROOT/busy_hint_kit"
+copy_kit "$BUSY_KIT"
+mkdir -p "$BUSY_PROJ"
+git -C "$BUSY_PROJ" init -q
+printf 'fn main() {}\n' > "$BUSY_PROJ/main.rs"
+git -C "$BUSY_PROJ" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$BUSY_PROJ" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture code"
+if busy_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$BUSY_KIT/init.sh" --balanced "$BUSY_PROJ" 2>&1)"; then
+    busy_rc=0
+else
+    busy_rc=$?
+fi
+[[ "$busy_rc" -eq 0 ]]
+if grep -qF 'Fresh project (no code yet)?' <<<"$busy_out"; then
+    echo "Install hint claimed a project with committed code is fresh." >&2
+    exit 1
+fi
+
+# Test 36: dangling-kit warning — when the engine runs from outside the
+# project and nothing staged the kit at .promptkit/, the summary warns and
+# suppresses the upgrade hint that points at the unstaged path. Lite profile
+# is used so the suppressed "Upgrade anytime" hint is genuinely exercised
+# (it is a lite-only summary line).
+DANGLE_PROJ="$TEST_ROOT/dangle_hint_project"
+DANGLE_KIT="$TEST_ROOT/dangle_hint_kit"
+copy_kit "$DANGLE_KIT"
+mkdir -p "$DANGLE_PROJ"
+if dangle_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$DANGLE_KIT/init.sh" --lite "$DANGLE_PROJ" 2>&1)"; then
+    dangle_rc=0
+else
+    dangle_rc=$?
+fi
+[[ "$dangle_rc" -eq 0 ]]
+grep -qF 'not staged at .promptkit/' <<<"$dangle_out"
+grep -qF 'Stage the kit:' <<<"$dangle_out"
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$dangle_out"; then
+    echo "Upgrade hint points at an unstaged kit path." >&2
+    exit 1
+fi
+
+# Test 36b: staged kit — when .promptkit/ exists and carries the installer,
+# the relative upgrade hint is advertised and no dangling warning prints.
+# Lite profile so the "Upgrade anytime" hint is genuinely exercised.
+STAGED_PROJ="$TEST_ROOT/staged_hint_project"
+STAGED_KIT="$TEST_ROOT/staged_hint_kit"
+copy_kit "$STAGED_KIT"
+mkdir -p "$STAGED_PROJ/.promptkit"
+cp "$STAGED_KIT/init.sh" "$STAGED_PROJ/.promptkit/init.sh"
+if staged_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$STAGED_KIT/init.sh" --lite "$STAGED_PROJ" 2>&1)"; then
+    staged_rc=0
+else
+    staged_rc=$?
+fi
+[[ "$staged_rc" -eq 0 ]]
+grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$staged_out"
+if grep -qF 'not staged at .promptkit/' <<<"$staged_out"; then
+    echo "Dangling warning printed for a staged kit." >&2
+    exit 1
+fi
+
+echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint, dangling-kit warning, and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."

@@ -451,6 +451,26 @@ if [[ -z "$PROJECT_ROOT" ]]; then
     fi
 fi
 
+# Fresh-project detection (before any writes): a project with no tracked files
+# (git) or no non-hidden top-level entries (non-git) has no code yet, so the
+# install hint should point at pk:onboard repo intake instead of assuming an
+# existing codebase. A missing or failing git probe degrades to the non-git
+# check, so a broken git binary can never fail the install here.
+FRESH_PROJECT=0
+if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    if [[ -z "$(git -C "$PROJECT_ROOT" ls-files 2>/dev/null | head -n 1)" ]] \
+        && [[ -z "$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null | head -n 1)" ]]; then
+        FRESH_PROJECT=1
+    fi
+else
+    shopt -s nullglob dotglob
+    fresh_entries=("$PROJECT_ROOT"/*)
+    shopt -u dotglob nullglob
+    if [[ ${#fresh_entries[@]} -eq 0 ]]; then
+        FRESH_PROJECT=1
+    fi
+fi
+
 # Keep installed settings on update re-runs (flags always win over installed values)
 if [[ "$PROFILE_SET" -eq 0 ]]; then
     installed_profile="$(grep -E '^profile:[[:space:]]' "$PROJECT_ROOT/PROMPTKIT.md" 2>/dev/null | tail -n 1 | awk '{print $2}' || true)"
@@ -761,6 +781,18 @@ if [[ "$SCRIPT_DIR" == "$PROJECT_ROOT" ]]; then
     KIT_DIR_REL="."
 elif [[ "$SCRIPT_DIR" == "$PROJECT_ROOT"/* ]]; then
     KIT_DIR_REL="${SCRIPT_DIR#"$PROJECT_ROOT"/}"
+fi
+
+# Kit staging awareness: the directive references $KIT_DIR_REL/workflows/...;
+# when the engine ran from outside the project and nothing staged the kit at
+# .promptkit/ (courier or submodule), those references dangle. The upgrade
+# hints must not point at a path that does not exist in the project, so the
+# summary warns and names the staging commands instead. "Staged" means the
+# directory exists AND carries the installer the hints reference.
+KIT_DANGLING=0
+if [[ "$KIT_DIR_REL" == ".promptkit" ]] \
+    && [[ ! -d "$PROJECT_ROOT/.promptkit" || ! -f "$PROJECT_ROOT/.promptkit/init.sh" ]]; then
+    KIT_DANGLING=1
 fi
 
 if [[ "$PROFILE" == "lite" ]]; then
@@ -1192,17 +1224,24 @@ if [[ -f "$STATE_TRACKER" ]]; then
         rm -f "$STATE_STAMP_TMP"
     fi
 fi
-if [[ ! -f "$PR_TEMPLATE_TARGET" && -f "$TEMPLATE_PR" ]]; then
-    mkdir -p "$GITHUB_DIR"
-    CREATED_FILES+=("$PR_TEMPLATE_TARGET")
-    cp "$TEMPLATE_PR" "$PR_TEMPLATE_TARGET"
-    echo -e "  \033[0;32m[+]\\033[0m Created: .github/pull_request_template.md (staff-level PR specification)"
-fi
-if [[ ! -f "$TASK_TEMPLATE_TARGET" && -f "$TEMPLATE_TASK" ]]; then
-    mkdir -p "$ISSUE_TEMPLATE_DIR"
-    CREATED_FILES+=("$TASK_TEMPLATE_TARGET")
-    cp "$TEMPLATE_TASK" "$TASK_TEMPLATE_TARGET"
-    echo -e "  \033[0;32m[+]\\033[0m Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)"
+# GitHub PR/issue templates mirror the GitHub tracker: they are only useful
+# when tasks are tracked on GitHub (or projected there), so a local/jira/linear
+# install skips them instead of adding .github noise to a non-GitHub project.
+if [[ "$TRACKING" == "github" || "$TRACKING_PROJECTION" == "github" ]]; then
+    if [[ ! -f "$PR_TEMPLATE_TARGET" && -f "$TEMPLATE_PR" ]]; then
+        mkdir -p "$GITHUB_DIR"
+        CREATED_FILES+=("$PR_TEMPLATE_TARGET")
+        cp "$TEMPLATE_PR" "$PR_TEMPLATE_TARGET"
+        echo -e "  \033[0;32m[+]\\033[0m Created: .github/pull_request_template.md (staff-level PR specification)"
+    fi
+    if [[ ! -f "$TASK_TEMPLATE_TARGET" && -f "$TEMPLATE_TASK" ]]; then
+        mkdir -p "$ISSUE_TEMPLATE_DIR"
+        CREATED_FILES+=("$TASK_TEMPLATE_TARGET")
+        cp "$TEMPLATE_TASK" "$TASK_TEMPLATE_TARGET"
+        echo -e "  \033[0;32m[+]\\033[0m Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)"
+    fi
+else
+    echo -e "  \033[0;33m[-]\\033[0m Skipped: .github PR/issue templates (task tracking is '$TRACKING'; they are created when tracking is GitHub or GitHub projection)"
 fi
 
 # Commit targets
@@ -1255,14 +1294,31 @@ if [[ "$ASSERT_RC" -ne 0 ]]; then
 fi
 
 echo -e "\n\033[0;36m✨ PromptKit OS successfully configured for $PROJECT_ROOT! ($PROFILE profile)\033[0m"
+if [[ "$KIT_DANGLING" == "1" ]]; then
+    echo -e "   \033[0;33mNote: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it.\033[0m"
+    echo -e "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
+fi
 if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok\033[0m"
-    echo -e "   Upgrade anytime: $KIT_DIR_REL/init.sh --balanced for the full Balanced profile"
+    if [[ "$KIT_DANGLING" == "0" ]]; then
+        echo -e "   Upgrade anytime: $KIT_DIR_REL/init.sh --balanced for the full Balanced profile"
+    fi
 elif [[ "$PROFILE" == "balanced" ]]; then
     echo -e "   Balanced: 26 workflows, Level 0-3 adaptive ceremony — full power"
-    echo -e "   For onboarding: $KIT_DIR_REL/init.sh --lite for minimal setup"
+    if [[ "$KIT_DANGLING" == "0" ]]; then
+        echo -e "   For onboarding: $KIT_DIR_REL/init.sh --lite for minimal setup"
+    fi
 else
     echo -e "   \033[0;33mTurbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost\033[0m"
     echo -e "   Human approval still required for Level 3 (releases/tags/deploys)"
+fi
+if [[ "$FRESH_PROJECT" == "1" ]]; then
+    if [[ "$PROFILE" == "lite" && "$KIT_DANGLING" == "1" ]]; then
+        echo -e "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning (Balanced-profile workflow — stage the kit first, see above)"
+    elif [[ "$PROFILE" == "lite" ]]; then
+        echo -e "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning (Balanced-profile workflow; upgrade: $KIT_DIR_REL/init.sh --balanced)"
+    else
+        echo -e "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning"
+    fi
 fi
 echo -e "   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'\n"

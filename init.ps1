@@ -506,6 +506,27 @@ if ($TargetDir -ne "") {
 
 $ProjectRootPath = if ($ProjectRoot.Path) { $ProjectRoot.Path } else { $ProjectRoot.ToString() }
 
+# Fresh-project detection (before any writes): a project with no tracked files
+# (git) or no non-hidden top-level entries (non-git) has no code yet, so the
+# install hint should point at pk:onboard repo intake instead of assuming an
+# existing codebase. A missing or failing git probe degrades to the non-git
+# check, so a broken git binary can never fail the install here.
+$FreshProject = $false
+$gitProbe = Get-Command git -ErrorAction SilentlyContinue
+$gitOk = $false
+if ($gitProbe) {
+    & git -C $ProjectRootPath rev-parse --is-inside-work-tree *> $null
+    $gitOk = ($LASTEXITCODE -eq 0)
+}
+if ($gitOk) {
+    $tracked = @(git -C $ProjectRootPath ls-files 2>$null)
+    $dirty = @(git -C $ProjectRootPath status --porcelain 2>$null)
+    if ($tracked.Count -eq 0 -and $dirty.Count -eq 0) { $FreshProject = $true }
+} else {
+    $topLevel = @(Get-ChildItem -LiteralPath $ProjectRootPath -Force -ErrorAction SilentlyContinue)
+    if ($topLevel.Count -eq 0) { $FreshProject = $true }
+}
+
 $DocDirs = @(
     "docs/tasks",
     "docs/specs",
@@ -797,6 +818,20 @@ $KitDirRel = if ($KitDirFull -ieq $KitRootFull) {
     $KitDirFull.Substring($KitRootFull.Length).TrimStart('\', '/') -replace '\\', '/'
 } else {
     ".promptkit"
+}
+
+# Kit staging awareness: the directive references $KitDirRel/workflows/...;
+# when the engine ran from outside the project and nothing staged the kit at
+# .promptkit/ (courier or submodule), those references dangle. The upgrade
+# hints must not point at a path that does not exist in the project, so the
+# summary warns and names the staging commands instead. "Staged" means the
+# directory exists AND carries the installer the hints reference.
+$KitDangling = $false
+if ($KitDirRel -eq ".promptkit") {
+    $stagedInstaller = Join-Path $ProjectRootPath ".promptkit/init.ps1"
+    if (-not (Test-Path -LiteralPath (Join-Path $ProjectRootPath ".promptkit")) -or -not (Test-Path -LiteralPath $stagedInstaller)) {
+        $KitDangling = $true
+    }
 }
 
 if ($Profile -eq "lite") {
@@ -1188,19 +1223,26 @@ try {
             [System.IO.File]::WriteAllText($StateTracker, $inserted, $utf8NoBom)
         }
     }
-    if (-not (Test-Path -LiteralPath $PrTemplateTarget) -and (Test-Path -LiteralPath $TemplatePr)) {
-        $ghParent = Split-Path -Parent $PrTemplateTarget
-        if (-not (Test-Path -LiteralPath $ghParent)) { [System.IO.Directory]::CreateDirectory($ghParent) | Out-Null }
-        Copy-Item -LiteralPath $TemplatePr -Destination $PrTemplateTarget -Force
-        $createdFiles.Add($PrTemplateTarget)
-        Write-Host "  [+] Created: .github/pull_request_template.md (staff-level PR specification)" -ForegroundColor Green
-    }
-    if (-not (Test-Path -LiteralPath $TaskTemplateTarget) -and (Test-Path -LiteralPath $TemplateTask)) {
-        $taskParent = Split-Path -Parent $TaskTemplateTarget
-        if (-not (Test-Path -LiteralPath $taskParent)) { [System.IO.Directory]::CreateDirectory($taskParent) | Out-Null }
-        Copy-Item -LiteralPath $TemplateTask -Destination $TaskTemplateTarget -Force
-        $createdFiles.Add($TaskTemplateTarget)
-        Write-Host "  [+] Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)" -ForegroundColor Green
+    # GitHub PR/issue templates mirror the GitHub tracker: they are only useful
+    # when tasks are tracked on GitHub (or projected there), so a local/jira/linear
+    # install skips them instead of adding .github noise to a non-GitHub project.
+    if ($Tracking -eq "github" -or $TrackingProjection -eq "github") {
+        if (-not (Test-Path -LiteralPath $PrTemplateTarget) -and (Test-Path -LiteralPath $TemplatePr)) {
+            $ghParent = Split-Path -Parent $PrTemplateTarget
+            if (-not (Test-Path -LiteralPath $ghParent)) { [System.IO.Directory]::CreateDirectory($ghParent) | Out-Null }
+            Copy-Item -LiteralPath $TemplatePr -Destination $PrTemplateTarget -Force
+            $createdFiles.Add($PrTemplateTarget)
+            Write-Host "  [+] Created: .github/pull_request_template.md (staff-level PR specification)" -ForegroundColor Green
+        }
+        if (-not (Test-Path -LiteralPath $TaskTemplateTarget) -and (Test-Path -LiteralPath $TemplateTask)) {
+            $taskParent = Split-Path -Parent $TaskTemplateTarget
+            if (-not (Test-Path -LiteralPath $taskParent)) { [System.IO.Directory]::CreateDirectory($taskParent) | Out-Null }
+            Copy-Item -LiteralPath $TemplateTask -Destination $TaskTemplateTarget -Force
+            $createdFiles.Add($TaskTemplateTarget)
+            Write-Host "  [+] Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "  [-] Skipped: .github PR/issue templates (task tracking is '$Tracking'; they are created when tracking is GitHub or GitHub projection)" -ForegroundColor Yellow
     }
 
     # Commit targets
@@ -1267,14 +1309,31 @@ if ($assertRc -ne 0) {
 }
 
 Write-Host "`n✨ PromptKit OS successfully configured for $ProjectRoot! ($Profile profile)" -ForegroundColor Cyan
+if ($KitDangling) {
+    Write-Host "   Note: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it." -ForegroundColor Yellow
+    Write-Host "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
+}
 if ($Profile -eq "lite") {
     Write-Host "   Lite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok" -ForegroundColor Green
-    Write-Host "   Upgrade anytime: $KitDirRel/init.ps1 --balanced for the full Balanced profile" -ForegroundColor DarkGray
+    if (-not $KitDangling) {
+        Write-Host "   Upgrade anytime: $KitDirRel/init.ps1 --balanced for the full Balanced profile" -ForegroundColor DarkGray
+    }
 } elseif ($Profile -eq "balanced") {
     Write-Host "   Balanced: 26 workflows, Level 0-3 adaptive ceremony — full power" -ForegroundColor White
-    Write-Host "   For onboarding: $KitDirRel/init.ps1 --lite for minimal setup" -ForegroundColor DarkGray
+    if (-not $KitDangling) {
+        Write-Host "   For onboarding: $KitDirRel/init.ps1 --lite for minimal setup" -ForegroundColor DarkGray
+    }
 } else {
     Write-Host "   Turbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost" -ForegroundColor Yellow
     Write-Host "   Human approval still required for Level 3 (releases/tags/deploys)" -ForegroundColor DarkGray
+}
+if ($FreshProject) {
+    if ($Profile -eq "lite" -and $KitDangling) {
+        Write-Host "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning (Balanced-profile workflow — stage the kit first, see above)" -ForegroundColor DarkGray
+    } elseif ($Profile -eq "lite") {
+        Write-Host "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning (Balanced-profile workflow; upgrade: $KitDirRel/init.ps1 --balanced)" -ForegroundColor DarkGray
+    } else {
+        Write-Host "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning" -ForegroundColor DarkGray
+    }
 }
 Write-Host "   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'`n" -ForegroundColor White

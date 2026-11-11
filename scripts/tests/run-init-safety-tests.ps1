@@ -4,7 +4,10 @@
 $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../..")).Path
+# ProviderPath strips the 'Microsoft.PowerShell.Core\FileSystem::' prefix that
+# Resolve-Path adds for UNC script locations (e.g. \\wsl.localhost\...); a
+# child 'pwsh -File' refuses the provider-qualified form as a script path.
+$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../..")).ProviderPath
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
@@ -28,7 +31,10 @@ try {
     $crlfInitialContent = "Header with `$1 literal dollar reference`r`n`r`nKeep content before.`r`n`r`n<!-- PROMPTKIT_START -->`r`nold directive`r`n<!-- PROMPTKIT_END -->`r`n`r`nKeep content after."
     [System.IO.File]::WriteAllText($crlfAgentsPath, $crlfInitialContent, $utf8NoBom)
 
-    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfRoot | Out-Null
+    # -Tracking github keeps the .github PR/issue template scaffolding
+    # assertions below meaningful: those templates are gated on GitHub tracking
+    # (Test 34 covers the local-tracking SKIP path).
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfRoot -Tracking github | Out-Null
     $crlfUpdated = [System.IO.File]::ReadAllText($crlfAgentsPath, [System.Text.Encoding]::UTF8)
 
     if (-not $crlfUpdated.Contains('Header with $1 literal dollar reference')) {
@@ -77,8 +83,9 @@ try {
         throw "Failed Test 1 (CRLF): .github/ISSUE_TEMPLATE/task.md does not contain expected template frontmatter."
     }
 
-    # Test 10: Idempotency re-run on CRLF file
-    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfRoot | Out-Null
+    # Test 10: Idempotency re-run on CRLF file (same GitHub tracking as Test 1,
+    # so the already-scaffolded .github templates take the already-exist path).
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfRoot -Tracking github | Out-Null
     $reRunContent = [System.IO.File]::ReadAllText($crlfAgentsPath, [System.Text.Encoding]::UTF8)
     $reRunLines = $reRunContent -split "\r?\n"
     $reRunStartCount = @($reRunLines | Where-Object { $_ -eq '<!-- PROMPTKIT_START -->' }).Count
@@ -748,8 +755,8 @@ try {
     }
 
     function Invoke-InitAssert {
-        param([string]$InitPath, [string]$ProjectPath)
-        $captured = & pwsh -NoProfile -File $InitPath -Profile balanced -ProjectRoot $ProjectPath 2>&1 | Out-String
+        param([string]$InitPath, [string]$ProjectPath, [string]$InstallProfile = 'balanced', [string[]]$ExtraArgs = @())
+        $captured = & pwsh -NoProfile -File $InitPath -Profile $InstallProfile -ProjectRoot $ProjectPath @ExtraArgs 2>&1 | Out-String
         return [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = $captured }
     }
 
@@ -811,6 +818,10 @@ try {
         if ($sub.ExitCode -ne 0) { throw "Failed Test 30 (submodule): expected exit 0, got $($sub.ExitCode)." }
         if (-not $sub.Output.Contains('ASSERT|submodule|status|OK')) { throw "Failed Test 30 (submodule): missing ASSERT line." }
         if (-not $sub.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 30 (submodule): missing banner." }
+        # The submodule door stages the kit at .promptkit/, so the relative
+        # upgrade hint must still be advertised there (dangling-kit coverage
+        # lives in Test 36).
+        if (-not $sub.Output.Contains('.promptkit/init.ps1')) { throw "Failed Test 30 (submodule): missing relative upgrade hint." }
 
         # Test 31: Standalone door - the kit directory is the project root.
         $standaloneKit = Join-Path $TestRoot 'standalone_kit'
@@ -839,6 +850,10 @@ try {
         if (-not $kitRefAgents.Contains('(`./.promptkit`)')) { throw 'Failed Test 31b (kit reference): sibling kit did not fall back to .promptkit.' }
         if ($kitRefAgents.Contains('.//') -or $kitRefAgents.Contains($kitRefKit)) { throw 'Failed Test 31b (kit reference): sibling kit path leaked into the directive.' }
         if ($kitRef.Output.Contains((Join-Path $kitRefKit 'init.ps1'))) { throw 'Failed Test 31b (kit reference): sibling kit path leaked into the upgrade hint.' }
+        # The sibling-kit scenario leaves .promptkit/ unstaged in the project, so
+        # the summary warns about the dangling kit reference instead of
+        # advertising an upgrade path that does not exist there.
+        if (-not $kitRef.Output.Contains('not staged at .promptkit/')) { throw 'Failed Test 31b (kit reference): missing dangling-kit warning.' }
 
         # Test 32: Opt-out - PROMPTKIT_NO_PREFLIGHT=1 yields SKIP and proceeds.
         $env:PROMPTKIT_NO_PREFLIGHT = '1'
@@ -870,12 +885,85 @@ try {
         if ($gitfail.ExitCode -ne 2) { throw "Failed Test 33 (unexpected git): expected exit 2, got $($gitfail.ExitCode)." }
         if (-not $gitfail.Output.Contains('ASSERT|unknown|host_git|INCOMPLETE')) { throw "Failed Test 33 (unexpected git): missing INCOMPLETE line." }
         if ($gitfail.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 33 (unexpected git): banner printed on INCOMPLETE." }
+
+        # Test 34: GitHub template gate - .github PR/issue templates are created
+        # only when tracking is GitHub (or GitHub projection); a local-tracking
+        # install skips them instead of adding .github noise to a non-GitHub project.
+        $gateProj = Join-Path $TestRoot 'template-gate-proj'
+        $gateKit = Join-Path $TestRoot 'template-gate-kit'
+        New-AssertKitCopy $gateKit
+        New-Item -ItemType Directory -Path $gateProj -Force | Out-Null
+        $gate = Invoke-InitAssert -InitPath (Join-Path $gateKit 'init.ps1') -ProjectPath $gateProj
+        if ($gate.ExitCode -ne 0) { throw "Failed Test 34 (template gate): expected exit 0, got $($gate.ExitCode)." }
+        if (Test-Path -LiteralPath (Join-Path $gateProj '.github')) { throw 'Failed Test 34 (template gate): .github created under local tracking.' }
+        if (-not $gate.Output.Contains('Skipped: .github PR/issue templates')) { throw 'Failed Test 34 (template gate): missing SKIP line.' }
+        $gateGhProj = Join-Path $TestRoot 'template-gate-github-proj'
+        $gateGhKit = Join-Path $TestRoot 'template-gate-github-kit'
+        New-AssertKitCopy $gateGhKit
+        New-Item -ItemType Directory -Path $gateGhProj -Force | Out-Null
+        $gateGh = Invoke-InitAssert -InitPath (Join-Path $gateGhKit 'init.ps1') -ProjectPath $gateGhProj -ExtraArgs @('-Tracking', 'github')
+        if ($gateGh.ExitCode -ne 0) { throw "Failed Test 34 (template gate): expected exit 0, got $($gateGh.ExitCode)." }
+        if (-not (Test-Path -LiteralPath (Join-Path $gateGhProj '.github/pull_request_template.md'))) { throw 'Failed Test 34 (template gate): PR template not created under GitHub tracking.' }
+        if (-not (Test-Path -LiteralPath (Join-Path $gateGhProj '.github/ISSUE_TEMPLATE/task.md'))) { throw 'Failed Test 34 (template gate): issue template not created under GitHub tracking.' }
+        if (-not $gateGh.Output.Contains('Created: .github/pull_request_template.md')) { throw 'Failed Test 34 (template gate): missing PR Created line.' }
+        if (-not $gateGh.Output.Contains('Created: .github/ISSUE_TEMPLATE/task.md')) { throw 'Failed Test 34 (template gate): missing issue Created line.' }
+
+        # Test 35: freshness-aware hint - a fresh project (no tracked files) is
+        # told about pk:onboard repo intake; a project with committed code is not.
+        $freshProj = Join-Path $TestRoot 'fresh-hint-proj'
+        $freshKit = Join-Path $TestRoot 'fresh-hint-kit'
+        New-AssertKitCopy $freshKit
+        New-Item -ItemType Directory -Path $freshProj -Force | Out-Null
+        & git -C $freshProj init -q
+        $fresh = Invoke-InitAssert -InitPath (Join-Path $freshKit 'init.ps1') -ProjectPath $freshProj
+        if ($fresh.ExitCode -ne 0) { throw "Failed Test 35 (freshness): expected exit 0, got $($fresh.ExitCode)." }
+        if (-not $fresh.Output.Contains('Fresh project (no code yet)?')) { throw 'Failed Test 35 (freshness): missing fresh-project hint.' }
+        if (-not $fresh.Output.Contains('pk:onboard')) { throw 'Failed Test 35 (freshness): missing pk:onboard hint.' }
+        $busyProj = Join-Path $TestRoot 'busy-hint-proj'
+        $busyKit = Join-Path $TestRoot 'busy-hint-kit'
+        New-AssertKitCopy $busyKit
+        New-Item -ItemType Directory -Path $busyProj -Force | Out-Null
+        & git -C $busyProj init -q
+        [System.IO.File]::WriteAllText((Join-Path $busyProj 'main.rs'), "fn main() {}`n", $utf8NoBom)
+        & git -C $busyProj -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $busyProj -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture code'
+        $busy = Invoke-InitAssert -InitPath (Join-Path $busyKit 'init.ps1') -ProjectPath $busyProj
+        if ($busy.ExitCode -ne 0) { throw "Failed Test 35 (freshness): expected exit 0, got $($busy.ExitCode)." }
+        if ($busy.Output.Contains('Fresh project (no code yet)?')) { throw 'Failed Test 35 (freshness): project with committed code treated as fresh.' }
+
+        # Test 36: dangling-kit warning - when the engine runs from outside the
+        # project and nothing staged the kit at .promptkit/, the summary warns
+        # and suppresses the upgrade hint that points at the unstaged path.
+        $dangleProj = Join-Path $TestRoot 'dangle-hint-proj'
+        $dangleKit = Join-Path $TestRoot 'dangle-hint-kit'
+        New-AssertKitCopy $dangleKit
+        New-Item -ItemType Directory -Path $dangleProj -Force | Out-Null
+        # Lite profile so the suppressed "Upgrade anytime" hint is genuinely
+        # exercised (it is a lite-only summary line).
+        $dangle = Invoke-InitAssert -InitPath (Join-Path $dangleKit 'init.ps1') -ProjectPath $dangleProj -InstallProfile lite
+        if ($dangle.ExitCode -ne 0) { throw "Failed Test 36 (dangling kit): expected exit 0, got $($dangle.ExitCode)." }
+        if (-not $dangle.Output.Contains('not staged at .promptkit/')) { throw 'Failed Test 36 (dangling kit): missing warning.' }
+        if (-not $dangle.Output.Contains('Stage the kit:')) { throw 'Failed Test 36 (dangling kit): missing staging hint.' }
+        if ($dangle.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36 (dangling kit): upgrade hint points at an unstaged kit path.' }
+
+        # Test 36b: staged kit - when .promptkit/ exists and carries the
+        # installer, the relative upgrade hint is advertised and no warning prints.
+        $stagedProj = Join-Path $TestRoot 'staged-hint-proj'
+        $stagedKit = Join-Path $TestRoot 'staged-hint-kit'
+        New-AssertKitCopy $stagedKit
+        New-Item -ItemType Directory -Path (Join-Path $stagedProj '.promptkit') -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $stagedKit 'init.ps1') -Destination (Join-Path $stagedProj '.promptkit/init.ps1') -Force
+        # Lite profile so the "Upgrade anytime" hint is genuinely exercised.
+        $staged = Invoke-InitAssert -InitPath (Join-Path $stagedKit 'init.ps1') -ProjectPath $stagedProj -InstallProfile lite
+        if ($staged.ExitCode -ne 0) { throw "Failed Test 36b (staged kit): expected exit 0, got $($staged.ExitCode)." }
+        if (-not $staged.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36b (staged kit): missing relative upgrade hint.' }
+        if ($staged.Output.Contains('not staged at .promptkit/')) { throw 'Failed Test 36b (staged kit): dangling warning printed for a staged kit.' }
     } finally {
         if ($null -eq $savedNoInteractive) { Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_INTERACTIVE = $savedNoInteractive }
         if ($null -eq $savedNoPreflight) { Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_PREFLIGHT = $savedNoPreflight }
     }
 
-    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, and install-door structural-assert tests passed." -ForegroundColor Green
+    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint, dangling-kit warning, and install-door structural-assert tests passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
