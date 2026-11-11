@@ -1480,6 +1480,122 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $nestedProj '.promptkit/init.ps1'))) { throw 'Failed Test 36o (nested project root): the printed command did not restore the kit.' }
         if ((Get-SubmodulePrefix $nestedProj) -ne ' ') { throw 'Failed Test 36o (nested project root): the printed command left the submodule out of sync.' }
 
+        # Test 36p: the README's removal recipe, executed. The README tells a
+        # reader how to take a submodule install out, and until now nothing read
+        # that paragraph. The previous text inspected the kit with
+        # `git -C .promptkit log --branches`, which misses a commit made on a
+        # detached HEAD, and resolved the module name AFTER `git rm`, by which
+        # point .gitmodules is empty. This fixture pulls the commands out of
+        # README.md and runs them in the order the README prints them, against a
+        # kit registered under a name that differs from its path and holding a
+        # commit reachable from no branch. The recipe is POSIX shell, so it runs
+        # through bash; the subject is the README text, not the PowerShell twin.
+        $readmeText = [System.IO.File]::ReadAllText((Join-Path $RepoRoot 'README.md'))
+        # Split on every backtick rather than pairing them with a regex: the
+        # pairing shifts wherever a span is left unclosed in prose, and a
+        # regex then swallows the removal commands into one merged span. The
+        # bash twin splits the same way with tr, so both read the file alike.
+        $readmeCommands = @()
+        foreach ($readmeSpanText in ($readmeText -split [char]96)) {
+            if ($readmeSpanText.StartsWith('name=') -or $readmeSpanText.StartsWith('git --git-dir=') -or $readmeSpanText.StartsWith('git submodule deinit ') -or $readmeSpanText.StartsWith('git rm ')) {
+                $readmeCommands += $readmeSpanText
+            }
+        }
+        if ($readmeCommands.Count -ne 5) { throw "Failed Test 36p (README removal): expected 5 removal commands in README.md, found $($readmeCommands.Count)." }
+        $readmeKitRepo = Join-Path $TestRoot 'readme-kitrepo'
+        $readmeHost = Join-Path $TestRoot 'readme-host'
+        New-AssertKitCopy $readmeKitRepo
+        & git -C $readmeKitRepo init -q
+        & git -C $readmeKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $readmeKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        New-Item -ItemType Directory -Path $readmeHost -Force | Out-Null
+        & git -C $readmeHost init -q
+        $readmeUrl = $readmeKitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $readmeHost submodule add -q --name kit-alias $readmeUrl .promptkit
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36p (README removal): fixture submodule add failed.' }
+        & git -C $readmeHost -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'add kit'
+        & git -C (Join-Path $readmeHost '.promptkit') checkout -q --detach
+        & git -C (Join-Path $readmeHost '.promptkit') -c user.name=Fixture -c user.email=fixture@example.invalid commit -q --allow-empty -m 'kit detached only commit'
+        $readmeDetached = (& git -C (Join-Path $readmeHost '.promptkit') rev-parse HEAD).Trim()
+        # Record the detached commit in the host so the checkout is not itself a
+        # local modification: the recipe below is the plain one, and a modified
+        # gitlink would make the non-forced deinit refuse before the inspection
+        # is exercised.
+        & git -C $readmeHost -c user.name=Fixture -c user.email=fixture@example.invalid add .promptkit
+        & git -C $readmeHost -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'record detached kit'
+        if ((& git -C $readmeHost status --porcelain)) { throw 'Failed Test 36p (README removal): fixture host is not clean.' }
+        $readmeNameCmd = $readmeCommands[0]
+        $readmeLogCmd = $readmeCommands[1]
+        $readmeStatusCmd = $readmeCommands[2]
+        $readmeDeinitCmd = $readmeCommands[3]
+        $readmeRmCmd = $readmeCommands[4]
+        # Run one README command through bash from the project root, the way a
+        # reader would, and return its stdout. The command goes into a script
+        # file rather than a "-c" argument: ProcessStartInfo.Arguments is a
+        # single string that Windows re-splits, so a command containing spaces
+        # would reach bash as several arguments and only the first would run.
+        $readmeBash = (Get-Command bash -ErrorAction SilentlyContinue)
+        if ($null -eq $readmeBash) { throw 'Failed Test 36p (README removal): bash is required to execute the README recipe and was not found on PATH.' }
+        $readmeScript = Join-Path $TestRoot 'readme-command.sh'
+        $readmeRun = {
+            param([string]$Command)
+            [System.IO.File]::WriteAllText($readmeScript, "#!/usr/bin/env bash`nset -euo pipefail`n" + $Command + "`n", $utf8NoBom)
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = $readmeBash.Source
+            $psi.Arguments = '"' + $readmeScript + '"'
+            $psi.WorkingDirectory = $readmeHost
+            $psi.UseShellExecute = $false
+            $psi.RedirectStandardOutput = $true
+            $psi.RedirectStandardError = $true
+            $psi.EnvironmentVariables['GIT_ALLOW_PROTOCOL'] = 'file'
+            $proc = [System.Diagnostics.Process]::Start($psi)
+            $stdout = $proc.StandardOutput.ReadToEnd()
+            $null = $proc.StandardError.ReadToEnd()
+            $proc.WaitForExit()
+            return [pscustomobject]@{ ExitCode = $proc.ExitCode; Output = $stdout }
+        }
+        # The name has to be resolved while .gitmodules still records it.
+        $readmeName = (& $readmeRun ($readmeNameCmd + '; printf ' + [char]39 + '%s' + [char]39 + ' "$name"'))
+        if ($readmeName.ExitCode -ne 0) { throw 'Failed Test 36p (README removal): the name-resolution command failed.' }
+        if ($readmeName.Output.Trim() -ne 'kit-alias') { throw "Failed Test 36p (README removal): resolved module name was '$($readmeName.Output.Trim())', expected 'kit-alias'." }
+        # A reader runs the recipe in one shell, so the resolved name is still
+        # set when the later commands run. Each command here is a separate bash
+        # process, so the name is exported into the child environment instead.
+        $env:name = $readmeName.Output.Trim()
+        # The inspection has to find a commit that no branch points at.
+        $readmeLog = & $readmeRun $readmeLogCmd
+        if ($readmeLog.ExitCode -ne 0) { throw 'Failed Test 36p (README removal): the inspection command failed.' }
+        if (-not $readmeLog.Output.Contains($readmeDetached.Substring(0, 7))) { throw 'Failed Test 36p (README removal): the inspection command did not list the detached-only commit.' }
+        # ...which the --branches form the README used to print does not.
+        $readmeOldLog = & $readmeRun 'git -C .promptkit log --oneline --branches --not --remotes'
+        if ($readmeOldLog.Output.Trim() -ne '') { throw 'Failed Test 36p (README removal): the --branches form listed the detached-only commit, so the fixture no longer distinguishes the two forms.' }
+        # The status form reports a clean kit.
+        $readmeStatus = & $readmeRun $readmeStatusCmd
+        if ($readmeStatus.ExitCode -ne 0) { throw 'Failed Test 36p (README removal): the status command failed.' }
+        if ($readmeStatus.Output.Trim() -ne '') { throw 'Failed Test 36p (README removal): the status command reported changes on a clean kit.' }
+        # Deinitializing empties the work tree, so `git -C .promptkit` answers
+        # about the HOST repository from then on; the module-repository form
+        # keeps answering about the kit.
+        $readmeDeinit = & $readmeRun $readmeDeinitCmd
+        if ($readmeDeinit.ExitCode -ne 0) { throw 'Failed Test 36p (README removal): the deinit command failed on a clean kit.' }
+        if (Test-Path -LiteralPath (Join-Path $readmeHost '.promptkit/.git')) { throw 'Failed Test 36p (README removal): deinit left a .git entry in the kit.' }
+        $readmeToplevel = & $readmeRun 'git -C .promptkit rev-parse --show-toplevel'
+        if ($readmeToplevel.Output.Trim() -eq (Join-Path $readmeHost '.promptkit')) { throw 'Failed Test 36p (README removal): the deinitialized kit still resolves to itself, so the guard this fixture covers is untested.' }
+        $readmeLogAfter = & $readmeRun $readmeLogCmd
+        if (-not $readmeLogAfter.Output.Contains($readmeDetached.Substring(0, 7))) { throw 'Failed Test 36p (README removal): the inspection command stopped finding the detached-only commit after deinit.' }
+        # The removal completes, and the leftover module repository is what makes
+        # a later re-add ask for --force, exactly as the README says.
+        $readmeRm = & $readmeRun $readmeRmCmd
+        if ($readmeRm.ExitCode -ne 0) { throw 'Failed Test 36p (README removal): the removal command failed.' }
+        & git -C $readmeHost -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'remove kit'
+        if ((& git -C $readmeHost ls-files -s -- .promptkit)) { throw 'Failed Test 36p (README removal): the gitlink survived the removal.' }
+        if ((Get-Item -LiteralPath (Join-Path $readmeHost '.gitmodules')).Length -ne 0) { throw 'Failed Test 36p (README removal): .gitmodules still records the submodule after removal.' }
+        & git -c protocol.file.allow=always -C $readmeHost submodule add -q --name kit-alias $readmeUrl .promptkit 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) { throw 'Failed Test 36p (README removal): the README says a leftover module repository makes a later re-add ask for --force, but it succeeded without it.' }
+        & git -c protocol.file.allow=always -C $readmeHost submodule add -q --force --name kit-alias $readmeUrl .promptkit 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36p (README removal): the --force re-add the README names failed.' }
+        if ((Get-SubmodulePrefix $readmeHost) -ne ' ') { throw 'Failed Test 36p (README removal): the --force re-add left the submodule out of sync.' }
+
         # Test 37: manifest coverage guard. Every engine-relative path the
         # installers resolve must be a row of scripts/setup-assert-files.txt or sit
         # on the exemption list below with a written reason. The manifest is what
@@ -1539,9 +1655,13 @@ try {
     } finally {
         if ($null -eq $savedNoInteractive) { Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_INTERACTIVE = $savedNoInteractive }
         if ($null -eq $savedNoPreflight) { Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_PREFLIGHT = $savedNoPreflight }
+        # Test 36p exports the resolved submodule name so the later README
+        # commands see it, the way one shell would; drop it here so a failure
+        # inside the fixture cannot leak it into a later scenario.
+        Remove-Item Env:\name -ErrorAction SilentlyContinue
     }
 
-    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert tests, and the manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption) passed." -ForegroundColor Green
+    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert tests, the manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and the README removal recipe (commands extracted from README.md and EXECUTED against a renamed submodule holding a detached-only commit: name resolved before removal, --all finds the detached commit where --branches finds nothing, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, and the leftover module repository making a plain re-add fail while --force reuses it) passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

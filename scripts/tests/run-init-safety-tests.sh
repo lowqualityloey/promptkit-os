@@ -1426,6 +1426,85 @@ run_recovery_command "$NESTED_PROJ" "$NESTED_CMD"
 [[ -f "$NESTED_PROJ/.promptkit/init.sh" ]]
 [[ "$(submodule_prefix "$NESTED_PROJ")" == " " ]]
 
+# Test 36p: the README's removal recipe, executed. The README tells a reader how
+# to take a submodule install out, and until now nothing read that paragraph.
+# The previous text inspected the kit with `git -C .promptkit log --branches`,
+# which misses a commit made on a detached HEAD, and resolved the module name
+# AFTER `git rm`, by which point .gitmodules is empty. This fixture pulls the
+# commands out of README.md and runs them in the order the README prints them,
+# against a kit registered under a name that differs from its path and holding a
+# commit reachable from no branch.
+readme_removal_commands() {
+    local bt
+    bt="$(printf '\140')"
+    tr "$bt" '\n' < "$REPO_ROOT/README.md" | grep -E '^(name=|git --git-dir=|git submodule deinit |git rm )'
+}
+README_KITREPO="$TEST_ROOT/readme_kitrepo"
+README_HOST="$TEST_ROOT/readme_host"
+copy_kit "$README_KITREPO"
+git -C "$README_KITREPO" init -q
+git -C "$README_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$README_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$README_HOST"
+git -C "$README_HOST" init -q
+git -C "$README_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q --name kit-alias "$README_KITREPO" .promptkit
+git -C "$README_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "add kit"
+git -C "$README_HOST/.promptkit" checkout -q --detach
+git -C "$README_HOST/.promptkit" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q --allow-empty -m "kit detached only commit"
+README_DETACHED="$(git -C "$README_HOST/.promptkit" rev-parse HEAD)"
+# Record the detached commit in the host so the checkout is not itself a local
+# modification: the recipe below is the plain one, and a modified gitlink would
+# make the non-forced deinit refuse before the inspection is exercised.
+git -C "$README_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid add .promptkit
+git -C "$README_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "record detached kit"
+[[ -z "$(git -C "$README_HOST" status --porcelain)" ]]
+mapfile -t README_CMDS <<<"$(readme_removal_commands)"
+[[ "${#README_CMDS[@]}" -eq 5 ]]
+README_NAME_CMD="${README_CMDS[0]}"
+README_LOG_CMD="${README_CMDS[1]}"
+README_STATUS_CMD="${README_CMDS[2]}"
+README_DEINIT_CMD="${README_CMDS[3]}"
+README_RM_CMD="${README_CMDS[4]}"
+# The name has to be resolved while .gitmodules still records it. A reader runs
+# the recipe in one shell, so the resolved name is exported and every later
+# command sees it; each command below still runs from the project root, which is
+# where the README says to run it.
+README_NAME="$( cd "$README_HOST" && eval "$README_NAME_CMD" && printf '%s' "$name" )"
+[[ "$README_NAME" == "kit-alias" ]]
+export name="$README_NAME"
+# The inspection has to find a commit that no branch points at.
+README_LOG="$( cd "$README_HOST" && eval "$README_LOG_CMD" )"
+grep -q "${README_DETACHED:0:7}" <<<"$README_LOG"
+# ...which the --branches form the README used to print does not.
+README_OLD_LOG="$( cd "$README_HOST" && git -C .promptkit log --oneline --branches --not --remotes )"
+[[ -z "$README_OLD_LOG" ]]
+# The status form reports a clean kit.
+README_STATUS="$( cd "$README_HOST" && eval "$README_STATUS_CMD" )"
+[[ -z "$README_STATUS" ]]
+# Deinitializing empties the work tree, so `git -C .promptkit` answers about the
+# HOST repository from then on; the module-repository form keeps answering about
+# the kit.
+( cd "$README_HOST" && eval "$README_DEINIT_CMD" ) >/dev/null 2>&1
+[[ ! -e "$README_HOST/.promptkit/.git" ]]
+README_TOPOLEVEL="$( cd "$README_HOST" && git -C .promptkit rev-parse --show-toplevel )"
+[[ "$README_TOPOLEVEL" != "$README_HOST/.promptkit" ]]
+README_LOG_AFTER="$( cd "$README_HOST" && eval "$README_LOG_CMD" )"
+grep -q "${README_DETACHED:0:7}" <<<"$README_LOG_AFTER"
+# The removal completes, and the leftover module repository is what makes a
+# later re-add ask for --force, exactly as the README says.
+( cd "$README_HOST" && eval "$README_RM_CMD" ) >/dev/null 2>&1
+git -C "$README_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "remove kit"
+[[ "$(git -C "$README_HOST" ls-files -s -- .promptkit | wc -l)" -eq 0 ]]
+[[ ! -s "$README_HOST/.gitmodules" ]]
+if git -C "$README_HOST" -c protocol.file.allow=always submodule add -q --name kit-alias "$README_KITREPO" .promptkit >/dev/null 2>&1; then
+    echo "The README says a leftover module repository makes a later re-add ask for --force, but it succeeded without it." >&2
+    exit 1
+fi
+git -C "$README_HOST" -c protocol.file.allow=always submodule add -q --force --name kit-alias "$README_KITREPO" .promptkit >/dev/null 2>&1
+[[ "$(submodule_prefix "$README_HOST")" == " " ]]
+# The name was exported so the later commands see it, the way one shell would.
+unset name
+
 # Test 37: manifest coverage guard. Every engine-relative path the installers
 # resolve must be a row of scripts/setup-assert-files.txt or sit on the
 # exemption list below with a written reason. The manifest is what the installer
@@ -1506,4 +1585,4 @@ for manifest_entry in "${MANIFEST_EXEMPTIONS[@]}"; do
         exit 1
     fi
 done
-echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), and manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption) tests passed."
+echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and README removal recipe (commands extracted from README.md and EXECUTED against a renamed submodule holding a detached-only commit: name resolved before removal, --all finds the detached commit where --branches finds nothing, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, and the leftover module repository making a plain re-add fail while --force reuses it) tests passed."
