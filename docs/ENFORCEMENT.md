@@ -55,9 +55,33 @@ The managed directive block (and the JIT-loaded workflow files it points at) is 
 
 ---
 
-## 5. The One Opt-In Executable: the Attribution Hook
+## 5. The Two Opt-In Executables
 
-PromptKit OS ships exactly one piece of opt-in executable enforcement, and it is deliberately narrow: the AI-attribution `commit-msg` hook ([`scripts/install-attribution-hook.sh`](../scripts/install-attribution-hook.sh) and its PowerShell twin). It is installed only on explicit request, is reversible, preserves any pre-existing hook, and checks one thing — attribution disclosure in commit messages. It demonstrates the pattern any future executable enforcement would have to follow: **opt-in, reversible, managed-block, single-purpose**. It does not generalize into a governance daemon, and none is planned.
+PromptKit OS ships two pieces of opt-in executable enforcement. Both are deliberately narrow, both are installed only on explicit request, both are reversible, and both preserve any pre-existing hook. Neither hook is installed by the installer, the courier, or CI — a clone that never asks for one has no hook at all. (CI does exercise both checkers against the kit's own tree — as a direct gate for the benchmark cards and as a test-suite subject for attribution — which is Tier 1, not a hook.)
+
+### 5a. The AI-attribution `commit-msg` hook
+
+[`scripts/install-attribution-hook.sh`](../scripts/install-attribution-hook.sh) and its PowerShell twin add a managed block to the repository's `commit-msg` hook that runs [`scripts/check-ai-attribution.sh`](../scripts/check-ai-attribution.sh) against the pending message.
+
+What it does is narrower than "checks attribution disclosure", and the direction matters. The checker reads the optional `ai-attribution: off|host-default` preference from `PROMPTKIT.md` and behaves like this:
+
+| `PROMPTKIT.md` preference | Behavior on a commit message |
+| :--- | :--- |
+| `ai-attribution: off` | **Fails** (exit 1) when the message carries an unsolicited AI signature — one the human did not ask for. This is the only blocking path. |
+| `ai-attribution: host-default` | **Skips** without newly blocking: the host assistant's own attribution convention is left alone. |
+| Line absent | **Skips** without newly blocking. |
+
+So the hook is not a disclosure *requirement*; it is an opt-out guard for users who do not want AI signatures on their commits. It never stages, commits, amends, or rewrites history, and `--remove` restores the original hook byte-for-byte and mode-for-mode.
+
+### 5b. The benchmark task-card `pre-commit` hook
+
+[`scripts/install-benchmark-task-card-hook.sh`](../scripts/install-benchmark-task-card-hook.sh) adds a managed block to the `pre-commit` hook that runs [`scripts/check-benchmark-task-cards.sh`](../scripts/check-benchmark-task-cards.sh) when the staged set touches a `benchmarks/tasks/TASK-*.md` card. It fails a card whose `Verify` command orders the suite before the probe, or chains them with `&&`, so the mistake surfaces locally instead of in CI.
+
+This one is **contributor-facing kit tooling**, not a user-project feature: it guards the benchmark task cards that live in this repository, and it is a no-op for a commit that touches no card. It is documented here because it is the second piece of opt-in executable enforcement the kit ships, and leaving it out would overstate how singular the attribution hook is.
+
+### The pattern, and its limit
+
+Both hooks follow the same shape: **opt-in, reversible, managed-block, single-purpose, scoped to one artifact class**. That is the pattern any future executable enforcement would have to follow. Neither generalizes into a governance daemon, and none is planned.
 
 ---
 

@@ -931,6 +931,42 @@ try {
         if ($busy.ExitCode -ne 0) { throw "Failed Test 35 (freshness): expected exit 0, got $($busy.ExitCode)." }
         if ($busy.Output.Contains('Fresh project (no code yet)?')) { throw 'Failed Test 35 (freshness): project with committed code treated as fresh.' }
 
+        # Test 35b: courier door freshness - the courier extracts the kit into
+        # .promptkit/ and stages it before running the installer, so the project
+        # is empty of project content even though .promptkit/ is tracked. The
+        # hint must still fire; counting the installer-owned tree as "code"
+        # would hide it in the flow a fresh project actually uses.
+        $courierFreshProj = Join-Path $TestRoot 'courier-fresh-proj'
+        $courierFreshKit = Join-Path $TestRoot 'courier-fresh-kit'
+        New-AssertKitCopy $courierFreshKit
+        New-Item -ItemType Directory -Path (Join-Path $courierFreshProj '.promptkit/workflows') -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $courierFreshKit 'init.ps1') -Destination (Join-Path $courierFreshProj '.promptkit/init.ps1') -Force
+        Copy-Item -LiteralPath (Join-Path $courierFreshKit 'workflows/route.md') -Destination (Join-Path $courierFreshProj '.promptkit/workflows/route.md') -Force
+        & git -C $courierFreshProj init -q
+        & git -C $courierFreshProj -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        $courierFresh = Invoke-InitAssert -InitPath (Join-Path $courierFreshKit 'init.ps1') -ProjectPath $courierFreshProj
+        if ($courierFresh.ExitCode -ne 0) { throw "Failed Test 35b (courier freshness): expected exit 0, got $($courierFresh.ExitCode)." }
+        if (-not $courierFresh.Output.Contains('Fresh project (no code yet)?')) { throw 'Failed Test 35b (courier freshness): staged kit suppressed the fresh-project hint.' }
+        if (-not $courierFresh.Output.Contains('pk:onboard')) { throw 'Failed Test 35b (courier freshness): missing pk:onboard hint.' }
+
+        # Test 35c: submodule door freshness - a submodule install adds a
+        # .promptkit gitlink and a .gitmodules entry, which are installer-owned
+        # rather than project content. The hint must still fire.
+        $subFreshProj = Join-Path $TestRoot 'submodule-fresh-proj'
+        $subFreshKit = Join-Path $TestRoot 'submodule-fresh-kit'
+        New-AssertKitCopy $subFreshKit
+        New-Item -ItemType Directory -Path $subFreshProj -Force | Out-Null
+        & git -C $subFreshProj init -q
+        & git -C $subFreshProj -c user.name=Fixture -c user.email=fixture@example.invalid commit -q --allow-empty -m 'fixture root'
+        $subFreshSha = (& git -C $subFreshProj rev-parse HEAD).Trim()
+        [System.IO.File]::WriteAllText((Join-Path $subFreshProj '.gitmodules'), "[submodule `".promptkit`"]`n`tpath = .promptkit`n`turl = https://example.invalid/kit.git`n", $utf8NoBom)
+        & git -C $subFreshProj add .gitmodules
+        & git -C $subFreshProj update-index --add --cacheinfo "160000,$subFreshSha,.promptkit"
+        $subFresh = Invoke-InitAssert -InitPath (Join-Path $subFreshKit 'init.ps1') -ProjectPath $subFreshProj
+        if ($subFresh.ExitCode -ne 0) { throw "Failed Test 35c (submodule freshness): expected exit 0, got $($subFresh.ExitCode)." }
+        if (-not $subFresh.Output.Contains('Fresh project (no code yet)?')) { throw 'Failed Test 35c (submodule freshness): gitlink suppressed the fresh-project hint.' }
+        if (-not $subFresh.Output.Contains('pk:onboard')) { throw 'Failed Test 35c (submodule freshness): missing pk:onboard hint.' }
+
         # Test 36: dangling-kit warning - when the engine runs from outside the
         # project and nothing staged the kit at .promptkit/, the summary warns
         # and suppresses the upgrade hint that points at the unstaged path.
@@ -946,24 +982,42 @@ try {
         if (-not $dangle.Output.Contains('Stage the kit:')) { throw 'Failed Test 36 (dangling kit): missing staging hint.' }
         if ($dangle.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36 (dangling kit): upgrade hint points at an unstaged kit path.' }
 
-        # Test 36b: staged kit - when .promptkit/ exists and carries the
-        # installer, the relative upgrade hint is advertised and no warning prints.
+        # Test 36b: staged kit - when .promptkit/ carries the files the directive
+        # and the summary actually reference (the installer the upgrade hint names
+        # and the workflow entry point the advertised pk:* commands load), the
+        # relative upgrade hint is advertised and no warning prints.
         $stagedProj = Join-Path $TestRoot 'staged-hint-proj'
         $stagedKit = Join-Path $TestRoot 'staged-hint-kit'
         New-AssertKitCopy $stagedKit
-        New-Item -ItemType Directory -Path (Join-Path $stagedProj '.promptkit') -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $stagedProj '.promptkit/workflows') -Force | Out-Null
         Copy-Item -LiteralPath (Join-Path $stagedKit 'init.ps1') -Destination (Join-Path $stagedProj '.promptkit/init.ps1') -Force
+        Copy-Item -LiteralPath (Join-Path $stagedKit 'workflows/route.md') -Destination (Join-Path $stagedProj '.promptkit/workflows/route.md') -Force
         # Lite profile so the "Upgrade anytime" hint is genuinely exercised.
         $staged = Invoke-InitAssert -InitPath (Join-Path $stagedKit 'init.ps1') -ProjectPath $stagedProj -InstallProfile lite
         if ($staged.ExitCode -ne 0) { throw "Failed Test 36b (staged kit): expected exit 0, got $($staged.ExitCode)." }
         if (-not $staged.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36b (staged kit): missing relative upgrade hint.' }
         if ($staged.Output.Contains('not staged at .promptkit/')) { throw 'Failed Test 36b (staged kit): dangling warning printed for a staged kit.' }
+
+        # Test 36c: partial kit - a .promptkit/ holding the installer but not the
+        # workflow entry point is a partial copy: the upgrade hint would point at
+        # pk:* commands that cannot resolve, so the warning must fire and the
+        # hint must be suppressed.
+        $partialProj = Join-Path $TestRoot 'partial-hint-proj'
+        $partialKit = Join-Path $TestRoot 'partial-hint-kit'
+        New-AssertKitCopy $partialKit
+        New-Item -ItemType Directory -Path (Join-Path $partialProj '.promptkit') -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $partialKit 'init.ps1') -Destination (Join-Path $partialProj '.promptkit/init.ps1') -Force
+        $partial = Invoke-InitAssert -InitPath (Join-Path $partialKit 'init.ps1') -ProjectPath $partialProj -InstallProfile lite
+        if ($partial.ExitCode -ne 0) { throw "Failed Test 36c (partial kit): expected exit 0, got $($partial.ExitCode)." }
+        if (-not $partial.Output.Contains('not staged at .promptkit/')) { throw 'Failed Test 36c (partial kit): missing dangling-kit warning.' }
+        if (-not $partial.Output.Contains('Stage the kit:')) { throw 'Failed Test 36c (partial kit): missing staging hint.' }
+        if ($partial.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36c (partial kit): upgrade hint advertised from a partial kit copy.' }
     } finally {
         if ($null -eq $savedNoInteractive) { Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_INTERACTIVE = $savedNoInteractive }
         if ($null -eq $savedNoPreflight) { Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_PREFLIGHT = $savedNoPreflight }
     }
 
-    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint, dangling-kit warning, and install-door structural-assert tests passed." -ForegroundColor Green
+    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial), and install-door structural-assert tests passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

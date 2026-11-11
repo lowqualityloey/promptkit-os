@@ -831,6 +831,51 @@ if grep -qF 'Fresh project (no code yet)?' <<<"$busy_out"; then
     exit 1
 fi
 
+# Test 35b: courier door freshness — the courier extracts the kit into
+# .promptkit/ and stages it before running the installer, so the project is
+# empty of project content even though .promptkit/ is tracked. The hint must
+# still fire; counting the installer-owned tree as "code" would hide it in
+# the flow a fresh project actually uses.
+COURIER_FRESH_PROJ="$TEST_ROOT/courier_fresh_project"
+COURIER_FRESH_KIT="$TEST_ROOT/courier_fresh_kit"
+copy_kit "$COURIER_FRESH_KIT"
+mkdir -p "$COURIER_FRESH_PROJ/.promptkit"
+cp "$COURIER_FRESH_KIT/init.sh" "$COURIER_FRESH_PROJ/.promptkit/init.sh"
+mkdir -p "$COURIER_FRESH_PROJ/.promptkit/workflows"
+cp "$COURIER_FRESH_KIT/workflows/route.md" "$COURIER_FRESH_PROJ/.promptkit/workflows/route.md"
+git -C "$COURIER_FRESH_PROJ" init -q
+git -C "$COURIER_FRESH_PROJ" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+if courier_fresh_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$COURIER_FRESH_KIT/init.sh" --balanced "$COURIER_FRESH_PROJ" 2>&1)"; then
+    courier_fresh_rc=0
+else
+    courier_fresh_rc=$?
+fi
+[[ "$courier_fresh_rc" -eq 0 ]]
+grep -qF 'Fresh project (no code yet)?' <<<"$courier_fresh_out"
+grep -qF 'pk:onboard' <<<"$courier_fresh_out"
+
+# Test 35c: submodule door freshness — a submodule install adds a .promptkit
+# gitlink and a .gitmodules entry, which are installer-owned rather than
+# project content. The hint must still fire.
+SUB_FRESH_PROJ="$TEST_ROOT/submodule_fresh_project"
+SUB_FRESH_KIT="$TEST_ROOT/submodule_fresh_kit"
+copy_kit "$SUB_FRESH_KIT"
+mkdir -p "$SUB_FRESH_PROJ"
+git -C "$SUB_FRESH_PROJ" init -q
+git -C "$SUB_FRESH_PROJ" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q --allow-empty -m "fixture root"
+sub_fresh_sha="$(git -C "$SUB_FRESH_PROJ" rev-parse HEAD)"
+printf '[submodule ".promptkit"]\n\tpath = .promptkit\n\turl = https://example.invalid/kit.git\n' > "$SUB_FRESH_PROJ/.gitmodules"
+git -C "$SUB_FRESH_PROJ" add .gitmodules
+git -C "$SUB_FRESH_PROJ" update-index --add --cacheinfo "160000,$sub_fresh_sha,.promptkit"
+if sub_fresh_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$SUB_FRESH_KIT/init.sh" --balanced "$SUB_FRESH_PROJ" 2>&1)"; then
+    sub_fresh_rc=0
+else
+    sub_fresh_rc=$?
+fi
+[[ "$sub_fresh_rc" -eq 0 ]]
+grep -qF 'Fresh project (no code yet)?' <<<"$sub_fresh_out"
+grep -qF 'pk:onboard' <<<"$sub_fresh_out"
+
 # Test 36: dangling-kit warning — when the engine runs from outside the
 # project and nothing staged the kit at .promptkit/, the summary warns and
 # suppresses the upgrade hint that points at the unstaged path. Lite profile
@@ -853,14 +898,17 @@ if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$dangle_out"; then
     exit 1
 fi
 
-# Test 36b: staged kit — when .promptkit/ exists and carries the installer,
-# the relative upgrade hint is advertised and no dangling warning prints.
-# Lite profile so the "Upgrade anytime" hint is genuinely exercised.
+# Test 36b: staged kit — when .promptkit/ carries the files the directive and
+# the summary actually reference (the installer the upgrade hint names and the
+# workflow entry point the advertised pk:* commands load), the relative
+# upgrade hint is advertised and no dangling warning prints. Lite profile so
+# the "Upgrade anytime" hint is genuinely exercised.
 STAGED_PROJ="$TEST_ROOT/staged_hint_project"
 STAGED_KIT="$TEST_ROOT/staged_hint_kit"
 copy_kit "$STAGED_KIT"
-mkdir -p "$STAGED_PROJ/.promptkit"
+mkdir -p "$STAGED_PROJ/.promptkit/workflows"
 cp "$STAGED_KIT/init.sh" "$STAGED_PROJ/.promptkit/init.sh"
+cp "$STAGED_KIT/workflows/route.md" "$STAGED_PROJ/.promptkit/workflows/route.md"
 if staged_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$STAGED_KIT/init.sh" --lite "$STAGED_PROJ" 2>&1)"; then
     staged_rc=0
 else
@@ -873,4 +921,26 @@ if grep -qF 'not staged at .promptkit/' <<<"$staged_out"; then
     exit 1
 fi
 
-echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint, dangling-kit warning, and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."
+# Test 36c: partial kit — a .promptkit/ holding the installer but not the
+# workflow entry point is a partial copy: the upgrade hint would point at
+# pk:* commands that cannot resolve, so the warning must fire and the hint
+# must be suppressed.
+PARTIAL_PROJ="$TEST_ROOT/partial_hint_project"
+PARTIAL_KIT="$TEST_ROOT/partial_hint_kit"
+copy_kit "$PARTIAL_KIT"
+mkdir -p "$PARTIAL_PROJ/.promptkit"
+cp "$PARTIAL_KIT/init.sh" "$PARTIAL_PROJ/.promptkit/init.sh"
+if partial_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$PARTIAL_KIT/init.sh" --lite "$PARTIAL_PROJ" 2>&1)"; then
+    partial_rc=0
+else
+    partial_rc=$?
+fi
+[[ "$partial_rc" -eq 0 ]]
+grep -qF 'not staged at .promptkit/' <<<"$partial_out"
+grep -qF 'Stage the kit:' <<<"$partial_out"
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$partial_out"; then
+    echo "Upgrade hint advertised from a partial kit copy." >&2
+    exit 1
+fi
+
+echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial), and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."

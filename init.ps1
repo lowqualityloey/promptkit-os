@@ -519,11 +519,17 @@ if ($gitProbe) {
     $gitOk = ($LASTEXITCODE -eq 0)
 }
 if ($gitOk) {
-    $tracked = @(git -C $ProjectRootPath ls-files 2>$null)
-    $dirty = @(git -C $ProjectRootPath status --porcelain 2>$null)
+    # Installer-owned paths are not project content: the courier extracts the
+    # kit into .promptkit/ before running the installer, and a submodule install
+    # adds a .promptkit gitlink plus .gitmodules. Counting either as "the project
+    # has code" would suppress the hint in exactly the two flows a fresh project
+    # uses, so both are excluded from the tracked and dirty counts.
+    $tracked = @(git -C $ProjectRootPath ls-files -- . ':!.promptkit' ':!.gitmodules' 2>$null)
+    $dirty = @(git -C $ProjectRootPath status --porcelain -- . ':!.promptkit' ':!.gitmodules' 2>$null)
     if ($tracked.Count -eq 0 -and $dirty.Count -eq 0) { $FreshProject = $true }
 } else {
-    $topLevel = @(Get-ChildItem -LiteralPath $ProjectRootPath -Force -ErrorAction SilentlyContinue)
+    $topLevel = @(Get-ChildItem -LiteralPath $ProjectRootPath -Force -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ne ".promptkit" -and $_.Name -ne ".gitmodules" })
     if ($topLevel.Count -eq 0) { $FreshProject = $true }
 }
 
@@ -828,8 +834,14 @@ $KitDirRel = if ($KitDirFull -ieq $KitRootFull) {
 # directory exists AND carries the installer the hints reference.
 $KitDangling = $false
 if ($KitDirRel -eq ".promptkit") {
+    # "Staged" means the directory carries the files the directive and the
+    # summary actually reference: the installer the upgrade hint names, and the
+    # workflow entry point the advertised pk:* commands load. A directory holding
+    # only the installer is a partial copy, and advertising the upgrade path from
+    # it would point at commands that cannot resolve.
     $stagedInstaller = Join-Path $ProjectRootPath ".promptkit/init.ps1"
-    if (-not (Test-Path -LiteralPath (Join-Path $ProjectRootPath ".promptkit")) -or -not (Test-Path -LiteralPath $stagedInstaller)) {
+    $stagedWorkflow = Join-Path $ProjectRootPath ".promptkit/workflows/route.md"
+    if (-not (Test-Path -LiteralPath $stagedInstaller) -or -not (Test-Path -LiteralPath $stagedWorkflow)) {
         $KitDangling = $true
     }
 }

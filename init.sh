@@ -456,17 +456,30 @@ fi
 # install hint should point at pk:onboard repo intake instead of assuming an
 # existing codebase. A missing or failing git probe degrades to the non-git
 # check, so a broken git binary can never fail the install here.
+#
+# Installer-owned paths are not project content: the courier extracts the kit
+# into .promptkit/ before running the installer, and a submodule install adds a
+# .promptkit gitlink plus .gitmodules. Counting either as "the project has code"
+# would suppress the hint in exactly the two flows a fresh project uses, so both
+# are excluded from the tracked, dirty, and non-git entry counts.
 FRESH_PROJECT=0
 if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    if [[ -z "$(git -C "$PROJECT_ROOT" ls-files 2>/dev/null | head -n 1)" ]] \
-        && [[ -z "$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null | head -n 1)" ]]; then
+    if [[ -z "$(git -C "$PROJECT_ROOT" ls-files -- . ':!.promptkit' ':!.gitmodules' 2>/dev/null | head -n 1)" ]] \
+        && [[ -z "$(git -C "$PROJECT_ROOT" status --porcelain -- . ':!.promptkit' ':!.gitmodules' 2>/dev/null | head -n 1)" ]]; then
         FRESH_PROJECT=1
     fi
 else
     shopt -s nullglob dotglob
     fresh_entries=("$PROJECT_ROOT"/*)
     shopt -u dotglob nullglob
-    if [[ ${#fresh_entries[@]} -eq 0 ]]; then
+    fresh_count=0
+    for fresh_entry in "${fresh_entries[@]}"; do
+        case "${fresh_entry##*/}" in
+            .promptkit|.gitmodules) continue ;;
+        esac
+        fresh_count=$((fresh_count + 1))
+    done
+    if [[ "$fresh_count" -eq 0 ]]; then
         FRESH_PROJECT=1
     fi
 fi
@@ -788,10 +801,14 @@ fi
 # .promptkit/ (courier or submodule), those references dangle. The upgrade
 # hints must not point at a path that does not exist in the project, so the
 # summary warns and names the staging commands instead. "Staged" means the
-# directory exists AND carries the installer the hints reference.
+# directory carries the files the directive and the summary actually
+# reference: the installer the upgrade hint names, and the workflow entry
+# point the advertised pk:* commands load. A directory holding only init.sh
+# is a partial copy, and advertising the upgrade path from it would point at
+# commands that cannot resolve.
 KIT_DANGLING=0
 if [[ "$KIT_DIR_REL" == ".promptkit" ]] \
-    && [[ ! -d "$PROJECT_ROOT/.promptkit" || ! -f "$PROJECT_ROOT/.promptkit/init.sh" ]]; then
+    && [[ ! -f "$PROJECT_ROOT/.promptkit/init.sh" || ! -f "$PROJECT_ROOT/.promptkit/workflows/route.md" ]]; then
     KIT_DANGLING=1
 fi
 
