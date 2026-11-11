@@ -818,10 +818,23 @@ KIT_DANGLING=0
 # destination without --force, and "git submodule add" refuses an existing
 # directory outright.
 KIT_PARTIAL=0
+# KIT_DOOR records which delivery door produced the copy at .promptkit/, because
+# the recovery command differs per door: a registered git submodule is restored
+# in place by "git submodule update --init --force", while a courier tarball has
+# no upstream to pull from and must be replaced. The test is the same one the
+# courier uses to tell the doors apart (package/bin/promptkit-os.js): a .git
+# entry inside the kit directory. A real submodule's .git is a file (a gitdir
+# pointer), so -e covers both shapes.
+KIT_DOOR="none"
 if [[ "$KIT_DIR_REL" == ".promptkit" ]]; then
     KIT_MANIFEST="$SCRIPT_DIR/scripts/setup-assert-files.txt"
     if [[ -d "$PROJECT_ROOT/.promptkit" ]]; then
         KIT_PARTIAL=1
+        if [[ -e "$PROJECT_ROOT/.promptkit/.git" ]]; then
+            KIT_DOOR="submodule"
+        else
+            KIT_DOOR="courier"
+        fi
     fi
     if [[ ! -f "$PROJECT_ROOT/.promptkit/init.sh" || ! -f "$KIT_MANIFEST" ]]; then
         KIT_DANGLING=1
@@ -1345,8 +1358,14 @@ echo -e "\n\033[0;36m✨ PromptKit OS successfully configured for $PROJECT_ROOT!
 if [[ "$KIT_DANGLING" == "1" ]]; then
     if [[ "$KIT_PARTIAL" == "1" ]]; then
         echo -e "   \033[0;33mNote: .promptkit/ in this project is an incomplete copy of the kit — the directive references workflows there, so pk:* commands cannot load until the kit is complete.\033[0m"
-        echo -e "   Replace it: rm -rf .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
-        echo -e "   (npx promptkit-os@latest --force overlays the existing directory without cleaning it, so stale files survive)"
+        if [[ "$KIT_DOOR" == "submodule" ]]; then
+            echo -e "   Restore it in place: git submodule update --init --force .promptkit"
+            echo -e "   (--force restores the files the submodule commit records; local edits to tracked kit files are reverted, untracked files such as notes are kept)"
+        else
+            echo -e "   Replace it: rm -rf .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
+            echo -e "   (a courier copy has no upstream to pull from, so it must be replaced; check .promptkit/ for local edits and untracked files first — rm -rf deletes them)"
+            echo -e "   (npx promptkit-os@latest --force overlays the existing directory without cleaning it, so stale files survive)"
+        fi
     else
         echo -e "   \033[0;33mNote: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it.\033[0m"
         echo -e "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"

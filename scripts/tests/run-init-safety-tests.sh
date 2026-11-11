@@ -948,10 +948,10 @@ fi
 # Test 36c: partial kit — a .promptkit/ holding the installer but not the
 # workflow entry point is a partial copy: the upgrade hint would point at
 # pk:* commands that cannot resolve, so the warning must fire and the hint
-# must be suppressed. The recovery advice must also match the state: a
-# non-empty .promptkit/ cannot be staged by the courier or by "git submodule
-# add" without removing it first, so the summary says so instead of printing
-# commands that would fail.
+# must be suppressed. The recovery advice must also match the state AND the
+# door: this copy has no .git, so it is a courier install, which has no
+# upstream to pull from and must be replaced — and the advice must warn that
+# the removal deletes local edits and untracked files.
 PARTIAL_PROJ="$TEST_ROOT/partial_hint_project"
 PARTIAL_KIT="$TEST_ROOT/partial_hint_kit"
 copy_kit "$PARTIAL_KIT"
@@ -964,8 +964,13 @@ else
 fi
 [[ "$partial_rc" -eq 0 ]]
 grep -qF 'incomplete copy of the kit' <<<"$partial_out"
-grep -qF 'rm -rf .promptkit' <<<"$partial_out"
+grep -qF 'Replace it: rm -rf .promptkit' <<<"$partial_out"
+grep -qF 'check .promptkit/ for local edits and untracked files first' <<<"$partial_out"
 grep -qF -- '--force overlays the existing directory without cleaning it' <<<"$partial_out"
+if grep -qF 'Restore it in place:' <<<"$partial_out"; then
+    echo "Courier-door partial kit printed the submodule restore advice, which cannot work without a submodule." >&2
+    exit 1
+fi
 if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$partial_out"; then
     echo "Upgrade hint advertised from a partial kit copy." >&2
     exit 1
@@ -1017,4 +1022,91 @@ if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$missingrow_out"; then
     exit 1
 fi
 
-echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row) with state-matched recovery advice, and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."
+# Test 36f: submodule door — the same incomplete copy, but installed as a git
+# submodule. A submodule DOES have an upstream, so the recovery is an in-place
+# restore, not a replacement: "git submodule update --init --force" checks the
+# recorded commit out again, which brings back deleted kit files. The plain
+# "--init" form does nothing once the recorded commit is already checked out,
+# which is why the advice carries --force. The scenario runs the advertised
+# command and asserts it actually restores the missing file.
+SUBDOOR_KITREPO="$TEST_ROOT/subdoor_kitrepo"
+SUBDOOR_HOST="$TEST_ROOT/subdoor_host"
+SUBDOOR_RUNNER="$TEST_ROOT/subdoor_runner"
+copy_kit "$SUBDOOR_KITREPO"
+git -C "$SUBDOOR_KITREPO" init -q
+git -C "$SUBDOOR_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$SUBDOOR_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$SUBDOOR_HOST"
+git -C "$SUBDOOR_HOST" init -q
+git -C "$SUBDOOR_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$SUBDOOR_KITREPO" .promptkit
+# A real submodule records .git as a file (a gitdir pointer), not a directory.
+[[ -f "$SUBDOOR_HOST/.promptkit/.git" ]]
+rm -f "$SUBDOOR_HOST/.promptkit/workflows/debug.md"
+copy_kit "$SUBDOOR_RUNNER"
+if subdoor_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$SUBDOOR_RUNNER/init.sh" --lite "$SUBDOOR_HOST" 2>&1)"; then
+    subdoor_rc=0
+else
+    subdoor_rc=$?
+fi
+[[ "$subdoor_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$subdoor_out"
+grep -qF 'Restore it in place: git submodule update --init --force .promptkit' <<<"$subdoor_out"
+grep -qF 'untracked files such as notes are kept' <<<"$subdoor_out"
+if grep -qF 'rm -rf .promptkit' <<<"$subdoor_out"; then
+    echo "Submodule-door partial kit was told to delete a copy that can be restored in place." >&2
+    exit 1
+fi
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$subdoor_out"; then
+    echo "Upgrade hint advertised from an incomplete submodule kit." >&2
+    exit 1
+fi
+[[ ! -f "$SUBDOOR_HOST/.promptkit/workflows/debug.md" ]]
+git -C "$SUBDOOR_HOST" -c protocol.file.allow=always submodule update --init --force .promptkit >/dev/null 2>&1
+[[ -f "$SUBDOOR_HOST/.promptkit/workflows/debug.md" ]]
+
+# Test 36g: an EMPTY scripts/ directory satisfies the "scripts|dir" row and
+# nothing else. The installer sources scripts/terminal-picker.sh before it
+# parses an argument, so such a copy cannot run — it must be called incomplete
+# instead of advertising an upgrade command that dies.
+EMPTYSCRIPTS_PROJ="$TEST_ROOT/emptyscripts_hint_project"
+EMPTYSCRIPTS_KIT="$TEST_ROOT/emptyscripts_hint_kit"
+copy_kit "$EMPTYSCRIPTS_KIT"
+stage_complete_kit "$EMPTYSCRIPTS_PROJ" "$EMPTYSCRIPTS_KIT"
+rm -rf "$EMPTYSCRIPTS_PROJ/.promptkit/scripts"
+mkdir -p "$EMPTYSCRIPTS_PROJ/.promptkit/scripts"
+[[ -d "$EMPTYSCRIPTS_PROJ/.promptkit/scripts" ]]
+[[ ! -f "$EMPTYSCRIPTS_PROJ/.promptkit/scripts/terminal-picker.sh" ]]
+if emptyscripts_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$EMPTYSCRIPTS_KIT/init.sh" --lite "$EMPTYSCRIPTS_PROJ" 2>&1)"; then
+    emptyscripts_rc=0
+else
+    emptyscripts_rc=$?
+fi
+[[ "$emptyscripts_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$emptyscripts_out"
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$emptyscripts_out"; then
+    echo "Upgrade hint advertised from a kit copy with an empty scripts/ directory." >&2
+    exit 1
+fi
+
+# Test 36h: a missing Lite workflow is incomplete too. The summary tells the
+# user to run pk:route, pk:debug, pk:commit, pk:checkpoint, pk:sync and
+# pk:profile, so a copy without workflows/debug.md cannot deliver what it
+# advertises.
+MISSINGWF_PROJ="$TEST_ROOT/missingwf_hint_project"
+MISSINGWF_KIT="$TEST_ROOT/missingwf_hint_kit"
+copy_kit "$MISSINGWF_KIT"
+stage_complete_kit "$MISSINGWF_PROJ" "$MISSINGWF_KIT"
+rm -f "$MISSINGWF_PROJ/.promptkit/workflows/debug.md"
+if missingwf_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$MISSINGWF_KIT/init.sh" --lite "$MISSINGWF_PROJ" 2>&1)"; then
+    missingwf_rc=0
+else
+    missingwf_rc=$?
+fi
+[[ "$missingwf_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$missingwf_out"
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$missingwf_out"; then
+    echo "Upgrade hint advertised from a kit copy missing a Lite workflow." >&2
+    exit 1
+fi
+
+echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore verified end to end), and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."

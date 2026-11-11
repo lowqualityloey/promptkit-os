@@ -2,6 +2,18 @@
 # Format: path|kind where kind is exactly `file` or `dir`, path is relative to
 # the kit root. Blank lines and `#` comments are ignored. A malformed row fails
 # closed as ASSERT|unknown|rules|INCOMPLETE.
+#
+# The rows below are what the installer and its own summary need, not a full
+# inventory of the kit: the installer sources scripts/terminal-picker.sh before
+# it parses a single argument, and the summary tells the user to run the six
+# Lite workflows, so a copy missing any of them advertises commands that die.
+# Everything else the kit ships is optional for a working install.
 templates/project-profile-template.md|file
 workflows/route.md|file
+workflows/debug.md|file
+workflows/commit.md|file
+workflows/checkpoint.md|file
+workflows/sync.md|file
+workflows/profile.md|file
 scripts|dir
+scripts/terminal-picker.sh|file

@@ -848,10 +848,25 @@ $KitDangling = $false
 # destination without --force, and "git submodule add" refuses an existing
 # directory outright.
 $KitPartial = $false
+# $KitDoor records which delivery door produced the copy at .promptkit/, because
+# the recovery command differs per door: a registered git submodule is restored
+# in place by "git submodule update --init --force", while a courier tarball has
+# no upstream to pull from and must be replaced. The test is the same one the
+# courier uses to tell the doors apart (package/bin/promptkit-os.js): a .git
+# entry inside the kit directory. A real submodule's .git is a file (a gitdir
+# pointer), so Test-Path covers both shapes.
+$KitDoor = "none"
 if ($KitDirRel -eq ".promptkit") {
     $stagedRoot = Join-Path $ProjectRootPath ".promptkit"
     $kitManifest = Join-Path $ScriptDir "scripts/setup-assert-files.txt"
-    if (Test-Path -LiteralPath $stagedRoot) { $KitPartial = $true }
+    if (Test-Path -LiteralPath $stagedRoot) {
+        $KitPartial = $true
+        if (Test-Path -LiteralPath (Join-Path $stagedRoot ".git")) {
+            $KitDoor = "submodule"
+        } else {
+            $KitDoor = "courier"
+        }
+    }
     $stagedInstaller = Join-Path $stagedRoot "init.ps1"
     if (-not (Test-Path -LiteralPath $stagedInstaller) -or -not (Test-Path -LiteralPath $kitManifest)) {
         $KitDangling = $true
@@ -1351,8 +1366,14 @@ Write-Host "`n✨ PromptKit OS successfully configured for $ProjectRoot! ($Profi
 if ($KitDangling) {
     if ($KitPartial) {
         Write-Host "   Note: .promptkit/ in this project is an incomplete copy of the kit — the directive references workflows there, so pk:* commands cannot load until the kit is complete." -ForegroundColor Yellow
-        Write-Host "   Replace it: rm -rf .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
-        Write-Host "   (npx promptkit-os@latest --force overlays the existing directory without cleaning it, so stale files survive)" -ForegroundColor DarkGray
+        if ($KitDoor -eq "submodule") {
+            Write-Host "   Restore it in place: git submodule update --init --force .promptkit" -ForegroundColor DarkGray
+            Write-Host "   (--force restores the files the submodule commit records; local edits to tracked kit files are reverted, untracked files such as notes are kept)" -ForegroundColor DarkGray
+        } else {
+            Write-Host "   Replace it: Remove-Item -Recurse -Force .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
+            Write-Host "   (a courier copy has no upstream to pull from, so it must be replaced; check .promptkit/ for local edits and untracked files first — Remove-Item -Recurse -Force deletes them)" -ForegroundColor DarkGray
+            Write-Host "   (npx promptkit-os@latest --force overlays the existing directory without cleaning it, so stale files survive)" -ForegroundColor DarkGray
+        }
     } else {
         Write-Host "   Note: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it." -ForegroundColor Yellow
         Write-Host "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray

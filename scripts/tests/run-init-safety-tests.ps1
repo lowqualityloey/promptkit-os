@@ -1026,9 +1026,10 @@ try {
         # Test 36c: partial kit - a .promptkit/ holding the installer but not the
         # workflow entry point is a partial copy: the upgrade hint would point at
         # pk:* commands that cannot resolve, so the warning must fire and the
-        # hint must be suppressed. The recovery advice must also match the state:
-        # a non-empty .promptkit/ cannot be staged by the courier or by
-        # "git submodule add" without removing it first.
+        # hint must be suppressed. The recovery advice must also match the state
+        # AND the door: this copy has no .git, so it is a courier install, which
+        # has no upstream to pull from and must be replaced - and the advice must
+        # warn that the removal deletes local edits and untracked files.
         $partialProj = Join-Path $TestRoot 'partial-hint-proj'
         $partialKit = Join-Path $TestRoot 'partial-hint-kit'
         New-AssertKitCopy $partialKit
@@ -1037,8 +1038,11 @@ try {
         $partial = Invoke-InitAssert -InitPath (Join-Path $partialKit 'init.ps1') -ProjectPath $partialProj -InstallProfile lite
         if ($partial.ExitCode -ne 0) { throw "Failed Test 36c (partial kit): expected exit 0, got $($partial.ExitCode)." }
         if (-not $partial.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36c (partial kit): missing incomplete-copy warning.' }
-        if (-not $partial.Output.Contains('rm -rf .promptkit')) { throw 'Failed Test 36c (partial kit): missing removal advice.' }
+        if (-not $partial.Output.Contains('Replace it: Remove-Item -Recurse -Force .promptkit')) { throw 'Failed Test 36c (partial kit): missing PowerShell removal advice.' }
+        if ($partial.Output.Contains('rm -rf .promptkit')) { throw 'Failed Test 36c (partial kit): printed a bash command from the PowerShell installer.' }
+        if (-not $partial.Output.Contains('check .promptkit/ for local edits and untracked files first')) { throw 'Failed Test 36c (partial kit): missing the data-loss warning before removal.' }
         if (-not $partial.Output.Contains('--force overlays the existing directory without cleaning it')) { throw 'Failed Test 36c (partial kit): missing --force caveat.' }
+        if ($partial.Output.Contains('Restore it in place:')) { throw 'Failed Test 36c (partial kit): courier-door copy printed the submodule restore advice.' }
         if ($partial.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36c (partial kit): upgrade hint advertised from a partial kit copy.' }
         if ($partial.Output.Contains('Stage the kit:')) { throw 'Failed Test 36c (partial kit): printed stage-from-scratch advice, which cannot succeed on a non-empty .promptkit/.' }
 
@@ -1069,12 +1073,76 @@ try {
         if ($missingRow.ExitCode -ne 0) { throw "Failed Test 36e (missing manifest row): expected exit 0, got $($missingRow.ExitCode)." }
         if (-not $missingRow.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36e (missing manifest row): kit missing a manifest row treated as complete.' }
         if ($missingRow.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36e (missing manifest row): upgrade hint advertised from an incomplete kit copy.' }
+
+        # Test 36f: submodule door - the same incomplete copy, but installed as a
+        # git submodule. A submodule DOES have an upstream, so the recovery is an
+        # in-place restore, not a replacement: "git submodule update --init
+        # --force" checks the recorded commit out again, which brings back deleted
+        # kit files. The plain "--init" form does nothing once the recorded commit
+        # is already checked out, which is why the advice carries --force. The
+        # scenario runs the advertised command and asserts it restores the file.
+        $subDoorKitRepo = Join-Path $TestRoot 'subdoor-kitrepo'
+        $subDoorHost = Join-Path $TestRoot 'subdoor-host'
+        $subDoorRunner = Join-Path $TestRoot 'subdoor-runner'
+        New-AssertKitCopy $subDoorKitRepo
+        & git -C $subDoorKitRepo init -q
+        & git -C $subDoorKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $subDoorKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        New-Item -ItemType Directory -Path $subDoorHost -Force | Out-Null
+        & git -C $subDoorHost init -q
+        $subDoorUrl = $subDoorKitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $subDoorHost submodule add -q $subDoorUrl .promptkit
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36f (submodule door): fixture submodule add failed.' }
+        # A real submodule records .git as a file (a gitdir pointer), not a directory.
+        if (-not (Test-Path -LiteralPath (Join-Path $subDoorHost '.promptkit/.git') -PathType Leaf)) { throw 'Failed Test 36f (submodule door): expected .promptkit/.git to be a file.' }
+        Remove-Item -LiteralPath (Join-Path $subDoorHost '.promptkit/workflows/debug.md') -Force
+        New-AssertKitCopy $subDoorRunner
+        $subDoor = Invoke-InitAssert -InitPath (Join-Path $subDoorRunner 'init.ps1') -ProjectPath $subDoorHost -InstallProfile lite
+        if ($subDoor.ExitCode -ne 0) { throw "Failed Test 36f (submodule door): expected exit 0, got $($subDoor.ExitCode)." }
+        if (-not $subDoor.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36f (submodule door): incomplete submodule kit treated as complete.' }
+        if (-not $subDoor.Output.Contains('Restore it in place: git submodule update --init --force .promptkit')) { throw 'Failed Test 36f (submodule door): missing in-place restore advice.' }
+        if (-not $subDoor.Output.Contains('untracked files such as notes are kept')) { throw 'Failed Test 36f (submodule door): missing the --force explanation.' }
+        if ($subDoor.Output.Contains('Remove-Item -Recurse -Force .promptkit')) { throw 'Failed Test 36f (submodule door): told to delete a copy that can be restored in place.' }
+        if ($subDoor.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36f (submodule door): upgrade hint advertised from an incomplete submodule kit.' }
+        if (Test-Path -LiteralPath (Join-Path $subDoorHost '.promptkit/workflows/debug.md')) { throw 'Failed Test 36f (submodule door): fixture did not actually remove the workflow.' }
+        & git -c protocol.file.allow=always -C $subDoorHost submodule update --init --force .promptkit 2>&1 | Out-Null
+        if (-not (Test-Path -LiteralPath (Join-Path $subDoorHost '.promptkit/workflows/debug.md'))) { throw 'Failed Test 36f (submodule door): the advertised restore command did not bring the file back.' }
+
+        # Test 36g: an EMPTY scripts/ directory satisfies the "scripts|dir" row and
+        # nothing else. The installer sources scripts/terminal-picker.ps1 before it
+        # parses an argument, so such a copy cannot run - it must be called
+        # incomplete instead of advertising an upgrade command that dies.
+        $emptyScriptsProj = Join-Path $TestRoot 'emptyscripts-hint-proj'
+        $emptyScriptsKit = Join-Path $TestRoot 'emptyscripts-hint-kit'
+        New-AssertKitCopy $emptyScriptsKit
+        Add-CompleteKitStage -ProjectPath $emptyScriptsProj -KitPath $emptyScriptsKit
+        Remove-Item -LiteralPath (Join-Path $emptyScriptsProj '.promptkit/scripts') -Recurse -Force
+        New-Item -ItemType Directory -Path (Join-Path $emptyScriptsProj '.promptkit/scripts') -Force | Out-Null
+        if (Test-Path -LiteralPath (Join-Path $emptyScriptsProj '.promptkit/scripts/terminal-picker.ps1')) { throw 'Failed Test 36g (empty scripts): fixture still holds the picker.' }
+        $emptyScripts = Invoke-InitAssert -InitPath (Join-Path $emptyScriptsKit 'init.ps1') -ProjectPath $emptyScriptsProj -InstallProfile lite
+        if ($emptyScripts.ExitCode -ne 0) { throw "Failed Test 36g (empty scripts): expected exit 0, got $($emptyScripts.ExitCode)." }
+        if (-not $emptyScripts.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36g (empty scripts): empty scripts/ directory treated as a complete kit.' }
+        if ($emptyScripts.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36g (empty scripts): upgrade hint advertised from a kit copy with an empty scripts/ directory.' }
+
+        # Test 36h: a missing Lite workflow is incomplete too. The summary tells
+        # the user to run pk:route, pk:debug, pk:commit, pk:checkpoint, pk:sync
+        # and pk:profile, so a copy without workflows/debug.md cannot deliver what
+        # it advertises.
+        $missingWfProj = Join-Path $TestRoot 'missingwf-hint-proj'
+        $missingWfKit = Join-Path $TestRoot 'missingwf-hint-kit'
+        New-AssertKitCopy $missingWfKit
+        Add-CompleteKitStage -ProjectPath $missingWfProj -KitPath $missingWfKit
+        Remove-Item -LiteralPath (Join-Path $missingWfProj '.promptkit/workflows/debug.md') -Force
+        $missingWf = Invoke-InitAssert -InitPath (Join-Path $missingWfKit 'init.ps1') -ProjectPath $missingWfProj -InstallProfile lite
+        if ($missingWf.ExitCode -ne 0) { throw "Failed Test 36h (missing Lite workflow): expected exit 0, got $($missingWf.ExitCode)." }
+        if (-not $missingWf.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36h (missing Lite workflow): kit missing a Lite workflow treated as complete.' }
+        if ($missingWf.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36h (missing Lite workflow): upgrade hint advertised from an incomplete kit copy.' }
     } finally {
         if ($null -eq $savedNoInteractive) { Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_INTERACTIVE = $savedNoInteractive }
         if ($null -eq $savedNoPreflight) { Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_PREFLIGHT = $savedNoPreflight }
     }
 
-    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row) with state-matched recovery advice, and install-door structural-assert tests passed." -ForegroundColor Green
+    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore verified end to end), and install-door structural-assert tests passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
