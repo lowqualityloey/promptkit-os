@@ -2,6 +2,44 @@
 # Format: path|kind where kind is exactly `file` or `dir`, path is relative to
 # the kit root. Blank lines and `#` comments are ignored. A malformed row fails
 # closed as ASSERT|unknown|rules|INCOMPLETE.
+#
+# The rows below are the engine-relative paths the installer EXECUTES or reads
+# as a required input, not a full inventory of the kit. The rule is mechanical:
+# every `$SCRIPT_DIR/<path>` in init.sh and every `Join-Path $ScriptDir "<path>"`
+# in init.ps1 must appear here or on the exemption list in
+# scripts/tests/run-init-safety-tests.sh (and its .ps1 twin), which carries a
+# written reason per exemption. That guard test fails when a new engine-relative
+# reference escapes both lists, so a hard dependency cannot silently go missing
+# from a staged copy again.
+#
+# Why these and not the rest: the installer sources scripts/terminal-picker.sh
+# before it parses a single argument, renders the directive from
+# templates/agent-directive-template.md (a missing one exits 1), runs
+# scripts/check-harness-security.sh as its preflight, and the advertised
+# `--balanced` upgrade re-runs scripts/check-setup-assert.sh, which reads
+# scripts/setup-assert-files.txt. A copy missing any of them installs and then
+# advertises an upgrade command that dies. The PowerShell twins are listed for
+# the same reason on the Windows door.
+#
+# Deliberately absent, with the reason recorded in the guard test's exemption
+# list: templates/agent-directive-lite-template.md (falls back to the full
+# template with a warning), templates/terminal-banner.txt (cosmetic, guarded),
+# templates/state-tracker-template.md, templates/pull-request-template.md and
+# templates/github-issue-template.md (all existence-guarded, so the install
+# completes without them).
 templates/project-profile-template.md|file
+templates/agent-directive-template.md|file
 workflows/route.md|file
+workflows/debug.md|file
+workflows/commit.md|file
+workflows/checkpoint.md|file
+workflows/sync.md|file
+workflows/profile.md|file
 scripts|dir
+scripts/terminal-picker.sh|file
+scripts/terminal-picker.ps1|file
+scripts/check-setup-assert.sh|file
+scripts/check-setup-assert.ps1|file
+scripts/setup-assert-files.txt|file
+scripts/check-harness-security.sh|file
+scripts/check-harness-security.ps1|file

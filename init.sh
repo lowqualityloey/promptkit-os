@@ -451,6 +451,39 @@ if [[ -z "$PROJECT_ROOT" ]]; then
     fi
 fi
 
+# Fresh-project detection (before any writes): a project with no tracked files
+# (git) or no non-hidden top-level entries (non-git) has no code yet, so the
+# install hint should point at pk:onboard repo intake instead of assuming an
+# existing codebase. A missing or failing git probe degrades to the non-git
+# check, so a broken git binary can never fail the install here.
+#
+# Installer-owned paths are not project content: the courier extracts the kit
+# into .promptkit/ before running the installer, and a submodule install adds a
+# .promptkit gitlink plus .gitmodules. Counting either as "the project has code"
+# would suppress the hint in exactly the two flows a fresh project uses, so both
+# are excluded from the tracked, dirty, and non-git entry counts.
+FRESH_PROJECT=0
+if git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    if [[ -z "$(git -C "$PROJECT_ROOT" ls-files -- . ':!.promptkit' ':!.gitmodules' 2>/dev/null | head -n 1)" ]] \
+        && [[ -z "$(git -C "$PROJECT_ROOT" status --porcelain -- . ':!.promptkit' ':!.gitmodules' 2>/dev/null | head -n 1)" ]]; then
+        FRESH_PROJECT=1
+    fi
+else
+    shopt -s nullglob dotglob
+    fresh_entries=("$PROJECT_ROOT"/*)
+    shopt -u dotglob nullglob
+    fresh_count=0
+    for fresh_entry in "${fresh_entries[@]}"; do
+        case "${fresh_entry##*/}" in
+            .promptkit|.gitmodules) continue ;;
+        esac
+        fresh_count=$((fresh_count + 1))
+    done
+    if [[ "$fresh_count" -eq 0 ]]; then
+        FRESH_PROJECT=1
+    fi
+fi
+
 # Keep installed settings on update re-runs (flags always win over installed values)
 if [[ "$PROFILE_SET" -eq 0 ]]; then
     installed_profile="$(grep -E '^profile:[[:space:]]' "$PROJECT_ROOT/PROMPTKIT.md" 2>/dev/null | tail -n 1 | awk '{print $2}' || true)"
@@ -761,6 +794,98 @@ if [[ "$SCRIPT_DIR" == "$PROJECT_ROOT" ]]; then
     KIT_DIR_REL="."
 elif [[ "$SCRIPT_DIR" == "$PROJECT_ROOT"/* ]]; then
     KIT_DIR_REL="${SCRIPT_DIR#"$PROJECT_ROOT"/}"
+fi
+
+# Kit staging awareness: the directive references $KIT_DIR_REL/workflows/...;
+# when the engine ran from outside the project and nothing staged the kit at
+# .promptkit/ (courier or submodule), those references dangle. The upgrade
+# hints must not point at a path that does not exist in the project, so the
+# summary warns and names the staging commands instead.
+#
+# "Staged" means a COMPLETE kit, not merely the files this summary happens to
+# name: anywhere the directive, the workflows, and the shipped scripts are used
+# together, a copy missing one of them fails at the first command that needs it.
+# Completeness is defined by scripts/setup-assert-files.txt — the same manifest
+# the install-door assert (scripts/check-setup-assert.sh) validates — so there
+# stays one definition of "a complete kit" instead of a third hand-maintained
+# list that drifts. A missing manifest is itself an incomplete kit, so this
+# check fails toward the warning rather than advertising an upgrade path it
+# cannot verify.
+KIT_DANGLING=0
+# KIT_PARTIAL separates the two dangling cases, because the recovery differs:
+# nothing at .promptkit/ can be staged by the documented commands, while an
+# incomplete copy must be removed first — the courier refuses a non-empty
+# destination without --force, and "git submodule add" refuses an existing
+# directory outright.
+KIT_PARTIAL=0
+# KIT_DOOR records which delivery door produced the copy at .promptkit/, because
+# the recovery command differs per door: a registered git submodule is restored
+# in place by "git submodule update --init --force", while a courier tarball has
+# no upstream to pull from and must be replaced.
+#
+# Registration is a property of the PARENT repository, not of the kit directory:
+# a submodule that was never initialized, or whose directory was deleted, still
+# has a gitlink recorded in the parent index and a path in .gitmodules, but no
+# .promptkit/.git to find. Testing only for that entry mislabels both states as
+# a courier copy and then advises "rm -rf .promptkit" for a checkout that
+# "git submodule update --init --force" restores in place.
+#
+# Both probes run from the project root WITHOUT a .git guard: git resolves the
+# enclosing work tree from any subdirectory, so a project root nested inside a
+# monorepo (apps/demo) has no .git and no .gitmodules of its own while
+# "git -C apps/demo ls-files -s -- .promptkit" still reports the gitlink. The
+# .gitmodules fallback resolves the TOPLEVEL file and compares against the
+# toplevel-relative path (prefix + rel), because a nested .gitmodules records
+# "submodule.apps/demo/.promptkit.path apps/demo/.promptkit".
+kit_registered_submodule() {
+    local proj="$1" rel="$2" out meta path line top prefix full
+    command -v git >/dev/null 2>&1 || return 1
+    out=$(GIT_OPTIONAL_LOCKS=0 git -C "$proj" -c core.fsmonitor=false ls-files -s -- "$rel" 2>/dev/null) || out=""
+    while IFS=$'\t' read -r meta path; do
+        [[ -z "$path" || "$path" != "$rel" ]] && continue
+        [[ "${meta%% *}" == "160000" ]] && return 0
+    done <<< "$out"
+    top=$(GIT_OPTIONAL_LOCKS=0 git -C "$proj" -c core.fsmonitor=false rev-parse --show-toplevel 2>/dev/null) || top=""
+    [[ -z "$top" || ! -f "$top/.gitmodules" ]] && return 1
+    prefix=$(GIT_OPTIONAL_LOCKS=0 git -C "$proj" -c core.fsmonitor=false rev-parse --show-prefix 2>/dev/null) || prefix=""
+    full="${prefix}${rel}"
+    out=$(git config -f "$top/.gitmodules" --get-regexp '^submodule\..*\.path$' 2>/dev/null) || out=""
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        [[ "${line##* }" == "$full" ]] && return 0
+    done <<< "$out"
+    return 1
+}
+
+KIT_DOOR="none"
+if [[ "$KIT_DIR_REL" == ".promptkit" ]]; then
+    KIT_MANIFEST="$SCRIPT_DIR/scripts/setup-assert-files.txt"
+    if [[ -d "$PROJECT_ROOT/.promptkit" ]]; then
+        KIT_PARTIAL=1
+    fi
+    if [[ -e "$PROJECT_ROOT/.promptkit/.git" ]] || kit_registered_submodule "$PROJECT_ROOT" ".promptkit"; then
+        KIT_DOOR="submodule"
+    elif [[ "$KIT_PARTIAL" == "1" ]]; then
+        KIT_DOOR="courier"
+    fi
+    if [[ ! -f "$PROJECT_ROOT/.promptkit/init.sh" || ! -f "$KIT_MANIFEST" ]]; then
+        KIT_DANGLING=1
+    else
+        while IFS='|' read -r kit_rel kit_kind; do
+            kit_rel="${kit_rel%$'\r'}"
+            kit_kind="${kit_kind%$'\r'}"
+            if [[ -z "$kit_rel" || "$kit_rel" == \#* ]]; then
+                continue
+            fi
+            if [[ "$kit_kind" == "dir" ]]; then
+                if [[ ! -d "$PROJECT_ROOT/.promptkit/$kit_rel" ]]; then
+                    KIT_DANGLING=1
+                fi
+            elif [[ ! -f "$PROJECT_ROOT/.promptkit/$kit_rel" ]]; then
+                KIT_DANGLING=1
+            fi
+        done < "$KIT_MANIFEST"
+    fi
 fi
 
 if [[ "$PROFILE" == "lite" ]]; then
@@ -1192,17 +1317,24 @@ if [[ -f "$STATE_TRACKER" ]]; then
         rm -f "$STATE_STAMP_TMP"
     fi
 fi
-if [[ ! -f "$PR_TEMPLATE_TARGET" && -f "$TEMPLATE_PR" ]]; then
-    mkdir -p "$GITHUB_DIR"
-    CREATED_FILES+=("$PR_TEMPLATE_TARGET")
-    cp "$TEMPLATE_PR" "$PR_TEMPLATE_TARGET"
-    echo -e "  \033[0;32m[+]\\033[0m Created: .github/pull_request_template.md (staff-level PR specification)"
-fi
-if [[ ! -f "$TASK_TEMPLATE_TARGET" && -f "$TEMPLATE_TASK" ]]; then
-    mkdir -p "$ISSUE_TEMPLATE_DIR"
-    CREATED_FILES+=("$TASK_TEMPLATE_TARGET")
-    cp "$TEMPLATE_TASK" "$TASK_TEMPLATE_TARGET"
-    echo -e "  \033[0;32m[+]\\033[0m Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)"
+# GitHub PR/issue templates mirror the GitHub tracker: they are only useful
+# when tasks are tracked on GitHub (or projected there), so a local/jira/linear
+# install skips them instead of adding .github noise to a non-GitHub project.
+if [[ "$TRACKING" == "github" || "$TRACKING_PROJECTION" == "github" ]]; then
+    if [[ ! -f "$PR_TEMPLATE_TARGET" && -f "$TEMPLATE_PR" ]]; then
+        mkdir -p "$GITHUB_DIR"
+        CREATED_FILES+=("$PR_TEMPLATE_TARGET")
+        cp "$TEMPLATE_PR" "$PR_TEMPLATE_TARGET"
+        echo -e "  \033[0;32m[+]\\033[0m Created: .github/pull_request_template.md (staff-level PR specification)"
+    fi
+    if [[ ! -f "$TASK_TEMPLATE_TARGET" && -f "$TEMPLATE_TASK" ]]; then
+        mkdir -p "$ISSUE_TEMPLATE_DIR"
+        CREATED_FILES+=("$TASK_TEMPLATE_TARGET")
+        cp "$TEMPLATE_TASK" "$TASK_TEMPLATE_TARGET"
+        echo -e "  \033[0;32m[+]\\033[0m Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)"
+    fi
+else
+    echo -e "  \033[0;33m[-]\\033[0m Skipped: .github PR/issue templates (task tracking is '$TRACKING'; they are created when tracking is GitHub or GitHub projection)"
 fi
 
 # Commit targets
@@ -1254,15 +1386,62 @@ if [[ "$ASSERT_RC" -ne 0 ]]; then
     exit 2
 fi
 
+# The submodule recovery command is owned by the install-door assert, not
+# restated here: two hand-written copies of it disagreed, and the copy in the
+# assert was the wrong one. Ask the assert for the string it prints in its own
+# remedies so the summary and the assert can never drift apart again.
+KIT_RECOVERY_COMMAND=""
+if [[ "$KIT_DOOR" == "submodule" ]]; then
+    KIT_RECOVERY_COMMAND=$(bash "$SCRIPT_DIR/scripts/check-setup-assert.sh" --recovery-command "$KIT_DIR_REL" 2>/dev/null) || KIT_RECOVERY_COMMAND=""
+    if [[ -z "$KIT_RECOVERY_COMMAND" ]]; then
+        KIT_RECOVERY_COMMAND="git submodule update --init --force $KIT_DIR_REL"
+    fi
+fi
+
 echo -e "\n\033[0;36m✨ PromptKit OS successfully configured for $PROJECT_ROOT! ($PROFILE profile)\033[0m"
+if [[ "$KIT_DANGLING" == "1" ]]; then
+    if [[ "$KIT_PARTIAL" == "1" ]]; then
+        echo -e "   \033[0;33mNote: .promptkit/ in this project is an incomplete copy of the kit — the directive references workflows there, so pk:* commands cannot load until the kit is complete.\033[0m"
+        if [[ "$KIT_DOOR" == "submodule" ]]; then
+            echo -e "   Restore it in place: $KIT_RECOVERY_COMMAND"
+            echo -e "   (--force restores the files the submodule commit records and reverts local edits to tracked kit files; untracked files elsewhere in the kit are kept, but an untracked file sitting where a missing tracked file belongs is replaced)"
+            echo -e "   (--init is required when the submodule was never initialized or its directory was deleted; the parent repository still records it)"
+        else
+            echo -e "   Replace it: rm -rf .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
+            echo -e "   (a courier copy has no upstream to pull from, so it must be replaced; check .promptkit/ for local edits and untracked files first — rm -rf deletes them)"
+            echo -e "   (npx promptkit-os@latest --force overlays the existing directory without cleaning it, so stale files survive)"
+        fi
+    else
+        echo -e "   \033[0;33mNote: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it.\033[0m"
+        if [[ "$KIT_DOOR" == "submodule" ]]; then
+            echo -e "   Restore it in place: $KIT_RECOVERY_COMMAND"
+            echo -e "   (the parent repository still records the submodule; --init checks it out again)"
+        else
+            echo -e "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
+        fi
+    fi
+fi
 if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok\033[0m"
-    echo -e "   Upgrade anytime: $KIT_DIR_REL/init.sh --balanced for the full Balanced profile"
+    if [[ "$KIT_DANGLING" == "0" ]]; then
+        echo -e "   Upgrade anytime: $KIT_DIR_REL/init.sh --balanced for the full Balanced profile"
+    fi
 elif [[ "$PROFILE" == "balanced" ]]; then
     echo -e "   Balanced: 26 workflows, Level 0-3 adaptive ceremony — full power"
-    echo -e "   For onboarding: $KIT_DIR_REL/init.sh --lite for minimal setup"
+    if [[ "$KIT_DANGLING" == "0" ]]; then
+        echo -e "   For onboarding: $KIT_DIR_REL/init.sh --lite for minimal setup"
+    fi
 else
     echo -e "   \033[0;33mTurbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost\033[0m"
     echo -e "   Human approval still required for Level 3 (releases/tags/deploys)"
+fi
+if [[ "$FRESH_PROJECT" == "1" ]]; then
+    if [[ "$PROFILE" == "lite" && "$KIT_DANGLING" == "1" ]]; then
+        echo -e "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning (Balanced-profile workflow — stage the kit first, see above)"
+    elif [[ "$PROFILE" == "lite" ]]; then
+        echo -e "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning (Balanced-profile workflow; upgrade: $KIT_DIR_REL/init.sh --balanced)"
+    else
+        echo -e "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning"
+    fi
 fi
 echo -e "   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'\n"

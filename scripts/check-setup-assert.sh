@@ -2,6 +2,7 @@
 # Read-only install-door structural assert for the PromptKit OS kit tree.
 #
 # Usage: scripts/check-setup-assert.sh <project-root> <kit-dir> <kit-dir-rel>
+#        scripts/check-setup-assert.sh --recovery-command [<kit-dir-rel>]
 #
 # The installer calls this after a successful commit and before printing the
 # success banner. It classifies which documented install door produced the kit
@@ -21,6 +22,10 @@
 #   ASSERT|skipped|USER_OPT_OUT|SKIP             (PROMPTKIT_NO_PREFLIGHT=1)
 #   ASSERT|<door>|remedy|<prose>                 (human remedy; field 4 is text)
 #
+# Query mode: `--recovery-command [<kit-dir-rel>]` prints the single submodule
+# recovery command and exits 0. The installer summary renders that command
+# instead of restating it, so the advice has one owner.
+#
 # Exit: 0 = OK or explicit opt-out, 1 = structural FAIL, 2 = INCOMPLETE.
 # FAIL is an observed structural mismatch the author can fix. INCOMPLETE means
 # the condition could not be measured (git missing, an unexpected git status,
@@ -36,6 +41,33 @@ kit_rel="${3:-}"
 verdict() { printf 'ASSERT|%s|%s|%s\n' "$1" "$2" "$3"; }
 sanitize() { printf '%s' "$1" | tr '\r\n|' '   '; }
 remedy() { printf 'ASSERT|%s|remedy|%s\n' "$1" "$(sanitize "$2")"; }
+
+# The ONE recovery command for a registered submodule, and the only place it is
+# written. The installer's summary renders it through --recovery-command instead
+# of restating it, because two hand-written copies of this string disagreed:
+# the summary said "--init --force" while this file said "--init --remote
+# --merge", and the second form is wrong twice over. It refuses a deinitialized
+# submodule ("Submodule path ... not initialized / Maybe you want to use 'update
+# --init'?"), and --remote advances the checkout to the remote tip while the
+# parent index keeps the old gitlink, which CREATES the '+' drift the remedy is
+# supposed to clear.
+#
+# Verified to restore the recorded commit from every state a registered
+# submodule can be in: deinitialized (empty directory), directory deleted,
+# drifted (+), and files deleted inside the checkout. --init is required for the
+# first two, --force for the last two.
+submodule_recovery_command() {
+    printf 'git submodule update --init --force %s' "$kit_rel"
+}
+
+# Query mode: print that command and exit. Read-only, like every other path in
+# this script.
+if [[ "${1:-}" == "--recovery-command" ]]; then
+    kit_rel="${2:-.promptkit}"
+    submodule_recovery_command
+    printf '\n'
+    exit 0
+fi
 
 if [[ -z "$project_root" || -z "$kit_dir" ]]; then
     verdict unknown args INCOMPLETE
@@ -92,7 +124,7 @@ fail_missing() {
             verdict "$door" "missing:$m" FAIL
         done
     fi
-    remedy "$door" "Restore the missing file(s) above, or reinstall via a documented method: npx promptkit-os@latest, git submodule update --remote --merge $kit_rel, or a full engine-tree copy"
+    remedy "$door" "Restore the missing file(s) above, or reinstall via a documented method: npx promptkit-os@latest, $(submodule_recovery_command), or a full engine-tree copy"
     exit 1
 }
 
@@ -173,7 +205,7 @@ if [[ "$host_repo" -eq 1 ]]; then
             160000)
                 if ! gitmodules_lists_kit; then
                     verdict submodule gitmodules FAIL
-                    remedy submodule "A gitlink is staged for $kit_rel but .gitmodules does not register that path; re-run git submodule update --init --recursive $kit_rel or remove the stale index entry"
+                    remedy submodule "A gitlink is staged for $kit_rel but .gitmodules does not register that path; re-run $(submodule_recovery_command) or remove the stale index entry"
                     exit 1
                 fi
                 door=submodule
@@ -190,7 +222,7 @@ if [[ "$host_repo" -eq 1 ]]; then
         esac
     elif gitmodules_lists_kit; then
         verdict submodule staged FAIL
-        remedy submodule ".gitmodules registers $kit_rel but no gitlink is staged; run git submodule update --init --recursive $kit_rel"
+        remedy submodule ".gitmodules registers $kit_rel but no gitlink is staged; run $(submodule_recovery_command)"
         exit 1
     else
         door=direct-clone
@@ -214,22 +246,22 @@ if [[ "$door" == "submodule" ]]; then
             ;;
         '-')
             verdict submodule status FAIL
-            remedy submodule "Submodule $kit_rel is not initialized; run git submodule update --remote --merge $kit_rel"
+            remedy submodule "Submodule $kit_rel is not initialized; run $(submodule_recovery_command)"
             exit 1
             ;;
         '+')
             verdict submodule status FAIL
-            remedy submodule "Submodule $kit_rel is out of sync with the recorded commit; run git submodule update --remote --merge $kit_rel"
+            remedy submodule "Submodule $kit_rel is out of sync with the recorded commit; run $(submodule_recovery_command)"
             exit 1
             ;;
         'U')
             verdict submodule status FAIL
-            remedy submodule "Submodule $kit_rel has unresolved merge conflicts; resolve them or re-run git submodule update --remote --merge $kit_rel"
+            remedy submodule "Submodule $kit_rel has unresolved merge conflicts; resolve them or re-run $(submodule_recovery_command)"
             exit 1
             ;;
         '?')
             verdict submodule status FAIL
-            remedy submodule "Submodule $kit_rel is not registered as expected; re-run git submodule update --init --recursive $kit_rel"
+            remedy submodule "Submodule $kit_rel is not registered as expected; re-run $(submodule_recovery_command)"
             exit 1
             ;;
         *)

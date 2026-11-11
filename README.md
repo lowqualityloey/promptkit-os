@@ -249,6 +249,7 @@ PromptKit routes the task to the appropriate ceremony level and workflow. Explic
 | **[docs/BENCHMARKS.md](./docs/BENCHMARKS.md)** | I want static token budget evidence |
 | **[docs/BENCHMARK-METHODOLOGY.md](./docs/BENCHMARK-METHODOLOGY.md)** | I want the CPAC engineering benchmark methodology |
 | **[docs/COMPARISONS.md](./docs/COMPARISONS.md)** | I want to compare it with other tools |
+| **[docs/ENFORCEMENT.md](./docs/ENFORCEMENT.md)** | I want to know what is actually enforced, and where |
 | **[docs/stacks/](./docs/stacks/)** | I want JIT stack playbooks (23 — Web, DB, Cloud, Mobile, Systems, CLI) |
 | **[docs/recipes/](./docs/recipes/)** | I want reusable boundary contracts (10 — Auth, Forms, Webhooks, Env, Testing, State, Realtime + 3 pk:auto utilities) |
 | **[docs/ADOPTION-GUIDE.md](./docs/ADOPTION-GUIDE.md)** | I want to add it to an existing project gradually |

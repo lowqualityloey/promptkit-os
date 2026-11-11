@@ -609,6 +609,65 @@ copy_kit() {
     tar -C "$REPO_ROOT" --exclude=.git --exclude=.codegraph -cf - . | tar -C "$dest" -xf -
 }
 
+# Stage a COMPLETE kit at <project>/.promptkit: the installer plus every row of
+# scripts/setup-assert-files.txt. That manifest is the single definition of a
+# complete kit — the installer reads it to decide whether a staged copy is
+# usable, and scripts/check-setup-assert.sh validates the same rows — so the
+# fixtures derive the staged set from it instead of hard-coding a second list
+# that could drift out of step with the installer.
+stage_complete_kit() {
+    local project="$1" kit="$2" rel kind
+    mkdir -p "$project/.promptkit"
+    cp "$kit/init.sh" "$project/.promptkit/init.sh"
+    while IFS='|' read -r rel kind; do
+        rel="${rel%$'\r'}"
+        kind="${kind%$'\r'}"
+        if [[ -z "$rel" || "$rel" == \#* ]]; then
+            continue
+        fi
+        if [[ "$kind" == "dir" ]]; then
+            mkdir -p "$project/.promptkit/$rel"
+            cp -R "$kit/$rel/." "$project/.promptkit/$rel/"
+        else
+            mkdir -p "$project/.promptkit/$(dirname "$rel")"
+            cp "$kit/$rel" "$project/.promptkit/$rel"
+        fi
+    done < "$kit/scripts/setup-assert-files.txt"
+}
+
+# The installer and the install-door assert both print a recovery command, and
+# these tests EXECUTE it instead of matching it. Six review rounds each found a
+# new defect in a hand-written recovery string that a test only pattern-matched,
+# so the subject here is the command's effect: run the printed line verbatim and
+# assert the resulting submodule state.
+printed_recovery_command() {
+    sed -n 's/^   Restore it in place: //p' <<<"$1" | head -n 1
+}
+
+# The assert prints its command inside a prose remedy, so pull the command out of
+# the sentence rather than restating it here.
+printed_assert_recovery_command() {
+    grep -o 'git submodule update --init --force [^,]*' <<<"$1" | head -n 1
+}
+
+# Run the printed command from the project root. GIT_ALLOW_PROTOCOL=file lets a
+# fixture submodule whose origin is a local path be fetched without weakening
+# the fixture's own configuration.
+run_recovery_command() {
+    local host="$1" cmd="$2"
+    local -a words
+    read -r -a words <<<"$cmd"
+    ( cd "$host" && env GIT_ALLOW_PROTOCOL=file "${words[@]}" ) >/dev/null 2>&1
+}
+
+# The first column of "git submodule status": ' ' in sync, '-' not initialized,
+# '+' drifted, 'U' conflicted.
+submodule_prefix() {
+    local host="$1" out
+    out=$(git -C "$host" submodule status -- .promptkit 2>/dev/null) || return 1
+    printf '%s' "${out:0:1}"
+}
+
 # Test 27: courier door — complete kit tree with no .git classifies as courier
 COURIER_PROJ="$TEST_ROOT/assert_courier_project"
 COURIER_KIT="$TEST_ROOT/assert_courier_kit"
@@ -677,6 +736,9 @@ fi
 [[ "$sub_rc" -eq 0 ]]
 grep -q '^ASSERT|submodule|status|OK$' <<<"$sub_out"
 grep -q 'PromptKit OS successfully configured' <<<"$sub_out"
+# The submodule door stages the kit at .promptkit/, so the relative upgrade
+# hint must still be advertised there (dangling-kit coverage lives in test 36).
+grep -qF '.promptkit/init.sh' <<<"$sub_out"
 
 # Test 31: standalone door — kit run in place with PROJECT_ROOT == SCRIPT_DIR
 STANDALONE_KIT="$TEST_ROOT/standalone_kit"
@@ -720,7 +782,10 @@ if grep -qF './/' "$KITREF_PROJ/AGENTS.md" || grep -qF "$KITREF_KIT" "$KITREF_PR
     echo "Sibling kit directory leaked into the directive: kit reference is not path-bounded." >&2
     exit 1
 fi
-grep -qF '.promptkit/init.sh' <<<"$kitref_out"
+# The sibling-kit scenario leaves .promptkit/ unstaged in the project, so the
+# summary warns about the dangling kit reference instead of advertising an
+# upgrade path that does not exist there.
+grep -qF 'not staged at .promptkit/' <<<"$kitref_out"
 if grep -qF "$KITREF_KIT/init.sh" <<<"$kitref_out"; then
     echo "Sibling kit directory leaked into the upgrade hint." >&2
     exit 1
@@ -761,4 +826,684 @@ if grep -q 'PromptKit OS successfully configured' <<<"$gitfail_out"; then
     exit 1
 fi
 
-echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."
+# Test 34: GitHub template gate — .github PR/issue templates are created only
+# when tracking is GitHub (or GitHub projection); a local-tracking install
+# skips them instead of adding .github noise to a non-GitHub project.
+GATE_PROJ="$TEST_ROOT/template_gate_project"
+GATE_KIT="$TEST_ROOT/template_gate_kit"
+copy_kit "$GATE_KIT"
+mkdir -p "$GATE_PROJ"
+if gate_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$GATE_KIT/init.sh" --balanced "$GATE_PROJ" 2>&1)"; then
+    gate_rc=0
+else
+    gate_rc=$?
+fi
+[[ "$gate_rc" -eq 0 ]]
+[[ ! -e "$GATE_PROJ/.github" ]]
+grep -qF 'Skipped: .github PR/issue templates' <<<"$gate_out"
+GATE_GH_PROJ="$TEST_ROOT/template_gate_github_project"
+GATE_GH_KIT="$TEST_ROOT/template_gate_github_kit"
+copy_kit "$GATE_GH_KIT"
+mkdir -p "$GATE_GH_PROJ"
+if gate_gh_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$GATE_GH_KIT/init.sh" --balanced --tracking=github "$GATE_GH_PROJ" 2>&1)"; then
+    gate_gh_rc=0
+else
+    gate_gh_rc=$?
+fi
+[[ "$gate_gh_rc" -eq 0 ]]
+[[ -f "$GATE_GH_PROJ/.github/pull_request_template.md" ]]
+[[ -f "$GATE_GH_PROJ/.github/ISSUE_TEMPLATE/task.md" ]]
+grep -qF 'Created: .github/pull_request_template.md' <<<"$gate_gh_out"
+grep -qF 'Created: .github/ISSUE_TEMPLATE/task.md' <<<"$gate_gh_out"
+
+# Test 35: freshness-aware hint — a fresh project (no tracked files) is told
+# about pk:onboard repo intake; a project with committed code is not.
+FRESH_PROJ="$TEST_ROOT/fresh_hint_project"
+FRESH_KIT="$TEST_ROOT/fresh_hint_kit"
+copy_kit "$FRESH_KIT"
+mkdir -p "$FRESH_PROJ"
+git -C "$FRESH_PROJ" init -q
+if fresh_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$FRESH_KIT/init.sh" --balanced "$FRESH_PROJ" 2>&1)"; then
+    fresh_rc=0
+else
+    fresh_rc=$?
+fi
+[[ "$fresh_rc" -eq 0 ]]
+grep -qF 'Fresh project (no code yet)?' <<<"$fresh_out"
+grep -qF 'pk:onboard' <<<"$fresh_out"
+BUSY_PROJ="$TEST_ROOT/busy_hint_project"
+BUSY_KIT="$TEST_ROOT/busy_hint_kit"
+copy_kit "$BUSY_KIT"
+mkdir -p "$BUSY_PROJ"
+git -C "$BUSY_PROJ" init -q
+printf 'fn main() {}\n' > "$BUSY_PROJ/main.rs"
+git -C "$BUSY_PROJ" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$BUSY_PROJ" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture code"
+if busy_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$BUSY_KIT/init.sh" --balanced "$BUSY_PROJ" 2>&1)"; then
+    busy_rc=0
+else
+    busy_rc=$?
+fi
+[[ "$busy_rc" -eq 0 ]]
+if grep -qF 'Fresh project (no code yet)?' <<<"$busy_out"; then
+    echo "Install hint claimed a project with committed code is fresh." >&2
+    exit 1
+fi
+
+# Test 35b: courier door freshness — the courier extracts the kit into
+# .promptkit/ and stages it before running the installer, so the project is
+# empty of project content even though .promptkit/ is tracked. The hint must
+# still fire; counting the installer-owned tree as "code" would hide it in
+# the flow a fresh project actually uses.
+COURIER_FRESH_PROJ="$TEST_ROOT/courier_fresh_project"
+COURIER_FRESH_KIT="$TEST_ROOT/courier_fresh_kit"
+copy_kit "$COURIER_FRESH_KIT"
+stage_complete_kit "$COURIER_FRESH_PROJ" "$COURIER_FRESH_KIT"
+git -C "$COURIER_FRESH_PROJ" init -q
+git -C "$COURIER_FRESH_PROJ" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+if courier_fresh_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$COURIER_FRESH_KIT/init.sh" --balanced "$COURIER_FRESH_PROJ" 2>&1)"; then
+    courier_fresh_rc=0
+else
+    courier_fresh_rc=$?
+fi
+[[ "$courier_fresh_rc" -eq 0 ]]
+grep -qF 'Fresh project (no code yet)?' <<<"$courier_fresh_out"
+grep -qF 'pk:onboard' <<<"$courier_fresh_out"
+
+# Test 35c: submodule door freshness — a submodule install adds a .promptkit
+# gitlink and a .gitmodules entry, which are installer-owned rather than
+# project content. The hint must still fire.
+SUB_FRESH_PROJ="$TEST_ROOT/submodule_fresh_project"
+SUB_FRESH_KIT="$TEST_ROOT/submodule_fresh_kit"
+copy_kit "$SUB_FRESH_KIT"
+mkdir -p "$SUB_FRESH_PROJ"
+git -C "$SUB_FRESH_PROJ" init -q
+git -C "$SUB_FRESH_PROJ" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q --allow-empty -m "fixture root"
+sub_fresh_sha="$(git -C "$SUB_FRESH_PROJ" rev-parse HEAD)"
+printf '[submodule ".promptkit"]\n\tpath = .promptkit\n\turl = https://example.invalid/kit.git\n' > "$SUB_FRESH_PROJ/.gitmodules"
+git -C "$SUB_FRESH_PROJ" add .gitmodules
+git -C "$SUB_FRESH_PROJ" update-index --add --cacheinfo "160000,$sub_fresh_sha,.promptkit"
+if sub_fresh_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$SUB_FRESH_KIT/init.sh" --balanced "$SUB_FRESH_PROJ" 2>&1)"; then
+    sub_fresh_rc=0
+else
+    sub_fresh_rc=$?
+fi
+[[ "$sub_fresh_rc" -eq 0 ]]
+grep -qF 'Fresh project (no code yet)?' <<<"$sub_fresh_out"
+grep -qF 'pk:onboard' <<<"$sub_fresh_out"
+
+# Test 36: dangling-kit warning — when the engine runs from outside the
+# project and nothing staged the kit at .promptkit/, the summary warns and
+# suppresses the upgrade hint that points at the unstaged path. Lite profile
+# is used so the suppressed "Upgrade anytime" hint is genuinely exercised
+# (it is a lite-only summary line).
+DANGLE_PROJ="$TEST_ROOT/dangle_hint_project"
+DANGLE_KIT="$TEST_ROOT/dangle_hint_kit"
+copy_kit "$DANGLE_KIT"
+mkdir -p "$DANGLE_PROJ"
+if dangle_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$DANGLE_KIT/init.sh" --lite "$DANGLE_PROJ" 2>&1)"; then
+    dangle_rc=0
+else
+    dangle_rc=$?
+fi
+[[ "$dangle_rc" -eq 0 ]]
+grep -qF 'not staged at .promptkit/' <<<"$dangle_out"
+grep -qF 'Stage the kit:' <<<"$dangle_out"
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$dangle_out"; then
+    echo "Upgrade hint points at an unstaged kit path." >&2
+    exit 1
+fi
+
+# Test 36b: staged kit — when .promptkit/ carries a COMPLETE kit (the
+# installer plus every row of scripts/setup-assert-files.txt), the relative
+# upgrade hint is advertised and no dangling warning prints. Lite profile so
+# the "Upgrade anytime" hint is genuinely exercised.
+STAGED_PROJ="$TEST_ROOT/staged_hint_project"
+STAGED_KIT="$TEST_ROOT/staged_hint_kit"
+copy_kit "$STAGED_KIT"
+stage_complete_kit "$STAGED_PROJ" "$STAGED_KIT"
+if staged_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$STAGED_KIT/init.sh" --lite "$STAGED_PROJ" 2>&1)"; then
+    staged_rc=0
+else
+    staged_rc=$?
+fi
+[[ "$staged_rc" -eq 0 ]]
+grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$staged_out"
+if grep -qF 'not staged at .promptkit/' <<<"$staged_out"; then
+    echo "Dangling warning printed for a staged kit." >&2
+    exit 1
+fi
+if grep -qF 'incomplete copy of the kit' <<<"$staged_out"; then
+    echo "Incomplete-copy warning printed for a complete kit." >&2
+    exit 1
+fi
+
+# Test 36c: partial kit — a .promptkit/ holding the installer but not the
+# workflow entry point is a partial copy: the upgrade hint would point at
+# pk:* commands that cannot resolve, so the warning must fire and the hint
+# must be suppressed. The recovery advice must also match the state AND the
+# door: this copy has no .git, so it is a courier install, which has no
+# upstream to pull from and must be replaced — and the advice must warn that
+# the removal deletes local edits and untracked files.
+PARTIAL_PROJ="$TEST_ROOT/partial_hint_project"
+PARTIAL_KIT="$TEST_ROOT/partial_hint_kit"
+copy_kit "$PARTIAL_KIT"
+mkdir -p "$PARTIAL_PROJ/.promptkit"
+cp "$PARTIAL_KIT/init.sh" "$PARTIAL_PROJ/.promptkit/init.sh"
+if partial_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$PARTIAL_KIT/init.sh" --lite "$PARTIAL_PROJ" 2>&1)"; then
+    partial_rc=0
+else
+    partial_rc=$?
+fi
+[[ "$partial_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$partial_out"
+grep -qF 'Replace it: rm -rf .promptkit' <<<"$partial_out"
+grep -qF 'check .promptkit/ for local edits and untracked files first' <<<"$partial_out"
+grep -qF -- '--force overlays the existing directory without cleaning it' <<<"$partial_out"
+if grep -qF 'Restore it in place:' <<<"$partial_out"; then
+    echo "Courier-door partial kit printed the submodule restore advice, which cannot work without a submodule." >&2
+    exit 1
+fi
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$partial_out"; then
+    echo "Upgrade hint advertised from a partial kit copy." >&2
+    exit 1
+fi
+if grep -qF 'Stage the kit:' <<<"$partial_out"; then
+    echo "Partial kit printed the stage-from-scratch advice, which cannot succeed on a non-empty .promptkit/." >&2
+    exit 1
+fi
+
+# Test 36d: the reviewer's tree — .promptkit/ holding exactly the installer and
+# the workflow entry point. Both files exist, so a two-file check called this
+# staged and advertised an upgrade path whose scripts/ directory was absent;
+# the manifest-driven check must call it incomplete.
+TWOFILE_PROJ="$TEST_ROOT/twofile_hint_project"
+TWOFILE_KIT="$TEST_ROOT/twofile_hint_kit"
+copy_kit "$TWOFILE_KIT"
+mkdir -p "$TWOFILE_PROJ/.promptkit/workflows"
+cp "$TWOFILE_KIT/init.sh" "$TWOFILE_PROJ/.promptkit/init.sh"
+cp "$TWOFILE_KIT/workflows/route.md" "$TWOFILE_PROJ/.promptkit/workflows/route.md"
+if twofile_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$TWOFILE_KIT/init.sh" --lite "$TWOFILE_PROJ" 2>&1)"; then
+    twofile_rc=0
+else
+    twofile_rc=$?
+fi
+[[ "$twofile_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$twofile_out"
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$twofile_out"; then
+    echo "Upgrade hint advertised from a two-file kit copy." >&2
+    exit 1
+fi
+
+# Test 36e: a complete kit minus one manifest row is still incomplete. The
+# scripts/ directory is the row a two-file copy misses, so removing it from an
+# otherwise complete stage must flip the verdict back to incomplete.
+MISSINGROW_PROJ="$TEST_ROOT/missingrow_hint_project"
+MISSINGROW_KIT="$TEST_ROOT/missingrow_hint_kit"
+copy_kit "$MISSINGROW_KIT"
+stage_complete_kit "$MISSINGROW_PROJ" "$MISSINGROW_KIT"
+rm -rf "$MISSINGROW_PROJ/.promptkit/scripts"
+if missingrow_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$MISSINGROW_KIT/init.sh" --lite "$MISSINGROW_PROJ" 2>&1)"; then
+    missingrow_rc=0
+else
+    missingrow_rc=$?
+fi
+[[ "$missingrow_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$missingrow_out"
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$missingrow_out"; then
+    echo "Upgrade hint advertised from a kit copy missing a manifest row." >&2
+    exit 1
+fi
+
+# Test 36f: submodule door — the same incomplete copy, but installed as a git
+# submodule. A submodule DOES have an upstream, so the recovery is an in-place
+# restore, not a replacement: "git submodule update --init --force" checks the
+# recorded commit out again, which brings back deleted kit files. The plain
+# "--init" form does nothing once the recorded commit is already checked out,
+# which is why the advice carries --force. The scenario runs the advertised
+# command and asserts it actually restores the missing file.
+SUBDOOR_KITREPO="$TEST_ROOT/subdoor_kitrepo"
+SUBDOOR_HOST="$TEST_ROOT/subdoor_host"
+SUBDOOR_RUNNER="$TEST_ROOT/subdoor_runner"
+copy_kit "$SUBDOOR_KITREPO"
+git -C "$SUBDOOR_KITREPO" init -q
+git -C "$SUBDOOR_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$SUBDOOR_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$SUBDOOR_HOST"
+git -C "$SUBDOOR_HOST" init -q
+git -C "$SUBDOOR_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$SUBDOOR_KITREPO" .promptkit
+# A real submodule records .git as a file (a gitdir pointer), not a directory.
+[[ -f "$SUBDOOR_HOST/.promptkit/.git" ]]
+rm -f "$SUBDOOR_HOST/.promptkit/workflows/debug.md"
+copy_kit "$SUBDOOR_RUNNER"
+if subdoor_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$SUBDOOR_RUNNER/init.sh" --lite "$SUBDOOR_HOST" 2>&1)"; then
+    subdoor_rc=0
+else
+    subdoor_rc=$?
+fi
+[[ "$subdoor_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$subdoor_out"
+grep -qF 'untracked files elsewhere in the kit are kept' <<<"$subdoor_out"
+if grep -qF 'rm -rf .promptkit' <<<"$subdoor_out"; then
+    echo "Submodule-door partial kit was told to delete a copy that can be restored in place." >&2
+    exit 1
+fi
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$subdoor_out"; then
+    echo "Upgrade hint advertised from an incomplete submodule kit." >&2
+    exit 1
+fi
+[[ ! -f "$SUBDOOR_HOST/.promptkit/workflows/debug.md" ]]
+# Execute the advice instead of matching it: the printed line must restore the
+# deleted workflow and leave the submodule in sync with the recorded commit.
+SUBDOOR_CMD="$(printed_recovery_command "$subdoor_out")"
+[[ -n "$SUBDOOR_CMD" ]]
+run_recovery_command "$SUBDOOR_HOST" "$SUBDOOR_CMD"
+[[ -f "$SUBDOOR_HOST/.promptkit/workflows/debug.md" ]]
+[[ "$(submodule_prefix "$SUBDOOR_HOST")" == " " ]]
+
+# Test 36g: an EMPTY scripts/ directory satisfies the "scripts|dir" row and
+# nothing else. The installer sources scripts/terminal-picker.sh before it
+# parses an argument, so such a copy cannot run — it must be called incomplete
+# instead of advertising an upgrade command that dies.
+EMPTYSCRIPTS_PROJ="$TEST_ROOT/emptyscripts_hint_project"
+EMPTYSCRIPTS_KIT="$TEST_ROOT/emptyscripts_hint_kit"
+copy_kit "$EMPTYSCRIPTS_KIT"
+stage_complete_kit "$EMPTYSCRIPTS_PROJ" "$EMPTYSCRIPTS_KIT"
+rm -rf "$EMPTYSCRIPTS_PROJ/.promptkit/scripts"
+mkdir -p "$EMPTYSCRIPTS_PROJ/.promptkit/scripts"
+[[ -d "$EMPTYSCRIPTS_PROJ/.promptkit/scripts" ]]
+[[ ! -f "$EMPTYSCRIPTS_PROJ/.promptkit/scripts/terminal-picker.sh" ]]
+if emptyscripts_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$EMPTYSCRIPTS_KIT/init.sh" --lite "$EMPTYSCRIPTS_PROJ" 2>&1)"; then
+    emptyscripts_rc=0
+else
+    emptyscripts_rc=$?
+fi
+[[ "$emptyscripts_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$emptyscripts_out"
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$emptyscripts_out"; then
+    echo "Upgrade hint advertised from a kit copy with an empty scripts/ directory." >&2
+    exit 1
+fi
+
+# Test 36h: a missing Lite workflow is incomplete too. The summary tells the
+# user to run pk:route, pk:debug, pk:commit, pk:checkpoint, pk:sync and
+# pk:profile, so a copy without workflows/debug.md cannot deliver what it
+# advertises.
+MISSINGWF_PROJ="$TEST_ROOT/missingwf_hint_project"
+MISSINGWF_KIT="$TEST_ROOT/missingwf_hint_kit"
+copy_kit "$MISSINGWF_KIT"
+stage_complete_kit "$MISSINGWF_PROJ" "$MISSINGWF_KIT"
+rm -f "$MISSINGWF_PROJ/.promptkit/workflows/debug.md"
+if missingwf_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$MISSINGWF_KIT/init.sh" --lite "$MISSINGWF_PROJ" 2>&1)"; then
+    missingwf_rc=0
+else
+    missingwf_rc=$?
+fi
+[[ "$missingwf_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$missingwf_out"
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$missingwf_out"; then
+    echo "Upgrade hint advertised from a kit copy missing a Lite workflow." >&2
+    exit 1
+fi
+
+# Test 36i: a DEINITIALIZED submodule, seen by the install-door assert. "git
+# submodule deinit" empties the directory but leaves the gitlink in the parent
+# index, so the kit is still REGISTERED even though .promptkit/.git is gone.
+# The assert validates the ENGINE tree, so an install run from a separate engine
+# still succeeds (test 36j covers that path); point the assert at the staged
+# copy to reach the state a user hits when they check .promptkit/ itself. The
+# tree check runs before the door classification, so the verdict is
+# partial-copy rather than submodule — what matters is that the remedy it
+# prints actually restores the kit. The plain "update --remote --merge" form
+# does not: it refuses with "Submodule path '.promptkit' not initialized /
+# Maybe you want to use 'update --init'?", so the remedy carries --init and
+# this scenario runs it.
+DEINIT_KITREPO="$TEST_ROOT/deinit_kitrepo"
+DEINIT_HOST="$TEST_ROOT/deinit_host"
+DEINIT_RUNNER="$TEST_ROOT/deinit_runner"
+copy_kit "$DEINIT_KITREPO"
+git -C "$DEINIT_KITREPO" init -q
+git -C "$DEINIT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$DEINIT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$DEINIT_HOST"
+git -C "$DEINIT_HOST" init -q
+git -C "$DEINIT_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$DEINIT_KITREPO" .promptkit
+git -C "$DEINIT_HOST" submodule deinit -f .promptkit >/dev/null 2>&1
+[[ -d "$DEINIT_HOST/.promptkit" ]]
+[[ ! -e "$DEINIT_HOST/.promptkit/.git" ]]
+[[ ! -f "$DEINIT_HOST/.promptkit/init.sh" ]]
+copy_kit "$DEINIT_RUNNER"
+if deinit_assert_out="$(bash "$DEINIT_RUNNER/scripts/check-setup-assert.sh" "$DEINIT_HOST" "$DEINIT_HOST/.promptkit" ".promptkit" 2>&1)"; then
+    deinit_assert_rc=0
+else
+    deinit_assert_rc=$?
+fi
+[[ "$deinit_assert_rc" -eq 1 ]]
+grep -q '^ASSERT|partial-copy|missing:workflows/route.md|FAIL$' <<<"$deinit_assert_out"
+if grep -qF -- '--remote' <<<"$deinit_assert_out"; then
+    echo "The assert remedy still carries --remote, which advances the checkout past the recorded gitlink." >&2
+    exit 1
+fi
+DEINIT_CMD="$(printed_assert_recovery_command "$deinit_assert_out")"
+[[ -n "$DEINIT_CMD" ]]
+run_recovery_command "$DEINIT_HOST" "$DEINIT_CMD"
+[[ -f "$DEINIT_HOST/.promptkit/init.sh" ]]
+[[ "$(submodule_prefix "$DEINIT_HOST")" == " " ]]
+
+# Test 36j: the same deinitialized submodule on the install path. The assert
+# would exit before the summary, so the preflight is opted out (documented at
+# PROMPTKIT_NO_PREFLIGHT) and the summary must classify the state as the
+# submodule door and name the in-place restore. Before the door was read from
+# the parent repository this printed the courier advice and the removal warning.
+git -C "$DEINIT_HOST" submodule deinit -f .promptkit >/dev/null 2>&1
+[[ ! -f "$DEINIT_HOST/.promptkit/init.sh" ]]
+if deinit_out="$(PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash "$DEINIT_RUNNER/init.sh" --lite "$DEINIT_HOST" 2>&1)"; then
+    deinit_rc=0
+else
+    deinit_rc=$?
+fi
+[[ "$deinit_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$deinit_out"
+grep -qF 'the parent repository still records it' <<<"$deinit_out"
+if grep -qF 'rm -rf .promptkit' <<<"$deinit_out"; then
+    echo "A deinitialized submodule was told to delete a copy that can be restored in place." >&2
+    exit 1
+fi
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$deinit_out"; then
+    echo "Upgrade hint advertised from a deinitialized submodule." >&2
+    exit 1
+fi
+DEINIT_INSTALL_CMD="$(printed_recovery_command "$deinit_out")"
+[[ -n "$DEINIT_INSTALL_CMD" ]]
+run_recovery_command "$DEINIT_HOST" "$DEINIT_INSTALL_CMD"
+[[ -f "$DEINIT_HOST/.promptkit/workflows/debug.md" ]]
+[[ "$(submodule_prefix "$DEINIT_HOST")" == " " ]]
+
+# Test 36k: a REGISTERED submodule whose directory was DELETED. Nothing is
+# staged, so the summary takes the "not staged" branch - but the parent
+# repository still records the gitlink, so the advice is the in-place restore
+# ("--init checks it out again"), not "git submodule add", which refuses an
+# existing index entry with "fatal: '.promptkit' already exists in the index".
+DELDIR_KITREPO="$TEST_ROOT/deldir_kitrepo"
+DELDIR_HOST="$TEST_ROOT/deldir_host"
+DELDIR_RUNNER="$TEST_ROOT/deldir_runner"
+copy_kit "$DELDIR_KITREPO"
+git -C "$DELDIR_KITREPO" init -q
+git -C "$DELDIR_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$DELDIR_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$DELDIR_HOST"
+git -C "$DELDIR_HOST" init -q
+git -C "$DELDIR_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$DELDIR_KITREPO" .promptkit
+rm -rf "$DELDIR_HOST/.promptkit"
+[[ ! -d "$DELDIR_HOST/.promptkit" ]]
+copy_kit "$DELDIR_RUNNER"
+if deldir_out="$(PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash "$DELDIR_RUNNER/init.sh" --lite "$DELDIR_HOST" 2>&1)"; then
+    deldir_rc=0
+else
+    deldir_rc=$?
+fi
+[[ "$deldir_rc" -eq 0 ]]
+grep -qF 'the kit is not staged at .promptkit/' <<<"$deldir_out"
+grep -qF 'the parent repository still records the submodule; --init checks it out again' <<<"$deldir_out"
+if grep -qF 'Stage the kit:' <<<"$deldir_out"; then
+    echo "A registered submodule with a deleted directory was told to run git submodule add, which refuses the existing index entry." >&2
+    exit 1
+fi
+if grep -qF 'rm -rf .promptkit' <<<"$deldir_out"; then
+    echo "A registered submodule with a deleted directory was told to delete nothing." >&2
+    exit 1
+fi
+DELDIR_CMD="$(printed_recovery_command "$deldir_out")"
+[[ -n "$DELDIR_CMD" ]]
+run_recovery_command "$DELDIR_HOST" "$DELDIR_CMD"
+[[ -f "$DELDIR_HOST/.promptkit/init.sh" ]]
+[[ "$(submodule_prefix "$DELDIR_HOST")" == " " ]]
+
+# Test 36l: the DRIFTED state ('+'). A submodule whose checkout has moved off
+# the recorded gitlink is what "--remote" produces, and the old remedy
+# recommended the very command that creates it. The printed command must clear
+# the drift and land on the RECORDED commit, not on the remote tip.
+#
+# The advance also DROPS a manifest row, because the installer only prints
+# recovery advice when the staged kit is incomplete: a drifted-but-complete kit
+# still resolves every pk:* command, so the drift is the assert's report (36m)
+# rather than the installer's. Pairing the two states here keeps the installer
+# path exercised while still asserting that the command lands on the recorded
+# commit instead of the remote tip.
+DRIFT_KITREPO="$TEST_ROOT/drift_kitrepo"
+DRIFT_HOST="$TEST_ROOT/drift_host"
+DRIFT_RUNNER="$TEST_ROOT/drift_runner"
+copy_kit "$DRIFT_KITREPO"
+git -C "$DRIFT_KITREPO" init -q
+git -C "$DRIFT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$DRIFT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$DRIFT_HOST"
+git -C "$DRIFT_HOST" init -q
+git -C "$DRIFT_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$DRIFT_KITREPO" .promptkit
+# The gitlink is only recorded in a commit, so the host needs one before
+# "rev-parse HEAD:.promptkit" can name the recorded commit.
+git -C "$DRIFT_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "add kit"
+DRIFT_RECORDED="$(git -C "$DRIFT_HOST" rev-parse HEAD:.promptkit)"
+# Advance the kit upstream (dropping a manifest row), then move the checkout
+# onto the new tip without touching the parent index: exactly the '+' state.
+git -C "$DRIFT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid rm -q workflows/debug.md
+git -C "$DRIFT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "kit advances"
+git -C "$DRIFT_HOST/.promptkit" fetch -q origin
+git -C "$DRIFT_HOST/.promptkit" -c advice.detachedHead=false checkout -q origin/HEAD 2>/dev/null || git -C "$DRIFT_HOST/.promptkit" -c advice.detachedHead=false checkout -q FETCH_HEAD
+[[ "$(submodule_prefix "$DRIFT_HOST")" == "+" ]]
+[[ ! -f "$DRIFT_HOST/.promptkit/workflows/debug.md" ]]
+copy_kit "$DRIFT_RUNNER"
+if drift_out="$(PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash "$DRIFT_RUNNER/init.sh" --lite "$DRIFT_HOST" 2>&1)"; then
+    drift_rc=0
+else
+    drift_rc=$?
+fi
+[[ "$drift_rc" -eq 0 ]]
+DRIFT_CMD="$(printed_recovery_command "$drift_out")"
+[[ -n "$DRIFT_CMD" ]]
+if grep -qF -- '--remote' <<<"$DRIFT_CMD"; then
+    echo "The recovery command carries --remote, which is what creates the drift it is meant to clear." >&2
+    exit 1
+fi
+run_recovery_command "$DRIFT_HOST" "$DRIFT_CMD"
+[[ "$(submodule_prefix "$DRIFT_HOST")" == " " ]]
+[[ "$(git -C "$DRIFT_HOST" rev-parse HEAD:.promptkit)" == "$DRIFT_RECORDED" ]]
+[[ "$(git -C "$DRIFT_HOST/.promptkit" rev-parse HEAD)" == "$DRIFT_RECORDED" ]]
+
+# Test 36m: the assert's own remedy, on the drifted state. The assert is the
+# single owner of the command, so its remedy must be the same one the installer
+# prints - and it must clear the drift rather than advance the checkout.
+#
+# This fixture drifts WITHOUT dropping a manifest row. The assert reports a
+# missing file before it classifies the door, so a drifted-but-complete kit is
+# the only shape in which the submodule status check is reached at all.
+DRIFT2_KITREPO="$TEST_ROOT/drift2_kitrepo"
+DRIFT2_HOST="$TEST_ROOT/drift2_host"
+copy_kit "$DRIFT2_KITREPO"
+git -C "$DRIFT2_KITREPO" init -q
+git -C "$DRIFT2_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$DRIFT2_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$DRIFT2_HOST"
+git -C "$DRIFT2_HOST" init -q
+git -C "$DRIFT2_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$DRIFT2_KITREPO" .promptkit
+git -C "$DRIFT2_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "add kit"
+DRIFT2_RECORDED="$(git -C "$DRIFT2_HOST" rev-parse HEAD:.promptkit)"
+printf '\n<!-- drift -->\n' >> "$DRIFT2_KITREPO/README.md"
+git -C "$DRIFT2_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -am "kit advances harmlessly"
+git -C "$DRIFT2_HOST/.promptkit" fetch -q origin
+git -C "$DRIFT2_HOST/.promptkit" -c advice.detachedHead=false checkout -q origin/HEAD 2>/dev/null || git -C "$DRIFT2_HOST/.promptkit" -c advice.detachedHead=false checkout -q FETCH_HEAD
+[[ "$(submodule_prefix "$DRIFT2_HOST")" == "+" ]]
+if drift_assert_out="$(bash "$REPO_ROOT/scripts/check-setup-assert.sh" "$DRIFT2_HOST" "$DRIFT2_HOST/.promptkit" ".promptkit" 2>&1)"; then
+    drift_assert_rc=0
+else
+    drift_assert_rc=$?
+fi
+[[ "$drift_assert_rc" -eq 1 ]]
+grep -q '^ASSERT|submodule|status|FAIL$' <<<"$drift_assert_out"
+if grep -qF -- '--remote' <<<"$drift_assert_out"; then
+    echo "The assert's drift remedy still carries --remote." >&2
+    exit 1
+fi
+DRIFT_ASSERT_CMD="$(printed_assert_recovery_command "$drift_assert_out")"
+[[ -n "$DRIFT_ASSERT_CMD" ]]
+run_recovery_command "$DRIFT2_HOST" "$DRIFT_ASSERT_CMD"
+[[ "$(submodule_prefix "$DRIFT2_HOST")" == " " ]]
+[[ "$(git -C "$DRIFT2_HOST/.promptkit" rev-parse HEAD)" == "$DRIFT2_RECORDED" ]]
+
+# Test 36n: the --force warning must be TRUE. An untracked file elsewhere in the
+# kit survives, while an untracked file sitting at the path of a missing tracked
+# file is replaced. Both halves are asserted, because the previous wording
+# claimed untracked files are always kept and that is false.
+OBSTRUCT_KITREPO="$TEST_ROOT/obstruct_kitrepo"
+OBSTRUCT_HOST="$TEST_ROOT/obstruct_host"
+OBSTRUCT_RUNNER="$TEST_ROOT/obstruct_runner"
+copy_kit "$OBSTRUCT_KITREPO"
+git -C "$OBSTRUCT_KITREPO" init -q
+git -C "$OBSTRUCT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$OBSTRUCT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$OBSTRUCT_HOST"
+git -C "$OBSTRUCT_HOST" init -q
+git -C "$OBSTRUCT_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$OBSTRUCT_KITREPO" .promptkit
+# The installer only prints recovery advice for an INCOMPLETE kit, so the
+# incompleteness comes from a manifest row (workflows/debug.md) while the
+# obstruction sits on a tracked file the manifest does not list
+# (workflows/plan.md): an untracked file at that path satisfies no manifest row,
+# so the kit stays incomplete and --force still has to replace it.
+rm -f "$OBSTRUCT_HOST/.promptkit/workflows/debug.md"
+rm -f "$OBSTRUCT_HOST/.promptkit/workflows/plan.md"
+printf 'my own notes\n' > "$OBSTRUCT_HOST/.promptkit/workflows/plan.md"
+printf 'keep me\n' > "$OBSTRUCT_HOST/.promptkit/notes.md"
+copy_kit "$OBSTRUCT_RUNNER"
+if obstruct_out="$(PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash "$OBSTRUCT_RUNNER/init.sh" --lite "$OBSTRUCT_HOST" 2>&1)"; then
+    obstruct_rc=0
+else
+    obstruct_rc=$?
+fi
+[[ "$obstruct_rc" -eq 0 ]]
+grep -qF 'an untracked file sitting where a missing tracked file belongs is replaced' <<<"$obstruct_out"
+OBSTRUCT_CMD="$(printed_recovery_command "$obstruct_out")"
+[[ -n "$OBSTRUCT_CMD" ]]
+run_recovery_command "$OBSTRUCT_HOST" "$OBSTRUCT_CMD"
+[[ "$(cat "$OBSTRUCT_HOST/.promptkit/workflows/plan.md")" != "my own notes" ]]
+[[ "$(cat "$OBSTRUCT_HOST/.promptkit/notes.md")" == "keep me" ]]
+[[ -f "$OBSTRUCT_HOST/.promptkit/workflows/debug.md" ]]
+
+# Test 36o: a project root NESTED inside a monorepo. The kit submodule lives at
+# apps/demo/.promptkit, so the project root has no .git and no .gitmodules of its
+# own; the registration is recorded in the TOPLEVEL index and .gitmodules. The
+# old probe was guarded on "$proj/.git" and skipped both, classifying a
+# registered submodule as a courier copy.
+NESTED_KITREPO="$TEST_ROOT/nested_kitrepo"
+NESTED_HOST="$TEST_ROOT/nested_host"
+NESTED_PROJ="$NESTED_HOST/apps/demo"
+NESTED_RUNNER="$TEST_ROOT/nested_runner"
+copy_kit "$NESTED_KITREPO"
+git -C "$NESTED_KITREPO" init -q
+git -C "$NESTED_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$NESTED_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$NESTED_PROJ"
+git -C "$NESTED_HOST" init -q
+git -C "$NESTED_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$NESTED_KITREPO" apps/demo/.promptkit
+git -C "$NESTED_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "add kit"
+[[ ! -e "$NESTED_PROJ/.git" ]]
+[[ ! -e "$NESTED_PROJ/.gitmodules" ]]
+git -C "$NESTED_HOST" submodule deinit -f apps/demo/.promptkit >/dev/null 2>&1
+[[ ! -e "$NESTED_PROJ/.promptkit/.git" ]]
+copy_kit "$NESTED_RUNNER"
+if nested_out="$(PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash "$NESTED_RUNNER/init.sh" --lite "$NESTED_PROJ" 2>&1)"; then
+    nested_rc=0
+else
+    nested_rc=$?
+fi
+[[ "$nested_rc" -eq 0 ]]
+if grep -qF 'rm -rf .promptkit' <<<"$nested_out"; then
+    echo "A submodule registered from a nested project root was classified as a courier copy." >&2
+    exit 1
+fi
+NESTED_CMD="$(printed_recovery_command "$nested_out")"
+[[ -n "$NESTED_CMD" ]]
+run_recovery_command "$NESTED_PROJ" "$NESTED_CMD"
+[[ -f "$NESTED_PROJ/.promptkit/init.sh" ]]
+[[ "$(submodule_prefix "$NESTED_PROJ")" == " " ]]
+
+# Test 37: manifest coverage guard. Every engine-relative path the installers
+# resolve must be a row of scripts/setup-assert-files.txt or sit on the
+# exemption list below with a written reason. The manifest is what the installer
+# uses to decide whether a staged kit is complete, so a hard dependency that
+# escapes it makes the installer call a kit complete and then advertise an
+# upgrade command that dies at the first step needing the missing file. The
+# guard makes that rule mechanical instead of resting on review.
+MANIFEST_EXEMPTIONS=(
+    "..|path arithmetic: the project root is derived from the engine directory, not read from it"
+    ".git|engine identity probe: distinguishes a direct clone from a staged copy; a staged copy legitimately has none"
+    "templates/agent-directive-lite-template.md|optional: the installer falls back to the full directive template with a warning"
+    "templates/terminal-banner.txt|cosmetic: guarded by a file test and only drawn on an interactive setup"
+    "templates/state-tracker-template.md|existence-guarded: docs/STATE.md is only seeded when the template is present"
+    "templates/pull-request-template.md|existence-guarded: the PR template is only copied when present"
+    "templates/github-issue-template.md|existence-guarded: the issue template is only copied when present"
+)
+MANIFEST_ROWS=()
+while IFS='|' read -r manifest_rel _; do
+    manifest_rel="${manifest_rel%$'\r'}"
+    if [[ -z "$manifest_rel" || "$manifest_rel" == \#* ]]; then
+        continue
+    fi
+    MANIFEST_ROWS+=("$manifest_rel")
+done < "$REPO_ROOT/scripts/setup-assert-files.txt"
+[[ "${#MANIFEST_ROWS[@]}" -ge 10 ]]
+manifest_is_row() {
+    local candidate="$1" row
+    for row in "${MANIFEST_ROWS[@]}"; do
+        [[ "$row" == "$candidate" ]] && return 0
+    done
+    return 1
+}
+manifest_exempt_reason() {
+    local candidate="$1" entry
+    for entry in "${MANIFEST_EXEMPTIONS[@]}"; do
+        if [[ "${entry%%|*}" == "$candidate" ]]; then
+            printf '%s' "${entry#*|}"
+            return 0
+        fi
+    done
+    return 1
+}
+manifest_guard() {
+    local engine="$1" refs ref reason found=0
+    if [[ "$engine" == *.ps1 ]]; then
+        # [$] keeps the dollar literal: "\\$(" would start a command substitution.
+        refs="$(grep -oE "Join-Path [$](ScriptDir|PSScriptRoot) [\"'][^\"']+[\"']" "$engine" | sed -E "s/.*[\"']([^\"']+)[\"']/\1/" | sort -u)"
+    else
+        refs="$(grep -oE '\$SCRIPT_DIR/[^"'"'"' )]+' "$engine" | sed 's|^\$SCRIPT_DIR/||' | sort -u)"
+    fi
+    [[ -n "$refs" ]]
+    while IFS= read -r ref; do
+        [[ -z "$ref" ]] && continue
+        found=$((found + 1))
+        manifest_is_row "$ref" && continue
+        if reason="$(manifest_exempt_reason "$ref")"; then
+            [[ -n "$reason" ]]
+            continue
+        fi
+        echo "Manifest coverage guard: $(basename "$engine") resolves '$ref', which is neither a row of scripts/setup-assert-files.txt nor an exemption with a written reason." >&2
+        echo "Add it to the manifest if the installer or its advertised upgrade needs it, or to MANIFEST_EXEMPTIONS in this test with the reason it is optional." >&2
+        exit 1
+    done <<< "$refs"
+    # A regex that stops matching would make the guard vacuous, so a floor on
+    # the number of extracted references is part of the assertion.
+    [[ "$found" -ge 10 ]]
+}
+manifest_guard "$REPO_ROOT/init.sh"
+echo "Manifest coverage guard: init.sh ok"
+manifest_guard "$REPO_ROOT/init.ps1"
+echo "Manifest coverage guard: init.ps1 ok"
+# An exemption that no longer matches anything is a stale reason: removing or
+# renaming a reference must also retire its exemption.
+for manifest_entry in "${MANIFEST_EXEMPTIONS[@]}"; do
+    manifest_path="${manifest_entry%%|*}"
+    if ! grep -qF -- "$manifest_path" "$REPO_ROOT/init.sh" && ! grep -qF -- "$manifest_path" "$REPO_ROOT/init.ps1"; then
+        echo "Manifest coverage guard: exemption '$manifest_path' no longer matches any installer reference; retire it with the reference it excused." >&2
+        exit 1
+    fi
+done
+echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), and manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption) tests passed."

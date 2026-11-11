@@ -4,7 +4,10 @@
 $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../..")).Path
+# ProviderPath strips the 'Microsoft.PowerShell.Core\FileSystem::' prefix that
+# Resolve-Path adds for UNC script locations (e.g. \\wsl.localhost\...); a
+# child 'pwsh -File' refuses the provider-qualified form as a script path.
+$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../..")).ProviderPath
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
@@ -28,7 +31,10 @@ try {
     $crlfInitialContent = "Header with `$1 literal dollar reference`r`n`r`nKeep content before.`r`n`r`n<!-- PROMPTKIT_START -->`r`nold directive`r`n<!-- PROMPTKIT_END -->`r`n`r`nKeep content after."
     [System.IO.File]::WriteAllText($crlfAgentsPath, $crlfInitialContent, $utf8NoBom)
 
-    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfRoot | Out-Null
+    # -Tracking github keeps the .github PR/issue template scaffolding
+    # assertions below meaningful: those templates are gated on GitHub tracking
+    # (Test 34 covers the local-tracking SKIP path).
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfRoot -Tracking github | Out-Null
     $crlfUpdated = [System.IO.File]::ReadAllText($crlfAgentsPath, [System.Text.Encoding]::UTF8)
 
     if (-not $crlfUpdated.Contains('Header with $1 literal dollar reference')) {
@@ -77,8 +83,9 @@ try {
         throw "Failed Test 1 (CRLF): .github/ISSUE_TEMPLATE/task.md does not contain expected template frontmatter."
     }
 
-    # Test 10: Idempotency re-run on CRLF file
-    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfRoot | Out-Null
+    # Test 10: Idempotency re-run on CRLF file (same GitHub tracking as Test 1,
+    # so the already-scaffolded .github templates take the already-exist path).
+    & pwsh -NoProfile -File $initScriptPath -ProjectRoot $CrlfRoot -Tracking github | Out-Null
     $reRunContent = [System.IO.File]::ReadAllText($crlfAgentsPath, [System.Text.Encoding]::UTF8)
     $reRunLines = $reRunContent -split "\r?\n"
     $reRunStartCount = @($reRunLines | Where-Object { $_ -eq '<!-- PROMPTKIT_START -->' }).Count
@@ -747,10 +754,104 @@ try {
             ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $Destination -Recurse -Force }
     }
 
+    # The installer and the install-door assert both print a recovery command,
+    # and these tests EXECUTE it instead of matching it. Six review rounds each
+    # found a new defect in a hand-written recovery string that a test only
+    # pattern-matched, so the subject here is the command's effect: run the
+    # printed line verbatim and assert the resulting submodule state.
+    function Get-PrintedRecoveryCommand {
+        param([string]$Output)
+        foreach ($line in ($Output -split "`n")) {
+            $trimmed = $line.TrimEnd("`r")
+            if ($trimmed.StartsWith('   Restore it in place: ')) {
+                return $trimmed.Substring('   Restore it in place: '.Length).Trim()
+            }
+        }
+        return ''
+    }
+
+    # The assert prints its command inside a prose remedy, so pull the command
+    # out of the sentence rather than restating it here.
+    function Get-PrintedAssertRecoveryCommand {
+        param([string]$Output)
+        # Double-quoted on purpose: in a single-quoted string `r and `n are
+        # literal characters, so the class would exclude the letters r and n and
+        # truncate the match at the "r" in ".promptkit".
+        $match = [regex]::Match($Output, "git submodule update --init --force [^,`r`n]*")
+        if ($match.Success) { return $match.Value.Trim() }
+        return ''
+    }
+
+    # Run the printed command from the project root. GIT_ALLOW_PROTOCOL=file lets
+    # a fixture submodule whose origin is a local path be fetched without
+    # weakening the fixture's own configuration.
+    function Invoke-RecoveryCommand {
+        param([string]$HostPath, [string]$Command)
+        # Run the printed line as a real child process with the project root as
+        # its working directory. Push-Location is not enough: it moves the
+        # PowerShell provider location, while a child process inherits the
+        # PROCESS working directory, so a nested invocation would run in the
+        # wrong tree and silently restore nothing.
+        $words = $Command -split '\s+'
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $words[0]
+        $psi.Arguments = ($words[1..($words.Count - 1)] -join ' ')
+        $psi.WorkingDirectory = $HostPath
+        $psi.UseShellExecute = $false
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.EnvironmentVariables['GIT_ALLOW_PROTOCOL'] = 'file'
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $null = $proc.StandardOutput.ReadToEnd()
+        $null = $proc.StandardError.ReadToEnd()
+        $proc.WaitForExit()
+        return $proc.ExitCode
+    }
+
+    # The first column of "git submodule status": ' ' in sync, '-' not
+    # initialized, '+' drifted, 'U' conflicted.
+    function Get-SubmodulePrefix {
+        param([string]$HostPath)
+        $out = & git -C $HostPath submodule status -- .promptkit 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not $out) { return '' }
+        $first = [string]($out | Select-Object -First 1)
+        if ($first.Length -eq 0) { return '' }
+        return $first.Substring(0, 1)
+    }
+
     function Invoke-InitAssert {
-        param([string]$InitPath, [string]$ProjectPath)
-        $captured = & pwsh -NoProfile -File $InitPath -Profile balanced -ProjectRoot $ProjectPath 2>&1 | Out-String
+        param([string]$InitPath, [string]$ProjectPath, [string]$InstallProfile = 'balanced', [string[]]$ExtraArgs = @())
+        $captured = & pwsh -NoProfile -File $InitPath -Profile $InstallProfile -ProjectRoot $ProjectPath @ExtraArgs 2>&1 | Out-String
         return [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = $captured }
+    }
+
+    # Stage a COMPLETE kit at <project>/.promptkit: the installer plus every row
+    # of scripts/setup-assert-files.txt. That manifest is the single definition
+    # of a complete kit - the installer reads it to decide whether a staged copy
+    # is usable, and scripts/check-setup-assert.ps1 validates the same rows - so
+    # the fixtures derive the staged set from it instead of hard-coding a second
+    # list that could drift out of step with the installer.
+    function Add-CompleteKitStage {
+        param([string]$ProjectPath, [string]$KitPath)
+        $stagedRoot = Join-Path $ProjectPath '.promptkit'
+        New-Item -ItemType Directory -Path $stagedRoot -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $KitPath 'init.ps1') -Destination (Join-Path $stagedRoot 'init.ps1') -Force
+        foreach ($row in [System.IO.File]::ReadAllLines((Join-Path $KitPath 'scripts/setup-assert-files.txt'))) {
+            $line = $row.Trim()
+            if ($line -eq '' -or $line.StartsWith('#')) { continue }
+            $parts = $line.Split('|')
+            $rel = $parts[0].Trim()
+            $kind = $parts[1].Trim()
+            $source = Join-Path $KitPath $rel
+            $target = Join-Path $stagedRoot $rel
+            if ($kind -eq 'dir') {
+                New-Item -ItemType Directory -Path $target -Force | Out-Null
+                Copy-Item -Path (Join-Path $source '*') -Destination $target -Recurse -Force
+            } else {
+                New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
+                Copy-Item -LiteralPath $source -Destination $target -Force
+            }
+        }
     }
 
     $savedNoInteractive = $env:PROMPTKIT_NO_INTERACTIVE
@@ -811,6 +912,10 @@ try {
         if ($sub.ExitCode -ne 0) { throw "Failed Test 30 (submodule): expected exit 0, got $($sub.ExitCode)." }
         if (-not $sub.Output.Contains('ASSERT|submodule|status|OK')) { throw "Failed Test 30 (submodule): missing ASSERT line." }
         if (-not $sub.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 30 (submodule): missing banner." }
+        # The submodule door stages the kit at .promptkit/, so the relative
+        # upgrade hint must still be advertised there (dangling-kit coverage
+        # lives in Test 36).
+        if (-not $sub.Output.Contains('.promptkit/init.ps1')) { throw "Failed Test 30 (submodule): missing relative upgrade hint." }
 
         # Test 31: Standalone door - the kit directory is the project root.
         $standaloneKit = Join-Path $TestRoot 'standalone_kit'
@@ -839,6 +944,10 @@ try {
         if (-not $kitRefAgents.Contains('(`./.promptkit`)')) { throw 'Failed Test 31b (kit reference): sibling kit did not fall back to .promptkit.' }
         if ($kitRefAgents.Contains('.//') -or $kitRefAgents.Contains($kitRefKit)) { throw 'Failed Test 31b (kit reference): sibling kit path leaked into the directive.' }
         if ($kitRef.Output.Contains((Join-Path $kitRefKit 'init.ps1'))) { throw 'Failed Test 31b (kit reference): sibling kit path leaked into the upgrade hint.' }
+        # The sibling-kit scenario leaves .promptkit/ unstaged in the project, so
+        # the summary warns about the dangling kit reference instead of
+        # advertising an upgrade path that does not exist there.
+        if (-not $kitRef.Output.Contains('not staged at .promptkit/')) { throw 'Failed Test 31b (kit reference): missing dangling-kit warning.' }
 
         # Test 32: Opt-out - PROMPTKIT_NO_PREFLIGHT=1 yields SKIP and proceeds.
         $env:PROMPTKIT_NO_PREFLIGHT = '1'
@@ -870,12 +979,569 @@ try {
         if ($gitfail.ExitCode -ne 2) { throw "Failed Test 33 (unexpected git): expected exit 2, got $($gitfail.ExitCode)." }
         if (-not $gitfail.Output.Contains('ASSERT|unknown|host_git|INCOMPLETE')) { throw "Failed Test 33 (unexpected git): missing INCOMPLETE line." }
         if ($gitfail.Output.Contains('PromptKit OS successfully configured')) { throw "Failed Test 33 (unexpected git): banner printed on INCOMPLETE." }
+
+        # Test 34: GitHub template gate - .github PR/issue templates are created
+        # only when tracking is GitHub (or GitHub projection); a local-tracking
+        # install skips them instead of adding .github noise to a non-GitHub project.
+        $gateProj = Join-Path $TestRoot 'template-gate-proj'
+        $gateKit = Join-Path $TestRoot 'template-gate-kit'
+        New-AssertKitCopy $gateKit
+        New-Item -ItemType Directory -Path $gateProj -Force | Out-Null
+        $gate = Invoke-InitAssert -InitPath (Join-Path $gateKit 'init.ps1') -ProjectPath $gateProj
+        if ($gate.ExitCode -ne 0) { throw "Failed Test 34 (template gate): expected exit 0, got $($gate.ExitCode)." }
+        if (Test-Path -LiteralPath (Join-Path $gateProj '.github')) { throw 'Failed Test 34 (template gate): .github created under local tracking.' }
+        if (-not $gate.Output.Contains('Skipped: .github PR/issue templates')) { throw 'Failed Test 34 (template gate): missing SKIP line.' }
+        $gateGhProj = Join-Path $TestRoot 'template-gate-github-proj'
+        $gateGhKit = Join-Path $TestRoot 'template-gate-github-kit'
+        New-AssertKitCopy $gateGhKit
+        New-Item -ItemType Directory -Path $gateGhProj -Force | Out-Null
+        $gateGh = Invoke-InitAssert -InitPath (Join-Path $gateGhKit 'init.ps1') -ProjectPath $gateGhProj -ExtraArgs @('-Tracking', 'github')
+        if ($gateGh.ExitCode -ne 0) { throw "Failed Test 34 (template gate): expected exit 0, got $($gateGh.ExitCode)." }
+        if (-not (Test-Path -LiteralPath (Join-Path $gateGhProj '.github/pull_request_template.md'))) { throw 'Failed Test 34 (template gate): PR template not created under GitHub tracking.' }
+        if (-not (Test-Path -LiteralPath (Join-Path $gateGhProj '.github/ISSUE_TEMPLATE/task.md'))) { throw 'Failed Test 34 (template gate): issue template not created under GitHub tracking.' }
+        if (-not $gateGh.Output.Contains('Created: .github/pull_request_template.md')) { throw 'Failed Test 34 (template gate): missing PR Created line.' }
+        if (-not $gateGh.Output.Contains('Created: .github/ISSUE_TEMPLATE/task.md')) { throw 'Failed Test 34 (template gate): missing issue Created line.' }
+
+        # Test 35: freshness-aware hint - a fresh project (no tracked files) is
+        # told about pk:onboard repo intake; a project with committed code is not.
+        $freshProj = Join-Path $TestRoot 'fresh-hint-proj'
+        $freshKit = Join-Path $TestRoot 'fresh-hint-kit'
+        New-AssertKitCopy $freshKit
+        New-Item -ItemType Directory -Path $freshProj -Force | Out-Null
+        & git -C $freshProj init -q
+        $fresh = Invoke-InitAssert -InitPath (Join-Path $freshKit 'init.ps1') -ProjectPath $freshProj
+        if ($fresh.ExitCode -ne 0) { throw "Failed Test 35 (freshness): expected exit 0, got $($fresh.ExitCode)." }
+        if (-not $fresh.Output.Contains('Fresh project (no code yet)?')) { throw 'Failed Test 35 (freshness): missing fresh-project hint.' }
+        if (-not $fresh.Output.Contains('pk:onboard')) { throw 'Failed Test 35 (freshness): missing pk:onboard hint.' }
+        $busyProj = Join-Path $TestRoot 'busy-hint-proj'
+        $busyKit = Join-Path $TestRoot 'busy-hint-kit'
+        New-AssertKitCopy $busyKit
+        New-Item -ItemType Directory -Path $busyProj -Force | Out-Null
+        & git -C $busyProj init -q
+        [System.IO.File]::WriteAllText((Join-Path $busyProj 'main.rs'), "fn main() {}`n", $utf8NoBom)
+        & git -C $busyProj -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $busyProj -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture code'
+        $busy = Invoke-InitAssert -InitPath (Join-Path $busyKit 'init.ps1') -ProjectPath $busyProj
+        if ($busy.ExitCode -ne 0) { throw "Failed Test 35 (freshness): expected exit 0, got $($busy.ExitCode)." }
+        if ($busy.Output.Contains('Fresh project (no code yet)?')) { throw 'Failed Test 35 (freshness): project with committed code treated as fresh.' }
+
+        # Test 35b: courier door freshness - the courier extracts the kit into
+        # .promptkit/ and stages it before running the installer, so the project
+        # is empty of project content even though .promptkit/ is tracked. The
+        # hint must still fire; counting the installer-owned tree as "code"
+        # would hide it in the flow a fresh project actually uses.
+        $courierFreshProj = Join-Path $TestRoot 'courier-fresh-proj'
+        $courierFreshKit = Join-Path $TestRoot 'courier-fresh-kit'
+        New-AssertKitCopy $courierFreshKit
+        Add-CompleteKitStage -ProjectPath $courierFreshProj -KitPath $courierFreshKit
+        & git -C $courierFreshProj init -q
+        & git -C $courierFreshProj -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        $courierFresh = Invoke-InitAssert -InitPath (Join-Path $courierFreshKit 'init.ps1') -ProjectPath $courierFreshProj
+        if ($courierFresh.ExitCode -ne 0) { throw "Failed Test 35b (courier freshness): expected exit 0, got $($courierFresh.ExitCode)." }
+        if (-not $courierFresh.Output.Contains('Fresh project (no code yet)?')) { throw 'Failed Test 35b (courier freshness): staged kit suppressed the fresh-project hint.' }
+        if (-not $courierFresh.Output.Contains('pk:onboard')) { throw 'Failed Test 35b (courier freshness): missing pk:onboard hint.' }
+
+        # Test 35c: submodule door freshness - a submodule install adds a
+        # .promptkit gitlink and a .gitmodules entry, which are installer-owned
+        # rather than project content. The hint must still fire.
+        $subFreshProj = Join-Path $TestRoot 'submodule-fresh-proj'
+        $subFreshKit = Join-Path $TestRoot 'submodule-fresh-kit'
+        New-AssertKitCopy $subFreshKit
+        New-Item -ItemType Directory -Path $subFreshProj -Force | Out-Null
+        & git -C $subFreshProj init -q
+        & git -C $subFreshProj -c user.name=Fixture -c user.email=fixture@example.invalid commit -q --allow-empty -m 'fixture root'
+        $subFreshSha = (& git -C $subFreshProj rev-parse HEAD).Trim()
+        [System.IO.File]::WriteAllText((Join-Path $subFreshProj '.gitmodules'), "[submodule `".promptkit`"]`n`tpath = .promptkit`n`turl = https://example.invalid/kit.git`n", $utf8NoBom)
+        & git -C $subFreshProj add .gitmodules
+        & git -C $subFreshProj update-index --add --cacheinfo "160000,$subFreshSha,.promptkit"
+        $subFresh = Invoke-InitAssert -InitPath (Join-Path $subFreshKit 'init.ps1') -ProjectPath $subFreshProj
+        if ($subFresh.ExitCode -ne 0) { throw "Failed Test 35c (submodule freshness): expected exit 0, got $($subFresh.ExitCode)." }
+        if (-not $subFresh.Output.Contains('Fresh project (no code yet)?')) { throw 'Failed Test 35c (submodule freshness): gitlink suppressed the fresh-project hint.' }
+        if (-not $subFresh.Output.Contains('pk:onboard')) { throw 'Failed Test 35c (submodule freshness): missing pk:onboard hint.' }
+
+        # Test 36: dangling-kit warning - when the engine runs from outside the
+        # project and nothing staged the kit at .promptkit/, the summary warns
+        # and suppresses the upgrade hint that points at the unstaged path.
+        $dangleProj = Join-Path $TestRoot 'dangle-hint-proj'
+        $dangleKit = Join-Path $TestRoot 'dangle-hint-kit'
+        New-AssertKitCopy $dangleKit
+        New-Item -ItemType Directory -Path $dangleProj -Force | Out-Null
+        # Lite profile so the suppressed "Upgrade anytime" hint is genuinely
+        # exercised (it is a lite-only summary line).
+        $dangle = Invoke-InitAssert -InitPath (Join-Path $dangleKit 'init.ps1') -ProjectPath $dangleProj -InstallProfile lite
+        if ($dangle.ExitCode -ne 0) { throw "Failed Test 36 (dangling kit): expected exit 0, got $($dangle.ExitCode)." }
+        if (-not $dangle.Output.Contains('not staged at .promptkit/')) { throw 'Failed Test 36 (dangling kit): missing warning.' }
+        if (-not $dangle.Output.Contains('Stage the kit:')) { throw 'Failed Test 36 (dangling kit): missing staging hint.' }
+        if ($dangle.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36 (dangling kit): upgrade hint points at an unstaged kit path.' }
+
+        # Test 36b: staged kit - when .promptkit/ carries a COMPLETE kit (the
+        # installer plus every row of scripts/setup-assert-files.txt), the
+        # relative upgrade hint is advertised and no warning prints.
+        $stagedProj = Join-Path $TestRoot 'staged-hint-proj'
+        $stagedKit = Join-Path $TestRoot 'staged-hint-kit'
+        New-AssertKitCopy $stagedKit
+        Add-CompleteKitStage -ProjectPath $stagedProj -KitPath $stagedKit
+        # Lite profile so the "Upgrade anytime" hint is genuinely exercised.
+        $staged = Invoke-InitAssert -InitPath (Join-Path $stagedKit 'init.ps1') -ProjectPath $stagedProj -InstallProfile lite
+        if ($staged.ExitCode -ne 0) { throw "Failed Test 36b (staged kit): expected exit 0, got $($staged.ExitCode)." }
+        if (-not $staged.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36b (staged kit): missing relative upgrade hint.' }
+        if ($staged.Output.Contains('not staged at .promptkit/')) { throw 'Failed Test 36b (staged kit): dangling warning printed for a staged kit.' }
+        if ($staged.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36b (staged kit): incomplete-copy warning printed for a complete kit.' }
+
+        # Test 36c: partial kit - a .promptkit/ holding the installer but not the
+        # workflow entry point is a partial copy: the upgrade hint would point at
+        # pk:* commands that cannot resolve, so the warning must fire and the
+        # hint must be suppressed. The recovery advice must also match the state
+        # AND the door: this copy has no .git, so it is a courier install, which
+        # has no upstream to pull from and must be replaced - and the advice must
+        # warn that the removal deletes local edits and untracked files.
+        $partialProj = Join-Path $TestRoot 'partial-hint-proj'
+        $partialKit = Join-Path $TestRoot 'partial-hint-kit'
+        New-AssertKitCopy $partialKit
+        New-Item -ItemType Directory -Path (Join-Path $partialProj '.promptkit') -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $partialKit 'init.ps1') -Destination (Join-Path $partialProj '.promptkit/init.ps1') -Force
+        $partial = Invoke-InitAssert -InitPath (Join-Path $partialKit 'init.ps1') -ProjectPath $partialProj -InstallProfile lite
+        if ($partial.ExitCode -ne 0) { throw "Failed Test 36c (partial kit): expected exit 0, got $($partial.ExitCode)." }
+        if (-not $partial.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36c (partial kit): missing incomplete-copy warning.' }
+        if (-not $partial.Output.Contains('Replace it: Remove-Item -Recurse -Force .promptkit')) { throw 'Failed Test 36c (partial kit): missing PowerShell removal advice.' }
+        if ($partial.Output.Contains('rm -rf .promptkit')) { throw 'Failed Test 36c (partial kit): printed a bash command from the PowerShell installer.' }
+        if (-not $partial.Output.Contains('check .promptkit/ for local edits and untracked files first')) { throw 'Failed Test 36c (partial kit): missing the data-loss warning before removal.' }
+        if (-not $partial.Output.Contains('--force overlays the existing directory without cleaning it')) { throw 'Failed Test 36c (partial kit): missing --force caveat.' }
+        if ($partial.Output.Contains('Restore it in place:')) { throw 'Failed Test 36c (partial kit): courier-door copy printed the submodule restore advice.' }
+        if ($partial.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36c (partial kit): upgrade hint advertised from a partial kit copy.' }
+        if ($partial.Output.Contains('Stage the kit:')) { throw 'Failed Test 36c (partial kit): printed stage-from-scratch advice, which cannot succeed on a non-empty .promptkit/.' }
+
+        # Test 36d: the reviewer's tree - .promptkit/ holding exactly the
+        # installer and the workflow entry point. Both files exist, so a two-file
+        # check called this staged and advertised an upgrade path whose scripts/
+        # directory was absent; the manifest-driven check must call it incomplete.
+        $twoFileProj = Join-Path $TestRoot 'twofile-hint-proj'
+        $twoFileKit = Join-Path $TestRoot 'twofile-hint-kit'
+        New-AssertKitCopy $twoFileKit
+        New-Item -ItemType Directory -Path (Join-Path $twoFileProj '.promptkit/workflows') -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $twoFileKit 'init.ps1') -Destination (Join-Path $twoFileProj '.promptkit/init.ps1') -Force
+        Copy-Item -LiteralPath (Join-Path $twoFileKit 'workflows/route.md') -Destination (Join-Path $twoFileProj '.promptkit/workflows/route.md') -Force
+        $twoFile = Invoke-InitAssert -InitPath (Join-Path $twoFileKit 'init.ps1') -ProjectPath $twoFileProj -InstallProfile lite
+        if ($twoFile.ExitCode -ne 0) { throw "Failed Test 36d (two-file kit): expected exit 0, got $($twoFile.ExitCode)." }
+        if (-not $twoFile.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36d (two-file kit): two-file copy treated as a complete kit.' }
+        if ($twoFile.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36d (two-file kit): upgrade hint advertised from a two-file kit copy.' }
+
+        # Test 36e: a complete kit minus one manifest row is still incomplete.
+        # The scripts/ directory is the row a two-file copy misses, so removing
+        # it from an otherwise complete stage must flip the verdict back.
+        $missingRowProj = Join-Path $TestRoot 'missingrow-hint-proj'
+        $missingRowKit = Join-Path $TestRoot 'missingrow-hint-kit'
+        New-AssertKitCopy $missingRowKit
+        Add-CompleteKitStage -ProjectPath $missingRowProj -KitPath $missingRowKit
+        Remove-Item -LiteralPath (Join-Path $missingRowProj '.promptkit/scripts') -Recurse -Force
+        $missingRow = Invoke-InitAssert -InitPath (Join-Path $missingRowKit 'init.ps1') -ProjectPath $missingRowProj -InstallProfile lite
+        if ($missingRow.ExitCode -ne 0) { throw "Failed Test 36e (missing manifest row): expected exit 0, got $($missingRow.ExitCode)." }
+        if (-not $missingRow.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36e (missing manifest row): kit missing a manifest row treated as complete.' }
+        if ($missingRow.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36e (missing manifest row): upgrade hint advertised from an incomplete kit copy.' }
+
+        # Test 36f: submodule door - the same incomplete copy, but installed as a
+        # git submodule. A submodule DOES have an upstream, so the recovery is an
+        # in-place restore, not a replacement: "git submodule update --init
+        # --force" checks the recorded commit out again, which brings back deleted
+        # kit files. The plain "--init" form does nothing once the recorded commit
+        # is already checked out, which is why the advice carries --force. The
+        # scenario runs the advertised command and asserts it restores the file.
+        $subDoorKitRepo = Join-Path $TestRoot 'subdoor-kitrepo'
+        $subDoorHost = Join-Path $TestRoot 'subdoor-host'
+        $subDoorRunner = Join-Path $TestRoot 'subdoor-runner'
+        New-AssertKitCopy $subDoorKitRepo
+        & git -C $subDoorKitRepo init -q
+        & git -C $subDoorKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $subDoorKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        New-Item -ItemType Directory -Path $subDoorHost -Force | Out-Null
+        & git -C $subDoorHost init -q
+        $subDoorUrl = $subDoorKitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $subDoorHost submodule add -q $subDoorUrl .promptkit
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36f (submodule door): fixture submodule add failed.' }
+        # A real submodule records .git as a file (a gitdir pointer), not a directory.
+        if (-not (Test-Path -LiteralPath (Join-Path $subDoorHost '.promptkit/.git') -PathType Leaf)) { throw 'Failed Test 36f (submodule door): expected .promptkit/.git to be a file.' }
+        Remove-Item -LiteralPath (Join-Path $subDoorHost '.promptkit/workflows/debug.md') -Force
+        New-AssertKitCopy $subDoorRunner
+        $subDoor = Invoke-InitAssert -InitPath (Join-Path $subDoorRunner 'init.ps1') -ProjectPath $subDoorHost -InstallProfile lite
+        if ($subDoor.ExitCode -ne 0) { throw "Failed Test 36f (submodule door): expected exit 0, got $($subDoor.ExitCode)." }
+        if (-not $subDoor.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36f (submodule door): incomplete submodule kit treated as complete.' }
+        if (-not $subDoor.Output.Contains('untracked files elsewhere in the kit are kept')) { throw 'Failed Test 36f (submodule door): missing the --force explanation.' }
+        if ($subDoor.Output.Contains('Remove-Item -Recurse -Force .promptkit')) { throw 'Failed Test 36f (submodule door): told to delete a copy that can be restored in place.' }
+        if ($subDoor.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36f (submodule door): upgrade hint advertised from an incomplete submodule kit.' }
+        if (Test-Path -LiteralPath (Join-Path $subDoorHost '.promptkit/workflows/debug.md')) { throw 'Failed Test 36f (submodule door): fixture did not actually remove the workflow.' }
+        # Execute the advice instead of matching it.
+        $subDoorCmd = Get-PrintedRecoveryCommand $subDoor.Output
+        if ([string]::IsNullOrEmpty($subDoorCmd)) { throw 'Failed Test 36f (submodule door): no printed recovery command.' }
+        $null = Invoke-RecoveryCommand -HostPath $subDoorHost -Command $subDoorCmd
+        if (-not (Test-Path -LiteralPath (Join-Path $subDoorHost '.promptkit/workflows/debug.md'))) { throw 'Failed Test 36f (submodule door): the printed restore command did not bring the file back.' }
+        if ((Get-SubmodulePrefix $subDoorHost) -ne ' ') { throw 'Failed Test 36f (submodule door): the printed restore command left the submodule out of sync.' }
+
+        # Test 36g: an EMPTY scripts/ directory satisfies the "scripts|dir" row and
+        # nothing else. The installer sources scripts/terminal-picker.ps1 before it
+        # parses an argument, so such a copy cannot run - it must be called
+        # incomplete instead of advertising an upgrade command that dies.
+        $emptyScriptsProj = Join-Path $TestRoot 'emptyscripts-hint-proj'
+        $emptyScriptsKit = Join-Path $TestRoot 'emptyscripts-hint-kit'
+        New-AssertKitCopy $emptyScriptsKit
+        Add-CompleteKitStage -ProjectPath $emptyScriptsProj -KitPath $emptyScriptsKit
+        Remove-Item -LiteralPath (Join-Path $emptyScriptsProj '.promptkit/scripts') -Recurse -Force
+        New-Item -ItemType Directory -Path (Join-Path $emptyScriptsProj '.promptkit/scripts') -Force | Out-Null
+        if (Test-Path -LiteralPath (Join-Path $emptyScriptsProj '.promptkit/scripts/terminal-picker.ps1')) { throw 'Failed Test 36g (empty scripts): fixture still holds the picker.' }
+        $emptyScripts = Invoke-InitAssert -InitPath (Join-Path $emptyScriptsKit 'init.ps1') -ProjectPath $emptyScriptsProj -InstallProfile lite
+        if ($emptyScripts.ExitCode -ne 0) { throw "Failed Test 36g (empty scripts): expected exit 0, got $($emptyScripts.ExitCode)." }
+        if (-not $emptyScripts.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36g (empty scripts): empty scripts/ directory treated as a complete kit.' }
+        if ($emptyScripts.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36g (empty scripts): upgrade hint advertised from a kit copy with an empty scripts/ directory.' }
+
+        # Test 36h: a missing Lite workflow is incomplete too. The summary tells
+        # the user to run pk:route, pk:debug, pk:commit, pk:checkpoint, pk:sync
+        # and pk:profile, so a copy without workflows/debug.md cannot deliver what
+        # it advertises.
+        $missingWfProj = Join-Path $TestRoot 'missingwf-hint-proj'
+        $missingWfKit = Join-Path $TestRoot 'missingwf-hint-kit'
+        New-AssertKitCopy $missingWfKit
+        Add-CompleteKitStage -ProjectPath $missingWfProj -KitPath $missingWfKit
+        Remove-Item -LiteralPath (Join-Path $missingWfProj '.promptkit/workflows/debug.md') -Force
+        $missingWf = Invoke-InitAssert -InitPath (Join-Path $missingWfKit 'init.ps1') -ProjectPath $missingWfProj -InstallProfile lite
+        if ($missingWf.ExitCode -ne 0) { throw "Failed Test 36h (missing Lite workflow): expected exit 0, got $($missingWf.ExitCode)." }
+        if (-not $missingWf.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36h (missing Lite workflow): kit missing a Lite workflow treated as complete.' }
+        if ($missingWf.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36h (missing Lite workflow): upgrade hint advertised from an incomplete kit copy.' }
+
+        # Test 36i: a DEINITIALIZED submodule, seen by the install-door assert.
+        # "git submodule deinit" empties the directory but leaves the gitlink in
+        # the parent index, so the kit is still REGISTERED even though
+        # .promptkit/.git is gone. The assert validates the ENGINE tree, so an
+        # install run from a separate engine still succeeds (test 36j covers that
+        # path); point the assert at the staged copy to reach the state a user
+        # hits when they check .promptkit/ itself. The tree check runs before the
+        # door classification, so the verdict is partial-copy rather than
+        # submodule - what matters is that the remedy it prints actually restores
+        # the kit. The plain "update --remote --merge" form does not: it refuses
+        # with "Submodule path '.promptkit' not initialized / Maybe you want to
+        # use 'update --init'?", so the remedy carries --init and this scenario
+        # runs it.
+        $deinitKitRepo = Join-Path $TestRoot 'deinit-kitrepo'
+        $deinitHost = Join-Path $TestRoot 'deinit-host'
+        $deinitRunner = Join-Path $TestRoot 'deinit-runner'
+        New-AssertKitCopy $deinitKitRepo
+        & git -C $deinitKitRepo init -q
+        & git -C $deinitKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $deinitKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        New-Item -ItemType Directory -Path $deinitHost -Force | Out-Null
+        & git -C $deinitHost init -q
+        $deinitUrl = $deinitKitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $deinitHost submodule add -q $deinitUrl .promptkit
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36i (deinitialized submodule): fixture submodule add failed.' }
+        & git -C $deinitHost submodule deinit -f .promptkit 2>&1 | Out-Null
+        if (-not (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit') -PathType Container)) { throw 'Failed Test 36i (deinitialized submodule): deinit removed the directory.' }
+        if (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit/.git')) { throw 'Failed Test 36i (deinitialized submodule): deinit left a .git entry.' }
+        if (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit/init.ps1')) { throw 'Failed Test 36i (deinitialized submodule): deinit left the installer.' }
+        New-AssertKitCopy $deinitRunner
+        $deinitAssertOutput = & pwsh -NoProfile -File (Join-Path $deinitRunner 'scripts/check-setup-assert.ps1') -ProjectRoot $deinitHost -KitDir (Join-Path $deinitHost '.promptkit') -KitDirRel '.promptkit' 2>&1 | Out-String
+        $deinitAssertCode = $LASTEXITCODE
+        if ($deinitAssertCode -ne 1) { throw "Failed Test 36i (deinitialized submodule): expected exit 1, got $deinitAssertCode." }
+        if (-not $deinitAssertOutput.Contains('ASSERT|partial-copy|missing:workflows/route.md|FAIL')) { throw 'Failed Test 36i (deinitialized submodule): missing the partial-copy tree verdict.' }
+        if ($deinitAssertOutput.Contains('--remote')) { throw 'Failed Test 36i (deinitialized submodule): the remedy still carries --remote, which advances the checkout past the recorded gitlink.' }
+        $deinitAssertCmd = Get-PrintedAssertRecoveryCommand $deinitAssertOutput
+        if ([string]::IsNullOrEmpty($deinitAssertCmd)) { throw 'Failed Test 36i (deinitialized submodule): no printed recovery command in the remedy.' }
+        $null = Invoke-RecoveryCommand -HostPath $deinitHost -Command $deinitAssertCmd
+        if (-not (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit/init.ps1'))) { throw 'Failed Test 36i (deinitialized submodule): the printed remedy did not restore the kit.' }
+        if ((Get-SubmodulePrefix $deinitHost) -ne ' ') { throw 'Failed Test 36i (deinitialized submodule): the printed remedy left the submodule out of sync.' }
+
+        # Test 36j: the same deinitialized submodule on the install path. The
+        # assert would exit before the summary, so the preflight is opted out
+        # (PROMPTKIT_NO_PREFLIGHT) and the summary must classify the state as the
+        # submodule door and name the in-place restore. Before the door was read
+        # from the parent repository this printed the courier advice.
+        & git -C $deinitHost submodule deinit -f .promptkit 2>&1 | Out-Null
+        if (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit/init.ps1')) { throw 'Failed Test 36j (deinitialized submodule): fixture still holds the installer.' }
+        $env:PROMPTKIT_NO_PREFLIGHT = '1'
+        try {
+            $deinit = Invoke-InitAssert -InitPath (Join-Path $deinitRunner 'init.ps1') -ProjectPath $deinitHost -InstallProfile lite
+        } finally {
+            Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+        }
+        if ($deinit.ExitCode -ne 0) { throw "Failed Test 36j (deinitialized submodule): expected exit 0, got $($deinit.ExitCode)." }
+        if (-not $deinit.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36j (deinitialized submodule): deinitialized submodule treated as complete.' }
+        if (-not $deinit.Output.Contains('the parent repository still records it')) { throw 'Failed Test 36j (deinitialized submodule): missing the --init explanation.' }
+        if ($deinit.Output.Contains('Remove-Item -Recurse -Force .promptkit')) { throw 'Failed Test 36j (deinitialized submodule): told to delete a copy that can be restored in place.' }
+        if ($deinit.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36j (deinitialized submodule): upgrade hint advertised from a deinitialized submodule.' }
+        $deinitCmd = Get-PrintedRecoveryCommand $deinit.Output
+        if ([string]::IsNullOrEmpty($deinitCmd)) { throw 'Failed Test 36j (deinitialized submodule): no printed recovery command.' }
+        $null = Invoke-RecoveryCommand -HostPath $deinitHost -Command $deinitCmd
+        if (-not (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit/workflows/debug.md'))) { throw 'Failed Test 36j (deinitialized submodule): the printed restore command did not bring the kit back.' }
+        if ((Get-SubmodulePrefix $deinitHost) -ne ' ') { throw 'Failed Test 36j (deinitialized submodule): the printed restore command left the submodule out of sync.' }
+
+        # Test 36k: a REGISTERED submodule whose directory was DELETED. Nothing is
+        # staged, so the summary takes the "not staged" branch - but the parent
+        # repository still records the gitlink, so the advice is the in-place
+        # restore, not "git submodule add", which refuses an existing index entry
+        # with "fatal: '.promptkit' already exists in the index".
+        $delDirKitRepo = Join-Path $TestRoot 'deldir-kitrepo'
+        $delDirHost = Join-Path $TestRoot 'deldir-host'
+        $delDirRunner = Join-Path $TestRoot 'deldir-runner'
+        New-AssertKitCopy $delDirKitRepo
+        & git -C $delDirKitRepo init -q
+        & git -C $delDirKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $delDirKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        New-Item -ItemType Directory -Path $delDirHost -Force | Out-Null
+        & git -C $delDirHost init -q
+        $delDirUrl = $delDirKitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $delDirHost submodule add -q $delDirUrl .promptkit
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36k (deleted submodule directory): fixture submodule add failed.' }
+        Remove-Item -LiteralPath (Join-Path $delDirHost '.promptkit') -Recurse -Force
+        if (Test-Path -LiteralPath (Join-Path $delDirHost '.promptkit')) { throw 'Failed Test 36k (deleted submodule directory): fixture directory survived.' }
+        New-AssertKitCopy $delDirRunner
+        $env:PROMPTKIT_NO_PREFLIGHT = '1'
+        try {
+            $delDir = Invoke-InitAssert -InitPath (Join-Path $delDirRunner 'init.ps1') -ProjectPath $delDirHost -InstallProfile lite
+        } finally {
+            Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+        }
+        if ($delDir.ExitCode -ne 0) { throw "Failed Test 36k (deleted submodule directory): expected exit 0, got $($delDir.ExitCode)." }
+        if (-not $delDir.Output.Contains('the kit is not staged at .promptkit/')) { throw 'Failed Test 36k (deleted submodule directory): missing the not-staged note.' }
+        if (-not $delDir.Output.Contains('the parent repository still records the submodule; --init checks it out again')) { throw 'Failed Test 36k (deleted submodule directory): missing the --init explanation.' }
+        if ($delDir.Output.Contains('Stage the kit:')) { throw 'Failed Test 36k (deleted submodule directory): told to run git submodule add, which refuses the existing index entry.' }
+        if ($delDir.Output.Contains('Remove-Item -Recurse -Force .promptkit')) { throw 'Failed Test 36k (deleted submodule directory): told to delete a directory that is already gone.' }
+        $delDirCmd = Get-PrintedRecoveryCommand $delDir.Output
+        if ([string]::IsNullOrEmpty($delDirCmd)) { throw 'Failed Test 36k (deleted submodule directory): no printed recovery command.' }
+        $null = Invoke-RecoveryCommand -HostPath $delDirHost -Command $delDirCmd
+        if (-not (Test-Path -LiteralPath (Join-Path $delDirHost '.promptkit/init.ps1'))) { throw 'Failed Test 36k (deleted submodule directory): the printed restore command did not bring the kit back.' }
+        if ((Get-SubmodulePrefix $delDirHost) -ne ' ') { throw 'Failed Test 36k (deleted submodule directory): the printed restore command left the submodule out of sync.' }
+
+        # Test 36l: the DRIFTED state ('+'). A submodule whose checkout has moved
+        # off the recorded gitlink is what "--remote" produces, and the old remedy
+        # recommended the very command that creates it. The printed command must
+        # clear the drift and land on the RECORDED commit, not on the remote tip.
+        #
+        # The advance also DROPS a manifest row, because the installer only prints
+        # recovery advice when the staged kit is incomplete: a drifted-but-complete
+        # kit still resolves every pk:* command, so the drift is the assert's
+        # report (36m) rather than the installer's. Pairing the two states here
+        # keeps the installer path exercised while still asserting that the
+        # command lands on the recorded commit instead of the remote tip.
+        $driftKitRepo = Join-Path $TestRoot 'drift-kitrepo'
+        $driftHost = Join-Path $TestRoot 'drift-host'
+        $driftRunner = Join-Path $TestRoot 'drift-runner'
+        New-AssertKitCopy $driftKitRepo
+        & git -C $driftKitRepo init -q
+        & git -C $driftKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $driftKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        New-Item -ItemType Directory -Path $driftHost -Force | Out-Null
+        & git -C $driftHost init -q
+        $driftUrl = $driftKitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $driftHost submodule add -q $driftUrl .promptkit
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36l (drifted submodule): fixture submodule add failed.' }
+        # The gitlink is only recorded in a commit, so the host needs one before
+        # "rev-parse HEAD:.promptkit" can name the recorded commit.
+        & git -C $driftHost -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'add kit'
+        $driftRecorded = (& git -C $driftHost rev-parse HEAD:.promptkit).Trim()
+        & git -C $driftKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid rm -q workflows/debug.md
+        & git -C $driftKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'kit advances'
+        $driftCheckout = Join-Path $driftHost '.promptkit'
+        & git -C $driftCheckout fetch -q origin
+        & git -C $driftCheckout -c advice.detachedHead=false checkout -q origin/HEAD 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { & git -C $driftCheckout -c advice.detachedHead=false checkout -q FETCH_HEAD 2>&1 | Out-Null }
+        if ((Get-SubmodulePrefix $driftHost) -ne '+') { throw 'Failed Test 36l (drifted submodule): fixture did not reach the drifted state.' }
+        New-AssertKitCopy $driftRunner
+        $env:PROMPTKIT_NO_PREFLIGHT = '1'
+        try {
+            $drift = Invoke-InitAssert -InitPath (Join-Path $driftRunner 'init.ps1') -ProjectPath $driftHost -InstallProfile lite
+        } finally {
+            Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+        }
+        if ($drift.ExitCode -ne 0) { throw "Failed Test 36l (drifted submodule): expected exit 0, got $($drift.ExitCode)." }
+        $driftCmd = Get-PrintedRecoveryCommand $drift.Output
+        if ([string]::IsNullOrEmpty($driftCmd)) { throw 'Failed Test 36l (drifted submodule): no printed recovery command.' }
+        if ($driftCmd.Contains('--remote')) { throw 'Failed Test 36l (drifted submodule): the recovery command carries --remote, which is what creates the drift it is meant to clear.' }
+        $null = Invoke-RecoveryCommand -HostPath $driftHost -Command $driftCmd
+        if ((Get-SubmodulePrefix $driftHost) -ne ' ') { throw 'Failed Test 36l (drifted submodule): the printed command did not clear the drift.' }
+        if (((& git -C $driftHost rev-parse HEAD:.promptkit).Trim()) -ne $driftRecorded) { throw 'Failed Test 36l (drifted submodule): the printed command moved the recorded gitlink.' }
+        if (((& git -C $driftCheckout rev-parse HEAD).Trim()) -ne $driftRecorded) { throw 'Failed Test 36l (drifted submodule): the printed command left the checkout on the remote tip instead of the recorded commit.' }
+
+        # Test 36m: the assert's own remedy, on the drifted state. The assert is
+        # the single owner of the command, so its remedy must be the same one the
+        # installer prints - and it must clear the drift rather than advance the
+        # checkout.
+        #
+        # This fixture drifts WITHOUT dropping a manifest row. The assert reports a
+        # missing file before it classifies the door, so a drifted-but-complete kit
+        # is the only shape in which the submodule status check is reached at all.
+        $drift2KitRepo = Join-Path $TestRoot 'drift2-kitrepo'
+        $drift2Host = Join-Path $TestRoot 'drift2-host'
+        New-AssertKitCopy $drift2KitRepo
+        & git -C $drift2KitRepo init -q
+        & git -C $drift2KitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $drift2KitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        New-Item -ItemType Directory -Path $drift2Host -Force | Out-Null
+        & git -C $drift2Host init -q
+        $drift2Url = $drift2KitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $drift2Host submodule add -q $drift2Url .promptkit
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36m (assert drift remedy): fixture submodule add failed.' }
+        & git -C $drift2Host -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'add kit'
+        $drift2Recorded = (& git -C $drift2Host rev-parse HEAD:.promptkit).Trim()
+        Add-Content -LiteralPath (Join-Path $drift2KitRepo 'README.md') -Value '<!-- drift -->'
+        & git -C $drift2KitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -am 'kit advances harmlessly'
+        $drift2Checkout = Join-Path $drift2Host '.promptkit'
+        & git -C $drift2Checkout fetch -q origin
+        & git -C $drift2Checkout -c advice.detachedHead=false checkout -q origin/HEAD 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { & git -C $drift2Checkout -c advice.detachedHead=false checkout -q FETCH_HEAD 2>&1 | Out-Null }
+        if ((Get-SubmodulePrefix $drift2Host) -ne '+') { throw 'Failed Test 36m (assert drift remedy): fixture did not reach the drifted state.' }
+        $driftAssertOutput = & pwsh -NoProfile -File (Join-Path $RepoRoot 'scripts/check-setup-assert.ps1') -ProjectRoot $drift2Host -KitDir $drift2Checkout -KitDirRel '.promptkit' 2>&1 | Out-String
+        $driftAssertCode = $LASTEXITCODE
+        if ($driftAssertCode -ne 1) { throw "Failed Test 36m (assert drift remedy): expected exit 1, got $driftAssertCode." }
+        if (-not $driftAssertOutput.Contains('ASSERT|submodule|status|FAIL')) { throw 'Failed Test 36m (assert drift remedy): missing the submodule status FAIL line.' }
+        if ($driftAssertOutput.Contains('--remote')) { throw 'Failed Test 36m (assert drift remedy): the remedy still carries --remote.' }
+        $driftAssertCmd = Get-PrintedAssertRecoveryCommand $driftAssertOutput
+        if ([string]::IsNullOrEmpty($driftAssertCmd)) { throw 'Failed Test 36m (assert drift remedy): no printed recovery command in the remedy.' }
+        $null = Invoke-RecoveryCommand -HostPath $drift2Host -Command $driftAssertCmd
+        if ((Get-SubmodulePrefix $drift2Host) -ne ' ') { throw 'Failed Test 36m (assert drift remedy): the printed remedy did not clear the drift.' }
+        if (((& git -C $drift2Checkout rev-parse HEAD).Trim()) -ne $drift2Recorded) { throw 'Failed Test 36m (assert drift remedy): the printed remedy left the checkout on the remote tip.' }
+
+        # Test 36n: the --force warning must be TRUE. An untracked file elsewhere
+        # in the kit survives, while an untracked file sitting at the path of a
+        # missing tracked file is replaced. Both halves are asserted, because the
+        # previous wording claimed untracked files are always kept and that is
+        # false.
+        $obstructKitRepo = Join-Path $TestRoot 'obstruct-kitrepo'
+        $obstructHost = Join-Path $TestRoot 'obstruct-host'
+        $obstructRunner = Join-Path $TestRoot 'obstruct-runner'
+        New-AssertKitCopy $obstructKitRepo
+        & git -C $obstructKitRepo init -q
+        & git -C $obstructKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $obstructKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        New-Item -ItemType Directory -Path $obstructHost -Force | Out-Null
+        & git -C $obstructHost init -q
+        $obstructUrl = $obstructKitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $obstructHost submodule add -q $obstructUrl .promptkit
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36n (obstruction): fixture submodule add failed.' }
+        # The installer only prints recovery advice for an INCOMPLETE kit, so the
+        # incompleteness comes from a manifest row (workflows/debug.md) while the
+        # obstruction sits on a tracked file the manifest does not list
+        # (workflows/plan.md): an untracked file at that path satisfies no
+        # manifest row, so the kit stays incomplete and --force still has to
+        # replace it.
+        $obstructDebug = Join-Path $obstructHost '.promptkit/workflows/debug.md'
+        $obstructPlan = Join-Path $obstructHost '.promptkit/workflows/plan.md'
+        Remove-Item -LiteralPath $obstructDebug -Force
+        Remove-Item -LiteralPath $obstructPlan -Force
+        Set-Content -LiteralPath $obstructPlan -Value 'my own notes'
+        Set-Content -LiteralPath (Join-Path $obstructHost '.promptkit/notes.md') -Value 'keep me'
+        New-AssertKitCopy $obstructRunner
+        $env:PROMPTKIT_NO_PREFLIGHT = '1'
+        try {
+            $obstruct = Invoke-InitAssert -InitPath (Join-Path $obstructRunner 'init.ps1') -ProjectPath $obstructHost -InstallProfile lite
+        } finally {
+            Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+        }
+        if ($obstruct.ExitCode -ne 0) { throw "Failed Test 36n (obstruction): expected exit 0, got $($obstruct.ExitCode)." }
+        if (-not $obstruct.Output.Contains('an untracked file sitting where a missing tracked file belongs is replaced')) { throw 'Failed Test 36n (obstruction): the --force warning does not state that an obstructing untracked file is replaced.' }
+        $obstructCmd = Get-PrintedRecoveryCommand $obstruct.Output
+        if ([string]::IsNullOrEmpty($obstructCmd)) { throw 'Failed Test 36n (obstruction): no printed recovery command.' }
+        $null = Invoke-RecoveryCommand -HostPath $obstructHost -Command $obstructCmd
+        if ((Get-Content -LiteralPath $obstructPlan -Raw).Trim() -eq 'my own notes') { throw 'Failed Test 36n (obstruction): the obstructing untracked file survived, so the warning overstates the risk.' }
+        if ((Get-Content -LiteralPath (Join-Path $obstructHost '.promptkit/notes.md') -Raw).Trim() -ne 'keep me') { throw 'Failed Test 36n (obstruction): an untracked file elsewhere in the kit was deleted, so the warning understates the risk.' }
+        if (-not (Test-Path -LiteralPath $obstructDebug -PathType Leaf)) { throw 'Failed Test 36n (obstruction): the missing manifest row was not restored.' }
+
+        # Test 36o: a project root NESTED inside a monorepo. The kit submodule
+        # lives at apps/demo/.promptkit, so the project root has no .git and no
+        # .gitmodules of its own; the registration is recorded in the TOPLEVEL
+        # index and .gitmodules. The old probe was guarded on "$proj/.git" and
+        # skipped both, classifying a registered submodule as a courier copy.
+        $nestedKitRepo = Join-Path $TestRoot 'nested-kitrepo'
+        $nestedHost = Join-Path $TestRoot 'nested-host'
+        $nestedProj = Join-Path $nestedHost 'apps/demo'
+        $nestedRunner = Join-Path $TestRoot 'nested-runner'
+        New-AssertKitCopy $nestedKitRepo
+        & git -C $nestedKitRepo init -q
+        & git -C $nestedKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $nestedKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        New-Item -ItemType Directory -Path $nestedProj -Force | Out-Null
+        & git -C $nestedHost init -q
+        $nestedUrl = $nestedKitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $nestedHost submodule add -q $nestedUrl apps/demo/.promptkit
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36o (nested project root): fixture submodule add failed.' }
+        & git -C $nestedHost -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'add kit'
+        if (Test-Path -LiteralPath (Join-Path $nestedProj '.git')) { throw 'Failed Test 36o (nested project root): fixture has a .git at the nested root.' }
+        if (Test-Path -LiteralPath (Join-Path $nestedProj '.gitmodules')) { throw 'Failed Test 36o (nested project root): fixture has a .gitmodules at the nested root.' }
+        & git -C $nestedHost submodule deinit -f apps/demo/.promptkit 2>&1 | Out-Null
+        if (Test-Path -LiteralPath (Join-Path $nestedProj '.promptkit/.git')) { throw 'Failed Test 36o (nested project root): deinit left a .git entry.' }
+        New-AssertKitCopy $nestedRunner
+        $env:PROMPTKIT_NO_PREFLIGHT = '1'
+        try {
+            $nested = Invoke-InitAssert -InitPath (Join-Path $nestedRunner 'init.ps1') -ProjectPath $nestedProj -InstallProfile lite
+        } finally {
+            Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+        }
+        if ($nested.ExitCode -ne 0) { throw "Failed Test 36o (nested project root): expected exit 0, got $($nested.ExitCode)." }
+        if ($nested.Output.Contains('Remove-Item -Recurse -Force .promptkit')) { throw 'Failed Test 36o (nested project root): a submodule registered from a nested project root was classified as a courier copy.' }
+        $nestedCmd = Get-PrintedRecoveryCommand $nested.Output
+        if ([string]::IsNullOrEmpty($nestedCmd)) { throw 'Failed Test 36o (nested project root): no printed recovery command.' }
+        $null = Invoke-RecoveryCommand -HostPath $nestedProj -Command $nestedCmd
+        if (-not (Test-Path -LiteralPath (Join-Path $nestedProj '.promptkit/init.ps1'))) { throw 'Failed Test 36o (nested project root): the printed command did not restore the kit.' }
+        if ((Get-SubmodulePrefix $nestedProj) -ne ' ') { throw 'Failed Test 36o (nested project root): the printed command left the submodule out of sync.' }
+
+        # Test 37: manifest coverage guard. Every engine-relative path the
+        # installers resolve must be a row of scripts/setup-assert-files.txt or sit
+        # on the exemption list below with a written reason. The manifest is what
+        # the installer uses to decide whether a staged kit is complete, so a hard
+        # dependency that escapes it makes the installer call a kit complete and
+        # then advertise an upgrade command that dies at the first step needing the
+        # missing file. The guard makes that rule mechanical instead of resting on
+        # review.
+        $manifestRows = @()
+        foreach ($manifestRow in [System.IO.File]::ReadAllLines((Join-Path $RepoRoot 'scripts/setup-assert-files.txt'))) {
+            $manifestLine = $manifestRow.Trim()
+            if ($manifestLine -eq '' -or $manifestLine.StartsWith('#')) { continue }
+            $manifestRows += $manifestLine.Split('|')[0].Trim()
+        }
+        if ($manifestRows.Count -lt 10) { throw "Failed Test 37 (manifest guard): expected at least 10 manifest rows, found $($manifestRows.Count)." }
+        $manifestExemptions = @(
+            '..|path arithmetic: the project root is derived from the engine directory, not read from it',
+            '.git|engine identity probe: distinguishes a direct clone from a staged copy; a staged copy legitimately has none',
+            'templates/agent-directive-lite-template.md|optional: the installer falls back to the full directive template with a warning',
+            'templates/terminal-banner.txt|cosmetic: guarded by a file test and only drawn on an interactive setup',
+            'templates/state-tracker-template.md|existence-guarded: docs/STATE.md is only seeded when the template is present',
+            'templates/pull-request-template.md|existence-guarded: the PR template is only copied when present',
+            'templates/github-issue-template.md|existence-guarded: the issue template is only copied when present'
+        )
+        $manifestExemptPaths = @{}
+        foreach ($manifestEntry in $manifestExemptions) {
+            $manifestParts = $manifestEntry.Split('|', 2)
+            if ($manifestParts.Count -ne 2 -or [string]::IsNullOrWhiteSpace($manifestParts[1])) { throw "Failed Test 37 (manifest guard): exemption '$manifestEntry' carries no written reason." }
+            $manifestExemptPaths[$manifestParts[0]] = $manifestParts[1]
+        }
+        $manifestGuard = {
+            param([string]$EnginePath, [string]$Pattern)
+            $engineText = [System.IO.File]::ReadAllText($EnginePath)
+            $refs = @()
+            foreach ($match in [regex]::Matches($engineText, $Pattern)) {
+                $refs += $match.Groups[1].Value
+            }
+            $refs = @($refs | Sort-Object -Unique)
+            if ($refs.Count -lt 10) { throw "Failed Test 37 (manifest guard): extracted only $($refs.Count) references from $(Split-Path -Leaf $EnginePath); the extraction pattern has gone stale." }
+            foreach ($ref in $refs) {
+                if ($manifestRows -contains $ref) { continue }
+                if ($manifestExemptPaths.ContainsKey($ref)) { continue }
+                throw "Failed Test 37 (manifest guard): $(Split-Path -Leaf $EnginePath) resolves '$ref', which is neither a row of scripts/setup-assert-files.txt nor an exemption with a written reason."
+            }
+        }
+        # The pattern is parenthesised: in command-argument mode PowerShell does
+        # not evaluate "+" concatenation, so an unparenthesised expression would
+        # pass only its first fragment as the pattern.
+        & $manifestGuard (Join-Path $RepoRoot 'init.sh') ('\$SCRIPT_DIR/([^"' + [char]39 + '\s)]+)')
+        & $manifestGuard (Join-Path $RepoRoot 'init.ps1') ('Join-Path\s+\$(?:ScriptDir|PSScriptRoot)\s+["' + [char]39 + ']([^"' + [char]39 + ']+)["' + [char]39 + ']')
+        # An exemption that no longer matches anything is a stale reason: removing
+        # or renaming a reference must also retire its exemption.
+        $installerText = [System.IO.File]::ReadAllText((Join-Path $RepoRoot 'init.sh')) + [System.IO.File]::ReadAllText((Join-Path $RepoRoot 'init.ps1'))
+        foreach ($manifestPath in $manifestExemptPaths.Keys) {
+            if (-not $installerText.Contains($manifestPath)) { throw "Failed Test 37 (manifest guard): exemption '$manifestPath' no longer matches any installer reference; retire it with the reference it excused." }
+        }
     } finally {
         if ($null -eq $savedNoInteractive) { Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_INTERACTIVE = $savedNoInteractive }
         if ($null -eq $savedNoPreflight) { Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_PREFLIGHT = $savedNoPreflight }
     }
 
-    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, and install-door structural-assert tests passed." -ForegroundColor Green
+    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert tests, and the manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption) passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

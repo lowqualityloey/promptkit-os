@@ -506,6 +506,33 @@ if ($TargetDir -ne "") {
 
 $ProjectRootPath = if ($ProjectRoot.Path) { $ProjectRoot.Path } else { $ProjectRoot.ToString() }
 
+# Fresh-project detection (before any writes): a project with no tracked files
+# (git) or no non-hidden top-level entries (non-git) has no code yet, so the
+# install hint should point at pk:onboard repo intake instead of assuming an
+# existing codebase. A missing or failing git probe degrades to the non-git
+# check, so a broken git binary can never fail the install here.
+$FreshProject = $false
+$gitProbe = Get-Command git -ErrorAction SilentlyContinue
+$gitOk = $false
+if ($gitProbe) {
+    & git -C $ProjectRootPath rev-parse --is-inside-work-tree *> $null
+    $gitOk = ($LASTEXITCODE -eq 0)
+}
+if ($gitOk) {
+    # Installer-owned paths are not project content: the courier extracts the
+    # kit into .promptkit/ before running the installer, and a submodule install
+    # adds a .promptkit gitlink plus .gitmodules. Counting either as "the project
+    # has code" would suppress the hint in exactly the two flows a fresh project
+    # uses, so both are excluded from the tracked and dirty counts.
+    $tracked = @(git -C $ProjectRootPath ls-files -- . ':!.promptkit' ':!.gitmodules' 2>$null)
+    $dirty = @(git -C $ProjectRootPath status --porcelain -- . ':!.promptkit' ':!.gitmodules' 2>$null)
+    if ($tracked.Count -eq 0 -and $dirty.Count -eq 0) { $FreshProject = $true }
+} else {
+    $topLevel = @(Get-ChildItem -LiteralPath $ProjectRootPath -Force -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ne ".promptkit" -and $_.Name -ne ".gitmodules" })
+    if ($topLevel.Count -eq 0) { $FreshProject = $true }
+}
+
 $DocDirs = @(
     "docs/tasks",
     "docs/specs",
@@ -797,6 +824,129 @@ $KitDirRel = if ($KitDirFull -ieq $KitRootFull) {
     $KitDirFull.Substring($KitRootFull.Length).TrimStart('\', '/') -replace '\\', '/'
 } else {
     ".promptkit"
+}
+
+# Kit staging awareness: the directive references $KitDirRel/workflows/...;
+# when the engine ran from outside the project and nothing staged the kit at
+# .promptkit/ (courier or submodule), those references dangle. The upgrade
+# hints must not point at a path that does not exist in the project, so the
+# summary warns and names the staging commands instead.
+#
+# "Staged" means a COMPLETE kit, not merely the files this summary happens to
+# name: anywhere the directive, the workflows, and the shipped scripts are used
+# together, a copy missing one of them fails at the first command that needs it.
+# Completeness is defined by scripts/setup-assert-files.txt - the same manifest
+# the install-door assert (scripts/check-setup-assert.ps1) validates - so there
+# stays one definition of "a complete kit" instead of a third hand-maintained
+# list that drifts. A missing manifest is itself an incomplete kit, so this
+# check fails toward the warning rather than advertising an upgrade path it
+# cannot verify.
+$KitDangling = $false
+# $KitPartial separates the two dangling cases, because the recovery differs:
+# nothing at .promptkit/ can be staged by the documented commands, while an
+# incomplete copy must be removed first - the courier refuses a non-empty
+# destination without --force, and "git submodule add" refuses an existing
+# directory outright.
+$KitPartial = $false
+# $KitDoor records which delivery door produced the copy at .promptkit/, because
+# the recovery command differs per door: a registered git submodule is restored
+# in place by "git submodule update --init --force", while a courier tarball has
+# no upstream to pull from and must be replaced.
+#
+# Registration is a property of the PARENT repository, not of the kit directory:
+# a submodule that was never initialized, or whose directory was deleted, still
+# has a gitlink recorded in the parent index and a path in .gitmodules, but no
+# .promptkit/.git to find. Testing only for that entry mislabels both states as
+# a courier copy and then advises removing a checkout that
+# "git submodule update --init --force" restores in place.
+#
+# Both probes run from the project root WITHOUT a .git guard: git resolves the
+# enclosing work tree from any subdirectory, so a project root nested inside a
+# monorepo (apps/demo) has no .git and no .gitmodules of its own while
+# "git -C apps/demo ls-files -s -- .promptkit" still reports the gitlink. The
+# .gitmodules fallback resolves the TOPLEVEL file and compares against the
+# toplevel-relative path (prefix + rel), because a nested .gitmodules records
+# "submodule.apps/demo/.promptkit.path apps/demo/.promptkit".
+function Test-KitRegisteredSubmodule {
+    param([string]$ProjectRoot, [string]$RelPath)
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if (-not $git) { return $false }
+    $env:GIT_OPTIONAL_LOCKS = "0"
+    try {
+        $entries = & git -C $ProjectRoot -c core.fsmonitor=false ls-files -s -- $RelPath 2>$null
+    } catch {
+        $entries = @()
+    } finally {
+        Remove-Item Env:GIT_OPTIONAL_LOCKS -ErrorAction SilentlyContinue
+    }
+    foreach ($entry in @($entries)) {
+        if (-not $entry) { continue }
+        $fields = $entry -split "`t"
+        if ($fields.Count -lt 2) { continue }
+        if ($fields[1] -ne $RelPath) { continue }
+        if (($fields[0] -split ' ')[0] -eq '160000') { return $true }
+    }
+    $top = ""
+    try {
+        $topOut = & git -C $ProjectRoot -c core.fsmonitor=false rev-parse --show-toplevel 2>$null
+        if ($LASTEXITCODE -eq 0 -and $topOut) { $top = ([string]$topOut).Trim() }
+    } catch {
+        $top = ""
+    }
+    if ([string]::IsNullOrEmpty($top)) { return $false }
+    $gitmodules = Join-Path $top ".gitmodules"
+    if (-not (Test-Path -LiteralPath $gitmodules -PathType Leaf)) { return $false }
+    $prefix = ""
+    try {
+        $prefixOut = & git -C $ProjectRoot -c core.fsmonitor=false rev-parse --show-prefix 2>$null
+        if ($LASTEXITCODE -eq 0 -and $prefixOut) { $prefix = ([string]$prefixOut).Trim() }
+    } catch {
+        $prefix = ""
+    }
+    $full = ($prefix + $RelPath) -replace '\\', '/'
+    try {
+        $paths = & git config -f $gitmodules --get-regexp '^submodule\..*\.path$' 2>$null
+    } catch {
+        $paths = @()
+    }
+    foreach ($line in @($paths)) {
+        if (-not $line) { continue }
+        if ((($line -split ' ')[-1] -replace '\\', '/') -eq $full) { return $true }
+    }
+    return $false
+}
+
+$KitDoor = "none"
+if ($KitDirRel -eq ".promptkit") {
+    $stagedRoot = Join-Path $ProjectRootPath ".promptkit"
+    $kitManifest = Join-Path $ScriptDir "scripts/setup-assert-files.txt"
+    if (Test-Path -LiteralPath $stagedRoot) {
+        $KitPartial = $true
+    }
+    if ((Test-Path -LiteralPath (Join-Path $stagedRoot ".git")) -or (Test-KitRegisteredSubmodule -ProjectRoot $ProjectRootPath -RelPath ".promptkit")) {
+        $KitDoor = "submodule"
+    } elseif ($KitPartial) {
+        $KitDoor = "courier"
+    }
+    $stagedInstaller = Join-Path $stagedRoot "init.ps1"
+    if (-not (Test-Path -LiteralPath $stagedInstaller) -or -not (Test-Path -LiteralPath $kitManifest)) {
+        $KitDangling = $true
+    } else {
+        foreach ($row in [System.IO.File]::ReadAllLines($kitManifest)) {
+            $line = $row.Trim()
+            if ($line -eq '' -or $line.StartsWith('#')) { continue }
+            $parts = $line.Split('|')
+            if ($parts.Count -lt 2) { $KitDangling = $true; continue }
+            $rel = $parts[0].Trim()
+            $kind = $parts[1].Trim()
+            $target = Join-Path $stagedRoot $rel
+            if ($kind -eq 'dir') {
+                if (-not (Test-Path -LiteralPath $target -PathType Container)) { $KitDangling = $true }
+            } elseif (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
+                $KitDangling = $true
+            }
+        }
+    }
 }
 
 if ($Profile -eq "lite") {
@@ -1188,19 +1338,26 @@ try {
             [System.IO.File]::WriteAllText($StateTracker, $inserted, $utf8NoBom)
         }
     }
-    if (-not (Test-Path -LiteralPath $PrTemplateTarget) -and (Test-Path -LiteralPath $TemplatePr)) {
-        $ghParent = Split-Path -Parent $PrTemplateTarget
-        if (-not (Test-Path -LiteralPath $ghParent)) { [System.IO.Directory]::CreateDirectory($ghParent) | Out-Null }
-        Copy-Item -LiteralPath $TemplatePr -Destination $PrTemplateTarget -Force
-        $createdFiles.Add($PrTemplateTarget)
-        Write-Host "  [+] Created: .github/pull_request_template.md (staff-level PR specification)" -ForegroundColor Green
-    }
-    if (-not (Test-Path -LiteralPath $TaskTemplateTarget) -and (Test-Path -LiteralPath $TemplateTask)) {
-        $taskParent = Split-Path -Parent $TaskTemplateTarget
-        if (-not (Test-Path -LiteralPath $taskParent)) { [System.IO.Directory]::CreateDirectory($taskParent) | Out-Null }
-        Copy-Item -LiteralPath $TemplateTask -Destination $TaskTemplateTarget -Force
-        $createdFiles.Add($TaskTemplateTarget)
-        Write-Host "  [+] Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)" -ForegroundColor Green
+    # GitHub PR/issue templates mirror the GitHub tracker: they are only useful
+    # when tasks are tracked on GitHub (or projected there), so a local/jira/linear
+    # install skips them instead of adding .github noise to a non-GitHub project.
+    if ($Tracking -eq "github" -or $TrackingProjection -eq "github") {
+        if (-not (Test-Path -LiteralPath $PrTemplateTarget) -and (Test-Path -LiteralPath $TemplatePr)) {
+            $ghParent = Split-Path -Parent $PrTemplateTarget
+            if (-not (Test-Path -LiteralPath $ghParent)) { [System.IO.Directory]::CreateDirectory($ghParent) | Out-Null }
+            Copy-Item -LiteralPath $TemplatePr -Destination $PrTemplateTarget -Force
+            $createdFiles.Add($PrTemplateTarget)
+            Write-Host "  [+] Created: .github/pull_request_template.md (staff-level PR specification)" -ForegroundColor Green
+        }
+        if (-not (Test-Path -LiteralPath $TaskTemplateTarget) -and (Test-Path -LiteralPath $TemplateTask)) {
+            $taskParent = Split-Path -Parent $TaskTemplateTarget
+            if (-not (Test-Path -LiteralPath $taskParent)) { [System.IO.Directory]::CreateDirectory($taskParent) | Out-Null }
+            Copy-Item -LiteralPath $TemplateTask -Destination $TaskTemplateTarget -Force
+            $createdFiles.Add($TaskTemplateTarget)
+            Write-Host "  [+] Created: .github/ISSUE_TEMPLATE/task.md (standard task specification)" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "  [-] Skipped: .github PR/issue templates (task tracking is '$Tracking'; they are created when tracking is GitHub or GitHub projection)" -ForegroundColor Yellow
     }
 
     # Commit targets
@@ -1266,15 +1423,67 @@ if ($assertRc -ne 0) {
     exit 2
 }
 
+# The submodule recovery command is owned by the install-door assert, not
+# restated here: two hand-written copies of it disagreed, and the copy in the
+# assert was the wrong one. Ask the assert for the string it prints in its own
+# remedies so the summary and the assert can never drift apart again.
+$KitRecoveryCommand = ""
+if ($KitDoor -eq "submodule") {
+    try {
+        $recoveryOut = & pwsh -NoProfile -File (Join-Path $ScriptDir 'scripts/check-setup-assert.ps1') -RecoveryCommand -KitDirRel $KitDirRel 2>$null
+        if ($LASTEXITCODE -eq 0 -and $recoveryOut) { $KitRecoveryCommand = ([string]($recoveryOut | Select-Object -First 1)).Trim() }
+    } catch {
+        $KitRecoveryCommand = ""
+    }
+    if ([string]::IsNullOrEmpty($KitRecoveryCommand)) {
+        $KitRecoveryCommand = "git submodule update --init --force $KitDirRel"
+    }
+}
+
 Write-Host "`n✨ PromptKit OS successfully configured for $ProjectRoot! ($Profile profile)" -ForegroundColor Cyan
+if ($KitDangling) {
+    if ($KitPartial) {
+        Write-Host "   Note: .promptkit/ in this project is an incomplete copy of the kit — the directive references workflows there, so pk:* commands cannot load until the kit is complete." -ForegroundColor Yellow
+        if ($KitDoor -eq "submodule") {
+            Write-Host "   Restore it in place: $KitRecoveryCommand" -ForegroundColor DarkGray
+            Write-Host "   (--force restores the files the submodule commit records and reverts local edits to tracked kit files; untracked files elsewhere in the kit are kept, but an untracked file sitting where a missing tracked file belongs is replaced)" -ForegroundColor DarkGray
+            Write-Host "   (--init is required when the submodule was never initialized or its directory was deleted; the parent repository still records it)" -ForegroundColor DarkGray
+        } else {
+            Write-Host "   Replace it: Remove-Item -Recurse -Force .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
+            Write-Host "   (a courier copy has no upstream to pull from, so it must be replaced; check .promptkit/ for local edits and untracked files first — Remove-Item -Recurse -Force deletes them)" -ForegroundColor DarkGray
+            Write-Host "   (npx promptkit-os@latest --force overlays the existing directory without cleaning it, so stale files survive)" -ForegroundColor DarkGray
+        }
+    } else {
+        Write-Host "   Note: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it." -ForegroundColor Yellow
+        if ($KitDoor -eq "submodule") {
+            Write-Host "   Restore it in place: $KitRecoveryCommand" -ForegroundColor DarkGray
+            Write-Host "   (the parent repository still records the submodule; --init checks it out again)" -ForegroundColor DarkGray
+        } else {
+            Write-Host "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
+        }
+    }
+}
 if ($Profile -eq "lite") {
     Write-Host "   Lite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok" -ForegroundColor Green
-    Write-Host "   Upgrade anytime: $KitDirRel/init.ps1 --balanced for the full Balanced profile" -ForegroundColor DarkGray
+    if (-not $KitDangling) {
+        Write-Host "   Upgrade anytime: $KitDirRel/init.ps1 --balanced for the full Balanced profile" -ForegroundColor DarkGray
+    }
 } elseif ($Profile -eq "balanced") {
     Write-Host "   Balanced: 26 workflows, Level 0-3 adaptive ceremony — full power" -ForegroundColor White
-    Write-Host "   For onboarding: $KitDirRel/init.ps1 --lite for minimal setup" -ForegroundColor DarkGray
+    if (-not $KitDangling) {
+        Write-Host "   For onboarding: $KitDirRel/init.ps1 --lite for minimal setup" -ForegroundColor DarkGray
+    }
 } else {
     Write-Host "   Turbo (Experimental): Balanced + parallel waves, up to ~2x measured token cost" -ForegroundColor Yellow
     Write-Host "   Human approval still required for Level 3 (releases/tags/deploys)" -ForegroundColor DarkGray
+}
+if ($FreshProject) {
+    if ($Profile -eq "lite" -and $KitDangling) {
+        Write-Host "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning (Balanced-profile workflow — stage the kit first, see above)" -ForegroundColor DarkGray
+    } elseif ($Profile -eq "lite") {
+        Write-Host "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning (Balanced-profile workflow; upgrade: $KitDirRel/init.ps1 --balanced)" -ForegroundColor DarkGray
+    } else {
+        Write-Host "   Fresh project (no code yet)? Ask your AI: pk:onboard for repo intake before planning" -ForegroundColor DarkGray
+    }
 }
 Write-Host "   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'`n" -ForegroundColor White
