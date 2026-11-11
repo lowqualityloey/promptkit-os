@@ -54,13 +54,13 @@ The conformance suite evaluates five governance-critical scenarios staged in the
 
 ## 3. Scorer Fixture Validation Matrix
 
-- **Status**: Scorer Fixture Validation (All hosts UNTESTED for live runtime fidelity pending maintainer live sessions)
+- **Status**: Scorer Fixture Validation (no host has a live runtime capture for these fixtures; OpenCode's single live `milestone-halt` capture is recorded in §5, and every other host remains UNTESTED for live runtime fidelity pending maintainer live sessions)
 - **PromptKit OS Baseline**: `main` @ [`0972900`](https://github.com/lowqualityloey/promptkit-os/commit/09729003417009103481a77de5fda62df35e2f40)
 - **Directive Under Test**: Shipped Balanced (`templates/agent-directive-template.md`, 2,318 tok)
 - **Total Scored Fixtures**: 12 (10 PASS, 1 PARTIAL, 1 FAIL)
 
 > [!NOTE]
-> The cells below evaluate how the mechanical scoring harness (`scripts/run-behavioral-eval.sh --score`) grades the staged sample fixtures in `docs/internal/host-conformance/`. They validate rubric check mechanics and formatting expectations; they **do not** reflect live host runtime captures. Live runtime fidelity across all hosts is **Untested** until maintainer sessions with recorded model, version, and run provenance are captured.
+> The cells below evaluate how the mechanical scoring harness (`scripts/run-behavioral-eval.sh --score`) grades the staged sample fixtures in `docs/internal/host-conformance/`. They validate rubric check mechanics and formatting expectations; they **do not** reflect live host runtime captures. Live runtime fidelity is **Untested** for every host in this matrix until maintainer sessions with recorded model, version, and run provenance are captured — the one live capture on record, OpenCode's partial `milestone-halt` session, is graded in §5 and is not one of these fixture cells.
 
 | Evaluation Scenario | Claude Code Staged Fixtures<br>`docs/internal/host-conformance/claude-code/` | Cursor Staged Fixtures<br>`docs/internal/host-conformance/cursor/` | GitHub Copilot Staged Fixtures<br>`docs/internal/host-conformance/github-copilot/` |
 | :--- | :---: | :---: | :---: |
