@@ -199,7 +199,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $d "docs") | Out-Null
 Set-Content -LiteralPath (Join-Path $d "docs\STATE.md") -Value "- **Engine Version**: vOLD @ deadbee"
 Set-Content -LiteralPath (Join-Path $d "PROMPTKIT.md") -Value "profile: lite"
 Set-Content -LiteralPath (Join-Path $d ".github") -Value ""
-& pwsh -NoProfile -File $Init --balanced --tracking=local --host=agents $d 2>&1 | Out-Null
+& pwsh -NoProfile -File $Init --balanced --tracking=github --host=agents $d 2>&1 | Out-Null
 $rbState = Get-Content (Join-Path $d "docs\STATE.md") -Raw
 $rbProfile = Get-Content (Join-Path $d "PROMPTKIT.md") -Raw
 if ($rbState -match "vOLD @ deadbee" -and $rbProfile -match "profile: lite") {

@@ -204,7 +204,7 @@ D="$TEST_ROOT/t13"; mkdir -p "$D/docs"
 printf -- '- **Engine Version**: vOLD @ deadbee\n' > "$D/docs/STATE.md"
 printf 'profile: lite\n' > "$D/PROMPTKIT.md"
 touch "$D/.github"
-bash "$REPO_ROOT/init.sh" --balanced --tracking=local --host=agents "$D" </dev/null >/dev/null 2>&1
+bash "$REPO_ROOT/init.sh" --balanced --tracking=github --host=agents "$D" </dev/null >/dev/null 2>&1
 if grep -q 'vOLD @ deadbee' "$D/docs/STATE.md" 2>/dev/null \
    && head -1 "$D/PROMPTKIT.md" 2>/dev/null | grep -q 'profile: lite'; then
     ok "rollback restores a pre-existing docs/STATE.md after a later failure"
