@@ -1,6 +1,7 @@
 # Read-only install-door structural assert for the PromptKit OS kit tree.
 #
 # Usage: scripts/check-setup-assert.ps1 -ProjectRoot <dir> -KitDir <dir> -KitDirRel <rel>
+#        scripts/check-setup-assert.ps1 -RecoveryCommand [-KitDirRel <rel>]
 #
 # The installer calls this after a successful commit and before printing the
 # success banner. It classifies which documented install door produced the kit
@@ -20,6 +21,10 @@
 #   ASSERT|skipped|USER_OPT_OUT|SKIP             ($env:PROMPTKIT_NO_PREFLIGHT=1)
 #   ASSERT|<door>|remedy|<prose>                 (human remedy; field 4 is text)
 #
+# Query mode: -RecoveryCommand [-KitDirRel <rel>] prints the single submodule
+# recovery command and exits 0. The installer summary renders that command
+# instead of restating it, so the advice has one owner.
+#
 # Exit: 0 = OK or explicit opt-out, 1 = structural FAIL, 2 = INCOMPLETE.
 # FAIL is an observed structural mismatch the author can fix. INCOMPLETE means
 # the condition could not be measured (git missing, an unexpected git status,
@@ -29,7 +34,8 @@
 param(
     [string]$ProjectRoot = '',
     [string]$KitDir = '',
-    [string]$KitDirRel = ''
+    [string]$KitDirRel = '',
+    [switch]$RecoveryCommand
 )
 
 Set-StrictMode -Version Latest
@@ -57,6 +63,33 @@ function Exit-Incomplete {
     param([string]$Door, [string]$Check)
     Write-Verdict $Door $Check 'INCOMPLETE'
     exit 2
+}
+
+# The ONE recovery command for a registered submodule, and the only place it is
+# written. The installer's summary renders it through -RecoveryCommand instead
+# of restating it, because two hand-written copies of this string disagreed: the
+# summary said "--init --force" while this file said "--init --remote --merge",
+# and the second form is wrong twice over. It refuses a deinitialized submodule
+# ("Submodule path ... not initialized / Maybe you want to use 'update --init'?"),
+# and --remote advances the checkout to the remote tip while the parent index
+# keeps the old gitlink, which CREATES the '+' drift the remedy is supposed to
+# clear.
+#
+# Verified to restore the recorded commit from every state a registered
+# submodule can be in: deinitialized (empty directory), directory deleted,
+# drifted (+), and files deleted inside the checkout. --init is required for the
+# first two, --force for the last two.
+function Get-SubmoduleRecoveryCommand {
+    param([string]$KitDirRel)
+    return ("git submodule update --init --force " + $KitDirRel)
+}
+
+# Query mode: print that command and exit. Read-only, like every other path in
+# this script.
+if ($RecoveryCommand) {
+    $queryRel = if ([string]::IsNullOrEmpty($KitDirRel)) { '.promptkit' } else { $KitDirRel }
+    Write-Output (Get-SubmoduleRecoveryCommand -KitDirRel $queryRel)
+    exit 0
 }
 
 if ([string]::IsNullOrEmpty($ProjectRoot) -or [string]::IsNullOrEmpty($KitDir)) {
@@ -135,7 +168,7 @@ function Test-PathEqual {
 function Write-MissingFailure {
     param([string]$Door)
     foreach ($m in $missing) { Write-Verdict $Door ("missing:" + $m) 'FAIL' }
-    Write-Remedy $Door ("Restore the missing file(s) above, or reinstall via a documented method: npx promptkit-os@latest, git submodule update --init --remote --merge " + $KitDirRel + ", or a full engine-tree copy")
+    Write-Remedy $Door ("Restore the missing file(s) above, or reinstall via a documented method: npx promptkit-os@latest, " + (Get-SubmoduleRecoveryCommand -KitDirRel $KitDirRel) + ", or a full engine-tree copy")
     exit 1
 }
 
@@ -236,7 +269,7 @@ if ($hostRepo) {
             '160000' {
                 if (-not (Test-GitmodulesListsKit)) {
                     Write-Verdict 'submodule' 'gitmodules' 'FAIL'
-                    Write-Remedy 'submodule' ("A gitlink is staged for " + $KitDirRel + " but .gitmodules does not register that path; re-run git submodule update --init --recursive " + $KitDirRel + " or remove the stale index entry")
+                    Write-Remedy 'submodule' ("A gitlink is staged for " + $KitDirRel + " but .gitmodules does not register that path; re-run " + (Get-SubmoduleRecoveryCommand -KitDirRel $KitDirRel) + " or remove the stale index entry")
                     exit 1
                 }
                 $door = 'submodule'
@@ -257,7 +290,7 @@ if ($hostRepo) {
         }
     } elseif (Test-GitmodulesListsKit) {
         Write-Verdict 'submodule' 'staged' 'FAIL'
-        Write-Remedy 'submodule' (".gitmodules registers " + $KitDirRel + " but no gitlink is staged; run git submodule update --init --recursive " + $KitDirRel)
+        Write-Remedy 'submodule' (".gitmodules registers " + $KitDirRel + " but no gitlink is staged; run " + (Get-SubmoduleRecoveryCommand -KitDirRel $KitDirRel))
         exit 1
     } else {
         $door = 'direct-clone'
@@ -279,22 +312,22 @@ if ($door -eq 'submodule') {
         }
         '-' {
             Write-Verdict 'submodule' 'status' 'FAIL'
-            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " is not initialized; run git submodule update --init --remote --merge " + $KitDirRel)
+            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " is not initialized; run " + (Get-SubmoduleRecoveryCommand -KitDirRel $KitDirRel))
             exit 1
         }
         '+' {
             Write-Verdict 'submodule' 'status' 'FAIL'
-            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " is out of sync with the recorded commit; run git submodule update --init --remote --merge " + $KitDirRel)
+            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " is out of sync with the recorded commit; run " + (Get-SubmoduleRecoveryCommand -KitDirRel $KitDirRel))
             exit 1
         }
         'U' {
             Write-Verdict 'submodule' 'status' 'FAIL'
-            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " has unresolved merge conflicts; resolve them or re-run git submodule update --init --remote --merge " + $KitDirRel)
+            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " has unresolved merge conflicts; resolve them or re-run " + (Get-SubmoduleRecoveryCommand -KitDirRel $KitDirRel))
             exit 1
         }
         '?' {
             Write-Verdict 'submodule' 'status' 'FAIL'
-            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " is not registered as expected; re-run git submodule update --init --recursive " + $KitDirRel)
+            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " is not registered as expected; re-run " + (Get-SubmoduleRecoveryCommand -KitDirRel $KitDirRel))
             exit 1
         }
         default {

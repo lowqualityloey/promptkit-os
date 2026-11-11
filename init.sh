@@ -829,23 +829,31 @@ KIT_PARTIAL=0
 # .promptkit/.git to find. Testing only for that entry mislabels both states as
 # a courier copy and then advises "rm -rf .promptkit" for a checkout that
 # "git submodule update --init --force" restores in place.
+#
+# Both probes run from the project root WITHOUT a .git guard: git resolves the
+# enclosing work tree from any subdirectory, so a project root nested inside a
+# monorepo (apps/demo) has no .git and no .gitmodules of its own while
+# "git -C apps/demo ls-files -s -- .promptkit" still reports the gitlink. The
+# .gitmodules fallback resolves the TOPLEVEL file and compares against the
+# toplevel-relative path (prefix + rel), because a nested .gitmodules records
+# "submodule.apps/demo/.promptkit.path apps/demo/.promptkit".
 kit_registered_submodule() {
-    local proj="$1" rel="$2" out meta path line
+    local proj="$1" rel="$2" out meta path line top prefix full
     command -v git >/dev/null 2>&1 || return 1
-    if [[ -e "$proj/.git" ]]; then
-        out=$(GIT_OPTIONAL_LOCKS=0 git -C "$proj" -c core.fsmonitor=false ls-files -s -- "$rel" 2>/dev/null) || out=""
-        while IFS=$'\t' read -r meta path; do
-            [[ -z "$path" || "$path" != "$rel" ]] && continue
-            [[ "${meta%% *}" == "160000" ]] && return 0
-        done <<< "$out"
-    fi
-    if [[ -f "$proj/.gitmodules" ]]; then
-        out=$(git config -f "$proj/.gitmodules" --get-regexp '^submodule\..*\.path$' 2>/dev/null) || out=""
-        while IFS= read -r line; do
-            [[ -z "$line" ]] && continue
-            [[ "${line##* }" == "$rel" ]] && return 0
-        done <<< "$out"
-    fi
+    out=$(GIT_OPTIONAL_LOCKS=0 git -C "$proj" -c core.fsmonitor=false ls-files -s -- "$rel" 2>/dev/null) || out=""
+    while IFS=$'\t' read -r meta path; do
+        [[ -z "$path" || "$path" != "$rel" ]] && continue
+        [[ "${meta%% *}" == "160000" ]] && return 0
+    done <<< "$out"
+    top=$(GIT_OPTIONAL_LOCKS=0 git -C "$proj" -c core.fsmonitor=false rev-parse --show-toplevel 2>/dev/null) || top=""
+    [[ -z "$top" || ! -f "$top/.gitmodules" ]] && return 1
+    prefix=$(GIT_OPTIONAL_LOCKS=0 git -C "$proj" -c core.fsmonitor=false rev-parse --show-prefix 2>/dev/null) || prefix=""
+    full="${prefix}${rel}"
+    out=$(git config -f "$top/.gitmodules" --get-regexp '^submodule\..*\.path$' 2>/dev/null) || out=""
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        [[ "${line##* }" == "$full" ]] && return 0
+    done <<< "$out"
     return 1
 }
 
@@ -1378,13 +1386,25 @@ if [[ "$ASSERT_RC" -ne 0 ]]; then
     exit 2
 fi
 
+# The submodule recovery command is owned by the install-door assert, not
+# restated here: two hand-written copies of it disagreed, and the copy in the
+# assert was the wrong one. Ask the assert for the string it prints in its own
+# remedies so the summary and the assert can never drift apart again.
+KIT_RECOVERY_COMMAND=""
+if [[ "$KIT_DOOR" == "submodule" ]]; then
+    KIT_RECOVERY_COMMAND=$(bash "$SCRIPT_DIR/scripts/check-setup-assert.sh" --recovery-command "$KIT_DIR_REL" 2>/dev/null) || KIT_RECOVERY_COMMAND=""
+    if [[ -z "$KIT_RECOVERY_COMMAND" ]]; then
+        KIT_RECOVERY_COMMAND="git submodule update --init --force $KIT_DIR_REL"
+    fi
+fi
+
 echo -e "\n\033[0;36m✨ PromptKit OS successfully configured for $PROJECT_ROOT! ($PROFILE profile)\033[0m"
 if [[ "$KIT_DANGLING" == "1" ]]; then
     if [[ "$KIT_PARTIAL" == "1" ]]; then
         echo -e "   \033[0;33mNote: .promptkit/ in this project is an incomplete copy of the kit — the directive references workflows there, so pk:* commands cannot load until the kit is complete.\033[0m"
         if [[ "$KIT_DOOR" == "submodule" ]]; then
-            echo -e "   Restore it in place: git submodule update --init --force .promptkit"
-            echo -e "   (--force restores the files the submodule commit records; local edits to tracked kit files are reverted, untracked files such as notes are kept)"
+            echo -e "   Restore it in place: $KIT_RECOVERY_COMMAND"
+            echo -e "   (--force restores the files the submodule commit records and reverts local edits to tracked kit files; untracked files elsewhere in the kit are kept, but an untracked file sitting where a missing tracked file belongs is replaced)"
             echo -e "   (--init is required when the submodule was never initialized or its directory was deleted; the parent repository still records it)"
         else
             echo -e "   Replace it: rm -rf .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
@@ -1394,7 +1414,7 @@ if [[ "$KIT_DANGLING" == "1" ]]; then
     else
         echo -e "   \033[0;33mNote: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it.\033[0m"
         if [[ "$KIT_DOOR" == "submodule" ]]; then
-            echo -e "   Restore it in place: git submodule update --init --force .promptkit"
+            echo -e "   Restore it in place: $KIT_RECOVERY_COMMAND"
             echo -e "   (the parent repository still records the submodule; --init checks it out again)"
         else
             echo -e "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"

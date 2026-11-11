@@ -635,6 +635,39 @@ stage_complete_kit() {
     done < "$kit/scripts/setup-assert-files.txt"
 }
 
+# The installer and the install-door assert both print a recovery command, and
+# these tests EXECUTE it instead of matching it. Six review rounds each found a
+# new defect in a hand-written recovery string that a test only pattern-matched,
+# so the subject here is the command's effect: run the printed line verbatim and
+# assert the resulting submodule state.
+printed_recovery_command() {
+    sed -n 's/^   Restore it in place: //p' <<<"$1" | head -n 1
+}
+
+# The assert prints its command inside a prose remedy, so pull the command out of
+# the sentence rather than restating it here.
+printed_assert_recovery_command() {
+    grep -o 'git submodule update --init --force [^,]*' <<<"$1" | head -n 1
+}
+
+# Run the printed command from the project root. GIT_ALLOW_PROTOCOL=file lets a
+# fixture submodule whose origin is a local path be fetched without weakening
+# the fixture's own configuration.
+run_recovery_command() {
+    local host="$1" cmd="$2"
+    local -a words
+    read -r -a words <<<"$cmd"
+    ( cd "$host" && env GIT_ALLOW_PROTOCOL=file "${words[@]}" ) >/dev/null 2>&1
+}
+
+# The first column of "git submodule status": ' ' in sync, '-' not initialized,
+# '+' drifted, 'U' conflicted.
+submodule_prefix() {
+    local host="$1" out
+    out=$(git -C "$host" submodule status -- .promptkit 2>/dev/null) || return 1
+    printf '%s' "${out:0:1}"
+}
+
 # Test 27: courier door — complete kit tree with no .git classifies as courier
 COURIER_PROJ="$TEST_ROOT/assert_courier_project"
 COURIER_KIT="$TEST_ROOT/assert_courier_kit"
@@ -1050,8 +1083,7 @@ else
 fi
 [[ "$subdoor_rc" -eq 0 ]]
 grep -qF 'incomplete copy of the kit' <<<"$subdoor_out"
-grep -qF 'Restore it in place: git submodule update --init --force .promptkit' <<<"$subdoor_out"
-grep -qF 'untracked files such as notes are kept' <<<"$subdoor_out"
+grep -qF 'untracked files elsewhere in the kit are kept' <<<"$subdoor_out"
 if grep -qF 'rm -rf .promptkit' <<<"$subdoor_out"; then
     echo "Submodule-door partial kit was told to delete a copy that can be restored in place." >&2
     exit 1
@@ -1061,8 +1093,13 @@ if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$subdoor_out"; then
     exit 1
 fi
 [[ ! -f "$SUBDOOR_HOST/.promptkit/workflows/debug.md" ]]
-git -C "$SUBDOOR_HOST" -c protocol.file.allow=always submodule update --init --force .promptkit >/dev/null 2>&1
+# Execute the advice instead of matching it: the printed line must restore the
+# deleted workflow and leave the submodule in sync with the recorded commit.
+SUBDOOR_CMD="$(printed_recovery_command "$subdoor_out")"
+[[ -n "$SUBDOOR_CMD" ]]
+run_recovery_command "$SUBDOOR_HOST" "$SUBDOOR_CMD"
 [[ -f "$SUBDOOR_HOST/.promptkit/workflows/debug.md" ]]
+[[ "$(submodule_prefix "$SUBDOOR_HOST")" == " " ]]
 
 # Test 36g: an EMPTY scripts/ directory satisfies the "scripts|dir" row and
 # nothing else. The installer sources scripts/terminal-picker.sh before it
@@ -1143,9 +1180,15 @@ else
 fi
 [[ "$deinit_assert_rc" -eq 1 ]]
 grep -q '^ASSERT|partial-copy|missing:workflows/route.md|FAIL$' <<<"$deinit_assert_out"
-grep -qF 'git submodule update --init --remote --merge .promptkit' <<<"$deinit_assert_out"
-git -C "$DEINIT_HOST" -c protocol.file.allow=always submodule update --init --remote --merge .promptkit >/dev/null 2>&1
+if grep -qF -- '--remote' <<<"$deinit_assert_out"; then
+    echo "The assert remedy still carries --remote, which advances the checkout past the recorded gitlink." >&2
+    exit 1
+fi
+DEINIT_CMD="$(printed_assert_recovery_command "$deinit_assert_out")"
+[[ -n "$DEINIT_CMD" ]]
+run_recovery_command "$DEINIT_HOST" "$DEINIT_CMD"
 [[ -f "$DEINIT_HOST/.promptkit/init.sh" ]]
+[[ "$(submodule_prefix "$DEINIT_HOST")" == " " ]]
 
 # Test 36j: the same deinitialized submodule on the install path. The assert
 # would exit before the summary, so the preflight is opted out (documented at
@@ -1161,7 +1204,6 @@ else
 fi
 [[ "$deinit_rc" -eq 0 ]]
 grep -qF 'incomplete copy of the kit' <<<"$deinit_out"
-grep -qF 'Restore it in place: git submodule update --init --force .promptkit' <<<"$deinit_out"
 grep -qF 'the parent repository still records it' <<<"$deinit_out"
 if grep -qF 'rm -rf .promptkit' <<<"$deinit_out"; then
     echo "A deinitialized submodule was told to delete a copy that can be restored in place." >&2
@@ -1171,8 +1213,11 @@ if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$deinit_out"; then
     echo "Upgrade hint advertised from a deinitialized submodule." >&2
     exit 1
 fi
-git -C "$DEINIT_HOST" -c protocol.file.allow=always submodule update --init --force .promptkit >/dev/null 2>&1
+DEINIT_INSTALL_CMD="$(printed_recovery_command "$deinit_out")"
+[[ -n "$DEINIT_INSTALL_CMD" ]]
+run_recovery_command "$DEINIT_HOST" "$DEINIT_INSTALL_CMD"
 [[ -f "$DEINIT_HOST/.promptkit/workflows/debug.md" ]]
+[[ "$(submodule_prefix "$DEINIT_HOST")" == " " ]]
 
 # Test 36k: a REGISTERED submodule whose directory was DELETED. Nothing is
 # staged, so the summary takes the "not staged" branch - but the parent
@@ -1199,7 +1244,6 @@ else
 fi
 [[ "$deldir_rc" -eq 0 ]]
 grep -qF 'the kit is not staged at .promptkit/' <<<"$deldir_out"
-grep -qF 'Restore it in place: git submodule update --init --force .promptkit' <<<"$deldir_out"
 grep -qF 'the parent repository still records the submodule; --init checks it out again' <<<"$deldir_out"
 if grep -qF 'Stage the kit:' <<<"$deldir_out"; then
     echo "A registered submodule with a deleted directory was told to run git submodule add, which refuses the existing index entry." >&2
@@ -1209,8 +1253,178 @@ if grep -qF 'rm -rf .promptkit' <<<"$deldir_out"; then
     echo "A registered submodule with a deleted directory was told to delete nothing." >&2
     exit 1
 fi
-git -C "$DELDIR_HOST" -c protocol.file.allow=always submodule update --init --force .promptkit >/dev/null 2>&1
+DELDIR_CMD="$(printed_recovery_command "$deldir_out")"
+[[ -n "$DELDIR_CMD" ]]
+run_recovery_command "$DELDIR_HOST" "$DELDIR_CMD"
 [[ -f "$DELDIR_HOST/.promptkit/init.sh" ]]
+[[ "$(submodule_prefix "$DELDIR_HOST")" == " " ]]
+
+# Test 36l: the DRIFTED state ('+'). A submodule whose checkout has moved off
+# the recorded gitlink is what "--remote" produces, and the old remedy
+# recommended the very command that creates it. The printed command must clear
+# the drift and land on the RECORDED commit, not on the remote tip.
+#
+# The advance also DROPS a manifest row, because the installer only prints
+# recovery advice when the staged kit is incomplete: a drifted-but-complete kit
+# still resolves every pk:* command, so the drift is the assert's report (36m)
+# rather than the installer's. Pairing the two states here keeps the installer
+# path exercised while still asserting that the command lands on the recorded
+# commit instead of the remote tip.
+DRIFT_KITREPO="$TEST_ROOT/drift_kitrepo"
+DRIFT_HOST="$TEST_ROOT/drift_host"
+DRIFT_RUNNER="$TEST_ROOT/drift_runner"
+copy_kit "$DRIFT_KITREPO"
+git -C "$DRIFT_KITREPO" init -q
+git -C "$DRIFT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$DRIFT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$DRIFT_HOST"
+git -C "$DRIFT_HOST" init -q
+git -C "$DRIFT_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$DRIFT_KITREPO" .promptkit
+# The gitlink is only recorded in a commit, so the host needs one before
+# "rev-parse HEAD:.promptkit" can name the recorded commit.
+git -C "$DRIFT_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "add kit"
+DRIFT_RECORDED="$(git -C "$DRIFT_HOST" rev-parse HEAD:.promptkit)"
+# Advance the kit upstream (dropping a manifest row), then move the checkout
+# onto the new tip without touching the parent index: exactly the '+' state.
+git -C "$DRIFT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid rm -q workflows/debug.md
+git -C "$DRIFT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "kit advances"
+git -C "$DRIFT_HOST/.promptkit" fetch -q origin
+git -C "$DRIFT_HOST/.promptkit" -c advice.detachedHead=false checkout -q origin/HEAD 2>/dev/null || git -C "$DRIFT_HOST/.promptkit" -c advice.detachedHead=false checkout -q FETCH_HEAD
+[[ "$(submodule_prefix "$DRIFT_HOST")" == "+" ]]
+[[ ! -f "$DRIFT_HOST/.promptkit/workflows/debug.md" ]]
+copy_kit "$DRIFT_RUNNER"
+if drift_out="$(PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash "$DRIFT_RUNNER/init.sh" --lite "$DRIFT_HOST" 2>&1)"; then
+    drift_rc=0
+else
+    drift_rc=$?
+fi
+[[ "$drift_rc" -eq 0 ]]
+DRIFT_CMD="$(printed_recovery_command "$drift_out")"
+[[ -n "$DRIFT_CMD" ]]
+if grep -qF -- '--remote' <<<"$DRIFT_CMD"; then
+    echo "The recovery command carries --remote, which is what creates the drift it is meant to clear." >&2
+    exit 1
+fi
+run_recovery_command "$DRIFT_HOST" "$DRIFT_CMD"
+[[ "$(submodule_prefix "$DRIFT_HOST")" == " " ]]
+[[ "$(git -C "$DRIFT_HOST" rev-parse HEAD:.promptkit)" == "$DRIFT_RECORDED" ]]
+[[ "$(git -C "$DRIFT_HOST/.promptkit" rev-parse HEAD)" == "$DRIFT_RECORDED" ]]
+
+# Test 36m: the assert's own remedy, on the drifted state. The assert is the
+# single owner of the command, so its remedy must be the same one the installer
+# prints - and it must clear the drift rather than advance the checkout.
+#
+# This fixture drifts WITHOUT dropping a manifest row. The assert reports a
+# missing file before it classifies the door, so a drifted-but-complete kit is
+# the only shape in which the submodule status check is reached at all.
+DRIFT2_KITREPO="$TEST_ROOT/drift2_kitrepo"
+DRIFT2_HOST="$TEST_ROOT/drift2_host"
+copy_kit "$DRIFT2_KITREPO"
+git -C "$DRIFT2_KITREPO" init -q
+git -C "$DRIFT2_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$DRIFT2_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$DRIFT2_HOST"
+git -C "$DRIFT2_HOST" init -q
+git -C "$DRIFT2_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$DRIFT2_KITREPO" .promptkit
+git -C "$DRIFT2_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "add kit"
+DRIFT2_RECORDED="$(git -C "$DRIFT2_HOST" rev-parse HEAD:.promptkit)"
+printf '\n<!-- drift -->\n' >> "$DRIFT2_KITREPO/README.md"
+git -C "$DRIFT2_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -am "kit advances harmlessly"
+git -C "$DRIFT2_HOST/.promptkit" fetch -q origin
+git -C "$DRIFT2_HOST/.promptkit" -c advice.detachedHead=false checkout -q origin/HEAD 2>/dev/null || git -C "$DRIFT2_HOST/.promptkit" -c advice.detachedHead=false checkout -q FETCH_HEAD
+[[ "$(submodule_prefix "$DRIFT2_HOST")" == "+" ]]
+if drift_assert_out="$(bash "$REPO_ROOT/scripts/check-setup-assert.sh" "$DRIFT2_HOST" "$DRIFT2_HOST/.promptkit" ".promptkit" 2>&1)"; then
+    drift_assert_rc=0
+else
+    drift_assert_rc=$?
+fi
+[[ "$drift_assert_rc" -eq 1 ]]
+grep -q '^ASSERT|submodule|status|FAIL$' <<<"$drift_assert_out"
+if grep -qF -- '--remote' <<<"$drift_assert_out"; then
+    echo "The assert's drift remedy still carries --remote." >&2
+    exit 1
+fi
+DRIFT_ASSERT_CMD="$(printed_assert_recovery_command "$drift_assert_out")"
+[[ -n "$DRIFT_ASSERT_CMD" ]]
+run_recovery_command "$DRIFT2_HOST" "$DRIFT_ASSERT_CMD"
+[[ "$(submodule_prefix "$DRIFT2_HOST")" == " " ]]
+[[ "$(git -C "$DRIFT2_HOST/.promptkit" rev-parse HEAD)" == "$DRIFT2_RECORDED" ]]
+
+# Test 36n: the --force warning must be TRUE. An untracked file elsewhere in the
+# kit survives, while an untracked file sitting at the path of a missing tracked
+# file is replaced. Both halves are asserted, because the previous wording
+# claimed untracked files are always kept and that is false.
+OBSTRUCT_KITREPO="$TEST_ROOT/obstruct_kitrepo"
+OBSTRUCT_HOST="$TEST_ROOT/obstruct_host"
+OBSTRUCT_RUNNER="$TEST_ROOT/obstruct_runner"
+copy_kit "$OBSTRUCT_KITREPO"
+git -C "$OBSTRUCT_KITREPO" init -q
+git -C "$OBSTRUCT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$OBSTRUCT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$OBSTRUCT_HOST"
+git -C "$OBSTRUCT_HOST" init -q
+git -C "$OBSTRUCT_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$OBSTRUCT_KITREPO" .promptkit
+# The installer only prints recovery advice for an INCOMPLETE kit, so the
+# incompleteness comes from a manifest row (workflows/debug.md) while the
+# obstruction sits on a tracked file the manifest does not list
+# (workflows/plan.md): an untracked file at that path satisfies no manifest row,
+# so the kit stays incomplete and --force still has to replace it.
+rm -f "$OBSTRUCT_HOST/.promptkit/workflows/debug.md"
+rm -f "$OBSTRUCT_HOST/.promptkit/workflows/plan.md"
+printf 'my own notes\n' > "$OBSTRUCT_HOST/.promptkit/workflows/plan.md"
+printf 'keep me\n' > "$OBSTRUCT_HOST/.promptkit/notes.md"
+copy_kit "$OBSTRUCT_RUNNER"
+if obstruct_out="$(PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash "$OBSTRUCT_RUNNER/init.sh" --lite "$OBSTRUCT_HOST" 2>&1)"; then
+    obstruct_rc=0
+else
+    obstruct_rc=$?
+fi
+[[ "$obstruct_rc" -eq 0 ]]
+grep -qF 'an untracked file sitting where a missing tracked file belongs is replaced' <<<"$obstruct_out"
+OBSTRUCT_CMD="$(printed_recovery_command "$obstruct_out")"
+[[ -n "$OBSTRUCT_CMD" ]]
+run_recovery_command "$OBSTRUCT_HOST" "$OBSTRUCT_CMD"
+[[ "$(cat "$OBSTRUCT_HOST/.promptkit/workflows/plan.md")" != "my own notes" ]]
+[[ "$(cat "$OBSTRUCT_HOST/.promptkit/notes.md")" == "keep me" ]]
+[[ -f "$OBSTRUCT_HOST/.promptkit/workflows/debug.md" ]]
+
+# Test 36o: a project root NESTED inside a monorepo. The kit submodule lives at
+# apps/demo/.promptkit, so the project root has no .git and no .gitmodules of its
+# own; the registration is recorded in the TOPLEVEL index and .gitmodules. The
+# old probe was guarded on "$proj/.git" and skipped both, classifying a
+# registered submodule as a courier copy.
+NESTED_KITREPO="$TEST_ROOT/nested_kitrepo"
+NESTED_HOST="$TEST_ROOT/nested_host"
+NESTED_PROJ="$NESTED_HOST/apps/demo"
+NESTED_RUNNER="$TEST_ROOT/nested_runner"
+copy_kit "$NESTED_KITREPO"
+git -C "$NESTED_KITREPO" init -q
+git -C "$NESTED_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$NESTED_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$NESTED_PROJ"
+git -C "$NESTED_HOST" init -q
+git -C "$NESTED_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$NESTED_KITREPO" apps/demo/.promptkit
+git -C "$NESTED_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "add kit"
+[[ ! -e "$NESTED_PROJ/.git" ]]
+[[ ! -e "$NESTED_PROJ/.gitmodules" ]]
+git -C "$NESTED_HOST" submodule deinit -f apps/demo/.promptkit >/dev/null 2>&1
+[[ ! -e "$NESTED_PROJ/.promptkit/.git" ]]
+copy_kit "$NESTED_RUNNER"
+if nested_out="$(PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash "$NESTED_RUNNER/init.sh" --lite "$NESTED_PROJ" 2>&1)"; then
+    nested_rc=0
+else
+    nested_rc=$?
+fi
+[[ "$nested_rc" -eq 0 ]]
+if grep -qF 'rm -rf .promptkit' <<<"$nested_out"; then
+    echo "A submodule registered from a nested project root was classified as a courier copy." >&2
+    exit 1
+fi
+NESTED_CMD="$(printed_recovery_command "$nested_out")"
+[[ -n "$NESTED_CMD" ]]
+run_recovery_command "$NESTED_PROJ" "$NESTED_CMD"
+[[ -f "$NESTED_PROJ/.promptkit/init.sh" ]]
+[[ "$(submodule_prefix "$NESTED_PROJ")" == " " ]]
 
 # Test 37: manifest coverage guard. Every engine-relative path the installers
 # resolve must be a row of scripts/setup-assert-files.txt or sit on the
@@ -1292,4 +1506,4 @@ for manifest_entry in "${MANIFEST_EXEMPTIONS[@]}"; do
         exit 1
     fi
 done
-echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore verified end to end, deinitialized and deleted-directory submodules restored in place), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), and manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption) tests passed."
+echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), and manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption) tests passed."

@@ -859,38 +859,59 @@ $KitPartial = $false
 # .promptkit/.git to find. Testing only for that entry mislabels both states as
 # a courier copy and then advises removing a checkout that
 # "git submodule update --init --force" restores in place.
+#
+# Both probes run from the project root WITHOUT a .git guard: git resolves the
+# enclosing work tree from any subdirectory, so a project root nested inside a
+# monorepo (apps/demo) has no .git and no .gitmodules of its own while
+# "git -C apps/demo ls-files -s -- .promptkit" still reports the gitlink. The
+# .gitmodules fallback resolves the TOPLEVEL file and compares against the
+# toplevel-relative path (prefix + rel), because a nested .gitmodules records
+# "submodule.apps/demo/.promptkit.path apps/demo/.promptkit".
 function Test-KitRegisteredSubmodule {
     param([string]$ProjectRoot, [string]$RelPath)
     $git = Get-Command git -ErrorAction SilentlyContinue
     if (-not $git) { return $false }
-    if (Test-Path -LiteralPath (Join-Path $ProjectRoot ".git")) {
-        $env:GIT_OPTIONAL_LOCKS = "0"
-        try {
-            $entries = & git -C $ProjectRoot -c core.fsmonitor=false ls-files -s -- $RelPath 2>$null
-        } catch {
-            $entries = @()
-        } finally {
-            Remove-Item Env:GIT_OPTIONAL_LOCKS -ErrorAction SilentlyContinue
-        }
-        foreach ($entry in @($entries)) {
-            if (-not $entry) { continue }
-            $fields = $entry -split "`t"
-            if ($fields.Count -lt 2) { continue }
-            if ($fields[1] -ne $RelPath) { continue }
-            if (($fields[0] -split ' ')[0] -eq '160000') { return $true }
-        }
+    $env:GIT_OPTIONAL_LOCKS = "0"
+    try {
+        $entries = & git -C $ProjectRoot -c core.fsmonitor=false ls-files -s -- $RelPath 2>$null
+    } catch {
+        $entries = @()
+    } finally {
+        Remove-Item Env:GIT_OPTIONAL_LOCKS -ErrorAction SilentlyContinue
     }
-    $gitmodules = Join-Path $ProjectRoot ".gitmodules"
-    if (Test-Path -LiteralPath $gitmodules -PathType Leaf) {
-        try {
-            $paths = & git config -f $gitmodules --get-regexp '^submodule\..*\.path$' 2>$null
-        } catch {
-            $paths = @()
-        }
-        foreach ($line in @($paths)) {
-            if (-not $line) { continue }
-            if (($line -split ' ')[-1] -eq $RelPath) { return $true }
-        }
+    foreach ($entry in @($entries)) {
+        if (-not $entry) { continue }
+        $fields = $entry -split "`t"
+        if ($fields.Count -lt 2) { continue }
+        if ($fields[1] -ne $RelPath) { continue }
+        if (($fields[0] -split ' ')[0] -eq '160000') { return $true }
+    }
+    $top = ""
+    try {
+        $topOut = & git -C $ProjectRoot -c core.fsmonitor=false rev-parse --show-toplevel 2>$null
+        if ($LASTEXITCODE -eq 0 -and $topOut) { $top = ([string]$topOut).Trim() }
+    } catch {
+        $top = ""
+    }
+    if ([string]::IsNullOrEmpty($top)) { return $false }
+    $gitmodules = Join-Path $top ".gitmodules"
+    if (-not (Test-Path -LiteralPath $gitmodules -PathType Leaf)) { return $false }
+    $prefix = ""
+    try {
+        $prefixOut = & git -C $ProjectRoot -c core.fsmonitor=false rev-parse --show-prefix 2>$null
+        if ($LASTEXITCODE -eq 0 -and $prefixOut) { $prefix = ([string]$prefixOut).Trim() }
+    } catch {
+        $prefix = ""
+    }
+    $full = ($prefix + $RelPath) -replace '\\', '/'
+    try {
+        $paths = & git config -f $gitmodules --get-regexp '^submodule\..*\.path$' 2>$null
+    } catch {
+        $paths = @()
+    }
+    foreach ($line in @($paths)) {
+        if (-not $line) { continue }
+        if ((($line -split ' ')[-1] -replace '\\', '/') -eq $full) { return $true }
     }
     return $false
 }
@@ -1402,13 +1423,30 @@ if ($assertRc -ne 0) {
     exit 2
 }
 
+# The submodule recovery command is owned by the install-door assert, not
+# restated here: two hand-written copies of it disagreed, and the copy in the
+# assert was the wrong one. Ask the assert for the string it prints in its own
+# remedies so the summary and the assert can never drift apart again.
+$KitRecoveryCommand = ""
+if ($KitDoor -eq "submodule") {
+    try {
+        $recoveryOut = & pwsh -NoProfile -File (Join-Path $ScriptDir 'scripts/check-setup-assert.ps1') -RecoveryCommand -KitDirRel $KitDirRel 2>$null
+        if ($LASTEXITCODE -eq 0 -and $recoveryOut) { $KitRecoveryCommand = ([string]($recoveryOut | Select-Object -First 1)).Trim() }
+    } catch {
+        $KitRecoveryCommand = ""
+    }
+    if ([string]::IsNullOrEmpty($KitRecoveryCommand)) {
+        $KitRecoveryCommand = "git submodule update --init --force $KitDirRel"
+    }
+}
+
 Write-Host "`n✨ PromptKit OS successfully configured for $ProjectRoot! ($Profile profile)" -ForegroundColor Cyan
 if ($KitDangling) {
     if ($KitPartial) {
         Write-Host "   Note: .promptkit/ in this project is an incomplete copy of the kit — the directive references workflows there, so pk:* commands cannot load until the kit is complete." -ForegroundColor Yellow
         if ($KitDoor -eq "submodule") {
-            Write-Host "   Restore it in place: git submodule update --init --force .promptkit" -ForegroundColor DarkGray
-            Write-Host "   (--force restores the files the submodule commit records; local edits to tracked kit files are reverted, untracked files such as notes are kept)" -ForegroundColor DarkGray
+            Write-Host "   Restore it in place: $KitRecoveryCommand" -ForegroundColor DarkGray
+            Write-Host "   (--force restores the files the submodule commit records and reverts local edits to tracked kit files; untracked files elsewhere in the kit are kept, but an untracked file sitting where a missing tracked file belongs is replaced)" -ForegroundColor DarkGray
             Write-Host "   (--init is required when the submodule was never initialized or its directory was deleted; the parent repository still records it)" -ForegroundColor DarkGray
         } else {
             Write-Host "   Replace it: Remove-Item -Recurse -Force .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
@@ -1418,7 +1456,7 @@ if ($KitDangling) {
     } else {
         Write-Host "   Note: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it." -ForegroundColor Yellow
         if ($KitDoor -eq "submodule") {
-            Write-Host "   Restore it in place: git submodule update --init --force .promptkit" -ForegroundColor DarkGray
+            Write-Host "   Restore it in place: $KitRecoveryCommand" -ForegroundColor DarkGray
             Write-Host "   (the parent repository still records the submodule; --init checks it out again)" -ForegroundColor DarkGray
         } else {
             Write-Host "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
