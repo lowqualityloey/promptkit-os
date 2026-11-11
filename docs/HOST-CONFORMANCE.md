@@ -86,7 +86,7 @@ These notes explain how the mechanical evaluation rubric scores the staged sampl
 
 ## 4. Untested Hosts Registry
 
-All host environments—including Claude Code, Cursor, and GitHub Copilot—remain **untested for live runtime fidelity** pending maintainer live sessions with recorded model, version, and run provenance. The table below registers the full set of 10 host environments supported by the PromptKit OS installer (see [`docs/COMPARISONS.md`](./COMPARISONS.md)); behavioral instruction fidelity in live execution is **untested and unmeasured** across all hosts:
+All host environments—including Claude Code, Cursor, and GitHub Copilot—remain **untested for live runtime fidelity** pending maintainer live sessions with recorded model, version, and run provenance, with one exception: OpenCode holds a single **PARTIAL** live capture of the `milestone-halt` probe whose limits §5 records — one of five probes, a single-host model excluded from cross-host comparison, and an interface that exited at the sign-off gate instead of exercising the continuation loop. The table below registers the full set of 10 host environments supported by the PromptKit OS installer (see [`docs/COMPARISONS.md`](./COMPARISONS.md)); apart from that one partial capture, behavioral instruction fidelity in live execution is **untested and unmeasured**:
 
 | Host Name | Supported Integration Target | Live Runtime Fidelity | Staged Fixtures | Scheduled Cadence |
 | :--- | :--- | :---: | :---: | :--- |
