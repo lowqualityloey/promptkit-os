@@ -135,7 +135,7 @@ function Test-PathEqual {
 function Write-MissingFailure {
     param([string]$Door)
     foreach ($m in $missing) { Write-Verdict $Door ("missing:" + $m) 'FAIL' }
-    Write-Remedy $Door ("Restore the missing file(s) above, or reinstall via a documented method: npx promptkit-os@latest, git submodule update --remote --merge " + $KitDirRel + ", or a full engine-tree copy")
+    Write-Remedy $Door ("Restore the missing file(s) above, or reinstall via a documented method: npx promptkit-os@latest, git submodule update --init --remote --merge " + $KitDirRel + ", or a full engine-tree copy")
     exit 1
 }
 
@@ -279,17 +279,17 @@ if ($door -eq 'submodule') {
         }
         '-' {
             Write-Verdict 'submodule' 'status' 'FAIL'
-            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " is not initialized; run git submodule update --remote --merge " + $KitDirRel)
+            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " is not initialized; run git submodule update --init --remote --merge " + $KitDirRel)
             exit 1
         }
         '+' {
             Write-Verdict 'submodule' 'status' 'FAIL'
-            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " is out of sync with the recorded commit; run git submodule update --remote --merge " + $KitDirRel)
+            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " is out of sync with the recorded commit; run git submodule update --init --remote --merge " + $KitDirRel)
             exit 1
         }
         'U' {
             Write-Verdict 'submodule' 'status' 'FAIL'
-            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " has unresolved merge conflicts; resolve them or re-run git submodule update --remote --merge " + $KitDirRel)
+            Write-Remedy 'submodule' ("Submodule " + $KitDirRel + " has unresolved merge conflicts; resolve them or re-run git submodule update --init --remote --merge " + $KitDirRel)
             exit 1
         }
         '?' {

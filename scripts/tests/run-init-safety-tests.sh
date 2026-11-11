@@ -1109,4 +1109,187 @@ if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$missingwf_out"; then
     exit 1
 fi
 
-echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore verified end to end), and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."
+# Test 36i: a DEINITIALIZED submodule, seen by the install-door assert. "git
+# submodule deinit" empties the directory but leaves the gitlink in the parent
+# index, so the kit is still REGISTERED even though .promptkit/.git is gone.
+# The assert validates the ENGINE tree, so an install run from a separate engine
+# still succeeds (test 36j covers that path); point the assert at the staged
+# copy to reach the state a user hits when they check .promptkit/ itself. The
+# tree check runs before the door classification, so the verdict is
+# partial-copy rather than submodule — what matters is that the remedy it
+# prints actually restores the kit. The plain "update --remote --merge" form
+# does not: it refuses with "Submodule path '.promptkit' not initialized /
+# Maybe you want to use 'update --init'?", so the remedy carries --init and
+# this scenario runs it.
+DEINIT_KITREPO="$TEST_ROOT/deinit_kitrepo"
+DEINIT_HOST="$TEST_ROOT/deinit_host"
+DEINIT_RUNNER="$TEST_ROOT/deinit_runner"
+copy_kit "$DEINIT_KITREPO"
+git -C "$DEINIT_KITREPO" init -q
+git -C "$DEINIT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$DEINIT_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$DEINIT_HOST"
+git -C "$DEINIT_HOST" init -q
+git -C "$DEINIT_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$DEINIT_KITREPO" .promptkit
+git -C "$DEINIT_HOST" submodule deinit -f .promptkit >/dev/null 2>&1
+[[ -d "$DEINIT_HOST/.promptkit" ]]
+[[ ! -e "$DEINIT_HOST/.promptkit/.git" ]]
+[[ ! -f "$DEINIT_HOST/.promptkit/init.sh" ]]
+copy_kit "$DEINIT_RUNNER"
+if deinit_assert_out="$(bash "$DEINIT_RUNNER/scripts/check-setup-assert.sh" "$DEINIT_HOST" "$DEINIT_HOST/.promptkit" ".promptkit" 2>&1)"; then
+    deinit_assert_rc=0
+else
+    deinit_assert_rc=$?
+fi
+[[ "$deinit_assert_rc" -eq 1 ]]
+grep -q '^ASSERT|partial-copy|missing:workflows/route.md|FAIL$' <<<"$deinit_assert_out"
+grep -qF 'git submodule update --init --remote --merge .promptkit' <<<"$deinit_assert_out"
+git -C "$DEINIT_HOST" -c protocol.file.allow=always submodule update --init --remote --merge .promptkit >/dev/null 2>&1
+[[ -f "$DEINIT_HOST/.promptkit/init.sh" ]]
+
+# Test 36j: the same deinitialized submodule on the install path. The assert
+# would exit before the summary, so the preflight is opted out (documented at
+# PROMPTKIT_NO_PREFLIGHT) and the summary must classify the state as the
+# submodule door and name the in-place restore. Before the door was read from
+# the parent repository this printed the courier advice and the removal warning.
+git -C "$DEINIT_HOST" submodule deinit -f .promptkit >/dev/null 2>&1
+[[ ! -f "$DEINIT_HOST/.promptkit/init.sh" ]]
+if deinit_out="$(PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash "$DEINIT_RUNNER/init.sh" --lite "$DEINIT_HOST" 2>&1)"; then
+    deinit_rc=0
+else
+    deinit_rc=$?
+fi
+[[ "$deinit_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$deinit_out"
+grep -qF 'Restore it in place: git submodule update --init --force .promptkit' <<<"$deinit_out"
+grep -qF 'the parent repository still records it' <<<"$deinit_out"
+if grep -qF 'rm -rf .promptkit' <<<"$deinit_out"; then
+    echo "A deinitialized submodule was told to delete a copy that can be restored in place." >&2
+    exit 1
+fi
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$deinit_out"; then
+    echo "Upgrade hint advertised from a deinitialized submodule." >&2
+    exit 1
+fi
+git -C "$DEINIT_HOST" -c protocol.file.allow=always submodule update --init --force .promptkit >/dev/null 2>&1
+[[ -f "$DEINIT_HOST/.promptkit/workflows/debug.md" ]]
+
+# Test 36k: a REGISTERED submodule whose directory was DELETED. Nothing is
+# staged, so the summary takes the "not staged" branch - but the parent
+# repository still records the gitlink, so the advice is the in-place restore
+# ("--init checks it out again"), not "git submodule add", which refuses an
+# existing index entry with "fatal: '.promptkit' already exists in the index".
+DELDIR_KITREPO="$TEST_ROOT/deldir_kitrepo"
+DELDIR_HOST="$TEST_ROOT/deldir_host"
+DELDIR_RUNNER="$TEST_ROOT/deldir_runner"
+copy_kit "$DELDIR_KITREPO"
+git -C "$DELDIR_KITREPO" init -q
+git -C "$DELDIR_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+git -C "$DELDIR_KITREPO" -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m "fixture kit"
+mkdir -p "$DELDIR_HOST"
+git -C "$DELDIR_HOST" init -q
+git -C "$DELDIR_HOST" -c user.name=Fixture -c user.email=fixture@example.invalid -c protocol.file.allow=always submodule add -q "$DELDIR_KITREPO" .promptkit
+rm -rf "$DELDIR_HOST/.promptkit"
+[[ ! -d "$DELDIR_HOST/.promptkit" ]]
+copy_kit "$DELDIR_RUNNER"
+if deldir_out="$(PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash "$DELDIR_RUNNER/init.sh" --lite "$DELDIR_HOST" 2>&1)"; then
+    deldir_rc=0
+else
+    deldir_rc=$?
+fi
+[[ "$deldir_rc" -eq 0 ]]
+grep -qF 'the kit is not staged at .promptkit/' <<<"$deldir_out"
+grep -qF 'Restore it in place: git submodule update --init --force .promptkit' <<<"$deldir_out"
+grep -qF 'the parent repository still records the submodule; --init checks it out again' <<<"$deldir_out"
+if grep -qF 'Stage the kit:' <<<"$deldir_out"; then
+    echo "A registered submodule with a deleted directory was told to run git submodule add, which refuses the existing index entry." >&2
+    exit 1
+fi
+if grep -qF 'rm -rf .promptkit' <<<"$deldir_out"; then
+    echo "A registered submodule with a deleted directory was told to delete nothing." >&2
+    exit 1
+fi
+git -C "$DELDIR_HOST" -c protocol.file.allow=always submodule update --init --force .promptkit >/dev/null 2>&1
+[[ -f "$DELDIR_HOST/.promptkit/init.sh" ]]
+
+# Test 37: manifest coverage guard. Every engine-relative path the installers
+# resolve must be a row of scripts/setup-assert-files.txt or sit on the
+# exemption list below with a written reason. The manifest is what the installer
+# uses to decide whether a staged kit is complete, so a hard dependency that
+# escapes it makes the installer call a kit complete and then advertise an
+# upgrade command that dies at the first step needing the missing file. The
+# guard makes that rule mechanical instead of resting on review.
+MANIFEST_EXEMPTIONS=(
+    "..|path arithmetic: the project root is derived from the engine directory, not read from it"
+    ".git|engine identity probe: distinguishes a direct clone from a staged copy; a staged copy legitimately has none"
+    "templates/agent-directive-lite-template.md|optional: the installer falls back to the full directive template with a warning"
+    "templates/terminal-banner.txt|cosmetic: guarded by a file test and only drawn on an interactive setup"
+    "templates/state-tracker-template.md|existence-guarded: docs/STATE.md is only seeded when the template is present"
+    "templates/pull-request-template.md|existence-guarded: the PR template is only copied when present"
+    "templates/github-issue-template.md|existence-guarded: the issue template is only copied when present"
+)
+MANIFEST_ROWS=()
+while IFS='|' read -r manifest_rel _; do
+    manifest_rel="${manifest_rel%$'\r'}"
+    if [[ -z "$manifest_rel" || "$manifest_rel" == \#* ]]; then
+        continue
+    fi
+    MANIFEST_ROWS+=("$manifest_rel")
+done < "$REPO_ROOT/scripts/setup-assert-files.txt"
+[[ "${#MANIFEST_ROWS[@]}" -ge 10 ]]
+manifest_is_row() {
+    local candidate="$1" row
+    for row in "${MANIFEST_ROWS[@]}"; do
+        [[ "$row" == "$candidate" ]] && return 0
+    done
+    return 1
+}
+manifest_exempt_reason() {
+    local candidate="$1" entry
+    for entry in "${MANIFEST_EXEMPTIONS[@]}"; do
+        if [[ "${entry%%|*}" == "$candidate" ]]; then
+            printf '%s' "${entry#*|}"
+            return 0
+        fi
+    done
+    return 1
+}
+manifest_guard() {
+    local engine="$1" refs ref reason found=0
+    if [[ "$engine" == *.ps1 ]]; then
+        # [$] keeps the dollar literal: "\\$(" would start a command substitution.
+        refs="$(grep -oE "Join-Path [$](ScriptDir|PSScriptRoot) [\"'][^\"']+[\"']" "$engine" | sed -E "s/.*[\"']([^\"']+)[\"']/\1/" | sort -u)"
+    else
+        refs="$(grep -oE '\$SCRIPT_DIR/[^"'"'"' )]+' "$engine" | sed 's|^\$SCRIPT_DIR/||' | sort -u)"
+    fi
+    [[ -n "$refs" ]]
+    while IFS= read -r ref; do
+        [[ -z "$ref" ]] && continue
+        found=$((found + 1))
+        manifest_is_row "$ref" && continue
+        if reason="$(manifest_exempt_reason "$ref")"; then
+            [[ -n "$reason" ]]
+            continue
+        fi
+        echo "Manifest coverage guard: $(basename "$engine") resolves '$ref', which is neither a row of scripts/setup-assert-files.txt nor an exemption with a written reason." >&2
+        echo "Add it to the manifest if the installer or its advertised upgrade needs it, or to MANIFEST_EXEMPTIONS in this test with the reason it is optional." >&2
+        exit 1
+    done <<< "$refs"
+    # A regex that stops matching would make the guard vacuous, so a floor on
+    # the number of extracted references is part of the assertion.
+    [[ "$found" -ge 10 ]]
+}
+manifest_guard "$REPO_ROOT/init.sh"
+echo "Manifest coverage guard: init.sh ok"
+manifest_guard "$REPO_ROOT/init.ps1"
+echo "Manifest coverage guard: init.ps1 ok"
+# An exemption that no longer matches anything is a stale reason: removing or
+# renaming a reference must also retire its exemption.
+for manifest_entry in "${MANIFEST_EXEMPTIONS[@]}"; do
+    manifest_path="${manifest_entry%%|*}"
+    if ! grep -qF -- "$manifest_path" "$REPO_ROOT/init.sh" && ! grep -qF -- "$manifest_path" "$REPO_ROOT/init.ps1"; then
+        echo "Manifest coverage guard: exemption '$manifest_path' no longer matches any installer reference; retire it with the reference it excused." >&2
+        exit 1
+    fi
+done
+echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore verified end to end, deinitialized and deleted-directory submodules restored in place), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), and manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption) tests passed."

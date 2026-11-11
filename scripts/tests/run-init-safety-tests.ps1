@@ -1137,12 +1137,164 @@ try {
         if ($missingWf.ExitCode -ne 0) { throw "Failed Test 36h (missing Lite workflow): expected exit 0, got $($missingWf.ExitCode)." }
         if (-not $missingWf.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36h (missing Lite workflow): kit missing a Lite workflow treated as complete.' }
         if ($missingWf.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36h (missing Lite workflow): upgrade hint advertised from an incomplete kit copy.' }
+
+        # Test 36i: a DEINITIALIZED submodule, seen by the install-door assert.
+        # "git submodule deinit" empties the directory but leaves the gitlink in
+        # the parent index, so the kit is still REGISTERED even though
+        # .promptkit/.git is gone. The assert validates the ENGINE tree, so an
+        # install run from a separate engine still succeeds (test 36j covers that
+        # path); point the assert at the staged copy to reach the state a user
+        # hits when they check .promptkit/ itself. The tree check runs before the
+        # door classification, so the verdict is partial-copy rather than
+        # submodule - what matters is that the remedy it prints actually restores
+        # the kit. The plain "update --remote --merge" form does not: it refuses
+        # with "Submodule path '.promptkit' not initialized / Maybe you want to
+        # use 'update --init'?", so the remedy carries --init and this scenario
+        # runs it.
+        $deinitKitRepo = Join-Path $TestRoot 'deinit-kitrepo'
+        $deinitHost = Join-Path $TestRoot 'deinit-host'
+        $deinitRunner = Join-Path $TestRoot 'deinit-runner'
+        New-AssertKitCopy $deinitKitRepo
+        & git -C $deinitKitRepo init -q
+        & git -C $deinitKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $deinitKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        New-Item -ItemType Directory -Path $deinitHost -Force | Out-Null
+        & git -C $deinitHost init -q
+        $deinitUrl = $deinitKitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $deinitHost submodule add -q $deinitUrl .promptkit
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36i (deinitialized submodule): fixture submodule add failed.' }
+        & git -C $deinitHost submodule deinit -f .promptkit 2>&1 | Out-Null
+        if (-not (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit') -PathType Container)) { throw 'Failed Test 36i (deinitialized submodule): deinit removed the directory.' }
+        if (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit/.git')) { throw 'Failed Test 36i (deinitialized submodule): deinit left a .git entry.' }
+        if (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit/init.ps1')) { throw 'Failed Test 36i (deinitialized submodule): deinit left the installer.' }
+        New-AssertKitCopy $deinitRunner
+        $deinitAssertOutput = & pwsh -NoProfile -File (Join-Path $deinitRunner 'scripts/check-setup-assert.ps1') -ProjectRoot $deinitHost -KitDir (Join-Path $deinitHost '.promptkit') -KitDirRel '.promptkit' 2>&1 | Out-String
+        $deinitAssertCode = $LASTEXITCODE
+        if ($deinitAssertCode -ne 1) { throw "Failed Test 36i (deinitialized submodule): expected exit 1, got $deinitAssertCode." }
+        if (-not $deinitAssertOutput.Contains('ASSERT|partial-copy|missing:workflows/route.md|FAIL')) { throw 'Failed Test 36i (deinitialized submodule): missing the partial-copy tree verdict.' }
+        if (-not $deinitAssertOutput.Contains('git submodule update --init --remote --merge .promptkit')) { throw 'Failed Test 36i (deinitialized submodule): remedy omits --init, which the deinitialized state requires.' }
+        & git -c protocol.file.allow=always -C $deinitHost submodule update --init --remote --merge .promptkit 2>&1 | Out-Null
+        if (-not (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit/init.ps1'))) { throw 'Failed Test 36i (deinitialized submodule): the advertised remedy did not restore the kit.' }
+
+        # Test 36j: the same deinitialized submodule on the install path. The
+        # assert would exit before the summary, so the preflight is opted out
+        # (PROMPTKIT_NO_PREFLIGHT) and the summary must classify the state as the
+        # submodule door and name the in-place restore. Before the door was read
+        # from the parent repository this printed the courier advice.
+        & git -C $deinitHost submodule deinit -f .promptkit 2>&1 | Out-Null
+        if (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit/init.ps1')) { throw 'Failed Test 36j (deinitialized submodule): fixture still holds the installer.' }
+        $env:PROMPTKIT_NO_PREFLIGHT = '1'
+        try {
+            $deinit = Invoke-InitAssert -InitPath (Join-Path $deinitRunner 'init.ps1') -ProjectPath $deinitHost -InstallProfile lite
+        } finally {
+            Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+        }
+        if ($deinit.ExitCode -ne 0) { throw "Failed Test 36j (deinitialized submodule): expected exit 0, got $($deinit.ExitCode)." }
+        if (-not $deinit.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36j (deinitialized submodule): deinitialized submodule treated as complete.' }
+        if (-not $deinit.Output.Contains('Restore it in place: git submodule update --init --force .promptkit')) { throw 'Failed Test 36j (deinitialized submodule): missing in-place restore advice.' }
+        if (-not $deinit.Output.Contains('the parent repository still records it')) { throw 'Failed Test 36j (deinitialized submodule): missing the --init explanation.' }
+        if ($deinit.Output.Contains('Remove-Item -Recurse -Force .promptkit')) { throw 'Failed Test 36j (deinitialized submodule): told to delete a copy that can be restored in place.' }
+        if ($deinit.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36j (deinitialized submodule): upgrade hint advertised from a deinitialized submodule.' }
+        & git -c protocol.file.allow=always -C $deinitHost submodule update --init --force .promptkit 2>&1 | Out-Null
+        if (-not (Test-Path -LiteralPath (Join-Path $deinitHost '.promptkit/workflows/debug.md'))) { throw 'Failed Test 36j (deinitialized submodule): the advertised restore command did not bring the kit back.' }
+
+        # Test 36k: a REGISTERED submodule whose directory was DELETED. Nothing is
+        # staged, so the summary takes the "not staged" branch - but the parent
+        # repository still records the gitlink, so the advice is the in-place
+        # restore, not "git submodule add", which refuses an existing index entry
+        # with "fatal: '.promptkit' already exists in the index".
+        $delDirKitRepo = Join-Path $TestRoot 'deldir-kitrepo'
+        $delDirHost = Join-Path $TestRoot 'deldir-host'
+        $delDirRunner = Join-Path $TestRoot 'deldir-runner'
+        New-AssertKitCopy $delDirKitRepo
+        & git -C $delDirKitRepo init -q
+        & git -C $delDirKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid add -A
+        & git -C $delDirKitRepo -c user.name=Fixture -c user.email=fixture@example.invalid commit -q -m 'fixture kit'
+        New-Item -ItemType Directory -Path $delDirHost -Force | Out-Null
+        & git -C $delDirHost init -q
+        $delDirUrl = $delDirKitRepo -replace '\\', '/'
+        & git -c protocol.file.allow=always -C $delDirHost submodule add -q $delDirUrl .promptkit
+        if ($LASTEXITCODE -ne 0) { throw 'Failed Test 36k (deleted submodule directory): fixture submodule add failed.' }
+        Remove-Item -LiteralPath (Join-Path $delDirHost '.promptkit') -Recurse -Force
+        if (Test-Path -LiteralPath (Join-Path $delDirHost '.promptkit')) { throw 'Failed Test 36k (deleted submodule directory): fixture directory survived.' }
+        New-AssertKitCopy $delDirRunner
+        $env:PROMPTKIT_NO_PREFLIGHT = '1'
+        try {
+            $delDir = Invoke-InitAssert -InitPath (Join-Path $delDirRunner 'init.ps1') -ProjectPath $delDirHost -InstallProfile lite
+        } finally {
+            Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue
+        }
+        if ($delDir.ExitCode -ne 0) { throw "Failed Test 36k (deleted submodule directory): expected exit 0, got $($delDir.ExitCode)." }
+        if (-not $delDir.Output.Contains('the kit is not staged at .promptkit/')) { throw 'Failed Test 36k (deleted submodule directory): missing the not-staged note.' }
+        if (-not $delDir.Output.Contains('Restore it in place: git submodule update --init --force .promptkit')) { throw 'Failed Test 36k (deleted submodule directory): missing in-place restore advice.' }
+        if (-not $delDir.Output.Contains('the parent repository still records the submodule; --init checks it out again')) { throw 'Failed Test 36k (deleted submodule directory): missing the --init explanation.' }
+        if ($delDir.Output.Contains('Stage the kit:')) { throw 'Failed Test 36k (deleted submodule directory): told to run git submodule add, which refuses the existing index entry.' }
+        if ($delDir.Output.Contains('Remove-Item -Recurse -Force .promptkit')) { throw 'Failed Test 36k (deleted submodule directory): told to delete a directory that is already gone.' }
+        & git -c protocol.file.allow=always -C $delDirHost submodule update --init --force .promptkit 2>&1 | Out-Null
+        if (-not (Test-Path -LiteralPath (Join-Path $delDirHost '.promptkit/init.ps1'))) { throw 'Failed Test 36k (deleted submodule directory): the advertised restore command did not bring the kit back.' }
+
+        # Test 37: manifest coverage guard. Every engine-relative path the
+        # installers resolve must be a row of scripts/setup-assert-files.txt or sit
+        # on the exemption list below with a written reason. The manifest is what
+        # the installer uses to decide whether a staged kit is complete, so a hard
+        # dependency that escapes it makes the installer call a kit complete and
+        # then advertise an upgrade command that dies at the first step needing the
+        # missing file. The guard makes that rule mechanical instead of resting on
+        # review.
+        $manifestRows = @()
+        foreach ($manifestRow in [System.IO.File]::ReadAllLines((Join-Path $RepoRoot 'scripts/setup-assert-files.txt'))) {
+            $manifestLine = $manifestRow.Trim()
+            if ($manifestLine -eq '' -or $manifestLine.StartsWith('#')) { continue }
+            $manifestRows += $manifestLine.Split('|')[0].Trim()
+        }
+        if ($manifestRows.Count -lt 10) { throw "Failed Test 37 (manifest guard): expected at least 10 manifest rows, found $($manifestRows.Count)." }
+        $manifestExemptions = @(
+            '..|path arithmetic: the project root is derived from the engine directory, not read from it',
+            '.git|engine identity probe: distinguishes a direct clone from a staged copy; a staged copy legitimately has none',
+            'templates/agent-directive-lite-template.md|optional: the installer falls back to the full directive template with a warning',
+            'templates/terminal-banner.txt|cosmetic: guarded by a file test and only drawn on an interactive setup',
+            'templates/state-tracker-template.md|existence-guarded: docs/STATE.md is only seeded when the template is present',
+            'templates/pull-request-template.md|existence-guarded: the PR template is only copied when present',
+            'templates/github-issue-template.md|existence-guarded: the issue template is only copied when present'
+        )
+        $manifestExemptPaths = @{}
+        foreach ($manifestEntry in $manifestExemptions) {
+            $manifestParts = $manifestEntry.Split('|', 2)
+            if ($manifestParts.Count -ne 2 -or [string]::IsNullOrWhiteSpace($manifestParts[1])) { throw "Failed Test 37 (manifest guard): exemption '$manifestEntry' carries no written reason." }
+            $manifestExemptPaths[$manifestParts[0]] = $manifestParts[1]
+        }
+        $manifestGuard = {
+            param([string]$EnginePath, [string]$Pattern)
+            $engineText = [System.IO.File]::ReadAllText($EnginePath)
+            $refs = @()
+            foreach ($match in [regex]::Matches($engineText, $Pattern)) {
+                $refs += $match.Groups[1].Value
+            }
+            $refs = @($refs | Sort-Object -Unique)
+            if ($refs.Count -lt 10) { throw "Failed Test 37 (manifest guard): extracted only $($refs.Count) references from $(Split-Path -Leaf $EnginePath); the extraction pattern has gone stale." }
+            foreach ($ref in $refs) {
+                if ($manifestRows -contains $ref) { continue }
+                if ($manifestExemptPaths.ContainsKey($ref)) { continue }
+                throw "Failed Test 37 (manifest guard): $(Split-Path -Leaf $EnginePath) resolves '$ref', which is neither a row of scripts/setup-assert-files.txt nor an exemption with a written reason."
+            }
+        }
+        # The pattern is parenthesised: in command-argument mode PowerShell does
+        # not evaluate "+" concatenation, so an unparenthesised expression would
+        # pass only its first fragment as the pattern.
+        & $manifestGuard (Join-Path $RepoRoot 'init.sh') ('\$SCRIPT_DIR/([^"' + [char]39 + '\s)]+)')
+        & $manifestGuard (Join-Path $RepoRoot 'init.ps1') ('Join-Path\s+\$(?:ScriptDir|PSScriptRoot)\s+["' + [char]39 + ']([^"' + [char]39 + ']+)["' + [char]39 + ']')
+        # An exemption that no longer matches anything is a stale reason: removing
+        # or renaming a reference must also retire its exemption.
+        $installerText = [System.IO.File]::ReadAllText((Join-Path $RepoRoot 'init.sh')) + [System.IO.File]::ReadAllText((Join-Path $RepoRoot 'init.ps1'))
+        foreach ($manifestPath in $manifestExemptPaths.Keys) {
+            if (-not $installerText.Contains($manifestPath)) { throw "Failed Test 37 (manifest guard): exemption '$manifestPath' no longer matches any installer reference; retire it with the reference it excused." }
+        }
     } finally {
         if ($null -eq $savedNoInteractive) { Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_INTERACTIVE = $savedNoInteractive }
         if ($null -eq $savedNoPreflight) { Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_PREFLIGHT = $savedNoPreflight }
     }
 
-    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore verified end to end), and install-door structural-assert tests passed." -ForegroundColor Green
+    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore verified end to end, deinitialized and deleted-directory submodules restored in place), install-door structural-assert tests, and the manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption) passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

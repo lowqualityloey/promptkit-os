@@ -92,7 +92,7 @@ fail_missing() {
             verdict "$door" "missing:$m" FAIL
         done
     fi
-    remedy "$door" "Restore the missing file(s) above, or reinstall via a documented method: npx promptkit-os@latest, git submodule update --remote --merge $kit_rel, or a full engine-tree copy"
+    remedy "$door" "Restore the missing file(s) above, or reinstall via a documented method: npx promptkit-os@latest, git submodule update --init --remote --merge $kit_rel, or a full engine-tree copy"
     exit 1
 }
 
@@ -214,17 +214,17 @@ if [[ "$door" == "submodule" ]]; then
             ;;
         '-')
             verdict submodule status FAIL
-            remedy submodule "Submodule $kit_rel is not initialized; run git submodule update --remote --merge $kit_rel"
+            remedy submodule "Submodule $kit_rel is not initialized; run git submodule update --init --remote --merge $kit_rel"
             exit 1
             ;;
         '+')
             verdict submodule status FAIL
-            remedy submodule "Submodule $kit_rel is out of sync with the recorded commit; run git submodule update --remote --merge $kit_rel"
+            remedy submodule "Submodule $kit_rel is out of sync with the recorded commit; run git submodule update --init --remote --merge $kit_rel"
             exit 1
             ;;
         'U')
             verdict submodule status FAIL
-            remedy submodule "Submodule $kit_rel has unresolved merge conflicts; resolve them or re-run git submodule update --remote --merge $kit_rel"
+            remedy submodule "Submodule $kit_rel has unresolved merge conflicts; resolve them or re-run git submodule update --init --remote --merge $kit_rel"
             exit 1
             ;;
         '?')

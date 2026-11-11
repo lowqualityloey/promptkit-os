@@ -821,20 +821,44 @@ KIT_PARTIAL=0
 # KIT_DOOR records which delivery door produced the copy at .promptkit/, because
 # the recovery command differs per door: a registered git submodule is restored
 # in place by "git submodule update --init --force", while a courier tarball has
-# no upstream to pull from and must be replaced. The test is the same one the
-# courier uses to tell the doors apart (package/bin/promptkit-os.js): a .git
-# entry inside the kit directory. A real submodule's .git is a file (a gitdir
-# pointer), so -e covers both shapes.
+# no upstream to pull from and must be replaced.
+#
+# Registration is a property of the PARENT repository, not of the kit directory:
+# a submodule that was never initialized, or whose directory was deleted, still
+# has a gitlink recorded in the parent index and a path in .gitmodules, but no
+# .promptkit/.git to find. Testing only for that entry mislabels both states as
+# a courier copy and then advises "rm -rf .promptkit" for a checkout that
+# "git submodule update --init --force" restores in place.
+kit_registered_submodule() {
+    local proj="$1" rel="$2" out meta path line
+    command -v git >/dev/null 2>&1 || return 1
+    if [[ -e "$proj/.git" ]]; then
+        out=$(GIT_OPTIONAL_LOCKS=0 git -C "$proj" -c core.fsmonitor=false ls-files -s -- "$rel" 2>/dev/null) || out=""
+        while IFS=$'\t' read -r meta path; do
+            [[ -z "$path" || "$path" != "$rel" ]] && continue
+            [[ "${meta%% *}" == "160000" ]] && return 0
+        done <<< "$out"
+    fi
+    if [[ -f "$proj/.gitmodules" ]]; then
+        out=$(git config -f "$proj/.gitmodules" --get-regexp '^submodule\..*\.path$' 2>/dev/null) || out=""
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            [[ "${line##* }" == "$rel" ]] && return 0
+        done <<< "$out"
+    fi
+    return 1
+}
+
 KIT_DOOR="none"
 if [[ "$KIT_DIR_REL" == ".promptkit" ]]; then
     KIT_MANIFEST="$SCRIPT_DIR/scripts/setup-assert-files.txt"
     if [[ -d "$PROJECT_ROOT/.promptkit" ]]; then
         KIT_PARTIAL=1
-        if [[ -e "$PROJECT_ROOT/.promptkit/.git" ]]; then
-            KIT_DOOR="submodule"
-        else
-            KIT_DOOR="courier"
-        fi
+    fi
+    if [[ -e "$PROJECT_ROOT/.promptkit/.git" ]] || kit_registered_submodule "$PROJECT_ROOT" ".promptkit"; then
+        KIT_DOOR="submodule"
+    elif [[ "$KIT_PARTIAL" == "1" ]]; then
+        KIT_DOOR="courier"
     fi
     if [[ ! -f "$PROJECT_ROOT/.promptkit/init.sh" || ! -f "$KIT_MANIFEST" ]]; then
         KIT_DANGLING=1
@@ -1361,6 +1385,7 @@ if [[ "$KIT_DANGLING" == "1" ]]; then
         if [[ "$KIT_DOOR" == "submodule" ]]; then
             echo -e "   Restore it in place: git submodule update --init --force .promptkit"
             echo -e "   (--force restores the files the submodule commit records; local edits to tracked kit files are reverted, untracked files such as notes are kept)"
+            echo -e "   (--init is required when the submodule was never initialized or its directory was deleted; the parent repository still records it)"
         else
             echo -e "   Replace it: rm -rf .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
             echo -e "   (a courier copy has no upstream to pull from, so it must be replaced; check .promptkit/ for local edits and untracked files first — rm -rf deletes them)"
@@ -1368,7 +1393,12 @@ if [[ "$KIT_DANGLING" == "1" ]]; then
         fi
     else
         echo -e "   \033[0;33mNote: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it.\033[0m"
-        echo -e "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
+        if [[ "$KIT_DOOR" == "submodule" ]]; then
+            echo -e "   Restore it in place: git submodule update --init --force .promptkit"
+            echo -e "   (the parent repository still records the submodule; --init checks it out again)"
+        else
+            echo -e "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
+        fi
     fi
 fi
 if [[ "$PROFILE" == "lite" ]]; then

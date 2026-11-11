@@ -851,21 +851,61 @@ $KitPartial = $false
 # $KitDoor records which delivery door produced the copy at .promptkit/, because
 # the recovery command differs per door: a registered git submodule is restored
 # in place by "git submodule update --init --force", while a courier tarball has
-# no upstream to pull from and must be replaced. The test is the same one the
-# courier uses to tell the doors apart (package/bin/promptkit-os.js): a .git
-# entry inside the kit directory. A real submodule's .git is a file (a gitdir
-# pointer), so Test-Path covers both shapes.
+# no upstream to pull from and must be replaced.
+#
+# Registration is a property of the PARENT repository, not of the kit directory:
+# a submodule that was never initialized, or whose directory was deleted, still
+# has a gitlink recorded in the parent index and a path in .gitmodules, but no
+# .promptkit/.git to find. Testing only for that entry mislabels both states as
+# a courier copy and then advises removing a checkout that
+# "git submodule update --init --force" restores in place.
+function Test-KitRegisteredSubmodule {
+    param([string]$ProjectRoot, [string]$RelPath)
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if (-not $git) { return $false }
+    if (Test-Path -LiteralPath (Join-Path $ProjectRoot ".git")) {
+        $env:GIT_OPTIONAL_LOCKS = "0"
+        try {
+            $entries = & git -C $ProjectRoot -c core.fsmonitor=false ls-files -s -- $RelPath 2>$null
+        } catch {
+            $entries = @()
+        } finally {
+            Remove-Item Env:GIT_OPTIONAL_LOCKS -ErrorAction SilentlyContinue
+        }
+        foreach ($entry in @($entries)) {
+            if (-not $entry) { continue }
+            $fields = $entry -split "`t"
+            if ($fields.Count -lt 2) { continue }
+            if ($fields[1] -ne $RelPath) { continue }
+            if (($fields[0] -split ' ')[0] -eq '160000') { return $true }
+        }
+    }
+    $gitmodules = Join-Path $ProjectRoot ".gitmodules"
+    if (Test-Path -LiteralPath $gitmodules -PathType Leaf) {
+        try {
+            $paths = & git config -f $gitmodules --get-regexp '^submodule\..*\.path$' 2>$null
+        } catch {
+            $paths = @()
+        }
+        foreach ($line in @($paths)) {
+            if (-not $line) { continue }
+            if (($line -split ' ')[-1] -eq $RelPath) { return $true }
+        }
+    }
+    return $false
+}
+
 $KitDoor = "none"
 if ($KitDirRel -eq ".promptkit") {
     $stagedRoot = Join-Path $ProjectRootPath ".promptkit"
     $kitManifest = Join-Path $ScriptDir "scripts/setup-assert-files.txt"
     if (Test-Path -LiteralPath $stagedRoot) {
         $KitPartial = $true
-        if (Test-Path -LiteralPath (Join-Path $stagedRoot ".git")) {
-            $KitDoor = "submodule"
-        } else {
-            $KitDoor = "courier"
-        }
+    }
+    if ((Test-Path -LiteralPath (Join-Path $stagedRoot ".git")) -or (Test-KitRegisteredSubmodule -ProjectRoot $ProjectRootPath -RelPath ".promptkit")) {
+        $KitDoor = "submodule"
+    } elseif ($KitPartial) {
+        $KitDoor = "courier"
     }
     $stagedInstaller = Join-Path $stagedRoot "init.ps1"
     if (-not (Test-Path -LiteralPath $stagedInstaller) -or -not (Test-Path -LiteralPath $kitManifest)) {
@@ -1369,6 +1409,7 @@ if ($KitDangling) {
         if ($KitDoor -eq "submodule") {
             Write-Host "   Restore it in place: git submodule update --init --force .promptkit" -ForegroundColor DarkGray
             Write-Host "   (--force restores the files the submodule commit records; local edits to tracked kit files are reverted, untracked files such as notes are kept)" -ForegroundColor DarkGray
+            Write-Host "   (--init is required when the submodule was never initialized or its directory was deleted; the parent repository still records it)" -ForegroundColor DarkGray
         } else {
             Write-Host "   Replace it: Remove-Item -Recurse -Force .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
             Write-Host "   (a courier copy has no upstream to pull from, so it must be replaced; check .promptkit/ for local edits and untracked files first — Remove-Item -Recurse -Force deletes them)" -ForegroundColor DarkGray
@@ -1376,7 +1417,12 @@ if ($KitDangling) {
         }
     } else {
         Write-Host "   Note: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it." -ForegroundColor Yellow
-        Write-Host "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
+        if ($KitDoor -eq "submodule") {
+            Write-Host "   Restore it in place: git submodule update --init --force .promptkit" -ForegroundColor DarkGray
+            Write-Host "   (the parent repository still records the submodule; --init checks it out again)" -ForegroundColor DarkGray
+        } else {
+            Write-Host "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
+        }
     }
 }
 if ($Profile -eq "lite") {
