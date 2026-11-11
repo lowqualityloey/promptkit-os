@@ -11,7 +11,7 @@ A lightweight, repository-native system for risk, context, state, autonomy, and 
 
 No runtime. No daemon. No model lock-in. No required API.
 
-Generates native instructions and directives for nine installer targets — `claude`, `gemini`, `cursor`, `windsurf`, `copilot`, `cline`, `trae`, `opencode`, `aider` (Claude Code, Gemini CLI/Antigravity, Cursor, Windsurf, GitHub Copilot, Cline/Roo Code, Trae IDE, OpenCode, and Aider) — with `AGENTS.md` created as the universal fallback for any other AGENTS.md-reading host, such as Codex CLI. See [docs/HOST-CONFORMANCE.md](./docs/HOST-CONFORMANCE.md) for the host matrix and its runtime-validated status.
+Generates native instructions and directives for nine installer targets — `claude`, `gemini`, `cursor`, `windsurf`, `copilot`, `cline`, `trae`, `opencode`, `aider` (Claude Code, Gemini CLI/Antigravity, Cursor, Windsurf, GitHub Copilot, Cline/Roo Code, Trae IDE, OpenCode, and Aider) — with `AGENTS.md` created as the universal fallback for any other AGENTS.md-reading host, such as Codex CLI. See [docs/HOST-CONFORMANCE.md](./docs/HOST-CONFORMANCE.md) for the host matrix, which registers every host without a published live session transcript as **Untested for live runtime fidelity** — today that is all of them — because its fixture grades validate the scoring rubric, not live runtime behaviour.
 
 ---
 
@@ -108,6 +108,8 @@ Prompt your assistant naturally or invoke fast shorthand triggers:
 | `pk:debug` | **Root-Cause Analysis** | Systematic 5-step falsifiable debugging (stops infinite hallucinated edits) |
 | `pk:commit` | **Pre-Commit Gate** | Secret scanning, running test suites, and authoring atomic conventional commits |
 | `pk:checkpoint` | **Session Handover** | Saving active tasks and state to Git before ending your chat session |
+
+`pk:onboard`, `pk:plan`, and `pk:test` are Balanced-profile workflows: their files ship in every install, but the Lite directive advertises only its six utility triggers (`pk:route`, `pk:debug`, `pk:commit`, `pk:checkpoint`, `pk:sync`, `pk:profile`), so switch to Balanced first (`.promptkit/init.sh --balanced`, or `.\.promptkit\init.ps1 --balanced` in PowerShell) if you rely on them.
 
 ### What PromptKit Looks Like in Chat
 
@@ -221,13 +223,13 @@ npx promptkit-os@latest --lite
 </details>
 
 > [!NOTE]
-> The git submodule flow above is canonical. The npm package is a **courier, not a dependency** — it fetches the release tarball matching its version into `.promptkit/` and runs the same installer, producing an identical tree. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`. It requires Node 18+ (and PowerShell 7 on Windows), and it refuses to overlay a non-empty `.promptkit/`, printing the update command that matches how the existing install was made. Removal: delete `.promptkit/` (plus generated `PROMPTKIT.md` / `docs/STATE.md` if unwanted) — no daemon, nothing left behind.
+> The git submodule flow above is canonical. The npm package is a **courier, not a dependency** — it fetches the release tarball matching its version into `.promptkit/` and runs the same installer, producing an identical tree. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`. It requires Node 18+ (and PowerShell 7 on Windows), and it refuses to overlay a non-empty `.promptkit/`, printing the update command that matches how the existing install was made. Removal (there is no `--uninstall` flag): delete `.promptkit/`, `PROMPTKIT.md`, and `docs/STATE.md`; delete the `<!-- PROMPTKIT_START -->` … `<!-- PROMPTKIT_END -->` block from every host directive file the installer wrote to — leaving it behind points the agent at a `.promptkit/` that no longer exists; and delete `docs/tasks/`, `docs/specs/`, `docs/adrs/`, `docs/tests/`, plus `.github/pull_request_template.md` and `.github/ISSUE_TEMPLATE/task.md` (GitHub tracking only) if the installer created them and you have added nothing of your own. Nothing keeps running afterwards: no daemon, no service, no scheduled task.
 
 Already installed? To pull updates, see [Updating PromptKit](./QUICKSTART.md#updating-promptkit).
 
 ### 2. Configure
 
-The installer creates `PROMPTKIT.md` (your project profile — test commands, stack constraints, architectural invariants) and `docs/STATE.md` (living project state). Run `pk:onboard` for a guided setup interview. Verify any install anytime with `pk:doctor` — a read-only audit of host directives, engine version, ignore-state, docs drift, intake provenance, and submodule registration; it reports rot and never writes.
+The installer creates `PROMPTKIT.md` (your project profile — test commands, stack constraints, architectural invariants) and `docs/STATE.md` (living project state). Run `pk:onboard` for a guided setup interview — it is a Balanced-profile workflow, so under Lite switch to Balanced first (`.promptkit/init.sh --balanced`). Verify any install anytime with `pk:doctor` — a read-only audit of host directives, engine version, ignore-state, docs drift, intake provenance, and submodule registration; it reports rot and never writes.
 
 ### 3. Work normally
 
