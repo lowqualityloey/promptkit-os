@@ -63,15 +63,18 @@ PromptKit OS ships two pieces of opt-in executable enforcement. Both are deliber
 
 [`scripts/install-attribution-hook.sh`](../scripts/install-attribution-hook.sh) and its PowerShell twin add a managed block to the repository's `commit-msg` hook that runs [`scripts/check-ai-attribution.sh`](../scripts/check-ai-attribution.sh) against the pending message.
 
-What it does is narrower than "checks attribution disclosure", and the direction matters. The checker reads the optional `ai-attribution: off|host-default` preference from `PROMPTKIT.md` and behaves like this:
+What it does is narrower than "checks attribution disclosure", and the direction matters. The checker reads the optional `ai-attribution: off|host-default` preference from `PROMPTKIT.md`, and the hook it feeds is **fail-closed**: the installed line ends `|| exit 1`, so *any* non-zero checker result blocks the commit, not only a detected signature.
 
-| `PROMPTKIT.md` preference | Behavior on a commit message |
-| :--- | :--- |
-| `ai-attribution: off` | **Fails** (exit 1) when the message carries an unsolicited AI signature — one the human did not ask for. This is the only blocking path. |
-| `ai-attribution: host-default` | **Skips** without newly blocking: the host assistant's own attribution convention is left alone. |
-| Line absent | **Skips** without newly blocking. |
+| Outcome | Exit | Effect on the commit |
+| :--- | :--- | :--- |
+| `ai-attribution: off` and the message carries an unsolicited AI signature — one the human did not ask for | 1 (`PROHIBITED`) | **Blocks.** This is the intended failure. |
+| `ai-attribution: off` and the message carries no unsolicited signature | 0 (`OK`) | Passes. |
+| `ai-attribution: host-default`, or the line is absent | 0 (`SKIP`) | Passes, leaving the host assistant's own attribution convention alone. |
+| Invalid preference value, missing or unreadable rules file, missing message payload, or bad arguments | 2 (`INCOMPLETE`) | **Blocks.** The checker cannot decide, so it refuses rather than guessing. |
 
-So the hook is not a disclosure *requirement*; it is an opt-out guard for users who do not want AI signatures on their commits. It never stages, commits, amends, or rewrites history, and `--remove` restores the original hook byte-for-byte and mode-for-mode.
+That last row is the honest part of the design and the reason the hook is described as fail-closed rather than as a signature detector: a misconfigured preference value, a rules file that moved, or a payload it cannot read stops commits until the configuration is fixed. The remedy is to correct `PROMPTKIT.md` or restore the rules file — or to run the installer with `--remove`, which deletes the managed block and leaves the original hook as it was.
+
+So the hook is not a disclosure *requirement*; it is an opt-out guard for users who do not want AI signatures on their commits, and it fails closed when it cannot tell. It never stages, commits, amends, or rewrites history, and `--remove` restores the original hook byte-for-byte and mode-for-mode.
 
 ### 5b. The benchmark task-card `pre-commit` hook
 

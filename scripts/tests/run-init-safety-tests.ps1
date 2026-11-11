@@ -760,6 +760,35 @@ try {
         return [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = $captured }
     }
 
+    # Stage a COMPLETE kit at <project>/.promptkit: the installer plus every row
+    # of scripts/setup-assert-files.txt. That manifest is the single definition
+    # of a complete kit - the installer reads it to decide whether a staged copy
+    # is usable, and scripts/check-setup-assert.ps1 validates the same rows - so
+    # the fixtures derive the staged set from it instead of hard-coding a second
+    # list that could drift out of step with the installer.
+    function Add-CompleteKitStage {
+        param([string]$ProjectPath, [string]$KitPath)
+        $stagedRoot = Join-Path $ProjectPath '.promptkit'
+        New-Item -ItemType Directory -Path $stagedRoot -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $KitPath 'init.ps1') -Destination (Join-Path $stagedRoot 'init.ps1') -Force
+        foreach ($row in [System.IO.File]::ReadAllLines((Join-Path $KitPath 'scripts/setup-assert-files.txt'))) {
+            $line = $row.Trim()
+            if ($line -eq '' -or $line.StartsWith('#')) { continue }
+            $parts = $line.Split('|')
+            $rel = $parts[0].Trim()
+            $kind = $parts[1].Trim()
+            $source = Join-Path $KitPath $rel
+            $target = Join-Path $stagedRoot $rel
+            if ($kind -eq 'dir') {
+                New-Item -ItemType Directory -Path $target -Force | Out-Null
+                Copy-Item -Path (Join-Path $source '*') -Destination $target -Recurse -Force
+            } else {
+                New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
+                Copy-Item -LiteralPath $source -Destination $target -Force
+            }
+        }
+    }
+
     $savedNoInteractive = $env:PROMPTKIT_NO_INTERACTIVE
     $savedNoPreflight = $env:PROMPTKIT_NO_PREFLIGHT
     $env:PROMPTKIT_NO_INTERACTIVE = '1'
@@ -939,9 +968,7 @@ try {
         $courierFreshProj = Join-Path $TestRoot 'courier-fresh-proj'
         $courierFreshKit = Join-Path $TestRoot 'courier-fresh-kit'
         New-AssertKitCopy $courierFreshKit
-        New-Item -ItemType Directory -Path (Join-Path $courierFreshProj '.promptkit/workflows') -Force | Out-Null
-        Copy-Item -LiteralPath (Join-Path $courierFreshKit 'init.ps1') -Destination (Join-Path $courierFreshProj '.promptkit/init.ps1') -Force
-        Copy-Item -LiteralPath (Join-Path $courierFreshKit 'workflows/route.md') -Destination (Join-Path $courierFreshProj '.promptkit/workflows/route.md') -Force
+        Add-CompleteKitStage -ProjectPath $courierFreshProj -KitPath $courierFreshKit
         & git -C $courierFreshProj init -q
         & git -C $courierFreshProj -c user.name=Fixture -c user.email=fixture@example.invalid add -A
         $courierFresh = Invoke-InitAssert -InitPath (Join-Path $courierFreshKit 'init.ps1') -ProjectPath $courierFreshProj
@@ -982,26 +1009,26 @@ try {
         if (-not $dangle.Output.Contains('Stage the kit:')) { throw 'Failed Test 36 (dangling kit): missing staging hint.' }
         if ($dangle.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36 (dangling kit): upgrade hint points at an unstaged kit path.' }
 
-        # Test 36b: staged kit - when .promptkit/ carries the files the directive
-        # and the summary actually reference (the installer the upgrade hint names
-        # and the workflow entry point the advertised pk:* commands load), the
+        # Test 36b: staged kit - when .promptkit/ carries a COMPLETE kit (the
+        # installer plus every row of scripts/setup-assert-files.txt), the
         # relative upgrade hint is advertised and no warning prints.
         $stagedProj = Join-Path $TestRoot 'staged-hint-proj'
         $stagedKit = Join-Path $TestRoot 'staged-hint-kit'
         New-AssertKitCopy $stagedKit
-        New-Item -ItemType Directory -Path (Join-Path $stagedProj '.promptkit/workflows') -Force | Out-Null
-        Copy-Item -LiteralPath (Join-Path $stagedKit 'init.ps1') -Destination (Join-Path $stagedProj '.promptkit/init.ps1') -Force
-        Copy-Item -LiteralPath (Join-Path $stagedKit 'workflows/route.md') -Destination (Join-Path $stagedProj '.promptkit/workflows/route.md') -Force
+        Add-CompleteKitStage -ProjectPath $stagedProj -KitPath $stagedKit
         # Lite profile so the "Upgrade anytime" hint is genuinely exercised.
         $staged = Invoke-InitAssert -InitPath (Join-Path $stagedKit 'init.ps1') -ProjectPath $stagedProj -InstallProfile lite
         if ($staged.ExitCode -ne 0) { throw "Failed Test 36b (staged kit): expected exit 0, got $($staged.ExitCode)." }
         if (-not $staged.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36b (staged kit): missing relative upgrade hint.' }
         if ($staged.Output.Contains('not staged at .promptkit/')) { throw 'Failed Test 36b (staged kit): dangling warning printed for a staged kit.' }
+        if ($staged.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36b (staged kit): incomplete-copy warning printed for a complete kit.' }
 
         # Test 36c: partial kit - a .promptkit/ holding the installer but not the
         # workflow entry point is a partial copy: the upgrade hint would point at
         # pk:* commands that cannot resolve, so the warning must fire and the
-        # hint must be suppressed.
+        # hint must be suppressed. The recovery advice must also match the state:
+        # a non-empty .promptkit/ cannot be staged by the courier or by
+        # "git submodule add" without removing it first.
         $partialProj = Join-Path $TestRoot 'partial-hint-proj'
         $partialKit = Join-Path $TestRoot 'partial-hint-kit'
         New-AssertKitCopy $partialKit
@@ -1009,15 +1036,45 @@ try {
         Copy-Item -LiteralPath (Join-Path $partialKit 'init.ps1') -Destination (Join-Path $partialProj '.promptkit/init.ps1') -Force
         $partial = Invoke-InitAssert -InitPath (Join-Path $partialKit 'init.ps1') -ProjectPath $partialProj -InstallProfile lite
         if ($partial.ExitCode -ne 0) { throw "Failed Test 36c (partial kit): expected exit 0, got $($partial.ExitCode)." }
-        if (-not $partial.Output.Contains('not staged at .promptkit/')) { throw 'Failed Test 36c (partial kit): missing dangling-kit warning.' }
-        if (-not $partial.Output.Contains('Stage the kit:')) { throw 'Failed Test 36c (partial kit): missing staging hint.' }
+        if (-not $partial.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36c (partial kit): missing incomplete-copy warning.' }
+        if (-not $partial.Output.Contains('rm -rf .promptkit')) { throw 'Failed Test 36c (partial kit): missing removal advice.' }
+        if (-not $partial.Output.Contains('--force overlays the existing directory without cleaning it')) { throw 'Failed Test 36c (partial kit): missing --force caveat.' }
         if ($partial.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36c (partial kit): upgrade hint advertised from a partial kit copy.' }
+        if ($partial.Output.Contains('Stage the kit:')) { throw 'Failed Test 36c (partial kit): printed stage-from-scratch advice, which cannot succeed on a non-empty .promptkit/.' }
+
+        # Test 36d: the reviewer's tree - .promptkit/ holding exactly the
+        # installer and the workflow entry point. Both files exist, so a two-file
+        # check called this staged and advertised an upgrade path whose scripts/
+        # directory was absent; the manifest-driven check must call it incomplete.
+        $twoFileProj = Join-Path $TestRoot 'twofile-hint-proj'
+        $twoFileKit = Join-Path $TestRoot 'twofile-hint-kit'
+        New-AssertKitCopy $twoFileKit
+        New-Item -ItemType Directory -Path (Join-Path $twoFileProj '.promptkit/workflows') -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $twoFileKit 'init.ps1') -Destination (Join-Path $twoFileProj '.promptkit/init.ps1') -Force
+        Copy-Item -LiteralPath (Join-Path $twoFileKit 'workflows/route.md') -Destination (Join-Path $twoFileProj '.promptkit/workflows/route.md') -Force
+        $twoFile = Invoke-InitAssert -InitPath (Join-Path $twoFileKit 'init.ps1') -ProjectPath $twoFileProj -InstallProfile lite
+        if ($twoFile.ExitCode -ne 0) { throw "Failed Test 36d (two-file kit): expected exit 0, got $($twoFile.ExitCode)." }
+        if (-not $twoFile.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36d (two-file kit): two-file copy treated as a complete kit.' }
+        if ($twoFile.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36d (two-file kit): upgrade hint advertised from a two-file kit copy.' }
+
+        # Test 36e: a complete kit minus one manifest row is still incomplete.
+        # The scripts/ directory is the row a two-file copy misses, so removing
+        # it from an otherwise complete stage must flip the verdict back.
+        $missingRowProj = Join-Path $TestRoot 'missingrow-hint-proj'
+        $missingRowKit = Join-Path $TestRoot 'missingrow-hint-kit'
+        New-AssertKitCopy $missingRowKit
+        Add-CompleteKitStage -ProjectPath $missingRowProj -KitPath $missingRowKit
+        Remove-Item -LiteralPath (Join-Path $missingRowProj '.promptkit/scripts') -Recurse -Force
+        $missingRow = Invoke-InitAssert -InitPath (Join-Path $missingRowKit 'init.ps1') -ProjectPath $missingRowProj -InstallProfile lite
+        if ($missingRow.ExitCode -ne 0) { throw "Failed Test 36e (missing manifest row): expected exit 0, got $($missingRow.ExitCode)." }
+        if (-not $missingRow.Output.Contains('incomplete copy of the kit')) { throw 'Failed Test 36e (missing manifest row): kit missing a manifest row treated as complete.' }
+        if ($missingRow.Output.Contains('Upgrade anytime: .promptkit/init.ps1')) { throw 'Failed Test 36e (missing manifest row): upgrade hint advertised from an incomplete kit copy.' }
     } finally {
         if ($null -eq $savedNoInteractive) { Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_INTERACTIVE = $savedNoInteractive }
         if ($null -eq $savedNoPreflight) { Remove-Item Env:\PROMPTKIT_NO_PREFLIGHT -ErrorAction SilentlyContinue } else { $env:PROMPTKIT_NO_PREFLIGHT = $savedNoPreflight }
     }
 
-    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial), and install-door structural-assert tests passed." -ForegroundColor Green
+    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row) with state-matched recovery advice, and install-door structural-assert tests passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

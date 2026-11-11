@@ -830,19 +830,46 @@ $KitDirRel = if ($KitDirFull -ieq $KitRootFull) {
 # when the engine ran from outside the project and nothing staged the kit at
 # .promptkit/ (courier or submodule), those references dangle. The upgrade
 # hints must not point at a path that does not exist in the project, so the
-# summary warns and names the staging commands instead. "Staged" means the
-# directory exists AND carries the installer the hints reference.
+# summary warns and names the staging commands instead.
+#
+# "Staged" means a COMPLETE kit, not merely the files this summary happens to
+# name: anywhere the directive, the workflows, and the shipped scripts are used
+# together, a copy missing one of them fails at the first command that needs it.
+# Completeness is defined by scripts/setup-assert-files.txt - the same manifest
+# the install-door assert (scripts/check-setup-assert.ps1) validates - so there
+# stays one definition of "a complete kit" instead of a third hand-maintained
+# list that drifts. A missing manifest is itself an incomplete kit, so this
+# check fails toward the warning rather than advertising an upgrade path it
+# cannot verify.
 $KitDangling = $false
+# $KitPartial separates the two dangling cases, because the recovery differs:
+# nothing at .promptkit/ can be staged by the documented commands, while an
+# incomplete copy must be removed first - the courier refuses a non-empty
+# destination without --force, and "git submodule add" refuses an existing
+# directory outright.
+$KitPartial = $false
 if ($KitDirRel -eq ".promptkit") {
-    # "Staged" means the directory carries the files the directive and the
-    # summary actually reference: the installer the upgrade hint names, and the
-    # workflow entry point the advertised pk:* commands load. A directory holding
-    # only the installer is a partial copy, and advertising the upgrade path from
-    # it would point at commands that cannot resolve.
-    $stagedInstaller = Join-Path $ProjectRootPath ".promptkit/init.ps1"
-    $stagedWorkflow = Join-Path $ProjectRootPath ".promptkit/workflows/route.md"
-    if (-not (Test-Path -LiteralPath $stagedInstaller) -or -not (Test-Path -LiteralPath $stagedWorkflow)) {
+    $stagedRoot = Join-Path $ProjectRootPath ".promptkit"
+    $kitManifest = Join-Path $ScriptDir "scripts/setup-assert-files.txt"
+    if (Test-Path -LiteralPath $stagedRoot) { $KitPartial = $true }
+    $stagedInstaller = Join-Path $stagedRoot "init.ps1"
+    if (-not (Test-Path -LiteralPath $stagedInstaller) -or -not (Test-Path -LiteralPath $kitManifest)) {
         $KitDangling = $true
+    } else {
+        foreach ($row in [System.IO.File]::ReadAllLines($kitManifest)) {
+            $line = $row.Trim()
+            if ($line -eq '' -or $line.StartsWith('#')) { continue }
+            $parts = $line.Split('|')
+            if ($parts.Count -lt 2) { $KitDangling = $true; continue }
+            $rel = $parts[0].Trim()
+            $kind = $parts[1].Trim()
+            $target = Join-Path $stagedRoot $rel
+            if ($kind -eq 'dir') {
+                if (-not (Test-Path -LiteralPath $target -PathType Container)) { $KitDangling = $true }
+            } elseif (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
+                $KitDangling = $true
+            }
+        }
     }
 }
 
@@ -1322,8 +1349,14 @@ if ($assertRc -ne 0) {
 
 Write-Host "`n✨ PromptKit OS successfully configured for $ProjectRoot! ($Profile profile)" -ForegroundColor Cyan
 if ($KitDangling) {
-    Write-Host "   Note: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it." -ForegroundColor Yellow
-    Write-Host "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
+    if ($KitPartial) {
+        Write-Host "   Note: .promptkit/ in this project is an incomplete copy of the kit — the directive references workflows there, so pk:* commands cannot load until the kit is complete." -ForegroundColor Yellow
+        Write-Host "   Replace it: rm -rf .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
+        Write-Host "   (npx promptkit-os@latest --force overlays the existing directory without cleaning it, so stale files survive)" -ForegroundColor DarkGray
+    } else {
+        Write-Host "   Note: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it." -ForegroundColor Yellow
+        Write-Host "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
+    }
 }
 if ($Profile -eq "lite") {
     Write-Host "   Lite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok" -ForegroundColor Green

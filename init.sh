@@ -800,16 +800,47 @@ fi
 # when the engine ran from outside the project and nothing staged the kit at
 # .promptkit/ (courier or submodule), those references dangle. The upgrade
 # hints must not point at a path that does not exist in the project, so the
-# summary warns and names the staging commands instead. "Staged" means the
-# directory carries the files the directive and the summary actually
-# reference: the installer the upgrade hint names, and the workflow entry
-# point the advertised pk:* commands load. A directory holding only init.sh
-# is a partial copy, and advertising the upgrade path from it would point at
-# commands that cannot resolve.
+# summary warns and names the staging commands instead.
+#
+# "Staged" means a COMPLETE kit, not merely the files this summary happens to
+# name: anywhere the directive, the workflows, and the shipped scripts are used
+# together, a copy missing one of them fails at the first command that needs it.
+# Completeness is defined by scripts/setup-assert-files.txt — the same manifest
+# the install-door assert (scripts/check-setup-assert.sh) validates — so there
+# stays one definition of "a complete kit" instead of a third hand-maintained
+# list that drifts. A missing manifest is itself an incomplete kit, so this
+# check fails toward the warning rather than advertising an upgrade path it
+# cannot verify.
 KIT_DANGLING=0
-if [[ "$KIT_DIR_REL" == ".promptkit" ]] \
-    && [[ ! -f "$PROJECT_ROOT/.promptkit/init.sh" || ! -f "$PROJECT_ROOT/.promptkit/workflows/route.md" ]]; then
-    KIT_DANGLING=1
+# KIT_PARTIAL separates the two dangling cases, because the recovery differs:
+# nothing at .promptkit/ can be staged by the documented commands, while an
+# incomplete copy must be removed first — the courier refuses a non-empty
+# destination without --force, and "git submodule add" refuses an existing
+# directory outright.
+KIT_PARTIAL=0
+if [[ "$KIT_DIR_REL" == ".promptkit" ]]; then
+    KIT_MANIFEST="$SCRIPT_DIR/scripts/setup-assert-files.txt"
+    if [[ -d "$PROJECT_ROOT/.promptkit" ]]; then
+        KIT_PARTIAL=1
+    fi
+    if [[ ! -f "$PROJECT_ROOT/.promptkit/init.sh" || ! -f "$KIT_MANIFEST" ]]; then
+        KIT_DANGLING=1
+    else
+        while IFS='|' read -r kit_rel kit_kind; do
+            kit_rel="${kit_rel%$'\r'}"
+            kit_kind="${kit_kind%$'\r'}"
+            if [[ -z "$kit_rel" || "$kit_rel" == \#* ]]; then
+                continue
+            fi
+            if [[ "$kit_kind" == "dir" ]]; then
+                if [[ ! -d "$PROJECT_ROOT/.promptkit/$kit_rel" ]]; then
+                    KIT_DANGLING=1
+                fi
+            elif [[ ! -f "$PROJECT_ROOT/.promptkit/$kit_rel" ]]; then
+                KIT_DANGLING=1
+            fi
+        done < "$KIT_MANIFEST"
+    fi
 fi
 
 if [[ "$PROFILE" == "lite" ]]; then
@@ -1312,8 +1343,14 @@ fi
 
 echo -e "\n\033[0;36m✨ PromptKit OS successfully configured for $PROJECT_ROOT! ($PROFILE profile)\033[0m"
 if [[ "$KIT_DANGLING" == "1" ]]; then
-    echo -e "   \033[0;33mNote: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it.\033[0m"
-    echo -e "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
+    if [[ "$KIT_PARTIAL" == "1" ]]; then
+        echo -e "   \033[0;33mNote: .promptkit/ in this project is an incomplete copy of the kit — the directive references workflows there, so pk:* commands cannot load until the kit is complete.\033[0m"
+        echo -e "   Replace it: rm -rf .promptkit, then npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
+        echo -e "   (npx promptkit-os@latest --force overlays the existing directory without cleaning it, so stale files survive)"
+    else
+        echo -e "   \033[0;33mNote: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it.\033[0m"
+        echo -e "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
+    fi
 fi
 if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok\033[0m"

@@ -609,6 +609,32 @@ copy_kit() {
     tar -C "$REPO_ROOT" --exclude=.git --exclude=.codegraph -cf - . | tar -C "$dest" -xf -
 }
 
+# Stage a COMPLETE kit at <project>/.promptkit: the installer plus every row of
+# scripts/setup-assert-files.txt. That manifest is the single definition of a
+# complete kit — the installer reads it to decide whether a staged copy is
+# usable, and scripts/check-setup-assert.sh validates the same rows — so the
+# fixtures derive the staged set from it instead of hard-coding a second list
+# that could drift out of step with the installer.
+stage_complete_kit() {
+    local project="$1" kit="$2" rel kind
+    mkdir -p "$project/.promptkit"
+    cp "$kit/init.sh" "$project/.promptkit/init.sh"
+    while IFS='|' read -r rel kind; do
+        rel="${rel%$'\r'}"
+        kind="${kind%$'\r'}"
+        if [[ -z "$rel" || "$rel" == \#* ]]; then
+            continue
+        fi
+        if [[ "$kind" == "dir" ]]; then
+            mkdir -p "$project/.promptkit/$rel"
+            cp -R "$kit/$rel/." "$project/.promptkit/$rel/"
+        else
+            mkdir -p "$project/.promptkit/$(dirname "$rel")"
+            cp "$kit/$rel" "$project/.promptkit/$rel"
+        fi
+    done < "$kit/scripts/setup-assert-files.txt"
+}
+
 # Test 27: courier door — complete kit tree with no .git classifies as courier
 COURIER_PROJ="$TEST_ROOT/assert_courier_project"
 COURIER_KIT="$TEST_ROOT/assert_courier_kit"
@@ -839,10 +865,7 @@ fi
 COURIER_FRESH_PROJ="$TEST_ROOT/courier_fresh_project"
 COURIER_FRESH_KIT="$TEST_ROOT/courier_fresh_kit"
 copy_kit "$COURIER_FRESH_KIT"
-mkdir -p "$COURIER_FRESH_PROJ/.promptkit"
-cp "$COURIER_FRESH_KIT/init.sh" "$COURIER_FRESH_PROJ/.promptkit/init.sh"
-mkdir -p "$COURIER_FRESH_PROJ/.promptkit/workflows"
-cp "$COURIER_FRESH_KIT/workflows/route.md" "$COURIER_FRESH_PROJ/.promptkit/workflows/route.md"
+stage_complete_kit "$COURIER_FRESH_PROJ" "$COURIER_FRESH_KIT"
 git -C "$COURIER_FRESH_PROJ" init -q
 git -C "$COURIER_FRESH_PROJ" -c user.name=Fixture -c user.email=fixture@example.invalid add -A
 if courier_fresh_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$COURIER_FRESH_KIT/init.sh" --balanced "$COURIER_FRESH_PROJ" 2>&1)"; then
@@ -898,17 +921,14 @@ if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$dangle_out"; then
     exit 1
 fi
 
-# Test 36b: staged kit — when .promptkit/ carries the files the directive and
-# the summary actually reference (the installer the upgrade hint names and the
-# workflow entry point the advertised pk:* commands load), the relative
+# Test 36b: staged kit — when .promptkit/ carries a COMPLETE kit (the
+# installer plus every row of scripts/setup-assert-files.txt), the relative
 # upgrade hint is advertised and no dangling warning prints. Lite profile so
 # the "Upgrade anytime" hint is genuinely exercised.
 STAGED_PROJ="$TEST_ROOT/staged_hint_project"
 STAGED_KIT="$TEST_ROOT/staged_hint_kit"
 copy_kit "$STAGED_KIT"
-mkdir -p "$STAGED_PROJ/.promptkit/workflows"
-cp "$STAGED_KIT/init.sh" "$STAGED_PROJ/.promptkit/init.sh"
-cp "$STAGED_KIT/workflows/route.md" "$STAGED_PROJ/.promptkit/workflows/route.md"
+stage_complete_kit "$STAGED_PROJ" "$STAGED_KIT"
 if staged_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$STAGED_KIT/init.sh" --lite "$STAGED_PROJ" 2>&1)"; then
     staged_rc=0
 else
@@ -920,11 +940,18 @@ if grep -qF 'not staged at .promptkit/' <<<"$staged_out"; then
     echo "Dangling warning printed for a staged kit." >&2
     exit 1
 fi
+if grep -qF 'incomplete copy of the kit' <<<"$staged_out"; then
+    echo "Incomplete-copy warning printed for a complete kit." >&2
+    exit 1
+fi
 
 # Test 36c: partial kit — a .promptkit/ holding the installer but not the
 # workflow entry point is a partial copy: the upgrade hint would point at
 # pk:* commands that cannot resolve, so the warning must fire and the hint
-# must be suppressed.
+# must be suppressed. The recovery advice must also match the state: a
+# non-empty .promptkit/ cannot be staged by the courier or by "git submodule
+# add" without removing it first, so the summary says so instead of printing
+# commands that would fail.
 PARTIAL_PROJ="$TEST_ROOT/partial_hint_project"
 PARTIAL_KIT="$TEST_ROOT/partial_hint_kit"
 copy_kit "$PARTIAL_KIT"
@@ -936,11 +963,58 @@ else
     partial_rc=$?
 fi
 [[ "$partial_rc" -eq 0 ]]
-grep -qF 'not staged at .promptkit/' <<<"$partial_out"
-grep -qF 'Stage the kit:' <<<"$partial_out"
+grep -qF 'incomplete copy of the kit' <<<"$partial_out"
+grep -qF 'rm -rf .promptkit' <<<"$partial_out"
+grep -qF -- '--force overlays the existing directory without cleaning it' <<<"$partial_out"
 if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$partial_out"; then
     echo "Upgrade hint advertised from a partial kit copy." >&2
     exit 1
 fi
+if grep -qF 'Stage the kit:' <<<"$partial_out"; then
+    echo "Partial kit printed the stage-from-scratch advice, which cannot succeed on a non-empty .promptkit/." >&2
+    exit 1
+fi
 
-echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial), and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."
+# Test 36d: the reviewer's tree — .promptkit/ holding exactly the installer and
+# the workflow entry point. Both files exist, so a two-file check called this
+# staged and advertised an upgrade path whose scripts/ directory was absent;
+# the manifest-driven check must call it incomplete.
+TWOFILE_PROJ="$TEST_ROOT/twofile_hint_project"
+TWOFILE_KIT="$TEST_ROOT/twofile_hint_kit"
+copy_kit "$TWOFILE_KIT"
+mkdir -p "$TWOFILE_PROJ/.promptkit/workflows"
+cp "$TWOFILE_KIT/init.sh" "$TWOFILE_PROJ/.promptkit/init.sh"
+cp "$TWOFILE_KIT/workflows/route.md" "$TWOFILE_PROJ/.promptkit/workflows/route.md"
+if twofile_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$TWOFILE_KIT/init.sh" --lite "$TWOFILE_PROJ" 2>&1)"; then
+    twofile_rc=0
+else
+    twofile_rc=$?
+fi
+[[ "$twofile_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$twofile_out"
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$twofile_out"; then
+    echo "Upgrade hint advertised from a two-file kit copy." >&2
+    exit 1
+fi
+
+# Test 36e: a complete kit minus one manifest row is still incomplete. The
+# scripts/ directory is the row a two-file copy misses, so removing it from an
+# otherwise complete stage must flip the verdict back to incomplete.
+MISSINGROW_PROJ="$TEST_ROOT/missingrow_hint_project"
+MISSINGROW_KIT="$TEST_ROOT/missingrow_hint_kit"
+copy_kit "$MISSINGROW_KIT"
+stage_complete_kit "$MISSINGROW_PROJ" "$MISSINGROW_KIT"
+rm -rf "$MISSINGROW_PROJ/.promptkit/scripts"
+if missingrow_out="$(PROMPTKIT_NO_INTERACTIVE=1 bash "$MISSINGROW_KIT/init.sh" --lite "$MISSINGROW_PROJ" 2>&1)"; then
+    missingrow_rc=0
+else
+    missingrow_rc=$?
+fi
+[[ "$missingrow_rc" -eq 0 ]]
+grep -qF 'incomplete copy of the kit' <<<"$missingrow_out"
+if grep -qF 'Upgrade anytime: .promptkit/init.sh' <<<"$missingrow_out"; then
+    echo "Upgrade hint advertised from a kit copy missing a manifest row." >&2
+    exit 1
+fi
+
+echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row) with state-matched recovery advice, and install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete) tests passed."
