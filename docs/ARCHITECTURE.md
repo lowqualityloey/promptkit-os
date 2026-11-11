@@ -348,8 +348,8 @@ promptkit-os/
 │   ├── release-evaluation-template.md # Release candidate evaluation & approval
 │   ├── ci-triage-template.md       # CI classification & remediation tracking
 │   ├── contract-impact-evidence-template.md # Contract impact evidence & breaking guidance
-│   ├── pull-request-template.md    # High-signal Pull Request description & safety checklist
-│   ├── github-issue-template.md    # Standardized native GitHub issue template (.github/ISSUE_TEMPLATE/task.md)
+│   ├── pull-request-template.md    # High-signal Pull Request description & safety checklist (.github/pull_request_template.md under GitHub tracking)
+│   ├── github-issue-template.md    # Standardized native GitHub issue template (.github/ISSUE_TEMPLATE/task.md under GitHub tracking)
 │   ├── perf-audit-template.md      # Performance audit report & before/after delta spec
 │   ├── issue-task-template.md      # Staff-level GitHub Issue template with Gherkin AC
 │   ├── adr-template.md             # MADR standard Architectural Decision Record
