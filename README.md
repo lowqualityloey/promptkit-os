@@ -11,7 +11,7 @@ A lightweight, repository-native system for risk, context, state, autonomy, and 
 
 No runtime. No daemon. No model lock-in. No required API.
 
-Generates native instructions and directives for nine installer targets — `claude`, `gemini`, `cursor`, `windsurf`, `copilot`, `cline`, `trae`, `opencode`, `aider` (Claude Code, Gemini CLI/Antigravity, Cursor, Windsurf, GitHub Copilot, Cline/Roo Code, Trae IDE, OpenCode, and Aider) — with `AGENTS.md` created as the universal fallback for any other AGENTS.md-reading host, such as Codex CLI. See [docs/HOST-CONFORMANCE.md](./docs/HOST-CONFORMANCE.md) for the host matrix and its runtime-validated status.
+Generates native instructions and directives for nine installer targets — `claude`, `gemini`, `cursor`, `windsurf`, `copilot`, `cline`, `trae`, `opencode`, `aider` (Claude Code, Gemini CLI/Antigravity, Cursor, Windsurf, GitHub Copilot, Cline/Roo Code, Trae IDE, OpenCode, and Aider) — with `AGENTS.md` created as the universal fallback for any other AGENTS.md-reading host, such as Codex CLI. See [docs/HOST-CONFORMANCE.md](./docs/HOST-CONFORMANCE.md) for the host matrix: nine of its ten host configurations are registered **Untested for live runtime fidelity**, and only OpenCode holds a live result — one **PARTIAL** capture of the `milestone-halt` probe (1 of 5 probes, a single-host model excluded from cross-host comparison, on an interface that could not exercise the continuation loop), with its other four probes untested. The staged fixture grades validate the scoring rubric, not live runtime behaviour.
 
 ---
 
@@ -108,6 +108,8 @@ Prompt your assistant naturally or invoke fast shorthand triggers:
 | `pk:debug` | **Root-Cause Analysis** | Systematic 5-step falsifiable debugging (stops infinite hallucinated edits) |
 | `pk:commit` | **Pre-Commit Gate** | Secret scanning, running test suites, and authoring atomic conventional commits |
 | `pk:checkpoint` | **Session Handover** | Saving active tasks and state to Git before ending your chat session |
+
+`pk:onboard`, `pk:plan`, and `pk:test` are Balanced-profile workflows: their files ship in every install, but the Lite directive advertises only its six utility triggers (`pk:route`, `pk:debug`, `pk:commit`, `pk:checkpoint`, `pk:sync`, `pk:profile`), so switch to Balanced first (`.promptkit/init.sh --balanced`, or `.\.promptkit\init.ps1 --balanced` in PowerShell) if you rely on them.
 
 ### What PromptKit Looks Like in Chat
 
@@ -221,13 +223,38 @@ npx promptkit-os@latest --lite
 </details>
 
 > [!NOTE]
-> The git submodule flow above is canonical. The npm package is a **courier, not a dependency** — it fetches the release tarball matching its version into `.promptkit/` and runs the same installer, producing an identical tree. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`. It requires Node 18+ (and PowerShell 7 on Windows), and it refuses to overlay a non-empty `.promptkit/`, printing the update command that matches how the existing install was made. Removal: delete `.promptkit/` (plus generated `PROMPTKIT.md` / `docs/STATE.md` if unwanted) — no daemon, nothing left behind.
+> The git submodule flow above is canonical. The npm package is a **courier, not a dependency** — it fetches the release tarball matching its version into `.promptkit/` and runs the same installer, producing an identical tree. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`. It requires Node 18+ (and PowerShell 7 on Windows), and it refuses to overlay a non-empty `.promptkit/`, printing the update command that matches how the existing install was made. Removal (there is no `--uninstall` flag). The kit directory comes out differently depending on how it went in. A courier install just deletes `.promptkit/`. A submodule install must unregister it, and the kit is a real repository that may hold work of its own, so inspect it before you discard anything.
+>
+> Anything you want to keep should be copied out or pushed first — `deinit -f` discards both, and it deletes untracked files too. Without `-f`, `git submodule deinit .promptkit` refuses while the kit has modified tracked files or untracked files, but it does **not** refuse for ignored files: it prints `Cleared directory '.promptkit'`, exits 0, and the ignored files are gone. That is why the inspection below passes `--ignored` — a plain `status --short` prints nothing for a file your `.gitignore` covers.
+>
+> Resolve the submodule **name** first — it need not match the path, and the removal empties `.gitmodules`, so this is the only moment it can be read. Then inspect the module repository directly rather than through the work tree: `--all` is what catches a detached HEAD, which `--branches` misses. **Git Bash** (or any POSIX shell):
+>
+> ```bash
+> name=$(git config --file .gitmodules --list --name-only | sed -n 's/^submodule\.\(.*\)\.path$/\1/p' | while IFS= read -r n; do if [ "$(git config --file .gitmodules --get "submodule.$n.path")" = .promptkit ]; then printf '%s' "$n"; fi; done)
+> git --git-dir="$(git rev-parse --git-path "modules/$name")" log --oneline --all --not --remotes
+> git --git-dir="$(git rev-parse --git-path "modules/$name")" --work-tree=.promptkit status --short --ignored
+> git submodule deinit .promptkit
+> git rm .promptkit
+> ```
+>
+> **PowerShell 7** (Windows):
+>
+> ```powershell
+> $name = git config --file .gitmodules --list --name-only | ForEach-Object { if ($_ -match '^submodule\.(.*)\.path$') { $candidate = $Matches[1]; if ((git config --file .gitmodules --get "submodule.$candidate.path") -eq '.promptkit') { $candidate } } } | Select-Object -First 1
+> $gitDir = git rev-parse --git-path "modules/$name"
+> git "--git-dir=$gitDir" log --oneline --all --not --remotes
+> git "--git-dir=$gitDir" --work-tree=.promptkit status --short --ignored
+> git submodule deinit .promptkit
+> git rm .promptkit
+> ```
+>
+> Do not reach for `git -C .promptkit` here: once the kit is deinitialized its directory is empty, so git walks up and answers about the host repository instead. Then commit the `.gitmodules` change; deleting only the directory instead leaves a registered `160000` gitlink behind and the next `git submodule add` fails with `'.promptkit' already exists in the index`. The module repository under `.git/modules/` is optional cleanup, not part of removal: leave it alone if you are unsure — a leftover copy only makes a later re-add ask for `--force`, and `git submodule add --force` reuses it. Then delete the `<!-- PROMPTKIT_START -->` … `<!-- PROMPTKIT_END -->` block from every host directive file the installer wrote to — leaving it behind points the agent at a `.promptkit/` that no longer exists. `PROMPTKIT.md` and `docs/STATE.md` are yours after install, not regenerated files: the installer preserves custom content in `PROMPTKIT.md` and only rewrites its `profile` / `tracking` / `projection` fields, and it creates `docs/STATE.md` only when absent, so delete either one only if you added nothing worth keeping. Also delete `docs/tasks/`, `docs/specs/`, `docs/adrs/`, `docs/tests/`, plus `.github/pull_request_template.md` and `.github/ISSUE_TEMPLATE/task.md` (GitHub tracking only) if the installer created them and you have added nothing of your own. Nothing keeps running afterwards: no daemon, no service, no scheduled task.
 
 Already installed? To pull updates, see [Updating PromptKit](./QUICKSTART.md#updating-promptkit).
 
 ### 2. Configure
 
-The installer creates `PROMPTKIT.md` (your project profile — test commands, stack constraints, architectural invariants) and `docs/STATE.md` (living project state). Run `pk:onboard` for a guided setup interview. Verify any install anytime with `pk:doctor` — a read-only audit of host directives, engine version, ignore-state, docs drift, intake provenance, and submodule registration; it reports rot and never writes.
+The installer creates `PROMPTKIT.md` (your project profile — test commands, stack constraints, architectural invariants) and `docs/STATE.md` (living project state). Run `pk:onboard` for a guided setup interview — it is a Balanced-profile workflow, so under Lite switch to Balanced first (`.promptkit/init.sh --balanced`). Verify any install anytime with `pk:doctor` — a read-only audit of host directives, engine version, ignore-state, docs drift, intake provenance, and submodule registration; it reports rot and never writes.
 
 ### 3. Work normally
 
