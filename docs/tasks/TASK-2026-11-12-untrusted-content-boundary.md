@@ -81,14 +81,14 @@
 - **Checkpoint Records**: `none`
 - **Handoff Records**: `none`
 - **Verification Evidence**: `bash scripts/measure-tokens.sh --strict` → `BALANCED|2410|2500|PASS`, `LITE|1491|1500|PASS`; `bash scripts/measure-per-task-tokens.sh --strict` → six BASELINE rows PASS; `bash scripts/tests/run-behavioral-contract-tests.sh` → `Passed: 576 | Failed: 0`; `/usr/bin/pwsh -NoProfile -File ./scripts/tests/run-behavioral-contract-tests.ps1` → `Passed: 565 | Failed: 0`; `bash scripts/run-behavioral-eval.sh --self-test` → `Passed: 35 | Failed: 0`; `bash scripts/validate-references.sh . --strict`, `bash scripts/check-math-labels.sh --root .`, `bash scripts/validate-execution-control.sh --root . --strict` → `VALID|RECORDS=71`, `bash scripts/check-doctor.sh` → exit 0, `bash scripts/measure-ceremony-overhead.sh --strict` → `CEREMONY_GATE|PASS`, `bash scripts/measure-turbo-overhead.sh --strict` → both rows PASS, plus the remaining bash and PowerShell harnesses recorded in the session log.`
-- **CI Evidence**: `pending`
-- **Review Evidence**: `pending`
-- **Commit Evidence**: `pending`
-- **Pull Request Evidence**: `pending`
+- **CI Evidence**: `PR #737 run 43201645811 — pending at the time this record was committed; the run is the gate of record and its result is reported on the PR`
+- **Review Evidence**: `none yet — no human review has been requested or received`
+- **Commit Evidence**: `52c09ad carries the directive, the protocol section, the enforcement non-claim, the eval card, Scenario AT in both twins, the scenario-count prose, and every re-propagated figure; a4d0795 is documentation-only and restates the docs/BENCHMARKS.md provenance anchor to 52c09ad, because a commit cannot contain its own SHA`
+- **Pull Request Evidence**: `PR #737 (open) — https://github.com/lowqualityloey/promptkit-os/pull/737, base main, head feat/untrusted-content-boundary at a4d0795`
 - **Release Evidence**: `not applicable`
 - **Blocker and Resume Condition**: `none`
 - **Completion State**: `In Review`
 - **Acceptance Results**: `AC-1 through AC-7 met; AC-7's anchor restatement lands in the documentation-only follow-up commit.`
 - **Changed-File Summary**: `15 modified files, 2 new files; +129/-39 before the CHANGELOG entry and the PowerShell twin block.`
 - **Completion Exception**: `none`
-- **Completion Decision and Timestamp**: `pending`
+- **Completion Decision and Timestamp**: `2026-11-12 23:36 UTC — implementation and evidence complete; awaiting review and CI on PR #737. Merge is outside this record's approval boundary.`
