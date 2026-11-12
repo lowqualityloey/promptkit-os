@@ -101,5 +101,6 @@ Both hooks follow the same shape: **opt-in, reversible, managed-block, single-pu
 - That a user project has any automatic enforcement of PromptKit OS rules. It does not; the default posture is Tier 3 alone.
 - That `pk:doctor` or the shipped scripts run unless someone runs them.
 - That any directive statement is runtime-enforced. The Context Economy boundary statement in [`protocols/context-economy.md`](../protocols/context-economy.md) applies to the whole product: PromptKit OS contains no mechanism that executes or enforces its `MUST` / `MUST NOT` statements.
+- That untrusted repository content is filtered. The Untrusted Content Boundary in [`protocols/context-sync.md`](../protocols/context-sync.md) §3.3 is Tier 3 advisory text: the kit ships no sanitizer, no content scanner, and no runtime interception, so a prompt-injection attempt reaches the agent unfiltered and the boundary only tells the agent how to treat it.
 
 When evaluating PromptKit OS against a governance requirement, locate the requirement on this ladder first. If the requirement needs Tier 1 strength in *your* project, the honest current answer is that PromptKit OS does not provide it — wiring the shipped validators into your own CI is possible (they are plain scripts), but it is a user-side integration, not a shipped feature.
