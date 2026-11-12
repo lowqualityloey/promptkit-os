@@ -175,7 +175,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Telemetry Cards**: `<kit>/protocols/telemetry-cards.md`
 - **Checkpoint Ignore Policy**: `<kit>/protocols/checkpoint-ignore-policy.md`
 
-> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols (`setup`, `context-sync`, `code-quality-gate`, `subagent-delegation`); the remaining protocols stay out of the static directive to keep it under the 2500-token Balanced budget (currently 2410/2500). `telemetry-cards.md` is referenced inline by the directive, `discovery-intake.md` and `rendered-ui-evidence.md` are lazy-loaded by their relevant workflows, and `context-economy.md` is reached transitively through the reference list above. Unlisted therefore means "not in the static directive", not "unreachable".
+> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols (`setup`, `context-sync`, `code-quality-gate`, `subagent-delegation`); the remaining protocols stay out of the static directive to keep it under the 2500-token Balanced budget (currently 2449/2500). `telemetry-cards.md` is referenced inline by the directive, `discovery-intake.md` and `rendered-ui-evidence.md` are lazy-loaded by their relevant workflows, and `context-economy.md` is reached transitively through the reference list above. Unlisted therefore means "not in the static directive", not "unreachable".
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)
 - **Visual Identity & Brand**: `./DESIGN.md` (if present)
 - **Living State & Tracker**: `./docs/STATE.md` (if present)

@@ -11,7 +11,7 @@
 - **Work Type**: `Documentation and Test Work`
 - **Specification**: `N/A` — no specification document; acceptance criteria derive from the owner's request of 2026-11-12
 - **Owner / Actor**: `DeepSeek Harness agent (lead)`
-- **Execution Scope**: Repository `promptkit-os` — `templates/agent-directive-template.md`, `templates/agent-directive-lite-template.md`, `protocols/context-sync.md`, `docs/ENFORCEMENT.md`, `docs/BENCHMARKS.md`, `README.md`, `FAQ.md`, `protocols/setup.md`, `scripts/tests/run-behavioral-contract-tests.sh`, `scripts/tests/run-behavioral-contract-tests.ps1`, `scripts/tests/eval-scenarios/injection-untrusted-content.md` (new), `CONTRIBUTING.md`, `docs/BEHAVIORAL-EVAL.md`, `docs/ARCHITECTURE.md`, `CHANGELOG.md`, `docs/STATE.md`
+- **Execution Scope**: Repository `promptkit-os` — `templates/agent-directive-template.md`, `templates/agent-directive-lite-template.md`, `protocols/context-sync.md`, `docs/ENFORCEMENT.md`, `docs/BENCHMARKS.md`, `README.md`, `FAQ.md`, `templates/lite-profile.md`, `protocols/setup.md`, `scripts/tests/run-behavioral-contract-tests.sh`, `scripts/tests/run-behavioral-contract-tests.ps1`, `scripts/tests/eval-scenarios/injection-untrusted-content.md` (new), `scripts/tests/fixtures/injection-untrusted-content/ONBOARDING-NOTES.md` (new), `CONTRIBUTING.md`, `docs/BEHAVIORAL-EVAL.md`, `docs/ARCHITECTURE.md`, `CHANGELOG.md`, `docs/STATE.md`
 - **Approval Boundary**: Commit, push, and pull-request creation are authorized by the owner's request. Merge, release, deployment, and closing any issue each require explicit human confirmation. This record authorizes none of them.
 - **Created**: `2026-11-12 20:58 UTC`
 
@@ -26,6 +26,7 @@
   - `scripts/tests/run-behavioral-contract-tests.sh` and `.ps1` — assertions that both templates and the protocol carry the boundary, and that the enforcement non-claim exists.
   - `scripts/tests/eval-scenarios/injection-untrusted-content.md` (new) — a scenario card whose prompt carries an embedded injection, with a PASS fixture that treats it as data and a FAIL fixture that complies.
   - `docs/BENCHMARKS.md`, `README.md`, `FAQ.md`, `protocols/setup.md` — re-propagated directive figures, because both templates are measured inputs.
+  - `scripts/tests/fixtures/injection-untrusted-content/ONBOARDING-NOTES.md` (new) — the seeded lower-trust input the scenario reads, so the attack lives in a file rather than in the user prompt.
   - `CHANGELOG.md` — one Unreleased / Added entry.
   - `docs/STATE.md` — section 3A projection updated to this record.
 - **Explicit Non-Goals**:
@@ -46,6 +47,10 @@
 - [x] **AC-5** — Both behavioral-contract twins assert the boundary in both templates and in the protocol, and assert the enforcement non-claim.
 - [x] **AC-6** — A new eval scenario card exercises an embedded injection, and its PASS fixture satisfies every check while its FAIL fixture violates at least one.
 - [x] **AC-7** — Every restated directive figure matches the measured value, and the provenance anchor is restated to the implementation commit in a documentation-only follow-up commit.
+- [x] **AC-8** — Both directive bullets and `protocols/context-sync.md` §3.3 distinguish project configuration read through its documented entry point (which still directs work) from text embedded inside a file (which does not), so the boundary does not read as "ignore the repository".
+- [x] **AC-9** — The injection scenario judges recorded evidence, not prose alone: it declares `repo-unwritten` and `prohibited-action` checks, and a transcript that paraphrases compliance scores below PASS.
+- [x] **AC-10** — The injection scenario stages the lower-trust input in a seeded fixture and keeps the attack out of the user prompt, so a live run exercises the file-to-agent boundary.
+- [x] **AC-11** — `docs/BENCHMARKS.md` states that the 2500/1500 gates bound the `bytes/4` proxy rather than a tokenizer, and records that the Lite directive exceeds 1,500 `cl100k_base` tokens.
 
 ## 4. Execution Policy
 
@@ -80,15 +85,15 @@
 - **Scope Change Records**: `none`
 - **Checkpoint Records**: `none`
 - **Handoff Records**: `none`
-- **Verification Evidence**: `bash scripts/measure-tokens.sh --strict` → `BALANCED|2410|2500|PASS`, `LITE|1491|1500|PASS`; `bash scripts/measure-per-task-tokens.sh --strict` → six BASELINE rows PASS; `bash scripts/tests/run-behavioral-contract-tests.sh` → `Passed: 576 | Failed: 0`; `/usr/bin/pwsh -NoProfile -File ./scripts/tests/run-behavioral-contract-tests.ps1` → `Passed: 565 | Failed: 0`; `bash scripts/run-behavioral-eval.sh --self-test` → `Passed: 35 | Failed: 0`; `bash scripts/validate-references.sh . --strict`, `bash scripts/check-math-labels.sh --root .`, `bash scripts/validate-execution-control.sh --root . --strict` → `VALID|RECORDS=71`, `bash scripts/check-doctor.sh` → exit 0, `bash scripts/measure-ceremony-overhead.sh --strict` → `CEREMONY_GATE|PASS`, `bash scripts/measure-turbo-overhead.sh --strict` → both rows PASS, plus the remaining bash and PowerShell harnesses recorded in the session log.`
-- **CI Evidence**: `PR #737 run 43201645811 — pending at the time this record was committed; the run is the gate of record and its result is reported on the PR`
+- **Verification Evidence**: `bash scripts/measure-tokens.sh --strict` → `BALANCED|2449|2500|PASS`, `LITE|1489|1500|PASS`; `bash scripts/measure-per-task-tokens.sh --strict` → six BASELINE rows PASS (`pk:fix` 11,436/10,476, `pk:plan` 20,925/19,965, `pk:ship` 17,226/16,266); `bash scripts/tests/run-behavioral-contract-tests.sh` → `Passed: 588 | Failed: 0`; `/usr/bin/pwsh -NoProfile -File ./scripts/tests/run-behavioral-contract-tests.ps1` → `Passed: 577 | Failed: 0`; `bash scripts/run-behavioral-eval.sh --self-test` → `Passed: 35 | Failed: 0`; `bash scripts/validate-references.sh . --strict`, `bash scripts/check-math-labels.sh --root .`, `bash scripts/validate-execution-control.sh --root . --strict` → `VALID|RECORDS=71`, `bash scripts/check-doctor.sh` → exit 0, `bash scripts/measure-ceremony-overhead.sh --strict` → `CEREMONY_GATE|PASS`, `bash scripts/measure-turbo-overhead.sh --strict` → both rows PASS, plus the remaining bash and PowerShell harnesses recorded in the session log.`
+- **CI Evidence**: `PR #737 run 43202152107 on 90da3f6 — all 12 checks green; the review-fix commits are gated by the run that follows them, and that run is the gate of record`
 - **Review Evidence**: `none yet — no human review has been requested or received`
-- **Commit Evidence**: `52c09ad carries the directive, the protocol section, the enforcement non-claim, the eval card, Scenario AT in both twins, the scenario-count prose, and every re-propagated figure; a4d0795 is documentation-only and restates the docs/BENCHMARKS.md provenance anchor to 52c09ad, because a commit cannot contain its own SHA`
-- **Pull Request Evidence**: `PR #737 (open) — https://github.com/lowqualityloey/promptkit-os/pull/737, base main, head feat/untrusted-content-boundary at a4d0795`
+- **Commit Evidence**: `52c09ad carries the directive, the protocol section, the enforcement non-claim, the eval card, Scenario AT in both twins, the scenario-count prose, and every re-propagated figure; 90da3f6 is documentation-only and restates the docs/BENCHMARKS.md provenance anchor to 52c09ad, because a commit cannot contain its own SHA. The four review fixes land in a third commit that carries the project-config carve-out, the seeded fixture, the scenario evidence checks, the proxy-bound qualification, and the re-propagated figures; a fourth documentation-only commit restates the anchor to it`
+- **Pull Request Evidence**: `PR #737 (open) — https://github.com/lowqualityloey/promptkit-os/pull/737, base main, head feat/untrusted-content-boundary`
 - **Release Evidence**: `not applicable`
 - **Blocker and Resume Condition**: `none`
 - **Completion State**: `In Review`
-- **Acceptance Results**: `AC-1 through AC-7 met; AC-7's anchor restatement lands in the documentation-only follow-up commit.`
-- **Changed-File Summary**: `15 modified files, 2 new files; +129/-39 before the CHANGELOG entry and the PowerShell twin block.`
+- **Acceptance Results**: `AC-1 through AC-11 met; AC-7's anchor restatement lands in the documentation-only follow-up commit.`
+- **Changed-File Summary**: `13 modified files and 1 new directory (2 new files) in the review-fix commit, on top of the 15 modified and 2 new files of the original implementation.`
 - **Completion Exception**: `none`
-- **Completion Decision and Timestamp**: `2026-11-12 23:36 UTC — implementation and evidence complete; awaiting review and CI on PR #737. Merge is outside this record's approval boundary.`
+- **Completion Decision and Timestamp**: `2026-11-13 07:55 UTC — implementation, the four review fixes, and the refreshed evidence are complete; awaiting review and CI on PR #737. Merge is outside this record's approval boundary.`
