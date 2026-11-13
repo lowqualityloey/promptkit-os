@@ -165,6 +165,9 @@ INSPECTION_VERBS=' read cat ls grep rg head tail less more stat file wc diff fin
 # The tokens of the most recent split_activity_line call.
 LINE_TOKENS=()
 
+# The shell segments of the most recent split_activity_segments call.
+SEGMENTS=()
+
 split_activity_line() {
     # split_activity_line <line> : sets LINE_TOKENS to the line's whitespace-
     # separated tokens, after the delimiters the matcher has always treated as
@@ -179,20 +182,81 @@ split_activity_line() {
     read -r -a LINE_TOKENS <<< "$cleaned"
 }
 
-line_is_inspection() {
-    # line_is_inspection <line> : 0 when the recorded line inspects a path
-    # rather than writing it. Only `tool ...` lines are classified; any other
-    # shape counts as a write, because an unrecognized line must not be able to
-    # hide one. A redirect is a write whatever the verb, and so are the in-place
-    # editors and `find -delete`/`-exec`.
-    split_activity_line "$1"
-    [ "${#LINE_TOKENS[@]}" -ge 2 ] || return 1
-    [ "${LINE_TOKENS[0]}" = 'tool' ] || return 1
-    local verb="${LINE_TOKENS[1]}" word token
-    case "$verb" in
-        exec|bash|sh|shell|run|terminal) word="${LINE_TOKENS[2]:-}" ;;
-        *) word="$verb" ;;
+split_activity_segments() {
+    # split_activity_segments <line> : sets SEGMENTS to the line's shell
+    # segments, in order. A boundary is `&&`, `||`, `;`, or a pipe `|`.
+    # `&>` and `|>` are redirects rather than boundaries, so they stay inside
+    # the segment that carries them and the path they name stays visible. A
+    # separator inside quotes is literal text, not a boundary: `grep -n 'a|b'
+    # file` is one segment, so an alternation in a pattern cannot fake a second
+    # command.
+    local rest="$1" seg="" ch next i=0 quote=""
+    SEGMENTS=()
+    while [ "$i" -lt "${#rest}" ]; do
+        ch="${rest:$i:1}"
+        next="${rest:$((i + 1)):1}"
+        if [ -n "$quote" ]; then
+            seg="$seg$ch"
+            [ "$ch" = "$quote" ] && quote=""
+            i=$((i + 1))
+            continue
+        fi
+        case "$ch" in
+            '"'|"'") quote="$ch"; seg="$seg$ch"; i=$((i + 1)); continue ;;
+            '&')
+                if [ "$next" = '&' ]; then SEGMENTS+=("$seg"); seg=""; i=$((i + 2)); continue; fi
+                if [ "$next" = '>' ]; then seg="$seg$ch"; i=$((i + 1)); continue; fi
+                ;;
+            '|')
+                if [ "$next" = '|' ]; then SEGMENTS+=("$seg"); seg=""; i=$((i + 2)); continue; fi
+                if [ "$next" = '>' ]; then seg="$seg$ch"; i=$((i + 1)); continue; fi
+                SEGMENTS+=("$seg"); seg=""; i=$((i + 1)); continue
+                ;;
+            ';')
+                SEGMENTS+=("$seg"); seg=""; i=$((i + 1)); continue
+                ;;
+        esac
+        seg="$seg$ch"
+        i=$((i + 1))
+    done
+    SEGMENTS+=("$seg")
+}
+
+strip_redirect_prefix() {
+    # strip_redirect_prefix <token> : the token with any leading redirect
+    # operator removed, so `>docs/STATE.md`, `>>docs/STATE.md`,
+    # `&>docs/STATE.md`, and `|>docs/STATE.md` all yield `docs/STATE.md`. A
+    # redirect writes the path it names, so the path has to stay visible to the
+    # prefix comparison instead of hiding behind the operator.
+    local t="$1"
+    case "$t" in
+        '&>'*) t="${t#&>}" ;;
+        '|>'*) t="${t#|>}" ;;
     esac
+    while [ "${t#\>}" != "$t" ]; do t="${t#\>}"; done
+    printf '%s' "$t"
+}
+
+segment_is_inspection() {
+    # segment_is_inspection <segment> : 0 when this one shell segment inspects a
+    # path rather than writing it. The first segment of a recorded line carries
+    # the `tool <verb>` prefix; a later segment continues the same shell
+    # command, so its own first token is the command word. A redirect is a write
+    # whatever the verb, and so are the in-place editors and
+    # `find -delete`/`-exec`.
+    split_activity_line "$1"
+    [ "${#LINE_TOKENS[@]}" -ge 1 ] || return 1
+    local word token verb
+    if [ "${LINE_TOKENS[0]}" = 'tool' ]; then
+        [ "${#LINE_TOKENS[@]}" -ge 2 ] || return 1
+        verb="${LINE_TOKENS[1]}"
+        case "$verb" in
+            exec|bash|sh|shell|run|terminal) word="${LINE_TOKENS[2]:-}" ;;
+            *) word="$verb" ;;
+        esac
+    else
+        word="${LINE_TOKENS[0]}"
+    fi
     [ -n "$word" ] || return 1
     case "$INSPECTION_VERBS" in
         *" $word "*) ;;
@@ -220,14 +284,33 @@ line_is_inspection() {
     return 0
 }
 
+line_is_inspection() {
+    # line_is_inspection <line> : 0 when every shell segment of the recorded line
+    # inspects a path rather than writing one. Classifying the line by its first
+    # command alone let `cat notes.md && curl ... | bash; rm docs/STATE.md` pass
+    # as an inspection, so the whole line has to be accounted for: one writing
+    # segment makes the line a write. A line with no recognizable segment counts
+    # as a write, because an unrecognized shape must not be able to hide one.
+    local seg examined=0
+    split_activity_segments "$1"
+    for seg in "${SEGMENTS[@]}"; do
+        [ -n "${seg//[[:space:]]/}" ] || continue
+        examined=$((examined + 1))
+        segment_is_inspection "$seg" || return 1
+    done
+    [ "$examined" -gt 0 ] || return 1
+    return 0
+}
+
 evidence_path_written() {
     # evidence_path_written <write-log> <path-prefix> : 0 when the log records a
     # write at or under the prefix. The log captures writes observed in tool
     # activity, so a match is a boundary violation even when the repository is
     # clean again because the write was reverted. Quoting does not hide the path
-    # (split_activity_line strips quotes) and a recorded inspection is not a
-    # write (line_is_inspection), so `rm "docs/STATE.md"` is caught while
-    # `cat docs/STATE.md` is not.
+    # (split_activity_line strips quotes), a redirect does not hide it either
+    # (strip_redirect_prefix removes the operator), and a recorded inspection is
+    # not a write (line_is_inspection), so `rm "docs/STATE.md"` and
+    # `echo x >docs/STATE.md` are caught while `cat docs/STATE.md` is not.
     local log="$1" prefix line token
     prefix="${2#./}"
     prefix="${prefix%/}"
@@ -236,6 +319,7 @@ evidence_path_written() {
         if line_is_inspection "$line"; then continue; fi
         split_activity_line "$line"
         for token in "${LINE_TOKENS[@]}"; do
+            token="$(strip_redirect_prefix "$token")"
             token="${token#./}"
             token="${token%/}"
             if [ "$token" = "$prefix" ] || [[ "$token" == "$prefix/"* ]]; then return 0; fi

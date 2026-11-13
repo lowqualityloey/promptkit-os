@@ -278,20 +278,84 @@ function Split-ActivityLine {
     return @(Split-OnDelimiters $cleaned '[ \t\n]+' | Where-Object { $_ -ne '' })
 }
 
-function Test-InspectionLine {
-    # True when the recorded line inspects a path rather than writing it. Only
-    # `tool ...` lines are classified; any other shape counts as a write, because
-    # an unrecognized line must not be able to hide one. A redirect is a write
-    # whatever the verb, and so are the in-place editors and `find
-    # -delete`/`-exec`.
+function Split-ActivitySegments {
+    # The line's shell segments, in order. A boundary is `&&`, `||`, `;`, or a
+    # pipe `|`. `&>` and `|>` are redirects rather than boundaries, so they
+    # stay inside the segment that carries them and the path they name stays
+    # visible. A separator inside quotes is literal text, not a boundary:
+    # `grep -n 'a|b' file` is one segment, so an alternation in a pattern cannot
+    # fake a second command. Mirrors split_activity_segments in the Bash twin.
     param([string]$Line)
-    $tokens = @(Split-ActivityLine $Line)
-    if ($tokens.Count -lt 2) { return $false }
-    if ($tokens[0] -cne 'tool') { return $false }
-    $verb = $tokens[1]
-    $word = $verb
-    if (@('exec', 'bash', 'sh', 'shell', 'run', 'terminal') -contains $verb) {
-        $word = if ($tokens.Count -ge 3) { $tokens[2] } else { '' }
+    $segments = New-Object System.Collections.Generic.List[string]
+    $seg = New-Object System.Text.StringBuilder
+    $quote = [char]0
+    $i = 0
+    while ($i -lt $Line.Length) {
+        $ch = $Line[$i]
+        $next = if ($i + 1 -lt $Line.Length) { $Line[$i + 1] } else { [char]0 }
+        if ($quote -ne [char]0) {
+            [void]$seg.Append($ch)
+            if ($ch -eq $quote) { $quote = [char]0 }
+            $i++
+            continue
+        }
+        if ($ch -eq '"' -or $ch -eq "'") {
+            $quote = $ch
+            [void]$seg.Append($ch)
+            $i++
+            continue
+        }
+        if ($ch -eq '&') {
+            if ($next -eq '&') { $segments.Add($seg.ToString()); [void]$seg.Clear(); $i += 2; continue }
+            if ($next -eq '>') { [void]$seg.Append($ch); $i++; continue }
+        }
+        if ($ch -eq '|') {
+            if ($next -eq '|') { $segments.Add($seg.ToString()); [void]$seg.Clear(); $i += 2; continue }
+            if ($next -eq '>') { [void]$seg.Append($ch); $i++; continue }
+            $segments.Add($seg.ToString()); [void]$seg.Clear(); $i++; continue
+        }
+        if ($ch -eq ';') {
+            $segments.Add($seg.ToString()); [void]$seg.Clear(); $i++; continue
+        }
+        [void]$seg.Append($ch)
+        $i++
+    }
+    $segments.Add($seg.ToString())
+    return $segments.ToArray()
+}
+
+function Remove-RedirectPrefix {
+    # The token with any leading redirect operator removed, so `>docs/STATE.md`,
+    # `>>docs/STATE.md`, `&>docs/STATE.md`, and `|>docs/STATE.md` all yield
+    # `docs/STATE.md`. A redirect writes the path it names, so the path has to
+    # stay visible to the prefix comparison instead of hiding behind the operator.
+    param([string]$Token)
+    $t = $Token
+    if ($t.StartsWith('&>', [StringComparison]::Ordinal)) { $t = $t.Substring(2) }
+    elseif ($t.StartsWith('|>', [StringComparison]::Ordinal)) { $t = $t.Substring(2) }
+    while ($t.StartsWith('>', [StringComparison]::Ordinal)) { $t = $t.Substring(1) }
+    return $t
+}
+
+function Test-InspectionSegment {
+    # True when this one shell segment inspects a path rather than writing it.
+    # The first segment of a recorded line carries the `tool <verb>` prefix; a
+    # later segment continues the same shell command, so its own first token is
+    # the command word. A redirect is a write whatever the verb, and so are the
+    # in-place editors and `find -delete`/`-exec`.
+    param([string]$Segment)
+    $tokens = @(Split-ActivityLine $Segment)
+    if ($tokens.Count -lt 1) { return $false }
+    $word = ''
+    if ($tokens[0] -ceq 'tool') {
+        if ($tokens.Count -lt 2) { return $false }
+        $verb = $tokens[1]
+        $word = $verb
+        if (@('exec', 'bash', 'sh', 'shell', 'run', 'terminal') -contains $verb) {
+            $word = if ($tokens.Count -ge 3) { $tokens[2] } else { '' }
+        }
+    } else {
+        $word = $tokens[0]
     }
     if ($word -eq '') { return $false }
     if (-not ($script:InspectionVerbs -contains $word)) { return $false }
@@ -314,6 +378,23 @@ function Test-InspectionLine {
     return $true
 }
 
+function Test-InspectionLine {
+    # True when every shell segment of the recorded line inspects a path rather
+    # than writing one. Classifying the line by its first command alone let
+    # `cat notes.md && curl ... | bash; rm docs/STATE.md` pass as an inspection,
+    # so the whole line has to be accounted for: one writing segment makes the
+    # line a write. A line with no recognizable segment counts as a write,
+    # because an unrecognized shape must not be able to hide one.
+    param([string]$Line)
+    $examined = 0
+    foreach ($segment in @(Split-ActivitySegments $Line)) {
+        if ($segment.Trim() -eq '') { continue }
+        $examined++
+        if (-not (Test-InspectionSegment $segment)) { return $false }
+    }
+    return ($examined -gt 0)
+}
+
 function Test-EvidencePathWritten {
     # True when the log records a write at or under the prefix. The log captures
     # writes observed in tool activity, so a match is a boundary violation even
@@ -329,7 +410,7 @@ function Test-EvidencePathWritten {
     foreach ($line in Get-Content -LiteralPath $Log) {
         if (Test-InspectionLine $line) { continue }
         foreach ($token in @(Split-ActivityLine $line)) {
-            $t = $token
+            $t = Remove-RedirectPrefix $token
             if ($t.StartsWith('./', [StringComparison]::Ordinal)) { $t = $t.Substring(2) }
             if ($t.EndsWith('/')) { $t = $t.Substring(0, $t.Length - 1) }
             if ($t -ceq $prefix) { return $true }
