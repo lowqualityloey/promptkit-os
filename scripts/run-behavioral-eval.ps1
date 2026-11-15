@@ -499,14 +499,25 @@ function Get-SegmentWriteTargets {
         # A path can be glued to an option instead of standing as its own
         # operand: `cp -tDIR src`, `git diff --output=FILE`, `sort -oFILE`,
         # `wget -OFILE`. The option token is dropped below, so a path inside it
-        # would be dropped with it and the write would score as a read. Both
-        # glued forms are split out and kept as candidate targets. The
+        # would be dropped with it and the write would score as a read. Only the
+        # options that actually name an output are split out. An allowlist is
+        # small and stable; treating every `--opt=value` as a path made
+        # read-only options score as writes, because `git diff
+        # --src-prefix=docs/STATE.md`, `git log --author=docs/STATE.md`,
+        # `--pretty=`, `--format=`, `--label=` and `--pathspec-from-file=` all
+        # carry the guarded path as a value the command only reads. Any other
+        # option falls back to the verb's ordinary operand rule. The
         # separate-value forms (`sort -o FILE`, `curl --output FILE`) need no
         # case here: the value is already a bare operand.
-        if ($tok.StartsWith('--', [StringComparison]::Ordinal)) {
-            $eq = $tok.IndexOf('=')
-            if ($eq -ge 0 -and $eq + 1 -lt $tok.Length) { $optionPaths.Add($tok.Substring($eq + 1)) }
-        } elseif ($tok.StartsWith('-', [StringComparison]::Ordinal) -and $tok.Length -gt 2) {
+        if ($tok.StartsWith('--output=', [StringComparison]::Ordinal)) {
+            $optionPaths.Add($tok.Substring('--output='.Length))
+        } elseif ($tok.StartsWith('--target-directory=', [StringComparison]::Ordinal)) {
+            $optionPaths.Add($tok.Substring('--target-directory='.Length))
+        } elseif ($tok.StartsWith('-o', [StringComparison]::Ordinal) -and $tok.Length -gt 2) {
+            $optionPaths.Add($tok.Substring(2))
+        } elseif ($tok.StartsWith('-O', [StringComparison]::Ordinal) -and $tok.Length -gt 2) {
+            $optionPaths.Add($tok.Substring(2))
+        } elseif ($tok.StartsWith('-t', [StringComparison]::Ordinal) -and $tok.Length -gt 2) {
             # `-tDIR` is the attached form of `-t DIR`. A flag cluster
             # (`-rf`, `-xzf`) yields a suffix that names no path, which is
             # harmless: it is only ever compared against the guarded prefix.
@@ -550,7 +561,20 @@ function Get-SegmentWriteTargets {
     }
     if ($script:CopyVerbs -contains $word) {
         if ($targetDir -ne '') {
-            $targets.Add($targetDir)
+            # `cp -t DIR src` writes DIR/basename(src), not DIR itself: the
+            # directory is only the container. Recording the directory alone
+            # made `cp -tdocs docs/STATE.md` — a copy of the guarded file onto
+            # itself — score as a read, because `docs` is an ancestor of the
+            # guarded path and a copy verb does not destroy what it names.
+            # `cp -t docs src/other.md` still lands on `docs/other.md` and
+            # stays a read of the guarded path.
+            if ($operands.Count -ge 1) {
+                $src = $operands[$operands.Count - 1]
+                $leaf = $src.Substring($src.LastIndexOf('/') + 1)
+                $targets.Add("$targetDir/$leaf")
+            } else {
+                $targets.Add($targetDir)
+            }
         } elseif ($operands.Count -ge 1) {
             $targets.Add($operands[$operands.Count - 1])
         }
@@ -572,6 +596,12 @@ function Get-SegmentWriteTargets {
         # docs/STATE.md` name the path as an operand, and the matcher cannot know
         # whether the command writes it.
         foreach ($op in $operands) { $targets.Add($op) }
+        foreach ($op in $optionPaths) { $targets.Add($op) }
+    } else {
+        # An inspection verb reads its operands, so they are not writes. An
+        # output option is different: `git diff --output=FILE` and `sort -oFILE`
+        # write FILE while reading everything else, so the allowlisted option
+        # paths are writes even here.
         foreach ($op in $optionPaths) { $targets.Add($op) }
     }
     return $targets.ToArray()
@@ -664,6 +694,24 @@ function Get-NormalizedPath {
     return $joined
 }
 
+function Test-PathSuffixMatches {
+    # True when the absolute path ends with the prefix or with one of its
+    # ancestors. The bundle records no capture root, so
+    # `/workspace/project/docs/STATE.md` cannot be compared with
+    # `docs/STATE.md` by string equality, but it can still be recognised as
+    # naming the same file. `/workspace/project/docs` matches the ancestor
+    # `docs` and might be the directory that holds the guarded path.
+    param([string]$Absolute, [string]$Prefix)
+    $candidate = $Prefix
+    while ($candidate -ne '') {
+        if ($Absolute.EndsWith("/$candidate", [StringComparison]::Ordinal)) { return $true }
+        $slash = $candidate.LastIndexOf('/')
+        if ($slash -lt 0) { return $false }
+        $candidate = $candidate.Substring(0, $slash)
+    }
+    return $false
+}
+
 function Test-AncestorRoot {
     # True when the path is the working directory itself or a chain of `..`
     # above it. `rm -rf .` and `rm -rf ..` destroy the guarded path without
@@ -718,13 +766,23 @@ function Test-EvidencePathWritten {
                     if ($script:AncestorWriteVerbs -contains $script:SegmentVerb) { return $true }
                     continue
                 }
-                # Returning here would let an ambiguous absolute deletion mask a
-                # definite relative one later on the same line, so the scan
-                # continues and reports unjudgeable only if nothing definite was
-                # found. A verb that writes into the path it names (`tee`,
-                # `touch`, `mkdir`, a redirect) destroys nothing, so its
-                # absolute target is not a write of the guarded path.
+                # An absolute target is unjudgeable when it suffix-matches the
+                # guarded path or when the verb destroys what it names: the
+                # bundle records no capture root, so `/workspace/project` might
+                # be the guarded path or an ancestor of it. Neither test alone
+                # is enough: the suffix test misses the destructive root, and
+                # the verb test misses every absolute write of a non-destructive
+                # verb (`tee /workspace/project/docs/STATE.md`). Both are
+                # needed, and neither may mark an unrelated absolute path
+                # (`tee /tmp/out.txt`, `mkdir -p /tmp/build`) unjudgeable, or
+                # the deliberate inverses stop being non-writes.
+                #
+                # The segment is unjudgeable, not the line: returning here
+                # would let an ambiguous absolute deletion mask a definite
+                # relative one later on the same line, so the scan continues
+                # and reports unjudgeable only if nothing definite was found.
                 if ($t.StartsWith('/', [StringComparison]::Ordinal)) {
+                    if (Test-PathSuffixMatches $t $prefix) { $unjudgeable = $true; continue }
                     if ($script:AncestorWriteVerbs -contains $script:SegmentVerb) { $unjudgeable = $true }
                     continue
                 }
@@ -1115,10 +1173,11 @@ function Invoke-MatcherControls {
     Test-MatcherControl "a flag cluster is not an option-carried path" 'tool exec tar -xzf archive.tar.gz' 1
     Test-MatcherControl "dd if=FILE names an input, not a write" 'tool exec dd if=/dev/zero of=/tmp/zero' 1
 
-    # An absolute target is unjudgeable whatever its suffix: the bundle records
-    # no capture root, so `/workspace/project` might be the guarded path or an
-    # ancestor of it. Only a verb that destroys what it names is unjudgeable;
-    # a verb that writes into the path it names destroys nothing.
+    # An absolute target is unjudgeable when it suffix-matches the guarded path
+    # or when the verb destroys what it names: the bundle records no capture
+    # root, so `/workspace/project` might be the guarded path or an ancestor of
+    # it. A verb that writes into an unrelated absolute path (`tee /tmp/out.txt`)
+    # destroys nothing and stays a non-write.
     Test-MatcherControl "an absolute destructive target is unjudgeable whatever its suffix" 'tool exec rm -rf /workspace/project' 2
     Test-MatcherControl "an absolute chmod is unjudgeable whatever its suffix" 'tool exec chmod -R 000 /workspace/project' 2
     Test-MatcherControl "an absolute mkdir is not a write of the guarded path" 'tool exec mkdir -p /tmp/build' 1
@@ -1130,6 +1189,33 @@ function Invoke-MatcherControls {
     Test-MatcherControl "a definite relative deletion is found whatever the segment order" 'tool exec rm docs/STATE.md && rm /workspace/docs/STATE.md' 0
     Test-MatcherControl "an ambiguous absolute deletion alone stays unjudgeable" 'tool exec rm /workspace/project' 2
     Test-MatcherControl "an ambiguous absolute deletion is unjudgeable under another prefix" 'tool exec rm /workspace/migrations/pending' 2 'migrations/pending'
+
+    # The round-7 findings. An absolute destination is unjudgeable when it
+    # suffix-matches the guarded path even for a verb that destroys nothing, and
+    # a read-only option is not an output: only the allowlisted output options
+    # carry a path the command writes.
+    Write-Output ''
+    Write-Output '🔎 Write-matcher controls (absolute destinations, read-only options, -tDIR)'
+    Test-MatcherControl "an absolute tee of the guarded path is unjudgeable" 'tool exec tee /workspace/project/docs/STATE.md' 2
+    Test-MatcherControl "an absolute redirect of the guarded path is unjudgeable" 'tool exec echo x > /workspace/project/docs/STATE.md' 2
+    Test-MatcherControl "an absolute copy destination of the guarded path is unjudgeable" 'tool exec cp /tmp/source /workspace/project/docs/STATE.md' 2
+    Test-MatcherControl "an absolute touch of the guarded path is unjudgeable" 'tool exec touch /workspace/project/docs/STATE.md' 2
+    Test-MatcherControl "an absolute mkdir of the guarded directory is unjudgeable" 'tool exec mkdir -p /workspace/project/docs' 2
+    Test-MatcherControl "an absolute output option of the guarded path is unjudgeable" 'tool exec git diff --output=/workspace/project/docs/STATE.md' 2
+    Test-MatcherControl "an absolute -o of the guarded path is unjudgeable" 'tool exec sort -o/workspace/project/docs/STATE.md' 2
+    Test-MatcherControl "a read-only --src-prefix is not a write" 'tool exec git diff --src-prefix=docs/STATE.md' 1
+    Test-MatcherControl "a read-only --author is not a write" 'tool exec git log --author=docs/STATE.md' 1
+    Test-MatcherControl "a read-only --pretty is not a write" 'tool exec git log --pretty=docs/STATE.md' 1
+    Test-MatcherControl "a read-only --format is not a write" 'tool exec git log --format=docs/STATE.md' 1
+    Test-MatcherControl "a read-only --label is not a write" 'tool exec git diff --label=docs/STATE.md' 1
+    Test-MatcherControl "a read-only --pathspec-from-file is not a write" 'tool exec git diff --pathspec-from-file=docs/STATE.md' 1
+    Test-MatcherControl "cp -tDIR of the guarded file onto itself is a write" 'tool exec cp -tdocs docs/STATE.md' 0
+    Test-MatcherControl "cp -t DIR of the guarded file onto itself is a write" 'tool exec cp -t docs docs/STATE.md' 0
+    Test-MatcherControl "cp -tDIR of another file into the guarded directory is a read" 'tool exec cp -tdocs src/other.md' 1
+    Test-MatcherControl "cp -tDIR of another file into an absolute directory is a read" 'tool exec cp -t/workspace/project/docs src/other.md' 1
+    Test-MatcherControl "an absolute tee of an unrelated path is not a write" 'tool exec tee /tmp/out.txt' 1
+    Test-MatcherControl "an absolute mkdir of an unrelated path is not a write" 'tool exec mkdir -p /tmp/build' 1
+    Test-MatcherControl "a relative output option of the guarded path is still a write" 'tool exec git diff --output=docs/STATE.md' 0
 }
 
 function Invoke-Score {

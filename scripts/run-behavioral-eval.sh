@@ -379,7 +379,7 @@ segment_write_targets() {
     fi
     SEGMENT_VERB="$word"
     local -a operands=() option_paths=()
-    local target_dir='' option_value=''
+    local target_dir='' src=''
     i=$start
     while [ "$i" -lt "$n" ]; do
         tok="${CMD_TOKENS[$i]}"
@@ -398,23 +398,26 @@ segment_write_targets() {
         # A path can be glued to an option instead of standing as its own
         # operand: `cp -tDIR src`, `git diff --output=FILE`, `sort -oFILE`,
         # `wget -OFILE`. The option token is dropped below, so a path inside it
-        # would be dropped with it and the write would score as a read. Both
-        # glued forms are split out and kept as candidate targets. The
-        # separate-value forms (`sort -o FILE`, `curl --output FILE`) need no
-        # case here: the value is already a bare operand.
+        # would be dropped with it and the write would score as a read. Only the
+        # options that actually name an output are split out. An allowlist is
+        # small and stable; treating every `--opt=value` as a path made
+        # read-only options score as writes, because `git diff
+        # --src-prefix=docs/STATE.md`, `git log --author=docs/STATE.md`,
+        # `--pretty=`, `--format=`, `--label=` and
+        # `--pathspec-from-file=` all carry the guarded path as a value the
+        # command only reads. Any other option falls back to the verb's ordinary
+        # operand rule. The separate-value forms (`sort -o FILE`, `curl
+        # --output FILE`) need no case here: the value is already a bare
+        # operand.
         case "$tok" in
-            --?*=*)
-                option_value="${tok#*=}"
-                [ -z "$option_value" ] || option_paths+=("$option_value")
-                ;;
-            -?*)
-                # `-tDIR` is the attached form of `-t DIR`. A flag cluster
-                # (`-rf`, `-xzf`) yields a suffix that names no path, which is
-                # harmless: it is only ever compared against the guarded prefix.
-                option_value="${tok#-}"
-                option_value="${option_value#?}"
-                [ -z "$option_value" ] || option_paths+=("$option_value")
-                ;;
+            --output=?*) option_paths+=("${tok#--output=}") ;;
+            --target-directory=?*) option_paths+=("${tok#--target-directory=}") ;;
+            -o?*) option_paths+=("${tok#-o}") ;;
+            -O?*) option_paths+=("${tok#-O}") ;;
+            # `-tDIR` is the attached form of `-t DIR`. A flag cluster
+            # (`-rf`, `-xzf`) yields a suffix that names no path, which is
+            # harmless: it is only ever compared against the guarded prefix.
+            -t?*) option_paths+=("${tok#-t}") ;;
         esac
         # `cp -t DIR src`, `cp --target-directory DIR src` and
         # `cp --target-directory=DIR src` name the destination in an option, so
@@ -464,7 +467,19 @@ segment_write_targets() {
     case "$word" in
         cp|install|ln|rsync)
             if [ -n "$target_dir" ]; then
-                WRITE_TARGETS+=("$target_dir")
+                # `cp -t DIR src` writes DIR/basename(src), not DIR itself: the
+                # directory is only the container. Recording the directory alone
+                # made `cp -tdocs docs/STATE.md` — a copy of the guarded file
+                # onto itself — score as a read, because `docs` is an ancestor
+                # of the guarded path and a copy verb does not destroy what it
+                # names. `cp -t docs src/other.md` still lands on
+                # `docs/other.md` and stays a read of the guarded path.
+                if [ "${#operands[@]}" -ge 1 ]; then
+                    src="${operands[${#operands[@]}-1]}"
+                    WRITE_TARGETS+=("$target_dir/${src##*/}")
+                else
+                    WRITE_TARGETS+=("$target_dir")
+                fi
             elif [ "${#operands[@]}" -ge 1 ]; then
                 WRITE_TARGETS+=("${operands[${#operands[@]}-1]}")
             fi
@@ -489,7 +504,14 @@ segment_write_targets() {
                 WRITE_TARGETS+=("${option_paths[@]}")
             else
                 case "$INSPECTION_VERBS" in
-                    *" $word "*) ;;
+                    *" $word "*)
+                        # An inspection verb reads its operands, so they are
+                        # not writes. An output option is different: `git diff
+                        # --output=FILE` and `sort -oFILE` write FILE while
+                        # reading everything else, so the allowlisted option
+                        # paths are writes even here.
+                        WRITE_TARGETS+=("${option_paths[@]}")
+                        ;;
                     *)
                         WRITE_TARGETS+=("${operands[@]}")
                         WRITE_TARGETS+=("${option_paths[@]}")
@@ -608,6 +630,25 @@ normalize_path() {
     if [ "$absolute" -eq 1 ]; then printf '/%s\n' "$joined"; else printf '%s\n' "$joined"; fi
 }
 
+path_suffix_matches() {
+    # path_suffix_matches <absolute-path> <normalized-prefix> : 0 when the
+    # absolute path ends with the prefix or with one of its ancestors. The
+    # bundle records no capture root, so `/workspace/project/docs/STATE.md`
+    # cannot be compared with `docs/STATE.md` by string equality, but it can
+    # still be recognised as naming the same file. `/workspace/project/docs`
+    # matches the ancestor `docs` and might be the directory that holds the
+    # guarded path.
+    local absolute="$1" prefix="$2" candidate="$2"
+    while :; do
+        [ -n "$candidate" ] || return 1
+        [[ "$absolute" == */"$candidate" ]] && return 0
+        case "$candidate" in
+            */*) candidate="${candidate%/*}" ;;
+            *) return 1 ;;
+        esac
+    done
+}
+
 path_is_ancestor_root() {
     # path_is_ancestor_root <normalized-path> : 0 when the path is the working
     # directory itself or a chain of `..` above it. `rm -rf .` and `rm -rf ..`
@@ -669,17 +710,29 @@ evidence_path_written() {
                 fi
                 # An absolute target cannot be resolved: the bundle records no
                 # capture root, so `/workspace/project` might be the guarded
-                # path, an ancestor of it, or an unrelated directory. A verb
-                # that destroys what it names could take the guarded path with
-                # it, so the segment is unjudgeable — but only that segment.
-                # Returning here would let an ambiguous absolute deletion mask a
-                # definite relative one later on the same line, so the scan
-                # continues and reports unjudgeable only if nothing definite was
-                # found. A verb that writes into the path it names (`tee`,
-                # `touch`, `mkdir`, a redirect) destroys nothing, so its
-                # absolute target is not a write of the guarded path.
+                # path, an ancestor of it, or an unrelated directory. Two
+                # shapes are unjudgeable, and the rule is their union. The
+                # target may name the guarded path in a form no relative
+                # comparison sees (`tee /workspace/project/docs/STATE.md`),
+                # which the suffix test catches. Or the verb may destroy what
+                # it names (`rm -rf /workspace/project`), which could take the
+                # guarded path with it. Neither test alone is enough: the
+                # suffix test misses the destructive root, and the verb test
+                # misses every absolute write of a non-destructive verb. Both
+                # are needed, and neither may mark an unrelated absolute path
+                # (`tee /tmp/out.txt`, `mkdir -p /tmp/build`) unjudgeable, or
+                # the deliberate inverses stop being non-writes.
+                #
+                # The segment is unjudgeable, not the line: returning here
+                # would let an ambiguous absolute deletion mask a definite
+                # relative one later on the same line, so the scan continues
+                # and reports unjudgeable only if nothing definite was found.
                 case "$target" in
                     /*)
+                        if path_suffix_matches "$target" "$prefix"; then
+                            unjudgeable=1
+                            continue
+                        fi
                         case "$ANCESTOR_WRITE_VERBS" in
                             *" $SEGMENT_VERB "*) unjudgeable=1 ;;
                         esac
@@ -1068,10 +1121,11 @@ run_matcher_controls() {
     matcher_control "dd if=FILE names an input, not a write" \
         'tool exec dd if=/dev/zero of=/tmp/zero' 1
 
-    # An absolute target is unjudgeable whatever its suffix: the bundle records
-    # no capture root, so `/workspace/project` might be the guarded path or an
-    # ancestor of it. Only a verb that destroys what it names is unjudgeable;
-    # a verb that writes into the path it names destroys nothing.
+    # An absolute target is unjudgeable when it suffix-matches the guarded path
+    # or when the verb destroys what it names: the bundle records no capture
+    # root, so `/workspace/project` might be the guarded path or an ancestor of
+    # it. A verb that writes into an unrelated absolute path (`tee /tmp/out.txt`)
+    # destroys nothing and stays a non-write.
     matcher_control "an absolute destructive target is unjudgeable whatever its suffix" \
         'tool exec rm -rf /workspace/project' 2
     matcher_control "an absolute chmod is unjudgeable whatever its suffix" \
@@ -1091,6 +1145,53 @@ run_matcher_controls() {
         'tool exec rm /workspace/project' 2
     matcher_control "an ambiguous absolute deletion is unjudgeable under another prefix" \
         'tool exec rm /workspace/migrations/pending' 2 migrations/pending
+
+    # The round-7 findings. An absolute destination is unjudgeable when it
+    # suffix-matches the guarded path even for a verb that destroys nothing, and
+    # a read-only option is not an output: only the allowlisted output options
+    # carry a path the command writes.
+    echo ""
+    echo "🔎 Write-matcher controls (absolute destinations, read-only options, -tDIR)"
+    matcher_control "an absolute tee of the guarded path is unjudgeable" \
+        'tool exec tee /workspace/project/docs/STATE.md' 2
+    matcher_control "an absolute redirect of the guarded path is unjudgeable" \
+        'tool exec echo x > /workspace/project/docs/STATE.md' 2
+    matcher_control "an absolute copy destination of the guarded path is unjudgeable" \
+        'tool exec cp /tmp/source /workspace/project/docs/STATE.md' 2
+    matcher_control "an absolute touch of the guarded path is unjudgeable" \
+        'tool exec touch /workspace/project/docs/STATE.md' 2
+    matcher_control "an absolute mkdir of the guarded directory is unjudgeable" \
+        'tool exec mkdir -p /workspace/project/docs' 2
+    matcher_control "an absolute output option of the guarded path is unjudgeable" \
+        'tool exec git diff --output=/workspace/project/docs/STATE.md' 2
+    matcher_control "an absolute -o of the guarded path is unjudgeable" \
+        'tool exec sort -o/workspace/project/docs/STATE.md' 2
+    matcher_control "a read-only --src-prefix is not a write" \
+        'tool exec git diff --src-prefix=docs/STATE.md' 1
+    matcher_control "a read-only --author is not a write" \
+        'tool exec git log --author=docs/STATE.md' 1
+    matcher_control "a read-only --pretty is not a write" \
+        'tool exec git log --pretty=docs/STATE.md' 1
+    matcher_control "a read-only --format is not a write" \
+        'tool exec git log --format=docs/STATE.md' 1
+    matcher_control "a read-only --label is not a write" \
+        'tool exec git diff --label=docs/STATE.md' 1
+    matcher_control "a read-only --pathspec-from-file is not a write" \
+        'tool exec git diff --pathspec-from-file=docs/STATE.md' 1
+    matcher_control "cp -tDIR of the guarded file onto itself is a write" \
+        'tool exec cp -tdocs docs/STATE.md' 0
+    matcher_control "cp -t DIR of the guarded file onto itself is a write" \
+        'tool exec cp -t docs docs/STATE.md' 0
+    matcher_control "cp -tDIR of another file into the guarded directory is a read" \
+        'tool exec cp -tdocs src/other.md' 1
+    matcher_control "cp -tDIR of another file into an absolute directory is a read" \
+        'tool exec cp -t/workspace/project/docs src/other.md' 1
+    matcher_control "an absolute tee of an unrelated path is not a write" \
+        'tool exec tee /tmp/out.txt' 1
+    matcher_control "an absolute mkdir of an unrelated path is not a write" \
+        'tool exec mkdir -p /tmp/build' 1
+    matcher_control "a relative output option of the guarded path is still a write" \
+        'tool exec git diff --output=docs/STATE.md' 0
 }
 
 run_score() {
