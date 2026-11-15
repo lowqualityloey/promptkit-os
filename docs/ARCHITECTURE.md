@@ -398,7 +398,7 @@ promptkit-os/
 │   ├── check-doctor.ps1                # PowerShell: pk:doctor installed-governance audit engine
 │   ├── run-behavioral-eval.sh          # Bash: Prompt-compliance eval harness + offline self-test
 │   ├── run-behavioral-eval.ps1         # PowerShell: Prompt-compliance eval harness + offline self-test
-│   ├── tests/eval-scenarios/           # Eval rubric scenarios with embedded fixtures (34)
+│   ├── tests/eval-scenarios/           # Eval rubric scenarios with embedded fixtures (35)
 │   ├── setup-github-labels.sh          # Bash: Provision standardized GitHub labels (priority, type, area)
 │   ├── setup-github-labels.ps1         # PowerShell: Provision standardized GitHub labels (priority, type, area)
 │   ├── validate-references.sh          # Bash: Check all workflow→template references
