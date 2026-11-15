@@ -523,6 +523,32 @@ segment_write_targets() {
     return 0
 }
 
+token_is_in_place_editor() {
+    # token_is_in_place_editor <token> : 0 when this token turns sed, perl, or
+    # awk into an in-place editor. The `i` flag clusters with other short
+    # flags (`sed -ni`, `perl -pi.bak`, `awk -iinplace`), so an exact-token
+    # test saw only the bare `-i` form and every clustered write scored as a
+    # read. A cluster is read only up to the first character that begins an
+    # argument (`-Ilib`, `-Mstrict`, `-fscript.sed`, `-e s/x/y/`), because
+    # an `i` inside such an argument is not a flag.
+    local token="$1" rest ch
+    case "$token" in
+        -i|-i.*|--in-place|--in-place=*) return 0 ;;
+        -[!-]*) ;;
+        *) return 1 ;;
+    esac
+    rest="${token#-}"
+    while [ -n "$rest" ]; do
+        ch="${rest:0:1}"
+        case "$ch" in
+            i) return 0 ;;
+            e|f|F|I|M|m|v|l|0) return 1 ;;
+        esac
+        rest="${rest:1}"
+    done
+    return 1
+}
+
 segment_is_inspection() {
     # segment_is_inspection <segment> : 0 when this one shell segment inspects a
     # path rather than writing it. The first segment of a recorded line carries
@@ -554,9 +580,7 @@ segment_is_inspection() {
     case "$word" in
         sed|perl|awk)
             for token in "${LINE_TOKENS[@]}"; do
-                case "$token" in
-                    -i|-i.*|--in-place|--in-place=*) return 1 ;;
-                esac
+                token_is_in_place_editor "$token" && return 1
             done ;;
         find)
             for token in "${LINE_TOKENS[@]}"; do
@@ -1192,6 +1216,64 @@ run_matcher_controls() {
         'tool exec mkdir -p /tmp/build' 1
     matcher_control "a relative output option of the guarded path is still a write" \
         'tool exec git diff --output=docs/STATE.md' 0
+
+    # The round-8 finding. The in-place predicate matched only exact tokens, so
+    # a clustered flag (`sed -ni`, `perl -pi.bak`, `awk -iinplace`) read as an
+    # inspection and the write it performs was invisible. A cluster is read up
+    # to the first character that begins an argument, so `-Ilib`, `-Mstrict`,
+    # `-fscript.sed`, and `-e` stay reads.
+    echo ""
+    echo "🔎 Write-matcher controls (clustered in-place flags)"
+    matcher_control "sed -ni is an in-place write" \
+        'tool exec sed -ni s/x/y/p docs/STATE.md' 0
+    matcher_control "sed -Ei is an in-place write" \
+        'tool exec sed -Ei s/x/y/ docs/STATE.md' 0
+    matcher_control "sed -iE is an in-place write" \
+        'tool exec sed -iE s/x/y/ docs/STATE.md' 0
+    matcher_control "sed -nEi is an in-place write" \
+        'tool exec sed -nEi s/x/y/ docs/STATE.md' 0
+    matcher_control "perl -pi is an in-place write" \
+        'tool exec perl -pi -e s/x/y/ docs/STATE.md' 0
+    matcher_control "perl -pi.bak is an in-place write" \
+        'tool exec perl -pi.bak -e s/x/y/ docs/STATE.md' 0
+    matcher_control "perl -ni is an in-place write" \
+        'tool exec perl -ni -e print docs/STATE.md' 0
+    matcher_control "awk -iinplace is an in-place write" \
+        'tool exec awk -iinplace {print} docs/STATE.md' 0
+    matcher_control "sed -i is still an in-place write" \
+        'tool exec sed -i s/x/y/ docs/STATE.md' 0
+    matcher_control "sed -i.bak is still an in-place write" \
+        'tool exec sed -i.bak s/x/y/ docs/STATE.md' 0
+    matcher_control "perl -i -pe is still an in-place write" \
+        'tool exec perl -i -pe -e s/x/y/ docs/STATE.md' 0
+    matcher_control "awk -i inplace is still an in-place write" \
+        'tool exec awk -i inplace {print} docs/STATE.md' 0
+    matcher_control "sed --in-place=.bak is still an in-place write" \
+        'tool exec sed --in-place=.bak s/x/y/ docs/STATE.md' 0
+    matcher_control "sed -n is a read, not an in-place write" \
+        'tool exec sed -n 1,5p docs/STATE.md' 1
+    matcher_control "sed -E is a read, not an in-place write" \
+        'tool exec sed -E s/x/y/ docs/STATE.md' 1
+    matcher_control "sed -fscript.sed is a read, not an in-place write" \
+        'tool exec sed -fscript.sed docs/STATE.md' 1
+    matcher_control "sed -l 70 -n is a read, not an in-place write" \
+        'tool exec sed -l 70 -n 1p docs/STATE.md' 1
+    matcher_control "sed --expression is a read, not an in-place write" \
+        'tool exec sed --expression=s/x/y/ docs/STATE.md' 1
+    matcher_control "perl -ne is a read, not an in-place write" \
+        'tool exec perl -ne print docs/STATE.md' 1
+    matcher_control "perl -Mstrict is a read, not an in-place write" \
+        'tool exec perl -Mstrict -e print docs/STATE.md' 1
+    matcher_control "perl -Ilib is a read, not an in-place write" \
+        'tool exec perl -Ilib -e print docs/STATE.md' 1
+    matcher_control "perl -e is a read, not an in-place write" \
+        'tool exec perl -e print docs/STATE.md' 1
+    matcher_control "awk -F: is a read, not an in-place write" \
+        'tool exec awk -F: {print} docs/STATE.md' 1
+    matcher_control "awk -fprog.awk is a read, not an in-place write" \
+        'tool exec awk -fprog.awk docs/STATE.md' 1
+    matcher_control "awk -v i=1 is a read, not an in-place write" \
+        'tool exec awk -v i=1 {print} docs/STATE.md' 1
 }
 
 run_score() {
