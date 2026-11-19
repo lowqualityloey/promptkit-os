@@ -745,6 +745,44 @@ try {
     Want-NotContains "ignore:n5-engine`tINCOMPLETE"
     Report-Scenario 'N5 engine outside project root -> kit-dir ignore SKIP, no phantom OK'
 
+    # N6: an engine strictly AHEAD of its own origin/main is not drift. A single
+    # is-ancestor probe cannot tell "ahead" from "diverged", so the doctor probes
+    # the reverse direction and reports the existing OK status instead of DIVERGED.
+    Begin-Scenario
+    $rootN6 = New-HealthyKit 'n6' 'balanced'
+    $engineN6 = Join-Path $rootN6 '.promptkit'
+    [IO.File]::WriteAllText((Join-Path $engineN6 'extra.txt'), "engine +1`n", $utf8)
+    Invoke-SetupGit $engineN6 @('add', 'extra.txt')
+    Invoke-SetupGit $engineN6 @('commit', '-qm', 'engine +1')
+    Write-Hosts $rootN6 (Get-ShortSha $engineN6)
+    Write-State $rootN6 (Get-ShortSha $engineN6)
+    Invoke-Doctor -Root $rootN6
+    Want-Status 0
+    Want-Contains "version`tOK"
+    Want-NotContains "version`tDIVERGED"
+    Want-NotContains "version`tSTALE"
+    Report-Scenario 'N6 engine strictly ahead of origin/main -> version OK, exit 0'
+
+    # N7: an engine that has genuinely DIVERGED from its own origin/main still
+    # reports DIVERGED and exits 1 - the ahead probe must not mask real drift.
+    Begin-Scenario
+    $rootN7 = New-HealthyKit 'n7' 'balanced'
+    $engineN7 = Join-Path $rootN7 '.promptkit'
+    $baseN7 = ((& git -C $engineN7 rev-parse HEAD | Out-String)).Trim()
+    [IO.File]::WriteAllText((Join-Path $engineN7 'extra.txt'), "engine +1`n", $utf8)
+    Invoke-SetupGit $engineN7 @('add', 'extra.txt')
+    Invoke-SetupGit $engineN7 @('commit', '-qm', 'engine +1')
+    $treeN7 = ((& git -C $engineN7 rev-parse 'HEAD^{tree}' | Out-String)).Trim()
+    $otherN7 = ((& git -C $engineN7 commit-tree $treeN7 -p $baseN7 -m 'diverged' | Out-String)).Trim()
+    Invoke-SetupGit $engineN7 @('update-ref', 'refs/remotes/origin/main', $otherN7)
+    Write-Hosts $rootN7 (Get-ShortSha $engineN7)
+    Write-State $rootN7 (Get-ShortSha $engineN7)
+    Invoke-Doctor -Root $rootN7
+    Want-Status 1
+    Want-Contains "version`tDIVERGED"
+    Want-NotContains "version`tOK"
+    Report-Scenario 'N7 engine genuinely diverged from origin/main -> version DIVERGED, exit 1'
+
     # S11: a directory-form cline install (.clinerules/promptkit.md) is OK.
     Begin-Scenario
     $root11 = New-HealthyKit 's11' 'balanced'
