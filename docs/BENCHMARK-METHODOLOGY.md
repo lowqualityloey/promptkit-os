@@ -21,7 +21,7 @@ In an unconstrained agent environment, the primary driver of cost is not the siz
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-PromptKit OS replaces this spiral with a **deterministic engineering control plane**:
+PromptKit OS replaces this spiral with a **deterministic advisory protocol layer**:
 1. **JIT Stack Knowledge**: Loads ecosystem-specific invariants ($\le 1,500$ tokens) before editing begins.
 2. **Task Ceremony Tiering (L0–L3)**: Aligns verification and planning overhead to real risk.
 3. **Evidence-Gated Verification**: Requires verifiable execution proof (`exit code = 0`) before progress is acknowledged.
