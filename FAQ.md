@@ -506,9 +506,9 @@ For complete line-by-line token breakdowns and mathematical analysis, see [docs/
 
 ## 15. How does PromptKit OS prevent tests or migrations from modifying foreign databases on my host?
 
-**Short Answer**: PromptKit OS enforces a strict **Project Database & Harness Isolation** guardrail across all database and testing workflows.
+**Short Answer**: PromptKit OS ships a strict **Project Database & Harness Isolation** guardrail as an advisory agent instruction across all database and testing workflows. It is not a runtime control — PromptKit cannot mechanically prevent a test or migration from reaching a foreign database.
 
-**How isolation is enforced**:
+**What the isolation guardrail directs**:
 - **Project-Scoped Containers**: Database operations (`pk:data`), schema migrations, seeders, and integration test runners (`pk:test`) are strictly prohibited from attaching to shared or foreign host containers (e.g. `api-db-1` or sibling project instances like `jobtracker`).
 - **Explicit Harness Targets**: Test and migration commands must target project-scoped instances (such as `./docker-compose.yml` or dedicated `project-db` containers defined in `PROMPTKIT.md` / `.env.test`).
 - **Accidental Contamination Guardrails**: Establishes instruction-level and harness-target guardrails preventing test suites or destructive migration scripts from truncating tables, applying schema changes, or dropping databases in neighboring projects (note: live isolation ultimately relies on project-scoped Docker/env configuration and host network boundaries).
