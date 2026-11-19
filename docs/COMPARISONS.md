@@ -39,7 +39,7 @@ To understand where PromptKit OS fits alongside other developer tools, prompts, 
 ```mermaid
 flowchart TD
     Human["👤 Human Developer (Intent & Strategic Authority)"] --> L1["Layer 1: Specification Layer<br/><i>'WHAT are we building?'</i><br/>(PRDs, user stories, Gherkin specs)"]
-    L1 --> L2["Layer 2: Engineering Control Plane — PromptKit OS<br/><i>'HOW MUCH process, risk management, and verification does this task deserve?'</i><br/>(Adaptive ceremony L0–L3, context budgets, Expand-Contract migrations, Bounded Oracle)"]
+    L1 --> L2["Layer 2: Advisory Governance Layer — PromptKit OS<br/><i>'HOW MUCH process, risk management, and verification does this task deserve?'</i><br/>(Adaptive ceremony L0–L3, context budgets, Expand-Contract migrations, Bounded Oracle)"]
     L2 --> L3["Layer 3: Capability & Execution Layer<br/><i>'HOW to execute specialized technical work?'</i><br/>(Domain skills, linters, specialized code generators, subagent execution)"]
     L3 --> L4["Layer 4: Agent Runtime / Host<br/><i>'WHERE does the AI execute?'</i><br/>(Claude Code, Antigravity, Cursor, Windsurf, Copilot, Trae, OpenCode, Aider)"]
 ```
@@ -47,7 +47,7 @@ flowchart TD
 ### Layer Breakdown
 
 1. **Layer 1: Specification Layer (`WHAT`)**: Defines requirements, business constraints, user journeys, and acceptance criteria before implementation starts.
-2. **Layer 2: Engineering Control Plane & JIT Knowledge — PromptKit OS (`HOW MUCH PROCESS, RISK & INVARIANTS`)**: Operates as the neutral governor of the software development lifecycle. It determines whether a task is trivial (Level 0/1) or high-risk (Level 2/3), injects required workflows, JIT Stack Playbooks (`docs/stacks/`), and Contract Boundary Recipes (`docs/recipes/`) on demand, tracks cross-session state (`STATE.md`), enforces non-breaking database safety, and validates done-gates.
+2. **Layer 2: Advisory Governance Layer & JIT Knowledge — PromptKit OS (`HOW MUCH PROCESS, RISK & INVARIANTS`)**: Provides the neutral, advisory governance model for the software development lifecycle. It determines whether a task is trivial (Level 0/1) or high-risk (Level 2/3), injects required workflows, JIT Stack Playbooks (`docs/stacks/`), and Contract Boundary Recipes (`docs/recipes/`) on demand, tracks cross-session state (`STATE.md`), specifies non-breaking database safety, and defines done-gates.
 3. **Layer 3: Capability & Execution Layer (`HOW TO EXECUTE`)**: Contains specialized assistance: language-specific tools, domain prompt libraries, refactoring helpers, or local scripts.
 4. **Layer 4: Agent Runtime / Host (`WHERE`)**: The underlying LLM interface and tool-use environment (Claude Code, Gemini CLI, Cursor, Windsurf, Copilot, etc.).
 
@@ -64,11 +64,11 @@ If two independent systems both attempt to govern the task lifecycle (planning �
 - Token consumption balloons as multiple monolithic instruction sets are dumped into context.
 - Done-gate ambiguity causes premature commits or infinite repair loops.
 
-**Rule**: *Only one system should own the engineering control plane and verification done-gates for a repository.*
+**Rule**: *Only one system should own the process governance and verification done-gates for a repository.*
 
 ### How to Layer Helpers Safely
 
-PromptKit OS is designed to act as the authoritative **Layer 2 Control Plane** while allowing external prompt packs and skill collections to plug in as **Layer 3 Subordinate Helpers**:
+PromptKit OS is designed to act as the authoritative **Layer 2 Advisory Governance Layer** while allowing external prompt packs and skill collections to plug in as **Layer 3 Subordinate Helpers**:
 
 1. **PromptKit Remains Authoritative**: Level 0–3 risk classification, milestone boundaries, Git commit gating (`pk:commit`), and machine-verified exit code 0 (`Bounded Oracle`) are governed by PromptKit.
 2. **Subordinate Execution**: External tools provide specialized domain help (e.g., writing a complex CSS animation, drafting a regex, or running a specific linter) without attempting to bypass PromptKit's git boundary or lifecycle state.

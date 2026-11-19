@@ -6,7 +6,7 @@
 [![npm provenance](https://img.shields.io/badge/provenance-attested-brightgreen.svg)](https://www.npmjs.com/package/promptkit-os)
 [![GitHub](https://img.shields.io/badge/GitHub-lowqualityloey%2Fpromptkit--os-black.svg)](https://github.com/lowqualityloey/promptkit-os)
 
-The open-source engineering control plane for AI coding agents.  
+The open-source advisory instruction layer for AI coding agents.  
 A lightweight, repository-native system for risk, context, state, autonomy, and verification.
 
 No runtime. No daemon. No model lock-in. No required API.
@@ -310,7 +310,7 @@ PromptKit takes the opposite approach. Its core question is:
 
 > *What is the minimum context, ceremony, and autonomy required to safely complete this task?*
 
-That is why workflows, stack knowledge, and recipes are separate and loaded just in time. The goal is not the largest AI engineering framework. The goal is a small control plane that makes many different AI engineering capabilities safer and more efficient to use.
+That is why workflows, stack knowledge, and recipes are separate and loaded just in time. The goal is not the largest AI engineering framework. The goal is a small advisory layer that makes many different AI engineering capabilities safer and more efficient to use.
 
 ---
 

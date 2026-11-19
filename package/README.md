@@ -1,6 +1,6 @@
 # `promptkit-os` (npm)
 
-The open-source engineering control plane for AI coding agents (Claude Code, Cursor, Windsurf, GitHub Copilot, Cline/Roo Code, Trae, OpenCode, Aider, Gemini CLI/Antigravity) — managing task ceremony levels (L0–L3), context economy, JIT stack playbooks, and evidence-gated verification.
+The open-source advisory instruction layer for AI coding agents (Claude Code, Cursor, Windsurf, GitHub Copilot, Cline/Roo Code, Trae, OpenCode, Aider, Gemini CLI/Antigravity) — covering task ceremony levels (L0–L3), context economy, JIT stack playbooks, and evidence-gated verification.
 
 > **Note**: This npm package is the **courier**, not the product. PromptKit OS itself is pure repository-native markdown with no runtime, no daemon, and no model lock-in — it lives at [lowqualityloey/promptkit-os](https://github.com/lowqualityloey/promptkit-os).
 

@@ -560,15 +560,15 @@ Run `pk:onboard` first. On an empty repo it skips the brownfield scan and runs a
 
 ## 19. Can I use PromptKit OS alongside other prompt packs, external skill libraries, or domain-specific tools?
 
-**Short Answer**: Yes. PromptKit OS acts as the **Engineering Control Plane (Layer 2)**, governing task risk, Git boundaries, and verification done-gates, while external skills, linters, and prompt packs plug in cleanly as **Subordinate Helpers (Layer 3)**.
+**Short Answer**: Yes. PromptKit OS acts as the **Advisory Governance Layer (Layer 2)**, defining task risk, Git boundaries, and verification done-gates, while external skills, linters, and prompt packs plug in cleanly as **Subordinate Helpers (Layer 3)**.
 
 **Taxonomy boundary:** Task-risk Levels 0–3 remain authoritative for workflow and approval gates. D0–D3 describes design procedure, not execution permission; T1–T4 describes engineer competency; Adoption Stages 0–4 describe rollout maturity. These taxonomy labels do not grant or deny workflow authority to any model family.
 
 ### How to Compose Multiple Tools Safely:
-1. **The Single Control Owner Principle**: If two independent systems both attempt to govern the planning, task decomposition, and verification lifecycle simultaneously, the agent enters a *Control Loop Collision* (conflicting prompts, recursive loops, and massive context bloat). Always let one system own the engineering control plane and verification done-gates.
+1. **The Single Control Owner Principle**: If two independent systems both attempt to govern the planning, task decomposition, and verification lifecycle simultaneously, the agent enters a *Control Loop Collision* (conflicting prompts, recursive loops, and massive context bloat). Always let one system own the process governance and verification done-gates.
 2. **Layer Separation**:
    - **Layer 1 (Specification)**: Use any requirements format, PRD, or user story to define *what* to build.
-   - **Layer 2 (Governance — PromptKit OS)**: Governs *how much process* is needed (adaptive ceremony Levels 0–3), manages cross-session state (`STATE.md`), enforces non-breaking Expand-Contract database migrations, and validates machine-verified `exit code 0` (Bounded Oracle).
+   - **Layer 2 (Advisory Governance — PromptKit OS)**: Advises on *how much process* is needed (adaptive ceremony Levels 0–3), tracks cross-session state (`STATE.md`), specifies non-breaking Expand-Contract database migrations, and requires machine-verified `exit code 0` (Bounded Oracle).
    - **Layer 3 (Capabilities & Skills)**: External libraries (e.g., domain helpers, CSS frameworks, specialized regex/refactoring prompts, or linters) provide specialized code generation assistance.
    - **Layer 4 (Agent Runtime)**: The host environment (Claude Code, Antigravity, Cursor, Windsurf, Copilot, etc.).
 3. **Keep External Skills Subordinate**: External helpers must never silently bypass verification gates, commit code, or alter milestone state.
@@ -580,7 +580,7 @@ For full architectural details, see [docs/COMPARISONS.md](docs/COMPARISONS.md).
 
 ## 20. How does PromptKit OS support non-web, mobile, and native systems without prompt bloat?
 
-**Short Answer**: Through **Just-In-Time (JIT) Stack Playbooks** (`docs/stacks/`) and **Contract Boundary Recipes** (`docs/recipes/`). PromptKit OS loads ecosystem-specific invariants on-demand only when relevant manifests (e.g. `Cargo.toml`, `go.mod`, `pubspec.yaml`, `app.json`) are detected, keeping the core control plane universally lightweight.
+**Short Answer**: Through **Just-In-Time (JIT) Stack Playbooks** (`docs/stacks/`) and **Contract Boundary Recipes** (`docs/recipes/`). PromptKit OS loads ecosystem-specific invariants on-demand only when relevant manifests (e.g. `Cargo.toml`, `go.mod`, `pubspec.yaml`, `app.json`) are detected, keeping the core advisory layer universally lightweight.
 
 **How it works across ecosystems**:
 - **Zero Web Assumptions Leaked**: Mobile and native systems have entirely different failure modes from web JavaScript. PromptKit OS provides dedicated stack playbooks:
