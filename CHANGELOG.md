@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Behavioral contract suite: awk ERE intervals replaced with explicit character classes**: `profile_header_verdict()` in `scripts/tests/run-behavioral-contract-tests.sh` matched the profile-header date with `[0-9]{4}-[0-9]{2}-[0-9]{2}`. Interval support is not universal across awk builds and modes: an awk without it reads `{4}` literally, the date never matches, and the verdict degrades to `FAIL:missing-profile-written` — two spurious failures on a correct tree. The three patterns now spell out `[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]`, which every awk supports. Verified A/B under a `mawk -W traditional` wrapper: 747 passed / 2 failed before the fix, 749 / 0 after, with no change under gawk. The PowerShell twin is unaffected — it uses .NET `\d{4}`, which has native intervals.
+
+### Documentation
+- **Full-clone requirement documented**: `CONTRIBUTING.md` item 4 of the Pre-PR Submission Checklist now states that the `docs/BENCHMARKS.md` provenance anchor is resolved with `git cat-file -e`, so a shallow clone cannot pass the contract suite; CI checks out with `fetch-depth: 0`, and a local clone needs `--depth` omitted or `git fetch --unshallow` run first.
+- **Token figures qualified as `bytes/4` proxy**: `README.md` stated the Balanced and Lite static footprints and their caps with no qualifier, while `docs/BENCHMARKS.md` §9 already records that the Lite directive passes its 1,500 gate at 1,482 proxy while measuring 1,529 `cl100k_base` tokens — 29 over the cap in that encoding — and that only Balanced clears its cap in both conventions. The profile bullets and the gate bullet now say the figures bound the `bytes/4` proxy rather than a tokenizer, and link §9.
+
 ---
 
 ## [2.3.0] - 2026-11-15
