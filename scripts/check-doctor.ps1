@@ -370,6 +370,21 @@ function Check-Version {
     $null = Invoke-LocalGit -Dir $engineDir @('merge-base', '--is-ancestor', 'HEAD', $upstream)
     $mb = $script:gitStatus
     if ($mb -eq 1) {
+        # HEAD is not an ancestor of upstream. That is either an engine strictly
+        # AHEAD of upstream (every PR branch) or one that has genuinely diverged,
+        # and a single is-ancestor call cannot tell them apart. Probe the reverse
+        # direction: when upstream IS an ancestor of HEAD the engine is strictly
+        # ahead, has nothing to reconcile, and is not drift.
+        $null = Invoke-LocalGit -Dir $engineDir @('merge-base', '--is-ancestor', $upstream, 'HEAD')
+        $rev = $script:gitStatus
+        if ($rev -eq 0) {
+            Emit 'version' 'OK' "engine $stampVer ($stampSha) current" '-'
+            return
+        }
+        if ($rev -ne 1) {
+            Emit 'version' 'SKIP(shallow-or-offline)' "merge-base returned unexpected status $rev" 'Resolve the upstream ref and re-run'
+            return
+        }
         Emit 'version' 'DIVERGED' "engine $stampVer diverged from $upstream" 'Reconcile the engine checkout with upstream manually; doctor never fetches or resets'
         return
     }

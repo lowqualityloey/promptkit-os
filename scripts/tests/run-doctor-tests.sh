@@ -569,6 +569,46 @@ n5() {
     want_not_contains "ignore:$base"$'\tINCOMPLETE'
 }
 
+# N6: an engine strictly AHEAD of its own origin/main is not drift. A single
+# is-ancestor probe cannot tell "ahead" from "diverged", so the doctor probes the
+# reverse direction and reports the existing OK status instead of DIVERGED.
+n6() {
+    local root sha
+    root="$(make_healthy n6 balanced)"
+    printf 'engine +1\n' > "$root/.promptkit/extra.txt"
+    git -C "$root/.promptkit" add extra.txt
+    git -C "$root/.promptkit" commit -qm 'engine +1'
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
+    write_hosts "$root" "$sha" balanced
+    write_state "$root" "$sha"
+    run_doctor "$root"
+    want_status 0
+    want_contains $'version\tOK'
+    want_not_contains $'version\tDIVERGED'
+    want_not_contains $'version\tSTALE'
+}
+
+# N7: an engine that has genuinely DIVERGED from its own origin/main still
+# reports DIVERGED and exits 1 — the ahead probe must not mask real drift.
+n7() {
+    local root sha base tree other
+    root="$(make_healthy n7 balanced)"
+    base="$(git -C "$root/.promptkit" rev-parse HEAD)"
+    printf 'engine +1\n' > "$root/.promptkit/extra.txt"
+    git -C "$root/.promptkit" add extra.txt
+    git -C "$root/.promptkit" commit -qm 'engine +1'
+    tree="$(git -C "$root/.promptkit" rev-parse 'HEAD^{tree}')"
+    other="$(printf 'diverged\n' | git -C "$root/.promptkit" commit-tree "$tree" -p "$base")"
+    git -C "$root/.promptkit" update-ref refs/remotes/origin/main "$other"
+    sha="$(git -C "$root/.promptkit" rev-parse --short HEAD)"
+    write_hosts "$root" "$sha" balanced
+    write_state "$root" "$sha"
+    run_doctor "$root"
+    want_status 1
+    want_contains $'version\tDIVERGED'
+    want_not_contains $'version\tOK'
+}
+
 # P1: a completed intake with a resolvable record path is OK.
 p1() {
     local root
@@ -1036,6 +1076,8 @@ begin; n2; report 'N2 --fix renders <engine_relpath>/workflows/... and path exis
 begin; n3; report 'N3 docs-drift compares shared fields, DIVERGED/SKIP, never bare OK'
 begin; n4; report 'N4 deleted AGENTS.md -> MISSING, exit 1'
 begin; n5; report 'N5 engine outside project root -> kit-dir ignore SKIP, no phantom OK'
+begin; n6; report 'N6 engine strictly ahead of origin/main -> version OK, exit 0'
+begin; n7; report 'N7 engine genuinely diverged from origin/main -> version DIVERGED, exit 1'
 begin; s11; report 'S11 cline directory-form install -> host OK'
 begin; s12; report 'S12 cursor mdc-only install -> host OK'
 begin; s13; report 'S13 template-prose Task ID -> clean docs-drift SKIP'

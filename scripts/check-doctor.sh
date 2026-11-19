@@ -305,7 +305,7 @@ check_version() {
         emit 'version' 'SKIP(shallow-or-offline)' 'git unavailable' 'Install git to enable engine drift checks'
         return 0
     fi
-    local is_shallow upstream mb count
+    local is_shallow upstream mb rev count
     is_shallow="$(git -C "$engine_dir" -c core.fsmonitor=false rev-parse --is-shallow-repository 2>/dev/null || true)"
     if [[ "$is_shallow" != "false" ]]; then
         emit 'version' 'SKIP(shallow-or-offline)' 'shallow or offline checkout' 'Fetch full history (git fetch --unshallow) to check drift'
@@ -322,6 +322,21 @@ check_version() {
         mb=$?
     fi
     if [[ "$mb" -eq 1 ]]; then
+        # HEAD is not an ancestor of upstream. That is either an engine strictly
+        # AHEAD of upstream (every PR branch) or one that has genuinely diverged,
+        # and a single is-ancestor call cannot tell them apart. Probe the reverse
+        # direction: when upstream IS an ancestor of HEAD the engine is strictly
+        # ahead, has nothing to reconcile, and is not drift.
+        rev=0
+        git -C "$engine_dir" -c core.fsmonitor=false merge-base --is-ancestor "$upstream" HEAD >/dev/null 2>&1 || rev=$?
+        if [[ "$rev" -eq 0 ]]; then
+            emit 'version' 'OK' "engine $stamp_ver ($stamp_sha) current" '-'
+            return 0
+        fi
+        if [[ "$rev" -ne 1 ]]; then
+            emit 'version' 'SKIP(shallow-or-offline)' "merge-base returned unexpected status $rev" 'Resolve the upstream ref and re-run'
+            return 0
+        fi
         emit 'version' "DIVERGED" "engine $stamp_ver diverged from $upstream" 'Reconcile the engine checkout with upstream manually; doctor never fetches or resets'
         return 0
     fi
