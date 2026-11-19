@@ -254,6 +254,12 @@ assert_invariant_section_verdict() {
 # never assert that the engine was installed. Onboarding copies the template into
 # place, so the rendered template is a faithful proxy for an engine-absent header --
 # it does not execute a live agent, and no assertion below claims that it does.
+#
+# The date patterns below spell out [0-9][0-9][0-9][0-9] rather than using the ERE
+# interval {4}: interval support is not universal across awk builds and modes, and
+# an awk without it reads {4} literally, so the date never matches and the verdict
+# degrades to FAIL:missing-profile-written. CI's ubuntu-latest awk happens to
+# support intervals; nothing pins that.
 profile_header_verdict() {
     local file="$1"
     local verdict=""
@@ -280,9 +286,9 @@ profile_header_verdict() {
                 }
                 if (raw == "---") { in_s0 = 0; continue }
                 if (raw ~ /[^[:space:]]/) body++
-                if (raw ~ /Installed:[[:blank:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}/) installed = 1
-                if (raw ~ /Installed\*\*:[[:blank:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}/) installed = 1
-                if (raw ~ /^- \*\*Profile written\*\*: [0-9]{4}-[0-9]{2}-[0-9]{2}$/) profile_written++
+                if (raw ~ /Installed:[[:blank:]]*[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/) installed = 1
+                if (raw ~ /Installed\*\*:[[:blank:]]*[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/) installed = 1
+                if (raw ~ /^- \*\*Profile written\*\*: [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/) profile_written++
             }
             if (!found || body == 0) { print "FAIL:empty-header"; exit }
             if (installed) { print "FAIL:installation-claim"; exit }
