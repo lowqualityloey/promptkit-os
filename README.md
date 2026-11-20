@@ -279,8 +279,8 @@ PromptKit routes the task to the appropriate ceremony level and workflow. Explic
 | **[docs/BENCHMARK-METHODOLOGY.md](./docs/BENCHMARK-METHODOLOGY.md)** | I want the CPAC engineering benchmark methodology |
 | **[docs/COMPARISONS.md](./docs/COMPARISONS.md)** | I want to compare it with other tools |
 | **[docs/ENFORCEMENT.md](./docs/ENFORCEMENT.md)** | I want to know what is actually enforced, and where |
-| **[docs/stacks/](./docs/stacks/)** | I want JIT stack playbooks (23 — Web, DB, Cloud, Mobile, Systems, CLI) |
-| **[docs/recipes/](./docs/recipes/)** | I want reusable boundary contracts (10 — Auth, Forms, Webhooks, Env, Testing, State, Realtime + 3 pk:auto utilities) |
+| **[docs/stacks/](./docs/stacks/)** | I want JIT stack playbooks (25 — Web, DB, Cloud, Mobile, Systems, CLI) |
+| **[docs/recipes/](./docs/recipes/)** | I want reusable boundary contracts (12 — Auth, Forms, Webhooks, Env, Testing, State, Realtime, LLM, Supply Chain + 3 pk:auto utilities) |
 | **[docs/ADOPTION-GUIDE.md](./docs/ADOPTION-GUIDE.md)** | I want to add it to an existing project gradually |
 | **[docs/MAXIMS.md](./docs/MAXIMS.md)** | I want the quotable invariants — 9 one-line maxims with canonical links |
 | **[CHANGELOG.md](./CHANGELOG.md)** | I want what changed, release by release |
@@ -296,7 +296,7 @@ PromptKit's own CI validates on every PR across Linux and Windows:
 - Workflow and documentation reference integrity (`validate-references.sh`)
 - Static token budget gates — Balanced ≤ 2,500 tok, Lite ≤ 1,500 tok (`measure-tokens.sh --strict`), bounding the `bytes/4` proxy rather than a tokenizer (see §9 of [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md))
 - Behavioral contract compliance — all behavioral contract tests pass (live count in CI) (`run-behavioral-contract-tests.sh`)
-- Playbook & recipe contracts — 35/35 (24 stack playbooks + 11 boundary recipes) (`run-playbook-contract-tests.sh`)
+- Playbook & recipe contracts — 37/37 (25 stack playbooks + 12 boundary recipes) (`run-playbook-contract-tests.sh`)
 
 PromptKit applies its own engineering principles to itself.
 

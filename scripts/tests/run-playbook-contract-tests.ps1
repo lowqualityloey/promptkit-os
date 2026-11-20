@@ -25,4 +25,13 @@ if ((Get-Command node -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPat
     }
 }
 
+$auditScript = Join-Path $RepoRoot "scripts\tests\verify-dependency-audit-gate.mjs"
+if ((Get-Command node -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath $auditScript)) {
+    Write-Host "[TEST] Running Dependency Audit Gate Verification (Node)..." -ForegroundColor Cyan
+    node $auditScript
+    if ($LASTEXITCODE -ne 0) {
+        throw "Dependency Audit Gate Verification failed with exit code $LASTEXITCODE"
+    }
+}
+
 Write-Host "[PASS] All Playbook Contract tests PASSED" -ForegroundColor Green
