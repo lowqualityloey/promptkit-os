@@ -1193,6 +1193,27 @@ Assert-Contains "workflows/api.md" "docs/recipes/webhook-idempotency.md" "API wo
 Assert-Contains "workflows/test.md" "docs/recipes/test-isolation.md" "Test workflow links test-isolation recipe"
 Assert-Contains "workflows/onboard.md" "docs/recipes/env-validation.md" "Onboarding workflow links env-validation recipe"
 
+Write-Host "`n📌 Scenario AU: every catalog recipe is linked from its declared owning workflow" -ForegroundColor Yellow
+# The catalog at docs/recipes/README.md:60 states the contract: recipes are
+# referenced via single-line links from owning workflows. Nothing enforced it,
+# so two recipes shipped with an owner named in the catalog and no link on disk.
+# This derives the pairs from the catalog itself, so a new row cannot drift.
+$recipePairCount = 0
+foreach ($catalogLine in (Get-Content -Path (Join-Path $RepoRoot 'docs/recipes/README.md'))) {
+    if ($catalogLine -notmatch '^\| \[`([a-z0-9-]+\.md)`\]') { continue }
+    $recipeName = $Matches[1]
+    $catalogCols = $catalogLine -split '\|'
+    if ($catalogCols.Count -lt 7) { continue }
+    foreach ($ownerMatch in [regex]::Matches($catalogCols[5], 'workflows/[a-z0-9-]+\.md')) {
+        $recipePairCount++
+        Assert-Contains $ownerMatch.Value "docs/recipes/$recipeName" "Catalog owner $($ownerMatch.Value) links $recipeName"
+    }
+}
+if ($recipePairCount -eq 0) {
+    Write-Host "  ❌ FAIL: parsed no recipe/owner pairs out of docs/recipes/README.md (the catalog table shape changed)" -ForegroundColor Red
+    $script:FailCount++
+}
+
 Write-Host "`n📌 Scenario AB: Stack Playbooks Catalog Index & Astro Stack (Issue #392)" -ForegroundColor Yellow
 Assert-Contains "docs/stacks/README.md" "Stack Playbook Catalog" "Stacks README includes catalog matrix"
 Assert-Contains "docs/stacks/README.md" "Architectural Intake Criteria" "Stacks README documents guidance tiers and intake rules"

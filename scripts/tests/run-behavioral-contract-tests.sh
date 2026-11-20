@@ -1196,6 +1196,38 @@ assert_contains "workflows/test.md" "docs/recipes/test-isolation.md" "Test workf
 assert_contains "workflows/onboard.md" "docs/recipes/env-validation.md" "Onboarding workflow links env-validation recipe"
 
 echo ""
+echo "📌 Scenario AU: every catalog recipe is linked from its declared owning workflow"
+# The catalog at docs/recipes/README.md:60 states the contract: recipes are
+# referenced via single-line links from owning workflows. Nothing enforced it,
+# so two recipes shipped with an owner named in the catalog and no link on disk.
+# This derives the pairs from the catalog itself, so a new row cannot drift.
+recipe_owner_pairs() {
+    local line recipe owners wf
+    while IFS= read -r line; do
+        case "$line" in
+            '| [`'*) ;;
+            *) continue ;;
+        esac
+        recipe="$(printf '%s' "$line" | sed -nE 's/^\| \[`([a-z0-9-]+\.md)`\].*/\1/p')"
+        [ -z "$recipe" ] && continue
+        owners="$(printf '%s' "$line" | awk -F'|' '{print $6}')"
+        printf '%s' "$owners" | grep -oE 'workflows/[a-z0-9-]+\.md' | while IFS= read -r wf; do
+            printf '%s %s\n' "$recipe" "$wf"
+        done
+    done < "$REPO_ROOT/docs/recipes/README.md"
+}
+RECIPE_PAIR_COUNT=0
+while read -r recipe wf; do
+    [ -z "$recipe" ] && continue
+    RECIPE_PAIR_COUNT=$((RECIPE_PAIR_COUNT + 1))
+    assert_contains "$wf" "docs/recipes/$recipe" "Catalog owner $wf links $recipe"
+done <<< "$(recipe_owner_pairs)"
+if [ "$RECIPE_PAIR_COUNT" -eq 0 ]; then
+    echo "  ❌ FAIL: parsed no recipe/owner pairs out of docs/recipes/README.md (the catalog table shape changed)"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+echo ""
 echo "📌 Scenario AB: Stack Playbooks Catalog Index & Astro Stack (Issue #392)"
 assert_contains "docs/stacks/README.md" "Stack Playbook Catalog" "Stacks README includes catalog matrix"
 assert_contains "docs/stacks/README.md" "Architectural Intake Criteria" "Stacks README documents guidance tiers and intake rules"

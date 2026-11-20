@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [26 Inlined Workflows (119,905 tok) + Templates + Protocols] │
+│ Every Turn: [26 Inlined Workflows (119,959 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -41,7 +41,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
 | Core-six Lite subset | 6 | **32,985 tok** |
-| Full workflow set | 26 | **119,905 tok** |
+| Full workflow set | 26 | **119,959 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -183,9 +183,9 @@ The **2,882-token contribution is [`protocols/context-sync.md`](../protocols/con
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **`pk:fix`** | Localized bug fix (Directive + `fix.md` + `code-quality-gate.md`) | 12,861 tok | **11,475 tok** | **10,469 tok** | **-11% Balanced, -19% Lite (-1,386 to -2,392 tok)** |
 | **`pk:plan`** | Controlled feature planning (Directive + `plan.md` + `tech-spec` + `gate`) | 24,666 tok | **20,964 tok** | **19,958 tok** | **-15% Balanced, -19% Lite (-3,702 to -4,708 tok)** |
-| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **17,265 tok** | **16,259 tok** | **-30% Balanced, -34% Lite (-7,496 to -8,502 tok)** |
+| **`pk:ship`** | Release candidate & verification (Directive + `ship.md` + `code-quality-gate.md` + release checklist) | 24,761 tok | **17,295 tok** | **16,289 tok** | **-30% Balanced, -34% Lite (-7,466 to -8,472 tok)** |
 
-> **How to read the comparison table.** The **numerator** (the Balanced and Lite JIT payload columns, and the percentages derived from them) is a **current deterministic sum** of the selected instruction-file payloads – current directive + workflow + `code-quality-gate.md` + the relevant task template, measured from the checked-out tree. The **denominator** (`Baseline Payload (before A)`: 12,861 / 24,666 / 24,761 tok) is the **fixed historical loading-policy baseline** at `258cf8c` documented above. Each published percentage therefore means **current modeled payload against that frozen historical baseline**. It is **not** a freshly measured contemporaneous baseline, **not** total session-token usage, and **not** measured inference cost or a development-speed improvement. The six absolute payload figures (Balanced 11,475 / 20,964 / 17,265; Lite 10,469 / 19,958 / 16,259 tok) are current measurements; only the denominator is frozen.
+> **How to read the comparison table.** The **numerator** (the Balanced and Lite JIT payload columns, and the percentages derived from them) is a **current deterministic sum** of the selected instruction-file payloads – current directive + workflow + `code-quality-gate.md` + the relevant task template, measured from the checked-out tree. The **denominator** (`Baseline Payload (before A)`: 12,861 / 24,666 / 24,761 tok) is the **fixed historical loading-policy baseline** at `258cf8c` documented above. Each published percentage therefore means **current modeled payload against that frozen historical baseline**. It is **not** a freshly measured contemporaneous baseline, **not** total session-token usage, and **not** measured inference cost or a development-speed improvement. The six absolute payload figures (Balanced 11,475 / 20,964 / 17,295; Lite 10,469 / 19,958 / 16,289 tok) are current measurements; only the denominator is frozen.
 
 > **Budget headroom: the binding constraint was relieved by description compression, not by raising the cap.** The Balanced static directive grew 2,350 tok (#503) → 2,401 tok (#531) → 2,475 tok (#527–#530), leaving **25 tokens of a 2,500 cap** — roughly one rule short of the ~70-75 tokens a new governance or recovery rule costs. Compressing the 26 `pk:` trigger *descriptions* in `templates/agent-directive-template.md` (names and aliases untouched, so discoverability is unchanged) brought the directive to **2,287 tok — 213 tokens of headroom**. The install-time engine stamp then cost 25 tok; the #547 `pk:doctor` trigger line then added 29 tok, the 2026-10-25 doctor six-check enumeration swap added 7 tok, the 2026-11-12 untrusted-content directive added 62 tok, the 2026-11-13 review fixes added 39 tok, and the 2026-11-13 third-review fixes added another 39 tok, so it now sits at **2,488 tok — 12 tokens of headroom**, roughly one rule of room. The 2,500 cap was **not** raised. Lite sits at 1,482 of 1,500 (18 headroom). The lesson generalizes: the trigger catalog was carrying ~425 tok of prose that restated what each workflow file already says, and the names alone are cheap. When a rule no longer fits, extract the *detail* to a lazy-loaded protocol and leave a pointer — the pattern #526 and #529 already use — before reaching for the cap. Do not absorb this by silently raising the cap.
 >
