@@ -8,7 +8,7 @@ description: Audit-on-install vs audit-in-CI, reachability triage, and lockfile 
 
 # Dependency Audit Recipe
 
-How to turn an advisory feed into a decision: where the gate runs, how an advisory is triaged against shipped code, and what a lockfile change means.
+Turning an advisory feed into a decision: where the gate runs, how an advisory is triaged against shipped code, and what a lockfile change means.
 
 ---
 
@@ -60,7 +60,7 @@ const report = JSON.parse(
 const today = new Date().toISOString().slice(0, 10);
 const active = new Set(
   exceptions
-    .filter((e) => e.expires >= today && e.advisory?.trim())
+    .filter((e) => e.expires >= today && typeof e.advisory === "string" && e.advisory.trim())
     .map((e) => e.advisory.trim().toUpperCase())
 );
 
@@ -117,8 +117,8 @@ Review the first as a supply-chain change — diff the lockfile, run the suite. 
 
 ## 3. Framework Adaptations
 
-- **pnpm / yarn / bun**: the audit subcommand differs (`pnpm audit`, `yarn npm audit`, `bun audit`), but the gate shape does not — parse JSON, apply a threshold, subtract active exceptions, exit non-zero.
-- **Python / Go / Rust**: `pip-audit`, `govulncheck`, and `cargo audit` all emit machine-readable output. `govulncheck` is strongest because it reports reachability, not a flat package list.
+- **pnpm / yarn / bun**: the subcommand differs (`pnpm audit`, `yarn npm audit`, `bun audit`), but the gate shape does not — parse JSON, apply a threshold, subtract active exceptions, exit non-zero.
+- **Python / Go / Rust**: `pip-audit`, `govulncheck`, and `cargo audit` all emit machine-readable output. `govulncheck` is strongest: it reports reachability, not a flat package list.
 - **Container images**: scan the built image, not the source tree — the base image's packages are in the artifact, not the lockfile.
 
 ---
@@ -126,10 +126,10 @@ Review the first as a supply-chain change — diff the lockfile, run the suite. 
 ## 4. Anti-Patterns & Failure Modes
 
 - **Audit Only on Install**: the developer who runs `npm install --no-audit` never sees it, and CI never runs it.
-- **Severity-Only Triage**: ranking a dev-only `critical` above a reachable `moderate` spends remediation effort where the exposure is not.
+- **Severity-Only Triage**: ranking a dev-only `critical` above a reachable `moderate` spends effort where the exposure is not.
 - **Permanent Exceptions**: an exception with no expiry is a silent policy change that outlives the reason for it.
-- **Regenerating the Lockfile to Clear an Advisory**: it clears the advisory by upgrading everything, and the regression arrives without a diff that explains it.
-- **Calling a Lockfile Bump a Dependency Upgrade**: the commit message claims a contract change that did not happen, and the reviewer skips the lockfile diff that did.
+- **Regenerating the Lockfile to Clear an Advisory**: it clears the advisory by upgrading everything, and the regression arrives without an explaining diff.
+- **Calling a Lockfile Bump a Dependency Upgrade**: the message claims a contract change that did not happen, and the reviewer skips the lockfile diff that did.
 - **Auditing `node_modules`**: it describes the machine, not the artifact.
 
 ---
