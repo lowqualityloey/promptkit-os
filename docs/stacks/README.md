@@ -25,6 +25,7 @@ Stack playbooks are activated **just-in-time (JIT)** when detectable project man
 | [`mobile-expo.md`](mobile-expo.md) | `mobile` | `app.json`, `app.config.js`, `app.config.ts` | $\le$ 1,500 tok | `npx expo-doctor` / `npx expo export` / `npm test` |
 | [`mobile-flutter.md`](mobile-flutter.md) | `mobile` | `pubspec.yaml` | $\le$ 1,500 tok | `flutter analyze` / `flutter test` / `flutter build` |
 | [`mobile-kmp.md`](mobile-kmp.md) | `mobile` | Gradle build files + confirmed `org.jetbrains.kotlin.multiplatform` plugin | $\le$ 1,500 tok | `compileCommonMainKotlinMetadata` / `allTests` / `check` |
+| [`supply-chain.md`](supply-chain.md) | `web` | `package.json` | $\le$ 1,500 tok | `npm ci --ignore-scripts` / `npm audit --audit-level=high` / `npm run build`, `npx @cyclonedx/cyclonedx-npm --output-file sbom.json` |
 | [`systems-java-spring.md`](systems-java-spring.md) | `systems` | `pom.xml`, `build.gradle`, `build.gradle.kts` + Spring Boot | $\le$ 1,500 tok | Maven compile / test / verify |
 | [`systems-csharp-dotnet.md`](systems-csharp-dotnet.md) | `systems` | `.csproj` with confirmed Web SDK, Worker SDK, or EF Core reference | $\le$ 1,500 tok | `dotnet build` / `dotnet test` / `dotnet format --verify-no-changes` |
 | [`database-postgres.md`](database-postgres.md) | `database` | Active PostgreSQL datasource, dialect, or test-service image | $\le$ 1,500 tok | connection check / migration validation / integration suite |
