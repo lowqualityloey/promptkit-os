@@ -17,7 +17,7 @@ Eliminate the leading causes of API integration friction: inconsistent error sha
 - Public or breaking contract work is Level 2 (Controlled): a canonical Task Record at `docs/tasks/<task-id>.md` is required before implementation (see `workflows/route.md`).
 - Target storage directory: `./docs/api/` in the host project.
 - Access to `templates/api-contract-spec.md`.
-- Recipes: see `docs/recipes/form-mutations.md` for mutation envelopes and optimistic rollbacks; `docs/recipes/webhook-idempotency.md` for webhook ingestion and HMAC validation.
+- Recipes: see `docs/recipes/form-mutations.md` for mutation envelopes and optimistic rollbacks; `docs/recipes/webhook-idempotency.md` for webhook ingestion and HMAC validation; `docs/recipes/llm-feature.md` for instruction-channel isolation and split 429/5xx retry policy.
 
 ---
 

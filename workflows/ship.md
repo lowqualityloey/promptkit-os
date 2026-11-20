@@ -16,6 +16,7 @@ Reduce preventable production deployment failures: missing or invalid environmen
 - Code has passed code review (`pk:review`) and testing gates (`pk:test`).
 - Target storage directory: `./docs/releases/` in the host project.
 - Access to `templates/release-checklist.md`.
+- Recipe: see `docs/recipes/dependency-audit.md` for audit-in-CI, reachability triage, and lockfile vs version bumps.
 
 ---
 
