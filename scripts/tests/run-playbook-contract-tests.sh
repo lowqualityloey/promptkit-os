@@ -23,5 +23,10 @@ if command -v node >/dev/null 2>&1 && [[ -f "$REPO_ROOT/scripts/tests/verify-aut
     node "$REPO_ROOT/scripts/tests/verify-auth-session-concurrency.mjs"
 fi
 
+if command -v node >/dev/null 2>&1 && [[ -f "$REPO_ROOT/scripts/tests/verify-dependency-audit-gate.mjs" ]]; then
+    echo "🧪 Running Dependency Audit Gate Verification (Node)..."
+    node "$REPO_ROOT/scripts/tests/verify-dependency-audit-gate.mjs"
+fi
+
 echo "✅ All Playbook Contract tests PASSED"
 

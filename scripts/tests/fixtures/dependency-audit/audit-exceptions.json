@@ -1,0 +1,20 @@
+[
+  {
+    "advisory": "GHSA-aaaa-bbbb-cccc",
+    "owner": "platform-team",
+    "expires": "2099-01-01",
+    "reachability": "parse() is only reached from an internal admin route with a 4 KB body cap."
+  },
+  {
+    "advisory": "GHSA-dddd-eeee-ffff",
+    "owner": "security-team",
+    "expires": "2020-01-01",
+    "reachability": "Expired: the migration off CBC mode slipped past the re-evaluation date."
+  },
+  {
+    "advisory": "GHSA-pppp-qqqq-rrrr",
+    "owner": "platform-team",
+    "expires": "2099-01-01",
+    "reachability": "Deserialization is gated behind a signed internal envelope; no untrusted input reaches it."
+  }
+]

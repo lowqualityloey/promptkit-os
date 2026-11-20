@@ -1,0 +1,215 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "example-parser": {
+      "name": "example-parser",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        {
+          "source": 1098392,
+          "name": "example-parser",
+          "dependency": "example-parser",
+          "title": "Regular Expression Denial of Service in parse()",
+          "url": "https://github.com/advisories/GHSA-aaaa-bbbb-cccc",
+          "severity": "high",
+          "cwes": [
+            1333
+          ],
+          "range": "<2.0.1"
+        }
+      ],
+      "effects": [],
+      "range": "<2.0.1",
+      "nodes": [
+        "node_modules/example-parser"
+      ],
+      "fixAvailable": {
+        "name": "example-parser",
+        "version": "2.0.1",
+        "isSemVerMajor": false
+      }
+    },
+    "legacy-crypto": {
+      "name": "legacy-crypto",
+      "severity": "critical",
+      "isDirect": true,
+      "via": [
+        {
+          "source": 1098401,
+          "name": "legacy-crypto",
+          "dependency": "legacy-crypto",
+          "title": "Predictable IV in CBC mode",
+          "url": "https://github.com/advisories/GHSA-dddd-eeee-ffff",
+          "severity": "critical",
+          "cwes": [
+            329
+          ],
+          "range": "<4.2.0"
+        }
+      ],
+      "effects": [
+        "example-parser"
+      ],
+      "range": "<4.2.0",
+      "nodes": [
+        "node_modules/legacy-crypto"
+      ],
+      "fixAvailable": {
+        "name": "legacy-crypto",
+        "version": "4.2.0",
+        "isSemVerMajor": true
+      }
+    },
+    "tiny-http": {
+      "name": "tiny-http",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1098415,
+          "name": "tiny-http",
+          "dependency": "tiny-http",
+          "title": "Request smuggling via malformed Transfer-Encoding",
+          "url": "https://github.com/advisories/GHSA-gggg-hhhh-iiii",
+          "severity": "high",
+          "cwes": [
+            444
+          ],
+          "range": "<1.6.4"
+        }
+      ],
+      "effects": [
+        "wrapper-pkg"
+      ],
+      "range": "<1.6.4",
+      "nodes": [
+        "node_modules/tiny-http"
+      ],
+      "fixAvailable": {
+        "name": "tiny-http",
+        "version": "1.6.4",
+        "isSemVerMajor": false
+      }
+    },
+    "dev-linter": {
+      "name": "dev-linter",
+      "severity": "moderate",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1098420,
+          "name": "dev-linter",
+          "dependency": "dev-linter",
+          "title": "Prototype pollution in config merge",
+          "url": "https://github.com/advisories/GHSA-jjjj-kkkk-llll",
+          "severity": "moderate",
+          "cwes": [
+            1321
+          ],
+          "range": "<3.1.2"
+        }
+      ],
+      "effects": [],
+      "range": "<3.1.2",
+      "nodes": [
+        "node_modules/dev-linter"
+      ],
+      "fixAvailable": {
+        "name": "dev-linter",
+        "version": "3.1.2",
+        "isSemVerMajor": false
+      }
+    },
+    "wrapper-pkg": {
+      "name": "wrapper-pkg",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        "tiny-http"
+      ],
+      "effects": [],
+      "range": "*",
+      "nodes": [
+        "node_modules/wrapper-pkg"
+      ],
+      "fixAvailable": false
+    },
+    "safe-util": {
+      "name": "safe-util",
+      "severity": "low",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1098430,
+          "name": "safe-util",
+          "dependency": "safe-util",
+          "title": "Insecure default file mode",
+          "url": "https://github.com/advisories/GHSA-mmmm-nnnn-oooo",
+          "severity": "low",
+          "cwes": [
+            732
+          ],
+          "range": "<0.9.7"
+        }
+      ],
+      "effects": [],
+      "range": "<0.9.7",
+      "nodes": [
+        "node_modules/safe-util"
+      ],
+      "fixAvailable": {
+        "name": "safe-util",
+        "version": "0.9.7",
+        "isSemVerMajor": false
+      }
+    },
+    "patched-lib": {
+      "name": "patched-lib",
+      "severity": "critical",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1098440,
+          "name": "patched-lib",
+          "dependency": "patched-lib",
+          "title": "Remote code execution via unsafe deserialization",
+          "url": "https://github.com/advisories/GHSA-pppp-qqqq-rrrr",
+          "severity": "critical",
+          "cwes": [
+            502
+          ],
+          "range": "<5.0.3"
+        }
+      ],
+      "effects": [],
+      "range": "<5.0.3",
+      "nodes": [
+        "node_modules/patched-lib"
+      ],
+      "fixAvailable": {
+        "name": "patched-lib",
+        "version": "5.0.3",
+        "isSemVerMajor": false
+      }
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 1,
+      "moderate": 1,
+      "high": 3,
+      "critical": 2,
+      "total": 7
+    },
+    "dependencies": {
+      "prod": 412,
+      "dev": 188,
+      "optional": 9,
+      "peer": 3,
+      "peerOptional": 0,
+      "total": 612
+    }
+  }
+}

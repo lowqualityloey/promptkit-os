@@ -8,7 +8,7 @@ description: Audit-on-install vs audit-in-CI, reachability triage, and lockfile 
 
 # Dependency Audit Recipe
 
-How to turn an advisory feed into a decision: where the gate runs, how an advisory is triaged against the code that actually ships, and what a lockfile change is allowed to mean.
+How to turn an advisory feed into a decision: where the gate runs, how an advisory is triaged against the code that ships, and what a lockfile change may mean.
 
 ---
 
@@ -62,10 +62,13 @@ const active = new Set(
   exceptions.filter((e) => e.expires >= today).map((e) => e.advisory)
 );
 
+// via.url carries the GHSA id; via.source is numeric.
+const ghsa = (via: any) => String(via.url ?? "").match(/GHSA-[\w-]+/i)?.[0] ?? "";
+
 const blocking = Object.values(report.vulnerabilities ?? {}).filter(
   (v: any) =>
     RANK[v.severity as keyof typeof RANK] >= THRESHOLD &&
-    !v.via.some((via: any) => active.has(via.source ?? via.url))
+    !v.via.some((via: any) => active.has(ghsa(via)))
 );
 
 if (blocking.length > 0) {
@@ -74,7 +77,7 @@ if (blocking.length > 0) {
 }
 ```
 
-> **Expiry Is the Mechanism**: an exception whose date has passed stops suppressing the advisory on its own. The gate re-opens without anyone remembering to re-open it.
+> **Expiry Is the Mechanism**: an exception whose date has passed stops suppressing the advisory on its own.
 
 ### Pattern B: The Reachability Record
 
@@ -104,7 +107,7 @@ npm update example-parser
 npm install example-parser@^3
 ```
 
-Review the first as a supply-chain change — diff the lockfile, run the suite, confirm nothing else moved. Review the second as a contract change — read the changelog for the breaking surface before the diff.
+Review the first as a supply-chain change — diff the lockfile, run the suite. Review the second as a contract change — read the changelog before the diff.
 
 ---
 
