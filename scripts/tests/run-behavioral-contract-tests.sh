@@ -1227,6 +1227,28 @@ if [ "$RECIPE_PAIR_COUNT" -eq 0 ]; then
     FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 
+# The reverse direction: a recipe file with no catalog row is invisible to the
+# check above, so it could ship with no owner and no backlink and nothing would
+# fail. Assert every recipe file is listed in the catalog.
+RECIPE_FILE_COUNT=0
+RECIPE_TICK='`'
+for recipe_path in "$REPO_ROOT"/docs/recipes/*.md; do
+    recipe_file="$(basename "$recipe_path")"
+    [ "$recipe_file" = "README.md" ] && continue
+    RECIPE_FILE_COUNT=$((RECIPE_FILE_COUNT + 1))
+    if grep -Fq "| [$RECIPE_TICK$recipe_file$RECIPE_TICK]($recipe_file)" "$REPO_ROOT/docs/recipes/README.md"; then
+        echo "  ✅ PASS: Catalog lists $recipe_file"
+        PASS_COUNT=$((PASS_COUNT + 1))
+    else
+        echo "  ❌ FAIL: Catalog lists $recipe_file (no row for docs/recipes/$recipe_file in docs/recipes/README.md)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+done
+if [ "$RECIPE_FILE_COUNT" -eq 0 ]; then
+    echo "  ❌ FAIL: found no recipe files under docs/recipes/ (the directory shape changed)"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
 echo ""
 echo "📌 Scenario AB: Stack Playbooks Catalog Index & Astro Stack (Issue #392)"
 assert_contains "docs/stacks/README.md" "Stack Playbook Catalog" "Stacks README includes catalog matrix"

@@ -1214,6 +1214,29 @@ if ($recipePairCount -eq 0) {
     $script:FailCount++
 }
 
+# The reverse direction: a recipe file with no catalog row is invisible to the
+# check above, so it could ship with no owner and no backlink and nothing would
+# fail. Assert every recipe file is listed in the catalog.
+$recipeFileCount = 0
+$recipeCatalog = Get-Content -Path (Join-Path $RepoRoot 'docs/recipes/README.md') -Raw
+foreach ($recipePath in (Get-ChildItem -Path (Join-Path $RepoRoot 'docs/recipes') -Filter '*.md' -File)) {
+    if ($recipePath.Name -eq 'README.md') { continue }
+    $recipeFileCount++
+    $recipeName = [regex]::Escape($recipePath.Name)
+    $recipeRowPattern = '\| \[`' + $recipeName + '`\]\(' + $recipeName + '\)'
+    if ($recipeCatalog -match $recipeRowPattern) {
+        Write-Host "  ✅ PASS: Catalog lists $($recipePath.Name)" -ForegroundColor Green
+        $script:PassCount++
+    } else {
+        Write-Host "  ❌ FAIL: Catalog lists $($recipePath.Name) (no row for docs/recipes/$($recipePath.Name) in docs/recipes/README.md)" -ForegroundColor Red
+        $script:FailCount++
+    }
+}
+if ($recipeFileCount -eq 0) {
+    Write-Host "  ❌ FAIL: found no recipe files under docs/recipes/ (the directory shape changed)" -ForegroundColor Red
+    $script:FailCount++
+}
+
 Write-Host "`n📌 Scenario AB: Stack Playbooks Catalog Index & Astro Stack (Issue #392)" -ForegroundColor Yellow
 Assert-Contains "docs/stacks/README.md" "Stack Playbook Catalog" "Stacks README includes catalog matrix"
 Assert-Contains "docs/stacks/README.md" "Architectural Intake Criteria" "Stacks README documents guidance tiers and intake rules"
