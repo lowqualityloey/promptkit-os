@@ -192,6 +192,47 @@
         "version": "5.0.3",
         "isSemVerMajor": false
       }
+    },
+    "multi-vuln": {
+      "name": "multi-vuln",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        {
+          "source": 1098450,
+          "name": "multi-vuln",
+          "dependency": "multi-vuln",
+          "title": "Prototype pollution in option merge",
+          "url": "https://github.com/advisories/GHSA-pppp-qqqq-rrrr",
+          "severity": "high",
+          "cwes": [
+            1321
+          ],
+          "range": "<2.4.0"
+        },
+        {
+          "source": 1098451,
+          "name": "multi-vuln",
+          "dependency": "multi-vuln",
+          "title": "Path traversal in template resolution",
+          "url": "https://github.com/advisories/GHSA-zzzz-yyyy-xxxx",
+          "severity": "high",
+          "cwes": [
+            22
+          ],
+          "range": "<2.4.0"
+        }
+      ],
+      "effects": [],
+      "range": "<2.4.0",
+      "nodes": [
+        "node_modules/multi-vuln"
+      ],
+      "fixAvailable": {
+        "name": "multi-vuln",
+        "version": "2.4.0",
+        "isSemVerMajor": false
+      }
     }
   },
   "metadata": {
@@ -199,9 +240,9 @@
       "info": 0,
       "low": 1,
       "moderate": 1,
-      "high": 3,
+      "high": 4,
       "critical": 2,
-      "total": 7
+      "total": 8
     },
     "dependencies": {
       "prod": 412,
