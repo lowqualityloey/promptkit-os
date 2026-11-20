@@ -6,7 +6,8 @@
  * 1. Parity with the recipe text:
  *    - Pattern A no longer matches exceptions against via.source (a number) or via.url (a full URL).
  *    - Pattern A parses the GHSA id out of via.url before consulting the ledger.
- *    - Pattern A drops ledger rows with an empty advisory id and normalizes case.
+ *    - Pattern A drops ledger rows with an empty, whitespace, or non-string advisory id,
+ *      and normalizes case.
  *    - Pattern A blocks when any single advisory is unexcepted, not only when all are.
  *    - Pattern A treats an unrecognized severity as above every threshold.
  *    - Pattern B records the same GHSA id shape the ledger stores.
@@ -15,6 +16,7 @@
  *    - An expired exception stops suppressing it, with no edit to the gate.
  *    - The severity threshold still admits everything at or above it.
  *    - A malformed ledger row suppresses nothing; a lowercase row still matches.
+ *    - A non-string advisory id is a malformed row, not a crash.
  *    - A package with one excepted and one unexcepted advisory still blocks.
  *    - An unrecognized severity blocks instead of passing silently.
  * 3. The regressions themselves: the pre-fix comparison demonstrably fails to suppress
@@ -57,8 +59,10 @@ assert(
 );
 
 assert(
-  /\.filter\(\(e\) => e\.expires >= today && e\.advisory\?\.trim\(\)\)/.test(recipeContent),
-  "docs/recipes/dependency-audit.md must drop ledger rows whose advisory id is empty or whitespace"
+  /\.filter\(\(e\) => e\.expires >= today && typeof e\.advisory === "string" && e\.advisory\.trim\(\)\)/.test(
+    recipeContent
+  ),
+  "docs/recipes/dependency-audit.md must drop ledger rows whose advisory id is empty, whitespace, or not a string"
 );
 
 assert(
@@ -238,6 +242,22 @@ test("a malformed ledger row suppresses nothing", () => {
     baseline,
     "a ledger row with no advisory field must not suppress anything"
   );
+});
+
+test("a non-string advisory id is a malformed row, not a crash", () => {
+  const baseline = names(runGate(reportJson, exceptionsJson));
+  for (const malformed of [1098392, {}, [], null, true]) {
+    const ledger = [...exceptions, { ...exceptions[0], advisory: malformed }];
+    let blocked;
+    assert.doesNotThrow(() => {
+      blocked = names(runGate(reportJson, JSON.stringify(ledger)));
+    }, `a ledger row with advisory ${JSON.stringify(malformed)} must not throw`);
+    assert.deepStrictEqual(
+      blocked,
+      baseline,
+      `a ledger row with advisory ${JSON.stringify(malformed)} must not suppress anything (baseline=${baseline.join(", ")}, got=${blocked.join(", ")})`
+    );
+  }
 });
 
 test("a lowercase ledger entry still suppresses its advisory", () => {
