@@ -1896,6 +1896,22 @@ if ($WfCount -eq 26) {
 Assert-Contains "workflows/doctor.md" "### Phase 2: The Six Checks" "doctor Phase 2 heading declares six checks"
 Assert-NotContains "workflows/doctor.md" "Four Checks" "doctor carries no stale four-check claim"
 
+# AR-2c: the six-state delegation contract is pinned so it cannot drift again (#744 AC-5).
+# The doctor must delegate to the workflows/sync.md table instead of re-deriving the
+# comparison, and every state name must stay paired with its doctor vocabulary.
+Assert-Contains "workflows/doctor.md" 'conditions are authoritative and the doctor implements them as written' "doctor delegates to the sync.md table as authoritative"
+Assert-Contains "workflows/doctor.md" 'including the bidirectional ancestry test that separates' "doctor delegation names the bidirectional ancestry test"
+Assert-Contains "workflows/doctor.md" 'do not substitute a single `merge-base --is-ancestor` call of your own' "doctor forbids substituting a single ancestry probe"
+Assert-Contains "workflows/doctor.md" '[|] `ok` [|] `OK` [|]' "doctor maps ok -> OK"
+Assert-Contains "workflows/doctor.md" '[|] `behind[(][+]n[)]` [|] `STALE[(][+]n[)]` [|]' "doctor maps behind(+n) -> STALE(+n)"
+Assert-Contains "workflows/doctor.md" '[|] `diverged` [|] `DIVERGED` [|]' "doctor maps diverged -> DIVERGED"
+Assert-Contains "workflows/doctor.md" '[|] `unknown` [|] `SKIP[(]no engine stamp[)]`' "doctor maps unknown -> SKIP(no engine stamp)"
+Assert-Contains "workflows/doctor.md" '[|] `shallow-or-offline` [|] `SKIP[(]shallow/offline[)]` [|]' "doctor maps shallow-or-offline -> SKIP(shallow/offline)"
+Assert-Contains "workflows/doctor.md" '[|] `not-a-git-install` [|] `SKIP[(]not-a-git-install[)]`' "doctor maps not-a-git-install -> SKIP(not-a-git-install)"
+Assert-Contains "workflows/sync.md" 'neither `HEAD` nor `<upstream-ref>` is an ancestor of the other' "sync.md diverged row requires bidirectional non-ancestry"
+Assert-Contains "workflows/sync.md" '`HEAD` is an ancestor of `<upstream-ref>` AND `rev-list --count HEAD[.][.]<upstream-ref>` > 0' "sync.md behind row requires HEAD to be an ancestor"
+Assert-Contains "workflows/sync.md" 'covers current and strictly ahead' "sync.md ok row covers a strictly-ahead engine"
+
 # AR-3: exercised exit-code contract over tiny throwaway kit roots. Read-only:
 # the checker never writes unless -Fix is passed, and these fixtures are removed.
 $DoctorPs1 = Join-Path $RepoRoot "scripts\check-doctor.ps1"
