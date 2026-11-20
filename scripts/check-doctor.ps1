@@ -314,8 +314,12 @@ foreach ($id in $hostIds) {
 
 # --- Check 2: version -----------------------------------------------------
 # Issue #545's six-state table (workflows/sync.md, Engine Version & Drift
-# Audit), implemented as read-only git comparisons. Tests run top-to-bottom,
-# first match wins.
+# Audit), implemented as read-only git comparisons. Map: ok->OK (covers a
+# current engine and one strictly ahead of upstream), behind(+n)->STALE(+n),
+# diverged->DIVERGED (neither side is an ancestor of the other), unknown->
+# SKIP(no engine stamp), shallow-or-offline->SKIP(shallow-or-offline),
+# not-a-git-install->SKIP(not-a-git-install). Tests run top-to-bottom, first
+# match wins.
 function Invoke-LocalGit {
     param([string]$Dir, [string[]]$GitArgs)
     try {

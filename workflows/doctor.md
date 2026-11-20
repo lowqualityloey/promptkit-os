@@ -52,7 +52,7 @@ One command checks hosts × engine version × ignore-state × docs-drift × inta
 
 **1. hosts**: enumerate the expected host directive files from the declared profile; report `OK` when `<!-- PROMPTKIT_START -->` is present in each, `MISSING` when absent (remediation: re-run the installer). Scope by declared mode per Phase 1.
 
-**2. version**: delegate to [`workflows/sync.md`](./sync.md#engine-version-drift-audit)'s six-state table; never re-derive the comparison. Map its states into this workflow's vocabulary:
+**2. version**: delegate to [`workflows/sync.md`](./sync.md#engine-version-drift-audit)'s six-state table. The table's conditions are authoritative and the doctor implements them as written — including the bidirectional ancestry test that separates `diverged` from a strictly-ahead `ok` — so do not substitute a single `merge-base --is-ancestor` call of your own. Map its states into this workflow's vocabulary:
 
 | Six-state result | Doctor row |
 | :--- | :--- |
