@@ -296,7 +296,7 @@ PromptKit's own CI validates on every PR across Linux and Windows:
 - Workflow and documentation reference integrity (`validate-references.sh`)
 - Static token budget gates — Balanced ≤ 2,500 tok, Lite ≤ 1,500 tok (`measure-tokens.sh --strict`), bounding the `bytes/4` proxy rather than a tokenizer (see §9 of [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md))
 - Behavioral contract compliance — all behavioral contract tests pass (live count in CI) (`run-behavioral-contract-tests.sh`)
-- Playbook & recipe contracts — 33/33 (23 stack playbooks + 10 boundary recipes) (`run-playbook-contract-tests.sh`)
+- Playbook & recipe contracts — 35/35 (24 stack playbooks + 11 boundary recipes) (`run-playbook-contract-tests.sh`)
 
 PromptKit applies its own engineering principles to itself.
 
