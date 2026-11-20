@@ -272,10 +272,12 @@ done
 
 # --- Check 2: version -----------------------------------------------------
 # Issue #545's six-state table (workflows/sync.md, Engine Version & Drift
-# Audit), implemented as read-only git comparisons. Map: ok->OK,
-# behind(+n)->STALE(+n), diverged->DIVERGED, unknown->SKIP(no engine stamp),
-# shallow-or-offline->SKIP(shallow-or-offline), not-a-git-install->
-# SKIP(not-a-git-install). Tests run top-to-bottom, first match wins.
+# Audit), implemented as read-only git comparisons. Map: ok->OK (covers a
+# current engine and one strictly ahead of upstream), behind(+n)->STALE(+n),
+# diverged->DIVERGED (neither side is an ancestor of the other), unknown->
+# SKIP(no engine stamp), shallow-or-offline->SKIP(shallow-or-offline),
+# not-a-git-install->SKIP(not-a-git-install). Tests run top-to-bottom, first
+# match wins.
 resolve_upstream() {
     local sym c
     sym="$(git -C "$engine_dir" -c core.fsmonitor=false symbolic-ref -q refs/remotes/origin/HEAD 2>/dev/null || true)"

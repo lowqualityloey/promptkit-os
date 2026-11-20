@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [26 Inlined Workflows (119,766 tok) + Templates + Protocols] │
+│ Every Turn: [26 Inlined Workflows (119,856 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -32,7 +32,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Profile | Template | UTF-8 Bytes | Est. Tokens (bytes/4) | Reduction vs ~32.8k current core-subset baseline¹ | Use |
 | :--- | :--- | ---: | ---: | :--- | :--- |
-| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 5,929 | **1,482 tok** | **95% static** | Onboarding, new users, tiny fixes |
+| **Lite** | `agent-directive-lite-template.md` (6 utility workflows: route, debug, commit, checkpoint, sync, profile) | 5,929 | **1,482 tok** | **96% static** | Onboarding, new users, tiny fixes |
 | **Balanced** | `agent-directive-template.md` (26 workflows) | 9,953 | **2,488 tok** | **92% static** | Teams, production, default |
 | **Turbo** | same as Balanced + parallel waves | 9,953 | 2,488 tok + subagents (~2x measured total (bounds model, see section 8)) | 92% static, higher total | Experimental, greenfield, accepts cost |
 
@@ -40,14 +40,14 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **32,903 tok** |
-| Full workflow set | 26 | **119,766 tok** |
+| Core-six Lite subset | 6 | **32,935 tok** |
+| Full workflow set | 26 | **119,856 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
 > **Lite revision provenance (committed in `3f3f86f123f43e962a3c41ddedb26b323184ddc6`, 2026-10-14, from base `cbe6a7ad15f28113fbcebacaa49c7c87068fb9ca`):** `templates/agent-directive-lite-template.md` moved 5,745 B → 5,824 B (**+79 B**, the single measured file that differs from that base; `templates/agent-directive-template.md`, `workflows/*.md`, `protocols/code-quality-gate.md`, and every other measured input are unchanged). The revised file's SHA-256 is `ffc0349a97fdce97490b9bbab73067674df2640b05a38cdd5268079931afacd0`, reproducible with `sha256sum templates/agent-directive-lite-template.md`. That commit was the provenance anchor in the banner above until the 2026-11-12 untrusted-content directive revision, which moved the file 5,824 B → 5,962 B (**+138 B**) and changed its SHA-256 to `781297b78006ae960b0d3de384a305c6a60e8a6954481142761b0c32b00abab6`; the 2026-11-13 review-fix revision then moved it 5,962 B → 5,957 B (**-5 B**) and changed the SHA-256 to `7fe41c7f1bcd6501946ee1f4a4dce01ea0e8a81ddc20b19f5cbb5a1d7e097700`; the 2026-11-13 third-review revision then moved it 5,957 B → 5,929 B (**-28 B**) and changed the SHA-256 to `c0af9d015d2582b48b5f3e113966fc39b51e901673421e5665652bcce31a075e`.
 
-> **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (92% Balanced, 95% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (11–30% Balanced, 19–34% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
+> **Clarification:** Static-overhead reductions compare the directive with the current core-six workflow baseline (92% Balanced, 96% Lite). Per-task payload reductions use a separate historical per-task baseline; current results are measured below (11–30% Balanced, 19–34% Lite). Neither measures session token usage, estimates live-model cost, or enforces host runtime limits. Session usage is estimated by the host; `workflows/perf.md` covers application performance profiling, not session metering. The search circuit breaker in the directive templates is advisory instruction, not deterministic tool control. Markdown instructs; it cannot stop tools by itself.
 
 Component rows were re-derived at the current banner anchor. The #644 `workflows/onboard.md` and `protocols/discovery-intake.md` changes and every later banner-anchor move left `templates/agent-directive-template.md` untouched until the 2026-11-12 untrusted-content directive added one guardrail bullet to it, which the 2026-11-13 review fixes then extended with a project-config carve-out and the 2026-11-13 third-review fixes extended again with a provenance clause; the rows below are measured against that revision. They use the repo's own convention (`(bytes + 2) / 4`, the same formula `scripts/measure-tokens.sh` applies to the whole directive). Each row is a contiguous line range of `templates/agent-directive-template.md`: lines 1-4, 6-33, 35-53, 55-61, 63-69, and 71-73. Those cover **68 of the file's 73 lines**; the five omitted lines (5, 34, 54, 62, and 70) are blank separators between sections and carry no content. The rows sum to 2,487 against the 2,488-token figure `scripts/measure-tokens.sh` reports for the same file, and the 1-token gap is fully accounted for in bytes: the six ranges total 9,948 B (2,487.0 tokens unrounded), so rounding each range independently and adding the parts lands at 2,487. The five omitted blank lines add 5 B for 9,953 B, the file's full byte count, which `measure-tokens.sh` rounds to 2,488. The component rows are a decomposition for orientation; the `Total Baseline Static Overhead` row below is the gated figure and carries the tool value. The `Total Baseline Static Overhead` rows are the CI-gated cells (`scripts/tests/run-behavioral-contract-tests.sh` looks up `Component (Balanced)` / `Approx. Token Weight` / `Total Baseline Static Overhead (Balanced)` by exact string equality) and must continue to match `measure-tokens.sh` output; the component rows are explanatory and are not gated.
 
@@ -60,7 +60,7 @@ Component rows were re-derived at the current banner anchor. The #644 `workflows
 | **Task Ceremony Levels** | 7 | ~293 tokens | Composable 4-level task ceremony engine |
 | **Project Artifact Output Paths** | 3 | ~96 tokens | Canonical locations for generated specs, ADRs, and plans |
 | **Total Baseline Static Overhead (Balanced)** | **73 lines** | **~2,488 tokens** | **Permanent footprint in system prompt (~92% static saving vs. current ~32.8k core-subset (~98% vs. current full 26-file set))** |
-| **Total Baseline Static Overhead (Lite)** | **57 lines** | **~1,482 tokens** | **95% static saving, ~60% of Balanced** |
+| **Total Baseline Static Overhead (Lite)** | **57 lines** | **~1,482 tokens** | **96% static saving, ~60% of Balanced** |
 > **Opt-in add-on — §5a LSP diagnostics (net **~447 tok**):** `workflows/review.md` step 2a (~313 tok) + Diagnostics Evidence table (~134 tok), with the carried comparison figure 3,228 tok from the original row. Additive only when `LSP Enabled: true`; runtime evidence capped at 150 lines. Applies to **Balanced + `pk:review`** on TS repos (Lite stays at 1,482 tok — skipped silently).
 
 By contrast, the measured cost of inlining the complete workflow set is listed in the Current Workflow Inventory above; it would be paid on turn 1 before any user request is processed.

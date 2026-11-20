@@ -143,7 +143,7 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 The core instruction layer stays small. Workflows, stack playbooks, and boundary recipes are loaded only when the task requires them.
 
 - **Balanced** profile: ~2,488 tok static footprint (~92% static saving vs. ~32.8k current core-subset baseline; 2,500 tok budget cap)
-- **Lite** profile: ~1,482 tok static footprint (~95% static saving vs. the current baseline; 1,500 tok budget cap)
+- **Lite** profile: ~1,482 tok static footprint (~96% static saving vs. the current baseline; 1,500 tok budget cap)
 
 These figures, and the caps they are compared against, use the `bytes/4` proxy — `measure-tokens.sh` never invokes a tokenizer. Read them as "the proxy is under budget", not "the real token count is under budget": the Lite directive passes its 1,500 gate at 1,482 proxy while measuring 1,529 `cl100k_base` tokens, 29 over the cap in that encoding, and only the Balanced directive clears its cap in both conventions (2,488 proxy, 2,497 actual). See [`docs/BENCHMARKS.md` §9](./docs/BENCHMARKS.md) for the full comparison.
 
