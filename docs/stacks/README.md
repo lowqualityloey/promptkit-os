@@ -10,6 +10,7 @@ Stack playbooks are activated **just-in-time (JIT)** when detectable project man
 
 | Playbook | Category | Manifest Triggers | Token Budget | Verification (`fast` / `required` / `extended`) |
 |:---|:---|:---|:---|:---|
+| [`ai-app.md`](ai-app.md) | `web` | `package.json` | $\le$ 1,500 tok | `npm run type-check` / `npm run test:evals` / `npm run build`, `npm run lint` |
 | [`api-fastapi.md`](api-fastapi.md) | `web` | `pyproject.toml`, `requirements.txt`, `alembic.ini` | $\le$ 1,500 tok | `ruff check` / `mypy` / `pytest` |
 | [`api-node.md`](api-node.md) | `web` | `package.json`, `tsconfig.json`, `nest-cli.json` | $\le$ 1,500 tok | `npm run lint` / `npx tsc` / `npm test` |
 | [`cli-python.md`](cli-python.md) | `cli` | `pyproject.toml`, `requirements.txt`, `setup.py` | $\le$ 1,500 tok | `ruff check` / `pytest` / `mypy` |
