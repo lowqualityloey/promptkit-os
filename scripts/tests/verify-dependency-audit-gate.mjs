@@ -6,13 +6,16 @@
  * 1. Parity with the recipe text:
  *    - Pattern A no longer matches exceptions against via.source (a number) or via.url (a full URL).
  *    - Pattern A parses the GHSA id out of via.url before consulting the ledger.
+ *    - Pattern A drops ledger rows with an empty advisory id and normalizes case.
  *    - Pattern B records the same GHSA id shape the ledger stores.
  * 2. Behaviour of the extracted Pattern A gate against a realistic npm audit --json payload:
  *    - An active exception suppresses its advisory.
  *    - An expired exception stops suppressing it, with no edit to the gate.
  *    - The severity threshold still admits everything at or above it.
- * 3. The regression itself: the pre-fix comparison demonstrably fails to suppress
- *    an advisory that the ledger has an active exception for.
+ *    - A malformed ledger row suppresses nothing; a lowercase row still matches.
+ * 3. The regressions themselves: the pre-fix comparison demonstrably fails to suppress
+ *    an advisory the ledger has an active exception for, and the pre-fix ledger
+ *    demonstrably fails open on an empty advisory id.
  *
  * The fixture is synthetic and local-only. No network, no npm invocation, no real advisory ids.
  */
@@ -41,10 +44,20 @@ assert(
 );
 
 assert(
-  /const ghsa = \(via: any\) => String\(via\.url \?\? ""\)\.match\(\/GHSA-\[\\w-\]\+\/i\)\?\.\[0\] \?\? "";/.test(
+  /const ghsa = \(via: any\) =>\n  \(String\(via\.url \?\? ""\)\.match\(\/GHSA-\[\\w-\]\+\/i\)\?\.\[0\] \?\? ""\)\.toUpperCase\(\);/.test(
     recipeContent
   ),
-  "docs/recipes/dependency-audit.md must parse the GHSA id out of via.url before consulting the ledger"
+  "docs/recipes/dependency-audit.md must parse the GHSA id out of via.url and normalize it before consulting the ledger"
+);
+
+assert(
+  /\.filter\(\(e\) => e\.expires >= today && e\.advisory\?\.trim\(\)\)/.test(recipeContent),
+  "docs/recipes/dependency-audit.md must drop ledger rows whose advisory id is empty or whitespace"
+);
+
+assert(
+  /\.map\(\(e\) => e\.advisory\.trim\(\)\.toUpperCase\(\)\)/.test(recipeContent),
+  "docs/recipes/dependency-audit.md must normalize ledger ids to uppercase before comparison"
 );
 
 assert(
@@ -192,6 +205,42 @@ test("extending the expiry suppresses the same advisory", () => {
   );
 });
 
+test("a malformed ledger row suppresses nothing", () => {
+  const baseline = names(runGate(reportJson, exceptionsJson));
+  for (const malformed of ["", "   "]) {
+    const ledger = [...exceptions, { ...exceptions[0], advisory: malformed }];
+    const blocked = names(runGate(reportJson, JSON.stringify(ledger)));
+    assert.deepStrictEqual(
+      blocked,
+      baseline,
+      `a ledger row with advisory ${JSON.stringify(malformed)} must not suppress anything (baseline=${baseline.join(", ")}, got=${blocked.join(", ")})`
+    );
+  }
+  const missing = [...exceptions, { owner: "x", expires: "2099-01-01", reachability: "y" }];
+  assert.deepStrictEqual(
+    names(runGate(reportJson, JSON.stringify(missing))),
+    baseline,
+    "a ledger row with no advisory field must not suppress anything"
+  );
+});
+
+test("a lowercase ledger entry still suppresses its advisory", () => {
+  const lowered = exceptions.map((e) => ({ ...e, advisory: e.advisory.toLowerCase() }));
+  const blocked = names(runGate(reportJson, JSON.stringify(lowered)));
+  assert(
+    !blocked.includes("example-parser"),
+    `a lowercase ledger id must still suppress example-parser, got: ${blocked.join(", ")}`
+  );
+  assert(
+    !blocked.includes("patched-lib"),
+    `a lowercase ledger id must still suppress patched-lib, got: ${blocked.join(", ")}`
+  );
+  assert(
+    blocked.includes("legacy-crypto"),
+    `lowercasing must not revive an expired exception, got: ${blocked.join(", ")}`
+  );
+});
+
 test("severity threshold still admits everything at or above it", () => {
   const result = runGate(reportJson, exceptionsJson);
   const blocked = names(result);
@@ -261,6 +310,40 @@ test("the pre-fix comparison demonstrably fails to suppress", () => {
   assert(
     fixed.length < legacyNames.length,
     `the fixed gate must block strictly fewer advisories than the pre-fix comparison (fixed=${fixed.length}, legacy=${legacyNames.length})`
+  );
+});
+
+test("the pre-fix ledger demonstrably fails open on an empty advisory id", () => {
+  const RANK = { info: 0, low: 1, moderate: 2, high: 3, critical: 4 };
+  const THRESHOLD = RANK.high;
+  const today = new Date().toISOString().slice(0, 10);
+
+  // The pre-fix ledger kept whatever the file held, including an empty id.
+  const legacyActive = new Set(
+    [...exceptions, { ...exceptions[0], advisory: "" }]
+      .filter((e) => e.expires >= today)
+      .map((e) => e.advisory)
+  );
+  const ghsa = (via) => String(via.url ?? "").match(/GHSA-[\w-]+/i)?.[0] ?? "";
+
+  const legacyBlocking = Object.values(report.vulnerabilities ?? {}).filter(
+    (v) => RANK[v.severity] >= THRESHOLD && !v.via.some((via) => legacyActive.has(ghsa(via)))
+  );
+  const legacyNames = legacyBlocking.map((v) => v.name);
+
+  assert(
+    !legacyNames.includes("wrapper-pkg"),
+    "the pre-fix ledger should fail open and suppress wrapper-pkg's bare-string via; if it no longer does, the fixture no longer exercises the defect"
+  );
+
+  const fixed = names(runGate(reportJson, JSON.stringify([...exceptions, { ...exceptions[0], advisory: "" }])));
+  assert(
+    fixed.includes("wrapper-pkg"),
+    `the fixed ledger must still block wrapper-pkg, got: ${fixed.join(", ")}`
+  );
+  assert(
+    fixed.length > legacyNames.length,
+    `the fixed ledger must block strictly more than the pre-fix ledger (fixed=${fixed.length}, legacy=${legacyNames.length})`
   );
 });
 
