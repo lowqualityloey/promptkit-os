@@ -8,25 +8,25 @@ description: Audit-on-install vs audit-in-CI, reachability triage, and lockfile 
 
 # Dependency Audit Recipe
 
-How to turn an advisory feed into a decision: where the gate runs, how an advisory is triaged against shipped code, and what a lockfile change may mean.
+How to turn an advisory feed into a decision: where the gate runs, how an advisory is triaged against shipped code, and what a lockfile change means.
 
 ---
 
 ## 1. Non-Negotiable Invariants
 
 - **The Gate Lives in CI, the Signal Lives Locally**:
-  - `npm audit` on install is a signal: early, cheap, and skippable. It is not the control.
-  - The control is a CI job on a pinned Node version that exits non-zero. A clean local audit is not evidence that the build is clean.
+  - `npm audit` on install is a signal: early, cheap, skippable. It is not the control.
+  - The control is a CI job on a pinned Node version that exits non-zero. A clean local audit is not evidence the build is clean.
 - **Triage by Reachability, Not Severity Alone**:
   - Severity describes the advisory in the abstract. Reachability describes your exposure.
-  - Record three facts before deciding: whether the vulnerable package is in the production graph, whether the vulnerable function is called, and whether untrusted input reaches it.
-  - A `critical` in a dev-only test runner and a `moderate` in a request-body parser are not the same decision, and severity alone ranks them backwards.
+  - Record three facts: is the vulnerable package in the production graph, is the vulnerable function called, and does untrusted input reach it.
+  - A `critical` in a dev-only test runner and a `moderate` in a request-body parser are not the same decision; severity alone ranks them backwards.
 - **A Lockfile Bump Is Not a Version Bump**:
-  - A lockfile bump moves the resolved version inside the range declared in `package.json`. The declared contract is unchanged; the shipped bytes are not.
+  - A lockfile bump moves the resolved version inside the range declared in `package.json`. The contract is unchanged; the shipped bytes are not.
   - A version bump changes the declared range. The contract changed, and the changelog is required reading.
-  - They carry different review obligations and must not be described by the same commit message.
+  - They carry different review obligations and must not share a commit message.
 - **Every Accepted Advisory Has an Owner and an Expiry**:
-  - An exception without an owner is an orphan; an exception without an expiry is permanent.
+  - An exception without an owner is an orphan; without an expiry it is permanent.
   - Record the advisory id, the reachability justification, the owner, and the re-evaluation date.
 
 ---
@@ -68,10 +68,11 @@ const active = new Set(
 const ghsa = (via: any) =>
   (String(via.url ?? "").match(/GHSA-[\w-]+/i)?.[0] ?? "").toUpperCase();
 
+// Any unexcepted advisory blocks; an unknown severity outranks every threshold.
 const blocking = Object.values(report.vulnerabilities ?? {}).filter(
   (v: any) =>
-    RANK[v.severity as keyof typeof RANK] >= THRESHOLD &&
-    !v.via.some((via: any) => active.has(ghsa(via)))
+    (RANK[v.severity as keyof typeof RANK] ?? Infinity) >= THRESHOLD &&
+    v.via.some((via: any) => !active.has(ghsa(via)))
 );
 
 if (blocking.length > 0) {
