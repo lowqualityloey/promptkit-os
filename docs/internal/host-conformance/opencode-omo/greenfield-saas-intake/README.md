@@ -30,7 +30,7 @@ Repository effects, 20 untracked paths and no commit:
 
 | Evidence | Value |
 |---|---|
-| tool calls | 59, including 8 `write`/`edit` calls |
+| tool calls | 59, including 23 `write`/`edit` calls |
 | files created | **20** untracked paths, 117,144 B total |
 | committed | nothing by the model — HEAD is the install commit `34720eb`, not the seed (5 files changed, 487 insertions; see `diff-seed-to-head.txt`) |
 | staged / unstaged | nothing |

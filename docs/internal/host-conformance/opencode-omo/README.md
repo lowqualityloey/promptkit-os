@@ -45,10 +45,13 @@ its own probe name at byte offset 46 and scored a `PASS` whose behaviour was a `
 `first-line-matches` had the mirror-image defect — it read line 1, which the renderer always
 writes as `# Live capture transcript — …`, so it could never pass on a live capture.
 
-Both twins now extract the assistant text events and grade those, stripping the renderer's
-two-space indent so `^`-anchored patterns see the model's line starts; `first-line-matches`
+Both twins now extract the assistant text events and grade those; `first-line-matches`
 resolves to the model's first non-blank line of prose, falling back to line 1 for a
-plain-prose fixture. Evidence checks are unchanged — they read the bundle, not the text.
+plain-prose fixture. The renderer's two-space indent is preserved rather than stripped: a
+`^`-anchored pattern such as `not-contains: ^tool write` must keep anchoring at the start of
+a plain-prose line, or a sentence that merely mentions a write would read as a
+prohibited-action violation. Evidence checks are unchanged — they read the bundle, not the
+text.
 
 Re-scoring all nine committed bundles moved exactly one: `greenfield-saas-intake/` went from
 `PASS|checks=2/2` to `PARTIAL|checks=1/2`, which is the honest score for that behaviour. Its

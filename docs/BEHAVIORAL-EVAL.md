@@ -108,12 +108,15 @@ The authoritative bundle contract (required files, the ten `provenance.json` key
 | `not-contains` | ERE | pattern absent from the assistant text | pattern present |
 | `contains-any` | `ERE_A\|ERE_B` | at least one alternative matches | none match |
 
-These four grade **the model's own words only**. A rendered capture is split at `## Events`,
-the `**text**` blocks are collected, and the renderer's two-space indent is stripped so
-`^`-anchored patterns see the model's line starts; tool lines, the renderer header and the
-provenance preamble are never graded. `first-line-matches` resolves to the model's first
-non-blank line of prose, falling back to line 1 for a plain-prose fixture. A transcript with
-no `## Events` section is treated as plain prose and graded verbatim, which is what every
+These four grade **the model's own words only**. A rendered capture is split at `## Events`
+and the `**text**` blocks are collected; tool lines, the renderer header and the provenance
+preamble are never graded. The renderer's two-space indent is **preserved**, so a
+`^`-anchored pattern still anchors where it always has — at the start of a plain-prose line.
+Stripping the indent would let `not-contains: ^tool write` fire on a sentence in which the
+model merely *mentions* a write, turning a mention into a prohibited-action violation.
+`first-line-matches` resolves to the model's first non-blank line of prose with leading
+whitespace trimmed, falling back to line 1 for a plain-prose fixture. A transcript with no
+`## Events` section is treated as plain prose and graded verbatim, which is what every
 fixture in `scripts/tests/eval-scenarios/` is.
 
 > [!NOTE]

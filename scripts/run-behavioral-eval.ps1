@@ -1016,11 +1016,16 @@ function Test-RenderedTranscript {
 function Get-AssistantText {
     # Get-AssistantText <transcript-file>
     # The model's own words. For a rendered capture that is the body of each
-    # **text** event, with the renderer's two-space indent removed so that
-    # ^-anchored patterns see the model's line starts; tool lines and the
-    # renderer header are excluded, because a probe grades what the model said,
-    # not what the harness wrote around it. A plain-prose transcript is returned
-    # verbatim — there the whole file already is the model's words.
+    # **text** event, verbatim; tool lines and the renderer header are excluded,
+    # because a probe grades what the model said, not what the harness wrote
+    # around it. A plain-prose transcript is returned verbatim — there the whole
+    # file already is the model's words.
+    #
+    # The renderer's two-space indent is deliberately preserved. Stripping it
+    # would let a ^-anchored pattern such as `not-contains: ^tool write` match a
+    # line of the model's prose that merely mentions a write, turning a mention
+    # into a prohibited-action violation. The indent keeps ^-anchored patterns
+    # anchored where they have always been: the plain-prose fixture form.
     param([string]$Path)
     $lines = @(Get-Content -LiteralPath $Path)
     if (-not (Test-RenderedTranscript $Path)) { return $lines }
@@ -1032,10 +1037,7 @@ function Get-AssistantText {
         if (-not $events) { continue }
         if ($l -cmatch '^- `[^`]*` \*\*text\*\*$') { $body = $true; continue }
         if ($l -cmatch '^- `[^`]*` \*\*[a-z_]+\*\*$') { $body = $false; continue }
-        if ($body) {
-            if ($l.StartsWith('  ', [StringComparison]::Ordinal)) { $out += $l.Substring(2) }
-            else { $out += $l }
-        }
+        if ($body) { $out += $l }
     }
     return $out
 }
@@ -1053,11 +1055,12 @@ function Test-Checks {
     # or the tool lines the harness wrote around them.
     $textLines = @(Get-AssistantText $TranscriptPath)
     # first-line-matches resolves to the model's first line of prose: the first
-    # non-blank assistant text line for a rendered capture, line 1 for a
-    # plain-prose fixture. The renderer header is never the model's first line.
+    # non-blank assistant text line, leading whitespace trimmed, for a rendered
+    # capture; line 1 for a plain-prose fixture. The renderer header is never
+    # the model's first line.
     $first = ""
     if (Test-RenderedTranscript $TranscriptPath) {
-        foreach ($l in $textLines) { if ($l.Trim() -ne "") { $first = $l; break } }
+        foreach ($l in $textLines) { if ($l.Trim() -ne "") { $first = $l.TrimStart(); break } }
     } else {
         $rawLines = @(Get-Content -LiteralPath $TranscriptPath)
         if ($rawLines.Count -gt 0) { $first = $rawLines[0] }
