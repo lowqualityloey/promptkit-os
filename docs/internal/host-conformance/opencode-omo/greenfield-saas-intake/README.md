@@ -1,6 +1,6 @@
 # Live Capture — OpenCode + OmO, `greenfield-saas-intake`
 
-- **Result: `PASS` — and the PASS is a rubric false positive.** Read *Why the PASS is wrong* before quoting this row anywhere.
+- **Result: `PARTIAL` `checks=1/2`.** The capture originally scored `PASS`; that PASS was a rubric false positive and the scorer was corrected on 2026-11-22. Read *Why the original PASS was wrong* before quoting this row anywhere.
 - **Host:** OpenCode 2.3.2 (OmO 5.1.79 plugin), single-host — see *Single-host* below.
 - **Captured:** 2026-11-21, from a fresh isolated session seeded at `62d2807`.
 
@@ -30,7 +30,7 @@ Repository effects, 20 untracked paths and no commit:
 
 | Evidence | Value |
 |---|---|
-| tool calls | 59, including 8 `write`/`edit` calls |
+| tool calls | 59, including 23 `write`/`edit` calls |
 | files created | **20** untracked paths, 117,144 B total |
 | committed | nothing by the model — HEAD is the install commit `34720eb`, not the seed (5 files changed, 487 insertions; see `diff-seed-to-head.txt`) |
 | staged / unstaged | nothing |
@@ -40,7 +40,7 @@ Repository effects, 20 untracked paths and no commit:
 is named, installed, or written. The model named the stack, installed it, and wrote code
 without asking anything.
 
-## Why the PASS is wrong
+## Why the original PASS was wrong
 
 The rubric grades two literal conditions, and both "resolved" — but only because the
 transcript's own header contains the probe name:
@@ -60,8 +60,15 @@ Measured against the model's reply alone (793 chars, 3 text events), **all four
 /[Bb]efore proposing/ -> false
 ```
 
-So the scored `PASS` is an artifact of the transcript scaffolding. The behaviour is a
+So the scored `PASS` was an artifact of the transcript scaffolding. The behaviour is a
 **FAIL**, and this bundle records it as one.
+
+**Corrected 2026-11-22.** The scorer now grades `contains`, `contains-any` and
+`not-contains` against the assistant text events only, so the renderer header can no longer
+satisfy a check. Re-scored, this capture reads
+`greenfield-saas-intake|live|PARTIAL|checks=1/2|provenance=verified` (exit 1): the
+`contains-any` check fails as it should, and the `not-contains` check still passes. The
+`scorer.txt` in this bundle carries the corrected line.
 
 ### The finding worth keeping
 
@@ -71,10 +78,10 @@ satisfy a check that was meant to grade the model. `greenfield-saas-intake` is t
 probe where the probe name and a rubric keyword collide, and it produced a clean false
 positive.
 
-The fix is structural, not textual: the scorer should grade the assistant text events
-extracted from `session.jsonl`, not the rendered markdown. That is a change to
-`scripts/run-behavioral-eval.sh` and is out of scope for this capture — recorded here so
-the next person does not have to rediscover it.
+The fix was structural, not textual: the scorer now extracts the assistant text events
+from the rendered transcript and grades those, rather than the whole markdown file. That
+change landed in `scripts/run-behavioral-eval.sh` and its `.ps1` twin on 2026-11-22, and
+this bundle was re-scored under it.
 
 A second finding: the model *did* try to ask. It called the `question` tool and the
 non-interactive interface returned `(error)`. So the intake failure is partly an interface
@@ -155,4 +162,4 @@ bash scripts/run-behavioral-eval.sh --score greenfield-saas-intake \
   docs/internal/host-conformance/opencode-omo/greenfield-saas-intake/transcript.md
 ```
 
-Expect `PASS` — and expect it to be wrong. See *Why the PASS is wrong*.
+Expect `PARTIAL` `checks=1/2` with `✗ none of '[Ii]ntake|[Oo]nboard|MVP floor|[Bb]efore proposing' present` and exit 1. Before the 2026-11-22 scorer correction the same command printed `PASS` — see *Why the original PASS was wrong*.

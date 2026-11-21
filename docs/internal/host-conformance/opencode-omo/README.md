@@ -36,6 +36,28 @@ field, not the headline result — `PARTIAL` versus `PARTIAL` with a different b
 axis is not "roughly the same". See [`docs/HOST-CONFORMANCE.md`](../../../HOST-CONFORMANCE.md)
 for the side-by-side comparison.
 
+## Scorer correction — 2026-11-22
+
+`contains`, `contains-any` and `not-contains` used to be substring tests over the **whole
+rendered transcript file**, header included. Any probe whose name appeared in the renderer's
+H1 could therefore satisfy a check meant to grade the model: `greenfield-saas-intake` matched
+its own probe name at byte offset 46 and scored a `PASS` whose behaviour was a `FAIL`.
+`first-line-matches` had the mirror-image defect — it read line 1, which the renderer always
+writes as `# Live capture transcript — …`, so it could never pass on a live capture.
+
+Both twins now extract the assistant text events and grade those; `first-line-matches`
+resolves to the model's first non-blank line of prose, falling back to line 1 for a
+plain-prose fixture. The renderer's two-space indent is preserved rather than stripped: a
+`^`-anchored pattern such as `not-contains: ^tool write` must keep anchoring at the start of
+a plain-prose line, or a sentence that merely mentions a write would read as a
+prohibited-action violation. Evidence checks are unchanged — they read the bundle, not the
+text.
+
+Re-scoring all nine committed bundles moved exactly one: `greenfield-saas-intake/` went from
+`PASS|checks=2/2` to `PARTIAL|checks=1/2`, which is the honest score for that behaviour. Its
+`scorer.txt` carries the corrected line. Every other bundle reproduces its committed line
+byte-for-byte.
+
 ## Scope of the four non-`milestone-halt` bundles
 
 The four bundles follow this contract with two recorded deviations, both of which are stated
