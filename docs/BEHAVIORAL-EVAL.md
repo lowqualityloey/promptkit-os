@@ -99,14 +99,22 @@ The authoritative bundle contract (required files, the ten `provenance.json` key
 
 ### Check types
 
-**Presentation checks** (four, unchanged — pattern checks over the transcript, decided by the all-must-hold rule):
+**Presentation checks** (four — pattern checks over the **assistant text**, decided by the all-must-hold rule):
 
 | Check | Payload | Pass | Fail |
 | :--- | :--- | :--- | :--- |
-| `first-line-matches` | ERE | first line matches | line 1 does not match |
-| `contains` | ERE | pattern occurs anywhere | pattern absent |
-| `not-contains` | ERE | pattern absent | pattern present |
+| `first-line-matches` | ERE | the model's first line of prose matches | it does not match |
+| `contains` | ERE | pattern occurs anywhere in the assistant text | pattern absent |
+| `not-contains` | ERE | pattern absent from the assistant text | pattern present |
 | `contains-any` | `ERE_A\|ERE_B` | at least one alternative matches | none match |
+
+These four grade **the model's own words only**. A rendered capture is split at `## Events`,
+the `**text**` blocks are collected, and the renderer's two-space indent is stripped so
+`^`-anchored patterns see the model's line starts; tool lines, the renderer header and the
+provenance preamble are never graded. `first-line-matches` resolves to the model's first
+non-blank line of prose, falling back to line 1 for a plain-prose fixture. A transcript with
+no `## Events` section is treated as plain prose and graded verbatim, which is what every
+fixture in `scripts/tests/eval-scenarios/` is.
 
 > [!NOTE]
 > `|` is **always** an alternation separator inside `contains-any`, so a literal pipe character cannot be expressed in that payload. Use `contains` for a literal pipe.

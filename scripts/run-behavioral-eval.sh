@@ -938,6 +938,35 @@ eval_evidence() {
     esac
 }
 
+transcript_is_rendered() {
+    # transcript_is_rendered <transcript-file>
+    # True when the file is a rendered capture transcript — the renderer always
+    # writes a "## Events" section — and false for a plain-prose fixture.
+    grep -q '^## Events$' "$1" 2>/dev/null
+}
+
+assistant_text() {
+    # assistant_text <transcript-file>
+    # Prints the model's own words. For a rendered capture that is the body of
+    # each **text** event, with the renderer's two-space indent removed so that
+    # ^-anchored patterns see the model's line starts; tool lines and the
+    # renderer header are excluded, because a probe grades what the model said,
+    # not what the harness wrote around it. A plain-prose transcript is printed
+    # verbatim — there the whole file already is the model's words.
+    local transcript="$1"
+    if ! transcript_is_rendered "$transcript"; then
+        cat "$transcript"
+        return 0
+    fi
+    awk '
+        /^## Events$/ { events = 1; next }
+        !events { next }
+        /^- `[^`]*` \*\*text\*\*$/ { body = 1; next }
+        /^- `[^`]*` \*\*[a-z_]+\*\*$/ { body = 0; next }
+        body { sub(/^  /, ""); print }
+    ' "$transcript"
+}
+
 eval_checks() {
     # eval_checks <transcript-file> <checks-text>
     # The four presentation check types decide RESULT by the all-must-hold rule.
@@ -949,7 +978,17 @@ eval_checks() {
     local transcript="$1" checks="$2"
     local first ok=0 total=0 ev_violation=0 ev_untested=0 ev_seen=0
     local line type pat status verdict='-'
-    first="$(head -n 1 "$transcript")"
+    local text_file
+    text_file="$(mktemp)"
+    assistant_text "$transcript" > "$text_file"
+    # first-line-matches resolves to the model's first line of prose: the first
+    # non-blank assistant text line for a rendered capture, line 1 for a
+    # plain-prose fixture. The renderer header is never the model's first line.
+    if transcript_is_rendered "$transcript"; then
+        first="$(awk 'NF { print; exit }' "$text_file")"
+    else
+        first="$(head -n 1 "$transcript")"
+    fi
     while IFS= read -r line; do
         line="${line#- }"
         [ -z "$line" ] && continue
@@ -972,16 +1011,16 @@ eval_checks() {
                 if printf '%s' "$first" | grep -Eq "$pat"; then ok=$((ok + 1));
                 else echo "    ✗ first-line-matches '$pat' (got: $first)"; fi ;;
             contains)
-                if grep -Eq "$pat" "$transcript"; then ok=$((ok + 1));
+                if grep -Eq "$pat" "$text_file"; then ok=$((ok + 1));
                 else echo "    ✗ missing '$pat'"; fi ;;
             not-contains)
-                if grep -Eq "$pat" "$transcript"; then echo "    ✗ forbidden '$pat' present";
+                if grep -Eq "$pat" "$text_file"; then echo "    ✗ forbidden '$pat' present";
                 else ok=$((ok + 1)); fi ;;
             contains-any)
                 local hit=0 alt
                 IFS='|' read -ra ALTS <<< "$pat"
                 for alt in "${ALTS[@]}"; do
-                    if grep -Eq "$alt" "$transcript"; then hit=1; break; fi
+                    if grep -Eq "$alt" "$text_file"; then hit=1; break; fi
                 done
                 if [ "$hit" -eq 1 ]; then ok=$((ok + 1));
                 else echo "    ✗ none of '$pat' present"; fi ;;
@@ -998,6 +1037,7 @@ eval_checks() {
         else verdict='PASS'
         fi
     fi
+    rm -f "$text_file"
     printf 'CHECKS|%s|%s|%s|%s\n' "$ok" "$total" "$verdict" "$ev_seen"
     [ "$ok" -eq "$total" ] && [ "$total" -gt 0 ]
 }

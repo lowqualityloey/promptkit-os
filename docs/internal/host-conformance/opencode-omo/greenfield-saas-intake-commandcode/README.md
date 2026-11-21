@@ -15,10 +15,12 @@ Both are published; neither is retracted.
 
 ## This PASS is earned — unlike the free-model capture
 
-The free-model bundle's `PASS` is a **rubric false positive**: its `contains-any` check
-matched the word `intake` inside the renderer's own H1 (`# Live capture transcript — OpenCode
-+ OmO, greenfield-saas-intake probe`, byte offset 46), not the model's reply. That model
-picked a stack and wrote 20 files with zero intake questions.
+The free-model bundle's original `PASS` was a **rubric false positive**: its `contains-any`
+check matched the word `intake` inside the renderer's own H1 (`# Live capture transcript —
+OpenCode + OmO, greenfield-saas-intake probe`, byte offset 46), not the model's reply. That
+model picked a stack and wrote 20 files with zero intake questions. The scorer was corrected
+on 2026-11-22 and that capture now scores `PARTIAL` `checks=1/2`; this one is unaffected
+because its match came from the reply.
 
 This capture is different. Graded against the **reply alone**, the same check still matches
 (`MVP floor` and `intake` both appear in the model's own text), and the `not-contains` check
@@ -89,9 +91,11 @@ artifact of the renderer's header; this one is the behaviour the probe was writt
 reward. Publishing both unchanged is what makes the difference visible — a single bundle
 would have looked like a clean pass either way.
 
-The rubric defect itself is **not fixed here**. `contains:` still grades the whole rendered
-transcript, header included, so any scenario whose name appears in the H1 can be satisfied
-by the header alone. That is a scorer change, tracked separately.
+The rubric defect that produced the free-model `PASS` was **fixed on 2026-11-22**: the
+scorer now grades `contains`, `contains-any` and `not-contains` against the assistant text
+events only, so a scenario whose name appears in the H1 can no longer be satisfied by the
+header alone. This bundle's own score is unchanged by that fix, which is the point — its
+match was always in the reply.
 
 ## Single-host
 

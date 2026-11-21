@@ -1001,6 +1001,45 @@ function Invoke-EvidenceCheck {
     return 0
 }
 
+function Test-RenderedTranscript {
+    # Test-RenderedTranscript <transcript-file>
+    # True when the file is a rendered capture transcript — the renderer always
+    # writes a "## Events" section — and false for a plain-prose fixture.
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
+    foreach ($l in Get-Content -LiteralPath $Path) {
+        if ($l -ceq '## Events') { return $true }
+    }
+    return $false
+}
+
+function Get-AssistantText {
+    # Get-AssistantText <transcript-file>
+    # The model's own words. For a rendered capture that is the body of each
+    # **text** event, with the renderer's two-space indent removed so that
+    # ^-anchored patterns see the model's line starts; tool lines and the
+    # renderer header are excluded, because a probe grades what the model said,
+    # not what the harness wrote around it. A plain-prose transcript is returned
+    # verbatim — there the whole file already is the model's words.
+    param([string]$Path)
+    $lines = @(Get-Content -LiteralPath $Path)
+    if (-not (Test-RenderedTranscript $Path)) { return $lines }
+    $out = @()
+    $events = $false
+    $body = $false
+    foreach ($l in $lines) {
+        if ($l -ceq '## Events') { $events = $true; continue }
+        if (-not $events) { continue }
+        if ($l -cmatch '^- `[^`]*` \*\*text\*\*$') { $body = $true; continue }
+        if ($l -cmatch '^- `[^`]*` \*\*[a-z_]+\*\*$') { $body = $false; continue }
+        if ($body) {
+            if ($l.StartsWith('  ', [StringComparison]::Ordinal)) { $out += $l.Substring(2) }
+            else { $out += $l }
+        }
+    }
+    return $out
+}
+
 function Test-Checks {
     # Test-Checks <transcript-file> <checks-text>
     # The four presentation check types decide RESULT by the all-must-hold rule.
@@ -1010,8 +1049,19 @@ function Test-Checks {
     # OK|TOTAL|BEHAVIORAL|EVIDENCE_SEEN|DETAIL_LINES — as an object, and
     # $true only when every presentation check holds.
     param([string]$TranscriptPath, [string[]]$CheckLines)
-    $lines = @(Get-Content -LiteralPath $TranscriptPath)
-    $first = if ($lines.Count -gt 0) { $lines[0] } else { "" }
+    # Presentation checks grade the model's own words, never the renderer header
+    # or the tool lines the harness wrote around them.
+    $textLines = @(Get-AssistantText $TranscriptPath)
+    # first-line-matches resolves to the model's first line of prose: the first
+    # non-blank assistant text line for a rendered capture, line 1 for a
+    # plain-prose fixture. The renderer header is never the model's first line.
+    $first = ""
+    if (Test-RenderedTranscript $TranscriptPath) {
+        foreach ($l in $textLines) { if ($l.Trim() -ne "") { $first = $l; break } }
+    } else {
+        $rawLines = @(Get-Content -LiteralPath $TranscriptPath)
+        if ($rawLines.Count -gt 0) { $first = $rawLines[0] }
+    }
     $bundle = Split-Path -Parent (Resolve-Path -LiteralPath $TranscriptPath)
     $ok = 0
     $total = 0
@@ -1039,15 +1089,15 @@ function Test-Checks {
                 if (Test-PatternIn @($first) $pat) { $ok++ }
                 else { $details += "    ✗ first-line-matches '$pat' (got: $first)" } }
             'contains' {
-                if (Test-PatternIn $lines $pat) { $ok++ }
+                if (Test-PatternIn $textLines $pat) { $ok++ }
                 else { $details += "    ✗ missing '$pat'" } }
             'not-contains' {
-                if (Test-PatternIn $lines $pat) { $details += "    ✗ forbidden '$pat' present" }
+                if (Test-PatternIn $textLines $pat) { $details += "    ✗ forbidden '$pat' present" }
                 else { $ok++ } }
             'contains-any' {
                 $hit = $false
                 foreach ($alt in Split-OnDelimiters $pat '\|') {
-                    if (Test-PatternIn $lines $alt) { $hit = $true; break }
+                    if (Test-PatternIn $textLines $alt) { $hit = $true; break }
                 }
                 if ($hit) { $ok++ }
                 else { $details += "    ✗ none of '$pat' present" } }
