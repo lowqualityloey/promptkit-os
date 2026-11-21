@@ -1,5 +1,5 @@
 # seed-relative committed (seed..HEAD), excluding the .promptkit/ staging commit
-# (940 files of unchanged kit content; see README.md 'Rebuild the repository evidence')
+# (1024 files of unchanged kit content; see README.md 'Rebuild the repository evidence')
  .opencode/rules.md |  73 ++++++++++++++++++++++++
  AGENTS.md          |  73 ++++++++++++++++++++++++
  PROMPTKIT.md       | 159 +++++++++++++++++++++++++++++++++++++++++++++++++++++

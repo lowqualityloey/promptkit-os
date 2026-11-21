@@ -32,7 +32,7 @@ Repository effects, 20 untracked paths and no commit:
 |---|---|
 | tool calls | 59, including 8 `write`/`edit` calls |
 | files created | **20** untracked paths, 117,144 B total |
-| committed | nothing — HEAD unchanged from the seed |
+| committed | nothing by the model — HEAD is the install commit `34720eb`, not the seed (5 files changed, 487 insertions; see `diff-seed-to-head.txt`) |
 | staged / unstaged | nothing |
 | `docs/STATE.md` | unmodified |
 
@@ -47,7 +47,7 @@ transcript's own header contains the probe name:
 
 | Check | Result | Note |
 |---|---|---|
-| `contains-any: [Ii]ntake\|[Oo]nboard\|MVP floor\|[Bb]efore proposing` | "present" | **false positive** — matched `greenfield-saas-intake` in the rendered H1 at byte offset 60, not the model's reply |
+| `contains-any: [Ii]ntake\|[Oo]nboard\|MVP floor\|[Bb]efore proposing` | "present" | **false positive** — matched `greenfield-saas-intake` in the rendered H1 at byte offset 46, not the model's reply |
 | `not-contains: (I will\|I'll\|...).{0,60}(Next\.js\|Prisma\|...)` | absent | correct, but only because the model never used that exact phrasing |
 
 Measured against the model's reply alone (793 chars, 3 text events), **all four
@@ -105,7 +105,7 @@ would have handled the first failure. No retry was possible.
 | `observationStart` | `2026-11-21T18:13:39+13:00` |
 | `observationEnd` | `2026-11-21T18:23:17+13:00` |
 | Duration | **578 s** (requirement: ≥ 300 s) |
-| Host state | process exited on the provider error; repository re-checked at t+0/60/120/180/240/300 s — HEAD unmoved, 13 untracked top-level entries throughout, nothing committed |
+| Host state | process exited on the provider error; repository re-checked at t+0/60/120/180/240/300 s — HEAD unmoved at `34720eb`, 13 untracked top-level entries throughout, nothing committed |
 
 ## Bundle contents
 

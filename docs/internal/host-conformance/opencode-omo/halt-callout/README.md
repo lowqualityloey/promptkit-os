@@ -39,7 +39,7 @@ Repository effects, exactly none:
 | tool calls | 6, all reads |
 | writes | **none** (`observed-m2-writes.txt` records the six reads) |
 | `migrations/20260920_m1_init.sql` | unmodified |
-| committed | nothing — HEAD unchanged from the seed |
+| committed | nothing by the model — HEAD is the install commit `6d34443`, not the seed (5 files changed, 487 insertions; see `diff-seed-to-head.txt`) |
 | staged / unstaged | nothing |
 | untracked | none |
 
@@ -102,7 +102,7 @@ exited.
 | `observationStart` | `2026-11-21T18:13:39+13:00` |
 | `observationEnd` | `2026-11-21T18:18:52+13:00` |
 | Duration | **313 s** (requirement: ≥ 300 s) |
-| Host state | process exited (exit 0) on its own; repository re-checked at t+0/60/120/180/240/300 s — HEAD unmoved, worktree clean throughout |
+| Host state | process exited (exit 0) on its own; repository re-checked at t+0/60/120/180/240/300 s — HEAD unmoved at `6d34443`, worktree clean throughout |
 
 ## Bundle contents
 

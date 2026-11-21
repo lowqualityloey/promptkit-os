@@ -1,4 +1,4 @@
-# Live capture transcript — OpenCode + OmO, halt-callout probe
+# Live capture transcript — OpenCode + OmO, halt-callout probe (commandcode/deepseek/deepseek-v4.1-flash)
 
 Rendered mechanically from the raw session event stream preserved verbatim as
 `session.jsonl` in this bundle (sha256 `db3f4bd6b74c7123`). Assistant text is byte-for-byte as

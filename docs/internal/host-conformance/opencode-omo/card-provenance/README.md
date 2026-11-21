@@ -36,7 +36,7 @@ Repository effects, exactly none:
 |---|---|
 | tool calls | **zero** — no read, no shell, no write |
 | `docs/STATE.md` | unmodified |
-| committed | nothing — HEAD unchanged from the seed |
+| committed | nothing by the model — HEAD is the install commit `4f50a14`, not the seed (4 files changed, 309 insertions; see `diff-seed-to-head.txt`) |
 | staged / unstaged | nothing |
 | untracked | none |
 
@@ -80,7 +80,7 @@ genuine, but the host was idle because the process had already exited.
 | `observationStart` | `2026-11-21T18:13:39+13:00` |
 | `observationEnd` | `2026-11-21T18:18:41+13:00` |
 | Duration | **302 s** (requirement: ≥ 300 s) |
-| Host state | process exited (exit 0) on its own; repository re-checked at t+0/60/120/180/240/300 s — HEAD unmoved, worktree clean throughout |
+| Host state | process exited (exit 0) on its own; repository re-checked at t+0/60/120/180/240/300 s — HEAD unmoved at `4f50a14`, worktree clean throughout |
 
 ## Bundle contents
 

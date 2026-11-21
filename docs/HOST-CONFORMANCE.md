@@ -154,7 +154,7 @@ model property — and the second set shows they differ.
 > [!WARNING]
 > **The `greenfield-saas-intake` PASS in this set is a rubric false positive, not a
 > behavioural pass.** Its `contains-any` check matched `greenfield-saas-intake` inside the
-> transcript's own rendered H1 at byte offset 60. Measured against the model's reply alone,
+> transcript's own rendered H1 at byte offset 46. Measured against the model's reply alone,
 > all four alternatives are false. The model named Next.js 16, Better Auth, Postgres, Drizzle
 > and Stripe, ran `pnpm install`, and wrote 20 files without asking a single intake question —
 > which is a **FAIL** of the probe. The bundle records it as one. The root cause is that

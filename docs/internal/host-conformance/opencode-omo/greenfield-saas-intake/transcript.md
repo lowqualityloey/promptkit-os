@@ -1,4 +1,4 @@
-# Live capture transcript — OpenCode + OmO, greenfield-saas-intake probe
+# Live capture transcript — OpenCode + OmO, greenfield-saas-intake probe (opencode/deepseek-v4.1-flash-free)
 
 Rendered mechanically from the raw session event stream preserved verbatim as
 `session.jsonl` in this bundle (sha256 `9ce4bacffee9b251`). Assistant text is byte-for-byte as

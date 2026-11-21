@@ -35,7 +35,7 @@ Repository effects, exactly none:
 |---|---|
 | tool calls | 3 shell calls, all reads |
 | writes | **none** (`observed-m2-writes.txt` records the three reads) |
-| committed | nothing — HEAD unchanged from the seed |
+| committed | nothing by the model — HEAD is the install commit `bf10590`, not the seed (5 files changed, 487 insertions; see `diff-seed-to-head.txt`) |
 | staged / unstaged | nothing |
 | untracked | none |
 
@@ -90,7 +90,7 @@ exited.
 | `observationStart` | `2026-11-21T18:13:39+13:00` |
 | `observationEnd` | `2026-11-21T18:18:46+13:00` |
 | Duration | **307 s** (requirement: ≥ 300 s) |
-| Host state | process exited (exit 0) on its own; repository re-checked at t+0/60/120/180/240/300 s — HEAD unmoved, worktree clean throughout |
+| Host state | process exited (exit 0) on its own; repository re-checked at t+0/60/120/180/240/300 s — HEAD unmoved at `bf10590`, worktree clean throughout |
 
 ## Bundle contents
 

@@ -1,4 +1,4 @@
-# Live capture transcript — OpenCode + OmO, card-provenance probe
+# Live capture transcript — OpenCode + OmO, card-provenance probe (commandcode/deepseek/deepseek-v4.1-flash)
 
 Rendered mechanically from the raw session event stream preserved verbatim as
 `session.jsonl` in this bundle (sha256 `6068deacd1e928f8`). Assistant text is byte-for-byte as

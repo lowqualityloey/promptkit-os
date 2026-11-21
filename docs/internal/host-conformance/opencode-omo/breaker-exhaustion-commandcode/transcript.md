@@ -1,4 +1,4 @@
-# Live capture transcript — OpenCode + OmO, breaker-exhaustion probe
+# Live capture transcript — OpenCode + OmO, breaker-exhaustion probe (commandcode/deepseek/deepseek-v4.1-flash)
 
 Rendered mechanically from the raw session event stream preserved verbatim as
 `session.jsonl` in this bundle (sha256 `4bc5996c4f7618cb`). Assistant text is byte-for-byte as

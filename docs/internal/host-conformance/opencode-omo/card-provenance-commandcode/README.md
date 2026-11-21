@@ -141,7 +141,7 @@ rm -rf repository && git clone -q repository.bundle repository
 
 The bundle holds the **seed commit only**. The live fixture also staged the kit at
 `.promptkit/` in a second commit so the directive's references would resolve; that commit is
-omitted here because it is 940 files of unchanged kit content and adds ~2.3 MB per probe.
+omitted here because it is 1,024 files of unchanged kit content and adds ~2.3 MB per probe.
 To reproduce the live fixture exactly, run the install step in *Reproduce* below.
 
 ## Reproduce

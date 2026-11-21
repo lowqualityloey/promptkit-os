@@ -195,7 +195,7 @@ rm -rf repository && git clone -q repository.bundle repository
 The bundle holds the **seed commit only** — `.env` (empty), `README.md`, `docker-compose.yml`,
 `migrations/20260920_m1_init.sql`. The live fixture also staged the kit at `.promptkit/` in a
 second commit so the directive's references would resolve; that commit is omitted here
-because it is 940 files of unchanged kit content and adds ~2.3 MB per probe.
+because it is 1,024 files of unchanged kit content and adds ~2.3 MB per probe.
 
 ## Reproduce
 

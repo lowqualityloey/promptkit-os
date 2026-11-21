@@ -1,6 +1,6 @@
 {
   "captureDate": "2026-11-21",
-  "promptkitCommit": "936efe3a497c6ac1a0c287364812e48134e023ae",
+  "promptkitCommit": "3e77633132cc7792e40f0449ed0032c9762f8ba3",
   "profile": "balanced",
   "seedCommit": "299385851912bcc4a132852f19eb480f579be066",
   "resetCommands": "git init; write the probe fixture files; git add -A; git commit -m 'seed: greenfield-saas-intake probe fixture'; PROMPTKIT_NO_INTERACTIVE=1 bash init.sh --balanced --host=opencode .; stage the kit at .promptkit/; write opencode.json enabling oh-my-opencode@5.1.79; git add -A; git commit -m 'install: Balanced directive + staged kit + OmO 5.1.79'; git status --porcelain must be empty",

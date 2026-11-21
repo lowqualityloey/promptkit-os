@@ -17,7 +17,7 @@ Both are published; neither is retracted.
 
 The free-model bundle's `PASS` is a **rubric false positive**: its `contains-any` check
 matched the word `intake` inside the renderer's own H1 (`# Live capture transcript — OpenCode
-+ OmO, greenfield-saas-intake probe`, byte offset 60), not the model's reply. That model
++ OmO, greenfield-saas-intake probe`, byte offset 46), not the model's reply. That model
 picked a stack and wrote 20 files with zero intake questions.
 
 This capture is different. Graded against the **reply alone**, the same check still matches
@@ -150,7 +150,7 @@ rm -rf repository && git clone -q repository.bundle repository
 
 The bundle holds the **seed commit only**. The live fixture also staged the kit at
 `.promptkit/` in a second commit so the directive's references would resolve; that commit is
-omitted here because it is 940 files of unchanged kit content and adds ~2.3 MB per probe.
+omitted here because it is 1,024 files of unchanged kit content and adds ~2.3 MB per probe.
 To reproduce the live fixture exactly, run the install step in *Reproduce* below.
 
 ## Reproduce
