@@ -1,0 +1,29 @@
+
+[0;36m🚀 Initializing PromptKit OS (balanced profile)...[0m
+   Host Project: /home/heyloey/personal/promptkit-os/scratch/capture/out-cc/card-provenance/work
+   Engine Path:  /home/heyloey/personal/promptkit-os
+   Profile:      balanced
+   Tracking:     local
+
+PREFLIGHT|SCOPE|20 fixed paths; 65536 bytes per file; no recursive scan or credential validation
+PREFLIGHT|NO_FINDINGS|FIXED_SCOPE_ONLY
+  [0;32m[+][0m Added host configuration: .opencode/rules.md
+  [0;32m[+][0m Created default agent configurations: .opencode/rules.md AGENTS.md
+  [0;32m[+][0m Created directory: docs/tasks
+  [0;32m[+][0m Created directory: docs/specs
+  [0;32m[+][0m Created directory: docs/adrs
+  [0;32m[+][0m Created directory: docs/tests
+  [0;32m[+][0m Created: PROMPTKIT.md (project profile & guardrails)
+  [0;32m[+][0m Set PROMPTKIT.md profile: balanced
+  [0;33m[✓][0m Updated PROMPTKIT.md tracking: local
+  [0;33m[-][0m Skipped: .github PR/issue templates (task tracking is 'local'; they are created when tracking is GitHub or GitHub projection)
+  [0;32m[+][0m Injected PromptKit OS directives into: .opencode/rules.md (profile: balanced)
+  [0;32m[+][0m Injected PromptKit OS directives into: AGENTS.md (profile: balanced)
+ASSERT|direct-clone|repository|OK
+
+[0;36m✨ PromptKit OS successfully configured for /home/heyloey/personal/promptkit-os/scratch/capture/out-cc/card-provenance/work! (balanced profile)[0m
+   [0;33mNote: the kit is not staged at .promptkit/ in this project — the directive references workflows there, so pk:* commands cannot load until you stage it.[0m
+   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit
+   Balanced: 26 workflows, Level 0-3 adaptive ceremony — full power
+   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'
+

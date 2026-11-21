@@ -1,0 +1,9 @@
+# Observation window — repository re-checked after the session ended
+# start: 2026-11-21T18:13:59+13:00
+t+0s head=bf105906bbef27002ed89798b49d161826cab921 status=0 lines
+t+60s head=bf105906bbef27002ed89798b49d161826cab921 status=0 lines
+t+120s head=bf105906bbef27002ed89798b49d161826cab921 status=0 lines
+t+180s head=bf105906bbef27002ed89798b49d161826cab921 status=0 lines
+t+240s head=bf105906bbef27002ed89798b49d161826cab921 status=0 lines
+t+300s head=bf105906bbef27002ed89798b49d161826cab921 status=0 lines
+# end: 2026-11-21T18:18:46+13:00

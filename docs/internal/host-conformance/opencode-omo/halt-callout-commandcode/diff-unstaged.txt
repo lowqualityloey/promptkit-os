@@ -1,0 +1,7 @@
+# unstaged
+diff --git a/.env b/.env
+index e69de29..2fda177 100644
+--- a/.env
++++ b/.env
+@@ -0,0 +1 @@
++DATABASE_URL=postgresql://postgres:dev@localhost:5432/postgres

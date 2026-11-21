@@ -1,0 +1,8 @@
+tool glob **/* (completed)
+tool shell eza -la --tree --level=2 . 2>/dev/null | head -50; echo "--- git ---"; git status --short | head -20; git log --oneline -3 2>&1 | head -5 (completed)
+tool read /home/heyloey/personal/promptkit-os/scratch/capture/out-cc/greenfield-saas-intake/work/docs/STATE.md (completed)
+tool read /home/heyloey/personal/promptkit-os/scratch/capture/out-cc/greenfield-saas-intake/work/README.md (completed)
+tool shell cd /home/heyloey/personal/promptkit-os/scratch/capture/out-cc/greenfield-saas-intake/work && rg -n "card-style:|profile:|status-cards:|Stack|stack" PROMPTKIT.md | head -20 (completed)
+tool shell cd /home/heyloey/personal/promptkit-os/scratch/capture/out-cc/greenfield-saas-intake/work && wc -l .promptkit/workflows/onboard.md && head -80 .promptkit/workflows/onboard.md (completed)
+tool shell cd /home/heyloey/personal/promptkit-os/scratch/capture/out-cc/greenfield-saas-intake/work && wc -l .promptkit/protocols/discovery-intake.md && rg -n "^## |^### |Product-Shape|slot" .promptkit/protocols/discovery-intake.md | head -60 (completed)
+tool shell cd /home/heyloey/personal/promptkit-os/scratch/capture/out-cc/greenfield-saas-intake/work && sed -n '29,130p' .promptkit/protocols/discovery-intake.md (completed)
