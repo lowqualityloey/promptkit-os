@@ -1,0 +1,4 @@
+tool glob **/{STATE.md,PROMPTKIT.md,handoff.md,*.md} (completed)
+tool shell eza --tree --level=2 --all 2>/dev/null | head -60; echo "---GIT---"; git -C . log --oneline -15 2>&1 | head -20; echo "---STATUS---"; git -C . status --short 2>&1 | head -30 (completed)
+tool read /home/heyloey/personal/promptkit-os/scratch/capture/out-cc/card-provenance/work/docs/STATE.md (completed)
+tool read /home/heyloey/personal/promptkit-os/scratch/capture/out-cc/card-provenance/work/README.md (completed)

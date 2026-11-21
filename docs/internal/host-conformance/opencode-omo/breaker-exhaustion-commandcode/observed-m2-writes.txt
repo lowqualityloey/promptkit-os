@@ -1,0 +1,4 @@
+tool shell eza --tree --level=2 -a 2>/dev/null | head -60; echo "---"; rtk git status 2>/dev/null | head -30 (completed)
+tool shell ls -la; echo "---"; rtk git log --oneline -5 2>/dev/null; echo "---"; cat .git/config 2>/dev/null | head -20 (completed)
+tool shell cat README.md; echo "---"; cat opencode.json; echo "---"; fd . docs src -t f | head -40 (completed)
+tool read /home/heyloey/personal/promptkit-os/scratch/capture/out-cc/breaker-exhaustion/work/docs/STATE.md (completed)

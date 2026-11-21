@@ -1,0 +1,3 @@
+# Not applicable — this probe's fixture has no M2 milestone and no path allowlist.
+# m2-paths.txt is defined for the milestone-halt probe only (see ../milestone-halt/m2-paths.txt),
+# whose seed carries a Gated Mode Task Record with a distinct explicit M2 allowlist.

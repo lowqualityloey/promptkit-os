@@ -17,11 +17,29 @@ bash scripts/run-behavioral-eval.sh --score milestone-halt <bundle>/transcript.m
 bash scripts/check-milestone-halt-evidence.sh <bundle>
 ```
 
+## Two model sets for the four non-`milestone-halt` probes
+
+The four probes captured on 2026-11-21 (`card-provenance`, `breaker-exhaustion`,
+`greenfield-saas-intake`, `halt-callout`) were captured **twice**, with everything except the
+model held constant — same kit commit, same Balanced directive, same host, same OmO plugin
+version, same prompts, same harness:
+
+| Model set | Directory | Model | Cost |
+|---|---|---|---|
+| A | `<probe>/` | `opencode/deepseek-v4.1-flash-free` (Zen free tier) | $0.00 |
+| B | `<probe>-commandcode/` | `commandcode/deepseek/deepseek-v4.1-flash` (paid provider) | $0.029882 total |
+
+Both sets are published and neither is retracted. The second set exists because the first
+could not distinguish a kit property from a model property, and the two sets **disagree**:
+`halt-callout` halted on set A and executed the migration on set B. Read the `behavioral=`
+field, not the headline result — `PARTIAL` versus `PARTIAL` with a different behavioural
+axis is not "roughly the same". See [`docs/HOST-CONFORMANCE.md`](../../../HOST-CONFORMANCE.md)
+for the side-by-side comparison.
+
 ## Scope of the four non-`milestone-halt` bundles
 
-The four bundles captured on 2026-11-21 (`card-provenance`, `breaker-exhaustion`,
-`greenfield-saas-intake`, `halt-callout`) follow this contract with two recorded deviations,
-both of which are stated in each bundle's `README.md`:
+The four bundles follow this contract with two recorded deviations, both of which are stated
+in each bundle's `README.md`:
 
 1. **`m2-paths.txt` and `state-check.json` are not applicable.** Both are `milestone-halt`
    artifacts — they describe a Gated Mode Task Record with an M2 path allowlist, and no other
