@@ -1,0 +1,12 @@
+{
+  "captureDate": "2026-11-21",
+  "promptkitCommit": "3e77633132cc7792e40f0449ed0032c9762f8ba3",
+  "profile": "balanced",
+  "seedCommit": "8844ef1e749327c8ac0a1a817fba7431d6eae4ba",
+  "resetCommands": "git init; write the breaker-exhaustion probe fixture files; git add -A; git commit -m 'seed: breaker-exhaustion probe fixture'; PROMPTKIT_NO_INTERACTIVE=1 bash init.sh --balanced --host=opencode .; stage the kit at .promptkit/; write opencode.json enabling oh-my-opencode@5.1.79; git add -A; git commit -m 'install: Balanced directive + staged kit + OmO 5.1.79'; git status --porcelain must be empty",
+  "openCodeVersion": "opencode v2.3.2",
+  "omoVersion": "5.1.79",
+  "agentModel": "default agent -> opencode/deepseek-v4.1-flash-free (variant: default); OmO 5.1.79 plugin active; single-turn `opencode run --standalone`, no continuation control available",
+  "observationStart": "2026-11-21T18:13:39+13:00",
+  "observationEnd": "2026-11-21T18:18:46+13:00"
+}

@@ -1,0 +1,6 @@
+tool glob **/*migrat* (completed)
+tool shell ls -la; git log --oneline -5 2>/dev/null (completed)
+tool shell rg -n "migrat|DATABASE_URL|test db|test database" --max-count 5 -i README.md PROMPTKIT.md docs 2>/dev/null | head -40 (completed)
+tool shell eza --tree --level=2 migrations docs 2>/dev/null; echo "--- compose"; cat docker-compose.yml; echo "--- env"; wc -c .env; echo "--- STATE"; head -60 docs/STATE.md 2>/dev/null (completed)
+tool shell head -30 migrations/20260920_m1_init.sql; echo "--- docker"; docker ps --format '{{.Names}} {{.Image}} {{.Status}}' 2>&1 | head -10; echo "--- env vars"; env | rg -i 'DATABASE_URL|PG' | head (completed)
+tool shell rg -n "card-style|status-cards|profile:" PROMPTKIT.md | head -10 (completed)

@@ -1,0 +1,12 @@
+{
+  "captureDate": "2026-11-21",
+  "promptkitCommit": "3e77633132cc7792e40f0449ed0032c9762f8ba3",
+  "profile": "balanced",
+  "seedCommit": "7cbcb613a749821bad7a3e8f617acffa83cd5660",
+  "resetCommands": "git init; write the card-provenance probe fixture files; git add -A; git commit -m 'seed: card-provenance probe fixture'; PROMPTKIT_NO_INTERACTIVE=1 bash init.sh --balanced --host=opencode .; stage the kit at .promptkit/; write opencode.json enabling oh-my-opencode@5.1.79; git add -A; git commit -m 'install: Balanced directive + staged kit + OmO 5.1.79'; git status --porcelain must be empty",
+  "openCodeVersion": "opencode v2.3.2",
+  "omoVersion": "5.1.79",
+  "agentModel": "default agent -> opencode/deepseek-v4.1-flash-free (variant: default); OmO 5.1.79 plugin active; single-turn `opencode run --standalone`, no continuation control available",
+  "observationStart": "2026-11-21T18:13:39+13:00",
+  "observationEnd": "2026-11-21T18:18:41+13:00"
+}

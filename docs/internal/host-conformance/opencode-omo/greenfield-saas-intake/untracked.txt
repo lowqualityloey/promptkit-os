@@ -1,0 +1,21 @@
+# untracked
+.env.example
+.gitignore
+docker-compose.yml
+next.config.ts
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+postcss.config.mjs
+scripts/auth-schema-options.ts
+scripts/print-auth-schema.ts
+src/db/index.ts
+src/db/schema/auth.ts
+src/db/schema/index.ts
+src/db/schema/saas.ts
+src/lib/auth.ts
+src/lib/env.ts
+src/lib/plans.ts
+tests/plans.test.ts
+tsconfig.json
+vitest.config.ts
