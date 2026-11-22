@@ -19,11 +19,15 @@
 
 - **Objective**: Remove the two blockers that make an honest non-OpenCode host capture impossible, then capture the first Antigravity probe end-to-end so the pipeline is proven before the remaining four probes are attempted.
 - **In Scope**:
-  - The provenance key list in all five code locations plus its documentation, generalized so `hostName` + `hostVersion` is accepted as an alternative to `openCodeVersion` + `omoVersion`.
-  - Regression coverage for both the legacy OpenCode shape and the host-neutral shape, in both twins.
+  - The provenance key list in all five code locations plus its documentation, generalized so `hostName` + `hostVersion` is accepted as an alternative to `openCodeVersion` + `omoVersion` (`scripts/run-behavioral-eval.sh`, `scripts/run-behavioral-eval.ps1`, `scripts/check-milestone-halt-evidence.sh`, `scripts/check-milestone-halt-evidence.ps1`, `docs/BEHAVIORAL-EVAL.md`, `docs/internal/host-conformance/opencode-omo/README.md`).
+  - Regression coverage for both the legacy OpenCode shape and the host-neutral shape, in both twins (`scripts/tests/run-behavioral-contract-tests.sh`, `scripts/tests/run-behavioral-contract-tests.ps1`).
   - A milestone-halt seed carrying an `AGENTS.md` that `agy` actually reads, with the new seed commit recorded.
-  - A transcript renderer (Bash and PowerShell twins) converting `agy` `stream-json` NDJSON into the format `--score` expects.
+  - A transcript renderer (Bash and PowerShell twins) converting `agy` `stream-json` NDJSON into the format `--score` expects, with its round-trip suites: `scripts/render-capture-transcript.mjs`, `scripts/render-capture-transcript.sh`, `scripts/render-capture-transcript.ps1`, `scripts/tests/run-render-capture-transcript-tests.sh`, `scripts/tests/run-render-capture-transcript-tests.ps1`.
   - One live `halt-callout` capture under the proven `bwrap` isolation, with its full bundle.
+  - The capture plan's Phase 4 close-out, which the merged specification (`docs/internal/host-conformance/antigravity-capture-plan.md`) requires: the Antigravity matrix row in `docs/HOST-CONFORMANCE.md` reflecting measured results only, the double-injection finding recorded with its evidence, and the plan's own gate items closed.
+  - The remaining five Antigravity capture bundles under `docs/internal/host-conformance/antigravity/<probe>/`, plus `docs/internal/host-conformance/antigravity/README.md`.
+  - Wiring the new suites into `.github/workflows/ci.yml` and `CONTRIBUTING.md`, and the `CHANGELOG.md` entry the changelog gate requires for a top-level `scripts/` change.
+  - The one-line Antigravity pointer in `README.md`.
 - **Explicit Non-Goals**:
   - Capturing the other four probes. Phase 2 exists to find pipeline defects on the cheapest probe first.
   - Moving the Antigravity row in `docs/HOST-CONFORMANCE.md` off `Untested`. One probe is not a host verdict, and the matrix update is Phase 4.
@@ -74,12 +78,12 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Execution State**: `completed`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-11-22 10:51 UTC`
 - **Current Actor**: `DeepSeek Harness agent (lead)`
-- **Next Action**: None — all eight acceptance criteria are met and evidenced. Awaiting the owner's merge decision on PR #763.
+- **Next Action**: None — the task is complete. PR #763 merged as `378c27e`; the gates were re-run on the merged tree and pass. Issue #764 (the installer double-write) and issue #600 (host-conformance expansion) remain open by the owner's instruction and are separate decisions.
 
 ### Transition History
 
@@ -88,22 +92,39 @@
 | `None` | `planned` | `2026-11-22 10:51 UTC` | `DeepSeek Harness agent` | Record created from the owner's request | `docs/internal/host-conformance/antigravity-capture-plan.md` |
 | `planned` | `in_progress` | `2026-11-22 10:51 UTC` | `DeepSeek Harness agent` | Objective, scope, criteria, and policy complete | This record |
 | `in_progress` | `awaiting_review` | `2026-11-23 08:20 UTC` | `DeepSeek Harness agent` | AC-1 through AC-8 met and evidenced; merge is the owner's decision | §3 Acceptance Criteria, §6 Evidence and Completion Gate |
+| `awaiting_review` | `completed` | `2026-11-22 21:05 UTC` | `Jonell Balanay (owner)` | Owner confirmed the merge; PR #763 merged into `main` as `378c27e` | `gh pr view 763` → `state: MERGED`, `mergeCommit: 378c27e`; gates re-run on the merged tree |
 
 ## 6. Evidence and Completion Gate
 
-- **Changed Files**: `scripts/run-behavioral-eval.sh`, `scripts/run-behavioral-eval.ps1`, `scripts/check-milestone-halt-evidence.sh`, `scripts/check-milestone-halt-evidence.ps1`, `scripts/tests/run-behavioral-contract-tests.sh`, `scripts/tests/run-behavioral-contract-tests.ps1`, `scripts/tests/run-milestone-halt-evidence-fixtures.sh`, `scripts/render-capture-transcript.mjs` (new), `scripts/render-capture-transcript.sh` (rewritten as a forwarder), `scripts/render-capture-transcript.ps1` (new), `scripts/tests/run-render-capture-transcript-tests.sh` (new), `scripts/tests/run-render-capture-transcript-tests.ps1` (new), `.github/workflows/ci.yml`, `CONTRIBUTING.md`, `CHANGELOG.md`, `README.md`, `docs/HOST-CONFORMANCE.md`, `docs/BEHAVIORAL-EVAL.md`, `docs/internal/host-conformance/antigravity-capture-plan.md`, `docs/internal/host-conformance/antigravity/README.md`, `docs/internal/host-conformance/opencode-omo/README.md`, and the six `docs/internal/host-conformance/antigravity/<probe>/` bundles
+- **Changed Files**:
+  - `scripts/run-behavioral-eval.sh` / `.ps1` - provenance key list generalized to a two-shape group, both twins
+  - `scripts/check-milestone-halt-evidence.sh` / `.ps1` - accepts either host-identification pair
+  - `scripts/tests/run-behavioral-contract-tests.sh` / `.ps1` - four regression controls per twin
+  - `scripts/render-capture-transcript.mjs` (new) - the single renderer implementation
+  - `scripts/render-capture-transcript.sh` (rewritten) / `.ps1` (new) - thin forwarders to the module
+  - `scripts/tests/run-render-capture-transcript-tests.sh` / `.ps1` (new) - 10-check round-trip suites
+  - `.github/workflows/ci.yml` - both syntax lists and one test step per twin
+  - `CONTRIBUTING.md` - the new suites in the documented gate set
+  - `CHANGELOG.md` - the renderer twin and the double-injection record
+  - `README.md` - the Antigravity capture pointer
+  - `docs/HOST-CONFORMANCE.md` - Antigravity matrix row and the double-injection finding
+  - `docs/BEHAVIORAL-EVAL.md` - both provenance shapes documented
+  - `docs/internal/host-conformance/antigravity-capture-plan.md` - all four phases closed
+  - `docs/internal/host-conformance/antigravity/README.md` - isolation canary, renderer, bundles
+  - `docs/internal/host-conformance/opencode-omo/README.md` - both provenance shapes
+  - `docs/internal/host-conformance/antigravity/<probe>/` - six capture bundles
 - **Scope Change Records**: `none`
 - **Checkpoint Records**: `none`
 - **Handoff Records**: `none`
 - **Verification Evidence**: `bash scripts/validate-references.sh . --strict` → exit 0, "All references valid! No broken links found."; `bash scripts/tests/run-behavioral-contract-tests.sh` → `Passed: 791 | Failed: 0`; `pwsh -NoProfile -File scripts/tests/run-behavioral-contract-tests.ps1` → all passed; `bash scripts/run-behavioral-eval.sh --self-test` → `Passed: 121 | Failed: 0`; `bash scripts/tests/run-milestone-halt-evidence-fixtures.sh` → `MILESTONE_EVIDENCE_FIXTURES|PASS|26 cases`; `bash scripts/tests/run-render-capture-transcript-tests.sh` → `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|10 passed`; `pwsh -NoProfile -File scripts/tests/run-render-capture-transcript-tests.ps1` → `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|10 passed`; `bash scripts/check-changelog-entry.sh` → `CHANGELOG_GATE|PASS`; `pwsh -NoProfile -File scripts/run-behavioral-eval.ps1 --score halt-callout <bundle>/transcript.md` → `halt-callout|live|PARTIAL|checks=5/7|behavioral=PARTIAL|provenance=verified`, byte-identical to the Bash scorer.
 - **CI Evidence**: PR #763 — all twelve checks SUCCESS, `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`. The suite has passed on every branch head since the two renderer fixes landed (`0b3935f`, `9233823`); the last verified run is 45065282237. This record is itself a docs-only file, so each commit to it re-runs the same twelve checks rather than changing what they cover. The twelve: Change Classification, Staged Secret Scan (PR Diff), Linux Docs & Contracts, Windows Docs & Contracts, Lint & Validate (Linux), Lint & Validate (Windows), Linux Code Shard - Installer & Runtime, Linux Code Shard - Fixtures & Benchmarks, Windows Code Shard - Command Surface, Windows Code Shard - Doctor & Profiles, Windows Code Shard - Harnesses, Windows Code Shard - Syntax, Gates & Init Safety. The renderer suites are wired into `.github/workflows/ci.yml` (bash `-n` list, PowerShell `$syntaxFiles`, and one test step per twin) so they run on every future PR. Two CI-only defects surfaced once they did, both fixed rather than skipped: the harness asserted against `observed-writes.log`, which is gitignored (`*.log`) and so never exists in a checkout (`0b3935f`), and the renderer hashed the stream's raw bytes, so a `core.autocrlf` checkout produced a different preamble `sha256` and failed all six Windows round-trips (`9233823`).
-- **Review Evidence**: `none yet — no human review has been requested or received`
+- **Review Evidence**: The owner reviewed the branch and confirmed the merge on 2026-11-22, which is the human confirmation the Approval Boundary requires. No separate code review was requested or performed; the twelve CI checks and the local gate set are the review evidence.
 - **Commit Evidence**: `9683d92` (provenance key list, renderer, halt-callout capture), `b885519` (merge of PR #761, milestone-halt capture), `f67c8a3` (merge of PR #762, remaining four probes), `0a1e1c0` (milestone-halt-resume capture), `7f2faef` (double-injection record, renderer PowerShell twin, acceptance-criteria close-out), `0b3935f` (harness no longer asserts on a gitignored file), `9233823` (renderer hashes the stream canonically).
-- **Pull Request Evidence**: PR #763 `feat: capture the Antigravity CLI milestone-halt resume turn` — OPEN, `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`. Predecessors #759, #760, #761, #762 merged.
+- **Pull Request Evidence**: PR #763 `feat: capture the Antigravity CLI milestone-halt resume turn` — MERGED into `main` as `378c27e` at 2026-11-22T20:59:22Z by `lowqualityloey`, after all twelve checks passed at head `86f82b6` with `mergeable: MERGEABLE` and `mergeStateStatus: CLEAN`. Predecessors #759, #760, #761, #762 merged.
 - **Release Evidence**: `not applicable`
 - **Blocker and Resume Condition**: `none`
-- **Completion State**: `awaiting_review`
+- **Completion State**: `completed`
 - **Acceptance Results**: `AC-1 through AC-8 met` (AC-2 met with one documented pre-existing exception: `milestone-halt` re-scores `provenance=unverified` under both the fixed and the pre-fix scorer because its `observed-m2-writes.txt` is empty)
 - **Changed-File Summary**: 20 files in `0a1e1c0` (+658/−3) plus the follow-up: five provenance code locations generalized to a two-shape group, four regression controls per contract twin, 26 milestone-halt evidence fixtures, one shared renderer module with two thin forwarders and two 10-check round-trip suites, the double-injection record in `docs/HOST-CONFORMANCE.md` §4 with issue #764 filed separately, the §2.3 `rtk` measurement, and the six Antigravity capture bundles.
 - **Completion Exception**: `none`
-- **Completion Decision and Timestamp**: `2026-11-23 08:20 UTC — work complete, all acceptance criteria met and evidenced. Merge is the owner's decision and is not claimed here.`
+- **Completion Decision and Timestamp**: `2026-11-22 21:05 UTC — complete. All eight acceptance criteria are met and evidenced, the owner confirmed the merge, and PR #763 landed on main as 378c27e. The gates were re-run on the merged tree rather than assumed from the branch: validate-references exit 0, both renderer round-trip suites PASS 10, both behavioral contract twins pass, --self-test 121/0, milestone-halt evidence fixtures PASS 26, changelog gate PASS.`
