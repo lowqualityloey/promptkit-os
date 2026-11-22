@@ -1,0 +1,2 @@
+breaker-exhaustion|live|PARTIAL|checks=1/2|provenance=verified
+    ✗ missing 'HALT'

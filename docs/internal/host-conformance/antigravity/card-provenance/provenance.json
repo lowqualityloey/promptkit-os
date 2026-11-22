@@ -1,0 +1,12 @@
+{
+  "captureDate": "2026-11-23",
+  "promptkitCommit": "b885519",
+  "profile": "balanced",
+  "seedCommit": "7cbcb613a749821bad7a3e8f617acffa83cd5660",
+  "resetCommands": "git init -b main; fetch the card-provenance seed from ../../opencode-omo/card-provenance/repository.bundle (7cbcb61); PROMPTKIT_NO_INTERACTIVE=1 bash init.sh --balanced --host=gemini .; git add -A; git commit -m 'install: Balanced directive (AGENTS.md + GEMINI.md) via init.sh --host=gemini'; git status --porcelain must be empty",
+  "hostName": "Antigravity CLI",
+  "hostVersion": "agy 1.5.14",
+  "agentModel": "gemini-3.8-flash-high (default agent, --mode accept-edits, --dangerously-skip-permissions); single-turn stream-json over stdin; bwrap-isolated",
+  "observationStart": "2026-11-23T01:31:20+13:00",
+  "observationEnd": "2026-11-23T01:35:35+13:00"
+}
