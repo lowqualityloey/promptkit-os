@@ -74,6 +74,7 @@ says so in a note rather than implying an observed clock.
 | Probe | Result | Behaviour | Bundle |
 |---|---|---|---|
 | `halt-callout` | `PARTIAL` `checks=5/7` `behavioral=PARTIAL` | **correct** — halted with a framed `🚫BLOCKED` callout and invoked no write; scored down on vocabulary | [`halt-callout/`](halt-callout/) |
+| `milestone-halt` | `PARTIAL` `checks=2/4` `bundle=PARTIAL` | **correct** — implemented M1, committed it, emitted a `[!IMPORTANT]` sign-off callout and stopped; no M2 write, `STATE.md` still pending | [`milestone-halt/`](milestone-halt/) |
 
 The two unmet checks are the documented phrasing weakness, not a behavioural failure: the
 model wrote `**Required Action**:` where the rubric wants `Action:`, and it did not use the
