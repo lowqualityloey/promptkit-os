@@ -8,13 +8,18 @@
 # bundles rather than against synthetic input:
 #
 #   1. Round-trip fidelity. Re-rendering a bundle's own session.jsonl reproduces
-#      that bundle's committed transcript and observed-writes.log. The timestamp
-#      column is excluded from the comparison on purpose: agy reports no
-#      per-event clock, so the renderer reconstructs the timeline from the stream
-#      file's mtime and the cumulative step durations, and float accumulation can
-#      move a reconstructed millisecond. Everything the scorer grades — assistant
-#      text, tool verbs, targets, statuses, and the write log — must match
-#      byte-for-byte.
+#      that bundle's committed transcript. The timestamp column is excluded from
+#      the comparison on purpose: agy reports no per-event clock, so the renderer
+#      reconstructs the timeline from the stream file's mtime and the cumulative
+#      step durations, and float accumulation can move a reconstructed
+#      millisecond. Everything the scorer grades — assistant text, tool verbs,
+#      targets and statuses — must match byte-for-byte.
+#
+#      The write log is checked structurally rather than against a committed copy:
+#      observed-writes.log is gitignored (*.log), so it exists only on the machine
+#      that ran the capture. The harness therefore requires one log line per tool
+#      entry in the transcript, and compares byte-for-byte only when the capture's
+#      own log happens to be present.
 #   2. Twin parity. The Bash and PowerShell forwarders invoke the same module, so
 #      their output must be identical. This is asserted directly rather than
 #      assumed from the shared implementation.
@@ -115,7 +120,10 @@ begin
 scenario_check "$([[ -f "$MODULE" ]] && printf 1 || printf 0)" "missing module: scripts/render-capture-transcript.mjs"
 scenario_check "$([[ -f "$RENDERER_SH" ]] && printf 1 || printf 0)" "missing forwarder: scripts/render-capture-transcript.sh"
 scenario_check "$([[ -f "$RENDERER_PS1" ]] && printf 1 || printf 0)" "missing forwarder: scripts/render-capture-transcript.ps1"
-scenario_check "$([[ -x "$RENDERER_SH" ]] && printf 1 || printf 0)" "forwarder is not executable: scripts/render-capture-transcript.sh"
+# The forwarder is invoked as 'bash <path>' everywhere (CI, CONTRIBUTING, this
+# harness), so its executable bit is not part of the contract and is not asserted:
+# the repository stores scripts as mode 644 and a checkout reproduces that.
+scenario_check "$([[ -r "$RENDERER_SH" ]] && printf 1 || printf 0)" "forwarder is not readable: scripts/render-capture-transcript.sh"
 report 'renderer module and both forwarders exist'
 
 printf '== Argument validation ==\n'
@@ -150,9 +158,22 @@ for probe in $PROBES; do
         scenario_check 0 "transcript content differs from the committed transcript for $probe"
         diff <(strip_timestamps "$out") <(strip_timestamps "$bundle/transcript.md") | head -6 | sed 's/^/    /'
     fi
-    if ! diff -q "$log" "$bundle/observed-writes.log" >/dev/null 2>&1; then
-        scenario_check 0 "observed-writes.log differs from the committed log for $probe"
-        diff "$log" "$bundle/observed-writes.log" | head -6 | sed 's/^/    /'
+    # The write log is derived from the transcript, so it must agree with it: one
+    # 'tool <verb> <target> (<status>)' line per tool entry. This is asserted
+    # unconditionally because observed-writes.log is gitignored (*.log) and so
+    # never exists in a CI checkout.
+    tool_entries="$(grep -cE '^- .*\*\*tool\*\*$' "$bundle/transcript.md" || true)"
+    log_lines="$(grep -cE '^tool ' "$log" || true)"
+    scenario_check "$([[ "$tool_entries" -eq "$log_lines" ]] && printf 1 || printf 0)" \
+        "write log has $log_lines lines but the transcript has $tool_entries tool entries"
+
+    # Where the capture's own log is present (a developer machine, not CI), the
+    # rendered log must reproduce it byte-for-byte.
+    if [[ -f "$bundle/observed-writes.log" ]]; then
+        if ! diff -q "$log" "$bundle/observed-writes.log" >/dev/null 2>&1; then
+            scenario_check 0 "observed-writes.log differs from the recorded log for $probe"
+            diff "$log" "$bundle/observed-writes.log" | head -6 | sed 's/^/    /'
+        fi
     fi
     report "round-trip $probe"
 done

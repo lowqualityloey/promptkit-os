@@ -7,13 +7,18 @@
 # bundles rather than against synthetic input:
 #
 #   1. Round-trip fidelity. Re-rendering a bundle's own session.jsonl reproduces
-#      that bundle's committed transcript and observed-writes.log. The timestamp
-#      column is excluded from the comparison on purpose: agy reports no
-#      per-event clock, so the renderer reconstructs the timeline from the stream
-#      file's mtime and the cumulative step durations, and float accumulation can
-#      move a reconstructed millisecond. Everything the scorer grades - assistant
-#      text, tool verbs, targets, statuses, and the write log - must match
-#      byte-for-byte.
+#      that bundle's committed transcript. The timestamp column is excluded from
+#      the comparison on purpose: agy reports no per-event clock, so the renderer
+#      reconstructs the timeline from the stream file's mtime and the cumulative
+#      step durations, and float accumulation can move a reconstructed
+#      millisecond. Everything the scorer grades - assistant text, tool verbs,
+#      targets and statuses - must match byte-for-byte.
+#
+#      The write log is checked structurally rather than against a committed copy:
+#      observed-writes.log is gitignored (*.log), so it exists only on the machine
+#      that ran the capture. The harness therefore requires one log line per tool
+#      entry in the transcript, and compares byte-for-byte only when the capture's
+#      own log happens to be present.
 #   2. Twin parity. The Bash and PowerShell forwarders invoke the same module, so
 #      their output must be identical. This is asserted directly rather than
 #      assumed from the shared implementation.
@@ -162,9 +167,22 @@ foreach ($probe in $probes) {
     $committed = Get-StrippedContent $transcript
     Assert-Scenario ($rendered -eq $committed) "transcript content differs from the committed transcript for $probe"
 
-    $renderedLog = ([IO.File]::ReadAllText($log)).Replace("`r", '')
-    $committedLog = ([IO.File]::ReadAllText((Join-Path $bundle 'observed-writes.log'))).Replace("`r", '')
-    Assert-Scenario ($renderedLog -eq $committedLog) "observed-writes.log differs from the committed log for $probe"
+    # The write log is derived from the transcript, so it must agree with it: one
+    # 'tool <verb> <target> (<status>)' line per tool entry. This is asserted
+    # unconditionally because observed-writes.log is gitignored (*.log) and so
+    # never exists in a CI checkout.
+    $toolEntries = @(Select-String -LiteralPath $transcript -Pattern '^- .*\*\*tool\*\*$' -AllMatches).Count
+    $logLines = @(Select-String -LiteralPath $log -Pattern '^tool ' -AllMatches).Count
+    Assert-Scenario ($toolEntries -eq $logLines) "write log has $logLines lines but the transcript has $toolEntries tool entries"
+
+    # Where the capture's own log is present (a developer machine, not CI), the
+    # rendered log must reproduce it byte-for-byte.
+    $recordedLog = Join-Path $bundle 'observed-writes.log'
+    if (Test-Path -LiteralPath $recordedLog -PathType Leaf) {
+        $renderedLog = ([IO.File]::ReadAllText($log)).Replace("`r", '')
+        $committedLog = ([IO.File]::ReadAllText($recordedLog)).Replace("`r", '')
+        Assert-Scenario ($renderedLog -eq $committedLog) "observed-writes.log differs from the recorded log for $probe"
+    }
 
     Report-Scenario "round-trip $probe"
 }

@@ -69,8 +69,13 @@ tree, which is why the format was previously documented only by example.
 The implementation lives in the `.mjs` module and `scripts/render-capture-transcript.sh` /
 `.ps1` are thin forwarders over it, so the Bash and PowerShell twins cannot drift apart. The
 round-trip harness `scripts/tests/run-render-capture-transcript-tests.sh` / `.ps1` re-renders
-all six committed bundles and asserts the result against the committed `transcript.md` and
-`observed-writes.log`; both report `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|10 passed`.
+all six committed bundles and asserts the result against the committed `transcript.md`; both
+report `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|10 passed`.
+
+`observed-writes.log` is gitignored (`*.log`), so it exists only on the machine that ran the
+capture and never in a CI checkout. The harness therefore checks the write log structurally —
+one `tool <verb> <target> (<status>)` line per tool entry in the transcript — and compares it
+byte-for-byte against the capture's own log only when that log is present.
 
 Two properties are load-bearing:
 
