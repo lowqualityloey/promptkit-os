@@ -300,13 +300,15 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
 
 **Model.** A Turbo branch runs in a fresh context. Beyond the first branch, each parallel lane costs either a directive reload + 250-tok synthesis return (lower bound) or a full task-path context reload (upper bound).
 
-**Measured (main @ `76e3168`, directive 2,496 tok; re-baselined 2026-09-16, prior measurement `719a74e` @ 2,319 tok):**
+**Measured (main @ `43cb101`, directive 2,488 tok; re-baselined 2026-11-22, prior measurement `76e3168` @ 2,496 tok):**
 
 | Task path | Balanced tok | Turbo tok (lower–upper) | Multiplier | Time saved (bound) | Fan-out anchor |
 | :--- | ---: | :--- | :--- | :--- | :--- |
-| `pk:fix` | 6,722 | 6,722–6,722 | **1.00x** | 0% (single-thread) | `route.md` Tier-3 offload only |
-| `pk:plan` | 16,225 | 18,971–32,700 | **1.17x–2.02x** | ≤50% of spike segment | Delegation Pattern A (k=2) |
-| `pk:ship` | 11,879 | 14,625–24,008 | **1.23x–2.02x** | ≤50% of QA segment | Pattern B (k=2) + Pattern C verifier |
+| `pk:fix` | 11,475 | 11,475–11,475 | **1.00x** | 0% (single-thread) | `route.md` Tier-3 offload only |
+| `pk:plan` | 20,964 | 23,702–42,178 | **1.13x–2.01x** | ≤50% of spike segment | Delegation Pattern A (k=2) |
+| `pk:ship` | 17,295 | 20,033–34,840 | **1.16x–2.01x** | ≤50% of QA segment | Pattern B (k=2) + Pattern C verifier |
+
+> **These cells are generated, not transcribed.** Every figure above is the literal output of `bash scripts/measure-turbo-overhead.sh` at the stated anchor, and the Balanced column agrees with the §3 per-task table (`11,475 / 20,964 / 17,295`). The previous revision of this table was **not reproducible from the script at its own stated anchor**: at `76e3168` the script printed `pk:plan` **15,539** against a published **16,225**, and at `a21ed56` — the commit that wrote those cells — it printed `6,778 / 16,333 / 11,879` against a published `6,722 / 16,225 / 11,879`. The `pk:plan` cell was never a measurement. The cause is a gate gap rather than a typo: `--strict` compares only the *multiplier* against the `1.00–2.60x` claim window and never reads the absolute cells, so a hand-edited Balanced column could not fail the build. This is the first revision of the table whose every cell can be regenerated from the script at the anchor it names.
 
 **Decision (per #145 threshold rule):** **KEEP Turbo experimental — do not promote, do not remove.** Measured overhead tops out near **2x**, materially below the "3-5x" band previously advertised, and the structural time benefit caps at ~50% of only the parallelizable segment. Promotion would require real multi-host wall-clock evidence that a documentation protocol cannot produce; removal would discard a genuinely useful (≤2x) pattern for greenfield spikes. All shipped "3-5x" claims were corrected in this change to "up to ~2x measured" and the claim window is now CI-gated (`--strict`, 1.00–2.60x): widening fan-out without re-baselining this section fails the build.
 
@@ -315,6 +317,8 @@ In addition to static prompt JIT loading, PromptKit OS provides significant toke
 **2026-10-02 re-confirmation (v1.10.1):** KEEP Turbo experimental. The previous trigger window closed with no multi-host evidence presented; trigger re-armed to the next minor release.
 
 **2026-10-25 re-confirmation (v2.0.1, closing the lapsed v1.11.0 / v2.0.0 / v2.0.1 windows):** KEEP Turbo experimental. The intervening minor and major windows closed with no multi-host wall-clock evidence presented and no change to the measured fan-out patterns; the CI-gated claim window (1.00–2.60x) still bounds every shipped figure. The missed re-arm at v1.11.0 is a recording lapse, not a silent promotion — this entry restores the dated-verdict discipline. Trigger re-armed to the next minor release.
+
+**2026-11-22 re-confirmation (v2.4.0, closing the lapsed v2.1.0 / v2.2.0 / v2.3.0 / v2.4.0 windows):** KEEP Turbo experimental. Four minor releases shipped inside this window — 2.1.0 (2026-11-07), 2.2.0 (2026-11-12), 2.3.0 (2026-11-15), 2.4.0 (2026-11-21) — and the verdict was not re-armed at any of them, so this entry closes all four. The evidence basis is the same three-part test the prior entries used, re-run rather than assumed: **(a) no promotion evidence.** No multi-host wall-clock measurement of Turbo fan-out was presented in the window. `git log --since=2026-10-25` over `docs/TURBO-WAVES-GUIDE.md`, `docs/tasks/TASK-2026-09-19-turbo-benchmark.md`, `scripts/measure-turbo-overhead.sh` and this file returns only anchor restatements and unrelated work, and `CHANGELOG.md` carries no Turbo entry since the 2026-10-25 re-confirmation. The `benchmarks/runs/2026-10-31-*` batches are whole-kit A/B arm comparisons, not fan-out wall-clock evidence, so they do not satisfy trigger (a). **(b) the claim window still holds.** `bash scripts/measure-turbo-overhead.sh --strict` at `43cb101` exits 0 with `STRICT|plan|2.01|claim-window 1.00-2.60|PASS` and `STRICT|ship|2.01|…|PASS`; the measured multipliers are `1.13x–2.01x` (plan) and `1.16x–2.01x` (ship), both inside the window, and the fan-out anchors are unchanged (Pattern A k=2; Pattern B k=2 + Pattern C verifier; `pk:fix` single-thread). **(c) the safety invariant still holds.** AC-3 passes against 3 shipped sources. The table above was re-baselined in the same change, because a re-confirmation that cites cells the script cannot reproduce would repeat the defect this entry exists to prevent — see the provenance note under it. Trigger re-armed to the next minor release.
 
 **Safety invariant (AC-3, grep-asserted by the script):** Turbo never removes the human Level-3 approval requirement for releases, tags, deployments, or rollback, in any shipped surface.
 
