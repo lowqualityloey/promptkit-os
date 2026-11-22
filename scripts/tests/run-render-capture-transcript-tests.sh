@@ -61,8 +61,11 @@ check_status() { scenario_check "$([[ "$1" -eq "$2" ]] && printf 1 || printf 0)"
 
 # The timestamp column is the only part of the transcript the renderer
 # reconstructs rather than copies, so it is the only part excluded here.
+# CRLF is stripped first: the renderer always writes LF, while a Windows
+# checkout materialises the committed transcript as CRLF, and the comparison
+# must be about content rather than the checkout's line-ending policy.
 strip_timestamps() {
-    sed -E 's/^- .[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+[+-][0-9]{2}:[0-9]{2}. /- /' "$1"
+    sed -E 's/\r$//' "$1" | sed -E 's/^- .[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+[+-][0-9]{2}:[0-9]{2}. /- /'
 }
 
 # Read a preamble field back out of a committed transcript so a re-render is
@@ -162,8 +165,10 @@ for probe in $PROBES; do
     # 'tool <verb> <target> (<status>)' line per tool entry. This is asserted
     # unconditionally because observed-writes.log is gitignored (*.log) and so
     # never exists in a CI checkout.
-    tool_entries="$(grep -cE '^- .*\*\*tool\*\*$' "$bundle/transcript.md" || true)"
-    log_lines="$(grep -cE '^tool ' "$log" || true)"
+    # CR is stripped before counting: the '$' anchor does not match a line that
+    # ends in CRLF, and a Windows checkout materialises the transcript that way.
+    tool_entries="$(sed -E 's/\r$//' "$bundle/transcript.md" | grep -cE '^- .*\*\*tool\*\*$' || true)"
+    log_lines="$(sed -E 's/\r$//' "$log" | grep -cE '^tool ' || true)"
     scenario_check "$([[ "$tool_entries" -eq "$log_lines" ]] && printf 1 || printf 0)" \
         "write log has $log_lines lines but the transcript has $tool_entries tool entries"
 

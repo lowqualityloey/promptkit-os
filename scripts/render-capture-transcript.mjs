@@ -89,7 +89,12 @@ if (!probe) fail('--probe is required');
 if (!prompt) fail('--prompt is required');
 if (!model) fail('--model is required');
 
-const raw = fs.readFileSync(jsonl, 'utf8');
+// The stream is hashed in canonical form (LF line endings) rather than as the
+// checkout happens to store it. A Windows checkout with core.autocrlf rewrites
+// the file to CRLF, which would otherwise change the preamble hash and make the
+// same capture render differently on different machines. The hash identifies the
+// stream's content, not the checkout's line-ending policy.
+const raw = fs.readFileSync(jsonl, 'utf8').replace(/\r\n/g, '\n');
 const sha = crypto.createHash('sha256').update(raw).digest('hex').slice(0, 16);
 
 // agy tool name -> the scorer's verb vocabulary. The scorer decides inspection

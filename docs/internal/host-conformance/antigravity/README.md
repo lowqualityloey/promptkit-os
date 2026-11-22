@@ -77,6 +77,12 @@ capture and never in a CI checkout. The harness therefore checks the write log s
 one `tool <verb> <target> (<status>)` line per tool entry in the transcript — and compares it
 byte-for-byte against the capture's own log only when that log is present.
 
+The renderer is line-ending agnostic, and the harnesses assert that rather than assume it. The
+stream is hashed in canonical form (LF) so the preamble's `sha256` identifies the capture's
+content rather than the checkout's `core.autocrlf` setting, and both harnesses strip CR before
+comparing or counting, because a Windows checkout materialises the committed `transcript.md` as
+CRLF while the renderer always writes LF. Both twins pass under either checkout.
+
 Two properties are load-bearing:
 
 1. **The two-space indent is preserved.** The scorer's `assistant_text()` keeps it so that a
