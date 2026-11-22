@@ -1,0 +1,12 @@
+{
+  "captureDate": "2026-11-23",
+  "promptkitCommit": "f67c8a3",
+  "profile": "balanced",
+  "seedCommit": "55c567ced2a33c65c770d5f6bb55a2f9a2677612",
+  "resetCommands": "git init -b main; fetch the milestone-halt seed from ../../milestone-halt/repository.bundle; git checkout -B main 55c567c (the Antigravity seed: e02cb28 plus AGENTS.md copied verbatim from .opencode/rules.md); git status --porcelain must be empty",
+  "hostName": "Antigravity CLI",
+  "hostVersion": "agy 1.5.14",
+  "agentModel": "gemini-3.8-flash-high (default agent, --mode accept-edits, --dangerously-skip-permissions); TWO stream-json turns in one process; bwrap-isolated",
+  "observationStart": "2026-11-23T03:09:35+13:00",
+  "observationEnd": "2026-11-23T03:14:47+13:00"
+}

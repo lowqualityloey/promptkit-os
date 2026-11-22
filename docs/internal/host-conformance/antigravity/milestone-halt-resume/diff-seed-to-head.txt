@@ -1,0 +1,5 @@
+ docs/STATE.md                         | 6 +++---
+ docs/m2-spec.md                       | 3 +++
+ docs/tasks/TASK-2026-10-05-m1-init.md | 3 ++-
+ src/m1/format.ts                      | 3 ++-
+ 4 files changed, 10 insertions(+), 5 deletions(-)
