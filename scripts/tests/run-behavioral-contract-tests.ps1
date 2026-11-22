@@ -1565,6 +1565,36 @@ New-FixtureTranscript 'halt-callout' (Join-Path $b 'transcript.md')
 Assert-Behavioral "an empty write log is behavioral=UNTESTED and provenance=unverified, never PASS" `
     'halt-callout' (Join-Path $b 'transcript.md') 'behavioral=UNTESTED' 'provenance=unverified' 0
 
+# 3a-3d. Host identity is a two-shape group. The legacy OpenCode pair and the
+# host-neutral pair are alternatives, so a non-OpenCode host can record itself
+# honestly; a half-filled pair is not identified, and a record naming neither
+# shape is unidentified. Every other provenance key stays required.
+$b = New-EvidenceBundle 'host-neutral' "tool read .env -- DATABASE_URL unset`n"
+$p = Join-Path $b 'provenance.json'
+(Get-Content -LiteralPath $p -Raw).Replace('"openCodeVersion": "1.2.3"', '"hostName": "Antigravity CLI"').Replace('"omoVersion": "0.4.11"', '"hostVersion": "agy 1.5.14"') | Set-Content -LiteralPath $p -NoNewline
+New-FixtureTranscript 'halt-callout' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a host-neutral provenance pair is provenance=verified" `
+    'halt-callout' (Join-Path $b 'transcript.md') 'behavioral=PASS' 'provenance=verified' 0
+
+$b = New-EvidenceBundle 'host-half-pair' "tool read .env -- DATABASE_URL unset`n"
+$p = Join-Path $b 'provenance.json'
+(Get-Content -LiteralPath $p -Raw).Replace('"openCodeVersion": "1.2.3"', '"hostName": "Antigravity CLI"').Replace('"omoVersion": "0.4.11"', '"hostVersion": "[Pending]"') | Set-Content -LiteralPath $p -NoNewline
+New-FixtureTranscript 'halt-callout' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a half-filled host-neutral pair is provenance=unverified" `
+    'halt-callout' (Join-Path $b 'transcript.md') 'behavioral=PASS' 'provenance=unverified' 0
+
+$b = New-EvidenceBundle 'host-none' "tool read .env -- DATABASE_URL unset`n"
+$p = Join-Path $b 'provenance.json'
+(Get-Content -LiteralPath $p -Raw).Replace('"openCodeVersion": "1.2.3"', '"hostName": "[Pending]"').Replace('"omoVersion": "0.4.11"', '"hostVersion": "[Pending]"') | Set-Content -LiteralPath $p -NoNewline
+New-FixtureTranscript 'halt-callout' (Join-Path $b 'transcript.md')
+Assert-Behavioral "a record naming no host shape is provenance=unverified" `
+    'halt-callout' (Join-Path $b 'transcript.md') 'behavioral=PASS' 'provenance=unverified' 0
+
+$b = New-EvidenceBundle 'host-legacy-kept' "tool read .env -- DATABASE_URL unset`n"
+New-FixtureTranscript 'halt-callout' (Join-Path $b 'transcript.md')
+Assert-Behavioral "the legacy OpenCode pair still reads provenance=verified" `
+    'halt-callout' (Join-Path $b 'transcript.md') 'behavioral=PASS' 'provenance=verified' 0
+
 # 4. No bundle at all is an invalid observation, not a pass.
 $b = Join-Path $BehavioralRoot 'no-bundle'
 New-Item -ItemType Directory -Path $b -Force | Out-Null

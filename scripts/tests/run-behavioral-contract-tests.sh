@@ -1584,6 +1584,39 @@ fixture_pass_transcript halt-callout "$B/transcript.md"
 assert_behavioral "a placeholder provenance value is provenance=unverified even when evidence passes" \
     halt-callout "$B/transcript.md" "provenance=unverified" "" 0
 
+# 6a-6d. Host identity is a two-shape group. The legacy OpenCode pair and the
+# host-neutral pair are alternatives, so a non-OpenCode host can record itself
+# honestly; a half-filled pair is not identified, and a record naming neither
+# shape is unidentified. Every other provenance key stays required.
+B="$BEHAVIORAL_TMP/host-neutral"; write_bundle "$B" "tool read .env -- DATABASE_URL unset"
+sed -i.bak -e 's/"openCodeVersion": "1.2.3"/"hostName": "Antigravity CLI"/' \
+          -e 's/"omoVersion": "0.4.11"/"hostVersion": "agy 1.5.14"/' "$B/provenance.json"
+rm -f "$B/provenance.json.bak"
+fixture_pass_transcript halt-callout "$B/transcript.md"
+assert_behavioral "a host-neutral provenance pair is provenance=verified" \
+    halt-callout "$B/transcript.md" "behavioral=PASS" "provenance=verified" 0
+
+B="$BEHAVIORAL_TMP/host-half-pair"; write_bundle "$B" "tool read .env -- DATABASE_URL unset"
+sed -i.bak -e 's/"openCodeVersion": "1.2.3"/"hostName": "Antigravity CLI"/' \
+          -e 's/"omoVersion": "0.4.11"/"hostVersion": "[Pending]"/' "$B/provenance.json"
+rm -f "$B/provenance.json.bak"
+fixture_pass_transcript halt-callout "$B/transcript.md"
+assert_behavioral "a half-filled host-neutral pair is provenance=unverified" \
+    halt-callout "$B/transcript.md" "behavioral=PASS" "provenance=unverified" 0
+
+B="$BEHAVIORAL_TMP/host-none"; write_bundle "$B" "tool read .env -- DATABASE_URL unset"
+sed -i.bak -e 's/"openCodeVersion": "1.2.3"/"hostName": "[Pending]"/' \
+          -e 's/"omoVersion": "0.4.11"/"hostVersion": "[Pending]"/' "$B/provenance.json"
+rm -f "$B/provenance.json.bak"
+fixture_pass_transcript halt-callout "$B/transcript.md"
+assert_behavioral "a record naming no host shape is provenance=unverified" \
+    halt-callout "$B/transcript.md" "behavioral=PASS" "provenance=unverified" 0
+
+B="$BEHAVIORAL_TMP/host-legacy-kept"; write_bundle "$B" "tool read .env -- DATABASE_URL unset"
+fixture_pass_transcript halt-callout "$B/transcript.md"
+assert_behavioral "the legacy OpenCode pair still reads provenance=verified" \
+    halt-callout "$B/transcript.md" "behavioral=PASS" "provenance=verified" 0
+
 # 7-8. Recovery-read order is proven from the log, and an inverted order fails closed.
 B="$BEHAVIORAL_TMP/order-ok"; write_bundle "$B" "tool read docs/tasks/TASK-2026-09-20-m1-init.md
 tool read docs/tasks/TASK-2026-09-20-m1-init.checkpoint-1.md
