@@ -50,10 +50,12 @@
 #
 # MODE is a scoring mode, not an origin. A hand-written transcript scores in `live`
 # mode too, so provenance is reported as its own trailing field and is always
-# present: `provenance=verified` when the bundle carries all ten provenance keys
-# with real values plus a recorded write log (Test-ProvenanceVerified), and
-# `provenance=unverified` otherwise. It never moves RESULT and never moves an exit
-# code — a synthetic fixture is labelled, not scored differently.
+# present: `provenance=verified` when the bundle carries every host-independent
+# provenance key with a real value, one complete host-identification pair (the
+# legacy openCodeVersion + omoVersion or the host-neutral hostName + hostVersion),
+# and a recorded write log (Test-ProvenanceVerified), and `provenance=unverified`
+# otherwise. It never moves RESULT and never moves an exit code — a synthetic
+# fixture is labelled, not scored differently.
 
 param(
     [switch]$SelfTest,
@@ -81,10 +83,20 @@ $script:EvidenceTypes = @(
 
 # The provenance record a genuine capture must carry, mirroring the required key
 # list at scripts/check-milestone-halt-evidence.sh:19.
+#
+# Host identity is a two-shape group, not a fixed pair. The original OpenCode
+# captures record the host as openCodeVersion + omoVersion; a host that is not
+# OpenCode cannot honestly fill either field, and forcing it to would make the
+# record lie. A bundle therefore satisfies host identity with EITHER the legacy
+# pair OR the host-neutral pair, and every other key is required regardless.
+# The legacy shape keeps its exact verdict, so the nine committed bundles
+# re-score byte-for-byte.
 $script:ProvenanceKeys = @(
     'captureDate', 'promptkitCommit', 'profile', 'seedCommit', 'resetCommands',
-    'openCodeVersion', 'omoVersion', 'agentModel', 'observationStart', 'observationEnd'
+    'agentModel', 'observationStart', 'observationEnd'
 )
+$script:ProvenanceHostKeysLegacy = @('openCodeVersion', 'omoVersion')
+$script:ProvenanceHostKeysNeutral = @('hostName', 'hostVersion')
 
 function Get-Section {
     param([string]$File, [string]$Heading)
@@ -880,13 +892,34 @@ function Get-ProvenanceJsonValue {
     return ""
 }
 
+function Test-ProvenanceHostIdentified {
+    # True when the record names its host in either accepted shape. The legacy
+    # OpenCode pair and the host-neutral pair are alternatives, never a union:
+    # requiring both would force a non-OpenCode capture to invent an OpenCode
+    # version, which is the defect this generalization removes. A record naming
+    # neither shape is unidentified.
+    #
+    # A shape counts only when EVERY key in it is real. Accepting a shape on the
+    # strength of one real key would let a half-filled pair — the exact placeholder
+    # case the provenance axis exists to catch — read as identified.
+    param([string]$File)
+    foreach ($group in @($script:ProvenanceHostKeysLegacy, $script:ProvenanceHostKeysNeutral)) {
+        $complete = $true
+        foreach ($key in $group) {
+            if (Test-EvidenceIsPlaceholder (Get-ProvenanceJsonValue $File $key)) { $complete = $false; break }
+        }
+        if ($complete) { return $true }
+    }
+    return $false
+}
+
 function Test-ProvenanceVerified {
     # True when the bundle substantiates a genuine capture. `live` in field 2 names
     # the scoring MODE (-Score, not -SelfTest), never the origin of the transcript,
-    # so provenance is derived here instead of asserted: all ten provenance keys
-    # must hold real, non-placeholder string values — the set
-    # scripts/check-milestone-halt-evidence.sh:19 requires — AND a recorded write
-    # log must accompany the transcript. The write log is required because a capture
+    # so provenance is derived here instead of asserted: every host-independent
+    # provenance key must hold a real, non-placeholder string value, the host must
+    # be identified in one of the two accepted shapes, AND a recorded write log
+    # must accompany the transcript. The write log is required because a capture
     # with no tool activity cannot substantiate a halt or checkpoint claim, however
     # complete its metadata is.
     param([string]$Bundle)
@@ -896,6 +929,7 @@ function Test-ProvenanceVerified {
     foreach ($key in $script:ProvenanceKeys) {
         if (Test-EvidenceIsPlaceholder (Get-ProvenanceJsonValue $prov $key)) { return $false }
     }
+    if (-not (Test-ProvenanceHostIdentified $prov)) { return $false }
     return $true
 }
 

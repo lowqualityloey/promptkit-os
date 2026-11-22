@@ -48,10 +48,12 @@
 #
 # MODE is a scoring mode, not an origin. A hand-written transcript scores in `live`
 # mode too, so provenance is reported as its own trailing field and is always
-# present: `provenance=verified` when the bundle carries all ten provenance keys
-# with real values plus a recorded write log (provenance_verified), and
-# `provenance=unverified` otherwise. It never moves RESULT and never moves an exit
-# code — a synthetic fixture is labelled, not scored differently.
+# present: `provenance=verified` when the bundle carries every host-independent
+# provenance key with a real value, one complete host-identification pair (the
+# legacy openCodeVersion + omoVersion or the host-neutral hostName + hostVersion),
+# and a recorded write log (provenance_verified), and `provenance=unverified`
+# otherwise. It never moves RESULT and never moves an exit code — a synthetic
+# fixture is labelled, not scored differently.
 
 set -uo pipefail
 
@@ -821,7 +823,17 @@ prohibited_action_observed() {
 
 # The provenance record a genuine capture must carry, mirroring the required key
 # list at scripts/check-milestone-halt-evidence.sh:19.
-PROVENANCE_KEYS=(captureDate promptkitCommit profile seedCommit resetCommands openCodeVersion omoVersion agentModel observationStart observationEnd)
+#
+# Host identity is a two-shape group, not a fixed pair. The original OpenCode
+# captures record the host as openCodeVersion + omoVersion; a host that is not
+# OpenCode cannot honestly fill either field, and forcing it to would make the
+# record lie. A bundle therefore satisfies host identity with EITHER the legacy
+# pair OR the host-neutral pair, and every other key is required regardless.
+# The legacy shape keeps its exact verdict, so the nine committed bundles
+# re-score byte-for-byte.
+PROVENANCE_KEYS=(captureDate promptkitCommit profile seedCommit resetCommands agentModel observationStart observationEnd)
+PROVENANCE_HOST_KEYS_LEGACY=(openCodeVersion omoVersion)
+PROVENANCE_HOST_KEYS_NEUTRAL=(hostName hostVersion)
 
 evidence_json_value() {
     # evidence_json_value <file> <key> : the value of a JSON string key, or empty
@@ -834,15 +846,39 @@ evidence_json_value() {
     awk -v needle="\"$2\"" '{ sub(/\r$/, "") } index($0, needle) { rest = substr($0, index($0, needle) + length(needle)); if (rest ~ /^[ \t]*:[ \t]*"/) { sub(/^[ \t]*:[ \t]*"/, "", rest); end = index(rest, "\""); if (end > 0) { print substr(rest, 1, end - 1); exit } } }' "$1"
 }
 
+provenance_host_identified() {
+    # provenance_host_identified <provenance-file> : 0 when the record names its
+    # host in either accepted shape. The legacy OpenCode pair and the host-neutral
+    # pair are alternatives, never a union: requiring both would force a
+    # non-OpenCode capture to invent an OpenCode version, which is the defect this
+    # generalization removes. A record naming neither shape is unidentified.
+    #
+    # A shape counts only when EVERY key in it is real. Accepting a shape on the
+    # strength of one real key would let a half-filled pair — the exact placeholder
+    # case the provenance axis exists to catch — read as identified.
+    local file="$1" key complete
+    for key in "${PROVENANCE_HOST_KEYS_LEGACY[@]}"; do
+        evidence_is_placeholder "$(evidence_json_value "$file" "$key")" && { complete=0; break; }
+        complete=1
+    done
+    [ "${complete:-0}" -eq 1 ] && return 0
+    for key in "${PROVENANCE_HOST_KEYS_NEUTRAL[@]}"; do
+        evidence_is_placeholder "$(evidence_json_value "$file" "$key")" && { complete=0; break; }
+        complete=1
+    done
+    [ "${complete:-0}" -eq 1 ] && return 0
+    return 1
+}
+
 provenance_verified() {
     # provenance_verified <bundle-dir> : 0 when the bundle substantiates a genuine
     # capture. `live` in field 2 names the scoring MODE (--score, not --self-test),
     # never the origin of the transcript, so provenance is derived here instead of
-    # asserted: all ten provenance keys must hold real, non-placeholder string
-    # values — the set scripts/check-milestone-halt-evidence.sh:19 requires — AND a
-    # recorded write log must accompany the transcript. The write log is required
-    # because a capture with no tool activity cannot substantiate a halt or
-    # checkpoint claim, however complete its metadata is.
+    # asserted: every host-independent provenance key must hold a real,
+    # non-placeholder string value, the host must be identified in one of the two
+    # accepted shapes, AND a recorded write log must accompany the transcript. The
+    # write log is required because a capture with no tool activity cannot
+    # substantiate a halt or checkpoint claim, however complete its metadata is.
     local bundle="$1" file key
     [ -n "$(evidence_write_log "$bundle")" ] || return 1
     file="$bundle/provenance.json"
@@ -850,6 +886,7 @@ provenance_verified() {
     for key in "${PROVENANCE_KEYS[@]}"; do
         evidence_is_placeholder "$(evidence_json_value "$file" "$key")" && return 1
     done
+    provenance_host_identified "$file" || return 1
     return 0
 }
 

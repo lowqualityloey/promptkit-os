@@ -16,11 +16,19 @@ if ! EVIDENCE_DIR="$bundle" node - <<'NODE'
 const fs = require('node:fs');
 const path = require('node:path');
 const dir = process.env.EVIDENCE_DIR;
-const required = ['captureDate', 'promptkitCommit', 'profile', 'seedCommit', 'resetCommands', 'openCodeVersion', 'omoVersion', 'agentModel', 'observationStart', 'observationEnd'];
+// Host identity is a two-shape group: the legacy OpenCode pair or the
+// host-neutral pair. Requiring both would force a non-OpenCode capture to
+// invent an OpenCode version. Every other key is required regardless.
+const required = ['captureDate', 'promptkitCommit', 'profile', 'seedCommit', 'resetCommands', 'agentModel', 'observationStart', 'observationEnd'];
+const hostLegacy = ['openCodeVersion', 'omoVersion'];
+const hostNeutral = ['hostName', 'hostVersion'];
 try {
   const data = JSON.parse(fs.readFileSync(path.join(dir, 'provenance.json'), 'utf8'));
   const state = JSON.parse(fs.readFileSync(path.join(dir, 'state-check.json'), 'utf8'));
-  const missing = required.filter((key) => typeof data[key] !== 'string' || !data[key].trim());
+  const present = (key) => typeof data[key] === 'string' && data[key].trim();
+  const missing = required.filter((key) => !present(key));
+  const hostIdentified = hostLegacy.every(present) || hostNeutral.every(present);
+  if (!hostIdentified) missing.push('openCodeVersion+omoVersion|hostName+hostVersion');
   const seconds = (Date.parse(data.observationEnd) - Date.parse(data.observationStart)) / 1000;
   if (missing.length || !Number.isFinite(seconds) || seconds < 300 || !['m1Verified', 'signoffCallout', 'm2Advanced'].every((key) => typeof state[key] === 'boolean')) {
     process.stdout.write(`milestone-halt|provenance|INVALID|missing=${missing.join(',') || 'valid five-minute observation and boolean state-check fields required'}\n`);

@@ -15,8 +15,16 @@ if ($m2Prefixes.Count -eq 0) { Write-Output 'milestone-halt|provenance|INVALID|m
 try {
     $provenance = Get-Content -LiteralPath (Join-Path $bundlePath 'provenance.json') -Raw | ConvertFrom-Json
     $state = Get-Content -LiteralPath (Join-Path $bundlePath 'state-check.json') -Raw | ConvertFrom-Json
-    $requiredFields = @('captureDate', 'promptkitCommit', 'profile', 'seedCommit', 'resetCommands', 'openCodeVersion', 'omoVersion', 'agentModel', 'observationStart', 'observationEnd')
+    # Host identity is a two-shape group: the legacy OpenCode pair or the
+    # host-neutral pair. Requiring both would force a non-OpenCode capture to
+    # invent an OpenCode version. Every other key is required regardless.
+    $requiredFields = @('captureDate', 'promptkitCommit', 'profile', 'seedCommit', 'resetCommands', 'agentModel', 'observationStart', 'observationEnd')
+    $hostLegacy = @('openCodeVersion', 'omoVersion')
+    $hostNeutral = @('hostName', 'hostVersion')
     $missing = @($requiredFields | Where-Object { [string]::IsNullOrWhiteSpace([string]$provenance.$_) })
+    $hostIdentified = (@($hostLegacy | Where-Object { [string]::IsNullOrWhiteSpace([string]$provenance.$_) }).Count -eq 0) -or
+                      (@($hostNeutral | Where-Object { [string]::IsNullOrWhiteSpace([string]$provenance.$_) }).Count -eq 0)
+    if (-not $hostIdentified) { $missing += 'openCodeVersion+omoVersion|hostName+hostVersion' }
     $seconds = ([DateTimeOffset]::Parse($provenance.observationEnd) - [DateTimeOffset]::Parse($provenance.observationStart)).TotalSeconds
     $stateKeys = @('m1Verified', 'signoffCallout', 'm2Advanced')
     $stateFieldsValid = @($stateKeys | Where-Object { $state.PSObject.Properties.Name -contains $_ }).Count -eq 3

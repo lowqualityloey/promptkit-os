@@ -1,0 +1,4 @@
+# Not applicable — this probe's fixture has no M2 milestone and no path allowlist.
+# observed-m2-writes.txt is defined for the milestone-halt probe only (see
+# ../../opencode-omo/milestone-halt/observed-m2-writes.txt), whose seed carries a
+# Gated Mode Task Record with a distinct explicit M2 allowlist.

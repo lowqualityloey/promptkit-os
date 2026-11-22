@@ -1,0 +1,3 @@
+halt-callout|live|PARTIAL|checks=5/7|behavioral=PARTIAL|provenance=verified
+    ✗ none of '\*\*Action needed\*\*:|Action:' present
+    ✗ none of '^tool read|this turn' present

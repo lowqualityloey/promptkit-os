@@ -1,0 +1,12 @@
+{
+  "captureDate": "2026-11-23",
+  "promptkitCommit": "34449d7",
+  "profile": "balanced",
+  "seedCommit": "0c351646b29f6eb7198409425db76d5a0248282c",
+  "resetCommands": "git init -b main; fetch the halt-callout seed from ../../opencode-omo/halt-callout/repository.bundle (0c35164); git commit -m 'seed: halt-callout probe fixture'; PROMPTKIT_NO_INTERACTIVE=1 bash init.sh --balanced --host=gemini .; git add -A; git commit -m 'install: Balanced directive (AGENTS.md + GEMINI.md) via init.sh --host=gemini'; git status --porcelain must be empty",
+  "hostName": "Antigravity CLI",
+  "hostVersion": "agy 1.5.14",
+  "agentModel": "gemini-3.8-flash-high (default agent, --mode accept-edits, --dangerously-skip-permissions); single-turn stream-json over stdin; bwrap-isolated",
+  "observationStart": "2026-11-23T00:35:24+13:00",
+  "observationEnd": "2026-11-23T00:39:48+13:00"
+}

@@ -168,4 +168,34 @@ git -C "$bundle/repository" -c user.name=Fixture -c user.email=fixture@example.i
 git -C "$bundle/repository" update-ref refs/gitbutler/wt HEAD
 assert_result 'synthetic workspace HEAD is refused' 2 'repository|INVALID|synthetic-base' "$bundle"
 
-echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|23 cases'
+# Host identity is a two-shape group: the legacy OpenCode pair or the
+# host-neutral pair. A non-OpenCode host cannot honestly fill openCodeVersion or
+# omoVersion, so requiring that pair would force the record to lie.
+bundle="$TEMP_ROOT/host-neutral"
+new_bundle host-neutral
+sed -e 's/"openCodeVersion":"fixture"/"hostName":"Antigravity CLI"/' \
+    -e 's/"omoVersion":"fixture"/"hostVersion":"agy 1.5.14"/' \
+    "$bundle/provenance.json" > "$bundle/provenance.json.new"
+mv "$bundle/provenance.json.new" "$bundle/provenance.json"
+assert_result 'a host-neutral provenance pair validates' 0 'bundle|PASS' "$bundle"
+
+# The checker rejects an absent or blank value, not a bracketed placeholder —
+# placeholder detection lives on the scorer's provenance axis, not here. These
+# two cases therefore use blank values, which is what this checker can judge.
+bundle="$TEMP_ROOT/host-half-pair"
+new_bundle host-half-pair
+sed -e 's/"openCodeVersion":"fixture"/"hostName":"Antigravity CLI"/' \
+    -e 's/"omoVersion":"fixture"/"hostVersion":""/' \
+    "$bundle/provenance.json" > "$bundle/provenance.json.new"
+mv "$bundle/provenance.json.new" "$bundle/provenance.json"
+assert_result 'a half-filled host-neutral pair is invalid' 2 'provenance|INVALID|missing=' "$bundle"
+
+bundle="$TEMP_ROOT/host-none"
+new_bundle host-none
+sed -e 's/"openCodeVersion":"fixture"/"hostName":""/' \
+    -e 's/"omoVersion":"fixture"/"hostVersion":""/' \
+    "$bundle/provenance.json" > "$bundle/provenance.json.new"
+mv "$bundle/provenance.json.new" "$bundle/provenance.json"
+assert_result 'a record naming no host shape is invalid' 2 'provenance|INVALID|missing=' "$bundle"
+
+echo 'MILESTONE_EVIDENCE_FIXTURES|PASS|26 cases'
