@@ -35,30 +35,30 @@
 
 ## 3. Acceptance Criteria
 
-- [ ] **AC-1**: The provenance key list accepts `hostName` + `hostVersion` as an alternative to `openCodeVersion` + `omoVersion` in all five code locations, and a bundle carrying either pair validates.
-  - **Result**: `Pending`
-  - **Evidence**: `scripts/run-behavioral-eval.sh`, `.ps1`, `scripts/check-milestone-halt-evidence.sh`, `.ps1`, and both fixture generators
-- [ ] **AC-2**: All nine committed OpenCode bundles under `docs/internal/host-conformance/opencode-omo/` re-score to their committed `scorer.txt` lines byte-for-byte, including `provenance=verified`.
-  - **Result**: `Pending`
-  - **Evidence**: re-score transcript of all nine bundles
-- [ ] **AC-3**: A bundle carrying only the host-neutral pair scores `provenance=verified`, and one carrying neither pair scores `provenance=unverified`.
-  - **Result**: `Pending`
-  - **Evidence**: new regression controls in both contract-test twins
-- [ ] **AC-4**: The milestone-halt seed carries an `AGENTS.md` holding the Balanced directive, and the new seed commit is recorded in the capture bundle's provenance.
-  - **Result**: `Pending`
-  - **Evidence**: seed tree listing and `provenance.json`
-- [ ] **AC-5**: A transcript renderer exists in both twins, converts `agy` `stream-json` NDJSON into the `## Events` format, and reproduces a recorded stream's assistant text byte-for-byte.
-  - **Result**: `Pending`
-  - **Evidence**: `scripts/render-capture-transcript.sh` / `.ps1` and a fixture round-trip
-- [ ] **AC-6**: The `halt-callout` capture is taken under `bwrap` isolation, its canary fails to read the kit repository, and its bundle satisfies the artifact contract.
-  - **Result**: `Pending`
-  - **Evidence**: `docs/internal/host-conformance/antigravity/halt-callout/`
-- [ ] **AC-7**: The `^`-anchored `^tool read` / `^tool write` patterns are checked against `rtk`-prefixed tool lines and the result is recorded.
-  - **Result**: `Pending`
-  - **Evidence**: `scorer.txt` and the bundle README
-- [ ] **AC-8**: `docs/BEHAVIORAL-EVAL.md` and the bundle contract README describe both provenance shapes.
-  - **Result**: `Pending`
-  - **Evidence**: both documents
+- [x] **AC-1**: The provenance key list accepts `hostName` + `hostVersion` as an alternative to `openCodeVersion` + `omoVersion` in all five code locations, and a bundle carrying either pair validates.
+  - **Result**: `Met`
+  - **Evidence**: `scripts/run-behavioral-eval.sh:836` (`PROVENANCE_HOST_KEYS_NEUTRAL=(hostName hostVersion)`), `scripts/run-behavioral-eval.ps1:99` (`$script:ProvenanceHostKeysNeutral`), `scripts/check-milestone-halt-evidence.sh:24` (`const hostNeutral = ['hostName', 'hostVersion']`), `scripts/check-milestone-halt-evidence.ps1:23` (`$hostNeutral`), and the two contract-test twins (`scripts/tests/run-behavioral-contract-tests.sh:1592-1609`, `.ps1:1574-1588`) which exercise both shapes. All six Antigravity bundles carry the host-neutral pair and score `provenance=verified`; all nine OpenCode bundles still carry the legacy pair and score unchanged.
+- [x] **AC-2**: All nine committed OpenCode bundles under `docs/internal/host-conformance/opencode-omo/` re-score to their committed `scorer.txt` lines byte-for-byte, including `provenance=verified`.
+  - **Result**: `Met with one documented exception`
+  - **Evidence**: re-scored all nine with `bash scripts/run-behavioral-eval.sh --score <scenario> <bundle>/transcript.md` and compared the first `<scenario>|…` line of each `scorer.txt`. **Eight of nine reproduce byte-for-byte** (`breaker-exhaustion`, `breaker-exhaustion-commandcode`, `card-provenance`, `card-provenance-commandcode`, `greenfield-saas-intake`, `greenfield-saas-intake-commandcode`, `halt-callout`, `halt-callout-commandcode`). `milestone-halt` re-scores `provenance=unverified` against a committed `provenance=verified`; this drift is **pre-existing and not caused by the provenance change** — it reproduces identically under the pre-fix scorer at `main` (`git worktree add /tmp/pk-main-check main` → same `milestone-halt|live|PARTIAL|checks=3/4|provenance=unverified`), because that bundle's `observed-m2-writes.txt` is empty so there is no write log to verify against. Recorded in `CHANGELOG.md` under the provenance entry rather than silently smoothed.
+- [x] **AC-3**: A bundle carrying only the host-neutral pair scores `provenance=verified`, and one carrying neither pair scores `provenance=unverified`.
+  - **Result**: `Met`
+  - **Evidence**: four new controls in each contract-test twin (`scripts/tests/run-behavioral-contract-tests.sh:1592-1609`, `.ps1:1574-1588`): host-neutral pair → verified; half-filled host-neutral pair (`hostVersion: "[Pending]"`) → unverified; half-filled legacy pair → unverified; neither pair → unverified. Both twins report `Passed: 791 | Failed: 0`.
+- [x] **AC-4**: The milestone-halt seed carries an `AGENTS.md` holding the Balanced directive, and the new seed commit is recorded in the capture bundle's provenance.
+  - **Result**: `Met`
+  - **Evidence**: `git --git-dir=<bundle>/repository.bundle ls-tree -r --name-only HEAD` lists `AGENTS.md` alongside `.opencode/rules.md`; the two are **byte-identical** (sha256 `7adab7b46b7bb8c473021fdc2bb2d2b66b28a211518e75c01a4ad1bdf1ac02da`), so the directive under test is the same one the OpenCode seed carries and only the delivery path differs. `docs/internal/host-conformance/antigravity/milestone-halt/provenance.json` records `"seedCommit": "55c567ced2a33c65c770d5f6bb55a2f9a2677612"` and `"profile": "balanced"`.
+- [x] **AC-5**: A transcript renderer exists in both twins, converts `agy` `stream-json` NDJSON into the `## Events` format, and reproduces a recorded stream's assistant text byte-for-byte.
+  - **Result**: `Met`
+  - **Evidence**: `scripts/render-capture-transcript.mjs` holds the single implementation; `scripts/render-capture-transcript.sh` and `scripts/render-capture-transcript.ps1` are thin forwarders over it, so the twins cannot drift. `scripts/tests/run-render-capture-transcript-tests.sh` and `.ps1` re-render **all six** committed Antigravity bundles from their `session.jsonl` and diff the result against the committed `transcript.md` (timestamp column stripped) and `observed-writes.log` (byte-identical): `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|10 passed` on both. The timestamp column is excluded because the renderer reconstructs the timeline from the `session.jsonl` mtime and can drift 1–2 ms per entry; every byte the scorer grades reproduces exactly. Both suites are wired into `.github/workflows/ci.yml` and `CONTRIBUTING.md`.
+- [x] **AC-6**: The `halt-callout` capture is taken under `bwrap` isolation, its canary fails to read the kit repository, and its bundle satisfies the artifact contract.
+  - **Result**: `Met`
+  - **Evidence**: `docs/internal/host-conformance/antigravity/README.md` §Isolation records the `bwrap` invocation and the canary measured in both directions on 2026-11-23 — **169** `halt-callout.md` paths visible without isolation, **0** under it. `docs/internal/host-conformance/antigravity/halt-callout/` carries all 17 contract files (`provenance.json`, `transcript.md`, `repository.bundle`, `m2-paths.txt`, `observed-m2-writes.txt`, `state-check.json`, `scorer.txt`, the four diff files, both git-status files, `final-head.txt`, `untracked.txt`, `observed-writes.log`, `session.jsonl`, `session.stderr.txt`).
+- [x] **AC-7**: The `^`-anchored `^tool read` / `^tool write` patterns are checked against `rtk`-prefixed tool lines and the result is recorded.
+  - **Result**: `Met`
+  - **Evidence**: `docs/internal/host-conformance/antigravity-capture-plan.md` §2.3 now records the measurement: `rtk` is never at the start of a line — it is an argument of the `shell` verb, and every tool line is two-space indented and verb-prefixed (`  shell rtk proxy find … (completed)`), so the `^`-anchored patterns never fire on a tool line at all, with or without `rtk`. Counts per bundle: `breaker-exhaustion` 2, `card-provenance` 4, `greenfield-saas-intake` 3, `halt-callout` 0, `milestone-halt` 2, `milestone-halt-resume` 1; zero lines in any transcript begin with `rtk`; over `halt-callout`'s `## Events` section `^tool write` and `^tool read` each match 0 lines. No scorer change needed; no capture invalidated.
+- [x] **AC-8**: `docs/BEHAVIORAL-EVAL.md` and the bundle contract README describe both provenance shapes.
+  - **Result**: `Met`
+  - **Evidence**: `docs/BEHAVIORAL-EVAL.md:98` and `docs/internal/host-conformance/opencode-omo/README.md:9` both state the eight host-independent keys plus one host-identification pair — legacy `openCodeVersion` + `omoVersion` or host-neutral `hostName` + `hostVersion` — and that a half-filled pair is not an identification and neither pair scores `provenance=unverified`.
 
 ## 4. Execution Policy
 
@@ -74,12 +74,12 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `in_progress`
-- **Mapped `pk:tasks` Status**: `In Progress`
-- **Active Task Pointer**: `TASK-2026-11-22-antigravity-host-conformance`
+- **Execution State**: `awaiting_review`
+- **Mapped `pk:tasks` Status**: `In Review`
+- **Active Task Pointer**: `None`
 - **Start Time**: `2026-11-22 10:51 UTC`
 - **Current Actor**: `DeepSeek Harness agent (lead)`
-- **Next Action**: Generalize the provenance key list in all five code locations.
+- **Next Action**: None — all eight acceptance criteria are met and evidenced. Awaiting the owner's merge decision on PR #763.
 
 ### Transition History
 
@@ -87,22 +87,23 @@
 |---|---|---|---|---|---|
 | `None` | `planned` | `2026-11-22 10:51 UTC` | `DeepSeek Harness agent` | Record created from the owner's request | `docs/internal/host-conformance/antigravity-capture-plan.md` |
 | `planned` | `in_progress` | `2026-11-22 10:51 UTC` | `DeepSeek Harness agent` | Objective, scope, criteria, and policy complete | This record |
+| `in_progress` | `awaiting_review` | `2026-11-23 08:20 UTC` | `DeepSeek Harness agent` | AC-1 through AC-8 met and evidenced; merge is the owner's decision | §3 Acceptance Criteria, §6 Evidence and Completion Gate |
 
 ## 6. Evidence and Completion Gate
 
-- **Changed Files**: `pending`
+- **Changed Files**: `scripts/run-behavioral-eval.sh`, `scripts/run-behavioral-eval.ps1`, `scripts/check-milestone-halt-evidence.sh`, `scripts/check-milestone-halt-evidence.ps1`, `scripts/tests/run-behavioral-contract-tests.sh`, `scripts/tests/run-behavioral-contract-tests.ps1`, `scripts/tests/run-milestone-halt-evidence-fixtures.sh`, `scripts/render-capture-transcript.mjs` (new), `scripts/render-capture-transcript.sh` (rewritten as a forwarder), `scripts/render-capture-transcript.ps1` (new), `scripts/tests/run-render-capture-transcript-tests.sh` (new), `scripts/tests/run-render-capture-transcript-tests.ps1` (new), `.github/workflows/ci.yml`, `CONTRIBUTING.md`, `CHANGELOG.md`, `README.md`, `docs/HOST-CONFORMANCE.md`, `docs/BEHAVIORAL-EVAL.md`, `docs/internal/host-conformance/antigravity-capture-plan.md`, `docs/internal/host-conformance/antigravity/README.md`, `docs/internal/host-conformance/opencode-omo/README.md`, and the six `docs/internal/host-conformance/antigravity/<probe>/` bundles
 - **Scope Change Records**: `none`
 - **Checkpoint Records**: `none`
 - **Handoff Records**: `none`
-- **Verification Evidence**: `pending`
-- **CI Evidence**: `pending`
+- **Verification Evidence**: `bash scripts/validate-references.sh . --strict` → exit 0, "All references valid! No broken links found."; `bash scripts/tests/run-behavioral-contract-tests.sh` → `Passed: 791 | Failed: 0`; `pwsh -NoProfile -File scripts/tests/run-behavioral-contract-tests.ps1` → all passed; `bash scripts/run-behavioral-eval.sh --self-test` → `Passed: 121 | Failed: 0`; `bash scripts/tests/run-milestone-halt-evidence-fixtures.sh` → `MILESTONE_EVIDENCE_FIXTURES|PASS|26 cases`; `bash scripts/tests/run-render-capture-transcript-tests.sh` → `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|10 passed`; `pwsh -NoProfile -File scripts/tests/run-render-capture-transcript-tests.ps1` → `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|10 passed`; `bash scripts/check-changelog-entry.sh` → `CHANGELOG_GATE|PASS`; `pwsh -NoProfile -File scripts/run-behavioral-eval.ps1 --score halt-callout <bundle>/transcript.md` → `halt-callout|live|PARTIAL|checks=5/7|behavioral=PARTIAL|provenance=verified`, byte-identical to the Bash scorer.
+- **CI Evidence**: PR #763 — Change Classification, Linux Docs & Contracts, Windows Docs & Contracts, Staged Secret Scan (PR Diff), Lint & Validate (Linux), Lint & Validate (Windows) all SUCCESS; the six code-shard jobs SKIPPED because the diff is docs-and-scripts only. The renderer suites are now wired into `.github/workflows/ci.yml` (bash `-n` list, PowerShell `$syntaxFiles`, and one test step per twin) so they run on every future PR.
 - **Review Evidence**: `none yet — no human review has been requested or received`
-- **Commit Evidence**: `pending`
-- **Pull Request Evidence**: `pending`
+- **Commit Evidence**: `9683d92` (provenance key list, renderer, halt-callout capture), `b885519` (merge of PR #761, milestone-halt capture), `f67c8a3` (merge of PR #762, remaining four probes), `0a1e1c0` (milestone-halt-resume capture), plus the follow-up commit on this branch carrying the double-injection record, the renderer twin, and the acceptance-criteria close-out.
+- **Pull Request Evidence**: PR #763 `feat: capture the Antigravity CLI milestone-halt resume turn` — OPEN, `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`. Predecessors #759, #760, #761, #762 merged.
 - **Release Evidence**: `not applicable`
 - **Blocker and Resume Condition**: `none`
-- **Completion State**: `In Progress`
-- **Acceptance Results**: `AC-1 through AC-8 pending`
-- **Changed-File Summary**: `pending`
+- **Completion State**: `awaiting_review`
+- **Acceptance Results**: `AC-1 through AC-8 met` (AC-2 met with one documented pre-existing exception: `milestone-halt` re-scores `provenance=unverified` under both the fixed and the pre-fix scorer because its `observed-m2-writes.txt` is empty)
+- **Changed-File Summary**: 20 files in `0a1e1c0` (+658/−3) plus the follow-up: five provenance code locations generalized to a two-shape group, four regression controls per contract twin, 26 milestone-halt evidence fixtures, one shared renderer module with two thin forwarders and two 10-check round-trip suites, the double-injection record in `docs/HOST-CONFORMANCE.md` §4 with issue #764 filed separately, the §2.3 `rtk` measurement, and the six Antigravity capture bundles.
 - **Completion Exception**: `none`
-- **Completion Decision and Timestamp**: `pending`
+- **Completion Decision and Timestamp**: `2026-11-23 08:20 UTC — work complete, all acceptance criteria met and evidenced. Merge is the owner's decision and is not claimed here.`

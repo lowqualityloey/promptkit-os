@@ -48,12 +48,29 @@ bwrap ... bash -c 'find / -xdev -name "halt-callout.md" -not -path "/proc/*" 2>/
 
 An empty result is the pass condition. A path list is a failed isolation run.
 
+Measured on 2026-11-23, both directions, so the canary is known to be able to detect the
+failure it is meant to detect:
+
+| Run | `halt-callout.md` paths visible |
+|---|---|
+| Without isolation (plain shell) | **169** — across `.promptkit/` stages, `.pkab/` trees, a `.tmp/pk-2.4.0-archive/` and the primary checkout |
+| Under the `bwrap` invocation above | **0** |
+
+The 169 is the reason the second `--tmpfs` exists: masking only the primary checkout leaves
+the answer key readable from a dozen unrelated project directories.
+
 ## Renderer
 
-`scripts/render-capture-transcript.sh` converts `agy`'s `stream-json` NDJSON into the
+`scripts/render-capture-transcript.mjs` converts `agy`'s `stream-json` NDJSON into the
 transcript format the scorer reads, and emits `observed-writes.log` alongside it. It is the
 first renderer in this repository; the nine OpenCode transcripts were rendered outside the
 tree, which is why the format was previously documented only by example.
+
+The implementation lives in the `.mjs` module and `scripts/render-capture-transcript.sh` /
+`.ps1` are thin forwarders over it, so the Bash and PowerShell twins cannot drift apart. The
+round-trip harness `scripts/tests/run-render-capture-transcript-tests.sh` / `.ps1` re-renders
+all six committed bundles and asserts the result against the committed `transcript.md` and
+`observed-writes.log`; both report `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|10 passed`.
 
 Two properties are load-bearing:
 
