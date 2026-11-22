@@ -1,0 +1,5 @@
+{
+  "applicable": false,
+  "probe": "greenfield-saas-intake",
+  "reason": "This probe's fixture has no Gated Mode Task Record, so m1Verified, signoffCallout and m2Advanced are not defined."
+}

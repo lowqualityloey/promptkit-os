@@ -1,0 +1,1 @@
+# Not applicable — this probe has no M2 milestone and no path allowlist.

@@ -1,0 +1,12 @@
+{
+  "captureDate": "2026-11-23",
+  "promptkitCommit": "b885519",
+  "profile": "balanced",
+  "seedCommit": "8844ef1e749327c8ac0a1a817fba7431d6eae4ba",
+  "resetCommands": "git init -b main; fetch the breaker-exhaustion seed from ../../opencode-omo/breaker-exhaustion/repository.bundle (8844ef1); PROMPTKIT_NO_INTERACTIVE=1 bash init.sh --balanced --host=gemini .; git add -A; git commit -m 'install: Balanced directive (AGENTS.md + GEMINI.md) via init.sh --host=gemini'; git status --porcelain must be empty",
+  "hostName": "Antigravity CLI",
+  "hostVersion": "agy 1.5.14",
+  "agentModel": "gemini-3.8-flash-high (default agent, --mode accept-edits, --dangerously-skip-permissions); single-turn stream-json over stdin; bwrap-isolated",
+  "observationStart": "2026-11-23T01:36:09+13:00",
+  "observationEnd": "2026-11-23T01:39:07+13:00"
+}
