@@ -64,6 +64,9 @@ bash scripts/tests/run-checkpoint-ignore-tests.sh
 bash scripts/tests/run-pk-entry-points-tests.sh
 bash scripts/tests/run-ai-attribution-tests.sh
 
+# Capture transcript renderer (round-trip against the committed Antigravity bundles)
+bash scripts/tests/run-render-capture-transcript-tests.sh
+
 # Token budget gates (Balanced <= 2500 / Lite <= 1500) and per-task payloads
 bash scripts/measure-tokens.sh --strict
 bash scripts/measure-per-task-tokens.sh --strict
@@ -127,7 +130,9 @@ $syntaxFiles = @(
   "scripts/tests/run-pk-entry-points-tests.ps1",
   "scripts/check-ai-attribution.ps1",
   "scripts/install-attribution-hook.ps1",
-  "scripts/tests/run-ai-attribution-tests.ps1"
+  "scripts/tests/run-ai-attribution-tests.ps1",
+  "scripts/render-capture-transcript.ps1",
+  "scripts/tests/run-render-capture-transcript-tests.ps1"
 )
 foreach ($file in $syntaxFiles) {
   $errors = @()
@@ -145,6 +150,7 @@ pwsh -NoProfile -File .\scripts\tests\run-checkpoint-ignore-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-pk-entry-points-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-ai-attribution-tests.ps1
 pwsh -NoProfile -File .\scripts\tests\run-projection-parity-tests.ps1
+pwsh -NoProfile -File .\scripts\tests\run-render-capture-transcript-tests.ps1
 
 # Token budget gates (Balanced <= 2500 / Lite <= 1500) and per-task payloads
 pwsh -NoProfile -File .\scripts\measure-tokens.ps1 -Strict

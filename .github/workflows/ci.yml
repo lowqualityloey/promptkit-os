@@ -280,6 +280,8 @@ jobs:
           bash -n scripts/check-ai-attribution.sh
           bash -n scripts/install-attribution-hook.sh
           bash -n scripts/tests/run-ai-attribution-tests.sh
+          bash -n scripts/render-capture-transcript.sh
+          bash -n scripts/tests/run-render-capture-transcript-tests.sh
           echo "Bash scripts parsed with 0 syntax errors."
 
       - name: Run Staged Secret Scan Regression Tests (Bash)
@@ -311,6 +313,9 @@ jobs:
 
       - name: Run AI Attribution Tests (Bash)
         run: bash scripts/tests/run-ai-attribution-tests.sh
+
+      - name: Run Capture Transcript Renderer Tests (Bash)
+        run: bash scripts/tests/run-render-capture-transcript-tests.sh
 
       - name: Run init.sh Safety Regression Tests (Bash)
         run: bash scripts/tests/run-init-safety-tests.sh
@@ -676,7 +681,9 @@ jobs:
             "scripts/check-benchmark-task-cards.ps1",
             "scripts/tests/run-benchmark-task-card-tests.ps1",
             "scripts/install-benchmark-task-card-hook.ps1",
-            "scripts/tests/run-benchmark-task-card-hook-tests.ps1"
+            "scripts/tests/run-benchmark-task-card-hook-tests.ps1",
+            "scripts/render-capture-transcript.ps1",
+            "scripts/tests/run-render-capture-transcript-tests.ps1"
           )
           foreach ($file in $syntaxFiles) {
             $errors = @()
@@ -703,6 +710,10 @@ jobs:
       - name: Run Harness Security Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-harness-security-tests.ps1
+
+      - name: Run Capture Transcript Renderer Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-render-capture-transcript-tests.ps1
 
       - name: Run Checkpoint Ignore Tests (PowerShell)
         shell: pwsh
