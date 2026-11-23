@@ -276,9 +276,12 @@ captured hosts changes.
 
 ### 6.2 The double-injection finding (independent of any capture)
 
-`agy` loads **both** `AGENTS.md` and `GEMINI.md`, and `init.sh --host=gemini` writes both with
-identical content (9,936 B each in the smoke fixture). The directive is therefore injected
-twice into the same context.
+`agy` loads **both** `AGENTS.md` and `GEMINI.md`, and `init.sh --host=gemini` wrote both with
+identical content (9,936 B each in the smoke fixture). The directive was therefore injected
+twice into the same context. The installer no longer does this — `gemini` resolves to
+`AGENTS.md` as of [#764](https://github.com/lowqualityloey/promptkit-os/issues/764) — but the six
+captures under [`antigravity/`](./antigravity/) were taken before that change and carry the
+doubled surface.
 
 This is a kit defect, not a capture artifact, and it deserves its own record whether or not
 the captures proceed. Two questions to settle:
@@ -289,6 +292,11 @@ the captures proceed. Two questions to settle:
 
 Record the answer in `docs/HOST-CONFORMANCE.md` and, if it warrants a change, in a separate
 issue — do not fold a kit change into a capture PR.
+
+Question 2 is answered and shipped as its own issue ([#764](https://github.com/lowqualityloey/promptkit-os/issues/764)):
+the installer writes only `AGENTS.md` for this host. Question 1 remains **unmeasured** — no capture
+exercised the duplication behaviourally, so the effect on probe outcomes is still unknown and
+`docs/HOST-CONFORMANCE.md` §4 claims none.
 
 ### 6.3 Gate
 

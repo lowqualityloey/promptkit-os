@@ -217,12 +217,14 @@ could not have shown that.
 #### Antigravity / Gemini CLI — the double-injection finding
 
 `agy` discovers **both** `AGENTS.md` and `GEMINI.md` as directory-based rules, and the installer
-writes both for the `gemini` host: `init.sh:334` maps `gemini` → `GEMINI.md`, and the
-fresh-install branch at `init.sh:757-765` registers `AGENTS.md` unconditionally before looping the
-selected hosts (`init.ps1:56` and `init.ps1:783-787` mirror it). A fresh
-`init.sh --host=gemini` therefore writes two files carrying the same directive block, and the host
-loads both. This is a kit defect rather than a capture artifact — it is independent of any probe,
-and it is recorded here precisely because the captures cannot show it.
+used to write both for the `gemini` host: `host_file()` mapped `gemini` → `GEMINI.md`, and the
+fresh-install branch registered `AGENTS.md` unconditionally before looping the selected hosts
+(`init.ps1` mirrored it). A fresh `init.sh --host=gemini` therefore wrote two files carrying the
+same directive block, and the host loaded both. This was a kit defect rather than a capture
+artifact — it is independent of any probe, and it is recorded here precisely because the captures
+cannot show it. **It is fixed**: `gemini` now resolves to `AGENTS.md` in both twins, so the host
+receives one file. The six captures below were taken before that change and their directive
+surface is the doubled one.
 
 **The duplication is real in the model's context, not merely on disk.** `agy` deduplicates rules by
 *resolved file path*, so two distinct files in one directory are both injected. A bwrap-isolated
@@ -241,11 +243,12 @@ in any of the six sessions targeted `GEMINI.md`, and the file appears in the str
 `ls` listings and the install commit's own subject line. The effect of double injection on probe
 outcomes is therefore **unmeasured**, and this record claims none.
 
-The plan's second question — whether the installer should write only one of the two — is an owner
-decision, tracked in [#764](https://github.com/lowqualityloey/promptkit-os/issues/764) rather than
-folded into a capture PR. The recommendation there is to write only `AGENTS.md` for a host whose
-rule discovery already includes it, which keeps the universal-fallback invariant and halves the
-static directive cost.
+The plan's second question — whether the installer should write only one of the two — was decided
+in [#764](https://github.com/lowqualityloey/promptkit-os/issues/764): write only `AGENTS.md` for a
+host whose rule discovery already includes it, which keeps the universal-fallback invariant and
+halves the static directive cost. The change shipped in `init.sh` and `init.ps1` together with
+the installed-host detection guard, the doctor row dedupe, and a migration note for installs that
+still carry a `GEMINI.md` from an earlier run.
 
 ---
 

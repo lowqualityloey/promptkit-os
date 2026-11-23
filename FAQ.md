@@ -89,7 +89,7 @@ Think of it as: Linux is to commands what PromptKit OS is to AI coding assistant
 | **Trae IDE** | ✅ Automated | `.traerules` |
 | **OpenCode** | ✅ Automated | `.opencode/rules.md` |
 | **GitHub Copilot** | ✅ Automated | `.github/copilot-instructions.md` |
-| **Gemini CLI / Antigravity** | ✅ Automated | `GEMINI.md` or `AGENTS.md` |
+| **Gemini CLI / Antigravity** | ✅ Automated | `AGENTS.md` (a legacy `GEMINI.md` is no longer written) |
 | **Aider** | ✅ Automated | `CONVENTIONS.md` or manual read |
 | **Any AI chat** | ✅ Manual | Manual workflow reference |
 

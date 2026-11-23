@@ -118,7 +118,9 @@ host_relpath() {
                 printf '.cursorrules'
             fi
             ;;
-        gemini) printf 'GEMINI.md' ;;
+        # gemini resolves to AGENTS.md (issue #764): agy discovers both files and
+        # dedupes by resolved path, so the installer writes only AGENTS.md.
+        gemini) printf 'AGENTS.md' ;;
         windsurf) printf '.windsurfrules' ;;
         copilot) printf '.github/copilot-instructions.md' ;;
         cline)
@@ -237,9 +239,16 @@ fix_host_block() {
 # is not judged against Balanced-only workflow lists, so the only host-level
 # expectation is the managed directive block itself, identical for both modes.
 INSTALLED_HOSTS=()
+seen_rels=" "
 for id in $HOST_IDS; do
     rel="$(host_relpath "$id")"
     [[ -n "$rel" ]] || continue
+    # Several host ids can resolve to the same file (gemini -> AGENTS.md, issue
+    # #764). Report each target file once so the row list stays one row per file.
+    case "$seen_rels" in
+        *" $rel "*) continue ;;
+    esac
+    seen_rels="$seen_rels$rel "
     path="$kit_root/$rel"
     if [[ ! -e "$path" ]]; then
         if [[ "$rel" == "AGENTS.md" ]]; then
