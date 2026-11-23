@@ -60,6 +60,14 @@ commit_paths() {
     git -C "$dir" commit -qm 'change' || return 1
 }
 
+# write_changelog <root> <line>... writes CHANGELOG.md verbatim (one argument
+# per line) so a fixture can pin an exact heading layout.
+write_changelog() {
+    local dir="$1"
+    shift
+    printf '%s\n' "$@" > "$dir/CHANGELOG.md" || return 1
+}
+
 run_gate() {
     local root="$1"
     STATUS=0
@@ -88,6 +96,71 @@ C3_ROOT="$(make_repo c3)" && commit_paths "$C3_ROOT" benchmarks/README.md && run
 want_status 0
 want_contains 'CHANGELOG_GATE|PASS|no behavior-surface paths in range'
 report 'C3 benchmark documentation without CHANGELOG -> PASS (not gated)'
+
+# C4: a version section that repeats a heading is rejected even though the
+# range carries a CHANGELOG.md entry. The fixture reproduces the exact shape
+# the [Unreleased] section had before it was collapsed: two ### Added groups
+# split by another heading.
+begin
+C4_ROOT="$(make_repo c4)" && write_changelog "$C4_ROOT" \
+    '# Changelog' \
+    '' \
+    '## [Unreleased]' \
+    '' \
+    '### Added' \
+    '' \
+    '- first added bullet' \
+    '' \
+    '### Fixed' \
+    '' \
+    '- a fixed bullet' \
+    '' \
+    '### Added' \
+    '' \
+    '- second added bullet' \
+    '' \
+    '## [1.0.0] - 2026-01-01' \
+    '' \
+    '### Added' \
+    '' \
+    '- released bullet' \
+    '' \
+    && commit_paths "$C4_ROOT" benchmarks/run-ab-benchmark.sh && run_gate "$C4_ROOT"
+want_status 1
+want_contains 'CHANGELOG_GATE|DUPLICATE-HEADING|'
+want_contains '## [Unreleased] -> ### Added (2 occurrences)'
+want_contains 'CHANGELOG_GATE|REMEDIATION|'
+want_not_contains 'CHANGELOG_GATE|PASS|'
+report 'C4 duplicate heading inside one version section -> DUPLICATE-HEADING'
+
+# C5: the same range with one heading per kind passes, so the check rejects
+# only the duplicate shape and not every CHANGELOG.md entry.
+begin
+C5_ROOT="$(make_repo c5)" && write_changelog "$C5_ROOT" \
+    '# Changelog' \
+    '' \
+    '## [Unreleased]' \
+    '' \
+    '### Added' \
+    '' \
+    '- first added bullet' \
+    '- second added bullet' \
+    '' \
+    '### Fixed' \
+    '' \
+    '- a fixed bullet' \
+    '' \
+    '## [1.0.0] - 2026-01-01' \
+    '' \
+    '### Added' \
+    '' \
+    '- released bullet' \
+    '' \
+    && commit_paths "$C5_ROOT" benchmarks/run-ab-benchmark.sh && run_gate "$C5_ROOT"
+want_status 0
+want_contains 'CHANGELOG_GATE|PASS|behavior-surface changes carry a CHANGELOG.md entry'
+want_not_contains 'CHANGELOG_GATE|DUPLICATE-HEADING|'
+report 'C5 one heading per kind per version section -> PASS'
 
 printf '\nCHANGELOG_GATE_TESTS|%d passed|%d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

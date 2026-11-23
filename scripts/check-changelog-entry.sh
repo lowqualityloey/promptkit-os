@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# CHANGELOG entry gate: behavior-surface changes must carry a CHANGELOG.md entry.
+# CHANGELOG entry gate: behavior-surface changes must carry a CHANGELOG.md entry,
+# and that entry must not repeat a heading inside a single version section.
 # Usage: scripts/check-changelog-entry.sh [--base REF] [--head REF]
 # Compares the committed range BASE...HEAD (default origin/main...HEAD).
 # Skips cleanly when the base ref is unavailable (shallow or offline checkout).
@@ -76,6 +77,42 @@ if [ -z "$behavior" ]; then
 fi
 
 if printf '%s\n' "$files" | grep -qx 'CHANGELOG.md'; then
+    # Structural check: one heading per kind per version section. A repeated
+    # heading splits one logical group across the file and breaks the
+    # Keep a Changelog shape, so the entry is rejected rather than accepted.
+    # Reads the committed blob first so uncommitted edits cannot mask the range.
+    changelog_text="$(git show "$HEAD:CHANGELOG.md" 2>/dev/null || true)"
+    if [ -z "$changelog_text" ] && [ -f CHANGELOG.md ]; then
+        changelog_text="$(cat CHANGELOG.md || true)"
+    fi
+    if [ -n "$changelog_text" ]; then
+        dupes="$(printf '%s\n' "$changelog_text" | awk '
+            /^[[:space:]]*(```|~~~)/ { fence = !fence; next }
+            fence { next }
+            /^## / { section = $0; next }
+            /^### / {
+                if (section == "") next
+                key = section SUBSEP $0
+                if (!(key in count)) { count[key] = 0; order[++n] = key }
+                count[key]++
+                next
+            }
+            END {
+                for (i = 1; i <= n; i++) {
+                    if (count[order[i]] > 1) {
+                        split(order[i], parts, SUBSEP)
+                        printf "  - %s -> %s (%d occurrences)\n", parts[1], parts[2], count[order[i]]
+                    }
+                }
+            }
+        ')"
+        if [ -n "$dupes" ]; then
+            echo "CHANGELOG_GATE|DUPLICATE-HEADING|CHANGELOG.md repeats a heading inside one version section:"
+            printf '%s\n' "$dupes"
+            echo "CHANGELOG_GATE|REMEDIATION|Merge each repeated heading's bullets under one heading per version section (Keep a Changelog)"
+            exit 1
+        fi
+    fi
     echo "CHANGELOG_GATE|PASS|behavior-surface changes carry a CHANGELOG.md entry"
     exit 0
 fi
