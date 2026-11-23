@@ -339,7 +339,7 @@ try {
         Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
     }
     $multiHostFiles = @(
-        "CLAUDE.md", ".cursorrules", ".opencode/rules.md", "GEMINI.md", ".windsurfrules",
+        "CLAUDE.md", ".cursorrules", ".opencode/rules.md", ".windsurfrules",
         ".github/copilot-instructions.md", ".clinerules/promptkit.md", ".traerules", "CONVENTIONS.md"
     )
     foreach ($rel in $multiHostFiles) {
@@ -351,6 +351,116 @@ try {
         if (($content.Split('<!-- PROMPTKIT_START -->').Count - 1) -ne 1) {
             throw "Failed Test 13c: managed block missing or duplicated in $rel."
         }
+    }
+    # Issue #764: the gemini host resolves to AGENTS.md, so a multi-host install must
+    # not also write GEMINI.md — agy would inject the same directive twice.
+    if (Test-Path (Join-Path $MultiHostRoot "GEMINI.md")) {
+        throw "Failed Test 13c: multi-host install wrote GEMINI.md; the gemini host must resolve to AGENTS.md."
+    }
+    $agentsContent = [System.IO.File]::ReadAllText((Join-Path $MultiHostRoot "AGENTS.md"), [System.Text.Encoding]::UTF8)
+    if (($agentsContent.Split('<!-- PROMPTKIT_START -->').Count - 1) -ne 1) {
+        throw "Failed Test 13c: managed block missing or duplicated in AGENTS.md."
+    }
+
+    # Test 13d: --host=gemini alone resolves to AGENTS.md and writes no GEMINI.md (Issue #764)
+    # The multi-host case above would still pass if a single-host install regressed, because the
+    # gemini entry is one of nine; this asserts the direct case the bug actually shipped in.
+    $GeminiHostRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "geminihost") -Force).FullName
+    $env:PROMPTKIT_NO_INTERACTIVE = "1"
+    try {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $GeminiHostRoot --host=gemini --balanced | Out-Null
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
+    }
+    $geminiAgents = Join-Path $GeminiHostRoot "AGENTS.md"
+    if (-not (Test-Path $geminiAgents)) {
+        throw "Failed Test 13d: --host=gemini did not write AGENTS.md."
+    }
+    $geminiAgentsContent = [System.IO.File]::ReadAllText($geminiAgents, [System.Text.Encoding]::UTF8)
+    if (($geminiAgentsContent.Split('<!-- PROMPTKIT_START -->').Count - 1) -ne 1) {
+        throw "Failed Test 13d: --host=gemini wrote a missing or duplicated managed block in AGENTS.md."
+    }
+    if (Test-Path (Join-Path $GeminiHostRoot "GEMINI.md")) {
+        throw "Failed Test 13d: --host=gemini wrote GEMINI.md; the gemini host must resolve to AGENTS.md."
+    }
+
+    # Test 13e: a PRE-EXISTING GEMINI.md must not be picked up as an injection target
+    # (Issue #764 review). The scan used to list GEMINI.md among the candidate agent
+    # files, so any project that already had one got the directive written into it on
+    # every install — including an unmanaged file the user wrote themselves, which the
+    # installer then described as "a managed block from an earlier install".
+    $SeededRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "seededgemini") -Force).FullName
+    $seededPath = Join-Path $SeededRoot "GEMINI.md"
+    [System.IO.File]::WriteAllText($seededPath, "# My own gemini notes`n`nhand-written, never managed by PromptKit`n", $utf8NoBom)
+    $seededBefore = (Get-FileHash -Path $seededPath -Algorithm SHA256).Hash
+    $env:PROMPTKIT_NO_INTERACTIVE = "1"
+    try {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $SeededRoot --host=gemini --balanced | Out-Null
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
+    }
+    if ((Get-FileHash -Path $seededPath -Algorithm SHA256).Hash -ne $seededBefore) {
+        throw "Failed Test 13e: an unmanaged pre-existing GEMINI.md was modified by --host=gemini."
+    }
+    $seededContent = [System.IO.File]::ReadAllText($seededPath, [System.Text.Encoding]::UTF8)
+    if ($seededContent.Contains('PROMPTKIT_START')) {
+        throw "Failed Test 13e: an unmanaged pre-existing GEMINI.md received a managed block."
+    }
+    $seededAgents = [System.IO.File]::ReadAllText((Join-Path $SeededRoot "AGENTS.md"), [System.Text.Encoding]::UTF8)
+    if (($seededAgents.Split('<!-- PROMPTKIT_START -->').Count - 1) -ne 1) {
+        throw "Failed Test 13e: --host=gemini with a pre-existing GEMINI.md did not write exactly one block to AGENTS.md."
+    }
+
+    # Test 13f: a managed GEMINI.md from an earlier install is left alone too — it is
+    # stale, not refreshed, so its old block must survive byte-for-byte.
+    $LegacyRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "legacygemini") -Force).FullName
+    $legacyPath = Join-Path $LegacyRoot "GEMINI.md"
+    [System.IO.File]::WriteAllText($legacyPath, "<!-- PROMPTKIT_START -->`n## PromptKit OS`nstale directive from an earlier install`n<!-- PROMPTKIT_END -->`n", $utf8NoBom)
+    $legacyBefore = (Get-FileHash -Path $legacyPath -Algorithm SHA256).Hash
+    $env:PROMPTKIT_NO_INTERACTIVE = "1"
+    try {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $LegacyRoot --host=claude --balanced | Out-Null
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
+    }
+    if ((Get-FileHash -Path $legacyPath -Algorithm SHA256).Hash -ne $legacyBefore) {
+        throw "Failed Test 13f: a legacy managed GEMINI.md was refreshed even though it is not a host target."
+    }
+    if (-not [System.IO.File]::ReadAllText($legacyPath, [System.Text.Encoding]::UTF8).Contains('stale directive from an earlier install')) {
+        throw "Failed Test 13f: a legacy managed GEMINI.md lost its original block."
+    }
+
+    # Test 13g: the explicit --target escape hatch still reaches GEMINI.md.
+    $TargetedRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "targetedgemini") -Force).FullName
+    $env:PROMPTKIT_NO_INTERACTIVE = "1"
+    try {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $TargetedRoot --host=claude --balanced --target=GEMINI.md | Out-Null
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
+    }
+    $targetedContent = [System.IO.File]::ReadAllText((Join-Path $TargetedRoot "GEMINI.md"), [System.Text.Encoding]::UTF8)
+    if (($targetedContent.Split('<!-- PROMPTKIT_START -->').Count - 1) -ne 1) {
+        throw "Failed Test 13g: --target=GEMINI.md no longer writes the managed block."
+    }
+
+    # Test 13h: a DIRECTORY named GEMINI.md must not fail the install. The migration
+    # notice used Test-Path alone, so ReadAllText threw after every project file had
+    # already been written, turning a completed install into exit 1.
+    $DirGeminiRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "dirgemini") -Force).FullName
+    New-Item -ItemType Directory -Path (Join-Path $DirGeminiRoot "GEMINI.md") -Force | Out-Null
+    $env:PROMPTKIT_NO_INTERACTIVE = "1"
+    try {
+        & pwsh -NoProfile -File $initScriptPath -ProjectRoot $DirGeminiRoot --host=gemini --balanced *> $null
+        $dirGeminiExit = $LASTEXITCODE
+    } finally {
+        Remove-Item Env:\PROMPTKIT_NO_INTERACTIVE -ErrorAction SilentlyContinue
+    }
+    if ($dirGeminiExit -ne 0) {
+        throw "Failed Test 13h: a directory named GEMINI.md failed the install (exit $dirGeminiExit)."
+    }
+    $dirGeminiAgents = [System.IO.File]::ReadAllText((Join-Path $DirGeminiRoot "AGENTS.md"), [System.Text.Encoding]::UTF8)
+    if (($dirGeminiAgents.Split('<!-- PROMPTKIT_START -->').Count - 1) -ne 1) {
+        throw "Failed Test 13h: a directory named GEMINI.md prevented the AGENTS.md install."
     }
 
     # Test 14: --add-host injects exactly once; pre-existing content preserved

@@ -14,7 +14,7 @@ Three different things are easy to conflate, so they are listed separately here:
 | Installer id | Assistant / Environment | Configuration Target File |
 | :--- | :--- | :--- |
 | `claude` | Claude Code | `CLAUDE.md` |
-| `gemini` | Gemini CLI / Antigravity | `GEMINI.md` |
+| `gemini` | Gemini CLI / Antigravity | `AGENTS.md` |
 | `cursor` | Cursor IDE | `.cursorrules` |
 | `windsurf` | Windsurf IDE | `.windsurfrules` |
 | `copilot` | GitHub Copilot | `.github/copilot-instructions.md` |
@@ -23,7 +23,7 @@ Three different things are easy to conflate, so they are listed separately here:
 | `opencode` | OpenCode | `.opencode/rules.md` |
 | `aider` | Aider | `CONVENTIONS.md` |
 
-**2. Universal fallback.** The `agents` target, which maps to `AGENTS.md`. Assistants that read `AGENTS.md` but have no dedicated installer id — Codex CLI, for example — are served through this fallback, and `AGENTS.md` is the file created when no known host configuration exists (see Preconditions below).
+**2. Universal fallback.** The `agents` target, which maps to `AGENTS.md`. Assistants that read `AGENTS.md` but have no dedicated installer id — Codex CLI, for example — are served through this fallback, and `AGENTS.md` is the file created when no known host configuration exists (see Preconditions below). The `gemini` target also maps to `AGENTS.md`: Antigravity discovers both `AGENTS.md` and `GEMINI.md` and dedupes by resolved path, so writing both would inject the same directive twice (`docs/HOST-CONFORMANCE.md` section 4, issue #764). An existing `GEMINI.md` from an earlier install is left in place and is no longer refreshed at all — it is not a host target and it is not in the installer's existing-config scan, so its managed block goes stale rather than being rewritten. Delete it to halve the static directive cost, or pass `--target=GEMINI.md` if you deliberately want that file maintained.
 
 **3. Runtime-validated hosts.** A separate question from installer support. Per-host live fidelity is tracked in `docs/HOST-CONFORMANCE.md`; as of that matrix only OpenCode carries any recorded live capture (`PARTIAL`, 1 of 5 probes) and every other host is `Untested`. This section documents install targets only — it is not evidence of validated runtime behavior.
 
@@ -57,7 +57,7 @@ All workflows, protocols, templates, and activities use these definitions — ne
 
 ### 1. Identify Workspace & Configuration Files
 Inspect the repository root for existing agent configuration files:
-- Check for: `CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `.cursorrules`, `.cursor/rules/`, `.windsurfrules`, `.github/copilot-instructions.md`, `.clinerules`, `.opencode/rules.md`, `CONVENTIONS.md`.
+- Check for: `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.cursor/rules/`, `.windsurfrules`, `.github/copilot-instructions.md`, `.clinerules`, `.opencode/rules.md`, `CONVENTIONS.md`. A legacy `GEMINI.md` may also be present from an install predating issue #764; it is no longer a host target.
 - Inspect for installed host skill packs: `.claude/skills/`, `.agents/skills/`, `.agents/`, and host-global skill configurations.
 - When skill packs are detected, confirm governance primacy with the developer: *"Detected external skill packs. PromptKit OS workflows govern ceremony levels and verification gates, while your skills provide specialized domain knowledge."* Record confirmation in living project state (`docs/STATE.md`).
 - If none exist, default to creating `./AGENTS.md`.
@@ -287,6 +287,6 @@ Rules 2–3 above describe *when* a terminal CLI fallback may run; they do not l
 ---
 
 ## Completion Criteria
-- Root agent file (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, or `.cursorrules`) contains valid PromptKit OS pointers.
+- Root agent file (`CLAUDE.md`, `AGENTS.md`, or `.cursorrules`) contains valid PromptKit OS pointers.
 - Project `docs/` directories are initialized.
 - The assistant is oriented to use `pk:` triggers, Socratic rules, and senior engineering workflows.

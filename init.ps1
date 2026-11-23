@@ -6,7 +6,7 @@
     Initializes PromptKit OS in your project:
     - Scaffolds project documentation directories (docs/tasks, docs/specs, docs/adrs, docs/tests)
     - Creates PROMPTKIT.md project profile if missing, injects profile: lite|balanced|turbo
-    - Injects or updates PromptKit OS directives in AGENTS.md, CLAUDE.md, GEMINI.md, .cursorrules, .cursor/rules/*.mdc, .windsurfrules, .github/copilot-instructions.md, .clinerules, .traerules, .opencode/rules.md, or CONVENTIONS.md (Aider)
+    - Injects or updates PromptKit OS directives in AGENTS.md, CLAUDE.md, .cursorrules, .cursor/rules/*.mdc, .windsurfrules, .github/copilot-instructions.md, .clinerules, .traerules, .opencode/rules.md, or CONVENTIONS.md (Aider). The gemini host targets AGENTS.md, and a legacy GEMINI.md from an earlier install is left untouched (pass --target=GEMINI.md to keep maintaining it deliberately)
 #>
 
 [CmdletBinding()]
@@ -53,7 +53,10 @@ function Get-HostFile($Name) {
         "claude" { return "CLAUDE.md" }
         "opencode" { return ".opencode/rules.md" }
         "cursor" { return ".cursorrules" }
-        "gemini" { return "GEMINI.md" }
+        # gemini shares AGENTS.md: agy discovers both AGENTS.md and GEMINI.md and
+        # dedupes by resolved path, so writing both injects the directive twice
+        # (docs/HOST-CONFORMANCE.md section 4, issue #764).
+        "gemini" { return "AGENTS.md" }
         "windsurf" { return ".windsurfrules" }
         "copilot" { return ".github/copilot-instructions.md" }
         "cline" { return ".clinerules" }
@@ -358,6 +361,9 @@ if ($AddHost -ne "") {
     }
     $Hosts = "agents,$AddHost"
     $HostSet = $true
+    if ((Get-HostFile $AddHost) -eq "AGENTS.md") {
+        Write-Host "  $AddHost reads AGENTS.md, which the universal target already covers — no separate host file is written" -ForegroundColor DarkGray
+    }
 }
 $ExtraTargets = @()
 if ($Target) {
@@ -457,6 +463,9 @@ if (-not $TrackingSet -and (Test-Path $probeProfile)) {
 if (-not $HostSet -and -not $Reconfigure -and (Test-Path $probeProfile)) {
     $installedHosts = @()
     foreach ($h in $KnownHostsList) {
+        # gemini maps to AGENTS.md, so an AGENTS.md-only install would otherwise
+        # re-detect as "gemini" instead of the universal "agents" target.
+        if ($h -eq "gemini") { continue }
         $hf = Get-HostFile $h
         if ($hf -ne "" -and (Test-Path (Join-Path $probeRoot $hf))) {
             $installedHosts += $h
@@ -680,7 +689,10 @@ if ($env:PROMPTKIT_NO_PREFLIGHT -eq '1') {
 $AgentFileCandidates = @(
     "AGENTS.md",
     "CLAUDE.md",
-    "GEMINI.md",
+    # GEMINI.md is deliberately absent: gemini resolves to AGENTS.md, and a
+    # pre-existing GEMINI.md must not be picked up as an injection target or the
+    # directive lands in both files again (issue #764). --target=GEMINI.md still
+    # works when a project deliberately wants that file.
     ".cursorrules",
     ".cursor/rules/promptkit.mdc",
     ".windsurfrules",
@@ -1462,6 +1474,24 @@ if ($KitDangling) {
             Write-Host "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit" -ForegroundColor DarkGray
         }
     }
+}
+$legacyGemini = Join-Path $ProjectRoot "GEMINI.md"
+# Leaf-file test, not Test-Path alone: a DIRECTORY named GEMINI.md also satisfies
+# Test-Path, and ReadAllText then throws after the install has already written its
+# files, turning a successful install into exit 1 (issue #764 review).
+$legacyGeminiIsFile = (Test-Path -LiteralPath $legacyGemini -PathType Leaf)
+$legacyGeminiManaged = $false
+if ($legacyGeminiIsFile) {
+    try {
+        $legacyGeminiManaged = [System.IO.File]::ReadAllText($legacyGemini).Contains('PROMPTKIT_START')
+    } catch {
+        # Unreadable (permissions, lock, encoding): stay silent rather than fail an
+        # install that has already completed its writes.
+        $legacyGeminiManaged = $false
+    }
+}
+if ($legacyGeminiManaged) {
+    Write-Host "   Note: GEMINI.md still carries a managed block from an earlier install. Gemini CLI / Antigravity read AGENTS.md, so the gemini host no longer targets GEMINI.md and this file is no longer refreshed — the stale block stays until you delete the file, and it doubles the static directive cost while it is there." -ForegroundColor Yellow
 }
 if ($Profile -eq "lite") {
     Write-Host "   Lite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok" -ForegroundColor Green

@@ -312,7 +312,7 @@ grep -q '## PromptKit OS: Engineering Operating System' "$CURSOR_ROOT/.cursorrul
 MULTIHOST_ROOT="$TEST_ROOT/multihost"
 mkdir -p "$MULTIHOST_ROOT"
 HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=claude,cursor,opencode,gemini,windsurf,copilot,cline,trae,aider --balanced "$MULTIHOST_ROOT" >/dev/null
-for rel in CLAUDE.md .cursorrules .opencode/rules.md GEMINI.md .windsurfrules .github/copilot-instructions.md .clinerules/promptkit.md .traerules CONVENTIONS.md; do
+for rel in CLAUDE.md .cursorrules .opencode/rules.md .windsurfrules .github/copilot-instructions.md .clinerules/promptkit.md .traerules CONVENTIONS.md; do
     if [[ ! -f "$MULTIHOST_ROOT/$rel" ]]; then
         echo "multi-host install missing $rel" >&2
         exit 1
@@ -322,6 +322,98 @@ for rel in CLAUDE.md .cursorrules .opencode/rules.md GEMINI.md .windsurfrules .g
         exit 1
     fi
 done
+# Issue #764: the gemini host resolves to AGENTS.md, so a multi-host install must
+# not also write GEMINI.md — agy would inject the same directive twice.
+if [[ -e "$MULTIHOST_ROOT/GEMINI.md" ]]; then
+    echo "multi-host install wrote GEMINI.md; the gemini host must resolve to AGENTS.md" >&2
+    exit 1
+fi
+if [[ "$(grep -c 'PROMPTKIT_START' "$MULTIHOST_ROOT/AGENTS.md")" -ne 1 ]]; then
+    echo "managed block missing or duplicated in AGENTS.md" >&2
+    exit 1
+fi
+
+# Host selection: --host=gemini alone resolves to AGENTS.md and writes no GEMINI.md (Issue #764)
+# The multi-host case above would still pass if a single-host install regressed, because the
+# gemini entry is one of nine; this asserts the direct case the bug actually shipped in.
+GEMINIHOST_ROOT="$TEST_ROOT/geminihost"
+mkdir -p "$GEMINIHOST_ROOT"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=gemini --balanced "$GEMINIHOST_ROOT" >/dev/null
+if [[ ! -f "$GEMINIHOST_ROOT/AGENTS.md" ]]; then
+    echo "--host=gemini did not write AGENTS.md" >&2
+    exit 1
+fi
+if [[ "$(grep -c 'PROMPTKIT_START' "$GEMINIHOST_ROOT/AGENTS.md")" -ne 1 ]]; then
+    echo "--host=gemini wrote a missing or duplicated managed block in AGENTS.md" >&2
+    exit 1
+fi
+if [[ -e "$GEMINIHOST_ROOT/GEMINI.md" ]]; then
+    echo "--host=gemini wrote GEMINI.md; the gemini host must resolve to AGENTS.md" >&2
+    exit 1
+fi
+
+# Issue #764 review: a PRE-EXISTING GEMINI.md must not be picked up as an injection
+# target. The scan used to list GEMINI.md among the candidate agent files, so any
+# project that already had one got the directive written into it on every install —
+# including an unmanaged file the user wrote themselves, which the installer then
+# described as "a managed block from an earlier install".
+SEEDED_ROOT="$TEST_ROOT/seededgemini"
+mkdir -p "$SEEDED_ROOT"
+printf '# My own gemini notes\n\nhand-written, never managed by PromptKit\n' > "$SEEDED_ROOT/GEMINI.md"
+seeded_before="$(cksum < "$SEEDED_ROOT/GEMINI.md")"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=gemini --balanced "$SEEDED_ROOT" >/dev/null
+if [[ "$(cksum < "$SEEDED_ROOT/GEMINI.md")" != "$seeded_before" ]]; then
+    echo "an unmanaged pre-existing GEMINI.md was modified by --host=gemini" >&2
+    exit 1
+fi
+if [[ "$(grep -c 'PROMPTKIT_START' "$SEEDED_ROOT/GEMINI.md")" -ne 0 ]]; then
+    echo "an unmanaged pre-existing GEMINI.md received a managed block" >&2
+    exit 1
+fi
+if [[ "$(grep -c 'PROMPTKIT_START' "$SEEDED_ROOT/AGENTS.md")" -ne 1 ]]; then
+    echo "--host=gemini with a pre-existing GEMINI.md did not write exactly one block to AGENTS.md" >&2
+    exit 1
+fi
+# A managed GEMINI.md from an earlier install is left alone too: it is stale, not
+# refreshed, so its old block must survive byte-for-byte rather than be rewritten.
+LEGACY_ROOT="$TEST_ROOT/legacygemini"
+mkdir -p "$LEGACY_ROOT"
+{
+    printf '<!-- PROMPTKIT_START -->\n'
+    printf '## PromptKit OS\n'
+    printf 'stale directive from an earlier install\n'
+    printf '<!-- PROMPTKIT_END -->\n'
+} > "$LEGACY_ROOT/GEMINI.md"
+legacy_before="$(cksum < "$LEGACY_ROOT/GEMINI.md")"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=claude --balanced "$LEGACY_ROOT" >/dev/null
+if [[ "$(cksum < "$LEGACY_ROOT/GEMINI.md")" != "$legacy_before" ]]; then
+    echo "a legacy managed GEMINI.md was refreshed even though it is not a host target" >&2
+    exit 1
+fi
+if ! grep -q 'stale directive from an earlier install' "$LEGACY_ROOT/GEMINI.md"; then
+    echo "a legacy managed GEMINI.md lost its original block" >&2
+    exit 1
+fi
+# The explicit --target escape hatch still reaches GEMINI.md when a project wants it.
+TARGETED_ROOT="$TEST_ROOT/targetedgemini"
+mkdir -p "$TARGETED_ROOT"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=claude --balanced --target=GEMINI.md "$TARGETED_ROOT" >/dev/null
+if [[ "$(grep -c 'PROMPTKIT_START' "$TARGETED_ROOT/GEMINI.md")" -ne 1 ]]; then
+    echo "--target=GEMINI.md no longer writes the managed block" >&2
+    exit 1
+fi
+# A DIRECTORY named GEMINI.md must not fail the install (the PowerShell twin used to
+# throw from ReadAllText here, after it had already written every project file).
+DIRGEMINI_ROOT="$TEST_ROOT/dirgemini"
+mkdir -p "$DIRGEMINI_ROOT/GEMINI.md"
+if ! HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=gemini --balanced "$DIRGEMINI_ROOT" >/dev/null 2>&1; then
+    echo "a directory named GEMINI.md failed the install" >&2
+    exit 1
+fi
+if [[ "$(grep -c 'PROMPTKIT_START' "$DIRGEMINI_ROOT/AGENTS.md")" -ne 1 ]]; then
+    echo "a directory named GEMINI.md prevented the AGENTS.md install" >&2
+    exit 1
+fi
 
 # Host probing: single unambiguous hit wins without flags (fake opencode only)
 PROBE_ROOT="$TEST_ROOT/probehit"

@@ -68,7 +68,9 @@ function Get-HostRelpath {
             if (Test-Path -LiteralPath (Join-Path $KitRoot '.cursor/rules/promptkit.mdc') -PathType Leaf) { return '.cursor/rules/promptkit.mdc' }
             return '.cursorrules'
         }
-        'gemini' { return 'GEMINI.md' }
+        # gemini resolves to AGENTS.md (issue #764): agy discovers both files and
+        # dedupes by resolved path, so the installer writes only AGENTS.md.
+        'gemini' { return 'AGENTS.md' }
         'windsurf' { return '.windsurfrules' }
         'copilot' { return '.github/copilot-instructions.md' }
         'cline' {
@@ -277,9 +279,13 @@ function Test-EngineDirectiveUsable {
 # is not judged against Balanced-only workflow lists, so the only host-level
 # expectation is the managed directive block itself, identical for both modes.
 $installedHosts = [System.Collections.Generic.List[string]]::new()
+$seenRels = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 foreach ($id in $hostIds) {
     $rel = Get-HostRelpath $id
     if ([string]::IsNullOrEmpty($rel)) { continue }
+    # Several host ids can resolve to the same file (gemini -> AGENTS.md, issue
+    # #764). Report each target file once so the row list stays one row per file.
+    if (-not $seenRels.Add($rel)) { continue }
     $path = Join-Path $kitRoot $rel
     if (-not (Test-Path -LiteralPath $path)) {
         if ($rel -eq 'AGENTS.md') {

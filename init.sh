@@ -331,7 +331,10 @@ host_file() {
         claude) echo "CLAUDE.md" ;;
         opencode) echo ".opencode/rules.md" ;;
         cursor) echo ".cursorrules" ;;
-        gemini) echo "GEMINI.md" ;;
+        # gemini shares AGENTS.md: agy discovers both AGENTS.md and GEMINI.md and
+        # dedupes by resolved path, so writing both injects the directive twice
+        # (docs/HOST-CONFORMANCE.md section 4, issue #764).
+        gemini) echo "AGENTS.md" ;;
         windsurf) echo ".windsurfrules" ;;
         copilot) echo ".github/copilot-instructions.md" ;;
         cline) echo ".clinerules" ;;
@@ -384,6 +387,9 @@ for arg in "$@"; do
             fi
             HOSTS="agents,$ADD_HOST"
             HOST_SET=1
+            if [[ "$(host_file "$ADD_HOST")" == "AGENTS.md" ]]; then
+                echo -e "  \033[0;90m$ADD_HOST reads AGENTS.md, which the universal target already covers — no separate host file is written\033[0m"
+            fi
             ;;
         --target=*)
             TARGET_PATH="${arg#--target=}"
@@ -511,6 +517,11 @@ fi
 if [[ "$HOST_SET" -eq 0 && "$RECONFIGURE" -eq 0 && -f "$PROJECT_ROOT/PROMPTKIT.md" ]]; then
     installed_hosts=""
     for h in $KNOWN_HOSTS; do
+        # gemini maps to AGENTS.md, so an AGENTS.md-only install would otherwise
+        # re-detect as "gemini" instead of the universal "agents" target.
+        if [[ "$h" == "gemini" ]]; then
+            continue
+        fi
         hf="$(host_file "$h")"
         if [[ -n "$hf" && -f "$PROJECT_ROOT/$hf" ]]; then
             installed_hosts="$installed_hosts $h"
@@ -659,7 +670,10 @@ fi
 AGENT_FILES=(
     "AGENTS.md"
     "CLAUDE.md"
-    "GEMINI.md"
+    # GEMINI.md is deliberately absent: gemini resolves to AGENTS.md, and a
+    # pre-existing GEMINI.md must not be picked up as an injection target or the
+    # directive lands in both files again (issue #764). --target=GEMINI.md still
+    # works when a project deliberately wants that file.
     ".cursorrules"
     ".cursor/rules/promptkit.mdc"
     ".windsurfrules"
@@ -1420,6 +1434,9 @@ if [[ "$KIT_DANGLING" == "1" ]]; then
             echo -e "   Stage the kit: npx promptkit-os@latest (courier) or git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit"
         fi
     fi
+fi
+if [[ -f "$PROJECT_ROOT/GEMINI.md" ]] && grep -q 'PROMPTKIT_START' "$PROJECT_ROOT/GEMINI.md" 2>/dev/null; then
+    echo -e "   \033[0;33mNote: GEMINI.md still carries a managed block from an earlier install. Gemini CLI / Antigravity read AGENTS.md, so the gemini host no longer targets GEMINI.md and this file is no longer refreshed — the stale block stays until you delete the file, and it doubles the static directive cost while it is there.\033[0m"
 fi
 if [[ "$PROFILE" == "lite" ]]; then
     echo -e "   \033[0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok\033[0m"
