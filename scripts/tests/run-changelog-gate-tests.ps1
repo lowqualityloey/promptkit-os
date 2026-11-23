@@ -80,6 +80,14 @@ function Add-HeadCommit {
     if ($LASTEXITCODE -ne 0) { throw "head commit failed for $RootPath" }
 }
 
+# Write-Changelog <root> <line>... writes CHANGELOG.md verbatim (one argument
+# per line) so a fixture can pin an exact heading layout.
+function Write-Changelog {
+    param([string]$RootPath, [string[]]$Lines)
+    $text = (($Lines -join "`n") + "`n")
+    [IO.File]::WriteAllText((Join-Path $RootPath 'CHANGELOG.md'), $text, $utf8)
+}
+
 try {
     # C1: a benchmark driver change without an entry is a behavior-surface miss.
     Begin-Scenario
@@ -109,6 +117,75 @@ try {
     Want-Status 0
     Want-Contains 'CHANGELOG_GATE|PASS|no behavior-surface paths in range'
     Report-Scenario 'C3 benchmark documentation without CHANGELOG -> PASS (not gated)'
+
+    # C4: a version section that repeats a heading is rejected even though the
+    # range carries a CHANGELOG.md entry. The fixture reproduces the exact shape
+    # the [Unreleased] section had before it was collapsed: two ### Added groups
+    # split by another heading.
+    Begin-Scenario
+    $root4 = New-Repo 'c4'
+    Write-Changelog -RootPath $root4 -Lines @(
+        '# Changelog',
+        '',
+        '## [Unreleased]',
+        '',
+        '### Added',
+        '',
+        '- first added bullet',
+        '',
+        '### Fixed',
+        '',
+        '- a fixed bullet',
+        '',
+        '### Added',
+        '',
+        '- second added bullet',
+        '',
+        '## [1.0.0] - 2026-01-01',
+        '',
+        '### Added',
+        '',
+        '- released bullet'
+    )
+    Add-HeadCommit -RootPath $root4 -Paths @('benchmarks/run-ab-benchmark.sh')
+    Invoke-Gate -RootPath $root4
+    Want-Status 1
+    Want-Contains 'CHANGELOG_GATE|DUPLICATE-HEADING|'
+    Want-Contains '## [Unreleased] -> ### Added (2 occurrences)'
+    Want-Contains 'CHANGELOG_GATE|REMEDIATION|'
+    Want-NotContains 'CHANGELOG_GATE|PASS|'
+    Report-Scenario 'C4 duplicate heading inside one version section -> DUPLICATE-HEADING'
+
+    # C5: the same range with one heading per kind passes, so the check rejects
+    # only the duplicate shape and not every CHANGELOG.md entry.
+    Begin-Scenario
+    $root5 = New-Repo 'c5'
+    Write-Changelog -RootPath $root5 -Lines @(
+        '# Changelog',
+        '',
+        '## [Unreleased]',
+        '',
+        '### Added',
+        '',
+        '- first added bullet',
+        '- second added bullet',
+        '',
+        '### Fixed',
+        '',
+        '- a fixed bullet',
+        '',
+        '## [1.0.0] - 2026-01-01',
+        '',
+        '### Added',
+        '',
+        '- released bullet'
+    )
+    Add-HeadCommit -RootPath $root5 -Paths @('benchmarks/run-ab-benchmark.sh')
+    Invoke-Gate -RootPath $root5
+    Want-Status 0
+    Want-Contains 'CHANGELOG_GATE|PASS|behavior-surface changes carry a CHANGELOG.md entry'
+    Want-NotContains 'CHANGELOG_GATE|DUPLICATE-HEADING|'
+    Report-Scenario 'C5 one heading per kind per version section -> PASS'
 } catch {
     Write-Fail ('harness aborted: ' + $_.Exception.Message)
 } finally {

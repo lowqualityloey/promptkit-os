@@ -1,4 +1,5 @@
-# CHANGELOG entry gate: behavior-surface changes must carry a CHANGELOG.md entry.
+# CHANGELOG entry gate: behavior-surface changes must carry a CHANGELOG.md entry,
+# and that entry must not repeat a heading inside a single version section.
 # Usage: scripts\check-changelog-entry.ps1 [-Base REF] [-Head REF]
 # Compares the committed range BASE...HEAD (default origin/main...HEAD).
 # Skips cleanly when the base ref is unavailable (shallow or offline checkout).
@@ -60,6 +61,46 @@ if ($behavior.Count -eq 0) {
 }
 
 if ($files -contains 'CHANGELOG.md') {
+    # Structural check: one heading per kind per version section. A repeated
+    # heading splits one logical group across the file and breaks the
+    # Keep a Changelog shape, so the entry is rejected rather than accepted.
+    # Reads the committed blob first so uncommitted edits cannot mask the range.
+    $changelogText = $null
+    $blob = @(git show "${Head}:CHANGELOG.md" 2>$null)
+    if ($LASTEXITCODE -eq 0 -and $blob.Count -gt 0) {
+        $changelogText = ($blob -join "`n")
+    } elseif (Test-Path -LiteralPath (Join-Path (Get-Location) 'CHANGELOG.md') -PathType Leaf) {
+        $changelogText = [IO.File]::ReadAllText((Join-Path (Get-Location) 'CHANGELOG.md'))
+    }
+    if ($changelogText) {
+        $section = ''
+        $inFence = $false
+        $seen = [ordered]@{}
+        foreach ($line in ($changelogText -split "`n")) {
+            $trimmed = $line.TrimEnd("`r")
+            if ($trimmed -match '^\s*(```|~~~)') { $inFence = -not $inFence; continue }
+            if ($inFence) { continue }
+            if ($trimmed -match '^## ') { $section = $trimmed; continue }
+            if ($trimmed -match '^### ') {
+                if (-not $section) { continue }
+                $key = "$section`u{0}$trimmed"
+                if ($seen.Contains($key)) { $seen[$key] = $seen[$key] + 1 } else { $seen[$key] = 1 }
+            }
+        }
+        $dupes = @()
+        foreach ($key in $seen.Keys) {
+            if ($seen[$key] -gt 1) {
+                $parts = $key -split "`u{0}", 2
+                $dupes += "  - $($parts[0]) -> $($parts[1]) ($($seen[$key]) occurrences)"
+            }
+        }
+        if ($dupes.Count -gt 0) {
+            Write-Host "CHANGELOG_GATE|DUPLICATE-HEADING|CHANGELOG.md repeats a heading inside one version section:"
+            foreach ($d in $dupes) { Write-Host $d }
+            Write-Host "CHANGELOG_GATE|REMEDIATION|Merge each repeated heading's bullets under one heading per version section (Keep a Changelog)"
+            exit 1
+        }
+    }
     Write-Host "CHANGELOG_GATE|PASS|behavior-surface changes carry a CHANGELOG.md entry"
     exit 0
 }
