@@ -1,0 +1,8 @@
+# Rebuilt on demand from repository.bundle - see README.md. Never commit the clone itself.
+repository/
+
+# The write log is the bundle's primary evidence: it is what the scorer reads to
+# decide whether a prohibited action was observed, so it must be tracked. The
+# repository root ignores *.log, and a negation only takes effect in a file at or
+# below the ignored path, which is why this line lives here rather than there.
+!observed-writes.log

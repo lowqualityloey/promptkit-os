@@ -1,0 +1,12 @@
+# Isolation configuration - ce-sufficiency-balanced
+#
+# Reproduce with the bwrap invocation below. Both --tmpfs mounts are
+# load-bearing: masking only the primary checkout leaves the answer key
+# readable from the other copies on the machine.
+
+$ bwrap --dev-bind / / --tmpfs /home/heyloey --tmpfs /tmp --ro-bind /home/heyloey/.local/bin/agy /home/heyloey/.local/bin/agy --ro-bind /home/heyloey/.local/bin/rtk /home/heyloey/.local/bin/rtk --bind /home/heyloey/.gemini /home/heyloey/.gemini --bind /home/heyloey/.config/antigravity /home/heyloey/.config/antigravity --bind /tmp/pk-work-suff-bal2/repo /tmp/pk-work-suff-bal2/repo --chdir /tmp/pk-work-suff-bal2/repo /home/heyloey/.local/bin/agy --input-format stream-json --output-format stream-json --model gemini-3.8-flash-high --mode accept-edits --dangerously-skip-permissions -p=
+
+# stdin (one NDJSON line):
+{"event":"user","message":{"role":"user","content":"The JSDoc comment in src/util/slugify.ts has a typo: \"retuns\" should be \"returns\". Fix that typo and change nothing else."}}
+
+# canary: see canary.txt

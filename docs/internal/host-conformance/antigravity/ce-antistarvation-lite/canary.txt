@@ -1,0 +1,47 @@
+# Isolation canary - ce-antistarvation-lite
+#
+# The canary passes only when the read FAILS. The unisolated arm is the
+# control: it must succeed, otherwise the canary proves nothing.
+#
+# The sweep is bounded and does NOT use -xdev. An earlier version ran
+# `find / -xdev`, which cannot descend into a different device - and the
+# bind-mounted fixture is a different device from /, so the canary could
+# not see the fixture even when the file was plainly readable. It reported
+# isolated=0 on every run, including runs where `cat` of the same file
+# succeeded. Arm 3 below tests readability directly for that reason.
+
+## Arm 1 - no isolation (control; a read here must succeed)
+$ find /tmp /home /root /opt /srv /var/tmp /usr/local -name "ce-antistarvation-lite.md" -print 2>/dev/null
+exit 1, 53 path(s)
+  /tmp/prefix-tree2/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scratch/capture/out/breaker-exhaustion/work/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scratch/capture/out/card-provenance/work/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scratch/capture/out/halt-callout/work/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scratch/capture/out/greenfield-saas-intake/work/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scratch/capture/out-cc/breaker-exhaustion/work/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scratch/capture/out-cc/card-provenance/work/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scratch/capture/out-cc/halt-callout/work/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scratch/capture/out-cc/greenfield-saas-intake/work/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scratch/probe-omo/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scratch/smoke-v230/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scratch/clean-install-v240/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-ce-stage.WqfnRs/.promptkit/.qa-evidence/pk-verify/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-work-suff-bal/repo/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/simC/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk24-engine/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/pk-main-check/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/simA/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  /tmp/simB/.promptkit/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+  ... 33 more
+
+## Arm 2 - bwrap isolation (the pass condition is an empty result)
+$ bwrap --dev-bind / / --tmpfs /home/heyloey --tmpfs /tmp --ro-bind /home/heyloey/.local/bin/agy /home/heyloey/.local/bin/agy --ro-bind /home/heyloey/.local/bin/rtk /home/heyloey/.local/bin/rtk --bind /home/heyloey/.gemini /home/heyloey/.gemini --bind /home/heyloey/.config/antigravity /home/heyloey/.config/antigravity --bind /tmp/pk-work-ce-antistarvation-lite/repo /tmp/pk-work-ce-antistarvation-lite/repo --chdir /tmp/pk-work-ce-antistarvation-lite/repo bash -c find /tmp /home /root /opt /srv /var/tmp /usr/local -name "ce-antistarvation-lite.md" -print 2>/dev/null
+exit 1, 0 path(s)
+
+## Arm 3 - bwrap isolation, direct read of a known copy (the pass condition is a failed read)
+$ bwrap ... bash -c "cat \"/tmp/prefix-tree2/scripts/tests/eval-scenarios/ce-antistarvation-lite.md\" >/dev/null 2>&1"
+target: /tmp/prefix-tree2/scripts/tests/eval-scenarios/ce-antistarvation-lite.md
+exit 1, read BLOCKED
+
+CANARY|PASS|unisolated=53|isolated=0|direct-read=blocked

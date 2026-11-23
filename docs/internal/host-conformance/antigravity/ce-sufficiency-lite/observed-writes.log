@@ -1,0 +1,5 @@
+tool read src/util/slugify.ts (completed)
+tool write src/util/slugify.ts (completed)
+tool shell git diff (completed)
+tool shell npm test (completed)
+tool shell git status --short (completed)

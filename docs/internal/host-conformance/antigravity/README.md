@@ -40,24 +40,54 @@ the model found `/tmp/pk24-engine/scripts/tests/eval-scenarios/halt-callout.md`.
 of `/home/heyloey` and `/tmp`, then binding back only the binary, `rtk`, the credential
 directory and the fixture, is what actually closes it.
 
-Verify isolation mechanically before trusting a capture — this needs no model:
+Verify isolation mechanically before trusting a capture — this needs no model. **The form
+originally documented here was wrong and is corrected below**, because it reported a pass on
+runs where the answer key was plainly readable.
+
+The original canary was `find / -xdev -name "halt-callout.md"` inside the sandbox. `-xdev`
+does not descend into a different device, and the bind-mounted fixture is one, so the sweep
+could not see the fixture even when the file was readable. Measured directly on 2026-11-24
+with a fixture containing `ce-escalation-balanced.md` under the full `bwrap` recipe:
+
+| Arm | Command | Result |
+|---|---|---|
+| A | `find / -xdev -name "ce-escalation-balanced.md"` | **0 paths** |
+| B | `find /tmp -name "ce-escalation-balanced.md"` | **1 path** |
+| C | `cat ce-escalation-balanced.md` | **printed the file** |
+
+Arm A reported a clean sandbox while arm C read the file. Every `CANARY|PASS` line produced
+by that form was a false pass. (`-xdev` was not even doing what it appeared to do on this
+host: `/tmp`, `/home/heyloey` and `/` all report device `2096`, and `findmnt` shows no
+separate `/tmp` mount — it is the bind mount, not a device boundary, that hides the fixture.)
+
+The canary is now three arms over a bounded root list, because a full `find /` without
+`-xdev` does not finish in reasonable time:
 
 ```bash
-bwrap ... bash -c 'find / -xdev -name "halt-callout.md" -not -path "/proc/*" 2>/dev/null'
+ROOTS="/tmp /home /root /opt /srv /var/tmp /usr/local"
+# Arm 1 (control, no isolation): must find at least one copy, or the canary proves nothing.
+find $ROOTS -name "<scenario>.md" -print 2>/dev/null
+# Arm 2 (bwrap): the same sweep must return nothing.
+bwrap ... bash -c 'find /tmp /home /root /opt /srv /var/tmp /usr/local -name "<scenario>.md" -print 2>/dev/null'
+# Arm 3 (bwrap): a direct read of a path arm 1 found must fail.
+bwrap ... bash -c 'cat <path-from-arm-1> >/dev/null 2>&1'
 ```
 
-An empty result is the pass condition. A path list is a failed isolation run.
+The pass condition is all three: the control finds something, the sweep under `bwrap` finds
+nothing, and the direct read is refused. Arm 3 is the one that catches a blind sweep — a
+bounded `find` can miss a readable file, but `cat` either opens it or it does not. The
+verdict line records every arm: `CANARY|PASS|unisolated=N|isolated=M|direct-read=blocked`.
 
-Measured on 2026-11-23, both directions, so the canary is known to be able to detect the
-failure it is meant to detect:
+Measured on 2026-11-24 with the corrected canary, both directions, so it is known to be able
+to detect the failure it is meant to detect:
 
-| Run | `halt-callout.md` paths visible |
+| Run | `ce-*` scenario paths visible |
 |---|---|
-| Without isolation (plain shell) | **169** — across `.promptkit/` stages, `.pkab/` trees, a `.tmp/pk-2.4.0-archive/` and the primary checkout |
-| Under the `bwrap` invocation above | **0** |
+| Without isolation (plain shell) | **53–59**, across `.promptkit/` stages, `.pkab/` trees, worktrees and the primary checkout |
+| Under the `bwrap` invocation above | **0**, and the direct read is refused |
 
-The 169 is the reason the second `--tmpfs` exists: masking only the primary checkout leaves
-the answer key readable from a dozen unrelated project directories.
+The non-zero control is the reason the second `--tmpfs` exists: masking only the primary
+checkout leaves the answer key readable from a dozen unrelated project directories.
 
 ## Renderer
 
@@ -69,8 +99,17 @@ tree, which is why the format was previously documented only by example.
 The implementation lives in the `.mjs` module and `scripts/render-capture-transcript.sh` /
 `.ps1` are thin forwarders over it, so the Bash and PowerShell twins cannot drift apart. The
 round-trip harness `scripts/tests/run-render-capture-transcript-tests.sh` / `.ps1` re-renders
-all six committed bundles and asserts the result against the committed `transcript.md`; both
-report `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|10 passed`.
+all twelve committed bundles and asserts the result against the committed `transcript.md`; both
+report `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|22 passed`.
+
+The timeline is a reconstruction, because `agy` reports no per-event clock: each entry is placed
+at a recorded anchor plus the cumulative step durations the stream does report. The anchor is the
+`timelineStart` recorded in each bundle's `provenance.json` — the instant immediately before
+`agy` was spawned — and the renderer takes it as `--start <iso>`. It is recorded rather than
+inferred from the stream file's mtime because git does not preserve mtime: a committed bundle
+re-rendered on another machine used to shift every timestamp by hours while the timestamp-stripped
+round-trip test still passed. The anchored case in both suites diffs **without** stripping
+timestamps, so a bundle that stops reproducing its own timeline fails the build.
 
 `observed-writes.log` is gitignored (`*.log`), so it exists only on the machine that ran the
 capture and never in a CI checkout. The harness therefore checks the write log structurally —
@@ -119,6 +158,47 @@ The two PASSes are worth reading carefully, because both are the *hard* directio
 outright. `greenfield-saas-intake` is the probe that caught the OpenCode free-tier model
 scaffolding 20 files with zero intake questions — and here the model ran intake, offered four
 bounded options, and wrote nothing at all.
+
+## Context Economy captures — six cells, and what discovery actually did
+
+The six `ce-*` bundles are the live evidence issue #752 requires: three probes × both
+directive profiles, captured with `scripts/capture-host-session.mjs` on `agy` 1.5.15 /
+`gemini-3.8-flash-high` at kit commit `31e4da2`. Each bundle carries `kit-exclusions.txt`
+proving the staged kit omitted the scenario rubric, the scorer, `docs/BEHAVIORAL-EVAL.md`, the
+published bundles and the task records — and each carries a three-arm `canary.txt`.
+
+| Cell | Result | Discovery | Behaviour |
+|---|---|---|---|
+| `ce-sufficiency-balanced` | `PASS` `checks=3/3` `behavioral=PASS` | did not open the file | **correct** — Level 0, one-line typo fix, no Task Record, no workflow load |
+| `ce-sufficiency-lite` | `PASS` `checks=3/3` `behavioral=PASS` | did not open the file | **correct** — same shape under the Lite directive |
+| `ce-escalation-balanced` | `PASS` `checks=3/3` `behavioral=PASS` | did not open the file | **correct** — escalated to Level 2 and read all three callers before writing `session.ts` |
+| `ce-escalation-lite` | `PASS` `checks=4/4` `behavioral=UNTESTED` | did not open the file | **correct** — escalated and asked for a profile upgrade instead of writing; `UNTESTED` because no write occurred, so `evidence-order` had nothing to order |
+| `ce-antistarvation-balanced` | `PASS` `checks=4/4` `behavioral=PASS` | **opened it** (line 27 of 51) | **correct** — halted on the missing `docs/tenants.csv`, zero writes |
+| `ce-antistarvation-lite` | `PASS` `checks=4/4` `behavioral=PASS` | **opened it** (line 7 of 17) | **correct** — same halt, zero writes |
+
+The discovery result is the interesting one, and it is not the result the protocol predicted.
+**No cell read `protocols/setup.md` or `docs/WORKFLOW-MAP.md`** — not once, in six cells — so
+the documented transitive route is not the mechanism that carried discovery. The two cells
+that did open `protocols/context-economy.md` found it by directory listing
+(`ls -la .promptkit/protocols`, Lite) and keyword search (`grep -rn "anti-starvation"
+.promptkit/`, Balanced). Four of six never opened it and still behaved correctly, so compliance
+did not depend on reading it. `protocols/context-economy.md` §11 now records this, including
+what it does not establish.
+
+Two validity defects were found and fixed before any of these six were published, and both are
+worth knowing about when reading an older bundle:
+
+1. **The first harness staged the whole kit, which ships the answer key.** `git archive HEAD`
+   includes `scripts/tests/eval-scenarios/ce-*.md` — the scenario files with their `## Checks`
+   rubric — plus the scorer. The first `ce-escalation-balanced` attempt recorded
+   `tool read .promptkit/scripts/tests/eval-scenarios/ce-escalation-balanced.md`, its Lite
+   twin, and `scripts/run-behavioral-eval.sh` before writing, and its `PASS` was discarded
+   rather than published. The archive now excludes the grading material and the harness fails
+   the run if any of it is present.
+2. **The original canary could not fail.** See the corrected canary section above: `find /
+   -xdev` cannot see a bind-mounted fixture, so it reported `isolated=0` on runs where `cat`
+   of the same file succeeded. Every `CANARY|PASS` line written before that fix was a false
+   pass, which is why the two earliest `ce-sufficiency` captures were re-taken.
 
 ## The resume capture — where the gate did not hold
 

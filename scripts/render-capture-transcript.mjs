@@ -35,7 +35,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 
-const USAGE = 'Usage: render-capture-transcript <session.jsonl> <transcript.md> <observed-writes.log> --probe <name> --prompt <text> --model <text> [--host <text>] [--invocation <text>]';
+const USAGE = 'Usage: render-capture-transcript <session.jsonl> <transcript.md> <observed-writes.log> --probe <name> --prompt <text> --model <text> [--host <text>] [--invocation <text>] [--stream <name>] [--start <iso>]';
 
 function usage() {
   process.stderr.write(USAGE + '\n');
@@ -59,6 +59,16 @@ let prompt = '';
 let model = '';
 let host = 'Antigravity CLI';
 let invocation = 'agy --input-format stream-json --output-format stream-json';
+// The file name the preamble names as the rendered source. A capture that
+// rewrites absolute tool targets to repository-relative ones renders from a
+// derived stream, and the preamble must say which file the hash describes
+// rather than implying it is the raw one.
+let streamName = 'session.jsonl';
+// The instant the capture began, when the bundle recorded one. Without it the
+// timeline is anchored on the stream file's mtime, which git does not preserve:
+// a committed bundle re-rendered on another machine would silently shift every
+// timestamp while still passing a timestamp-stripped round-trip test.
+let startAnchor = '';
 
 for (let i = 3; i < argv.length; i += 1) {
   const flag = argv[i];
@@ -79,6 +89,12 @@ for (let i = 3; i < argv.length; i += 1) {
     case '--invocation':
       if (value === undefined) usage();
       invocation = value; i += 1; break;
+    case '--stream':
+      if (value === undefined) usage();
+      streamName = value; i += 1; break;
+    case '--start':
+      if (value === undefined) usage();
+      startAnchor = value; i += 1; break;
     default:
       fail('unknown argument: ' + flag);
   }
@@ -113,6 +129,11 @@ const VERB = {
   multi_replace_file_content: 'write',
   sed_file: 'write',
   notebook_edit: 'write',
+  // agy 1.5.15 emits edit_file at runtime even though it is absent from the
+  // tool list in the init event. Leaving it unmapped would render it verbatim,
+  // and the scorer's write-verb table does not know it either, so a real write
+  // would be invisible to repo-unwritten and silently degrade to a non-detection.
+  edit_file: 'write',
 };
 
 // The argument that names what the tool acted on, in the order the scorer's
@@ -170,10 +191,27 @@ for (const ev of events) {
 }
 
 // agy reports no per-event clock, so the timeline is reconstructed: the capture
-// ended at the stream file's mtime, and each step is placed by the durations
-// agy does report. The transcript states this rather than implying observation.
-const endMs = fs.statSync(jsonl).mtimeMs;
-const startMs = endMs - totalSeconds * 1000;
+// began at a known instant, and each step is placed by the durations agy does
+// report. The transcript states this rather than implying observation.
+//
+// The anchor is the recorded capture start when the bundle carries one. Falling
+// back to the stream file's mtime is only correct on the machine that produced
+// the capture: git does not preserve mtime, so a committed bundle re-rendered
+// elsewhere would shift every timestamp by the checkout's clock while the
+// timestamp-stripped round-trip test still passed.
+// The anchor is rounded to whole milliseconds. A file mtime carries sub-ms
+// precision that no reader can interpret and that would make the same capture
+// render one millisecond differently depending on which filesystem wrote the
+// file. Rounding once, here, is what lets a recorded anchor reproduce a
+// committed transcript byte for byte on any machine.
+let startMs;
+if (startAnchor) {
+  startMs = Date.parse(startAnchor);
+  if (!Number.isFinite(startMs)) fail('--start is not a parseable instant: ' + startAnchor);
+  startMs = Math.round(startMs);
+} else {
+  startMs = Math.round(fs.statSync(jsonl).mtimeMs - totalSeconds * 1000);
+}
 let cursor = startMs;
 function iso(ms) {
   const d = new Date(ms);
@@ -189,9 +227,9 @@ const log = [];
 
 out.push(`# Live capture transcript — ${host}, ${probe} probe (${model})`);
 out.push('');
-out.push('Rendered mechanically from the raw session event stream preserved verbatim as');
-out.push(`\`session.jsonl\` in this bundle (sha256 \`${sha}\`). Assistant text is byte-for-byte as`);
-out.push('emitted; tool lines record the tool name, its target, and its completion status.');
+out.push('Rendered mechanically from the session event stream preserved in this bundle as');
+out.push(`\`${streamName}\` (sha256 \`${sha}\`). Assistant text is byte-for-byte as emitted;`);
+out.push('tool lines record the tool name, its target, and its completion status.');
 out.push('');
 out.push(`- Session: \`${conversation || 'unknown'}\``);
 out.push(`- Prompt submitted: \`${prompt}\``);

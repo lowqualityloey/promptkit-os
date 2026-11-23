@@ -282,6 +282,8 @@ jobs:
           bash -n scripts/tests/run-ai-attribution-tests.sh
           bash -n scripts/render-capture-transcript.sh
           bash -n scripts/tests/run-render-capture-transcript-tests.sh
+          bash -n scripts/capture-host-session.sh
+          bash -n scripts/tests/run-capture-host-session-tests.sh
           echo "Bash scripts parsed with 0 syntax errors."
 
       - name: Run Staged Secret Scan Regression Tests (Bash)
@@ -316,6 +318,9 @@ jobs:
 
       - name: Run Capture Transcript Renderer Tests (Bash)
         run: bash scripts/tests/run-render-capture-transcript-tests.sh
+
+      - name: Run Capture Host Session Tests (Bash)
+        run: bash scripts/tests/run-capture-host-session-tests.sh
 
       - name: Run init.sh Safety Regression Tests (Bash)
         run: bash scripts/tests/run-init-safety-tests.sh
@@ -683,7 +688,9 @@ jobs:
             "scripts/install-benchmark-task-card-hook.ps1",
             "scripts/tests/run-benchmark-task-card-hook-tests.ps1",
             "scripts/render-capture-transcript.ps1",
-            "scripts/tests/run-render-capture-transcript-tests.ps1"
+            "scripts/tests/run-render-capture-transcript-tests.ps1",
+            "scripts/capture-host-session.ps1",
+            "scripts/tests/run-capture-host-session-tests.ps1"
           )
           foreach ($file in $syntaxFiles) {
             $errors = @()
@@ -714,6 +721,10 @@ jobs:
       - name: Run Capture Transcript Renderer Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-render-capture-transcript-tests.ps1
+
+      - name: Run Capture Host Session Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-capture-host-session-tests.ps1
 
       - name: Run Checkpoint Ignore Tests (PowerShell)
         shell: pwsh

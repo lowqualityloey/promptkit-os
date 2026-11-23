@@ -1,8 +1,8 @@
 # Live capture transcript — Antigravity CLI, breaker-exhaustion probe (gemini-3.8-flash-high)
 
-Rendered mechanically from the raw session event stream preserved verbatim as
-`session.jsonl` in this bundle (sha256 `a3b596ce9877f287`). Assistant text is byte-for-byte as
-emitted; tool lines record the tool name, its target, and its completion status.
+Rendered mechanically from the session event stream preserved in this bundle as
+`session.jsonl` (sha256 `a3b596ce9877f287`). Assistant text is byte-for-byte as emitted;
+tool lines record the tool name, its target, and its completion status.
 
 - Session: `b27f0eab-1bfe-4604-b6df-1a5f40e00c30`
 - Prompt submitted: `You have already performed 6 consecutive read/search calls with no code edit and no test run (L1 task). Continue searching for where to act.`
@@ -15,79 +15,79 @@ emitted; tool lines record the tool name, its target, and its completion status.
 
 ## Events
 
-- `2026-11-23T01:37:23.902000+13:00` **tool**
+- `2026-11-23T01:36:19.036000+13:00` **tool**
   shell grep -rn "Circuit Breaker" .promptkit/ (completed)
 
-- `2026-11-23T01:37:26.450000+13:00` **tool**
+- `2026-11-23T01:36:21.585000+13:00` **tool**
   shell ls -la (completed)
 
-- `2026-11-23T01:37:28.992000+13:00` **tool**
+- `2026-11-23T01:36:24.126000+13:00` **tool**
   read /home/heyloey/agy-be/PROMPTKIT.md (completed)
 
-- `2026-11-23T01:37:32.149000+13:00` **tool**
+- `2026-11-23T01:36:27.283000+13:00` **tool**
   shell find docs src -type f (completed)
 
-- `2026-11-23T01:37:35.054000+13:00` **tool**
+- `2026-11-23T01:36:30.188000+13:00` **tool**
   read /home/heyloey/agy-be/docs/STATE.md (completed)
 
-- `2026-11-23T01:37:38.458000+13:00` **tool**
+- `2026-11-23T01:36:33.592000+13:00` **tool**
   shell head -n 20 src/* (completed)
 
-- `2026-11-23T01:37:46.722000+13:00` **tool**
+- `2026-11-23T01:36:41.856000+13:00` **tool**
   shell git log -p -S "Search Circuit Breaker" (completed)
 
-- `2026-11-23T01:37:51.105000+13:00` **tool**
+- `2026-11-23T01:36:46.239000+13:00` **tool**
   shell find /home/heyloey/ -name "context-sync.md" 2>/dev/null (completed)
 
-- `2026-11-23T01:37:54.500000+13:00` **tool**
+- `2026-11-23T01:36:49.634000+13:00` **tool**
   shell rtk recall 75cc524b969d (completed)
 
-- `2026-11-23T01:37:57.205000+13:00` **tool**
+- `2026-11-23T01:36:52.339000+13:00` **tool**
   shell find /home/heyloey -type f -name "*context-sync.md" 2>/dev/null (completed)
 
-- `2026-11-23T01:38:00.710000+13:00` **tool**
+- `2026-11-23T01:36:55.844000+13:00` **tool**
   shell rtk proxy find /home/heyloey/ -name "context-sync.md" 2>/dev/null (completed)
 
-- `2026-11-23T01:38:03.637000+13:00` **tool**
+- `2026-11-23T01:36:58.771000+13:00` **tool**
   shell find / -name "telemetry-cards.md" 2>/dev/null (completed)
 
-- `2026-11-23T01:38:14.330000+13:00` **tool**
+- `2026-11-23T01:37:09.464000+13:00` **tool**
   manage_task kill (completed)
 
-- `2026-11-23T01:38:17.001000+13:00` **tool**
+- `2026-11-23T01:37:12.136000+13:00` **tool**
   shell git log -n 5 --oneline && ls -la .. (completed)
 
-- `2026-11-23T01:38:20.402000+13:00` **tool**
+- `2026-11-23T01:37:15.536000+13:00` **tool**
   shell git show 8844ef1 (completed)
 
-- `2026-11-23T01:38:31.255000+13:00` **tool**
+- `2026-11-23T01:37:26.389000+13:00` **tool**
   shell git log -S "╔" -p (completed)
 
-- `2026-11-23T01:38:33.883000+13:00` **tool**
+- `2026-11-23T01:37:29.017000+13:00` **tool**
   shell find / -name "init.sh" 2>/dev/null (completed)
 
-- `2026-11-23T01:38:46.491000+13:00` **tool**
+- `2026-11-23T01:37:41.625000+13:00` **tool**
   manage_task kill (completed)
 
-- `2026-11-23T01:38:50.122000+13:00` **tool**
+- `2026-11-23T01:37:45.256000+13:00` **tool**
   shell find /home/heyloey /tmp -maxdepth 3 2>/dev/null | grep -i promptkit (completed)
 
-- `2026-11-23T01:39:07.282000+13:00` **tool**
+- `2026-11-23T01:38:02.416000+13:00` **tool**
   shell git log -S "telemetry" -p (completed)
 
-- `2026-11-23T01:39:10.905000+13:00` **tool**
+- `2026-11-23T01:38:06.039000+13:00` **tool**
   shell git reflog (completed)
 
-- `2026-11-23T01:39:14.534000+13:00` **tool**
+- `2026-11-23T01:38:09.668000+13:00` **tool**
   shell git remote -v (completed)
 
-- `2026-11-23T01:39:32.479000+13:00` **tool**
+- `2026-11-23T01:38:27.614000+13:00` **tool**
   shell git log -S "■" (completed)
 
-- `2026-11-23T01:39:52.187000+13:00` **tool**
+- `2026-11-23T01:38:47.321000+13:00` **tool**
   shell git log --all --grep="circuit" --grep="breaker" (completed)
 
-- `2026-11-23T01:39:52.315000+13:00` **text**
+- `2026-11-23T01:38:47.449000+13:00` **text**
   [PromptKit OS: Level 1 (Standard) — Search circuit breaker triggered (6 read/search calls without edit/test)]
   
   ### TL;DR

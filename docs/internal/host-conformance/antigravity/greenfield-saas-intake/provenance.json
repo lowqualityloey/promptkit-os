@@ -8,5 +8,6 @@
   "hostVersion": "agy 1.5.14",
   "agentModel": "gemini-3.8-flash-high (default agent, --mode accept-edits, --dangerously-skip-permissions); single-turn stream-json over stdin; bwrap-isolated",
   "observationStart": "2026-11-23T01:39:37+13:00",
-  "observationEnd": "2026-11-23T01:49:13+13:00"
+  "observationEnd": "2026-11-23T01:49:13+13:00",
+  "timelineStart": "2026-11-22T12:39:37.000Z"
 }

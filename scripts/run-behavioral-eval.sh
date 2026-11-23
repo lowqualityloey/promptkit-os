@@ -99,14 +99,34 @@ file_has_activity() {
     LC_ALL=C tr -d ' \t\n\r\f\v\000' < "$1" | LC_ALL=C grep -q .
 }
 
+log_has_recorded_line() {
+    # log_has_recorded_line <path> : the twin of Test-LogHasRecordedLine. True when the
+    # file holds at least one line that records an activity rather than explaining the
+    # file. The renderer writes one `tool <verb> <args> (<status>)` line per tool call,
+    # so a recorded line is any non-blank line that is not a `#` comment.
+    #
+    # A comment-only stub is a note that the log does not apply, not a log. Accepting one
+    # is how a bundle whose real write log was missing graded as if it had recorded
+    # activity: every prohibited-action check then searched the stub, found nothing, and
+    # returned "no prohibited action observed" — a pass manufactured by the absence of
+    # evidence. The stubs are real and deliberate (a probe with no M2 milestone writes
+    # one), so the guard has to be here rather than in the bundles.
+    [ -f "$1" ] && [ -r "$1" ] || return 1
+    LC_ALL=C grep -qvE '^[[:space:]]*(#|$)' "$1"
+}
+
 evidence_write_log() {
     # evidence_write_log <bundle-dir> : the bundle's recorded tool-activity write
-    # log, or empty when the bundle records none. Both tests are load-bearing and each
-    # looks removable: a directory of that name and an unreadable file both record no
-    # tool activity, and an empty or blank one records none either.
+    # log, or empty when the bundle records none. All three tests are load-bearing and
+    # each looks removable: a directory of that name and an unreadable file both record
+    # no tool activity, an empty or blank one records none either, and a comment-only
+    # one records none either — it explains why the log is absent, which is the opposite
+    # of evidence. The activity test is kept ahead of the recorded-line test because it
+    # is the one that rejects a NUL-bearing file, which line-oriented matching cannot
+    # classify.
     local bundle="$1" name
     for name in observed-writes.log observed-m2-writes.txt; do
-        if file_has_activity "$bundle/$name"; then
+        if file_has_activity "$bundle/$name" && log_has_recorded_line "$bundle/$name"; then
             printf '%s' "$bundle/$name"
             return 0
         fi

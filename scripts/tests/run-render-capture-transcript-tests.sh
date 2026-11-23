@@ -39,6 +39,11 @@ MODULE="$REPO_ROOT/scripts/render-capture-transcript.mjs"
 SCORER="$REPO_ROOT/scripts/run-behavioral-eval.sh"
 BUNDLES="$REPO_ROOT/docs/internal/host-conformance/antigravity"
 PROBES="breaker-exhaustion card-provenance greenfield-saas-intake halt-callout milestone-halt milestone-halt-resume"
+# Bundles captured with a recorded timeline anchor. Their provenance.json carries
+# timelineStart, so a re-render must reproduce the committed timestamps exactly -
+# no timestamp stripping. This is the regression the mtime anchor could not have:
+# it fails on any machine whose checkout clock differs from the capture clock.
+ANCHORED_PROBES="$PROBES ce-sufficiency-balanced ce-sufficiency-lite ce-escalation-balanced ce-escalation-lite ce-antistarvation-balanced ce-antistarvation-lite"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf -- "$TMP"' EXIT
@@ -181,6 +186,53 @@ for probe in $PROBES; do
         fi
     fi
     report "round-trip $probe"
+done
+
+printf '== Anchored bundles reproduce their timestamps exactly ==\n'
+for probe in $ANCHORED_PROBES; do
+    bundle="$BUNDLES/$probe"
+    begin
+    if [[ ! -f "$bundle/transcript.md" || ! -f "$bundle/provenance.json" ]]; then
+        scenario_check 0 "bundle is missing transcript.md or provenance.json: $probe"
+        report "anchored round-trip $probe"
+        continue
+    fi
+
+    # The ce-* bundles render from the derived relative stream; the six earlier
+    # bundles predate that derivation and render from the raw stream.
+    if [[ -f "$bundle/session.relative.jsonl" ]]; then
+        stream_name=session.relative.jsonl
+    else
+        stream_name=session.jsonl
+    fi
+
+    # The anchor is read back out of the bundle rather than hardcoded here, so the
+    # assertion is that the bundle is self-describing: a reader holding only the
+    # committed files can reproduce the transcript byte for byte.
+    anchor="$(awk -F'"' '/"timelineStart"[ 	]*:[ 	]*"/ { print $4; exit }' "$bundle/provenance.json")"
+    if [[ -z "$anchor" ]]; then
+        scenario_check 0 "provenance.json records no timelineStart: $probe"
+        report "anchored round-trip $probe"
+        continue
+    fi
+
+    out="$TMP/$probe-anchored.md"
+    log="$TMP/$probe-anchored.log"
+    bash "$RENDERER_SH" "$bundle/$stream_name" "$out" "$log" \
+        --probe "$probe" \
+        --prompt "$(field "$bundle/transcript.md" 'Prompt submitted')" \
+        --model "$(field "$bundle/transcript.md" 'Model')" \
+        --invocation "$(invocation_field "$bundle/transcript.md")" \
+        --stream "$stream_name" \
+        --start "$anchor" >/dev/null 2>&1
+    check_status "$?" 0
+
+    # No strip_timestamps here: the whole point is that the timestamps match.
+    if ! diff -q <(sed -E 's/$//' "$out") <(sed -E 's/$//' "$bundle/transcript.md") >/dev/null 2>&1; then
+        scenario_check 0 "re-render with the recorded anchor differs from the committed transcript for $probe"
+        diff <(sed -E 's/$//' "$out") <(sed -E 's/$//' "$bundle/transcript.md") | head -6 | sed 's/^/    /'
+    fi
+    report "anchored round-trip $probe"
 done
 
 printf '== Twin parity ==\n'

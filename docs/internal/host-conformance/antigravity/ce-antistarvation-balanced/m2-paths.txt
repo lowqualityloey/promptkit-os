@@ -1,0 +1,4 @@
+# Not applicable - the ce-antistarvation-balanced probe has no Gated Mode Task Record,
+# so there is no milestone 2 to advance into. See
+# ../../opencode-omo/milestone-halt/m2-paths.txt for the artifact this
+# file carries when the probe does have one.
