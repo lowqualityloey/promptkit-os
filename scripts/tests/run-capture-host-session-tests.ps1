@@ -80,6 +80,14 @@ function Get-PlanField {
     return ''
 }
 
+# The plan echoes a native path, so its separator is the host's: a Windows plan
+# carries backslashes and a Linux plan carries slashes. Compare on one form
+# rather than asserting a separator the harness never promised to emit.
+function ConvertTo-PlanPath {
+    param([string]$Field)
+    return ($Field -replace '\\', '/')
+}
+
 # Read the ## Prompt body out of a scenario file: the harness must take the
 # prompt from the scenario, not duplicate it, or the two can drift apart.
 function Get-ScenarioPrompt {
@@ -152,7 +160,8 @@ foreach ($scenario in $scenarios) {
     # The fixture is shared by the Balanced and Lite cells of a probe, so it is
     # named without the profile suffix.
     $expectedFixture = $scenario.Substring(0, $scenario.Length - $expectedProfile.Length - 1)
-    Assert-Scenario ((Get-PlanField $plan 'fixture').EndsWith('/' + $expectedFixture)) "fixture resolved to '$(Get-PlanField $plan 'fixture')', expected .../$expectedFixture"
+    $fixtureField = ConvertTo-PlanPath (Get-PlanField $plan 'fixture')
+    Assert-Scenario ($fixtureField.EndsWith('/' + $expectedFixture)) "fixture resolved to '$fixtureField', expected .../$expectedFixture"
 
     # The probe label is the full scenario name: it is the cell identity that
     # reaches the transcript, the README and state-check.json.
@@ -187,6 +196,11 @@ Assert-Status $status 0
 $shText = ([IO.File]::ReadAllText($shPlan)) -replace "`r`n", "`n"
 $psText = ([IO.File]::ReadAllText($psPlan)) -replace "`r`n", "`n"
 Assert-Scenario ($shText -eq $psText) 'Bash and PowerShell plans differ'
+# The plan echoes a native path, so only the Windows job ever sees a backslash
+# fixture. Pin the normalization here, where it runs on every host: this is the
+# assertion that fails if the comparison regresses to a '/'-anchored suffix test
+# on the raw field, which is the defect that shipped a red Windows job.
+Assert-Scenario ((ConvertTo-PlanPath 'C:\repo\scripts\tests\fixtures\ce-capture\ce-sufficiency').EndsWith('/ce-sufficiency')) 'plan path normalization rejects a backslash path'
 Report-Scenario 'Bash and PowerShell forwarders produce identical plans'
 
 Write-Output '== Committed bundles keep grading material out of the fixture =='

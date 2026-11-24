@@ -138,8 +138,13 @@ for scenario in $SCENARIOS; do
     # The fixture is shared by the Balanced and Lite cells of a probe, so it is
     # named without the profile suffix.
     expected_fixture="${scenario%-$expected_profile}"
-    scenario_check "$([[ "$(plan_field "$plan" fixture)" == */"$expected_fixture" ]] && printf 1 || printf 0)" \
-        "fixture resolved to '$(plan_field "$plan" fixture)', expected .../$expected_fixture"
+    # The plan echoes a native path, so the separator is the host's: a Windows
+    # plan carries backslashes. Normalize before the suffix test rather than
+    # asserting a separator the harness never promised to emit.
+    fixture_field="$(plan_field "$plan" fixture)"
+    fixture_field="${fixture_field//\\//}"
+    scenario_check "$([[ "$fixture_field" == */"$expected_fixture" ]] && printf 1 || printf 0)" \
+        "fixture resolved to '$fixture_field', expected .../$expected_fixture"
 
     # The probe label is the full scenario name: it is the cell identity that
     # reaches the transcript, the README and state-check.json.
