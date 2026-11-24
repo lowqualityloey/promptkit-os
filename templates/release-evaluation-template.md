@@ -155,6 +155,7 @@ This section records decisions only. It does not execute any action.
 - **Remote Operation Decision**: `[Not requested | Request human decision | Approved separately | Declined]`
 - **Deployment Decision**: `[Not requested | Request human decision | Approved separately | Declined]`
 - **Rollback Decision**: `[Not requested | Request human decision | Approved separately | Declined]`
+- **Dry Run Before Publication**: `[Required - courier surface changed since the last green release: <dry-run run id and result> | Not required - courier surface unchanged since the last green release | N/A]`
 - **External-Action Owner and Evidence**: `[Release Coordinator decision record or N/A]`
 
 A preliminary candidate, QA review, checkpoint handoff, or approved record never performs an external action automatically. Tagging, hosted release creation, changelog publication, remote operations, deployment, and rollback remain separate human decisions.
