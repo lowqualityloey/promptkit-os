@@ -109,6 +109,16 @@ function isoLocal(date) {
     sign + pad(offset / 60) + ':' + pad(offset % 60);
 }
 
+// The `±HH:MM` label for a Date's host offset, in the same shape the renderer
+// accepts as --offset. Recorded in provenance.json so a re-render is a property
+// of the bundle rather than of whichever machine runs it.
+function offsetLabel(date) {
+  const pad = (n) => String(Math.floor(Math.abs(n))).padStart(2, '0');
+  const offset = -date.getTimezoneOffset();
+  const sign = offset >= 0 ? '+' : '-';
+  return sign + pad(offset / 60) + ':' + pad(offset % 60);
+}
+
 function dateOnly(date) {
   const pad = (n) => String(n).padStart(2, '0');
   return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
@@ -610,6 +620,13 @@ const provenance = {
   timelineStart,
   observationStart: isoLocal(observationStart),
   observationEnd: isoLocal(observationEnd),
+  // The UTC offset the transcript's timestamp column is rendered in. Recorded
+  // here because the renderer must never read the host zone: without this the
+  // same bundle renders `+13:00` on the capture host and `+00:00` on a UTC CI
+  // runner, and the committed transcript becomes unreproducible off the machine
+  // that wrote it. observationStart carries the same offset; this field states
+  // it as the rendering input rather than leaving it to be inferred.
+  timelineOffset: offsetLabel(observationStart),
 };
 write('provenance.json', JSON.stringify(provenance, null, 2) + '\n');
 
@@ -647,6 +664,7 @@ const render = run('bash', [
   '--invocation', invocation,
   '--stream', 'session.relative.jsonl',
   '--start', timelineStart,
+  '--offset', offsetLabel(observationStart),
 ]);
 if (render.status !== 0) fail('renderer failed (exit ' + render.status + '): ' + render.stderr.trim());
 

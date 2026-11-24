@@ -9,5 +9,6 @@
   "agentModel": "gemini-3.8-flash-high (default agent, --mode accept-edits, --dangerously-skip-permissions); single-turn stream-json over stdin; bwrap-isolated",
   "observationStart": "2026-11-23T00:35:24+13:00",
   "observationEnd": "2026-11-23T00:39:48+13:00",
-  "timelineStart": "2026-11-22T11:35:24.000Z"
+  "timelineStart": "2026-11-22T11:35:24.000Z",
+  "timelineOffset": "+13:00"
 }

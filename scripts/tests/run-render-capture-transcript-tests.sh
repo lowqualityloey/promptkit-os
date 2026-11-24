@@ -216,6 +216,16 @@ for probe in $ANCHORED_PROBES; do
         continue
     fi
 
+    # The rendering offset is a property of the bundle, not of this machine. A
+    # bundle that does not record one cannot be reproduced off the host that
+    # captured it, which is exactly the defect this case exists to catch.
+    offset="$(awk -F'"' '/"timelineOffset"[ 	]*:[ 	]*"/ { print $4; exit }' "$bundle/provenance.json")"
+    if [[ -z "$offset" ]]; then
+        scenario_check 0 "provenance.json records no timelineOffset: $probe"
+        report "anchored round-trip $probe"
+        continue
+    fi
+
     out="$TMP/$probe-anchored.md"
     log="$TMP/$probe-anchored.log"
     bash "$RENDERER_SH" "$bundle/$stream_name" "$out" "$log" \
@@ -224,7 +234,8 @@ for probe in $ANCHORED_PROBES; do
         --model "$(field "$bundle/transcript.md" 'Model')" \
         --invocation "$(invocation_field "$bundle/transcript.md")" \
         --stream "$stream_name" \
-        --start "$anchor" >/dev/null 2>&1
+        --start "$anchor" \
+        --offset "$offset" >/dev/null 2>&1
     check_status "$?" 0
 
     # No strip_timestamps here: the whole point is that the timestamps match.
@@ -234,6 +245,41 @@ for probe in $ANCHORED_PROBES; do
     fi
     report "anchored round-trip $probe"
 done
+
+printf '== Rendering is independent of the host time zone ==\n'
+# The anchored case above proves a bundle reproduces on THIS machine. It cannot
+# prove the rendering is a property of the bundle rather than of the machine,
+# because this machine is the one that captured it. Re-render the same bundle
+# under two foreign zones and require the identical bytes: a renderer that reads
+# the host zone (getTimezoneOffset/getHours) passes the anchored case locally and
+# fails here, which is exactly how the defect reached CI.
+begin
+zone_bundle="$BUNDLES/breaker-exhaustion"
+zone_anchor="$(awk -F'"' '/"timelineStart"[ 	]*:[ 	]*"/ { print $4; exit }' "$zone_bundle/provenance.json")"
+zone_offset="$(awk -F'"' '/"timelineOffset"[ 	]*:[ 	]*"/ { print $4; exit }' "$zone_bundle/provenance.json")"
+if [[ -z "$zone_anchor" || -z "$zone_offset" ]]; then
+    scenario_check 0 "breaker-exhaustion records no timelineStart/timelineOffset"
+else
+    zone_prompt="$(field "$zone_bundle/transcript.md" 'Prompt submitted')"
+    zone_model="$(field "$zone_bundle/transcript.md" 'Model')"
+    zone_invocation="$(invocation_field "$zone_bundle/transcript.md")"
+    for zone in UTC America/New_York Asia/Kolkata; do
+        # The zone name carries a slash, so it cannot be used as a file name.
+        zone_slug="$(printf '%s' "$zone" | tr '/' '_')"
+        TZ="$zone" bash "$RENDERER_SH" "$zone_bundle/session.jsonl" "$TMP/zone-$zone_slug.md" "$TMP/zone-$zone_slug.log" \
+            --probe breaker-exhaustion \
+            --prompt "$zone_prompt" \
+            --model "$zone_model" \
+            --invocation "$zone_invocation" \
+            --stream session.jsonl \
+            --start "$zone_anchor" \
+            --offset "$zone_offset" >/dev/null 2>&1
+        check_status "$?" 0
+        scenario_check "$(diff -q <(sed -E 's/\r$//' "$TMP/zone-$zone_slug.md") <(sed -E 's/\r$//' "$zone_bundle/transcript.md") >/dev/null 2>&1 && printf 1 || printf 0)" \
+            "re-render under TZ=$zone differs from the committed transcript"
+    done
+fi
+report 'rendering is independent of the host time zone'
 
 printf '== Twin parity ==\n'
 if PWSH="$(pwsh_bin)"; then

@@ -133,6 +133,20 @@ function Get-TimelineAnchor {
     return ''
 }
 
+# The UTC offset the transcript's timestamp column is rendered in. It is a
+# property of the bundle, not of the machine doing the rendering: a renderer that
+# reads the host zone produces '+13:00' on the capture host and '+00:00' on a UTC
+# CI runner, so the committed transcript can never be reproduced off the machine
+# that wrote it.
+function Get-TimelineOffset {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return '' }
+    $text = [IO.File]::ReadAllText($Path)
+    $match = [regex]::Match($text, '"timelineOffset"\s*:\s*"([^"]+)"')
+    if ($match.Success) { return $match.Groups[1].Value }
+    return ''
+}
+
 function Invoke-Render {
     param([string]$Probe, [string]$Out, [string]$Log, [string]$Renderer)
     $bundle = Join-Path $bundles $Probe
@@ -233,6 +247,16 @@ foreach ($probe in $anchoredProbes) {
         continue
     }
 
+    # The rendering offset is a property of the bundle, not of this machine. A
+    # bundle that does not record one cannot be reproduced off the host that
+    # captured it, which is exactly the defect this case exists to catch.
+    $offset = Get-TimelineOffset $provenance
+    if ([string]::IsNullOrEmpty($offset)) {
+        Assert-Scenario $false "provenance.json records no timelineOffset: $probe"
+        Report-Scenario "anchored round-trip $probe"
+        continue
+    }
+
     $out = Join-Path $tmp "$probe-anchored.md"
     $log = Join-Path $tmp "$probe-anchored.log"
     $arguments = @(
@@ -242,7 +266,8 @@ foreach ($probe in $anchoredProbes) {
         '--model', (Get-Field $transcript 'Model'),
         '--invocation', (Get-InvocationField $transcript),
         '--stream', $streamName,
-        '--start', $anchor
+        '--start', $anchor,
+        '--offset', $offset
     )
     & bash $rendererSh @arguments 2>&1 | Out-Null
     Assert-Status $LASTEXITCODE 0
@@ -253,6 +278,58 @@ foreach ($probe in $anchoredProbes) {
     Assert-Scenario ($rendered -eq $committed) "re-render with the recorded anchor differs from the committed transcript for $probe"
     Report-Scenario "anchored round-trip $probe"
 }
+
+Write-Output '== Rendering is independent of the host time zone =='
+# The anchored case above proves a bundle reproduces on THIS machine. It cannot
+# prove the rendering is a property of the bundle rather than of the machine,
+# because this machine is the one that captured it. Re-render the same bundle
+# under two foreign zones and require the identical bytes: a renderer that reads
+# the host zone (getTimezoneOffset/getHours) passes the anchored case locally and
+# fails here, which is exactly how the defect reached CI.
+Begin-Scenario
+$zoneBundle = Join-Path $bundles 'breaker-exhaustion'
+$zoneAnchor = Get-TimelineAnchor (Join-Path $zoneBundle 'provenance.json')
+$zoneOffset = Get-TimelineOffset (Join-Path $zoneBundle 'provenance.json')
+if ([string]::IsNullOrEmpty($zoneAnchor) -or [string]::IsNullOrEmpty($zoneOffset)) {
+    Assert-Scenario $false 'breaker-exhaustion records no timelineStart/timelineOffset'
+} else {
+    $zoneTranscript = Join-Path $zoneBundle 'transcript.md'
+    $zonePrompt = Get-Field $zoneTranscript 'Prompt submitted'
+    $zoneModel = Get-Field $zoneTranscript 'Model'
+    $zoneInvocation = Get-InvocationField $zoneTranscript
+    $committedZone = ([IO.File]::ReadAllText($zoneTranscript)).Replace("`r", '')
+    foreach ($zone in @('UTC', 'America/New_York', 'Asia/Kolkata')) {
+        # The zone name carries a slash, so it cannot be used as a file name.
+        $zoneSlug = $zone.Replace('/', '_')
+        $zoneOut = Join-Path $tmp "zone-$zoneSlug.md"
+        $zoneLog = Join-Path $tmp "zone-$zoneSlug.log"
+        $zoneArguments = @(
+            (Join-Path $zoneBundle 'session.jsonl'), $zoneOut, $zoneLog,
+            '--probe', 'breaker-exhaustion',
+            '--prompt', $zonePrompt,
+            '--model', $zoneModel,
+            '--invocation', $zoneInvocation,
+            '--stream', 'session.jsonl',
+            '--start', $zoneAnchor,
+            '--offset', $zoneOffset
+        )
+        $previousTz = $env:TZ
+        $env:TZ = $zone
+        try {
+            & bash $rendererSh @zoneArguments 2>&1 | Out-Null
+            Assert-Status $LASTEXITCODE 0
+        } finally {
+            $env:TZ = $previousTz
+        }
+        if (Test-Path -LiteralPath $zoneOut) {
+            $renderedZone = ([IO.File]::ReadAllText($zoneOut)).Replace("`r", '')
+            Assert-Scenario ($renderedZone -eq $committedZone) "re-render under TZ=$zone differs from the committed transcript"
+        } else {
+            Assert-Scenario $false "re-render under TZ=$zone produced no transcript"
+        }
+    }
+}
+Report-Scenario 'rendering is independent of the host time zone'
 
 Write-Output '== Twin parity =='
 Begin-Scenario
