@@ -1,0 +1,17 @@
+# Kit staging exclusions - ce-antistarvation-balanced
+#
+# The staged kit is the tracked tree at promptkitCommit minus the paths below.
+# Each exclusion removes grading material the model under test must not read.
+
+$ git archive HEAD --format=tar -o kit.tar -- . :(exclude)scripts/tests :(exclude)scripts/run-behavioral-eval.sh :(exclude)scripts/run-behavioral-eval.ps1 :(exclude)docs/BEHAVIORAL-EVAL.md :(exclude)docs/internal/host-conformance :(exclude)docs/tasks
+
+absent  scripts/tests/eval-scenarios  (the scenario rubric)
+absent  scripts/run-behavioral-eval.sh  (the scorer)
+absent  scripts/run-behavioral-eval.ps1  (the scorer (PowerShell twin))
+absent  docs/BEHAVIORAL-EVAL.md  (the evaluation record)
+absent  docs/internal/host-conformance  (the published bundles)
+absent  docs/tasks  (the task records)
+present  protocols/context-economy.md  (discovery route)
+present  protocols/setup.md  (discovery route)
+present  docs/WORKFLOW-MAP.md  (discovery route)
+present  workflows/route.md  (discovery route)

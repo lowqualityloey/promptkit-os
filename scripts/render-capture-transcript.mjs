@@ -35,7 +35,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 
-const USAGE = 'Usage: render-capture-transcript <session.jsonl> <transcript.md> <observed-writes.log> --probe <name> --prompt <text> --model <text> [--host <text>] [--invocation <text>]';
+const USAGE = 'Usage: render-capture-transcript <session.jsonl> <transcript.md> <observed-writes.log> --probe <name> --prompt <text> --model <text> [--host <text>] [--invocation <text>] [--stream <name>] [--start <iso>] [--offset <±HH:MM>]';
 
 function usage() {
   process.stderr.write(USAGE + '\n');
@@ -59,6 +59,19 @@ let prompt = '';
 let model = '';
 let host = 'Antigravity CLI';
 let invocation = 'agy --input-format stream-json --output-format stream-json';
+// The file name the preamble names as the rendered source. A capture that
+// rewrites absolute tool targets to repository-relative ones renders from a
+// derived stream, and the preamble must say which file the hash describes
+// rather than implying it is the raw one.
+let streamName = 'session.jsonl';
+// The instant the capture began, when the bundle recorded one. Without it the
+// timeline is anchored on the stream file's mtime, which git does not preserve:
+// a committed bundle re-rendered on another machine would silently shift every
+// timestamp while still passing a timestamp-stripped round-trip test.
+let startAnchor = '';
+// The UTC offset the timestamp column is rendered in. It is a property of the
+// bundle, never of the machine doing the rendering - see the iso() comment.
+let offsetFlag = '';
 
 for (let i = 3; i < argv.length; i += 1) {
   const flag = argv[i];
@@ -79,6 +92,15 @@ for (let i = 3; i < argv.length; i += 1) {
     case '--invocation':
       if (value === undefined) usage();
       invocation = value; i += 1; break;
+    case '--stream':
+      if (value === undefined) usage();
+      streamName = value; i += 1; break;
+    case '--start':
+      if (value === undefined) usage();
+      startAnchor = value; i += 1; break;
+    case '--offset':
+      if (value === undefined) usage();
+      offsetFlag = value; i += 1; break;
     default:
       fail('unknown argument: ' + flag);
   }
@@ -113,6 +135,11 @@ const VERB = {
   multi_replace_file_content: 'write',
   sed_file: 'write',
   notebook_edit: 'write',
+  // agy 1.5.15 emits edit_file at runtime even though it is absent from the
+  // tool list in the init event. Leaving it unmapped would render it verbatim,
+  // and the scorer's write-verb table does not know it either, so a real write
+  // would be invisible to repo-unwritten and silently degrade to a non-detection.
+  edit_file: 'write',
 };
 
 // The argument that names what the tool acted on, in the order the scorer's
@@ -170,17 +197,71 @@ for (const ev of events) {
 }
 
 // agy reports no per-event clock, so the timeline is reconstructed: the capture
-// ended at the stream file's mtime, and each step is placed by the durations
-// agy does report. The transcript states this rather than implying observation.
-const endMs = fs.statSync(jsonl).mtimeMs;
-const startMs = endMs - totalSeconds * 1000;
+// began at a known instant, and each step is placed by the durations agy does
+// report. The transcript states this rather than implying observation.
+//
+// The anchor is the recorded capture start when the bundle carries one. Falling
+// back to the stream file's mtime is only correct on the machine that produced
+// the capture: git does not preserve mtime, so a committed bundle re-rendered
+// elsewhere would shift every timestamp by the checkout's clock while the
+// timestamp-stripped round-trip test still passed.
+// The anchor is rounded to whole milliseconds. A file mtime carries sub-ms
+// precision that no reader can interpret and that would make the same capture
+// render one millisecond differently depending on which filesystem wrote the
+// file. Rounding once, here, is what lets a recorded anchor reproduce a
+// committed transcript byte for byte on any machine.
+let startMs;
+if (startAnchor) {
+  startMs = Date.parse(startAnchor);
+  if (!Number.isFinite(startMs)) fail('--start is not a parseable instant: ' + startAnchor);
+  startMs = Math.round(startMs);
+} else {
+  startMs = Math.round(fs.statSync(jsonl).mtimeMs - totalSeconds * 1000);
+}
+// The timestamp column is rendered in a FIXED offset, never the host's local
+// zone. Formatting with getFullYear()/getHours()/getTimezoneOffset() made the
+// rendering a property of the machine rather than of the capture: the same
+// recorded anchor produced `+13:00` on the capture host and `+00:00` on a UTC
+// CI runner, so a committed transcript could never be reproduced off the
+// machine that wrote it. The anchor fixed the instant; this fixes its spelling.
+//
+// The offset comes from the bundle, in this order:
+//   1. --offset <±HH:MM>, when the caller passes one.
+//   2. The offset carried by --start, when it carries one (a Z-suffixed anchor
+//      carries none, which is why the flag exists).
+//   3. +00:00, the only offset that is not a guess about someone's machine.
+// A bundle that wants its capture host's zone recorded must say so; the
+// renderer will not infer it from the environment.
+const OFFSET_RE = /([+-])(\d{2}):?(\d{2})$/;
+function parseOffset(text) {
+  if (!text) return null;
+  const m = OFFSET_RE.exec(text);
+  if (!m) return null;
+  const minutes = (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
+  if (!Number.isFinite(minutes) || Math.abs(minutes) > 14 * 60) return null;
+  return minutes;
+}
+
+let offsetMinutes = parseOffset(offsetFlag);
+if (offsetMinutes === null && offsetFlag) fail('--offset is not a ±HH:MM offset: ' + offsetFlag);
+if (offsetMinutes === null) offsetMinutes = parseOffset(startAnchor);
+if (offsetMinutes === null) offsetMinutes = 0;
+
+const offsetLabel = (() => {
+  const sign = offsetMinutes < 0 ? '-' : '+';
+  const abs = Math.abs(offsetMinutes);
+  const pad = (n) => String(n).padStart(2, '0');
+  return sign + pad(Math.floor(abs / 60)) + ':' + pad(abs % 60);
+})();
+
 let cursor = startMs;
 function iso(ms) {
-  const d = new Date(ms);
+  // Shift into the target offset, then read every field through the UTC
+  // accessors: the shift is the only place the offset is applied, so the
+  // rendering cannot pick up the host zone by accident.
+  const d = new Date(ms + offsetMinutes * 60000);
   const pad = (n, w = 2) => String(n).padStart(w, '0');
-  const off = -d.getTimezoneOffset();
-  const sign = off >= 0 ? '+' : '-';
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}000${sign}${pad(Math.floor(Math.abs(off) / 60))}:${pad(Math.abs(off) % 60)}`;
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}.${pad(d.getUTCMilliseconds(), 3)}000${offsetLabel}`;
 }
 
 const ordered = [...steps.values()].sort((a, b) => a.index - b.index);
@@ -189,9 +270,9 @@ const log = [];
 
 out.push(`# Live capture transcript — ${host}, ${probe} probe (${model})`);
 out.push('');
-out.push('Rendered mechanically from the raw session event stream preserved verbatim as');
-out.push(`\`session.jsonl\` in this bundle (sha256 \`${sha}\`). Assistant text is byte-for-byte as`);
-out.push('emitted; tool lines record the tool name, its target, and its completion status.');
+out.push('Rendered mechanically from the session event stream preserved in this bundle as');
+out.push(`\`${streamName}\` (sha256 \`${sha}\`). Assistant text is byte-for-byte as emitted;`);
+out.push('tool lines record the tool name, its target, and its completion status.');
 out.push('');
 out.push(`- Session: \`${conversation || 'unknown'}\``);
 out.push(`- Prompt submitted: \`${prompt}\``);

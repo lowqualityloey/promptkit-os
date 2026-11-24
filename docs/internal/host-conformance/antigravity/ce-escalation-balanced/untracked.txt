@@ -1,0 +1,2 @@
+docs/specs/2026-11-24-auth-session-lifetime.md
+docs/tasks/TASK-2026-11-24-jwt-lifetime.md

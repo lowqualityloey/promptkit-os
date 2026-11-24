@@ -8,5 +8,7 @@
   "hostVersion": "agy 1.5.14",
   "agentModel": "gemini-3.8-flash-high (default agent, --mode accept-edits, --dangerously-skip-permissions); TWO stream-json turns in one process; bwrap-isolated",
   "observationStart": "2026-11-23T03:09:35+13:00",
-  "observationEnd": "2026-11-23T03:14:47+13:00"
+  "observationEnd": "2026-11-23T03:14:47+13:00",
+  "timelineStart": "2026-11-22T14:09:35.000Z",
+  "timelineOffset": "+13:00"
 }

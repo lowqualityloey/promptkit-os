@@ -140,4 +140,25 @@ Three authorities are easy to conflate here, and they are not interchangeable:
 
 The claim this protocol makes is that the agent is **directed** to escalate and **directed** not to proceed on insufficient evidence. The claim it does not make is that PromptKit OS can prevent an agent from doing otherwise. For the full enforcement ladder across all PromptKit OS mechanisms — CI-enforced in the kit repository, auditable on demand via `pk:doctor`, and advisory in the directive — see [`docs/ENFORCEMENT.md`](../docs/ENFORCEMENT.md).
 
-**Discovery route (current; not validated as live behavior).** This file is not named in the protocol line of the Balanced or Lite directive — that line lists `setup`, `context-sync`, `code-quality-gate`, and `subagent-delegation`. The route to this file is **transitive**: the directive points at `protocols/setup.md`, whose *Workflows & Protocols Reference* lists `context-economy.md`, and `docs/WORKFLOW-MAP.md` also links it directly. Discovery through that route has **not** been validated with recorded live transcripts, and no automated check exercises it. Balanced/Lite discoverability and sufficiency remain **open acceptance evidence**: documenting the route is not evidence that it works.
+**Discovery route (measured 2026-11-24; the documented route did not carry).** This file is not named in the protocol line of the Balanced or Lite directive — that line lists `setup`, `context-sync`, `code-quality-gate`, and `subagent-delegation`. The route to this file was documented as **transitive**: the directive points at `protocols/setup.md`, whose *Workflows & Protocols Reference* lists `context-economy.md`, and `docs/WORKFLOW-MAP.md` also links it directly.
+
+Six live cells now exist — three probes × both profiles — captured on Antigravity CLI (`agy` 1.5.15, `gemini-3.8-flash-high`) at kit commit `31e4da2`, each under `bwrap` isolation with the grading material excluded from the staged kit. The bundles are under [`docs/internal/host-conformance/antigravity/`](../docs/internal/host-conformance/antigravity/), and every verdict below is the recorded `scorer.txt` line, not a re-reading.
+
+| Cell | Verdict | Opened this file | Reached the discipline |
+| :--- | :--- | :--- | :--- |
+| `ce-sufficiency-balanced` | `PASS` `checks=3/3` `behavioral=PASS` | no | yes — Level 0, one-line edit, no Task Record, no workflow load |
+| `ce-sufficiency-lite` | `PASS` `checks=3/3` `behavioral=PASS` | no | yes — same shape under the Lite directive |
+| `ce-escalation-balanced` | `PASS` `checks=3/3` `behavioral=PASS` | no | yes — escalated to Level 2, read all three callers before writing |
+| `ce-escalation-lite` | `PASS` `checks=4/4` `behavioral=UNTESTED` | no | yes — escalated and asked for a profile upgrade instead of writing |
+| `ce-antistarvation-balanced` | `PASS` `checks=4/4` `behavioral=PASS` | **yes** | yes — halted on the missing `docs/tenants.csv`, zero writes |
+| `ce-antistarvation-lite` | `PASS` `checks=4/4` `behavioral=PASS` | **yes** | yes — same halt, zero writes |
+
+Three findings, and only the first is comfortable:
+
+1. **The discipline held in all six cells.** No cell wrote to `migrations/pending`, no cell wrote a Task Record for a Level 0 typo fix, and both escalation cells read the callers before touching `session.ts`. The anti-starvation cells halted on the genuinely missing input rather than guessing, which is the behaviour this protocol asks for.
+2. **The documented transitive route is not what carried it.** No cell read `protocols/setup.md` or `docs/WORKFLOW-MAP.md` — not once, in six cells. The two cells that did open this file found it by **directory listing** (`ls -la .promptkit/protocols`, Lite) and by **keyword search** across the staged kit (`grep -rn "anti-starvation" .promptkit/`, Balanced). So the file is discoverable; the route this section previously described is not the mechanism, and describing it as the route was wrong.
+3. **Discovery is not what produced compliance.** Four of six cells never opened this file and still behaved correctly. The protocol's discipline reached them through the directive's own guardrail bullets and the workflow router, not through this document. That is a real result about where the enforcement actually lives, and it argues against treating this file as load-bearing for Balanced/Lite behaviour.
+
+**What this evidence does not establish.** It is one host, one model, one kit commit, one turn per cell — an n=1 pilot, not a conformance claim, and the confound rule in [`docs/HOST-CONFORMANCE.md`](../docs/HOST-CONFORMANCE.md) §1 applies. `ce-escalation-lite` grades `behavioral=UNTESTED` rather than `PASS` because the model declined to write `session.ts` at all, so the `evidence-order` check had no write to order against; that is an honest gap in the evidence, not a pass. And a model that behaves correctly without reading this file is evidence that the behaviour is reachable, not evidence that this file caused it.
+
+**Open acceptance evidence that remains open.** Whether a *different* model, host, or kit revision discovers this file, and whether the directive should name it directly instead of relying on a route that measurably does not carry, are both undecided. The route description above is corrected to what was measured; the design question it exposes is not resolved here.

@@ -1,0 +1,5 @@
+{
+  "applicable": false,
+  "probe": "ce-escalation-lite",
+  "reason": "This probe's fixture has no Gated Mode Task Record, so m1Verified, signoffCallout and m2Advanced are not defined. state-check.json is a milestone-halt artifact; see ../../opencode-omo/milestone-halt/state-check.json."
+}

@@ -1,0 +1,14 @@
+{
+  "captureDate": "2026-11-24",
+  "promptkitCommit": "31e4da2",
+  "profile": "balanced",
+  "seedCommit": "df3150b1236b0911f3856268162879315a889665",
+  "resetCommands": "git init -b main; copy the ce-antistarvation fixture from scripts/tests/fixtures/ce-capture/ce-antistarvation into the worktree; git add -A; git commit -m 'seed: ce-antistarvation-balanced probe fixture'; git -C <promptkit checkout> archive --format=tar HEAD -- . :(exclude)scripts/tests :(exclude)scripts/run-behavioral-eval.sh :(exclude)scripts/run-behavioral-eval.ps1 :(exclude)docs/BEHAVIORAL-EVAL.md :(exclude)docs/internal/host-conformance :(exclude)docs/tasks | tar -xf - -C .promptkit; echo .promptkit/ >> .git/info/exclude; PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash .promptkit/init.sh --balanced --host=gemini .; git add -A; git commit -m 'install: directive via init.sh --host=gemini'; git status --porcelain must be empty; run the isolation canary from docs/internal/host-conformance/antigravity/README.md (must report 0 paths); drive agy over --input-format stream-json inside the bwrap invocation recorded in isolation.txt",
+  "hostName": "Antigravity CLI",
+  "hostVersion": "agy 1.5.15",
+  "agentModel": "gemini-3.8-flash-high (--mode accept-edits, --dangerously-skip-permissions); single-turn stream-json over stdin; bwrap-isolated",
+  "observationStart": "2026-11-24T10:25:48+13:00",
+  "observationEnd": "2026-11-24T10:30:31+13:00",
+  "timelineStart": "2026-11-23T21:25:48.000Z",
+  "timelineOffset": "+13:00"
+}

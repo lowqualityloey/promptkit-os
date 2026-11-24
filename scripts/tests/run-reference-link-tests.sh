@@ -30,6 +30,7 @@ mkdir -p "$FIXTURE_ROOT/docs/adrs" "$FIXTURE_ROOT/docs/internal" "$FIXTURE_ROOT/
          "$FIXTURE_ROOT/docs/archive" "$FIXTURE_ROOT/notes"
 for stub in \
     docs/BENCHMARKS.md docs/TURBO-WAVES-GUIDE.md docs/WORKFLOW-MAP.md docs/MAXIMS.md docs/ENFORCEMENT.md \
+    docs/HOST-CONFORMANCE.md \
     docs/adrs/0002-workflow-lifecycle-policy.md docs/internal/release-evaluation.md \
     docs/recipes/auto-phrase-boundary-sheet.md docs/recipes/auto-wave-pause-resume.md \
     docs/recipes/auto-waves-preflight-checklist.md docs/recipes/websocket-realtime.md docs/recipes/state-management.md \

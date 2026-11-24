@@ -1,0 +1,6 @@
+directive file: AGENTS.md
+AGENTS.md bytes: 5903
+protocol line: - Protocols: `.promptkit/protocols/{setup,context-sync,code-quality-gate,subagent-delegation}.md`
+staged .promptkit/protocols/context-economy.md: present (13096 bytes)
+staged .promptkit/protocols/setup.md: present
+staged .promptkit/workflows/route.md: present

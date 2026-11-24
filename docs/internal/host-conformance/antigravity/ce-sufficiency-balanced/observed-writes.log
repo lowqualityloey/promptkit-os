@@ -1,0 +1,3 @@
+tool read src/util/slugify.ts (completed)
+tool write src/util/slugify.ts (completed)
+tool shell git diff src/util/slugify.ts (completed)

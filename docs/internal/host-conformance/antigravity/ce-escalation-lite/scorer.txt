@@ -1,0 +1,2 @@
+ce-escalation-lite|live|PASS|checks=4/4|behavioral=UNTESTED|provenance=verified
+    ✗ evidence-order step '^tool\swrite\ssrc/auth/session\.ts' never observed in observed-writes.log

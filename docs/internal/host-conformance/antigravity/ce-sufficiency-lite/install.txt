@@ -1,0 +1,32 @@
+$ PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash .promptkit/init.sh --lite --host=gemini .
+[exit 0]
+--- stdout ---
+
+[0;36m🚀 Initializing PromptKit OS (lite profile)...[0m
+   Host Project: /tmp/pk-work-ce-sufficiency-lite/repo
+   Engine Path:  /tmp/pk-work-ce-sufficiency-lite/repo/.promptkit
+   Profile:      lite
+   Tracking:     local
+   [0;32m✨ Lite: 6 utility workflows, <1,500 tok, 80% value — perfect for onboarding[0m
+
+PREFLIGHT|SKIPPED|USER_OPT_OUT
+  [0;32m[+][0m Added host configuration: AGENTS.md
+  [0;32m[+][0m Created default agent configurations: AGENTS.md
+  [0;32m[+][0m Created directory: docs/tasks
+  [0;32m[+][0m Created directory: docs/specs
+  [0;32m[+][0m Created directory: docs/adrs
+  [0;32m[+][0m Created directory: docs/tests
+  [0;32m[+][0m Created: PROMPTKIT.md (project profile & guardrails)
+  [0;32m[+][0m Set PROMPTKIT.md profile: lite
+  [0;33m[✓][0m Updated PROMPTKIT.md tracking: local
+  [0;32m[+][0m Created: docs/STATE.md (living project & state tracker)
+  [0;33m[-][0m Skipped: .github PR/issue templates (task tracking is 'local'; they are created when tracking is GitHub or GitHub projection)
+  [0;32m[+][0m Injected PromptKit OS directives into: AGENTS.md (profile: lite)
+ASSERT|skipped|USER_OPT_OUT|SKIP
+
+[0;36m✨ PromptKit OS successfully configured for /tmp/pk-work-ce-sufficiency-lite/repo! (lite profile)[0m
+   [0;32mLite: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) — 80% value, <1,500 tok[0m
+   Upgrade anytime: .promptkit/init.sh --balanced for the full Balanced profile
+   Start by asking your AI: 'pk:route', 'pk:debug', 'pk:commit', 'pk:checkpoint'
+
+--- stderr ---
