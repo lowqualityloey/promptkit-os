@@ -79,17 +79,62 @@ function Test-Usable {
     return -not (Test-Placeholder $Value)
 }
 
+# A publication outcome section is a terminal level-2 heading that records what
+# happened after the record's pre-publication state was written. It is the only
+# place a record may restate a header label, because the later occurrence
+# supersedes the header value prospectively.
+function Test-OutcomeHeading {
+    param([AllowEmptyString()][string]$Heading)
+    $normalized = $Heading.ToLowerInvariant()
+    return ($normalized -like '*publication outcome*' -or
+        $normalized -like '*post-release outcome*')
+}
+
 function Get-ParsedRecord {
     param([string]$FilePath)
 
     $fields = @{}
     $duplicates = @{}
+    $outcomeFields = @{}
+    $outcomeDuplicates = @{}
+    $outcomeCount = 0
+    $outcomeFollowed = $false
+    $inOutcome = $false
+    $inFence = $false
     foreach ($line in @(Get-Content -LiteralPath $FilePath -ErrorAction Stop)) {
+        if ($line -like '```*') {
+            $inFence = -not $inFence
+            continue
+        }
+        if ($inFence) { continue }
+
+        if ($line -like '## *') {
+            $heading = $line.Substring(3).Trim()
+            if (Test-OutcomeHeading $heading) {
+                $outcomeCount++
+                $inOutcome = $true
+            }
+            else {
+                if ($outcomeCount -gt 0) { $outcomeFollowed = $true }
+                $inOutcome = $false
+            }
+            continue
+        }
+
         $match = [regex]::Match($line, '^- \*\*(?<label>[^*]+)\*\*:\s*(?<value>.*)$')
         if (-not $match.Success) { continue }
 
         $label = $match.Groups['label'].Value.Trim()
         $value = $match.Groups['value'].Value.Trim()
+        if ($inOutcome) {
+            if ($outcomeFields.ContainsKey($label)) {
+                if (-not $outcomeDuplicates.ContainsKey($label)) { $outcomeDuplicates[$label] = 1 }
+                $outcomeDuplicates[$label]++
+                continue
+            }
+            $outcomeFields[$label] = $value
+            continue
+        }
         if ($fields.ContainsKey($label)) {
             if (-not $duplicates.ContainsKey($label)) { $duplicates[$label] = 1 }
             $duplicates[$label]++
@@ -117,6 +162,10 @@ function Get-ParsedRecord {
         RelativePath = Get-RelativePath $FilePath
         Fields = $fields
         Duplicates = $duplicates
+        OutcomeFields = $outcomeFields
+        OutcomeDuplicates = $outcomeDuplicates
+        OutcomeCount = $outcomeCount
+        OutcomeFollowed = $outcomeFollowed
         RecordType = $recordType
         CanonicalType = $canonicalType
         EvaluationId = $evaluationId
@@ -132,6 +181,28 @@ function Get-FieldValue {
 function Test-Field {
     param([object]$Record, [string]$Label)
     return $Record.Fields.ContainsKey($Label)
+}
+
+function Get-OutcomeFieldValue {
+    param([object]$Record, [string]$Label)
+    if ($Record.OutcomeFields.ContainsKey($Label)) { return Unwrap-Value $Record.OutcomeFields[$Label] }
+    return ''
+}
+
+function Test-OutcomeField {
+    param([object]$Record, [string]$Label)
+    return $Record.OutcomeFields.ContainsKey($Label)
+}
+
+function Require-OutcomeValue {
+    param([object]$Record, [string]$Label)
+
+    $value = Get-OutcomeFieldValue $Record $Label
+    if (-not (Test-Usable $value)) {
+        Add-Diagnostic 'OUTCOME_SECTION' $Record.EvaluationId $Record.RelativePath "Missing usable outcome field: $Label" 'Record the publication outcome value inside the outcome section'
+        return $false
+    }
+    return $true
 }
 
 function Require-Label {
@@ -433,6 +504,47 @@ function Validate-ApprovedRecord {
     }
 }
 
+# A publication outcome section records what happened after the record's
+# pre-publication state was written. It is a separate field namespace: a label
+# may appear in both the header and the outcome section, and the outcome
+# occurrence is the one that describes the current state. The header keeps its
+# pre-publication value so the record stays truthful about what was authorized
+# at the time it was written.
+function Validate-OutcomeRecord {
+    param([object]$Record)
+
+    if ($Record.OutcomeCount -eq 0) { return }
+
+    if ($Record.OutcomeCount -gt 1) {
+        Add-Diagnostic 'OUTCOME_SECTION' $Record.EvaluationId $Record.RelativePath 'Record carries more than one publication outcome section' 'Keep exactly one terminal publication outcome section per record'
+    }
+    if ($Record.OutcomeFollowed) {
+        Add-Diagnostic 'OUTCOME_SECTION' $Record.EvaluationId $Record.RelativePath 'Publication outcome section is not the last section of the record' 'Move the publication outcome section to the end of the record'
+    }
+    if ($Record.CanonicalType -ne 'Release Notes Record' -and $Record.CanonicalType -ne 'Approved Release Record') {
+        Add-Diagnostic 'OUTCOME_SECTION' $Record.EvaluationId $Record.RelativePath "Publication outcome section is not valid for a $($Record.CanonicalType)" 'Record the publication outcome only on a Release Notes Record or an Approved Release Record'
+    }
+
+    foreach ($label in @($Record.OutcomeDuplicates.Keys)) {
+        Add-Diagnostic 'OUTCOME_SECTION' $Record.EvaluationId $Record.RelativePath "Duplicate outcome field: $label" 'Keep one canonical outcome field label per outcome section'
+    }
+
+    [void](Require-OutcomeValue $Record 'Post-release Status')
+    [void](Require-OutcomeValue $Record 'Hosted Release')
+    [void](Require-OutcomeValue $Record 'npm Publication')
+    if ($Record.CanonicalType -eq 'Release Notes Record') {
+        [void](Require-OutcomeValue $Record 'Changelog Publication Outcome')
+    }
+
+    foreach ($label in @('Post-release Status', 'Hosted Release', 'npm Publication', 'Changelog Publication Outcome')) {
+        if (-not (Test-OutcomeField $Record $label)) { continue }
+        $value = (Get-OutcomeFieldValue $Record $label).ToLowerInvariant()
+        if (-not ($value.StartsWith('published') -or $value.StartsWith('not published'))) {
+            Add-Diagnostic 'OUTCOME_SECTION' $Record.EvaluationId $Record.RelativePath "Outcome field does not state a publication result: $label" 'Begin the value with Published or Not published and cite the evidence'
+        }
+    }
+}
+
 function Validate-Record {
     param([object]$Record)
 
@@ -444,6 +556,7 @@ function Validate-Record {
         'Release Notes Record' { Validate-NotesRecord $Record }
         'Approved Release Record' { Validate-ApprovedRecord $Record }
     }
+    Validate-OutcomeRecord $Record
 }
 
 function Get-RecordsOfType {

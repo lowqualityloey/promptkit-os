@@ -14,8 +14,13 @@ declare -a RECORD_RELATIVE=()
 declare -a RECORD_ID=()
 declare -a RECORD_CANONICAL=()
 declare -a RECORD_LABELS=()
+declare -a RECORD_OUTCOME_LABELS=()
+declare -a RECORD_OUTCOME_COUNT=()
+declare -a RECORD_OUTCOME_FOLLOWED=()
 declare -A FIELDS=()
 declare -A DUPLICATES=()
+declare -A OUTCOME_FIELDS=()
+declare -A OUTCOME_DUPLICATES=()
 
 declare -a EVALUATION_INDICES=()
 declare -A SEEN_DIAGNOSTICS=()
@@ -140,14 +145,81 @@ field_value() {
     unwrap "$value"
 }
 
+outcome_field_exists() {
+    local index="$1" label="$2" key
+    key="$(field_key "$index" "$label")"
+    [ -n "${OUTCOME_FIELDS[$key]+present}" ]
+}
+
+outcome_field_value() {
+    local index="$1" label="$2" key value
+    key="$(field_key "$index" "$label")"
+    value="${OUTCOME_FIELDS[$key]-}"
+    unwrap "$value"
+}
+
+require_outcome_value() {
+    local index="$1" label="$2" value
+    value="$(outcome_field_value "$index" "$label")"
+    if ! is_usable "$value"; then
+        diagnostic "OUTCOME_SECTION" "${RECORD_ID[$index]}" "${RECORD_RELATIVE[$index]}" "Missing usable outcome field: $label" 'Record the publication outcome value inside the outcome section'
+        return 1
+    fi
+    return 0
+}
+
+# A publication outcome section is a terminal level-2 heading that records what
+# happened after the record's pre-publication state was written. It is the only
+# place a record may restate a header label, because the later occurrence
+# supersedes the header value prospectively.
+is_outcome_heading() {
+    local heading="${1,,}"
+    case "$heading" in
+        *'publication outcome'*|*'post-release outcome'*) return 0 ;;
+    esac
+    return 1
+}
+
 parse_file() {
-    local index="$1" file="$2" line label value key
+    local index="$1" file="$2" line label value key heading
+    local in_outcome=0 in_fence=0 outcome_count=0 outcome_followed=0
     while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            '```'*)
+                if [ "$in_fence" -eq 0 ]; then in_fence=1; else in_fence=0; fi
+                continue
+                ;;
+        esac
+        [ "$in_fence" -eq 1 ] && continue
+        case "$line" in
+            '## '*)
+                heading="$(trim "${line:3}")"
+                if is_outcome_heading "$heading"; then
+                    outcome_count=$((outcome_count + 1))
+                    in_outcome=1
+                else
+                    [ "$outcome_count" -gt 0 ] && outcome_followed=1
+                    in_outcome=0
+                fi
+                continue
+                ;;
+        esac
         if [[ "$line" =~ ^-\ \*\*([^*]+)\*\*:[[:space:]]*(.*)$ ]]; then
             label="$(trim "${BASH_REMATCH[1]}")"
             value="$(trim "${BASH_REMATCH[2]}")"
             key="$(field_key "$index" "$label")"
-            if [ -n "${FIELDS[$key]+present}" ]; then
+            if [ "$in_outcome" -eq 1 ]; then
+                if [ -n "${OUTCOME_FIELDS[$key]+present}" ]; then
+                    if [ -n "${OUTCOME_DUPLICATES[$key]+present}" ]; then
+                        OUTCOME_DUPLICATES[$key]=$((OUTCOME_DUPLICATES[$key] + 1))
+                    else
+                        OUTCOME_DUPLICATES[$key]=2
+                    fi
+                else
+                    OUTCOME_FIELDS[$key]="$value"
+                    RECORD_OUTCOME_LABELS[index]+="${label}"$'\t'
+                fi
+            elif [ -n "${FIELDS[$key]+present}" ]; then
                 if [ -n "${DUPLICATES[$key]+present}" ]; then
                     DUPLICATES[$key]=$((DUPLICATES[$key] + 1))
                 else
@@ -159,6 +231,8 @@ parse_file() {
             fi
         fi
     done < "$file"
+    RECORD_OUTCOME_COUNT[index]="$outcome_count"
+    RECORD_OUTCOME_FOLLOWED[index]="$outcome_followed"
 }
 
 canonical_type() {
@@ -462,6 +536,56 @@ validate_approved() {
     fi
 }
 
+# A publication outcome section records what happened after the record's
+# pre-publication state was written. It is a separate field namespace: a label
+# may appear in both the header and the outcome section, and the outcome
+# occurrence is the one that describes the current state. The header keeps its
+# pre-publication value so the record stays truthful about what was authorized
+# at the time it was written.
+validate_outcome() {
+    local index="$1" type="$2" label value key
+    local count="${RECORD_OUTCOME_COUNT[$index]-0}"
+    [ "${count:-0}" -eq 0 ] && return 0
+
+    if [ "$count" -gt 1 ]; then
+        diagnostic "OUTCOME_SECTION" "${RECORD_ID[$index]}" "${RECORD_RELATIVE[$index]}" 'Record carries more than one publication outcome section' 'Keep exactly one terminal publication outcome section per record'
+    fi
+    if [ "${RECORD_OUTCOME_FOLLOWED[$index]-0}" -ne 0 ]; then
+        diagnostic "OUTCOME_SECTION" "${RECORD_ID[$index]}" "${RECORD_RELATIVE[$index]}" 'Publication outcome section is not the last section of the record' 'Move the publication outcome section to the end of the record'
+    fi
+    case "$type" in
+        'Release Notes Record'|'Approved Release Record') ;;
+        *)
+            diagnostic "OUTCOME_SECTION" "${RECORD_ID[$index]}" "${RECORD_RELATIVE[$index]}" "Publication outcome section is not valid for a $type" 'Record the publication outcome only on a Release Notes Record or an Approved Release Record'
+            ;;
+    esac
+
+    IFS=$'\t' read -r -a _outcome_labels <<< "${RECORD_OUTCOME_LABELS[$index]-}"
+    for label in "${_outcome_labels[@]}"; do
+        [ -z "$label" ] && continue
+        key="$(field_key "$index" "$label")"
+        if [ -n "${OUTCOME_DUPLICATES[$key]+present}" ]; then
+            diagnostic "OUTCOME_SECTION" "${RECORD_ID[$index]}" "${RECORD_RELATIVE[$index]}" "Duplicate outcome field: $label" 'Keep one canonical outcome field label per outcome section'
+        fi
+    done
+
+    require_outcome_value "$index" 'Post-release Status' >/dev/null
+    require_outcome_value "$index" 'Hosted Release' >/dev/null
+    require_outcome_value "$index" 'npm Publication' >/dev/null
+    if [ "$type" = 'Release Notes Record' ]; then
+        require_outcome_value "$index" 'Changelog Publication Outcome' >/dev/null
+    fi
+
+    for label in 'Post-release Status' 'Hosted Release' 'npm Publication' 'Changelog Publication Outcome'; do
+        outcome_field_exists "$index" "$label" || continue
+        value="$(outcome_field_value "$index" "$label")"
+        value="${value,,}"
+        if [[ "$value" != published* && "$value" != "not published"* ]]; then
+            diagnostic "OUTCOME_SECTION" "${RECORD_ID[$index]}" "${RECORD_RELATIVE[$index]}" "Outcome field does not state a publication result: $label" 'Begin the value with Published or Not published and cite the evidence'
+        fi
+    done
+}
+
 validate_record() {
     local index="$1" type
     validate_base "$index"
@@ -473,6 +597,7 @@ validate_record() {
         'Release Notes Record') validate_notes "$index" ;;
         'Approved Release Record') validate_approved "$index" ;;
     esac
+    validate_outcome "$index" "$type"
 }
 
 validate_cross_records() {

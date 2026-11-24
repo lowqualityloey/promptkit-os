@@ -73,6 +73,7 @@ Run-InvalidValidatorCase 'evaluation-id-mismatch' 'EVALUATION_ID_MISMATCH'
 Run-InvalidValidatorCase 'qa-note-linkage' 'QA_NOTE_LINKAGE'
 Run-InvalidValidatorCase 'empty-range-no-decision' 'EMPTY_RANGE_DECISION'
 Run-InvalidValidatorCase 'breaking-guidance-missing' 'BREAKING_GUIDANCE_MISSING'
+Run-InvalidValidatorCase 'outcome-section-not-terminal' 'OUTCOME_SECTION'
 Write-Output 'EXAMPLE|malformed-validator-diagnostics|PASS'
 
 $propertyOutput = @(& pwsh -NoProfile -File $PropertyHarness 2>&1)

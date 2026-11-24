@@ -67,6 +67,7 @@ run_invalid_validator_case evaluation-id-mismatch EVALUATION_ID_MISMATCH
 run_invalid_validator_case qa-note-linkage QA_NOTE_LINKAGE
 run_invalid_validator_case empty-range-no-decision EMPTY_RANGE_DECISION
 run_invalid_validator_case breaking-guidance-missing BREAKING_GUIDANCE_MISSING
+run_invalid_validator_case outcome-section-not-terminal OUTCOME_SECTION
 echo "EXAMPLE|malformed-validator-diagnostics|PASS"
 
 property_output="$(PROMPTKIT_PROPERTY_ITERATIONS=1 bash "$PROPERTY_HARNESS" 2>&1)" || fail_example "paired property harness control failed"

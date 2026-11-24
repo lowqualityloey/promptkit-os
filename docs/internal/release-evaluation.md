@@ -125,6 +125,21 @@ Derive notes only from the normalized Effective Change Set:
 
 Create explicit **draft Changelog Entries** for the reviewed Public Release Notes and Maintenance Release Notes. Every draft entry must be labeled **unpublished** or **not published** and must state that publication is a separate human decision. Drafting a changelog entry does not write to a hosted changelog, publish a file, perform a remote action, or authorize a release.
 
+#### 7a. Record the Publication Outcome Without Rewriting the Authorization History
+
+A Release Notes Record or an Approved Release Record may append one terminal `## Publication outcome - <date>` (or `## Post-release outcome - <date>`) section after the release actually happens. The section is the record's only permitted restatement of a header label: the outcome occurrence supersedes the header value prospectively, and the header keeps its pre-publication value so the record stays truthful about what was authorized when it was written.
+
+The validator enforces the shape:
+
+- The outcome section must be the last section of the record and must appear at most once.
+- Only a Release Notes Record or an Approved Release Record may carry one.
+- `Post-release Status`, `Hosted Release`, and `npm Publication` are required; a Release Notes Record must also carry `Changelog Publication Outcome`.
+- Every outcome value must begin with `Published` or `Not published` and cite its evidence.
+- A label may appear once in the header and once in the outcome section. A second occurrence inside either namespace is still a duplicate.
+- The header `Changelog State` keeps its draft-and-unpublished value. The outcome section records what happened; it does not retroactively authorize the release.
+
+Recording an outcome is a documentation act. It never performs a tag, a hosted release, a changelog publication, a remote operation, a deployment, or a rollback, and it never substitutes for the separate human decisions in section 10.
+
 #### 8. Create the Approved Release Record Only After Human Approval
 
 The Approved Release Record is an internal decision record, not an automatic release operation. It must be created only after the Release Coordinator has reviewed the candidate and QA/Reviewer result and made an explicit decision. Include all of these fields:
