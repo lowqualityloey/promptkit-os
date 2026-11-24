@@ -109,6 +109,9 @@ bash scripts/check-changelog-entry.sh
 # Regression coverage for the gate's path classification
 bash scripts/tests/run-changelog-gate-tests.sh
 
+# Regression coverage for the math-label gate's file scope
+bash scripts/tests/run-math-label-gate-tests.sh
+
 # Self-application: this repository's own release records (see the exemption note below)
 bash scripts/validate-release-records.sh --root . --strict
 ```
@@ -185,6 +188,9 @@ pwsh -NoProfile -File .\scripts\check-changelog-entry.ps1
 
 # Regression coverage for the gate's path classification
 pwsh -NoProfile -File .\scripts\tests\run-changelog-gate-tests.ps1
+
+# Regression coverage for the math-label gate's file scope
+pwsh -NoProfile -File .\scripts\tests\run-math-label-gate-tests.ps1
 
 # Self-application: this repository's own release records (see the exemption note below)
 pwsh -NoProfile -File .\scripts\validate-release-records.ps1 -Root . -Strict
