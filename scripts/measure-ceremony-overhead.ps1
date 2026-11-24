@@ -85,12 +85,12 @@ $Baseline = [ordered]@{
     "L0" = 0
     "L1" = 0
     "L2" = 5372
-    "L3" = 13243
+    "L3" = 13561
     "SETUP" = 3021
     "REQ:templates/execution-task-record-template.md" = 4812
     "REQ:templates/execution-checkpoint-template.md#full" = 560
     "REQ:templates/release-checklist.md" = 3409
-    "REQ:templates/release-evaluation-template.md" = 3215
+    "REQ:templates/release-evaluation-template.md" = 3533
     "REQ:templates/contract-impact-evidence-template.md" = 1247
     "SPEC:templates/tech-spec-template.md" = 5480
     "SPEC:templates/data-model-spec.md" = 1825
@@ -103,8 +103,8 @@ $Baseline = [ordered]@{
     "OPT:templates/code-review-checklist.md" = 1534
     "BAND:L2:min" = 6351
     "BAND:L2:max" = 10852
-    "BAND:L3:min" = 14222
-    "BAND:L3:max" = 18723
+    "BAND:L3:min" = 14540
+    "BAND:L3:max" = 19041
 }
 
 # Policy the artifact model rests on: <file>|<literal fragment>|<sha256 prefix>.

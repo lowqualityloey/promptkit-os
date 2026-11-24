@@ -165,3 +165,15 @@ A preliminary candidate, QA review, checkpoint handoff, or approved record never
 - **Open Blockers**: `[named blocker, owner, and resolution condition, or None]`
 - **Resume Condition**: `[what must be corrected or approved before the next state, or N/A]`
 - **Next Action**: `[Exactly one prioritized action]`
+
+## 11. Publication Outcome Section
+
+A Release Notes Record or an Approved Release Record may append one terminal `## Publication outcome - <date>` (or `## Post-release outcome - <date>`) section after publication. It is the only place a record may restate a header label: the outcome occurrence supersedes the header value prospectively, and the header keeps its pre-publication value so the record stays truthful about what was authorized when it was written.
+
+- **Record Status**: `[Published | Not published - reason]`
+- **Post-release Status**: `[Published | Not published] - [what completed, and any limitation publication does not cure]`
+- **Changelog Publication Outcome**: `[Published | Not published] - [where the changelog section is published, or why it is not]`
+- **Hosted Release**: `[Published | Not published] - [URL, timestamp, isDraft, targetCommitish]`
+- **npm Publication**: `[Published | Not published] - [version, dist-tag, provenance attestation]`
+
+The section must be the last section of the record, must appear at most once, and every value must begin with `Published` or `Not published`. The header `Changelog State` keeps its draft-and-unpublished value; the outcome section records what happened without rewriting the authorization history.

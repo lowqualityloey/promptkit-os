@@ -220,6 +220,29 @@ Every release from v1.1.0 onward must pass cleanly, including the human-readable
 `*-release-notes.md` files, which carry the same canonical field set as their
 companion `*-release-notes-record.md`.
 
+### Publication Outcome Sections
+
+A Release Notes Record or an Approved Release Record may append one terminal
+`## Publication outcome - <date>` (or `## Post-release outcome - <date>`) section
+after the release actually happens. It is the only place a record may restate a
+header label: the outcome occurrence supersedes the header value prospectively,
+and the header keeps its pre-publication value so the record stays truthful about
+what was authorized when it was written.
+
+The validator enforces the shape rather than trusting it. The section must be the
+last section of the record and must appear at most once; only a Release Notes
+Record or an Approved Release Record may carry one; `Post-release Status`,
+`Hosted Release` and `npm Publication` are required, and a Release Notes Record
+must also carry `Changelog Publication Outcome`; every outcome value must begin
+with `Published` or `Not published`. A label may appear once in the header and
+once in the outcome section, but a second occurrence inside either namespace is
+still a duplicate. Findings use the `OUTCOME_SECTION` category.
+
+The header `Changelog State` keeps its draft-and-unpublished value. The outcome
+section records what happened; it does not retroactively authorize the release,
+and it never performs a tag, a hosted release, a changelog publication, a remote
+operation, a deployment, or a rollback.
+
 ### Pre-PR Submission Checklist
 
 Mechanical gates catch most resubmission causes; the rest is judgment. Before opening a pull request:
