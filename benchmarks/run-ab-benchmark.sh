@@ -59,6 +59,14 @@
 set -euo pipefail
 export LC_ALL=C
 
+# Bash 4 is required for associative arrays and readarray-style builtins; fail with
+# an actionable message before Bash 3.2 (macOS /bin/bash) trips over a syntax error.
+if (( BASH_VERSINFO[0] < 4 )); then
+    echo "Bash 4.0+ required (found $BASH_VERSION)." >&2
+    echo "macOS ships Bash 3.2; install a newer Bash (e.g. brew install bash) and run this script explicitly." >&2
+    exit 1
+fi
+
 ENGINE="" SEED="" TASKS_CSV="" MODEL="" OUT="" MAXTURNS=40 TIMEOUT=900 REPEATS=1 PROFILE=balanced PREFLIGHT_ONLY=0 FINALIZE=0 SCREEN=0 SCREEN_ARM="" GRADING="" ORDER_SEED="" SHUFFLE_SEED="${BENCH_SHUFFLE_SEED:-}" KEY_OUT="" KEY_ARG="" GRADED_BY=""
 
 usage() {
