@@ -732,13 +732,23 @@ jobs:
             echo "::notice::$EVENT_NAME has no commit range to scan; skipping."
             exit 0
           fi
-          git read-tree "$base"
-          git add -A -- .
-          if git diff --cached --quiet; then
+          head="$(git rev-parse HEAD)"
+          scan_parent="$(mktemp -d)"
+          scan_root="$scan_parent/scan"
+          cleanup_scan_worktree() {
+            git -C "$scan_root" read-tree "$base" >/dev/null 2>&1 || true
+            git worktree remove "$scan_root" >/dev/null 2>&1 || true
+            rm -rf "$scan_parent"
+            git worktree prune >/dev/null 2>&1 || true
+          }
+          trap cleanup_scan_worktree EXIT
+          git worktree add --detach --quiet "$scan_root" "$base"
+          git -C "$scan_root" read-tree "$head"
+          if git -C "$scan_root" diff --cached --quiet; then
             echo "No diff against $base to scan."
             exit 0
           fi
-          bash scripts/scan-staged-secrets.sh .
+          bash scripts/scan-staged-secrets.sh "$scan_root"
 
   validate-linux:
     name: Lint & Validate (Linux)
