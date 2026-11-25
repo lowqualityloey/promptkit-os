@@ -142,10 +142,10 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 
 The core instruction layer stays small. Workflows, stack playbooks, and boundary recipes are loaded only when the task requires them.
 
-- **Balanced** profile: ~2,488 tok static footprint (~92% static saving vs. ~32.8k current core-subset baseline; 2,500 tok budget cap)
-- **Lite** profile: ~1,482 tok static footprint (~96% static saving vs. the current baseline; 1,500 tok budget cap)
+- **Balanced** profile: ~2,404 tok static footprint (~93% static saving vs. ~32.8k current core-subset baseline; 2,500 tok budget cap)
+- **Lite** profile: ~1,415 tok static footprint (~96% static saving vs. the current baseline; 1,500 tok budget cap)
 
-These figures, and the caps they are compared against, use the `bytes/4` proxy — `measure-tokens.sh` never invokes a tokenizer. Read them as "the proxy is under budget", not "the real token count is under budget": the Lite directive passes its 1,500 gate at 1,482 proxy while measuring 1,529 `cl100k_base` tokens, 29 over the cap in that encoding, and only the Balanced directive clears its cap in both conventions (2,488 proxy, 2,497 actual). See [`docs/BENCHMARKS.md` §9](./docs/BENCHMARKS.md) for the full comparison.
+These figures, and the caps they are compared against, use the `bytes/4` proxy — `measure-tokens.sh` never invokes a tokenizer. Read them as "the proxy is under budget", not "the real token count is under budget": the proxy runs a fraction of a percent low against `cl100k_base`, so the proxy cap is set below the real cap. Both directives now clear their caps in both conventions (Balanced 2,404 proxy vs 2,411 `cl100k_base`; Lite 1,415 vs 1,449, against the 2,500/1,500 caps). See [`docs/BENCHMARKS.md` §9](./docs/BENCHMARKS.md) for the full comparison.
 
 PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), governing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 task risk ceremony). Retrieval confidence is treated as evidence rather than authority, and high-risk boundaries direct the agent to zoom out. These are advisory agent instructions: CI asserts that the invariant text is present and that the directive token budgets hold, but PromptKit does not enforce this protocol at runtime — see the enforcement boundary recorded in that file.
 
