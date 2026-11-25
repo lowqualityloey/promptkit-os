@@ -231,13 +231,18 @@ Write-Output '== Newer stream formats =='
 $fx = Join-Path $repoRoot 'scripts/tests/fixtures/render-capture-transcript'
 $fxPrompt = 'Read a.txt, then create c.txt containing the word gamma, then run the shell command ls -1, then say DONE.'
 
+# Compare content, not bytes. The renderer always writes LF, while a Windows
+# checkout materialises the committed golden as CRLF, so a raw byte comparison
+# passes on the machine that captured it and fails on every Windows runner - the
+# same defect class the renderer's own canonical hashing was fixed for. Line
+# endings are normalised before comparing; everything else must match exactly.
 function Test-FileEquals {
     param([string]$Left, [string]$Right)
     if (-not (Test-Path -LiteralPath $Left -PathType Leaf)) { return $false }
     if (-not (Test-Path -LiteralPath $Right -PathType Leaf)) { return $false }
-    $a = [Convert]::ToBase64String([IO.File]::ReadAllBytes($Left))
-    $b = [Convert]::ToBase64String([IO.File]::ReadAllBytes($Right))
-    return ($a -eq $b)
+    $a = [IO.File]::ReadAllText($Left) -replace "`r`n", "`n"
+    $b = [IO.File]::ReadAllText($Right) -replace "`r`n", "`n"
+    return ($a -ceq $b)
 }
 
 # opencode carries a per-event clock, so its golden is compared with no timestamp
