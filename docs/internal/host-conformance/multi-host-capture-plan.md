@@ -336,9 +336,14 @@ it is the one whose result this plan exists to obtain.
 
 `commandcode`'s resume path is the one piece of harness that does not exist yet. It is proven manually
 (a codeword set in turn 1 was recalled in turn 2, unisolated and under `bwrap`) but not scripted. Phase 3
-must script it, and the transcript must be written **inside the bound fixture** — an absolute path outside
-it fails with `is neither an existing .jsonl transcript nor a known session-id prefix` because
-`--tmpfs $HOME` masks it.
+must script it, and the transcript must be **mounted where the sandbox can see it** — an absolute path
+that `--tmpfs $HOME` masks fails with `is neither an existing .jsonl transcript nor a known session-id
+prefix`.
+
+**Correction (measured 2026-11-26).** The transcript does not have to live inside the bound fixture, and
+it should not. Mounting it at `/tmp/session.jsonl` resumes cleanly, while a copy inside the fixture was
+`read_file`'d by the resumed turn — so file access, not memory, could have explained the recall. The
+published `milestone-halt` bundle records the resume taken from `/tmp`.
 
 ### 5.2 Gate
 

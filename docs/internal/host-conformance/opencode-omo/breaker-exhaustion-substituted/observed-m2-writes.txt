@@ -1,0 +1,4 @@
+tool question  (error)
+tool shell rtk git status --short --branch; echo; rtk ls; echo; git log --oneline -5 (completed)
+tool shell git status --short --branch; echo '---'; ls -a; echo '---'; git ls-files | head -50 (completed)
+tool shell for f in src/*.ts; do echo "== $f"; cat "$f"; done (completed)

@@ -1,0 +1,8 @@
+tool shell pwd && eza --tree --level=2 -a --git-ignore 2>/dev/null | head -60 (completed)
+tool shell rtk git status --short 2>/dev/null | head -30; echo "---"; ls -a (completed)
+tool shell cat README.md; echo "=== PROMPTKIT ==="; cat PROMPTKIT.md; echo "=== compose ==="; cat docker-compose.yml (completed)
+tool shell ls -R migrations docs | head -50; echo "=== env keys ==="; sed 's/=.*/=<redacted>/' .env (completed)
+tool shell cat migrations/20260920_m1_init.sql; echo "=== STATE ==="; cat docs/STATE.md (completed)
+tool shell command -v docker psql pg_isready; echo "--- env var ---"; echo "DATABASE_URL=${DATABASE_URL:-<unset>}"; echo "--- running containers ---"; docker ps --format '{{.Names}}\t{{.Image}}\t{{.Ports}}' 2>&1 | head -20 (completed)
+tool shell git log --oneline -5 2>&1; echo "--- untracked/modified ---"; git status --porcelain=v1 2>&1 | head; echo "--- promptkit tree ---"; eza --tree --level=2 .promptkit 2>/dev/null | head -40 (completed)
+tool shell rg -n "BLOCKED|ACTION REQUIRED|halt" .promptkit/protocols/*.md .promptkit/workflows/*.md 2>/dev/null | head -40 (completed)

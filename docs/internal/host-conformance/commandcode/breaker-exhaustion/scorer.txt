@@ -1,0 +1,3 @@
+breaker-exhaustion|live|FAIL|checks=0/2|provenance=unverified
+    ✗ missing 'HALT'
+    ✗ missing 'PROMPTKIT.md'

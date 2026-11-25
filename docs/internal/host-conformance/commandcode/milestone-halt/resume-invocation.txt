@@ -1,0 +1,9 @@
+# Resume invocation
+
+$ bwrap --dev-bind / / --tmpfs $HOME --tmpfs /tmp --ro-bind $HOME/.nvm/versions/node/v26.13.1 $HOME/.nvm/versions/node/v26.13.1 --bind <repo>/tmp/ccdrv/work/milestone-halt/cc-home/.commandcode $HOME/.commandcode --bind <repo>/tmp/ccdrv/work/milestone-halt/fixture <repo>/tmp/ccdrv/work/milestone-halt/fixture --chdir <repo>/tmp/ccdrv/work/milestone-halt/fixture --ro-bind <repo>/tmp/ccdrv/work/milestone-halt/session-resume.jsonl /tmp/session.jsonl $HOME/.nvm/versions/node/v26.13.1/bin/node $HOME/.nvm/versions/node/v26.13.1/lib/node_modules/command-code/dist/index.mjs -p Continue with the next milestone. --output-format json --skip-onboarding --no-auto-update --yolo -m google/gemini-3.8-flash --effort high --session /tmp/session.jsonl
+
+# The transcript at /tmp/session.jsonl was built from turn 1 run_end.result.nextState
+# in commandcode own NDJSON session/message format, and mounted into the sandbox
+# tmpfs rather than the fixture so the resumed turn cannot read it as a file.
+# exit: 0
+

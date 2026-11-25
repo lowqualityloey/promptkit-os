@@ -1,0 +1,10 @@
+# Isolation configuration - greenfield-saas-intake
+#
+# Both --tmpfs mounts are load-bearing: masking only the primary checkout
+# leaves the answer key readable from the other copies on the machine.
+
+$ bwrap --dev-bind / / --tmpfs $HOME --tmpfs /tmp --ro-bind $HOME/.opencode $HOME/.opencode --ro-bind $HOME/.config/opencode $HOME/.config/opencode --ro-bind $HOME/.nvm/versions/node/v26.13.1 $HOME/.nvm/versions/node/v26.13.1 --bind <repo>/tmp/ccdrv/work/greenfield-saas-intake/fixture <repo>/tmp/ccdrv/work/greenfield-saas-intake/fixture --bind <repo>/tmp/ccdrv/work/greenfield-saas-intake/xdg/data <repo>/tmp/ccdrv/work/greenfield-saas-intake/xdg/data --bind <repo>/tmp/ccdrv/work/greenfield-saas-intake/xdg/state <repo>/tmp/ccdrv/work/greenfield-saas-intake/xdg/state --bind <repo>/tmp/ccdrv/work/greenfield-saas-intake/xdg/cache <repo>/tmp/ccdrv/work/greenfield-saas-intake/xdg/cache --chdir <repo>/tmp/ccdrv/work/greenfield-saas-intake/fixture --setenv XDG_CONFIG_HOME $HOME/.config --setenv XDG_DATA_HOME <repo>/tmp/ccdrv/work/greenfield-saas-intake/xdg/data --setenv XDG_STATE_HOME <repo>/tmp/ccdrv/work/greenfield-saas-intake/xdg/state --setenv XDG_CACHE_HOME <repo>/tmp/ccdrv/work/greenfield-saas-intake/xdg/cache $HOME/.opencode/bin/opencode run --standalone --model opencode/deepseek-v4.1-flash-free --format json Brand-new empty repo (no code, no manifest). Build me a SaaS app with authentication and billing.
+
+# prompt:
+Brand-new empty repo (no code, no manifest). Build me a SaaS app with authentication and billing.
+

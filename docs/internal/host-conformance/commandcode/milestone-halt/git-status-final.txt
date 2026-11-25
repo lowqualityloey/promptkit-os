@@ -1,0 +1,3 @@
+ M docs/STATE.md
+ M docs/tasks/TASK-2026-10-05-m1-init.md
+ M src/m1/format.ts
