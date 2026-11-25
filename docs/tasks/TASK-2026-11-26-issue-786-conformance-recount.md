@@ -25,8 +25,10 @@
   - `docs/HOST-CONFORMANCE.md` — §3 pointer and §4 set/capture wording
   - `protocols/setup.md` — host-coverage item, context-economy discovery note, workflow and protocol registries
   - `docs/WORKFLOW-MAP.md` — maintenance branch of the decision tree and the navigation rows
-  - `scripts/validate-references.{sh,ps1}` — filesystem-derived template/workflow/protocol inventories and registration checks
-  - `scripts/tests/run-behavioral-contract-tests.{sh,ps1}` — assertions pinning the counts and the corrected sentences
+  - `scripts/validate-references.sh` — filesystem-derived template/workflow/protocol inventories and registration checks
+  - `scripts/validate-references.ps1` — PowerShell twin of the same derivation and registration checks
+  - `scripts/tests/run-behavioral-contract-tests.sh` — assertions pinning the counts and the corrected sentences
+  - `scripts/tests/run-behavioral-contract-tests.ps1` — PowerShell twin of the same pinned assertions
   - `CHANGELOG.md` — one `[Unreleased]` / `### Fixed` entry
   - `docs/tasks/TASK-2026-11-26-issue-786-conformance-recount.md` (this record)
 - **Explicit Non-Goals**:
