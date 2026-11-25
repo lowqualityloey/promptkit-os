@@ -2,9 +2,9 @@
 
 <a id="DOC-MULTI-HOST-CAPTURE-PLAN"></a>
 
-- **Status**: Proposed — awaiting owner approval. No capture has been taken under this plan.
-- **Hosts under test**: Antigravity CLI (`agy`) v1.5.16, Command Code (`commandcode`) v1.88.5, OpenCode v2.4.1
-- **Kit baseline**: `main` @ `63f7dec`
+- **Status**: Approved — the owner answered all five open decisions on 2026-11-25 (§8). No capture has been taken under this plan.
+- **Hosts under test**: Antigravity CLI (`agy`) v1.5.14 — reused from the published bundles per §8 decision 5, installed binary is 1.5.16; Command Code (`commandcode`) v1.88.5; OpenCode v2.4.1 (model-substituted)
+- **Kit baseline**: `main` @ `50af58f` (authored at `63f7dec`; the §8 decisions were recorded at `50af58f`)
 - **Owner of the captures**: maintainer (see [`docs/HOST-CONFORMANCE.md`](../../HOST-CONFORMANCE.md) §1 division of labor)
 - **Authorizes**: nothing. This document plans work; it does not perform it, and it moves no host row.
 
@@ -99,7 +99,38 @@ blocked from reading by the CC Safety Net (`Rule: secret.cli.opencode`). The 32-
 
 **Consequence**: a strict three-way pin is not achievable. The pack anticipates exactly this and permits
 two resolutions — *drop the host from the initial matrix* or *record the substitution explicitly in the
-cell, never silently compare across models*. §8 decision 1 asks the owner to choose.
+cell, never silently compare across models*. §8 decision 1 records the owner's choice.
+
+### 2.1a Even the two-host pin is an id-level pin, not a verified-model pin
+
+Reachability is necessary but not sufficient. The confound rule says *same model + version*, and a model
+id is not a model. Measured on 2026-11-25 by asking each host which model it was, against the id it was
+asked for:
+
+| Host | Requested id | Self-report |
+|---|---|---|
+| `agy` | `gemini-3.8-flash-high` | `Model: Gemini 3.8 Flash` — corroborates |
+| `opencode` | `opencode/deepseek-v4.1-flash-free` | `Model: DeepSeek V4.1 Flash Free (provider: opencode)` — corroborates |
+| `commandcode` | `google/gemini-3.8-flash` | `Gemini by Google.` — corroborates |
+| `commandcode` | `deepseek/deepseek-v4.1-flash` | **`I am Claude, built by Anthropic.`** — contradicts |
+| `commandcode` | `claude-sonnet-5-5` | `I don't know which underlying model I run on.` — silent |
+
+**What this does and does not establish.** Self-report is weak evidence in both directions: models
+misidentify themselves routinely, and a system prompt can make a model claim any identity. This is
+therefore **not** proof that `commandcode` substitutes one vendor's model for another, and no such claim
+is made here or should be published.
+
+What it does establish is narrower and load-bearing for the matrix: **`commandcode`'s stream echoes the
+requested id, so that id is not independent evidence of what answered.** `model_request_start` reports
+`"model":"google/gemini-3.8-flash"` because that is what was asked for, not because the response was
+verified against it. On `agy` and `opencode` the self-report corroborates the id; on `commandcode` it
+contradicts it for one id and is silent for another.
+
+**Consequence for the matrix.** A cross-host delta measured on `commandcode` could be a routing effect
+rather than a host effect, and the published cell must say so. Every `commandcode` capture therefore
+records the requested id **and** the self-report, and the matrix cell carries the caveat that the pin is
+id-level on that host. This does not invalidate the comparison — it bounds what the comparison can claim,
+which is the same discipline §7 applies to single-host results.
 
 ### 2.2 The renderer is `agy`-only (blocks every non-Antigravity capture)
 
@@ -356,22 +387,47 @@ published text must say so.
 - That `opencode`'s free-tier models are comparable to `gemini-3.8-flash`. They are not, and any
   `opencode` capture taken on a free-tier model is a model-substituted observation, never a matrix cell
   in the same column as the pinned pair.
-- That the Antigravity captures need re-taking. They were taken on `agy` 1.5.14; this plan's `agy` arm is
-  1.5.16, and the version difference is recorded rather than smoothed.
+- That the Antigravity captures need re-taking. They were taken on `agy` 1.5.14 and are reused as
+  published (§8 decision 5); the matrix records the version difference rather than smoothing it.
 - That a FAIL is a defect. A host that crosses a milestone gate is reporting a directive gap, and the
   Antigravity resume capture already found one.
 
 ---
 
-## 8. Open decisions for the owner
+## 8. Decisions recorded by the owner
 
-| # | Decision | Why it cannot be made by the agent |
-|---|---|---|
-| 1 | Model matrix: pin `gemini-3.8-flash` across `agy` + `commandcode` and record `opencode` as a model-substituted observation, or drop `opencode` from this round entirely | The confound rule is binding and the substitution is a publishing decision, not a technical one |
-| 2 | Whether to authorize the `opencode` Vercel credential for sandboxed use, which would make a true three-way pin possible | The credential is behind a CC Safety Net rule; only the owner can lift it |
-| 3 | Resource budget: 10 captures (5 probes × 2 hosts) plus 5 model-substituted `opencode` captures, each `milestone-halt` needing a ≥300 s observation window | Quota and cost are the owner's to decide; the measured token figures are in §9 |
-| 4 | Whether to publish a partial result if only some probes complete | Publishing policy, not a technical call |
-| 5 | Whether the `agy` arm re-captures on 1.5.16 or reuses the existing 1.5.14 bundles | Re-capturing costs a full arm; reusing mixes host versions in one matrix |
+All five were open when this plan was proposed. The owner answered them on 2026-11-25, and the answers
+are binding on the execution that follows.
+
+| # | Decision | Owner's answer (2026-11-25) | Consequence for execution |
+|---|---|---|---|
+| 1 | Model matrix | **Pin `gemini-3.8-flash` across `agy` + `commandcode`; record `opencode` as a model-substituted observation.** | Two hosts form the pinned matrix. `opencode` captures are published in a separate, clearly labelled column and never compared against the pinned pair. §2.1a's id-level caveat applies to the `commandcode` arm. |
+| 2 | `opencode` Vercel credential | **Keep the `secret.cli.opencode` rule; use free-tier substitution.** | No credential is lifted or copied. `opencode` runs its ten free-tier ids under `bwrap`, exactly as measured. The three-way pin stays unavailable and is not pursued. |
+| 3 | Resource budget | **Authorize 2 hosts × 5 probes.** | Ten captures. Measured observation windows total 26.3 min per host, so ~53 min of observation plus setup and run time. The five model-substituted `opencode` captures are authorized separately and are not part of this budget. |
+| 4 | Partial results | **Publish partial results honestly, as the Antigravity arm did.** | A probe that completes is published even if others do not. FAIL and PARTIAL are published as measured; `UNTESTED` is published as `Untested`, never as a pass. |
+| 5 | `agy` arm | **Reuse the existing 1.5.14 bundles; record the host-version difference.** | No `agy` re-capture. The bundles stay as published, and the matrix records `agy` 1.5.14 alongside `commandcode` 1.88.5 with the version difference stated rather than smoothed. |
+
+### 8.1 Why decision 5 is defensible
+
+Reusing a capture taken on a different host version would normally be a confound. It is acceptable here
+because the variable the probes measure has not changed: the directive under test is **byte-identical**
+across every published capture and `HEAD`.
+
+| | Commit | Directive blob | Size |
+|---|---|---|---|
+| Every published capture | `34449d7`, `b885519`, `e527e26`, `f67c8a3`, `31e4da2`, `3e77633` | `2d5ba91f7fc3` | 9,953 B (2,488 tok) |
+| `HEAD` | `50af58f` | `2d5ba91f7fc3` | 9,953 B (2,488 tok) |
+
+Re-capturing on 1.5.16 would buy a host-version delta, not a directive delta. The version difference is
+recorded in the matrix cell instead, which is the honest form of the same information at a fraction of
+the cost.
+
+### 8.2 What the owner's answers do not authorize
+
+These answers settle the plan's open questions. They do not authorize the captures: executing this plan
+is Level 2 work and still requires a Task Record at `docs/tasks/TASK-<date>-multi-host-conformance.md`
+before implementation begins (§10). Issue #600 stays OPEN until that record exists and the captures are
+published.
 
 ---
 
@@ -389,9 +445,22 @@ stream. The only measured dollar figure in the repository is the OpenCode paid s
 `$0.029882` for four probes on `commandcode/deepseek/deepseek-v4.1-flash`
 ([`opencode-omo/README.md`](./opencode-omo/README.md)).
 
-Wall-clock: `milestone-halt` dominates, because each capture needs a ≥300 s observation window after the
-first sign-off request, plus the run itself. Budget roughly 10 minutes per `milestone-halt` capture and
-2–3 minutes per single-turn probe.
+Wall-clock, measured from the six published Antigravity bundles' `observationStart`/`observationEnd`
+pairs rather than estimated:
+
+| Probe | Observation window |
+|---|---:|
+| `halt-callout` | 4.4 min |
+| `card-provenance` | 4.3 min |
+| `breaker-exhaustion` | 3.0 min |
+| `greenfield-saas-intake` | 9.6 min |
+| `milestone-halt` | 5.0 min |
+| **Total per host** | **26.3 min** |
+
+Two hosts therefore need roughly **53 minutes** of observation, plus setup and run time. `milestone-halt`
+is not the longest probe — `greenfield-saas-intake` is, because it scaffolds files. `milestone-halt` is
+still the one that needs a ≥300 s window after the first sign-off request, and its measured 5.0 min
+satisfies that.
 
 ---
 
@@ -404,4 +473,6 @@ and produces evidence that moves a published matrix. It requires a Task Record a
 for it.
 
 Approval of this plan is not approval of the captures. The owner's #600 and #543 deferrals each require
-separate authorization, and this document is the artifact those authorizations would name.
+separate authorization, and this document is the artifact those authorizations would name. The owner's
+2026-11-25 answers in §8 settle the plan's open questions; they do not substitute for the Task Record
+this section requires.
