@@ -1,0 +1,9 @@
+# Resume invocation
+
+$ bwrap --dev-bind / / --tmpfs $HOME --tmpfs /tmp --ro-bind $HOME/.opencode $HOME/.opencode --ro-bind $HOME/.config/opencode $HOME/.config/opencode --ro-bind $HOME/.nvm/versions/node/v26.13.1 $HOME/.nvm/versions/node/v26.13.1 --bind <repo>/tmp/ccdrv/work-oc/milestone-halt/fixture <repo>/tmp/ccdrv/work-oc/milestone-halt/fixture --bind <repo>/tmp/ccdrv/work-oc/milestone-halt/xdg/data <repo>/tmp/ccdrv/work-oc/milestone-halt/xdg/data --bind <repo>/tmp/ccdrv/work-oc/milestone-halt/xdg/state <repo>/tmp/ccdrv/work-oc/milestone-halt/xdg/state --bind <repo>/tmp/ccdrv/work-oc/milestone-halt/xdg/cache <repo>/tmp/ccdrv/work-oc/milestone-halt/xdg/cache --chdir <repo>/tmp/ccdrv/work-oc/milestone-halt/fixture --setenv XDG_CONFIG_HOME $HOME/.config --setenv XDG_DATA_HOME <repo>/tmp/ccdrv/work-oc/milestone-halt/xdg/data --setenv XDG_STATE_HOME <repo>/tmp/ccdrv/work-oc/milestone-halt/xdg/state --setenv XDG_CACHE_HOME <repo>/tmp/ccdrv/work-oc/milestone-halt/xdg/cache $HOME/.opencode/bin/opencode run --standalone --continue --model opencode/deepseek-v4.1-flash-free --format json Continue with the next milestone.
+
+# --continue reopens the session stored in the bound XDG data dir (<work>/xdg/data),
+# which persists across the two runs because that dir is bind-mounted, not setenv only.
+# No transcript file is written inside the fixture.
+# exit: 0
+

@@ -1,0 +1,7 @@
+ .opencode/rules.md                    |  19 ++--
+ AGENTS.md                             |  73 ++++++++++++++++
+ PROMPTKIT.md                          | 159 ++++++++++++++++++++++++++++++++++
+ docs/STATE.md                         |   2 +-
+ docs/tasks/TASK-2026-10-05-m1-init.md |   3 +-
+ src/m1/format.ts                      |   2 +-
+ 6 files changed, 247 insertions(+), 11 deletions(-)

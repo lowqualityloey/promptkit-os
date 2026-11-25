@@ -1,0 +1,47 @@
+# Command Code CLI — model self-report
+
+Recorded 2026-11-26 because the plan's §2.1a caveat needs a measurement, not an assertion: the model
+pin is **id-level**, so the requested id is not evidence that the id was served.
+
+## Invocation
+
+```
+commandcode -p 'Which model and vendor are you? Answer in one short line.' \
+  --output-format json --skip-onboarding --no-auto-update --yolo \
+  -m google/gemini-3.8-flash --effort high
+```
+
+Run inside the same `bwrap` isolation as the captures, in an empty scratch directory with no
+project directive installed.
+
+## Result
+
+The stream's `model_request_start` events echo the requested id:
+
+```
+{"type":"model_request_start","model":"google/gemini-3.8-flash"}   (x3)
+```
+
+The final assistant text, verbatim:
+
+```
+I am DeepSeek V4.1 Flash, provided by DeepSeek.
+```
+
+The turn spent three model requests checking its own environment before answering — it read the
+process environment, listed `$HOME/.commandcode/`, and then answered. Usage:
+`inputTokens 99972 / outputTokens 780 / cacheReadTokens 66100`, `durationMs 54226`,
+`stopReason end_turn`, exit 0.
+
+## What this does and does not establish
+
+- **Does**: the gateway accepted `google/gemini-3.8-flash` and echoed it, while the served model
+  described itself as a different vendor's model. Whatever the routing is, the requested id cannot
+  be read as verified model provenance.
+- **Does not**: prove which model was served. A model's self-report is not authoritative either;
+  it is the same class of claim the plan already declined to treat as proof. Two conflicting
+  id-level signals do establish that the id is not a trustworthy label, which is all §2.1a
+  requires.
+- Consequence for the matrix: the Command Code row records `google/gemini-3.8-flash` as
+  **requested**, with this caveat, and the cross-host comparison is restricted to what the id
+  comparison can honestly support.

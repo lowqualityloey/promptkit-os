@@ -1,0 +1,6 @@
+tool shell pwd && eza -la --tree --level=2 2>/dev/null | head -50 && echo "--- git ---" && git status --short --branch 2>&1 | head -20 && echo "--- files ---" && fd -H --max-depth 2 -t f 2>/dev/null | head -40 (completed)
+tool shell ls -la .promptkit 2>/dev/null | head -20; echo "---"; ls PROMPTKIT.md docs 2>/dev/null; echo "--- node/pnpm ---"; node -v 2>/dev/null; pnpm -v 2>/dev/null; bun -v 2>/dev/null (completed)
+tool shell ls -la; echo "--- .promptkit target ---"; readlink -f .promptkit; echo "--- git log ---"; git log --oneline -5 2>&1; echo "--- ls docs/STATE.md ---"; ls -l PROMPTKIT.md docs/STATE.md 2>&1 (completed)
+tool shell cat README.md; echo "=== docs tree ==="; find docs -maxdepth 2 -type f | head -40; echo "=== git show seed ==="; git show --stat HEAD~1 | head -30 (completed)
+tool shell ls .promptkit/workflows/ | head -40; echo "=== onboard ==="; sed -n '1,120p' .promptkit/workflows/onboard.md 2>/dev/null (completed)
+tool shell sed -n '1,200p' .promptkit/protocols/discovery-intake.md (completed)

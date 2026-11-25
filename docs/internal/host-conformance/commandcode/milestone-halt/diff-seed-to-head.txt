@@ -1,0 +1,4 @@
+ .opencode/rules.md |  19 ++++---
+ AGENTS.md          |  73 ++++++++++++++++++++++++
+ PROMPTKIT.md       | 159 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 243 insertions(+), 8 deletions(-)

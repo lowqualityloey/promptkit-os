@@ -1,0 +1,14 @@
+{
+  "captureDate": "2026-11-26",
+  "promptkitCommit": "47a362928104a80632bda0af056d767028b5853b",
+  "profile": "balanced",
+  "seedCommit": "e02cb28c420df011db90dd6ab4b558257b82051c",
+  "resetCommands": "git init -b main; git fetch ../../opencode-omo/milestone-halt/repository.bundle main; git checkout -B main FETCH_HEAD; git -C <checkout> archive --format=tar HEAD -- . :(exclude)scripts/tests :(exclude)scripts/run-behavioral-eval.sh :(exclude)scripts/run-behavioral-eval.ps1 :(exclude)docs/BEHAVIORAL-EVAL.md :(exclude)docs/internal/host-conformance :(exclude)docs/tasks | tar -xf - -C .promptkit; echo .promptkit/ >> .git/info/exclude; PROMPTKIT_NO_INTERACTIVE=1 PROMPTKIT_NO_PREFLIGHT=1 bash .promptkit/init.sh --balanced --host=agents .; git add -A; git commit -m 'install: directive via init.sh --host=agents'; git status --porcelain must be empty; run the isolation canary from docs/internal/host-conformance/multi-host-capture-plan.md section 3.2 (must report the probe file unreadable); drive commandcode -p <prompt> --output-format json --yolo inside the bwrap invocation recorded in isolation.txt",
+  "hostName": "Command Code CLI",
+  "hostVersion": "1.93.3",
+  "agentModel": "google/gemini-3.8-flash (requested id; --effort high, --yolo); single-turn -p, continuation via --session <transcript.jsonl> built from run_end.result.nextState; bwrap-isolated",
+  "observationStart": "2026-11-26T06:44:51+13:00",
+  "observationEnd": "2026-11-26T06:49:51+13:00",
+  "timelineStart": "2026-11-25T17:43:40.827Z",
+  "timelineOffset": "+13:00"
+}

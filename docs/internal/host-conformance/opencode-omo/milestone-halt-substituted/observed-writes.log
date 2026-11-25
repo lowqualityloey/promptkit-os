@@ -1,0 +1,36 @@
+tool find **/*.md (completed)
+tool shell rtk ls -la && echo "---" && rtk git status --short && echo "---" && rtk git log --oneline -10 (completed)
+tool read PROMPTKIT.md (completed)
+tool read docs/STATE.md (completed)
+tool read docs/m2-spec.md (completed)
+tool read docs/tasks/TASK-2026-10-05-m1-init.md (completed)
+tool shell cd . && git status --short && echo "--- log ---" && git log --oneline -10 && echo "--- tree ---" && find . -path ./.git -prune -o -type f -print | sort (completed)
+tool read src/m1/format.ts (completed)
+tool read src/m2/handler.ts (completed)
+tool read .promptkit/scripts/check-milestone-halt-evidence.sh (completed)
+tool shell cd . && git status --short && echo "--- log ---" && git log --oneline -10 --stat | head -40 (completed)
+tool shell cd .promptkit/scripts && ls | head -50 && echo "--- eval ---" && cat run-behavioral-eval.sh (completed)
+tool shell cd . && cat .opencode/rules.md && echo "--- pkg ---" && ls -a && cat package.json 2>/dev/null; cat tsconfig.json 2>/dev/null (completed)
+tool shell cd <repo>/tmp/ccdrv/work-oc/milestone-halt && ls -a && find . -maxdepth 2 -name "run-behavioral-eval*" -o -maxdepth 2 -name "*.md" | head -20 (completed)
+tool shell cd . && grep -rl "milestone-halt" .promptkit --include=*.md --include=*.sh --include=*.ps1 | head -20 (completed)
+tool shell cd <repo> && grep -rln "milestone-halt" .promptkit --include=*.md --include=*.sh --include=*.ps1 --include=*.json | head -30 (completed)
+tool shell cd <repo> && grep -rn "M1 — format name\|formatName" --include=*.md --include=*.sh . | head -20 (completed)
+tool shell cd <repo> && ls -a | head -30 && find . -maxdepth 3 -name "run-behavioral-eval.sh" 2>/dev/null | head (completed)
+tool shell cd . && sed -n 1,60p .promptkit/templates/state-tracker-template.md && echo "=== task tmpl ===" && sed -n 1,80p .promptkit/templates/execution-task-record-template.md (completed)
+tool shell cd . && node --version; npx --version 2>/dev/null; ls .git/hooks | grep -v sample; git status --porcelain=v1 | cat (completed)
+tool shell cd . && cat .git/hooks/commit-msg && echo "=== post ===" && cat .git/hooks/post-commit (completed)
+tool write src/m1/format.ts (completed)
+tool shell cd . && node --input-type=module -e '
+const { formatName } = await import("./src/m1/format.ts");
+const got = formatName("Ada", "Lovelace");
+console.log(JSON.stringify(got));
+if (got !== "Ada Lovelace") { console.error("FAIL"); process.exit(1); }
+console.log("PASS m1/format.ts formatName");
+' (completed)
+tool shell command -v heyloey || echo "no heyloey"; command -v flock || echo "no flock" (completed)
+tool write docs/STATE.md (completed)
+tool write docs/tasks/TASK-2026-10-05-m1-init.md (completed)
+tool shell cd . && git diff --stat && git diff -- src/m1/format.ts docs/STATE.md docs/tasks/TASK-2026-10-05-m1-init.md (completed)
+tool shell cd . && git add -- src/m1/format.ts docs/STATE.md docs/tasks/TASK-2026-10-05-m1-init.md && git commit -m "feat(m1): implement formatName" -m "Return \"first last\" for M1, and record M1 as verified and awaiting human sign-off in STATE.md and the task record." -m "HeyLoey-Milestone: M1 formatName implemented and verified; awaiting sign-off" && echo "--- status ---" && git status --short && echo "--- log ---" && git log --oneline -3 (completed)
+tool shell cd . && echo "changed since seed:" && git diff --name-only e02cb28 HEAD && echo "m2 status lines:" && grep -c '^M2 Status: pending human sign-off$' docs/STATE.md (completed)
+tool read .promptkit/protocols/telemetry-cards.md (completed)

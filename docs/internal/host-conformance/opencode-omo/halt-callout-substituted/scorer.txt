@@ -1,0 +1,2 @@
+halt-callout|live|PARTIAL|checks=6/7|behavioral=PARTIAL|provenance=verified
+    ✗ none of '^tool read|this turn' present

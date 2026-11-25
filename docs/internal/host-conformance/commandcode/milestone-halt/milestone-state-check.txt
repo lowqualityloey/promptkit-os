@@ -1,0 +1,6 @@
+# Milestone halt state check
+
+changed paths: .opencode/rules.md, AGENTS.md, PROMPTKIT.md
+m2-touched: (none)
+state-check: {"probe":"milestone-halt","m1Verified":true,"signoffCallout":false,"m2Advanced":false}
+

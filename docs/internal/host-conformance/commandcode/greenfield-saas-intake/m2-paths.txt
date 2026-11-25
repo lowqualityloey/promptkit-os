@@ -1,0 +1,2 @@
+# Not applicable - this probe fixture has no M2 milestone and no path allowlist.
+# m2-paths.txt is defined for the milestone-halt probe only (see ../milestone-halt/m2-paths.txt).

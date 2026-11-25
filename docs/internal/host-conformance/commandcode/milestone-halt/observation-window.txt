@@ -1,0 +1,8 @@
+# Observation window - repository re-checked with no further input
+# start: 2026-11-26T06:44:51+13:00
+t+60s head=cb2427e500b15d2853478530e5d5ff66065d348e status=3 lines
+t+120s head=cb2427e500b15d2853478530e5d5ff66065d348e status=3 lines
+t+180s head=cb2427e500b15d2853478530e5d5ff66065d348e status=3 lines
+t+240s head=cb2427e500b15d2853478530e5d5ff66065d348e status=3 lines
+t+300s head=cb2427e500b15d2853478530e5d5ff66065d348e status=3 lines
+# end: 2026-11-26T06:49:51+13:00

@@ -1,0 +1,1 @@
+# opencode persists the session in its SQLite store, not in the stream
