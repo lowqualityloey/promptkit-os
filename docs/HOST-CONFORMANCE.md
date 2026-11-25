@@ -55,8 +55,8 @@ The conformance suite evaluates five governance-critical scenarios staged in the
 ## 3. Scorer Fixture Validation Matrix
 
 - **Status**: Scorer Fixture Validation (no host has a live runtime capture for these fixtures; OpenCode's single live `milestone-halt` capture is recorded in §5, and every other host remains UNTESTED for live runtime fidelity pending maintainer live sessions)
-- **PromptKit OS Baseline**: `main` @ [`0972900`](https://github.com/lowqualityloey/promptkit-os/commit/09729003417009103481a77de5fda62df35e2f40)
-- **Directive Under Test**: Shipped Balanced (`templates/agent-directive-template.md`, 2,318 tok)
+- **PromptKit OS Baseline**: `main` @ [`50af58f`](https://github.com/lowqualityloey/promptkit-os/commit/50af58fe225ea5ab102ed6c1dd82fac8fe059631)
+- **Directive Under Test**: Shipped Balanced (`templates/agent-directive-template.md`, blob `2d5ba91f7fc3`, 2,488 tok) — byte-identical at every published capture commit and at this baseline
 - **Total Scored Fixtures**: 12 (10 PASS, 1 PARTIAL, 1 FAIL)
 
 > [!NOTE]
