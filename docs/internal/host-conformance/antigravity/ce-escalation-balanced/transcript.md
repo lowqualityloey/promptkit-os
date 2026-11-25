@@ -208,10 +208,10 @@ tool lines record the tool name, its target, and its completion status.
   read .promptkit/scripts/validate-execution-control.sh (completed)
 
 - `2026-11-24T10:20:59.819000+13:00` **tool**
-  write_file docs/specs/2026-11-24-auth-session-lifetime.md (completed)
+  write docs/specs/2026-11-24-auth-session-lifetime.md (completed)
 
 - `2026-11-24T10:21:09.063000+13:00` **tool**
-  write_file docs/tasks/TASK-2026-11-24-jwt-lifetime.md (completed)
+  write docs/tasks/TASK-2026-11-24-jwt-lifetime.md (completed)
 
 - `2026-11-24T10:21:09.616000+13:00` **tool**
   write src/auth/session.ts (completed)

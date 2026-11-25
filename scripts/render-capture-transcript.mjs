@@ -1,10 +1,15 @@
 #!/usr/bin/env node
-// Render a capture transcript and its write log from an Antigravity CLI
-// (agy) --output-format stream-json event stream.
+// Render a capture transcript and its write log from a host's JSON event stream.
 //
 // Usage:
 //   node render-capture-transcript.mjs <session.jsonl> <transcript.md> <observed-writes.log> \
-//       --probe <name> --prompt <text> --model <text> [--host <text>] [--invocation <text>]
+//       --probe <name> --prompt <text> --model <text> [--host <text>] [--invocation <text>] \
+//       [--stream-format agy|opencode|commandcode]
+//
+// Three stream formats are understood. `agy` (the default) is Antigravity CLI's
+// --output-format stream-json; `opencode` is `opencode run --format json`;
+// `commandcode` is `commandcode -p --output-format json`. Each parser feeds the
+// same renderer, so the transcript format the scorer reads is written in one place.
 //
 // This module is the single implementation. scripts/render-capture-transcript.sh
 // and scripts/render-capture-transcript.ps1 are thin forwarders, so the two
@@ -28,14 +33,22 @@
 //      verb-driven, so emitting agy's own tool names (read_file, run_command)
 //      would make every tool line unclassifiable.
 //
-// agy's event stream carries no per-event timestamp. Timestamps are therefore
-// derived from the capture start plus the cumulative step durations agy does
-// report, and the transcript says so rather than implying an observed clock.
+// The three formats differ in what they record about time, and the transcript says
+// which it is rather than implying an observed clock it does not have:
+//
+//   agy          no per-event clock, but per-step durations. The timeline is
+//                reconstructed from the capture start plus cumulative durations.
+//   opencode     a real per-event clock (`timestamp`, epoch ms) on every event.
+//                Each entry carries the instant the host emitted it.
+//   commandcode  neither a per-event clock nor per-step durations - only a total
+//                run duration, which cannot be distributed across entries without
+//                inventing it. Every entry carries the capture start instant and
+//                the sequence, not the timing, is the record.
 
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 
-const USAGE = 'Usage: render-capture-transcript <session.jsonl> <transcript.md> <observed-writes.log> --probe <name> --prompt <text> --model <text> [--host <text>] [--invocation <text>] [--stream <name>] [--start <iso>] [--offset <±HH:MM>]';
+const USAGE = 'Usage: render-capture-transcript <session.jsonl> <transcript.md> <observed-writes.log> --probe <name> --prompt <text> --model <text> [--host <text>] [--invocation <text>] [--stream <name>] [--stream-format agy|opencode|commandcode] [--start <iso>] [--offset <±HH:MM>]';
 
 function usage() {
   process.stderr.write(USAGE + '\n');
@@ -58,7 +71,10 @@ let probe = '';
 let prompt = '';
 let model = '';
 let host = 'Antigravity CLI';
-let invocation = 'agy --input-format stream-json --output-format stream-json';
+// Empty means "use the format's own invocation"; resolved after the format is
+// known, because a transcript that names agy's command for an opencode stream
+// would be wrong about its own provenance.
+let invocation = '';
 // The file name the preamble names as the rendered source. A capture that
 // rewrites absolute tool targets to repository-relative ones renders from a
 // derived stream, and the preamble must say which file the hash describes
@@ -72,6 +88,10 @@ let startAnchor = '';
 // The UTC offset the timestamp column is rendered in. It is a property of the
 // bundle, never of the machine doing the rendering - see the iso() comment.
 let offsetFlag = '';
+// Which host's event shape the stream uses. The default is the original and only
+// format the renderer understood, so every existing invocation keeps its exact
+// behaviour and every committed bundle keeps reproducing byte-for-byte.
+let streamFormat = 'agy';
 
 for (let i = 3; i < argv.length; i += 1) {
   const flag = argv[i];
@@ -101,11 +121,24 @@ for (let i = 3; i < argv.length; i += 1) {
     case '--offset':
       if (value === undefined) usage();
       offsetFlag = value; i += 1; break;
+    case '--stream-format':
+      if (value === undefined) usage();
+      streamFormat = value; i += 1; break;
     default:
       fail('unknown argument: ' + flag);
   }
 }
 
+const FORMATS = ['agy', 'opencode', 'commandcode'];
+// The invocation each format corresponds to, recorded in the transcript so a reader
+// can tell which host command produced the stream without opening provenance.json.
+const FORMAT_INVOCATIONS = {
+  agy: 'agy --input-format stream-json --output-format stream-json',
+  opencode: 'opencode run --format json',
+  commandcode: 'commandcode -p --output-format json',
+};
+if (!invocation) invocation = FORMAT_INVOCATIONS[streamFormat];
+if (!FORMATS.includes(streamFormat)) fail('--stream-format is not one of ' + FORMATS.join(', ') + ': ' + streamFormat);
 if (!fs.existsSync(jsonl) || !fs.statSync(jsonl).isFile()) fail('no such event stream: ' + jsonl);
 if (!probe) fail('--probe is required');
 if (!prompt) fail('--prompt is required');
@@ -119,11 +152,18 @@ if (!model) fail('--model is required');
 const raw = fs.readFileSync(jsonl, 'utf8').replace(/\r\n/g, '\n');
 const sha = crypto.createHash('sha256').update(raw).digest('hex').slice(0, 16);
 
-// agy tool name -> the scorer's verb vocabulary. The scorer decides inspection
+// Host tool name -> the scorer's verb vocabulary. The scorer decides inspection
 // versus write from the verb, so this mapping is what makes a tool line
 // classifiable at all. An unmapped tool keeps its own name, which the scorer
-// then treats as neither an inspection nor a write — the safe direction.
+// then treats as neither an inspection nor a write — the safe direction — and the
+// renderer names it on stderr so a capture cannot silently degrade.
+//
+// The map is the union of the three hosts' vocabularies. Names arrive from more
+// than one host, so it is a lookup rather than a per-format switch: an identity
+// entry (`read: 'read'`) is genuinely a no-op for a host that already speaks the
+// scorer's vocabulary, which is what opencode does.
 const VERB = {
+  // agy — Antigravity CLI
   read_file: 'read',
   view_file: 'read',
   list_dir: 'ls',
@@ -140,15 +180,42 @@ const VERB = {
   // and the scorer's write-verb table does not know it either, so a real write
   // would be invisible to repo-unwritten and silently degrade to a non-detection.
   edit_file: 'write',
+  // opencode already emits the scorer's vocabulary (read, write, shell), so these
+  // are identity entries; the rest are observed opencode names and the plausible
+  // neighbours, mapped rather than guessed verbatim for the same reason as above.
+  read: 'read',
+  write: 'write',
+  shell: 'shell',
+  bash: 'shell',
+  grep: 'grep',
+  glob: 'find',
+  ls: 'ls',
+  edit: 'write',
+  multiedit: 'write',
+  patch: 'write',
+  // commandcode. Its read tool is already agy's name (read_file), but its write and
+  // shell tools are spelled differently, so they need their own entries: mapping only
+  // the name agy happens to share would leave a real write unclassifiable.
+  write_file: 'write',
+  read_directory: 'ls',
+  list_directory: 'ls',
+  shell_command: 'shell',
 };
 
 // The argument that names what the tool acted on, in the order the scorer's
-// path attribution expects to find it.
+// path attribution expects to find it. agy spells its parameters in PascalCase;
+// opencode and commandcode use lower camel/snake case, so both spellings are
+// checked before the first-string fallback. The fallback is what makes an
+// unrecognised parameter shape still name something rather than nothing.
 const TARGET_KEYS = ['CommandLine', 'Path', 'AbsolutePath', 'TargetFile', 'Query', 'Pattern', 'DirectoryPath', 'Url'];
+const TARGET_KEYS_LOWER = ['command', 'path', 'file_path', 'filePath', 'pattern', 'query', 'directory', 'url', 'file'];
 
 function targetOf(params) {
   if (!params || typeof params !== 'object') return '';
   for (const k of TARGET_KEYS) {
+    if (typeof params[k] === 'string' && params[k]) return params[k];
+  }
+  for (const k of TARGET_KEYS_LOWER) {
     if (typeof params[k] === 'string' && params[k]) return params[k];
   }
   const first = Object.values(params).find((v) => typeof v === 'string' && v);
@@ -163,38 +230,145 @@ for (const line of raw.split('\n')) {
   events.push(ev);
 }
 
+// Each parser returns the same shape so the renderer below is written once:
+//   { conversation, totalSeconds, clock, steps }
+// where `clock` is 'reconstructed' (a start plus per-step durations), 'observed'
+// (a real per-event timestamp) or 'anchored-only' (neither), and each step is
+//   { index, type: 'agent_response'|'tool', text, tool, target, status, seconds, atMs }
+// `atMs` is an absolute epoch millisecond when the stream reports one, else null
+// and the renderer places the step from the running cursor.
+
+// --- agy -----------------------------------------------------------------
 // One logical step per step_index. Text deltas accumulate across the ACTIVE and
 // DONE updates of the same step; a tool is emitted once, on DONE, so its status
 // is the final one.
-const steps = new Map();
-let conversation = '';
-let totalSeconds = 0;
-for (const ev of events) {
-  if (ev.event === 'init' && ev.conversation_id) conversation = ev.conversation_id;
-  if (ev.event === 'result' && ev.result) {
-    if (ev.result.conversation_id) conversation = ev.result.conversation_id;
-    if (Number.isFinite(ev.result.duration_seconds)) totalSeconds = ev.result.duration_seconds;
-    continue;
+function buildAgySteps(lines) {
+  const steps = new Map();
+  let conversation = '';
+  let totalSeconds = 0;
+  for (const ev of lines) {
+    if (ev.event === 'init' && ev.conversation_id) conversation = ev.conversation_id;
+    if (ev.event === 'result' && ev.result) {
+      if (ev.result.conversation_id) conversation = ev.result.conversation_id;
+      if (Number.isFinite(ev.result.duration_seconds)) totalSeconds = ev.result.duration_seconds;
+      continue;
+    }
+    if (ev.event !== 'step_update' || !ev.step_update) continue;
+    const su = ev.step_update;
+    const idx = su.step_index;
+    if (!Number.isInteger(idx)) continue;
+    let step = steps.get(idx);
+    if (!step) {
+      step = { index: idx, type: su.step_type, text: '', tool: '', target: '', status: '', seconds: 0, done: false, atMs: null };
+      steps.set(idx, step);
+    }
+    if (su.step_type) step.type = su.step_type;
+    if (typeof su.text_delta === 'string') step.text += su.text_delta;
+    if (su.tool_name) step.tool = su.tool_name;
+    if (su.tool_info && su.tool_info.parameters) step.target = targetOf(su.tool_info.parameters);
+    if (su.state === 'DONE') {
+      step.done = true;
+      step.status = 'completed';
+      if (Number.isFinite(su.duration_seconds)) step.seconds = su.duration_seconds;
+    }
   }
-  if (ev.event !== 'step_update' || !ev.step_update) continue;
-  const su = ev.step_update;
-  const idx = su.step_index;
-  if (!Number.isInteger(idx)) continue;
-  let step = steps.get(idx);
-  if (!step) {
-    step = { index: idx, type: su.step_type, text: '', tool: '', target: '', status: '', seconds: 0, done: false };
-    steps.set(idx, step);
-  }
-  if (su.step_type) step.type = su.step_type;
-  if (typeof su.text_delta === 'string') step.text += su.text_delta;
-  if (su.tool_name) step.tool = su.tool_name;
-  if (su.tool_info && su.tool_info.parameters) step.target = targetOf(su.tool_info.parameters);
-  if (su.state === 'DONE') {
-    step.done = true;
-    step.status = 'completed';
-    if (Number.isFinite(su.duration_seconds)) step.seconds = su.duration_seconds;
-  }
+  return {
+    conversation,
+    totalSeconds,
+    clock: 'reconstructed',
+    steps: [...steps.values()].sort((a, b) => a.index - b.index),
+  };
 }
+
+// --- opencode ------------------------------------------------------------
+// `opencode run --format json` emits NDJSON with a per-event `timestamp` (epoch
+// ms) and a `part` payload. Text parts are complete blocks, not deltas, so each
+// is emitted as-is; a tool part is one entry carrying its own status, so no
+// DONE-update accumulation is needed. opencode already names tools with the
+// scorer's vocabulary, so the VERB map is an identity for this host.
+function buildOpencodeSteps(lines) {
+  const steps = [];
+  let conversation = '';
+  for (const ev of lines) {
+    if (!conversation && typeof ev.sessionID === 'string' && ev.sessionID) conversation = ev.sessionID;
+    const atMs = Number.isFinite(ev.timestamp) ? ev.timestamp : null;
+    const part = ev.part;
+    if (!part || typeof part !== 'object') continue;
+    if (ev.type === 'text' && typeof part.text === 'string' && part.text.trim() !== '') {
+      steps.push({ index: steps.length, type: 'agent_response', text: part.text, tool: '', target: '', status: '', seconds: 0, atMs });
+    } else if (ev.type === 'tool_use' && typeof part.tool === 'string' && part.tool) {
+      const state = part.state && typeof part.state === 'object' ? part.state : {};
+      steps.push({
+        index: steps.length,
+        type: 'tool',
+        text: '',
+        tool: part.tool,
+        target: targetOf(state.input),
+        status: typeof state.status === 'string' ? state.status : '',
+        seconds: 0,
+        atMs,
+      });
+    }
+  }
+  return { conversation, totalSeconds: 0, clock: 'observed', steps };
+}
+
+// --- commandcode ---------------------------------------------------------
+// `commandcode -p --output-format json` wraps each event as { type: 'event',
+// event: {...} } and closes with a plain { type: 'result', durationMs }. There is
+// no per-event clock and no per-step duration, so `clock` is 'anchored-only'.
+//
+// Tools arrive as tool_queued (carrying the input) then tool_completed (carrying
+// the result). The completion is what makes the entry, so the queued input is
+// held in a map keyed by toolCallId. Text is taken from message_end's content
+// array rather than accumulated from text_delta: message_end holds the finished
+// message, which is what the transcript should quote.
+function buildCommandcodeSteps(lines) {
+  const steps = [];
+  const inputs = new Map();
+  let conversation = '';
+  let totalSeconds = 0;
+  for (const line of lines) {
+    if (line.type === 'result') {
+      if (Number.isFinite(line.durationMs)) totalSeconds = line.durationMs / 1000;
+      continue;
+    }
+    if (line.type !== 'event' || !line.event || typeof line.event !== 'object') continue;
+    const ev = line.event;
+    if (ev.type === 'run_start' && typeof ev.sessionId === 'string') conversation = ev.sessionId;
+    if (ev.type === 'tool_queued' && ev.toolCallId) {
+      inputs.set(ev.toolCallId, ev.input && typeof ev.input === 'object' ? ev.input : {});
+      continue;
+    }
+    if (ev.type === 'tool_completed' && typeof ev.toolName === 'string' && ev.toolName) {
+      steps.push({
+        index: steps.length,
+        type: 'tool',
+        text: '',
+        tool: ev.toolName,
+        target: targetOf(inputs.get(ev.toolCallId)),
+        status: 'completed',
+        seconds: 0,
+        atMs: null,
+      });
+      continue;
+    }
+    if (ev.type === 'message_end' && Array.isArray(ev.content)) {
+      const text = ev.content
+        .filter((b) => b && b.type === 'text' && typeof b.text === 'string')
+        .map((b) => b.text)
+        .join('\n');
+      if (text.trim() !== '') {
+        steps.push({ index: steps.length, type: 'agent_response', text, tool: '', target: '', status: '', seconds: 0, atMs: null });
+      }
+    }
+  }
+  return { conversation, totalSeconds, clock: 'anchored-only', steps };
+}
+
+const PARSERS = { agy: buildAgySteps, opencode: buildOpencodeSteps, commandcode: buildCommandcodeSteps };
+const parsed = PARSERS[streamFormat](events);
+const { conversation, totalSeconds, clock } = parsed;
 
 // agy reports no per-event clock, so the timeline is reconstructed: the capture
 // began at a known instant, and each step is placed by the durations agy does
@@ -210,6 +384,10 @@ for (const ev of events) {
 // render one millisecond differently depending on which filesystem wrote the
 // file. Rounding once, here, is what lets a recorded anchor reproduce a
 // committed transcript byte for byte on any machine.
+// A format that reports its own per-event clock ('observed') does not need this
+// anchor for placement: each step carries the instant the host emitted it. It is
+// still computed, because the offset label is derived from it and a bundle that
+// records --start should render in the offset it names.
 let startMs;
 if (startAnchor) {
   startMs = Date.parse(startAnchor);
@@ -264,7 +442,8 @@ function iso(ms) {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}.${pad(d.getUTCMilliseconds(), 3)}000${offsetLabel}`;
 }
 
-const ordered = [...steps.values()].sort((a, b) => a.index - b.index);
+const ordered = parsed.steps;
+const unmapped = new Set();
 const out = [];
 const log = [];
 
@@ -277,23 +456,42 @@ out.push('');
 out.push(`- Session: \`${conversation || 'unknown'}\``);
 out.push(`- Prompt submitted: \`${prompt}\``);
 out.push(`- Model: \`${model}\` via \`${invocation}\``);
+if (streamFormat !== 'agy') {
+  out.push('- Stream format: `' + streamFormat + '` (`' + FORMAT_INVOCATIONS[streamFormat] + '`)');
+}
 out.push('');
 out.push('> [!NOTE]');
-out.push('> The event stream carries no per-event timestamp. Each entry below is placed by the');
-out.push('> capture start plus the cumulative step durations the stream does report, so the');
-out.push('> times are a reconstruction of the run, not an observed clock.');
+if (clock === 'observed') {
+  out.push('> Timestamps are observed. The event stream carries a per-event clock, so');
+  out.push('> each entry below shows the instant the host emitted it.');
+} else if (clock === 'anchored-only') {
+  out.push('> The event stream carries neither a per-event clock nor per-step durations. It');
+  out.push('> reports only a total run duration, which cannot be distributed across entries');
+  out.push('> without inventing it, so every entry below carries the capture start instant and');
+  out.push('> the sequence, not the timing, is the record.');
+  out.push('>');
+  out.push('> Recorded total run duration: ' + totalSeconds.toFixed(1) + ' s.');
+} else {
+  out.push('> The event stream carries no per-event timestamp. Each entry below is placed by the');
+  out.push('> capture start plus the cumulative step durations the stream does report, so the');
+  out.push('> times are a reconstruction of the run, not an observed clock.');
+}
 out.push('');
 out.push('## Events');
 out.push('');
 
 for (const step of ordered) {
-  const at = iso(cursor);
+  const at = iso(step.atMs === null ? cursor : step.atMs);
   if (step.type === 'agent_response' && step.text.trim()) {
     out.push(`- \`${at}\` **text**`);
     for (const l of step.text.replace(/\n$/, '').split('\n')) out.push(`  ${l}`);
     out.push('');
   } else if (step.type === 'tool' && step.tool) {
     const verb = VERB[step.tool] ?? step.tool;
+    // A tool the map does not know renders under its own name, which the scorer
+    // treats as neither an inspection nor a write. That is the safe direction, but
+    // it is also a silent gap, so it is named on stderr rather than left invisible.
+    if (!Object.prototype.hasOwnProperty.call(VERB, step.tool)) unmapped.add(step.tool);
     const line = `${verb} ${step.target} (${step.status || 'unknown'})`.trimEnd();
     out.push(`- \`${at}\` **tool**`);
     out.push(`  ${line}`);
@@ -305,4 +503,8 @@ for (const step of ordered) {
 
 fs.writeFileSync(transcript, out.join('\n') + '\n');
 fs.writeFileSync(writes, log.join('\n') + (log.length ? '\n' : ''));
+if (unmapped.size) {
+  process.stderr.write('render-capture-transcript: unmapped tool name(s), rendered verbatim: ' + [...unmapped].sort().join(', ') + '\n');
+}
+
 process.stdout.write(`rendered ${transcript} (${ordered.length} steps, ${log.length} tool calls, session ${conversation || 'unknown'})\n`);

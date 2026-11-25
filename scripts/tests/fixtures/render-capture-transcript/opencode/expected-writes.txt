@@ -1,0 +1,3 @@
+tool read a.txt (completed)
+tool write c.txt (completed)
+tool shell ls -1 (completed)

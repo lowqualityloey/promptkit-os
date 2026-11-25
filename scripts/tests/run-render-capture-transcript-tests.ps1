@@ -223,6 +223,88 @@ foreach ($probe in $probes) {
     Report-Scenario "round-trip $probe"
 }
 
+
+Write-Output '== Newer stream formats =='
+# The renderer understands three host event shapes. agy is covered by the round-trip
+# cases above; the other two are pinned against committed golden transcripts rendered
+# from a real, sanitized stream.
+$fx = Join-Path $repoRoot 'scripts/tests/fixtures/render-capture-transcript'
+$fxPrompt = 'Read a.txt, then create c.txt containing the word gamma, then run the shell command ls -1, then say DONE.'
+
+# Compare content, not bytes. The renderer always writes LF, while a Windows
+# checkout materialises the committed golden as CRLF, so a raw byte comparison
+# passes on the machine that captured it and fails on every Windows runner - the
+# same defect class the renderer's own canonical hashing was fixed for. Line
+# endings are normalised before comparing; everything else must match exactly.
+function Test-FileEquals {
+    param([string]$Left, [string]$Right)
+    if (-not (Test-Path -LiteralPath $Left -PathType Leaf)) { return $false }
+    if (-not (Test-Path -LiteralPath $Right -PathType Leaf)) { return $false }
+    $a = [IO.File]::ReadAllText($Left) -replace "`r`n", "`n"
+    $b = [IO.File]::ReadAllText($Right) -replace "`r`n", "`n"
+    return ($a -ceq $b)
+}
+
+# opencode carries a per-event clock, so its golden is compared with no timestamp
+# stripping: the times are observed in the stream, not derived from an anchor.
+Begin-Scenario
+$ocFixture = Join-Path $fx 'opencode/session.jsonl'
+$ocGolden = Join-Path $fx 'opencode/transcript.md'
+$ocGoldenLog = Join-Path $fx 'opencode/expected-writes.txt'
+$ocMd = Join-Path $tmp 'oc.md'
+$ocLog = Join-Path $tmp 'oc.log'
+Assert-Scenario (Test-Path -LiteralPath $ocFixture -PathType Leaf) 'missing fixture: scripts/tests/fixtures/render-capture-transcript/opencode/session.jsonl'
+& bash $rendererSh $ocFixture $ocMd $ocLog --probe halt-callout --prompt $fxPrompt --model 'opencode/deepseek-v4.1-flash-free' --host 'OpenCode' --stream-format opencode --start '2026-11-25T00:00:00+09:00' --offset '+09:00' 2>&1 | Out-Null
+Assert-Status $LASTEXITCODE 0
+Assert-Scenario (Test-FileEquals $ocMd $ocGolden) 'opencode transcript differs from its golden'
+Assert-Scenario (Test-FileEquals $ocLog $ocGoldenLog) 'opencode write log differs from its golden'
+Report-Scenario 'opencode stream renders to its golden transcript'
+
+# commandcode carries neither a per-event clock nor per-step durations, so its
+# timeline is anchored on --start and the sequence, not the timing, is the record.
+Begin-Scenario
+$ccFixture = Join-Path $fx 'commandcode/session.jsonl'
+$ccGolden = Join-Path $fx 'commandcode/transcript.md'
+$ccGoldenLog = Join-Path $fx 'commandcode/expected-writes.txt'
+$ccMd = Join-Path $tmp 'cc.md'
+$ccLog = Join-Path $tmp 'cc.log'
+Assert-Scenario (Test-Path -LiteralPath $ccFixture -PathType Leaf) 'missing fixture: scripts/tests/fixtures/render-capture-transcript/commandcode/session.jsonl'
+& bash $rendererSh $ccFixture $ccMd $ccLog --probe halt-callout --prompt $fxPrompt --model 'deepseek/deepseek-v4.1-flash' --host 'Command Code' --stream-format commandcode --start '2026-11-25T00:00:00+09:00' --offset '+09:00' 2>&1 | Out-Null
+Assert-Status $LASTEXITCODE 0
+Assert-Scenario (Test-FileEquals $ccMd $ccGolden) 'commandcode transcript differs from its golden'
+Assert-Scenario (Test-FileEquals $ccLog $ccGoldenLog) 'commandcode write log differs from its golden'
+Report-Scenario 'commandcode stream renders to its golden transcript'
+
+# A format the renderer does not know must fail loudly rather than fall back to
+# rendering the stream as if it were agy.
+Begin-Scenario
+$badOut = (& bash $rendererSh $ocFixture (Join-Path $tmp 'bad.md') (Join-Path $tmp 'bad.log') --probe p --prompt x --model m --stream-format nope 2>&1 | Out-String)
+Assert-Status $LASTEXITCODE 2
+Assert-Scenario ($badOut -match 'not one of') 'unknown-format output did not name the problem'
+Report-Scenario 'an unknown --stream-format is rejected'
+
+# Each format records time differently and the transcript must say which it is.
+Begin-Scenario
+$agyNote = Get-Content -Raw -LiteralPath (Join-Path $bundles 'halt-callout/transcript.md')
+Assert-Scenario ($agyNote -match 'reconstruction of the run') 'the agy bundle does not carry the reconstructed-clock note'
+Assert-Scenario ((Get-Content -Raw -LiteralPath $ocGolden) -match 'Timestamps are observed') 'the opencode golden does not carry the observed-clock note'
+Assert-Scenario ((Get-Content -Raw -LiteralPath $ccGolden) -match 'neither a per-event clock') 'the commandcode golden does not carry the anchored-only note'
+Report-Scenario 'each format states which kind of clock it has'
+
+# A tool name the verb map does not know renders verbatim, which the scorer reads as
+# neither an inspection nor a write: the safe direction, but a silent gap unless it
+# is named on stderr where a capture operator will see it.
+Begin-Scenario
+$unknown = Join-Path $tmp 'unknown.jsonl'
+$unknownLine = '{"type":"tool_use","timestamp":0,"sessionID":"s","part":{"tool":"mystery_tool","state":{"status":"completed","input":{"path":"x"}}}}'
+[IO.File]::WriteAllText($unknown, $unknownLine + "`n")
+$uMd = Join-Path $tmp 'u.md'
+$uLog = Join-Path $tmp 'u.log'
+$uOut = (& bash $rendererSh $unknown $uMd $uLog --probe p --prompt x --model m --stream-format opencode 2>&1 | Out-String)
+Assert-Status $LASTEXITCODE 0
+Assert-Scenario ($uOut -match 'unmapped tool name') 'an unmapped tool name was not reported on stderr'
+Assert-Scenario ((Get-Content -Raw -LiteralPath $uMd) -match 'mystery_tool x \(completed\)') 'an unmapped tool was not rendered verbatim'
+Report-Scenario 'an unmapped tool name is rendered verbatim and reported'
 Write-Output '== Anchored bundles reproduce their timestamps exactly =='
 foreach ($probe in $anchoredProbes) {
     $bundle = Join-Path $bundles $probe

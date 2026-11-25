@@ -188,6 +188,67 @@ for probe in $PROBES; do
     report "round-trip $probe"
 done
 
+
+printf '== Newer stream formats ==\n'
+# The renderer understands three host event shapes. agy is covered by the round-trip
+# cases above; the other two are pinned against committed golden transcripts, one
+# per format, rendered from a real (sanitized) stream.
+FX="$REPO_ROOT/scripts/tests/fixtures/render-capture-transcript"
+FX_PROMPT='Read a.txt, then create c.txt containing the word gamma, then run the shell command ls -1, then say DONE.'
+
+# opencode carries a per-event clock, so its golden is compared with no timestamp
+# stripping: the times are observed in the stream, not derived from an anchor.
+begin
+scenario_check "$([[ -f "$FX/opencode/session.jsonl" ]] && printf 1 || printf 0)" "missing fixture: scripts/tests/fixtures/render-capture-transcript/opencode/session.jsonl"
+bash "$RENDERER_SH" "$FX/opencode/session.jsonl" "$TMP/oc.md" "$TMP/oc.log" \
+    --probe halt-callout --prompt "$FX_PROMPT" \
+    --model opencode/deepseek-v4.1-flash-free --host 'OpenCode' \
+    --stream-format opencode --start '2026-11-25T00:00:00+09:00' --offset '+09:00' >/dev/null 2>&1
+check_status "$?" 0
+scenario_check "$(diff -q "$TMP/oc.md" "$FX/opencode/transcript.md" >/dev/null 2>&1 && printf 1 || printf 0)" "opencode transcript differs from its golden"
+scenario_check "$(diff -q "$TMP/oc.log" "$FX/opencode/expected-writes.txt" >/dev/null 2>&1 && printf 1 || printf 0)" "opencode write log differs from its golden"
+report 'opencode stream renders to its golden transcript'
+
+# commandcode carries neither a per-event clock nor per-step durations, so its
+# timeline is anchored on --start and the transcript says the sequence, not the
+# timing, is the record.
+begin
+scenario_check "$([[ -f "$FX/commandcode/session.jsonl" ]] && printf 1 || printf 0)" "missing fixture: scripts/tests/fixtures/render-capture-transcript/commandcode/session.jsonl"
+bash "$RENDERER_SH" "$FX/commandcode/session.jsonl" "$TMP/cc.md" "$TMP/cc.log" \
+    --probe halt-callout --prompt "$FX_PROMPT" \
+    --model deepseek/deepseek-v4.1-flash --host 'Command Code' \
+    --stream-format commandcode --start '2026-11-25T00:00:00+09:00' --offset '+09:00' >/dev/null 2>&1
+check_status "$?" 0
+scenario_check "$(diff -q "$TMP/cc.md" "$FX/commandcode/transcript.md" >/dev/null 2>&1 && printf 1 || printf 0)" "commandcode transcript differs from its golden"
+scenario_check "$(diff -q "$TMP/cc.log" "$FX/commandcode/expected-writes.txt" >/dev/null 2>&1 && printf 1 || printf 0)" "commandcode write log differs from its golden"
+report 'commandcode stream renders to its golden transcript'
+
+# A format the renderer does not know must fail loudly rather than fall back to
+# rendering the stream as if it were agy.
+begin
+OUT="$(bash "$RENDERER_SH" "$FX/opencode/session.jsonl" "$TMP/bad.md" "$TMP/bad.log" --probe p --prompt x --model m --stream-format nope 2>&1)"; STATUS=$?
+check_status "$STATUS" 2
+scenario_check "$([[ "$OUT" == *"not one of"* ]] && printf 1 || printf 0)" "unknown-format output did not name the problem"
+report 'an unknown --stream-format is rejected'
+
+# Each format records time differently and the transcript must say which it is,
+# rather than implying an observed clock it does not have.
+begin
+scenario_check "$(grep -q 'reconstruction of the run' "$BUNDLES/halt-callout/transcript.md" && printf 1 || printf 0)" "the agy bundle does not carry the reconstructed-clock note"
+scenario_check "$(grep -q 'Timestamps are observed' "$FX/opencode/transcript.md" && printf 1 || printf 0)" "the opencode golden does not carry the observed-clock note"
+scenario_check "$(grep -q 'neither a per-event clock' "$FX/commandcode/transcript.md" && printf 1 || printf 0)" "the commandcode golden does not carry the anchored-only note"
+report 'each format states which kind of clock it has'
+
+# A tool name the verb map does not know renders verbatim, which the scorer reads
+# as neither an inspection nor a write. That is the safe direction but a silent
+# gap, so it must be named on stderr where a capture operator will see it.
+begin
+printf '%s\n' '{"type":"tool_use","timestamp":0,"sessionID":"s","part":{"tool":"mystery_tool","state":{"status":"completed","input":{"path":"x"}}}}' > "$TMP/unknown.jsonl"
+OUT="$(bash "$RENDERER_SH" "$TMP/unknown.jsonl" "$TMP/u.md" "$TMP/u.log" --probe p --prompt x --model m --stream-format opencode 2>&1)"
+check_status "$?" 0
+scenario_check "$([[ "$OUT" == *"unmapped tool name(s)"* ]] && printf 1 || printf 0)" "an unmapped tool name was not reported on stderr"
+scenario_check "$(grep -q 'mystery_tool x (completed)' "$TMP/u.md" && printf 1 || printf 0)" "an unmapped tool was not rendered verbatim"
+report 'an unmapped tool name is rendered verbatim and reported'
 printf '== Anchored bundles reproduce their timestamps exactly ==\n'
 for probe in $ANCHORED_PROBES; do
     bundle="$BUNDLES/$probe"

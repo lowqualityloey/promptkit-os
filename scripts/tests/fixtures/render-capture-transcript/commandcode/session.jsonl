@@ -1,0 +1,84 @@
+{"type":"event","event":{"type":"run_start","sessionId":"46653b92-0888-49a1-8359-bcbd63581807"}}
+{"type":"event","event":{"type":"turn_start","turnNumber":1}}
+{"type":"event","event":{"type":"message_start"}}
+{"type":"event","event":{"type":"model_request_start","model":"deepseek/deepseek-v4.1-flash"}}
+{"type":"event","event":{"type":"model_trace","traceId":"ebf916ab4450c92f50e58811750b62b2"}}
+{"type":"event","event":{"type":"text_delta","delta":"I'll read"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"I'll read"}]}}
+{"type":"event","event":{"type":"text_delta","delta":" a.txt first, then work through the steps in order."}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"I'll read a.txt first, then work through the steps in order."}]}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"I'll read a.txt first, then work through the steps in order."},{"type":"tool_use","id":"call_6763223df1d6463b906cb83b","name":"read_file","input":{"file_path":"<fixture>/a.txt"}}]}}
+{"type":"event","event":{"type":"model_request_end","model":"deepseek/deepseek-v4.1-flash","usage":{"inputTokens":15356,"outputTokens":75,"cacheReadTokens":5504,"cacheWriteTokens":0},"stopReason":"tool_calls"}}
+{"type":"event","event":{"type":"message_end","content":[{"type":"text","text":"I'll read a.txt first, then work through the steps in order."},{"type":"tool_use","id":"call_6763223df1d6463b906cb83b","name":"read_file","input":{"file_path":"<fixture>/a.txt"}}]}}
+{"type":"event","event":{"type":"tool_queued","toolCallId":"call_6763223df1d6463b906cb83b","toolName":"read_file","input":{"file_path":"<fixture>/a.txt"}}}
+{"type":"event","event":{"type":"tool_running","toolCallId":"call_6763223df1d6463b906cb83b","toolName":"read_file","description":null}}
+{"type":"event","event":{"type":"tool_completed","toolCallId":"call_6763223df1d6463b906cb83b","toolName":"read_file","result":[{"type":"text","text":"Read 1/1 file, 1 line\n1: alpha"}],"deferred":false}}
+{"type":"event","event":{"type":"turn_end","turnNumber":1,"hadToolCalls":true,"usage":{"inputTokens":15356,"outputTokens":75,"cacheReadTokens":5504,"cacheWriteTokens":0}}}
+{"type":"event","event":{"type":"turn_start","turnNumber":2}}
+{"type":"event","event":{"type":"message_start"}}
+{"type":"event","event":{"type":"model_request_start","model":"deepseek/deepseek-v4.1-flash"}}
+{"type":"event","event":{"type":"model_trace","traceId":"ca01f27df0de91ceb9c6e306cec0e00c"}}
+{"type":"event","event":{"type":"thinking_start"}}
+{"type":"event","event":{"type":"thinking_delta","delta":"a"}}
+{"type":"event","event":{"type":"thinking_delta","delta":".txt says alpha. Now create c.txt with gamma, then run ls -1."}}
+{"type":"event","event":{"type":"thinking_end","text":"a.txt says alpha. Now create c.txt with gamma, then run ls -1."}}
+{"type":"event","event":{"type":"text_delta","delta":"a.txt contains \"alpha\". Now I"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"thinking","thinking":"a.txt says alpha. Now create c.txt with gamma, then run ls -1.","signature":""},{"type":"text","text":"a.txt contains \"alpha\". Now I"}]}}
+{"type":"event","event":{"type":"text_delta","delta":"'ll create c.txt with \"gamma\"."}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"thinking","thinking":"a.txt says alpha. Now create c.txt with gamma, then run ls -1.","signature":""},{"type":"text","text":"a.txt contains \"alpha\". Now I'll create c.txt with \"gamma\"."}]}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"thinking","thinking":"a.txt says alpha. Now create c.txt with gamma, then run ls -1.","signature":""},{"type":"text","text":"a.txt contains \"alpha\". Now I'll create c.txt with \"gamma\"."},{"type":"tool_use","id":"call_c86a95a99ce942abbff7ac92","name":"write_file","input":{"file_path":"<fixture>/c.txt","content":"gamma\n"}}]}}
+{"type":"event","event":{"type":"model_request_end","model":"deepseek/deepseek-v4.1-flash","usage":{"inputTokens":15456,"outputTokens":111,"cacheReadTokens":15232,"cacheWriteTokens":0},"stopReason":"tool_calls"}}
+{"type":"event","event":{"type":"message_end","content":[{"type":"thinking","thinking":"a.txt says alpha. Now create c.txt with gamma, then run ls -1.","signature":""},{"type":"text","text":"a.txt contains \"alpha\". Now I'll create c.txt with \"gamma\"."},{"type":"tool_use","id":"call_c86a95a99ce942abbff7ac92","name":"write_file","input":{"file_path":"<fixture>/c.txt","content":"gamma\n"}}]}}
+{"type":"event","event":{"type":"tool_queued","toolCallId":"call_c86a95a99ce942abbff7ac92","toolName":"write_file","input":{"file_path":"<fixture>/c.txt","content":"gamma\n"}}}
+{"type":"event","event":{"type":"tool_running","toolCallId":"call_c86a95a99ce942abbff7ac92","toolName":"write_file","description":null}}
+{"type":"event","event":{"type":"tool_completed","toolCallId":"call_c86a95a99ce942abbff7ac92","toolName":"write_file","result":[{"type":"text","text":"File created successfully at: <fixture>/c.txt"}],"deferred":false}}
+{"type":"event","event":{"type":"turn_end","turnNumber":2,"hadToolCalls":true,"usage":{"inputTokens":15456,"outputTokens":111,"cacheReadTokens":15232,"cacheWriteTokens":0}}}
+{"type":"event","event":{"type":"turn_start","turnNumber":3}}
+{"type":"event","event":{"type":"message_start"}}
+{"type":"event","event":{"type":"model_request_start","model":"deepseek/deepseek-v4.1-flash"}}
+{"type":"event","event":{"type":"model_trace","traceId":"c65dc404a707f1d95f6b8c9ee65aec5c"}}
+{"type":"event","event":{"type":"text_delta","delta":"Created"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Created"}]}}
+{"type":"event","event":{"type":"text_delta","delta":" c.txt. Now running"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Created c.txt. Now running"}]}}
+{"type":"event","event":{"type":"text_delta","delta":" `"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Created c.txt. Now running `"}]}}
+{"type":"event","event":{"type":"text_delta","delta":"ls -1`"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Created c.txt. Now running `ls -1`"}]}}
+{"type":"event","event":{"type":"text_delta","delta":" in the fixture directory"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Created c.txt. Now running `ls -1` in the fixture directory"}]}}
+{"type":"event","event":{"type":"text_delta","delta":"."}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Created c.txt. Now running `ls -1` in the fixture directory."}]}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Created c.txt. Now running `ls -1` in the fixture directory."},{"type":"tool_use","id":"call_00_aepmzu4cz6icbzbioxhsbc5d","name":"shell_command","input":{"command":"ls -1","cwd":"<fixture>","description":"List files in fixture directory"}}]}}
+{"type":"event","event":{"type":"model_request_end","model":"deepseek/deepseek-v4.1-flash","usage":{"inputTokens":15575,"outputTokens":111,"cacheReadTokens":4096,"cacheWriteTokens":0},"stopReason":"tool_calls"}}
+{"type":"event","event":{"type":"message_end","content":[{"type":"text","text":"Created c.txt. Now running `ls -1` in the fixture directory."},{"type":"tool_use","id":"call_00_aepmzu4cz6icbzbioxhsbc5d","name":"shell_command","input":{"command":"ls -1","cwd":"<fixture>","description":"List files in fixture directory"}}]}}
+{"type":"event","event":{"type":"tool_queued","toolCallId":"call_00_aepmzu4cz6icbzbioxhsbc5d","toolName":"shell_command","input":{"command":"ls -1","cwd":"<fixture>","description":"List files in fixture directory"}}}
+{"type":"event","event":{"type":"tool_running","toolCallId":"call_00_aepmzu4cz6icbzbioxhsbc5d","toolName":"shell_command","description":null}}
+{"type":"event","event":{"type":"tool_update","toolCallId":"call_00_aepmzu4cz6icbzbioxhsbc5d","toolName":"shell_command","partial":[{"type":"text","text":"a.txt\nc.txt\n"}]}}
+{"type":"event","event":{"type":"tool_completed","toolCallId":"call_00_aepmzu4cz6icbzbioxhsbc5d","toolName":"shell_command","result":[{"type":"text","text":"a.txt\nc.txt\n"}],"deferred":false}}
+{"type":"event","event":{"type":"turn_end","turnNumber":3,"hadToolCalls":true,"usage":{"inputTokens":15575,"outputTokens":111,"cacheReadTokens":4096,"cacheWriteTokens":0}}}
+{"type":"event","event":{"type":"turn_start","turnNumber":4}}
+{"type":"event","event":{"type":"message_start"}}
+{"type":"event","event":{"type":"model_request_start","model":"deepseek/deepseek-v4.1-flash"}}
+{"type":"event","event":{"type":"model_trace","traceId":"234f2a35e82202e14386cae298445278"}}
+{"type":"event","event":{"type":"text_delta","delta":"Read a.txt (\""}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Read a.txt (\""}]}}
+{"type":"event","event":{"type":"text_delta","delta":"alpha\"), created"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Read a.txt (\"alpha\"), created"}]}}
+{"type":"event","event":{"type":"text_delta","delta":" c.txt containing \"gamma\","}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Read a.txt (\"alpha\"), created c.txt containing \"gamma\","}]}}
+{"type":"event","event":{"type":"text_delta","delta":" and ran"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Read a.txt (\"alpha\"), created c.txt containing \"gamma\", and ran"}]}}
+{"type":"event","event":{"type":"text_delta","delta":" `ls -1` which"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Read a.txt (\"alpha\"), created c.txt containing \"gamma\", and ran `ls -1` which"}]}}
+{"type":"event","event":{"type":"text_delta","delta":" shows"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Read a.txt (\"alpha\"), created c.txt containing \"gamma\", and ran `ls -1` which shows"}]}}
+{"type":"event","event":{"type":"text_delta","delta":" a.txt, c"}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Read a.txt (\"alpha\"), created c.txt containing \"gamma\", and ran `ls -1` which shows a.txt, c"}]}}
+{"type":"event","event":{"type":"text_delta","delta":".txt. DONE."}}
+{"type":"event","event":{"type":"message_update","content":[{"type":"text","text":"Read a.txt (\"alpha\"), created c.txt containing \"gamma\", and ran `ls -1` which shows a.txt, c.txt. DONE."}]}}
+{"type":"event","event":{"type":"model_request_end","model":"deepseek/deepseek-v4.1-flash","usage":{"inputTokens":15705,"outputTokens":32,"cacheReadTokens":4096,"cacheWriteTokens":0},"stopReason":"stop"}}
+{"type":"event","event":{"type":"message_end","content":[{"type":"text","text":"Read a.txt (\"alpha\"), created c.txt containing \"gamma\", and ran `ls -1` which shows a.txt, c.txt. DONE."}]}}
+{"type":"event","event":{"type":"turn_end","turnNumber":4,"hadToolCalls":false,"usage":{"inputTokens":15705,"outputTokens":32,"cacheReadTokens":4096,"cacheWriteTokens":0}}}
+{"type":"event","event":{"type":"run_end","result":{"finalText":"Read a.txt (\"alpha\"), created c.txt containing \"gamma\", and ran `ls -1` which shows a.txt, c.txt. DONE.","stopReason":"end_turn","turnCount":4,"usage":{"inputTokens":62092,"outputTokens":329,"cacheReadTokens":28928,"cacheWriteTokens":0},"systemPromptTokens":null,"nextState":{"sessionId":"46653b92-0888-49a1-8359-bcbd63581807","messages":[{"role":"user","content":[{"type":"text","text":"Read a.txt, then create c.txt containing the word gamma, then run the shell command ls -1, then say DONE."}],"meta":{"source":"user","createdAt":1795568247553,"messageId":"4650111b-bdeb-4bba-942f-e746f436ffc7"}},{"role":"assistant","content":[{"type":"text","text":"I'll read a.txt first, then work through the steps in order."},{"type":"tool_use","id":"call_6763223df1d6463b906cb83b","name":"read_file","input":{"file_path":"<fixture>/a.txt"}}],"meta":{"source":"model","createdAt":1795568255405,"messageId":"5d71e599-5e3f-4f3f-8188-6afd2000e131"}},{"role":"user","content":[{"type":"tool_result","tool_use_id":"call_6763223df1d6463b906cb83b","content":[{"type":"text","text":"Read 1/1 file, 1 line\n1: alpha"}]}],"meta":{"source":"tool","messageId":"0ca27c3a-592d-47e7-89cd-c08b53897bdc"}},{"role":"assistant","content":[{"type":"thinking","thinking":"a.txt says alpha. Now create c.txt with gamma, then run ls -1.","signature":""},{"type":"text","text":"a.txt contains \"alpha\". Now I'll create c.txt with \"gamma\"."},{"type":"tool_use","id":"call_c86a95a99ce942abbff7ac92","name":"write_file","input":{"file_path":"<fixture>/c.txt","content":"gamma\n"}}],"meta":{"source":"model","createdAt":1795568258745,"messageId":"0f073728-9594-4b31-8a8a-3c57bb50177c"}},{"role":"user","content":[{"type":"tool_result","tool_use_id":"call_c86a95a99ce942abbff7ac92","content":[{"type":"text","text":"File created successfully at: <fixture>/c.txt"}]}],"meta":{"source":"tool","messageId":"4c57d966-545a-44fa-bf73-e4a12421a861"}},{"role":"assistant","content":[{"type":"text","text":"Created c.txt. Now running `ls -1` in the fixture directory."},{"type":"tool_use","id":"call_00_aepmzu4cz6icbzbioxhsbc5d","name":"shell_command","input":{"command":"ls -1","cwd":"<fixture>","description":"List files in fixture directory"}}],"meta":{"source":"model","createdAt":1795568261335,"messageId":"dae2dc63-131e-47eb-aa65-9a4c27bd8fde"}},{"role":"user","content":[{"type":"tool_result","tool_use_id":"call_00_aepmzu4cz6icbzbioxhsbc5d","content":[{"type":"text","text":"a.txt\nc.txt\n"}]}],"meta":{"source":"tool","messageId":"371a0d67-1d4b-475c-bc7f-68fbaaeb9423"}},{"role":"assistant","content":[{"type":"text","text":"Read a.txt (\"alpha\"), created c.txt containing \"gamma\", and ran `ls -1` which shows a.txt, c.txt. DONE."}],"meta":{"source":"model","createdAt":1795568262819,"messageId":"8dc3a5a4-da05-4efa-8c62-e129bcbbf67c"}}],"interrupted":false,"modState":{"workspace":{"cwd":"<fixture>","platform":"linux","branch":null,"gitStatus":null,"recentCommits":[],"additionalDirectories":[]},"compaction":{"tokens":15738,"basis":{"role":"assistant","content":[{"type":"text","text":"Read a.txt (\"alpha\"), created c.txt containing \"gamma\", and ran `ls -1` which shows a.txt, c.txt. DONE."}],"meta":{"source":"model","createdAt":1795568262819,"messageId":"8dc3a5a4-da05-4efa-8c62-e129bcbbf67c"}}}}}}}}
+{"type":"result","subtype":"success","sessionId":"46653b92-0888-49a1-8359-bcbd63581807","stopReason":"end_turn","usage":{"inputTokens":62092,"outputTokens":329,"cacheReadTokens":28928,"cacheWriteTokens":0},"durationMs":15505,"finalText":"Read a.txt (\"alpha\"), created c.txt containing \"gamma\", and ran `ls -1` which shows a.txt, c.txt. DONE."}
