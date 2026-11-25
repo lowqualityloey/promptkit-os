@@ -277,7 +277,7 @@ $ExpectedTemplateCount = 29
 $TemplateInventory = @(Get-ChildItem -Path $TemplatesDir -Filter *.md -File | Sort-Object Name)
 
 if ($TemplateInventory.Count -ne $ExpectedTemplateCount) {
-    Write-Host "  ❌ templates/: expected $ExpectedTemplateCount markdown templates, found $($TemplateInventory.Count)" -ForegroundColor Red
+    Write-Host "  ❌ MISSING templates: expected $ExpectedTemplateCount markdown templates, found $($TemplateInventory.Count)" -ForegroundColor Red
     $script:ErrorCount++
 }
 
@@ -300,7 +300,7 @@ $ExpectedWorkflowCount = 26
 $WorkflowInventory = @(Get-ChildItem -Path $WorkflowsDir -Filter *.md -File | Sort-Object Name)
 
 if ($WorkflowInventory.Count -ne $ExpectedWorkflowCount) {
-    Write-Host "  ❌ workflows/: expected $ExpectedWorkflowCount workflows, found $($WorkflowInventory.Count)" -ForegroundColor Red
+    Write-Host "  ❌ MISSING workflows: expected $ExpectedWorkflowCount workflows, found $($WorkflowInventory.Count)" -ForegroundColor Red
     $script:ErrorCount++
 }
 

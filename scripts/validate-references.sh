@@ -284,7 +284,7 @@ for template_path in "$TEMPLATES_DIR"/*.md; do
 done
 
 if [ "${#template_inventory[@]}" -ne "$EXPECTED_TEMPLATE_COUNT" ]; then
-    echo "  ❌ templates/: expected $EXPECTED_TEMPLATE_COUNT markdown templates, found ${#template_inventory[@]}"
+    echo "  ❌ MISSING templates: expected $EXPECTED_TEMPLATE_COUNT markdown templates, found ${#template_inventory[@]}"
     ((ERROR_COUNT++))
 fi
 
@@ -310,7 +310,7 @@ for workflow_path in "$WORKFLOWS_DIR"/*.md; do
 done
 
 if [ "${#workflow_inventory[@]}" -ne "$EXPECTED_WORKFLOW_COUNT" ]; then
-    echo "  ❌ workflows/: expected $EXPECTED_WORKFLOW_COUNT workflows, found ${#workflow_inventory[@]}"
+    echo "  ❌ MISSING workflows: expected $EXPECTED_WORKFLOW_COUNT workflows, found ${#workflow_inventory[@]}"
     ((ERROR_COUNT++))
 fi
 
