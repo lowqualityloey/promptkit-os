@@ -391,6 +391,9 @@ jobs:
       - name: Run Release Archive Commit-Binding Fixture Harness
         run: bash scripts/tests/run-release-archive-verification-fixtures.sh
 
+      - name: Run Release Archive Export Fixture Harness (Bash)
+        run: bash scripts/tests/run-release-archive-export-tests.sh
+
       - name: Run Agent Execution Control Property Harness (Bash)
         run: bash scripts/tests/run-execution-control-properties.sh
 
@@ -542,6 +545,10 @@ jobs:
       - name: Run Doctor Tests (PowerShell)
         shell: pwsh
         run: pwsh -NoProfile -File .\scripts\tests\run-doctor-tests.ps1
+
+      - name: Run Release Archive Export Fixture Harness (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-release-archive-export-tests.ps1
 
       - name: Run init Profile Matrix Tests (PowerShell)
         shell: pwsh

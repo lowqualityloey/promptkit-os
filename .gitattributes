@@ -6,3 +6,17 @@
 
 # Freeze-time captures are cited by sha256; keep their bytes identical on every checkout
 benchmarks/PHASE-4-MODELS-*.txt text eol=lf
+
+# Release archives carry the consumer install surface only. Maintainer-only trees
+# stay in the repository; git archive and GitHub's tag tarball both honour these,
+# and scripts/tests/run-release-archive-export-tests.* asserts the result.
+benchmarks/ export-ignore
+docs/internal/ export-ignore
+docs/releases/ export-ignore
+docs/tasks/ export-ignore
+docs/reviews/ export-ignore
+docs/archive/ export-ignore
+docs/tests/ export-ignore
+scripts/tests/ export-ignore
+.github/ export-ignore
+.gitattributes export-ignore
