@@ -122,10 +122,10 @@
 - **Checkpoint Records**: `none`
 - **Handoff Records**: `none`
 - **Verification Evidence**: `bash scripts/validate-references.sh . --strict` -> exit 0 (`All references valid! No broken links found.`); `bash scripts/validate-execution-control.sh --root . --strict` -> `VALID|RECORDS=74|ROOT=.`; `bash scripts/measure-tokens.sh --strict` -> `BALANCED|2488|2500|PASS` and `LITE|1482|1500|PASS`; `bash scripts/check-math-labels.sh --root .` -> `MATH_LABEL_GATE|PASS|files=772`; `bash scripts/check-changelog-entry.sh` -> `CHANGELOG_GATE|PASS`; `bash scripts/validate-release-records.sh --root . --strict` -> `FAILED|ERRORS=37|RECORDS=96`, the grandfathered v1.0.0 baseline and unmoved; `bash scripts/run-behavioral-eval.sh --score <probe> <bundle>/transcript.md` re-scored all ten published bundles and reproduced every line in their `scorer.txt` verbatim (Command Code `PASS 2/2`, `FAIL 0/2`, `PASS 2/2`, `PARTIAL 6/7 behavioral=PARTIAL`, `PARTIAL 2/4`; substituted OpenCode `PASS 2/2 provenance=unverified`, `FAIL 0/2`, `PASS 2/2`, `PARTIAL 6/7`, `PARTIAL 1/4`); `bash scripts/check-milestone-halt-evidence.sh tmp/verify-ms2/<clone>` on both milestone bundles rebuilt with `git clone <bundle>/repository.bundle` -> `VALID|e02cb28c420df011db90dd6ab4b558257b82051c|false|true|false` then `milestone-halt|bundle|PARTIAL|no-hard-boundary-violation`.
-- **CI Evidence**: `pending`
+- **CI Evidence**: `PromptKit OS CI` run `45674438947` on commit `a69e12e4e33391d0790dffab90f7a593696ed89a` -> run conclusion `success`; the docs lane skipped the six code shards and the six jobs that ran all passed (`Lint & Validate (Linux)`, `Lint & Validate (Windows)`, `Linux Docs & Contracts`, `Windows Docs & Contracts`, `Staged Secret Scan (PR Diff)`, `Change Classification`)
 - **Review Evidence**: `pending`
 - **Commit Evidence**: `pending`
-- **Pull Request Evidence**: `pending`
+- **Pull Request Evidence**: https://github.com/lowqualityloey/promptkit-os/pull/781 - open against `main`, `MERGEABLE`, 231 changed paths (GitHub lists the first 100), +5367/-34; merge is the owner's decision, and the issue stays open until the owner closes it
 - **Release Evidence**: `not applicable`
 - **Blocker and Resume Condition**: `none`
 - **Completion State**: `awaiting review - AC-1 through AC-8 are met and evidenced; the pull request is open and merge is the owner's decision`
