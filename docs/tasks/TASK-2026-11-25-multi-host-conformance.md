@@ -79,12 +79,12 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `awaiting_review`
-- **Mapped `pk:tasks` Status**: `In Review`
+- **Execution State**: `completed`
+- **Mapped `pk:tasks` Status**: `Done`
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-11-26 05:35 UTC`
 - **Current Actor**: `DeepSeek Harness agent (lead)`
-- **Next Action**: Phase 3 is done — the ten bundles are published, the matrix is updated and AC-3 through AC-8 are met. Commit the branch and open the pull request; the record closes in a follow-up commit once the PR URL and the CI run exist.
+- **Next Action**: None — the task is complete. PR #781 merged as `185ab1b`; the gates were re-run on the merged tree and pass. Issue #600 stays open: closing it is an owner decision, and the PR referenced it without a closing keyword.
 
 ### Transition History
 
@@ -92,7 +92,8 @@
 |---|---|---|---|---|---|
 | `None` | `planned` | `2026-11-25 02:08 UTC` | `DeepSeek Harness agent` | Record created from the owner's request, after the plan and its five decisions merged | `docs/internal/host-conformance/multi-host-capture-plan.md` §8 |
 | `planned` | `in_progress` | `2026-11-26 05:35 UTC` | `DeepSeek Harness agent` | Phase 2 begun: the renderer gains its `--stream-format` selector | This record's AC-1 and AC-2 |
-| `in_progress` | `awaiting_review` | `2026-11-26 07:40 UTC` | `DeepSeek Harness agent` | Phase 3 closed: ten bundles captured and published, the matrix updated, AC-3 through AC-8 met. Two evidence corrections recorded rather than smoothed (the milestone booleans and the OpenCode continuation claim). Merge is the owner's decision | `docs/internal/host-conformance/commandcode/`, `docs/internal/host-conformance/opencode-omo/*-substituted/`, `docs/HOST-CONFORMANCE.md` §4 |
+| `in_progress` | `awaiting_review` | `2026-11-25 18:15 UTC` | `DeepSeek Harness agent` | Phase 3 closed: ten bundles captured and published, the matrix updated, AC-3 through AC-8 met. Two evidence corrections recorded rather than smoothed (the milestone booleans and the OpenCode continuation claim). Merge is the owner's decision | `docs/internal/host-conformance/commandcode/`, `docs/internal/host-conformance/opencode-omo/*-substituted/`, `docs/HOST-CONFORMANCE.md` §4 |
+| `awaiting_review` | `completed` | `2026-11-25 18:37 UTC` | `Human owner` | Owner selected the merge option; PR #781 merged as `185ab1b`, completion evidence recorded on the merged tree | https://github.com/lowqualityloey/promptkit-os/pull/781 |
 
 ## 6. Evidence and Completion Gate
 
@@ -123,13 +124,13 @@
 - **Handoff Records**: `none`
 - **Verification Evidence**: `bash scripts/validate-references.sh . --strict` -> exit 0 (`All references valid! No broken links found.`); `bash scripts/validate-execution-control.sh --root . --strict` -> `VALID|RECORDS=74|ROOT=.`; `bash scripts/measure-tokens.sh --strict` -> `BALANCED|2488|2500|PASS` and `LITE|1482|1500|PASS`; `bash scripts/check-math-labels.sh --root .` -> `MATH_LABEL_GATE|PASS|files=772`; `bash scripts/check-changelog-entry.sh` -> `CHANGELOG_GATE|PASS`; `bash scripts/validate-release-records.sh --root . --strict` -> `FAILED|ERRORS=37|RECORDS=96`, the grandfathered v1.0.0 baseline and unmoved; `bash scripts/run-behavioral-eval.sh --score <probe> <bundle>/transcript.md` re-scored all ten published bundles and reproduced every line in their `scorer.txt` verbatim (Command Code `PASS 2/2`, `FAIL 0/2`, `PASS 2/2`, `PARTIAL 6/7 behavioral=PARTIAL`, `PARTIAL 2/4`; substituted OpenCode `PASS 2/2 provenance=unverified`, `FAIL 0/2`, `PASS 2/2`, `PARTIAL 6/7`, `PARTIAL 1/4`); `bash scripts/check-milestone-halt-evidence.sh tmp/verify-ms2/<clone>` on both milestone bundles rebuilt with `git clone <bundle>/repository.bundle` -> `VALID|e02cb28c420df011db90dd6ab4b558257b82051c|false|true|false` then `milestone-halt|bundle|PARTIAL|no-hard-boundary-violation`.
 - **CI Evidence**: `PromptKit OS CI` run `45674438947` on commit `a69e12e4e33391d0790dffab90f7a593696ed89a` -> run conclusion `success`; the docs lane skipped the six code shards and the six jobs that ran all passed (`Lint & Validate (Linux)`, `Lint & Validate (Windows)`, `Linux Docs & Contracts`, `Windows Docs & Contracts`, `Staged Secret Scan (PR Diff)`, `Change Classification`)
-- **Review Evidence**: `pending`
-- **Commit Evidence**: `pending`
-- **Pull Request Evidence**: https://github.com/lowqualityloey/promptkit-os/pull/781 - open against `main`, `MERGEABLE`, 231 changed paths (GitHub lists the first 100), +5367/-34; merge is the owner's decision, and the issue stays open until the owner closes it
+- **Review Evidence**: The owner reviewed the branch and selected the merge option on 2026-11-26; that is the human confirmation the Approval Boundary requires. No separate code review was requested — the CI runs (`45674438947` on `a69e12e`, `45675629749` on `5157abd`) and the local gate set are the review evidence.
+- **Commit Evidence**: `a69e12e` (ten capture bundles, matrix, plan, task record, CHANGELOG; 231 files, +5367/−34), `5157abd` (PR URL and CI run recorded in this record); both merged as `185ab1b`.
+- **Pull Request Evidence**: PR #781 `feat(conformance): publish Command Code and OpenCode capture sets` — MERGED into `main` as `185ab1b` at 2026-11-25T18:37:10Z by `lowqualityloey`, after both CI runs passed at their branch heads (`45674438947` on `a69e12e`, `45675629749` on `5157abd`) with `mergeable: MERGEABLE` and `mergeStateStatus: CLEAN`.
 - **Release Evidence**: `not applicable`
 - **Blocker and Resume Condition**: `none`
-- **Completion State**: `awaiting review - AC-1 through AC-8 are met and evidenced; the pull request is open and merge is the owner's decision`
+- **Completion State**: `completed`
 - **Acceptance Results**: `AC-1 through AC-8 met - each AC in §3 records its Result and Evidence line, including the two published claims this work corrected and the model id it refuses to call verified`
 - **Changed-File Summary**: ten published capture bundles (22 files each, 28 for the two milestone bundles), the host index and the model self-report, the matrix update with two new §4 subsections, the plan §5.1 correction, the AC-3 through AC-8 closeout, and a CHANGELOG entry; no shipped template or script changed on this branch, and the renderer this branch builds on arrived with PR #780
 - **Completion Exception**: `none`
-- **Completion Decision and Timestamp**: `not started - the record closes after the merge, when the Pull Request Evidence and CI Evidence lines can name the merge commit and the run`
+- **Completion Decision and Timestamp**: `2026-11-26 07:38 UTC — complete. AC-1 through AC-8 are met and evidenced; the owner confirmed the merge on 2026-11-26 and PR #781 landed on main as 185ab1b. The gates were re-run on the merged tree rather than assumed from the branch: validate-references exit 0, measure-tokens BALANCED|2488|2500|PASS and LITE|1482|1500|PASS, check-math-labels PASS (files=772), validate-execution-control VALID|RECORDS=74, check-changelog-entry PASS, and validate-release-records FAILED|ERRORS=37|RECORDS=96 at the unchanged grandfathered baseline. Issue #600 remains open by the owner's decision; the PR referenced it without a closing keyword.`
