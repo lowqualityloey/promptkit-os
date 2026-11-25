@@ -20,7 +20,9 @@
 - **Objective**: Produce the first cross-host conformance comparison this repository can honestly make — two hosts measured on the same pinned model, under enforced isolation, against the same five documented probes — and publish the result as measured, including any FAIL.
 - **In Scope**:
   - A `--stream-format` selector on `scripts/render-capture-transcript.mjs` (`agy` default, `opencode`, `commandcode`), preserving the two load-bearing properties the current renderer documents: the two-space indent on event bodies, and the mapping from host tool names to the scorer's verb vocabulary.
-  - Round-trip coverage for the new formats in both renderer test twins, with the existing six `agy` bundles still reproducing byte-for-byte.
+  - Round-trip coverage for the new formats in both renderer test twins — `scripts/tests/run-render-capture-transcript-tests.sh` and `scripts/tests/run-render-capture-transcript-tests.ps1` — with the existing six `agy` bundles still reproducing byte-for-byte.
+  - A committed golden transcript and write log per new format, rendered from a real sanitized stream, under `scripts/tests/fixtures/render-capture-transcript/opencode/` and `scripts/tests/fixtures/render-capture-transcript/commandcode/`.
+  - The correction of the one published Antigravity transcript the union verb table changes: `docs/internal/host-conformance/antigravity/ce-escalation-balanced/transcript.md` and its `observed-writes.log`, whose verdict is re-checked and must not move.
   - Five `commandcode` capture bundles under `docs/internal/host-conformance/commandcode/<probe>/`, each satisfying the 17-file artifact contract.
   - Five model-substituted `opencode` capture bundles, published in a separate labelled column and never compared against the pinned pair.
   - The `docs/HOST-CONFORMANCE.md` §4 matrix update: the `commandcode` row added, the OpenCode row's stale cadence cell corrected, and the `agy` version difference recorded rather than smoothed.
@@ -38,12 +40,12 @@
 
 ## 3. Acceptance Criteria
 
-- [ ] **AC-1**: The renderer accepts `--stream-format opencode` and `--stream-format commandcode`, and the `agy` default still reproduces all six committed bundles byte-for-byte.
-  - **Result**: `Not started`
-  - **Evidence**: pending
-- [ ] **AC-2**: `opencode` tool names (`read`, `write`, `shell`) render unchanged, and `commandcode` tool names (`read_file`, `write_file`, `shell_command`, `read_directory`) map to the scorer's vocabulary (`read`, `write`, `shell`, `ls`).
-  - **Result**: `Not started`
-  - **Evidence**: pending
+- [x] **AC-1**: The renderer accepts `--stream-format opencode` and `--stream-format commandcode`, and the `agy` default still reproduces all six committed bundles byte-for-byte.
+  - **Result**: `Met`
+  - **Evidence**: `scripts/render-capture-transcript.mjs` takes `--stream-format agy|opencode|commandcode`, defaults to `agy`, and rejects anything else with exit 2 (`--stream-format is not one of agy, opencode, commandcode: <value>`). `bash scripts/tests/run-render-capture-transcript-tests.sh` → `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|28 passed`, which includes the twelve anchored round-trips (six probes + six `ce-*` cells) reproducing their committed transcripts byte-for-byte with no timestamp stripping, and the six stripped round-trips. The PowerShell twin reports the same `28 passed`.
+- [x] **AC-2**: `opencode` tool names (`read`, `write`, `shell`) render unchanged, and `commandcode` tool names (`read_file`, `write_file`, `shell_command`, `read_directory`) map to the scorer's vocabulary (`read`, `write`, `shell`, `ls`).
+  - **Result**: `Met`
+  - **Evidence**: the `VERB` table is one union across the three hosts. `opencode` already emits the scorer's vocabulary, so its entries are identity mappings; `commandcode`'s `read_file`/`write_file`/`shell_command`/`read_directory` map to `read`/`write`/`shell`/`ls`. The committed goldens show the result: `scripts/tests/fixtures/render-capture-transcript/opencode/transcript.md` renders `read a.txt`, `write c.txt`, `shell ls -1`, and `.../commandcode/transcript.md` renders the same three verbs from `read_file`, `write_file`, `shell_command`. An unmapped name renders verbatim and is named on stderr; that warning found a real pre-existing gap — `agy` emits `write_file`, which the renderer did not know, so two writes in `ce-escalation-balanced` had been rendering unclassifiable. Mapping it corrects that bundle's transcript and write log and leaves its verdict at `PASS|checks=3/3|behavioral=PASS|provenance=verified`.
 - [ ] **AC-3**: Five `commandcode` bundles exist under `docs/internal/host-conformance/commandcode/`, each carrying the 17-file artifact contract and a `scorer.txt` recording both axes where the scenario declares evidence checks.
   - **Result**: `Not started`
   - **Evidence**: pending
@@ -77,34 +79,45 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `planned`
-- **Mapped `pk:tasks` Status**: `To Do`
-- **Active Task Pointer**: `None`
-- **Start Time**: `not started`
+- **Execution State**: `in_progress`
+- **Mapped `pk:tasks` Status**: `In Progress`
+- **Active Task Pointer**: `TASK-2026-11-25-multi-host-conformance`
+- **Start Time**: `2026-11-26 05:35 UTC`
 - **Current Actor**: `DeepSeek Harness agent (lead)`
-- **Next Action**: Begin Phase 2 — add the `--stream-format` selector to `scripts/render-capture-transcript.mjs` and pin the `agy` path with the existing round-trip suites before adding either new format.
+- **Next Action**: Phase 2 is done (AC-1, AC-2 met). Begin Phase 3 — capture the five probes on `commandcode` under the §3.1 recipe, starting with `card-provenance`, then the model-substituted `opencode` set, then the matrix update.
 
 ### Transition History
 
 | Previous State | New State | Timestamp | Actor | Reason | Supporting Evidence |
 |---|---|---|---|---|---|
 | `None` | `planned` | `2026-11-25 02:08 UTC` | `DeepSeek Harness agent` | Record created from the owner's request, after the plan and its five decisions merged | `docs/internal/host-conformance/multi-host-capture-plan.md` §8 |
+| `planned` | `in_progress` | `2026-11-26 05:35 UTC` | `DeepSeek Harness agent` | Phase 2 begun: the renderer gains its `--stream-format` selector | This record's AC-1 and AC-2 |
 
 ## 6. Evidence and Completion Gate
 
-- **Changed Files**: `none yet`
-- **Scope Change Records**: `none`
+- **Changed Files**:
+  - `scripts/render-capture-transcript.mjs` - `--stream-format` selector, three parsers, union verb table, per-format clock note, unmapped-name report
+  - `scripts/tests/run-render-capture-transcript-tests.sh` / `.ps1` - five new cases each (two goldens, unknown-format rejection, clock-note assertion, unmapped-name report)
+  - `scripts/tests/fixtures/render-capture-transcript/opencode/` (new) - sanitized stream plus golden transcript and write log
+  - `scripts/tests/fixtures/render-capture-transcript/commandcode/` (new) - same
+  - `docs/internal/host-conformance/antigravity/ce-escalation-balanced/transcript.md` / `observed-writes.log` - the two `write_file` lines the newly-mapped verb corrects
+  - `CHANGELOG.md` - the entry the changelog gate requires for a top-level `scripts/` change
+- **Scope Change Records**:
+  - `SCOPE-2026-11-26-01` - the scope above was written before the renderer had any new format, so it named no fixture path and no bundle correction. Two additions were needed once the work started, and both stay inside the objective rather than widening it.
+    - *Added:* committed goldens per new format. A golden rendered from a real stream is the only way the suite can pin a parser against something other than the parser's own assumptions; a synthetic stream written by hand would test the author's belief about the shape.
+    - *Added:* the `ce-escalation-balanced` correction. The union verb table revealed that `agy` emits `write_file`, which the renderer had never mapped, so two writes in that bundle had been rendering as an unclassifiable tool name. Correcting the map without correcting the transcript would break the round-trip suite; correcting it silently would edit published evidence without a record. The verdict was re-scored and is unchanged at `PASS|checks=3/3|behavioral=PASS|provenance=verified`.
+    - *Not added:* any new capture. AC-3 through AC-8 still need live runs, which this change does not perform.
 - **Checkpoint Records**: `none`
 - **Handoff Records**: `none`
-- **Verification Evidence**: `none yet`
-- **CI Evidence**: `none yet`
-- **Review Evidence**: `none yet`
-- **Commit Evidence**: `none yet`
-- **Pull Request Evidence**: `none yet`
+- **Verification Evidence**: `bash scripts/tests/run-render-capture-transcript-tests.sh` -> `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|28 passed` (10 before the new cases); `pwsh -NoProfile -File scripts/tests/run-render-capture-transcript-tests.ps1` -> `RENDER_CAPTURE_TRANSCRIPT_TESTS|PASS|28 passed`, identical; all twelve anchored round-trips reproduce their committed transcripts byte-for-byte with no timestamp stripping; `bash scripts/run-behavioral-eval.sh --score ce-escalation-balanced <re-rendered>` -> `ce-escalation-balanced|live|PASS|checks=3/3|behavioral=PASS|provenance=verified`, byte-identical to the committed `scorer.txt`.
+- **CI Evidence**: `pending`
+- **Review Evidence**: `pending`
+- **Commit Evidence**: `pending`
+- **Pull Request Evidence**: `pending`
 - **Release Evidence**: `not applicable`
 - **Blocker and Resume Condition**: `none`
-- **Completion State**: `not started`
-- **Acceptance Results**: `AC-1 through AC-8 not started`
-- **Changed-File Summary**: `none yet`
+- **Completion State**: `in progress - AC-1 and AC-2 met, AC-3 through AC-8 not started`
+- **Acceptance Results**: `AC-1 and AC-2 met; AC-3 through AC-8 not started, because they need live captures this record has not performed`
+- **Changed-File Summary**: the renderer grew a format selector plus three parsers and two supporting tables; both test twins gained five cases and each new format gained a committed golden rendered from a real sanitized stream; one published Antigravity transcript and its write log were corrected by two lines each because the union verb table revealed an agy write tool the renderer had never recognised.
 - **Completion Exception**: `none`
 - **Completion Decision and Timestamp**: `not started`

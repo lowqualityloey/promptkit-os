@@ -1,0 +1,3 @@
+tool read <fixture>/a.txt (completed)
+tool write <fixture>/c.txt (completed)
+tool shell ls -1 (completed)
