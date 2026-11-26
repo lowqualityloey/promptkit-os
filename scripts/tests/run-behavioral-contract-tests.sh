@@ -470,6 +470,17 @@ assert_contains "workflows/profile.md" "4-Phase Switch Protocol" "Profile workfl
 assert_contains "workflows/profile.md" "Turbo guard" "Profile workflow enforces the Turbo experimental guard"
 assert_contains "workflows/profile.md" "PROMPTKIT_NO_INTERACTIVE" "Profile workflow honors non-interactive default"
 assert_contains "workflows/route.md" "Wrong Profile / Mode Upgrade" "Router decision matrix registers pk:profile"
+
+echo ""
+echo "📌 Scenario M2: Divergent Brainstorm & Balanced Read-Only Parallelism (pk:brainstorm)"
+assert_contains "workflows/plan.md" "Divergent Pre-Intake" "Plan workflow carries the divergent pre-intake section"
+assert_contains "workflows/plan.md" "pk:brainstorm" "Plan workflow names the pk:brainstorm alias"
+assert_contains "workflows/route.md" "Unshaped Option Space" "Router decision matrix registers divergent ideation"
+assert_contains "protocols/subagent-delegation.md" "Read-Only Parallelism" "Delegation protocol allows read-only parallelism in Balanced"
+assert_contains "workflows/auto.md" "Turbo-gated write waves" "Auto workflow scopes turbo gating to write waves"
+assert_contains "docs/TURBO-WAVES-GUIDE.md" "read-only fan-out" "Turbo guide distinguishes read-only fan-out from write waves"
+assert_contains "README.md" "Divergent Ideation" "README cheat-sheet surfaces pk:brainstorm"
+assert_contains "protocols/setup.md" "Brainstorm" "Setup protocol registry lists the brainstorm alias"
 WARN_COUNT=$(bash "$REPO_ROOT/scripts/validate-references.sh" "$REPO_ROOT" 2>&1 | grep -c 'WARNING' || true)
 if [ "$WARN_COUNT" -eq 0 ]; then
     echo "  ✅ PASS: Reference validator reports zero trigger warnings"

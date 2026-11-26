@@ -67,7 +67,9 @@ When invoked, `workflows/auto.md` operates under a declared terminal boundary:
 
 ---
 
-## Wave Mode & Bounded Auto-Refine (Turbo-gated)
+## Wave Mode & Bounded Auto-Refine (Turbo-gated write waves)
+
+Read-only fan-out — exploration, research, and independent review axes — is not a wave and does not need Turbo: Balanced may run it concurrently under the read-only parallelism rules in [`protocols/subagent-delegation.md`](../protocols/subagent-delegation.md). Everything below governs **write** waves, where parallel workers edit the same repository.
 
 ### Strict Eligibility (hard invariant — all required)
 - independent task contracts (no shared mutable contract surface)
@@ -81,11 +83,13 @@ No worker consumes another worker's unreviewed output within the same wave. Depe
 ### Budget Linkage
 Worker, wave, and repair caps compose with the [#258 autonomy budgets](https://github.com/lowqualityloey/promptkit-os/issues/258) (referenced, not duplicated). PromptKit governs when parallelism is permissible; the host executes it — no scheduler, daemon, or second orchestration engine, ever. Wave functionality must remain a capability of `pk:auto`, never become an orchestration subsystem.
 
-### Flags (Turbo profile only)
+### Flags (Turbo profile only — write waves)
 
 | Flag | Effect | Fallback |
 | :--- | :--- | :--- |
-| **`--waves N`** | Execute N waves in parallel (default 1, max 4). Requires Turbo profile. Sequential review-ready fallback on unsupported hosts. | Sequential review-ready |
+| **`--waves N`** | Execute N parallel **write** waves (default 1, max 4). Requires Turbo profile. Sequential review-ready fallback on unsupported hosts. | Sequential review-ready |
+
+Read-only parallelism never consumes this flag: `pk:auto` may fan out read-only recon and review axes in Balanced, then serialize the writes.
 
 ### Per-Task Verify
 Each worker runs: implement → test → verify. Automatic pass → wave integration queue. Fail → bounded auto-refine (max 2 attempts = Strikes 2–3 of the 3-strike budget). Third failure → human escalation with diagnostics. Worker GREEN ≠ Wave GREEN: integrated state must pass verification before the wave succeeds; this queue does not merge pull requests.

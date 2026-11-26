@@ -247,7 +247,7 @@ for file in "${ALL_MD_FILES[@]}"; do
             # Check if it's a known alias
             case "$trigger" in
                 # Documented aliases that route to an existing workflow.
-                db|profile|research|reflect|handoff|issue|kanban|scan|latency|grill|spike|retro|design|init|init-repo|task|update|refresh)
+                db|profile|research|reflect|handoff|issue|kanban|scan|latency|grill|spike|retro|design|brainstorm|init|init-repo|task|update|refresh)
                     # Known aliases, skip warning
                     ;;
                 # A name that is deliberately NOT a trigger. The execution-control

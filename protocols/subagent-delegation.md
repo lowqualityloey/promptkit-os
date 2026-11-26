@@ -1,7 +1,7 @@
 # Subagent Delegation & Parallel Execution Protocol
 
 ## Purpose
-Define the operational rules for delegating engineering tasks to background subagents versus executing them in the primary conversation thread. This protocol protects the parent agent's context window from token exhaustion, minimizes hallucinations caused by context clutter, and accelerates complex tasks through parallel execution.
+Define the operational rules for delegating engineering tasks to background subagents versus executing them in the primary conversation thread. This protocol protects the parent agent's context window from token exhaustion, minimizes hallucinations caused by context clutter, and accelerates complex tasks through parallel execution. It also draws the line between read-only fan-out, which Balanced may use freely, and parallel write waves, which stay Turbo-gated.
 
 > **Advisory agent instruction.** This protocol directs agent behavior; there is no runtime executor behind it — CI asserts invariant text presence only. See `protocols/context-economy.md` §11 (Enforcement Boundary) for the full boundary.
 
@@ -37,14 +37,28 @@ Evaluate your upcoming task against this triage before executing:
 | :--- | :--- | :--- |
 | **Broad Codebase Survey** (inspecting >3 files or unfamiliar folders) | **Subagent** | Keeps raw file dumps out of the parent conversation. |
 | **External Documentation / Web Search** (API docs, GitHub issues) | **Subagent** | Eliminates long HTML/markdown search dumps. |
-| **Parallel Risk Spikes** (evaluating Library A vs Library B) | **Subagent (Parallel)** | Enables concurrent exploration in `pk:spike` — only when the host supports concurrent subagents and the profile permits parallel execution (Turbo; otherwise sequential). |
-| **Two-Axis PR Audits** (Spec Fidelity vs Fowler Code Smells) | **Subagent (Parallel)** | Enables independent, unbiased reviews in `pk:review`. |
+| **Parallel Risk Spikes** (evaluating Library A vs Library B) | **Subagent (Parallel)** | Read-only evaluation fans out in **Balanced** and above when the host supports concurrent subagents; a benchmark that must write to the workspace is a write wave and stays Turbo-gated. |
+| **Two-Axis PR Audits** (Spec Fidelity vs Fowler Code Smells) | **Subagent (Parallel)** | Independent, unbiased reviews in `pk:review`; both axes are read-only, so Balanced may run them concurrently. |
 | **Independent Verification** (Level 2/3 Controlled) | **Subagent (Single-Pass)** | Eliminates author confirmation bias; single-pass audit contract; no child-agent delegation; max 15-line synthesis. |
 | **Long-Running Test / Linter Runs** (full CI simulation) | **Subagent / Task** | Prevents terminal scrollback from cluttering context. |
 | **Direct User Interaction & Alignments** | **Main Thread Only** | Subagents must never prompt the human developer directly. |
 | **Small Localized Edits** (<10 lines, single file tweaks) | **Main Thread Only** | Spawning a subagent introduces unnecessary latency overhead. |
 | **Git Staging, Commits & PR Submission** (`pk:commit`, `pk:pr`) | **Main Thread Only** | Requires unified workspace visibility and secret verification. |
 | **Strategic Architectural Decisions** (`pk:plan`, ADR writing) | **Main Thread Only** | Parent agent must lock invariants into project memory. |
+
+After the matrix, decide one more thing: does the delegated work **write** anything? Read-only work may fan out in Balanced; write work is a wave and follows the Turbo gate below.
+
+---
+
+### Read-Only Parallelism (Balanced and Above)
+
+A subagent task is **read-only** when its brief forbids tracked-file edits, mutating shell commands, installs, migrations, commits, and pushes, and requires it to return findings only. Read-only fan-out is allowed in **Balanced** and above — no Turbo profile, no `--experimental` acknowledgement, and no wave pre-flight checklist — because disjoint readers share no mutable state:
+
+- **Allowed fan-out**: broad codebase surveys, external documentation / API research, independent review axes (Spec Fidelity and Technical Standards), candidate evaluation in `pk:spike`, and option gathering during `pk:brainstorm`.
+- **Disjoint read scopes**: give each child explicit allowed and excluded paths so two children never contest the same interpretation of one file.
+- **Parent owns synthesis**: children return the compact 5–15 line report, and the parent alone merges findings, talks to the human, and decides.
+- **No worktree, no checklist**: the isolation machinery exists for concurrent **edits**. Read-only children need neither an isolated worktree nor the wave pre-flight checklist.
+- **Escalation to a write wave**: if a child discovers it must write, it stops and returns the proposed change instead of making it. The parent then promotes that work to a write wave, which requires the Turbo profile with `--turbo --experimental`, the [wave pre-flight checklist](../docs/recipes/auto-waves-preflight-checklist.md), disjoint file ownership, and worktree isolation (Pattern D).
 
 ---
 
@@ -82,7 +96,7 @@ Strictly forbid raw dumps. Require the subagent to return a compact 5-15 line sy
 ## 4. Multi-Agent Coordination Patterns
 
 ### Pattern A: Parallel Research Spike (Fan-Out / Fan-In)
-When running `pk:spike` to evaluate competing architectures (profile permits parallel execution — Turbo — otherwise run candidates sequentially):
+When running `pk:spike` to evaluate competing architectures (read-only evaluation may fan out in Balanced; a benchmark that writes scaffolding requires Turbo, otherwise run candidates sequentially in-thread):
 ```text
                     [ Parent Agent: pk:spike ]
                                 │

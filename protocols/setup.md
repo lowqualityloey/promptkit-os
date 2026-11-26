@@ -170,6 +170,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Verify-Bootstrap**: `<kit>/workflows/verify-bootstrap.md`
 - **Doctor**: `<kit>/workflows/doctor.md`
 - **Auto**: `<kit>/workflows/auto.md`
+- **Brainstorm**: divergent pre-intake (`pk:brainstorm`), defined inside `<kit>/workflows/plan.md` — no separate workflow file
 - **Setup**: `<kit>/protocols/setup.md`
 - **Quality Gate (DoD)**: `<kit>/protocols/code-quality-gate.md`
 - **Rendered UI Evidence**: `<kit>/protocols/rendered-ui-evidence.md` (lazy-loaded by `<kit>/workflows/design-system.md` and the quality gate when the task changes browser-rendered UI)

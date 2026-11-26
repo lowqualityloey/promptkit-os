@@ -117,6 +117,7 @@ Prompt your assistant naturally or invoke fast shorthand triggers:
 |:---|:---|:---|
 | `pk:route` | **Task Intake** | Classifies incoming tasks into Ceremony Levels 0–3 and routes to the right workflow |
 | `pk:onboard` | **Project Discovery** | First install on greenfield or brownfield codebases; detects stack & sets rules |
+| `pk:brainstorm` | **Divergent Ideation** | Widening the option space before requirements converge; zero artifacts, then one direction into `pk:plan` |
 | `pk:plan` | **Feature RFC** | Designing architectural changes, data contracts, and schema boundaries |
 | `pk:test` | **Test Strategy & TDD** | Allocating seams, mocking boundaries, and writing tests before code |
 | `pk:debug` | **Root-Cause Analysis** | Systematic 5-step falsifiable debugging (stops infinite hallucinated edits) |
