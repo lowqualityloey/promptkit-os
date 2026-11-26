@@ -47,6 +47,12 @@ chmod 700 "$KEYS"
 mkdir -p "$FAKE_HOME/.commandcode/taste" "$BINDIR"
 : > "$FAKE_HOME/.commandcode/taste/taste.md"   # preflight requires empty
 
+# The driver records <home>/<engine>/<seed> in its packet instead of the
+# operator's absolute roots and expands them again when it reads its own packet.
+# The cases below assert the recorded (scrubbed) form, then expand it the same
+# way before touching a file.
+expand_home() { printf '%s' "${1//<home>/$2}"; }
+
 # --- stub command-code ------------------------------------------------------
 cat > "$BINDIR/command-code" <<'STUB'
 #!/usr/bin/env bash
@@ -243,7 +249,10 @@ out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
     --key-out "$KEYS/slug.csv" --order-seed 7 --shuffle-seed 7 2>&1)"; rc=$?
 slug_row="$(grep -m1 $'^P3C-08-bare-r1\t' "$OUT_SLUG/manifest.tsv" 2>/dev/null || true)"
 slug_tr="$(printf '%s' "$slug_row" | cut -f4)"
-if [[ $rc -eq 0 && "$out" == *"BATCH|OK|runs=2"* && -f "$slug_tr" \
+# The manifest records the batch home as <home>; the driver expands it back when
+# it reads its own packet, and this case does the same before touching the file.
+slug_tr_file="$(expand_home "$slug_tr" "$FAKE_HOME")"
+if [[ $rc -eq 0 && "$out" == *"BATCH|OK|runs=2"* && "$slug_tr" == '<home>/'* && -f "$slug_tr_file" \
         && "$slug_tr" == *"-p3-c-08-bare-r1/"* ]]; then
     ok "a task id with a digit->upper run resolves its transcript under p3-c-08"
 else
@@ -265,8 +274,9 @@ out="$(cd "$OUT_REL" && PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
 rel_row="$(grep -m1 $'^P3C-08-bare-r1\t' "$OUT_REL/rel-out/manifest.tsv" 2>/dev/null || true)"
 rel_dir="$(printf '%s' "$rel_row" | cut -f3)"
 rel_tr="$(printf '%s' "$rel_row" | cut -f4)"
+rel_tr_file="$(expand_home "$rel_tr" "$FAKE_HOME")"
 if [[ $rc -eq 0 && "$out" == *"BATCH|OK|runs=2"* \
-        && "$rel_dir" == "$OUT_REL/rel-out/runs/P3C-08-bare-r1" && -f "$rel_tr" \
+        && "$rel_dir" == "$OUT_REL/rel-out/runs/P3C-08-bare-r1" && -f "$rel_tr_file" \
         && "$rel_tr" == *"-p3-c-08-bare-r1/"* ]]; then
     ok "a relative --out resolves transcripts against the CLI's absolute-path slug"
 else
@@ -430,13 +440,34 @@ out="$(PATH="$CLEAN_PATH" HOME="$FAKE_HOME" bash "$DRIVER" \
 # Stub transcript per run: 900 in / 90 out, no rework, accepted → CPAC = 900*3e-6
 # + 90*15e-6 = 0.00405 → machine line prints 0.0040 or 0.0041 at 4dp; assert the
 # stable prefix rather than the rounding tail.
-if [[ $rc -eq 0 && "$out" == *"BENCH|SUMMARY|arm=bare"* && "$out" == *"BENCH|SUMMARY|arm=promptkit_os"* \
+if [[ $rc -eq 0 && "$out" == *"FINALIZE|ENGINE|placeholder=resolved"* \
+        && "$out" == *"BENCH|SUMMARY|arm=bare"* && "$out" == *"BENCH|SUMMARY|arm=promptkit_os"* \
         && "$out" == *"cpac_mean=0.004"* ]] ; then
     ok "--finalize translates blind ids, re-extracts, and aggregates both arms"
 else
     notok "finalize (rc=$rc, out=$(printf '%s' "$out" | tail -2 | tr '\n' ' '))"
 fi
 
+# --- packets record placeholders, not the operator's roots -------------------
+# manifest.tsv, engine-path.txt and key-location.txt travel with the batch, so
+# none may carry the operator's absolute home or checkout path: a packet handed
+# to a reader must not also hand over the host layout. <home>/<engine>/<seed>
+# are what the driver expands again when it reads its own packet, which is how
+# the finalize above (FINALIZE|ENGINE|placeholder=resolved) still worked.
+packet_files=("$OUT/manifest.tsv" "$OUT/engine-path.txt" "$OUT/key-location.txt" "$OUT/isolation.txt")
+raw_home_hits="$(grep -lF "$FAKE_HOME" "${packet_files[@]}" 2>/dev/null | wc -l)"
+raw_engine_hits="$(grep -lF "$REPO_ROOT" "${packet_files[@]}" 2>/dev/null | wc -l)"
+placeholders_ok=0
+if [[ "$(cat "$OUT/engine-path.txt")" == "<engine>" ]] \
+        && grep -qx 'host_home: <home>' "$OUT/isolation.txt" \
+        && awk -F'\t' 'NR > 1 && NF >= 4 && $4 !~ /^<home>\// { bad = 1 } END { exit bad }' "$OUT/manifest.tsv"; then
+    placeholders_ok=1
+fi
+if [[ "$raw_home_hits" -eq 0 && "$raw_engine_hits" -eq 0 && "$placeholders_ok" -eq 1 ]]; then
+    ok "the packet records <home>/<engine> instead of the operator's absolute roots"
+else
+    notok "packet scrub (raw-home=$raw_home_hits raw-engine=$raw_engine_hits placeholders=$placeholders_ok)"
+fi
 if grep -q "^${b1}	" "$OUT/grading/grading.tsv" && ! grep -q "BENCH-DRIVER" "$OUT/grading/grading.tsv"; then
     ok "operator grading sheet stays blind-keyed (no scenario/arm ids)"
 else

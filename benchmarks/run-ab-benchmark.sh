@@ -67,6 +67,12 @@ if (( BASH_VERSINFO[0] < 4 )); then
     exit 1
 fi
 
+# The checkout this script ships in. A packet records the engine root as
+# <engine> instead of the operator's absolute checkout path, so --finalize
+# resolves that placeholder here and reports when this checkout is not the one
+# the batch recorded.
+DRIVER_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+
 ENGINE="" SEED="" TASKS_CSV="" MODEL="" OUT="" MAXTURNS=40 TIMEOUT=900 REPEATS=1 PROFILE=balanced PREFLIGHT_ONLY=0 FINALIZE=0 SCREEN=0 SCREEN_ARM="" GRADING="" ORDER_SEED="" SHUFFLE_SEED="${BENCH_SHUFFLE_SEED:-}" KEY_OUT="" KEY_ARG="" GRADED_BY=""
 
 usage() {
@@ -126,6 +132,33 @@ scrub_verify_output() {
     scrubbed="${scrubbed//"$2"/<out>}"
     scrubbed="${scrubbed//"$3"/<scenario>}"
     printf '%s\n' "$scrubbed"
+}
+
+scrub_packet_path() {
+    # scrub_packet_path <text>
+    # The manifest, the isolation record and the key record travel with the
+    # packet, so none of them may carry the operator's home directory or
+    # absolute checkout roots. <home>/<engine>/<seed> are restored verbatim by
+    # expand_packet_path() when the driver reads its own packet back, which is
+    # always the host that wrote it. Roots are replaced longest-first so an
+    # engine inside HOME records as <engine> rather than <home>/...
+    local text="$1"
+    if [[ -n "${ENGINE:-}" ]]; then text="${text//"${ENGINE}"/<engine>}"; fi
+    if [[ -n "${SEED:-}" ]]; then text="${text//"${SEED}"/<seed>}"; fi
+    if [[ -n "${HOME:-}" && "${HOME}" != "/" ]]; then text="${text//"${HOME}"/<home>}"; fi
+    printf '%s' "$text"
+}
+
+expand_packet_path() {
+    # expand_packet_path <text>
+    # The inverse of scrub_packet_path, for a finalize or a blind-packet pass
+    # reading the packet this host just wrote. An unset replacement is left
+    # alone rather than silently emptying the path.
+    local text="$1"
+    if [[ -n "${HOME:-}" && "${HOME}" != "/" ]]; then text="${text//<home>/"${HOME}"}"; fi
+    if [[ -n "${ENGINE:-}" ]]; then text="${text//<engine>/"${ENGINE}"}"; fi
+    if [[ -n "${SEED:-}" ]]; then text="${text//<seed>/"${SEED}"}"; fi
+    printf '%s' "$text"
 }
 
 stamp_grading_provenance() {
@@ -261,6 +294,22 @@ if [[ "$FINALIZE" -eq 1 ]]; then
     if [[ -z "$ENGINE" ]]; then
         [[ -r "$OUT/engine-path.txt" ]] || bench_error "UNREADABLE" "$OUT/engine-path.txt"
         ENGINE="$(cat "$OUT/engine-path.txt")"
+        if [[ "$ENGINE" == "<engine>" ]]; then
+            # The packet records a placeholder, not the operator's checkout
+            # path. Resolve it to the checkout this script ships in and say so:
+            # a finalize can only run where an engine checkout exists, and
+            # finalizing against a different revision than the one that ran is
+            # exactly what the recorded engine sha is compared for below.
+            ENGINE="$DRIVER_ROOT"
+            recorded_engine_sha="$(sed -n 's/^engine: //p' "$OUT/env.txt" 2>/dev/null | head -1)"
+            local_engine_sha="$(git -C "$ENGINE" rev-parse HEAD 2>/dev/null || echo unknown)"
+            if [[ -n "$recorded_engine_sha" && "$recorded_engine_sha" != "unknown" \
+                && "$local_engine_sha" != "$recorded_engine_sha" ]]; then
+                printf 'FINALIZE|WARN|ENGINE_SHA_MISMATCH|recorded=%s|local=%s\n' \
+                    "$recorded_engine_sha" "$local_engine_sha" >&2
+            fi
+            printf 'FINALIZE|ENGINE|placeholder=resolved|root=%s\n' "$ENGINE" >&2
+        fi
     fi
     [[ -d "$ENGINE" ]] || bench_error "UNREADABLE" "engine $ENGINE"
     EXTRACT="$ENGINE/scripts/extract-commandcode-telemetry.sh"
@@ -281,7 +330,7 @@ if [[ "$FINALIZE" -eq 1 ]]; then
     elif [[ -s "$OUT/grading/key.csv" ]]; then
         KEY="$OUT/grading/key.csv"
     elif [[ -s "$KEY_RECORD" ]]; then
-        KEY="$(sed -n 's/^key_path: //p' "$KEY_RECORD" | head -1)"
+        KEY="$(expand_packet_path "$(sed -n 's/^key_path: //p' "$KEY_RECORD" | head -1)")"
     else
         bench_error "UNREADABLE" "key (pass --key, or record one with --key-out at batch time)"
     fi
@@ -317,6 +366,8 @@ if [[ "$FINALIZE" -eq 1 ]]; then
     RECORDS=()
     while IFS=$'\t' read -r scenario arm rundir transcript record diff stripped; do
         [[ -z "$scenario" || "$scenario" == "scenario" ]] && continue
+        transcript="$(expand_packet_path "$transcript")"
+        record="$(expand_packet_path "$record")"
         blind="${S2B[$scenario]:-}"
         [[ -n "$blind" ]] || bench_error "MISSING_KEY_ROW" "$scenario"
         acc="${G_ACC[$blind]:-}"
@@ -747,7 +798,9 @@ PLAN_SHA="$(sha256sum "$OUT/order.tsv" | cut -d' ' -f1)"
 # preflight exit, so a full run and a dry run assert the same invocation.
 guard_cross_arm
 
-printf '%s\n' "$ENGINE" > "$OUT/engine-path.txt"
+# The packet records <engine>, never the operator's absolute checkout path;
+# --finalize resolves the placeholder against the checkout it runs from.
+printf '%s\n' "$(scrub_packet_path "$ENGINE")" > "$OUT/engine-path.txt"
 {
     echo "command-code: $CC_VERSION"
     echo "engine: $(git -C "$ENGINE" rev-parse HEAD 2>/dev/null || echo unknown)"
@@ -767,7 +820,7 @@ printf '%s\n' "$ENGINE" > "$OUT/engine-path.txt"
     echo "seed_working_tree: clean"
     echo "seed_instruction_surfaces: none"
     echo "seed_heyloey_references: none"
-    echo "host_home: $HOME"
+    echo "host_home: $(scrub_packet_path "$HOME")"
     echo "host_instruction_surfaces: none"
     echo "host_mcp_servers: none"
     echo "host_hooks: none"
@@ -939,7 +992,10 @@ for ((pi = 0; pi < PLAN_COUNT; pi++)); do
         : > "$stripped"
     fi
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-        "$scenario" "$arm" "$rundir" "$transcript" "$record" "$rundir-run.diff" "$stripped" "${verify_out:-}" >> "$OUT/manifest.tsv"
+        "$scenario" "$arm" "$(scrub_packet_path "$rundir")" \
+        "$(scrub_packet_path "$transcript")" "$(scrub_packet_path "$record")" \
+        "$(scrub_packet_path "$rundir-run.diff")" "$(scrub_packet_path "$stripped")" \
+        "$(scrub_packet_path "${verify_out:-}")" >> "$OUT/manifest.tsv"
     RUN_SCENARIOS+=("$scenario")
     RUNS=$((RUNS + 1))
     printf 'RUNDONE|%s|arm=%s|level=%s|cli_exit=%s\n' "$scenario" "$arm" "$level" "$rc"
@@ -977,8 +1033,8 @@ for scenario in "${RUN_SCENARIOS[@]}"; do
     blind="$(printf 'B%03d' "$idx")"
     row="$(grep -m1 -- "^${scenario}$(printf '\t')" "$MANIFEST" || true)"
     [[ -n "$row" ]] || bench_error "MANIFEST_ROW_MISSING" "$scenario"
-    sdiff="$(printf '%s' "$row" | cut -f7)"
-    verify_out="$(printf '%s' "$row" | cut -f8)"
+    sdiff="$(expand_packet_path "$(printf '%s' "$row" | cut -f7)")"
+    verify_out="$(expand_packet_path "$(printf '%s' "$row" | cut -f8)")"
     cp "$sdiff" "$OUT/grading/$blind.diff"
     if [[ -n "$verify_out" && -f "$verify_out" ]]; then
         cp "$verify_out" "$OUT/grading/$blind.verify.txt"
@@ -999,7 +1055,7 @@ key_sha="$(sha256sum "$KEY_OUT" | cut -d' ' -f1)"
 # prove it is reading the key this batch produced, not a substitute. It holds
 # the location and digest only - never a mapping row.
 {
-    echo "key_path: $KEY_OUT"
+    echo "key_path: $(scrub_packet_path "$KEY_OUT")"
     echo "key_sha256: $key_sha"
     echo "key_rows: $key_rows"
     echo "created_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
