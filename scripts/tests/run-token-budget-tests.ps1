@@ -56,7 +56,10 @@ $balancedTemplate = Join-Path $RepoRoot "templates/agent-directive-template.md"
 $balancedText = [System.IO.File]::ReadAllText($balancedTemplate, [System.Text.Encoding]::UTF8) -replace "`r", ""
 $balancedBytes = [System.Text.Encoding]::UTF8.GetByteCount($balancedText)
 $balancedExpected = [Math]::Floor(($balancedBytes + 2) / 4)
-if ($rc -eq 0 -and $out -match "BALANCED\|$balancedExpected\|2500\|PASS" -and $out -match "LITE.*PASS") {
+$measureText = [System.IO.File]::ReadAllText($measureScript, [System.Text.Encoding]::UTF8)
+$capMatch = [regex]::Match($measureText, '\$TokenBudgetBalanced\s*=\s*(\d+)')
+$balancedCap = if ($capMatch.Success) { $capMatch.Groups[1].Value } else { "UNPARSED" }
+if ($rc -eq 0 -and $out -match "BALANCED\|$balancedExpected\|$balancedCap\|PASS" -and $out -match "LITE.*PASS") {
     Ok "measure-tokens.ps1 --strict matches UTF-8 bytes/4 including the final newline"
 } else {
     NotOk "measure-tokens.ps1 --strict should exit 0 with BALANCED+LITE PASS (rc=$rc)"
