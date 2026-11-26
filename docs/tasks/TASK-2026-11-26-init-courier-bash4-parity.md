@@ -12,7 +12,7 @@
 - **Specification**: GitHub issue #785 "fix(init): enforce strict CLI flag/arg parity in init.ps1, atomic courier extraction, and Bash 4+ version guard" (P1, Type Twin Parity and Installer Safety Defect, Execution Wave A).
 - **External Reference**: https://github.com/lowqualityloey/promptkit-os/issues/785
 - **Owner / Actor**: repository owner (approval authority); delegated implementation agent impl-785 (execution) under the lead agent.
-- **Execution Scope**: isolated worktree `/home/heyloey/personal/pk-wt-785`, branch `fix/785-init-parity`, based on `d7ede1f964e670deca93a559eff294846b030b28`.
+- **Execution Scope**: isolated worktree `$HOME/personal/pk-wt-785` (outside the repository checkout), branch `fix/785-init-parity`, based on `d7ede1f964e670deca93a559eff294846b030b28`.
 - **Approval Boundary**: local implementation, tests, documentation, and one commit only. No push, pull request, merge, release, workflow edit, or other remote action without explicit owner approval.
 - **Created**: 2026-11-26
 
