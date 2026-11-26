@@ -12,8 +12,8 @@
 - **Specification**: `GitHub issue #793; docs/internal/host-conformance/multi-host-capture-plan.md sections 3.1-3.2 and 5; the issue's host-count criterion is reduced to one host by the measured inventory recorded under Reduced Scope below.`
 - **External Reference**: `GitHub issue #793`
 - **Owner / Actor**: `DeepSeek Harness agent (executor)`
-- **Execution Scope**: `promptkit-os repository; new capture bundles under docs/internal/host-conformance/codex-cli/, the Codex CLI row and prose in docs/HOST-CONFORMANCE.md, the host-count sentence in README.md, and this record. No file under scripts/, workflows/, protocols/, templates/, or docs/BENCHMARKS.md; no implementation change of any kind. Local captures and one local documentation commit on branch feat/793-codex-conformance.`
-- **Approval Boundary**: `Live capture on the local machine, artifact publication under docs/internal/host-conformance/codex-cli/, the documentation updates listed in Execution Scope, and one local commit on feat/793-codex-conformance are authorized. Push, pull request, merge, tag, release, npm publication, and any edit or closure of issue #793 remain unauthorized; the issue must stay open because its host-count criterion is unmet.`
+- **Execution Scope**: `promptkit-os repository; this task record only. No capture bundle, no Codex CLI row, no docs/HOST-CONFORMANCE.md or README.md count change, no file under scripts/, workflows/, protocols/, templates/, or docs/BENCHMARKS.md, and no implementation change. Local documentation commits on branch feat/793-codex-conformance.`
+- **Approval Boundary**: `Recording the reduced scope, the credential-isolation blocker, and the owner's option-3 decision, plus local commits on feat/793-codex-conformance, are authorized. Live capture, artifact publication, and count updates are not performed under that decision. Push, pull request, merge, tag, release, npm publication, and any edit or closure of issue #793 remain unauthorized; the issue must stay open.`
 - **Created**: `2026-11-26`
 
 ## 2. Objective and Boundaries
@@ -68,7 +68,7 @@
 - **Active Task Pointer**: `None`
 - **Start Time**: `2026-11-26`
 - **Current Actor**: `DeepSeek Harness agent`
-- **Next Action**: `Resolve the credential-isolation blocker: the owner must decide how Codex authentication is supplied to an isolated capture without the agent reading the credential store, or run the captures directly.`
+- **Next Action**: `Await a new owner instruction; under the recorded option-3 decision this task publishes no capture arm and issue #793 remains open. Resume only if the owner supplies an approved authentication path or owner-run capture bundles.`
 
 ### Transition History
 
@@ -81,20 +81,20 @@
 ## 6. Evidence and Completion Gate
 
 - **Changed Files**:
-  - `docs/tasks/TASK-2026-11-26-issue-793-codex-conformance.md` — reduced-scope restatement; capture evidence pending
+  - `docs/tasks/TASK-2026-11-26-issue-793-codex-conformance.md` — reduced-scope restatement, blocker record, and owner option-3 decision; no capture artifacts
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `The reduced-scope record validated at commit 32c1d35 with bash scripts/validate-execution-control.sh --root . --strict -> VALID|RECORDS=85|ROOT=. No capture bundle exists yet. The blocking event was: BLOCKED by CC Safety Net; Reason: Access to a sensitive path is not allowed; Rule: secret.cli.codex; Segment: /home/heyloey/.codex/auth.json.`
+- **Verification Evidence**: `The reduced-scope record validated at commit 32c1d35 with bash scripts/validate-execution-control.sh --root . --strict -> VALID|RECORDS=85|ROOT=. The decision update is revalidated before its commit. No capture bundle exists. The blocking event was: BLOCKED by CC Safety Net; Reason: Access to a sensitive path is not allowed; Rule: secret.cli.codex; Segment: /home/heyloey/.codex/auth.json.`
 - **CI Evidence**: `Pending — branch not pushed, so no workflow ran.`
-- **Review Evidence**: `Pending human review of the published bundles and counts.`
-- **Commit Evidence**: `Pending — one local documentation commit is created after the captures.`
+- **Review Evidence**: `Owner reviewed the blocker and selected option 3 on 2026-11-27: leave issue #793 open with the blocker recorded and publish no capture arm.`
+- **Commit Evidence**: `32c1d35 restates the reduced scope; 3544a7c records the blocker. A third local commit records the owner's option-3 decision. No capture commit exists.`
 - **Pull Request Evidence**: `Pending separate authorization.`
 - **Release Evidence**: `N/A — no release action in scope.`
-- **Blocker and Resume Condition**: `CC Safety Net rule secret.cli.codex blocked copying /home/heyloey/.codex/auth.json into the bwrap scratch CODEX_HOME. The block instruction forbids retrying or working around it, and an isolated Codex CLI cannot authenticate without that credential, so the five captures cannot start in this session. Resume after the owner either runs the captures in a session they control or decides how authentication is supplied to the isolated host without the sandboxed model being able to read the credential store; then resume at card-provenance.`
+- **Blocker and Resume Condition**: `CC Safety Net rule secret.cli.codex blocked copying /home/heyloey/.codex/auth.json into the bwrap scratch CODEX_HOME. The block instruction forbids retrying or working around it, and an isolated Codex CLI cannot authenticate without that credential, so the five captures cannot start in this session. On 2026-11-27 the owner selected option 3: leave issue #793 open with this blocker recorded and publish no capture arm. Resume only on a new instruction that supplies an approved authentication path or owner-run capture bundles; then resume at card-provenance.`
 - **Completion State**: `blocked`
-- **Acceptance Results**: `AC-1 Pass — the record restates the reduced scope, the measured inventory, and the unmet three-host criterion. AC-2 through AC-7 Blocked — no capture bundle, matrix row, or count update was produced because the isolated host could not authenticate.`
-- **Changed-File Summary**: `The #793 task record restating the reduced one-host scope and the unmet three-host criterion. Capture bundles, matrix row, and README count follow in the same branch.`
-- **Completion Exception**: `The issue's criterion of at least three previously Untested hosts cannot be met on this machine: only Codex CLI 0.172.0 is both installed and previously untested, while opencode, commandcode, and agy are already captured and claude, cursor-agent, gemini, aider, and copilot are absent.`
-- **Completion Decision and Timestamp**: `Blocked pending owner decision — 2026-11-26.`
+- **Acceptance Results**: `AC-1 Pass — the record restates the reduced scope, the measured inventory, and the unmet three-host criterion. AC-2 through AC-7 Blocked — no capture bundle, matrix row, or count update was produced because the isolated host could not authenticate; under the owner's option-3 decision no capture arm is published in this task.`
+- **Changed-File Summary**: `The #793 task record only: reduced one-host scope, unmet three-host criterion, credential-isolation blocker, and owner option-3 decision. No capture bundle, matrix row, or README count is published.`
+- **Completion Exception**: `The issue's criterion of at least three previously Untested hosts cannot be met on this machine: only Codex CLI 0.172.0 is both installed and previously untested, while opencode, commandcode, and agy are already captured and claude, cursor-agent, gemini, aider, and copilot are absent. The owner then elected option 3, so no capture arm is published.`
+- **Completion Decision and Timestamp**: `Stopped by owner decision (option 3): issue #793 stays open with the blocker recorded and no capture arm is published — 2026-11-27.`
 - **Branch / Revision**: `feat/793-codex-conformance at origin/main 6e381e1`
