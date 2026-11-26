@@ -4,206 +4,17 @@
 [![CI](https://github.com/lowqualityloey/promptkit-os/actions/workflows/ci.yml/badge.svg)](https://github.com/lowqualityloey/promptkit-os/actions)
 [![npm version](https://img.shields.io/npm/v/promptkit-os.svg)](https://www.npmjs.com/package/promptkit-os)
 [![npm provenance](https://img.shields.io/badge/provenance-attested-brightgreen.svg)](https://www.npmjs.com/package/promptkit-os)
-[![GitHub](https://img.shields.io/badge/GitHub-lowqualityloey%2Fpromptkit--os-black.svg)](https://github.com/lowqualityloey/promptkit-os)
 
 The open-source advisory instruction layer for AI coding agents.  
 A lightweight, repository-native system for risk, context, state, autonomy, and verification.
 
 No runtime. No daemon. No model lock-in. No required API.
 
-Generates native instructions and directives for nine installer targets — `claude`, `gemini`, `cursor`, `windsurf`, `copilot`, `cline`, `trae`, `opencode`, `aider` (Claude Code, Gemini CLI/Antigravity, Cursor, Windsurf, GitHub Copilot, Cline/Roo Code, Trae IDE, OpenCode, and Aider) — with `AGENTS.md` created as the universal fallback for any other AGENTS.md-reading host, such as Codex CLI. See [docs/HOST-CONFORMANCE.md](./docs/HOST-CONFORMANCE.md) for the host matrix: three of its eleven host configurations carry live single-host captures and eight are registered **Untested for live runtime fidelity**. OpenCode holds live captures of all five probes (four of them on two models), Antigravity CLI holds all five too — taken under enforced filesystem isolation, with two **PASS** and three `PARTIAL` on vocabulary alone — and Command Code CLI holds all five under the same enforced isolation. Antigravity also holds the repository's first **two-turn** capture, and it is a behavioural failure rather than a vocabulary one: given a resume instruction, the model accepted its own requested token as human sign-off and advanced into M2 without ever verifying M1. Every capture is single-host and excluded from cross-host comparison. The staged fixture grades validate the scoring rubric, not live runtime behaviour.
+Generates native directives for nine AI coding hosts plus a universal `AGENTS.md` fallback — three of its eleven host configurations carry live captures and eight remain **Untested for live runtime fidelity** (see [Host Compatibility & Live Conformance](#host-compatibility--live-conformance)).
 
 ---
 
 ## ⚡ Quick Start (10 Seconds)
-
-Add PromptKit OS to any new or existing repository:
-
-```bash
-# Recommended (zero prerequisite setup):
-npx promptkit-os
-
-# Or via Git submodule:
-git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh
-# (Windows PowerShell: .\.promptkit\init.ps1)
-```
-
-In an interactive terminal, the wizard uses arrow keys and Enter for profile and task-tracker choices, then Space and Enter to choose AI-host files. A final review lets you edit a choice, install, or cancel. Existing settings are kept on reruns; command-line flags remain available for automated installs.
-
-To refresh installed directives after updating PromptKit OS, update the kit using the same installation method and rerun its canonical `init.sh` or `init.ps1` installer. The installer regenerates the managed directive block from the selected profile template; custom content outside that block is preserved.
-
-*(For CI pipelines or headless scripts, pass flags directly: `--balanced`, `--lite`, `--host=<name>`.)*
-
-### The five-command loop
-
-Once installed, most solo work runs on five commands:
-
-| Command | Job |
-|---|---|
-| `pk:plan` | Shape the change: scope, acceptance criteria, and the implementation plan |
-| `pk:auto` | Chain plan → tasks → code → tests → review up to the declared terminal boundary (the default stops before any commit) |
-| `pk:review` | Two-axis audit of the change before it lands |
-| `pk:commit` | Secret scan, gates, and atomic Conventional Commits |
-| `pk:checkpoint` | Persist active state and hand off before a context reset |
-
-Set `preset: solo-fast` in `./PROMPTKIT.md` (or run `pk:profile --solo-fast`) for the tight loop: concise routine status, framed callouts only for ACTION REQUIRED or BLOCKED, and Level 2 Lite records by default. Hard gates — push, PR, destructive operations, and Level 3 — are unchanged.
-
----
-
-## The Problem
-
-AI coding agents are increasingly capable of writing code.  
-The harder problem is controlling everything around the code:
-
-- How much context should the agent load for this task?
-- How much process does this task actually need?
-- What project constraints must survive across sessions?
-- How do you prevent architectural decisions from disappearing after context compaction?
-- How do you verify that the claimed result was actually executed?
-- When should the agent stop instead of continuing unchecked?
-- What happens when the scope changes halfway through implementation?
-- How do you keep the instruction layer small enough that it does not become another source of token waste?
-
-PromptKit OS is designed around those problems.
-
----
-
-## The Core Idea
-
-PromptKit separates **engineering control** from **engineering capability**.
-
-```
-        HUMAN
-          │
-          ▼
-  ┌───────────────┐
-  │  PROMPTKIT OS │  ← Risk · Context · State · Autonomy · Verification
-  └───────┬───────┘
-          │  JIT workflows + stack knowledge loaded only when relevant
-          ▼
-  ┌───────────────┐
-  │  AI CODING    │  ← The agent executes
-  │  AGENT        │
-  └───────┬───────┘
-          │  edit / run / verify
-          ▼
-  ┌───────────────┐
-  │  EVIDENCE     │  ← tests · builds · checks · diffs
-  └───────┬───────┘
-          │
-          ▼
-  ┌───────────────┐
-  │ QUALITY GATE  │  ← exit code 0 required — not a claim
-  └───────────────┘
-```
-
-PromptKit does not try to become the model, IDE, compiler, or autonomous runtime.  
-It provides the engineering rules around them.
-
----
-
-## Start Here: Most Work Is Level 1
-
-You do not need to learn all 26 workflows. Most everyday engineering tasks — bug fixes, small features, isolated component changes — are **Level 1 (Standard)** and need only `pk:route` or `pk:debug` to get started. Heavier ceremony kicks in only when the task warrants it.
-
-> [!TIP]
-> Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (preserves project state and active tasks across context compaction and resets). You do not need to learn all 26 before getting value.
-
-### Everyday Triggers Cheat-Sheet
-
-Prompt your assistant naturally or invoke fast shorthand triggers:
-
-| Command | Purpose | When to Use |
-|:---|:---|:---|
-| `pk:route` | **Task Intake** | Classifies incoming tasks into Ceremony Levels 0–3 and routes to the right workflow |
-| `pk:onboard` | **Project Discovery** | First install on greenfield or brownfield codebases; detects stack & sets rules |
-| `pk:brainstorm` | **Divergent Ideation** | Widening the option space before requirements converge; zero artifacts, then one direction into `pk:plan` |
-| `pk:plan` | **Feature RFC** | Designing architectural changes, data contracts, and schema boundaries |
-| `pk:test` | **Test Strategy & TDD** | Allocating seams, mocking boundaries, and writing tests before code |
-| `pk:debug` | **Root-Cause Analysis** | Systematic 5-step falsifiable debugging (stops infinite hallucinated edits) |
-| `pk:commit` | **Pre-Commit Gate** | Secret scanning, running test suites, and authoring atomic conventional commits |
-| `pk:checkpoint` | **Session Handover** | Saving active tasks and state to Git before ending your chat session |
-
-`pk:onboard`, `pk:plan`, and `pk:test` are Balanced-profile workflows: their files ship in every install, but the Lite directive advertises only its six utility triggers (`pk:route`, `pk:debug`, `pk:commit`, `pk:checkpoint`, `pk:sync`, `pk:profile`), so switch to Balanced first (`.promptkit/init.sh --balanced`, or `.\.promptkit\init.ps1 --balanced` in PowerShell) if you rely on them.
-
-### What PromptKit Looks Like in Chat
-
-PromptKit standardizes agent telemetry into clean 3-line status cards without verbose conversational fluff:
-
-```text
-> 📊 **Milestone**: 02-user-auth [■■■■□□] 4/6 — source: STATE.md read this turn
-> 🎯 **Active**: Task 2.3 — Implement JWT refresh token rotation
-> 🟢 **Quality Gate**: measured this turn (flutter test: 14 passed, exit 0)
-```
-
----
-
-## What PromptKit Controls
-
-### Task Ceremony Levels (Level 0–3 Execution)
-
-Every task is routed through four ceremony levels before work begins:
-
-- **Level 0 — Direct**: Questions, explanations, doc typos, formatting, or syntax lookups. Zero overhead.
-- **Level 1 — Standard**: Localized bug fixes or small self-contained features. Level 1 does NOT require a Task Record file (`docs/tasks/<task-id>.md`).
-- **Level 2 — Controlled**: Schema, auth, multi-component, or public contract changes. Level 2 Requires a canonical Local Task Record at `docs/tasks/<task-id>.md` before implementation.
-- **Level 3 — Release-Critical**: Releases, deployments, high-impact contract changes. Level 3 Requires Level 2 evidence and Task Record readiness, plus human authorization.
-
-The principle: use the minimum ceremony appropriate to the risk.
-
-For authoritative Level 0–3 classification, escalation, downgrade, and Task Record rules, see [`workflows/route.md`](./workflows/route.md).
-
-### Context — Just-In-Time Loading & Context Economy
-
-The core instruction layer stays small. Workflows, stack playbooks, and boundary recipes are loaded only when the task requires them.
-
-- **Balanced** profile: ~2,404 tok static footprint (~93% static saving vs. ~32.8k current core-subset baseline; 2,500 tok budget cap)
-- **Lite** profile: ~1,415 tok static footprint (~96% static saving vs. the current baseline; 1,500 tok budget cap)
-
-These figures, and the caps they are compared against, use the `bytes/4` proxy — `measure-tokens.sh` never invokes a tokenizer. Read them as "the proxy is under budget", not "the real token count is under budget": the proxy runs a fraction of a percent low against `cl100k_base`, so the proxy cap is set below the real cap. Both directives now clear their caps in both conventions (Balanced 2,404 proxy vs 2,411 `cl100k_base`; Lite 1,415 vs 1,449, against the 2,500/1,500 caps). See [`docs/BENCHMARKS.md` §9](./docs/BENCHMARKS.md) for the full comparison.
-
-PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), governing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 task risk ceremony). Retrieval confidence is treated as evidence rather than authority, and high-risk boundaries direct the agent to zoom out. These are advisory agent instructions: CI asserts that the invariant text is present and that the directive token budgets hold, but PromptKit does not enforce this protocol at runtime — see the enforcement boundary recorded in that file.
-
-Full workflows are read from local files only when triggered. See [`docs/BENCHMARKS.md`](./docs/BENCHMARKS.md) and [`docs/BENCHMARK-METHODOLOGY.md`](./docs/BENCHMARK-METHODOLOGY.md) for Cost Per Accepted Change (CPAC) methodology.
-
-### State — Durable Across Sessions
-
-AI sessions are temporary. Repositories are not.
-
-PromptKit stores engineering state in Git-tracked project files: `PROMPTKIT.md`, `docs/STATE.md`, `docs/tasks/`, `docs/specs/`, `docs/adrs/`. Active milestones, task state, and architectural invariants survive context compaction, new sessions, and agent changes.
-
-### Autonomy — Bounded, Not Unlimited
-
-PromptKit introduces explicit limits around investigation loops, repeated repair attempts, scope changes, and high-risk operations. When a boundary is exceeded, the system records state and escalates rather than continuing unchecked.
-
-### Verification — Evidence, Not Claims
-
-An agent saying *"the implementation is complete"* is not evidence.
-
-PromptKit's quality gate protocols instruct the agent to execute real verification commands (`exit code 0` required) before marking tasks complete. Bounded repair is capped at 2 automated attempts before escalating to the developer. The human remains the sole authority for acceptance, commit approval, and release decisions.
-
----
-
-## Architecture
-
-```
-.promptkit/
-├── protocols/       # Core control — risk routing, evidence gates, context sync
-├── workflows/       # 26 engineering procedures (pk:route → pk:ship)
-├── docs/
-│   ├── stacks/      # JIT stack playbooks — Next.js, Supabase, Vercel, Expo, Flutter, Rust, Go, Python
-│   ├── recipes/     # Boundary contracts — auth sessions, form mutations, webhooks, env, test isolation
-│   └── adrs/        # Architecture decisions
-├── templates/       # 29 durable engineering templates (.md; artifact schemas plus the directive and profile sources — the one non-Markdown asset, `terminal-banner.txt`, is excluded)
-├── scripts/         # Validation, token measurement, CPAC benchmarking (.sh + .ps1 twins)
-└── examples/        # Reference implementations
-```
-
-The architectural boundary: **PromptKit owns engineering policy and control. The host agent owns capability and execution.**
-
----
-
-## Getting Started
 
 ### 1. Install
 
@@ -213,17 +24,17 @@ Run in your project root:
 # Recommended (zero prerequisite setup):
 npx promptkit-os
 
-# Or via Git submodule:
+# Or via Git submodule (canonical):
 git submodule add https://github.com/lowqualityloey/promptkit-os.git .promptkit && ./.promptkit/init.sh
 # (Windows PowerShell: .\.promptkit\init.ps1)
 ```
 
-In an interactive terminal, use ↑/↓ and Enter for profile and task-tracker choices, then Space and Enter to toggle AI-host files. The final review lets you edit a choice, install, or cancel. Existing settings are kept on reruns.
+In an interactive terminal, use ↑/↓ and Enter for profile and task-tracker choices, then Space and Enter to toggle AI-host files. Existing settings are kept on reruns; rerunning `init.sh` or `init.ps1` refreshes the managed directive block while preserving custom content outside it. Already installed? See [Updating PromptKit](./QUICKSTART.md#updating-promptkit).
 
 <details>
 <summary>Non-Interactive / CI Flags</summary>
 
-Pass flags directly to bypass the interactive prompts in automated environments:
+Pass flags directly to bypass interactive prompts in automated environments:
 
 ```bash
 # Balanced profile (full 26 workflows)
@@ -238,6 +49,9 @@ npx promptkit-os@latest --lite
 ```
 
 </details>
+
+<details>
+<summary>Courier Contract &amp; Uninstalling / Removing PromptKit OS</summary>
 
 > [!NOTE]
 > The git submodule flow above is canonical. The npm package is a **courier, not a dependency** — it fetches the release tarball matching its version into `.promptkit/` and runs the same installer, producing an identical tree. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`. It requires Node 18+ (and PowerShell 7 on Windows), and it refuses to overlay a non-empty `.promptkit/`, printing the update command that matches how the existing install was made. Removal (there is no `--uninstall` flag). The kit directory comes out differently depending on how it went in. A courier install just deletes `.promptkit/`. A submodule install must unregister it, and the kit is a real repository that may hold work of its own, so inspect it before you discard anything.
@@ -267,19 +81,168 @@ npx promptkit-os@latest --lite
 >
 > Do not reach for `git -C .promptkit` here: once the kit is deinitialized its directory is empty, so git walks up and answers about the host repository instead. Then commit the `.gitmodules` change; deleting only the directory instead leaves a registered `160000` gitlink behind and the next `git submodule add` fails with `'.promptkit' already exists in the index`. The module repository under `.git/modules/` is optional cleanup, not part of removal: leave it alone if you are unsure — a leftover copy only makes a later re-add ask for `--force`, and `git submodule add --force` reuses it. Then delete the `<!-- PROMPTKIT_START -->` … `<!-- PROMPTKIT_END -->` block from every host directive file the installer wrote to — leaving it behind points the agent at a `.promptkit/` that no longer exists. `PROMPTKIT.md` and `docs/STATE.md` are yours after install, not regenerated files: the installer preserves custom content in `PROMPTKIT.md` and only rewrites its `profile` / `tracking` / `projection` fields, and it creates `docs/STATE.md` only when absent, so delete either one only if you added nothing worth keeping. Also delete `docs/tasks/`, `docs/specs/`, `docs/adrs/`, `docs/tests/`, plus `.github/pull_request_template.md` and `.github/ISSUE_TEMPLATE/task.md` (GitHub tracking only) if the installer created them and you have added nothing of your own. Nothing keeps running afterwards: no daemon, no service, no scheduled task.
 
-Already installed? To pull updates, see [Updating PromptKit](./QUICKSTART.md#updating-promptkit).
+</details>
 
-### 2. Configure
+### 2. Configure & Work Normally
 
-The installer creates `PROMPTKIT.md` (your project profile — test commands, stack constraints, architectural invariants) and `docs/STATE.md` (living project state). Run `pk:onboard` for a guided setup interview — it is a Balanced-profile workflow, so under Lite switch to Balanced first (`.promptkit/init.sh --balanced`). Verify any install anytime with `pk:doctor` — a read-only audit of host directives, engine version, ignore-state, docs drift, intake provenance, and submodule registration; it reports rot and never writes.
+The installer creates `PROMPTKIT.md` (project commands, stack constraints, invariants) and `docs/STATE.md` (living project state). Run `pk:onboard` for a guided setup interview (Balanced profile) and verify any install anytime with `pk:doctor` (a read-only audit that reports drift and never writes).
 
-### 3. Work normally
+You do not need to memorize commands — prompt your agent naturally (*"The checkout endpoint is returning 500 errors"*) and PromptKit routes it to the right ceremony level and workflow (`pk:route`).
 
-You do not need to memorize commands. Prompt your agent naturally:
+### The five-command loop
 
-> *"The checkout endpoint is returning 500 errors."*
+Once installed, most solo work runs on five commands:
 
-PromptKit routes the task to the appropriate ceremony level and workflow. Explicit routing: `pk:route`.
+| Command | Job |
+|---|---|
+| `pk:plan` | Shape the change: scope, acceptance criteria, and the implementation plan |
+| `pk:auto` | Chain plan → tasks → code → tests → review up to the declared terminal boundary (the default stops before any commit) |
+| `pk:review` | Two-axis audit of the change before it lands |
+| `pk:commit` | Secret scan, gates, and atomic Conventional Commits |
+| `pk:checkpoint` | Persist active state and hand off before a context reset |
+
+Set `preset: solo-fast` in `./PROMPTKIT.md` (or run `pk:profile --solo-fast`) for the tight loop: concise routine status, framed callouts only for ACTION REQUIRED or BLOCKED, and Level 2 Lite records by default. Hard gates — push, PR, destructive operations, and Level 3 — are unchanged.
+
+### What PromptKit Looks Like in Chat
+
+PromptKit standardizes routine status output into three compact Markdown lines without conversational fluff:
+
+```text
+> 📊 **Milestone**: 02-user-auth [■■■■□□] 4/6 — source: STATE.md read this turn
+> 🎯 **Active**: Task 2.3 — Implement JWT refresh token rotation
+> 🟢 **Quality Gate**: measured this turn (flutter test: 14 passed, exit 0)
+```
+
+---
+
+## The Problem & Core Idea
+
+AI coding agents are increasingly capable of writing code. The harder problem is controlling everything around the code:
+
+- **Context bloat:** Loading entire instruction packs burns tokens before work starts.
+- **Ceremony mismatch:** Applying the same process to a typo fix and a schema migration slows small tasks or under-governs risky ones.
+- **Session amnesia:** Architectural decisions and active task state vanish after context compaction or chat resets.
+- **Unverified claims:** Agents declare *"done"* without executing real checks or stop only after spiraling through broken edits.
+
+PromptKit separates **engineering control** from **engineering capability**:
+
+```
+        HUMAN
+          │
+          ▼
+  ┌───────────────┐
+  │  PROMPTKIT OS │  ← Risk · Context · State · Autonomy · Verification
+  └───────┬───────┘
+          │  JIT workflows + stack knowledge loaded only when relevant
+          ▼
+  ┌───────────────┐
+  │  AI CODING    │  ← The agent executes
+  │  AGENT        │
+  └───────┬───────┘
+          │  edit / run / verify
+          ▼
+  ┌───────────────┐
+  │  EVIDENCE     │  ← tests · builds · checks · diffs
+  └───────┬───────┘
+          │
+          ▼
+  ┌───────────────┐
+  │ QUALITY GATE  │  ← exit code 0 required — not a claim
+  └───────────────┘
+```
+
+PromptKit does not try to become the model, IDE, compiler, or autonomous runtime. It provides the engineering rules around them.
+
+---
+
+## Start Here: Most Work Is Level 1
+
+You do not need to learn all 26 workflows. Most everyday engineering tasks — bug fixes, small features, isolated component changes — are **Level 1 (Standard)** and need only `pk:route` or `pk:debug` to get started. Heavier ceremony kicks in only when the task warrants it.
+
+> [!TIP]
+> Start with two workflows: `pk:debug` (stops guess-and-patch loops) and `pk:checkpoint` (preserves project state and active tasks across context compaction and resets). You do not need to learn all 26 before getting value.
+
+### Everyday Triggers Cheat-Sheet
+
+Expanded trigger reference beyond the five-command loop:
+
+| Command | Purpose | When to Use |
+|:---|:---|:---|
+| `pk:route` | **Task Intake** | Classifies incoming tasks into Ceremony Levels 0–3 and routes to the right workflow |
+| `pk:onboard` | **Project Discovery** | First install on greenfield or brownfield codebases; detects stack & sets rules |
+| `pk:brainstorm` | **Divergent Ideation** | Widening the option space before requirements converge; zero artifacts, then one direction into `pk:plan` |
+| `pk:plan` | **Feature RFC** | Designing architectural changes, data contracts, and schema boundaries |
+| `pk:test` | **Test Strategy & TDD** | Allocating seams, mocking boundaries, and writing tests before code |
+| `pk:debug` | **Root-Cause Analysis** | Systematic 5-step falsifiable debugging (stops infinite hallucinated edits) |
+| `pk:commit` | **Pre-Commit Gate** | Secret scanning, running test suites, and authoring atomic conventional commits |
+| `pk:checkpoint` | **Session Handover** | Saving active tasks and state to Git before ending your chat session |
+
+`pk:onboard`, `pk:plan`, and `pk:test` are Balanced-profile workflows: their files ship in every install, but the Lite directive advertises only its six utility triggers (`pk:route`, `pk:debug`, `pk:commit`, `pk:checkpoint`, `pk:sync`, `pk:profile`), so switch to Balanced first (`.promptkit/init.sh --balanced`, or `.\.promptkit\init.ps1 --balanced` in PowerShell) if you rely on them.
+
+---
+
+## What PromptKit Controls
+
+### Task Ceremony Levels (Level 0–3 Execution)
+
+Every task is routed through four ceremony levels before work begins — using the minimum ceremony appropriate to the risk:
+
+- **Level 0 — Direct**: Questions, explanations, doc typos, formatting, or syntax lookups. Zero overhead.
+- **Level 1 — Standard**: Localized bug fixes or small self-contained features. Level 1 does NOT require a Task Record file (`docs/tasks/<task-id>.md`).
+- **Level 2 — Controlled**: Schema, auth, multi-component, or public contract changes. Level 2 Requires a canonical Local Task Record at `docs/tasks/<task-id>.md` before implementation.
+- **Level 3 — Release-Critical**: Releases, deployments, high-impact contract changes. Level 3 Requires Level 2 evidence and Task Record readiness, plus human authorization.
+
+For authoritative Level 0–3 classification, escalation, downgrade, and Task Record rules, see [`workflows/route.md`](./workflows/route.md).
+
+### Context — Just-In-Time Loading & Context Economy
+
+The core instruction layer stays small; workflows, stack playbooks, and boundary recipes load only when triggered:
+
+- **Balanced** profile: ~2,404 tok static footprint (~93% static saving vs. ~32.8k current core-subset baseline; 2,500 tok budget cap)
+- **Lite** profile: ~1,415 tok static footprint (~96% static saving vs. the current baseline; 1,500 tok budget cap)
+
+These figures use the `bytes/4` proxy (`measure-tokens.sh`), whose cap is set below the real tokenizer cap so both directives clear both conventions (Balanced 2,404 proxy vs 2,411 `cl100k_base`; Lite 1,415 vs 1,449, against 2,500/1,500 caps — see [`docs/BENCHMARKS.md` §9](./docs/BENCHMARKS.md) and [`docs/BENCHMARK-METHODOLOGY.md`](./docs/BENCHMARK-METHODOLOGY.md)).
+
+PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), governing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 risk ceremony). These are advisory agent instructions: CI asserts that the invariant text is present and that the directive token budgets hold, but PromptKit does not enforce this protocol at runtime.
+
+### State, Autonomy & Verification
+
+- **Durable State:** Engineering state lives in Git-tracked project files (`PROMPTKIT.md`, `docs/STATE.md`, `docs/tasks/`, `docs/specs/`, `docs/adrs/`), surviving context compaction, new sessions, and agent changes.
+- **Bounded Autonomy:** Explicit limits cap investigation loops, repeated repair attempts (max 2 automated attempts before escalating), scope drift, and high-risk operations.
+- **Evidence, Not Claims:** Quality gate protocols require executed verification commands (`exit code 0` required) before marking tasks complete. The human remains the sole authority for acceptance, commit approval, and release decisions.
+
+---
+
+## Architecture
+
+```
+.promptkit/
+├── protocols/       # Core control — risk routing, evidence gates, context sync
+├── workflows/       # 26 engineering procedures (pk:route → pk:ship)
+├── docs/
+│   ├── stacks/      # JIT stack playbooks — Next.js, Supabase, Vercel, Expo, Flutter, Rust, Go, Python
+│   ├── recipes/     # Boundary contracts — auth sessions, form mutations, webhooks, env, test isolation
+│   └── adrs/        # Architecture decisions
+├── templates/       # 29 durable engineering templates (.md; excluding `terminal-banner.txt`)
+├── scripts/         # Validation, token measurement, CPAC benchmarking (.sh + .ps1 twins)
+└── examples/        # Reference implementations
+```
+
+The architectural boundary: **PromptKit owns engineering policy and control. The host agent owns capability and execution.**
+
+---
+
+## Host Compatibility & Live Conformance
+
+PromptKit generates native instructions and directives for nine installer targets — `claude`, `gemini`, `cursor`, `windsurf`, `copilot`, `cline`, `trae`, `opencode`, `aider` (Claude Code, Gemini CLI/Antigravity, Cursor, Windsurf, GitHub Copilot, Cline/Roo Code, Trae IDE, OpenCode, and Aider) — with `AGENTS.md` created as the universal fallback for any other `AGENTS.md`-reading host, such as Codex CLI.
+
+See [`docs/HOST-CONFORMANCE.md`](./docs/HOST-CONFORMANCE.md) for the full host matrix: **three of its eleven host configurations** carry live single-host captures and **eight** are registered **Untested for live runtime fidelity**:
+
+- **OpenCode:** Live captures of all five probes (four of them on two models).
+- **Antigravity CLI:** All five probes under enforced filesystem isolation (two **PASS**, three `PARTIAL` on vocabulary alone), plus the repository's first **two-turn** resume capture — a behavioural failure where the model accepted its own requested token as human sign-off and advanced into M2 without verifying M1.
+- **Command Code CLI:** All five probes under the same enforced isolation.
+
+Every capture is single-host and excluded from cross-host comparison. Staged fixture grades validate the scoring rubric, not live runtime behaviour.
 
 ---
 
@@ -319,13 +282,11 @@ PromptKit applies its own engineering principles to itself.
 
 ## Why Deliberately Small
 
-The temptation in AI tooling is to add more agents, more skills, more prompts, more context.
-
-PromptKit takes the opposite approach. Its core question is:
+The temptation in AI tooling is to add more agents, more skills, more prompts, more context. PromptKit takes the opposite approach:
 
 > *What is the minimum context, ceremony, and autonomy required to safely complete this task?*
 
-That is why workflows, stack knowledge, and recipes are separate and loaded just in time. The goal is not the largest AI engineering framework. The goal is a small advisory layer that makes many different AI engineering capabilities safer and more efficient to use.
+Workflows, stack knowledge, and recipes stay separate and load just in time. The goal is not the largest AI engineering framework — it is a small advisory layer that makes any AI coding agent safer and more efficient to use.
 
 ---
 
