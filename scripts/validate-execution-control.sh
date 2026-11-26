@@ -546,6 +546,26 @@ validate_task() {
     done
     require_value "$file" "$id" "Record Type"
     [ "$(field_value "$file" "Record Type")" = "Task Record" ] || diagnostic INVALID_STATE "$id" "$path" "Record Type is not Task Record" "Use the canonical Task Record type"
+
+    local record_form
+    record_form="$(field_value "$file" "Record Form")"
+    if [ -n "$record_form" ] && [ "$record_form" != "Lite" ] && [ "$record_form" != "Full" ]; then
+        diagnostic INVALID_STATE "$id" "$path" "Unknown Record Form: $record_form" "Use Lite or Full"
+    fi
+    if [ "$record_form" = "Lite" ]; then
+        local form_ceremony form_level
+        form_ceremony="$(field_value "$file" "Ceremony Level")"
+        [ -z "$form_ceremony" ] && form_ceremony="$(field_value "$file" "Work Classification")"
+        form_level="2"
+        if [ -n "$form_ceremony" ]; then
+            form_level="$(parse_ceremony_level "$form_ceremony")"
+            [ "$form_level" = "invalid" ] && form_level="2"
+        fi
+        if [ "$form_level" = "3" ]; then
+            diagnostic POLICY_LIMITATION "$id" "$path" "Lite Record Form cannot carry Level 3 work" "Use the full task record form at Level 3"
+        fi
+    fi
+
     require_value "$file" "$id" "Specification"
     require_value "$file" "$id" "Owner / Actor"
     require_value "$file" "$id" "Execution Scope"
@@ -743,8 +763,23 @@ validate_checkpoint() {
     fi
 
     local tier="full"
+    local record_form
+    record_form="$(field_value "$file" "Record Form")"
+    if [ -n "$record_form" ] && [ "$record_form" != "Lite" ] && [ "$record_form" != "Full" ]; then
+        diagnostic INVALID_STATE "$id" "$path" "Unknown Record Form: $record_form" "Use Lite or Full"
+    fi
     if [ "$effective_level" = "1" ]; then
         tier="quick"
+    fi
+    if [ "$record_form" = "Lite" ]; then
+        case "$effective_level" in
+            1) tier="quick" ;;
+            3)
+                diagnostic POLICY_LIMITATION "$id" "$path" "Lite Record Form is refused at Level 3" "Use the full checkpoint form"
+                tier="full"
+                ;;
+            *) tier="lite" ;;
+        esac
     fi
 
     if [ "$tier" = "quick" ]; then
@@ -790,6 +825,19 @@ validate_checkpoint() {
             fi
         done
         QUICK_UNRESOLVED_COUNT=$((QUICK_UNRESOLVED_COUNT + unresolved_count))
+        return 0
+    fi
+
+    if [ "$tier" = "lite" ]; then
+        [ "$(field_value "$file" "Record Type")" = "Checkpoint Record" ] || diagnostic CHECKPOINT_INCOMPLETE "$id" "$path" "Record Type is not Checkpoint Record" "Use the canonical Checkpoint Record type"
+        local lite_values=("Checkpoint ID" "Task ID" "Created" "Execution State" "Objective" "Completed Work" "Remaining Work" "Branch / Revision" "Locked Decisions and Invariants" "Next Action" "Resume Condition" "Recorded By")
+        local lite_label
+        for lite_label in "${lite_values[@]}"; do
+            require_value "$file" "$id" "$lite_label" "CHECKPOINT_INCOMPLETE"
+        done
+        require_label "$file" "$id" "Changed Files" "CHECKPOINT_INCOMPLETE"
+        require_label "$file" "$id" "Blockers" "CHECKPOINT_INCOMPLETE"
+        [ -n "$task_id" ] && [ -n "${TASK_FILE_BY_ID[$task_id]+set}" ] || diagnostic TRACEABILITY_MISSING "$id" "$path" "Checkpoint references unknown Task ID: $task_id" "Link the checkpoint to an existing Task Record"
         return 0
     fi
 

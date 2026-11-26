@@ -273,7 +273,7 @@ foreach ($file in $AllMarkdownFiles) {
 # Validate template directory completeness from the filesystem inventory
 Write-Host "`n📋 Checking template directory completeness..." -ForegroundColor Cyan
 
-$ExpectedTemplateCount = 29
+$ExpectedTemplateCount = 31
 $TemplateInventory = @(Get-ChildItem -Path $TemplatesDir -Filter *.md -File | Sort-Object Name)
 
 if ($TemplateInventory.Count -ne $ExpectedTemplateCount) {

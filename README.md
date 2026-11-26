@@ -34,6 +34,20 @@ To refresh installed directives after updating PromptKit OS, update the kit usin
 
 *(For CI pipelines or headless scripts, pass flags directly: `--balanced`, `--lite`, `--host=<name>`.)*
 
+### The five-command loop
+
+Once installed, most solo work runs on five commands:
+
+| Command | Job |
+|---|---|
+| `pk:plan` | Shape the change: scope, acceptance criteria, and the implementation plan |
+| `pk:auto` | Chain plan → tasks → code → tests → review up to the declared terminal boundary (the default stops before any commit) |
+| `pk:review` | Two-axis audit of the change before it lands |
+| `pk:commit` | Secret scan, gates, and atomic Conventional Commits |
+| `pk:checkpoint` | Persist active state and hand off before a context reset |
+
+Set `preset: solo-fast` in `./PROMPTKIT.md` (or run `pk:profile --solo-fast`) for the tight loop: concise routine status, framed callouts only for ACTION REQUIRED or BLOCKED, and Level 2 Lite records by default. Hard gates — push, PR, destructive operations, and Level 3 — are unchanged.
+
 ---
 
 ## The Problem

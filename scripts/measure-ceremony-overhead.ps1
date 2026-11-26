@@ -84,9 +84,11 @@ $KitDir = Split-Path -Parent $ScriptDir
 $Baseline = [ordered]@{
     "L0" = 0
     "L1" = 0
-    "L2" = 5372
+    "L2" = 998
     "L3" = 13561
     "SETUP" = 3021
+    "REQ:templates/execution-task-record-lite-template.md" = 790
+    "REQ:templates/execution-checkpoint-lite-template.md" = 208
     "REQ:templates/execution-task-record-template.md" = 4812
     "REQ:templates/execution-checkpoint-template.md#full" = 560
     "REQ:templates/release-checklist.md" = 3409
@@ -101,8 +103,8 @@ $Baseline = [ordered]@{
     "OPT:templates/execution-scope-change-template.md" = 782
     "OPT:templates/ci-triage-template.md" = 1603
     "OPT:templates/code-review-checklist.md" = 1534
-    "BAND:L2:min" = 6351
-    "BAND:L2:max" = 10852
+    "BAND:L2:min" = 1977
+    "BAND:L2:max" = 6478
     "BAND:L3:min" = 14540
     "BAND:L3:max" = 19041
 }
@@ -120,7 +122,8 @@ $PolicyAnchors = @(
     @{ File = "workflows/route.md"; Phrase = "as supporting references; do not create a new command"; Hash = "1ca0c1e74ad58f05" },
     @{ File = "workflows/checkpoint.md"; Phrase = "Level 1 (Standard) work updates"; Hash = "88aabdd5e32c660a" },
     @{ File = "workflows/checkpoint.md"; Phrase = "Requires ten canonical labels"; Hash = "a2be369aa6e99548" },
-    @{ File = "workflows/checkpoint.md"; Phrase = "Mandatory durable execution gate requiring all 20 canonical checkpoint labels"; Hash = "a7a8d20983332273" },
+    @{ File = "workflows/checkpoint.md"; Phrase = "17-label Lite form"; Hash = "223fc355f697d6db" },
+    @{ File = "workflows/checkpoint.md"; Phrase = "Mandatory durable execution gate requiring all 20 canonical checkpoint labels"; Hash = "42742e63472a455d" },
     @{ File = "workflows/plan.md"; Phrase = "Minimal Planning (Level 2 default)"; Hash = "201483077233b647" },
     @{ File = "workflows/plan.md"; Phrase = "Full Planning (Level 2 triggering work)"; Hash = "2eac98e5feb5025e" },
     @{ File = "workflows/review.md"; Phrase = "owns one durable two-axis report"; Hash = "2deb075a198f7e9c" },
@@ -141,8 +144,8 @@ $LevelRequired = [ordered]@{
     "L0" = @()
     "L1" = @()
     "L2" = @(
-        "templates/execution-task-record-template.md",
-        "templates/execution-checkpoint-template.md#full"
+        "templates/execution-task-record-lite-template.md",
+        "templates/execution-checkpoint-lite-template.md"
     )
     "L3" = @(
         "templates/execution-task-record-template.md",
@@ -163,7 +166,12 @@ $LevelUntemplated = [ordered]@{
 $LevelOptional = [ordered]@{
     "L0" = @()
     "L1" = @("templates/execution-checkpoint-template.md#quick")
-    "L2" = @("templates/execution-handoff-template.md", "templates/execution-scope-change-template.md")
+    "L2" = @(
+        "templates/execution-handoff-template.md",
+        "templates/execution-scope-change-template.md",
+        "templates/execution-task-record-template.md",
+        "templates/execution-checkpoint-template.md#full"
+    )
     "L3" = @(
         "templates/execution-handoff-template.md",
         "templates/execution-scope-change-template.md",
@@ -189,6 +197,8 @@ $SpecFamily = @(
 
 # Every required artifact, once, for the per-artifact baselines.
 $RequiredUnion = @(
+    "templates/execution-task-record-lite-template.md",
+    "templates/execution-checkpoint-lite-template.md",
     "templates/execution-task-record-template.md",
     "templates/execution-checkpoint-template.md#full",
     "templates/release-checklist.md",
@@ -472,7 +482,7 @@ foreach ($level in @("L0", "L1", "L2", "L3")) {
 Write-Host ""
 
 Write-Host "Level 2 planning depth (workflows/plan.md, anchor: 'Minimal Planning (Level 2 default)'):"
-Write-Host ("  {0,-34} {1,6} tok  (Task Record + full-tier checkpoint; no specification file)" -f "Minimal Planning (default)", $ReqTokens["L2"])
+Write-Host ("  {0,-34} {1,6} tok  (Lite Task Record + Lite checkpoint; no specification file)" -f "Minimal Planning (default)", $ReqTokens["L2"])
 Write-Host ("  {0,-34} {1,6}-{2} tok  (adds exactly one specification family member)" -f "Full Planning (triggering)", $BandMin["L2"], $BandMax["L2"])
 Write-Host ""
 Write-Host "Level 3 planning depth (Level 2 planning plus release evidence):"

@@ -10,12 +10,16 @@
   - `lite`: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value — onboarding
   - `balanced`: the full 26-workflow set, Level 0-3 adaptive ceremony (default) — teams, production
   - `turbo`: experimental, Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval
+- **Preset**: `standard` (default) or `solo-fast` — Solo/Fast bundles the five-command loop, concise routine telemetry and Level 2 Lite records; it never relaxes the push/PR, destructive-operation or Level 3 human-approval gates
 - **Upgrade Path**: From your resolved kit root, run `./init.sh --balanced` for full, `--lite` for minimal, `--turbo --experimental` for parallel waves — or switch in-session with `pk:profile`
 
 profile: balanced
 
 status-cards: on
 > `status-cards: on` (default) emits the 3-line telemetry card on completion; `off` suppresses the decorative card only — `> [!IMPORTANT]` / `> [!WARNING]` halts still fire. A missing line means `on`.
+
+preset: standard
+> `preset: standard` (default) runs the full ceremony surface. `solo-fast` — a solo maintainer on a small repository — keeps routine progress on concise Markdown lines with framed callouts reserved for ACTION REQUIRED and BLOCKED, and drives the five-command loop (`pk:plan`, `pk:auto`, `pk:review`, `pk:commit`, `pk:checkpoint`). A preset never relaxes a hard gate: push, PR, destructive operations, and Level 3 work still require explicit human approval. A missing line means `standard`.
 
 card-style: framed
 > `card-style: framed` (default) formats human callouts with ceiling-and-floor box borders (`╔═ ... ╚═`); `markdown` uses GFM blockquotes (`> [!TIP]`); `off` disables decorative framing while preserving text.

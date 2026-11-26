@@ -126,9 +126,11 @@ KIT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 declare -A BASELINE=(
     [L0]=0
     [L1]=0
-    [L2]=5372
+    [L2]=998
     [L3]=13561
     [SETUP]=3021
+    [REQ:templates/execution-task-record-lite-template.md]=790
+    [REQ:templates/execution-checkpoint-lite-template.md]=208
     [REQ:templates/execution-task-record-template.md]=4812
     [REQ:templates/execution-checkpoint-template.md#full]=560
     [REQ:templates/release-checklist.md]=3409
@@ -143,8 +145,8 @@ declare -A BASELINE=(
     [OPT:templates/execution-scope-change-template.md]=782
     [OPT:templates/ci-triage-template.md]=1603
     [OPT:templates/code-review-checklist.md]=1534
-    [BAND:L2:min]=6351
-    [BAND:L2:max]=10852
+    [BAND:L2:min]=1977
+    [BAND:L2:max]=6478
     [BAND:L3:min]=14540
     [BAND:L3:max]=19041
 )
@@ -163,7 +165,8 @@ POLICY_ANCHORS=(
     'workflows/route.md|as supporting references; do not create a new command|1ca0c1e74ad58f05'
     'workflows/checkpoint.md|Level 1 (Standard) work updates|88aabdd5e32c660a'
     'workflows/checkpoint.md|Requires ten canonical labels|a2be369aa6e99548'
-    'workflows/checkpoint.md|Mandatory durable execution gate requiring all 20 canonical checkpoint labels|a7a8d20983332273'
+    'workflows/checkpoint.md|17-label Lite form|223fc355f697d6db'
+    'workflows/checkpoint.md|Mandatory durable execution gate requiring all 20 canonical checkpoint labels|42742e63472a455d'
     'workflows/plan.md|Minimal Planning (Level 2 default)|201483077233b647'
     'workflows/plan.md|Full Planning (Level 2 triggering work)|2eac98e5feb5025e'
     'workflows/review.md|owns one durable two-axis report|2deb075a198f7e9c'
@@ -266,8 +269,9 @@ SHARED_SETUP="templates/state-tracker-template.md"
 #       "Requires a Local Task Record at docs/tasks/<task-id>.md" plus formal
 #       specification. Minimal Planning is the default and stops before the
 #       RFC, so the specification is NOT in the default set -- it is the band
-#       below. The checkpoint is required by the durable-gate anchor above, and
-#       policy binds L2 to its FULL tier.
+#       below. The checkpoint is required by the durable-gate anchor above.
+#       Policy binds ordinary L2 to the LITE forms of both records; the full
+#       forms are opt-in strict evidence and stay required at L3.
 #   L3 (`workflows/route.md`, anchor: `Uses full release candidate evaluation`):
 #       Level 2 evidence plus "contract impact evidence (pk:ship)" and release
 #       evaluation. The two evidence templates are named as supporting
@@ -279,7 +283,7 @@ SHARED_SETUP="templates/state-tracker-template.md"
 declare -A LEVEL_REQUIRED=(
     [L0]=""
     [L1]=""
-    [L2]="templates/execution-task-record-template.md $CHECKPOINT_TEMPLATE#full"
+    [L2]="templates/execution-task-record-lite-template.md templates/execution-checkpoint-lite-template.md"
     [L3]="templates/execution-task-record-template.md $CHECKPOINT_TEMPLATE#full templates/release-checklist.md templates/release-evaluation-template.md templates/contract-impact-evidence-template.md"
 )
 
@@ -295,7 +299,7 @@ declare -A LEVEL_UNTEMPLATED=(
 declare -A LEVEL_OPTIONAL=(
     [L0]=""
     [L1]="$CHECKPOINT_TEMPLATE#quick"
-    [L2]="templates/execution-handoff-template.md templates/execution-scope-change-template.md"
+    [L2]="templates/execution-handoff-template.md templates/execution-scope-change-template.md templates/execution-task-record-template.md $CHECKPOINT_TEMPLATE#full"
     [L3]="templates/execution-handoff-template.md templates/execution-scope-change-template.md templates/ci-triage-template.md templates/code-review-checklist.md"
 )
 
@@ -318,6 +322,8 @@ SPEC_FAMILY=(
 
 # Every required artifact, once, for the per-artifact baselines.
 REQUIRED_UNION=(
+    "templates/execution-task-record-lite-template.md"
+    "templates/execution-checkpoint-lite-template.md"
     "templates/execution-task-record-template.md"
     "$CHECKPOINT_TEMPLATE#full"
     "templates/release-checklist.md"
@@ -491,7 +497,7 @@ done
 echo ""
 
 echo "Level 2 planning depth (workflows/plan.md, anchor: 'Minimal Planning (Level 2 default)'):"
-printf "  %-34s %6d tok  (Task Record + full-tier checkpoint; no specification file)\n" "Minimal Planning (default)" "${REQ_TOKENS[L2]}"
+printf "  %-34s %6d tok  (Lite Task Record + Lite checkpoint; no specification file)\n" "Minimal Planning (default)" "${REQ_TOKENS[L2]}"
 printf "  %-34s %6d-%d tok  (adds exactly one specification family member)\n" "Full Planning (triggering)" "${BAND_MIN[L2]}" "${BAND_MAX[L2]}"
 echo ""
 echo "Level 3 planning depth (Level 2 planning plus release evidence):"

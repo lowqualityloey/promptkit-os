@@ -140,7 +140,7 @@ For each decomposed task, fill out `<kit>/templates/issue-task-template.md`:
 ### Phase 4: Local Storage & Tracker Sync (GitHub steps below are the GitHub adapter)
 
 1. **Persist the Canonical Local Source of Truth**:
-   - For each Controlled Work unit, create one canonical Task Record at `docs/tasks/<task-id>.md` from `<kit>/templates/execution-task-record-template.md`.
+   - For each Controlled Work unit, create one canonical Task Record at `docs/tasks/<task-id>.md`. Ordinary Controlled Work uses the Lite form (`<kit>/templates/execution-task-record-lite-template.md`, `Record Form: Lite`); opt-in strict evidence and all Release-Critical work use the full form (`<kit>/templates/execution-task-record-template.md`).
    - A dated breakdown document may index the per-task records, but it cannot replace them or become a second lifecycle authority.
    - This provides offline resilience and protects against agent context compaction (`pk:checkpoint`).
 2. **Provision Standard GitHub Labels & Issue Template** (remote repo-config writes — prepare only, execute with explicit human authorization per the Action Authority Model in `protocols/code-quality-gate.md`):

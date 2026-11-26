@@ -335,10 +335,12 @@ promptkit-os/
 │   ├── project-profile-template.md # Scaffolds PROMPTKIT.md for project guardrails & monorepo topology
 │   ├── design-profile-template.md  # Scaffolds DESIGN.md for brand identity & visual tokens
 │   ├── state-tracker-template.md   # Scaffolds docs/STATE.md as a synchronized projection
-│   ├── execution-task-record-template.md # Canonical Controlled Work Task Record
+│   ├── execution-task-record-lite-template.md # Default Controlled Work Task Record (Record Form: Lite)
+│   ├── execution-task-record-template.md # Full Controlled Work Task Record (opt-in strict evidence, Level 3)
 │   ├── friction-evaluation-template.md    # Adaptation friction evaluation & improvement
 │   ├── execution-scope-change-template.md # Approved scope expansion/change record
-│   ├── execution-checkpoint-template.md # Tiered session progress snapshot (Quick L1 / Full L2/L3)
+│   ├── execution-checkpoint-lite-template.md # Level 2 checkpoint (evidence stays in the Task Record)
+│   ├── execution-checkpoint-template.md # Tiered session progress snapshot (Quick L1 / Full opt-in L2 + L3)
 │   ├── execution-handoff-template.md # Receiver-validated session or role handoff
 │   ├── data-model-spec.md          # Relational schema & RLS specification
 │   ├── auth-matrix-template.md     # Auth architecture & RBAC capability matrix

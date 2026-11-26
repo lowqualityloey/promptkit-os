@@ -1,0 +1,2 @@
+POLICY_LIMITATION|TASK-2026-09-08-lite-level3|docs/tasks/TASK-2026-09-08-lite-level3.md|Lite Record Form cannot carry Level 3 work|Use the full task record form at Level 3
+POLICY_LIMITATION|CHECKPOINT-2026-09-08-lite-level3-1|docs/tasks/TASK-2026-09-08-lite-level3.checkpoint-1.md|Lite Record Form is refused at Level 3|Use the full checkpoint form
