@@ -452,6 +452,14 @@ Assert-Contains "workflows/profile.md" "solo-fast" "Profile workflow documents t
 Assert-Contains "README.md" "### The five-command loop" "README surfaces the five-command loop"
 Assert-Contains "workflows/tasks.md" "execution-task-record-lite-template.md" "Tasks workflow defaults ordinary Level 2 to the Lite record form"
 Assert-Contains "workflows/checkpoint.md" "execution-checkpoint-lite-template.md" "Checkpoint workflow links the Lite checkpoint template"
+Assert-Contains "protocols/telemetry-cards.md" "Compact Status Default" "Telemetry-cards protocol makes compact Markdown the routine default"
+Assert-Contains "protocols/telemetry-cards.md" "never a box" "Compact default forbids routine framing"
+Assert-Contains "templates/project-profile-template.md" "state-guard:" "Project profile template carries the state-guard machine line"
+Assert-Contains "workflows/checkpoint.md" "Honest Telemetry Rule" "Checkpoint workflow records not-measured instead of heuristic spend"
+Assert-Contains "workflows/checkpoint.md" "State Health Preflight" "Checkpoint workflow guards STATE.md size before writing"
+Assert-Contains "workflows/checkpoint.md" "STATE-ARCHIVE.md" "Checkpoint workflow names the archival target"
+Assert-NotContains "workflows/checkpoint.md" "Fallback Estimation Heuristic" "Checkpoint workflow no longer ships the heuristic spend range"
+Assert-Contains "workflows/doctor.md" "state-freshness" "Doctor workflow documents the state-freshness row"
 Assert-Contains "protocols/telemetry-cards.md" "Quiet Completion" "Telemetry-cards protocol defines quiet completion when nothing is pending"
 Assert-Contains "protocols/telemetry-cards.md" "Spend:" "Telemetry-cards protocol specifies the per-turn spend field"
 Assert-Contains "templates/state-tracker-template.md" "COMPLETED" "State template offers the terminal COMPLETED status"
@@ -700,9 +708,9 @@ Assert-Contains "workflows/plan.md" "Decisions I'm defaulting for you" "Plan wor
 Assert-Contains "workflows/plan.md" "Picker routing rule" "Plan workflow bounds interactive pickers to closed-set, evidence-backed choices"
 Assert-Contains "workflows/sync.md" "New-Requirement Interception" "Sync workflow intercepts mid-implementation requirement deltas"
 Assert-Contains "workflows/checkpoint.md" "never silently absorbed" "Checkpoint contract requires new requirements to be recorded before continuing"
-Assert-Contains "workflows/checkpoint.md" "Fallback Estimation Heuristic" "Checkpoint workflow defines fallback spend estimation heuristic for unmetered hosts"
-Assert-Contains "workflows/checkpoint.md" "lower and upper bounds independently" "Checkpoint preserves heuristic ranges instead of midpoint estimates"
-Assert-Contains "workflows/checkpoint.md" "Never add measured tokens to a heuristic range" "Checkpoint keeps measured and heuristic token evidence separate"
+Assert-Contains "workflows/checkpoint.md" "host telemetry unavailable" "Checkpoint records unavailable host metering instead of estimating"
+Assert-Contains "workflows/checkpoint.md" "Running total" "Checkpoint ledger keeps a measured-only running total"
+Assert-Contains "workflows/checkpoint.md" "inferred spend figure" "Checkpoint forbids inferred spend figures in ledger rows"
 Assert-Contains "workflows/checkpoint.md" "operational telemetry, not CPAC benchmark evidence" "Checkpoint distinguishes continuity telemetry from formal benchmarks"
 Assert-Contains "templates/state-tracker-template.md" "Estimated context payload" "State template labels heuristic payload without implying provider spend"
 Assert-Contains "templates/state-tracker-template.md" "repairs=<count or not tracked>" "State template records compact process evidence without inventing missing values"
@@ -1973,9 +1981,10 @@ if ($WfCount -eq 26) {
     $script:FailCount++
 }
 
-# AR-2b: the workflow documents the six-check contract the engine actually runs (#646, #667).
-Assert-Contains "workflows/doctor.md" "### Phase 2: The Six Checks" "doctor Phase 2 heading declares six checks"
+# AR-2b: the workflow documents the seven-check contract the engine actually runs (#646, #667, #791).
+Assert-Contains "workflows/doctor.md" "### Phase 2: The Seven Checks" "doctor Phase 2 heading declares seven checks"
 Assert-NotContains "workflows/doctor.md" "Four Checks" "doctor carries no stale four-check claim"
+Assert-NotContains "workflows/doctor.md" "The Six Checks" "doctor carries no stale six-check heading"
 
 # AR-2c: the six-state delegation contract is pinned so it cannot drift again (#744 AC-5).
 # The doctor must delegate to the workflows/sync.md table instead of re-deriving the

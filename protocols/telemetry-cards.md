@@ -1,7 +1,7 @@
 # Telemetry Status Cards & Visual Formatting Protocol
 
 ## Purpose
-Canonical visual formatting specification for telemetry cards, human-action callouts, and turn structures. Provides dual-mode rendering: **Framed Mode** (tactile ceiling-and-floor Unicode boxes, default) and **Markdown Mode** (for GitHub-style blockquote alerts), plus CLI/Terminal support across Cline, OpenCode, Aider, Cursor, VS Code, and Antigravity.
+Canonical visual formatting specification for telemetry status lines, human-action callouts, and turn structures. Routine progress, completion, and advisory next-step telemetry is **compact Markdown**: three concise lines and no box. Genuine stops (`🛑ACTION REQUIRED`, `🚫BLOCKED`) and decision probes render as an **expanded card** in one of two styles — Framed Mode (tactile ceiling-and-floor Unicode boxes, the shipped `card-style` default) or Markdown Mode (GitHub-style alerts) — with CLI/Terminal support across Cline, OpenCode, Aider, Cursor, VS Code, and Antigravity.
 
 ---
 
@@ -77,9 +77,27 @@ The host cannot mechanically halt an agent, inspect a future turn, or detect a m
 
 ---
 
+## Compact Status Default (Routine Telemetry)
+
+Routine progress, completion, and advisory next-step telemetry is **three concise Markdown lines — never a box, never a framed card**:
+
+```markdown
+📊 Milestone: M2: Core Database [■■■■■■■■□□] 8/10 (80%) — source: `docs/STATE.md`
+🎯 Active: TASK-2026-09-18-persistence (In Progress)
+🟢 Quality Gate: 32 passed, 0 failed (`vitest run`) · `tsc --noEmit` exit code 0
+```
+
+- One line per signal: milestone/progress, active work, quality gate or verification. Append a `💰 Spend: <in> / <out>` line only when the host exposes per-turn usage; otherwise omit it or write `not measured`.
+- No ceiling/floor borders, no `╔═` framing, no alert block, and no extra decoration around routine lines. Plain text or a single blockquote both qualify; the shape stays three lines.
+- A **framed box (Mode 2) or GFM alert (Mode 1) is reserved for a genuine stop** — `🛑ACTION REQUIRED`, `🚫BLOCKED`, `🎯GRILL PROBE`, `DECISION NEEDED` — where the human must act or decide. Routine milestones, completed work, and advisory next steps never render as a box.
+- The expanded telemetry card (boxed Mode 1 or Mode 2 form) is opt-in: render it only when the human asks for it or an explicit workflow step requires the expanded layout for evidence review.
+- `status-cards: off` suppresses these routine lines; halt boxes and their reply hints still fire (see *Cards-Off Still Communicates Genuine Halts*).
+
+---
+
 ## Dual-Compatible Telemetry Status Cards
 
-Provides dual-mode rendering: **Framed Mode** (ceiling-and-floor boxes, default) and **Markdown Mode** (for GitHub-style blockquote alerts in rich renderers).
+Provides the two **expanded-card renderings** selected by `card-style:` for turns that legitimately render a box — genuine stops, decision probes, and a human-requested expanded telemetry card. Routine turns use the *Compact Status Default* above.
 
 ### Mode 1: Markdown Mode (Rich Web & IDE Renderers)
 
@@ -93,7 +111,9 @@ Provides dual-mode rendering: **Framed Mode** (ceiling-and-floor boxes, default)
 | `src/db/repo.ts` (Tenant-isolated repository) | `pnpm tsc --noEmit` → **exit code 0** (clean) |
 ```
 
-#### 2. Telemetry Card (Single 3-Line Blockquote)
+#### 2. Expanded Telemetry Card (Single 3-Line Blockquote)
+
+Expanded form only. Routine completion uses the compact default (three plain lines, no blockquote alert).
 ```markdown
 > 📊 Milestone: M2: Core Database `[■■■■■■■■□□]` 8/10 (80%) — source: `docs/STATE.md`  
 > 🎯 Active: TASK-2026-09-18-persistence (In Progress)  
@@ -125,8 +145,8 @@ Provides dual-mode rendering: **Framed Mode** (ceiling-and-floor boxes, default)
   > 👉 **Reply**: Type `retry` once freed (or `skip` only if this dependency is explicitly waivable).
   ```
 
-- **Next Steps (`[!TIP]`)**:
-  Advisory next step only, with nothing required, uses `> [!TIP]` titled `### 💡 Next Recommended Step:` or `### 💡NEXT STEPS (Type number & Enter):`.
+- **Next Steps (`[!TIP]`) — expanded advisory card (opt-in)**:
+  Under the compact default, advisory next steps are plain numbered lines in the closing prose; render this card only when the human asks for the expanded layout. Advisory next step only, with nothing required, uses `> [!TIP]` titled `### 💡 Next Recommended Step:` or `### 💡NEXT STEPS (Type number & Enter):`.
   ```markdown
   > [!TIP]
   > ### 💡 Next Recommended Step:
@@ -141,7 +161,7 @@ Provides dual-mode rendering: **Framed Mode** (ceiling-and-floor boxes, default)
 
 ## Mode 2: CLI / Terminal Mode & Framed Mode (Ceiling & Floor Boxes)
 
-Default across all hosts when `card-style: framed` is active in `PROMPTKIT.md` (the shipped default), and standard for terminal tools (Cline, OpenCode, Aider, Windows Terminal, PowerShell, Bash). In rich markdown/web IDE chats (e.g. Antigravity, Cursor, Copilot), Mode 1 GFM alerts (`card-style: markdown`) can alternatively be selected for native styled UI cards. When rendering Mode 2 in chat interfaces, wrap in code blocks (````text ... ````) or keep widths bounded (≤60 chars) so variable-width fonts do not wrap ceiling and floor borders.
+The expanded halt/decision rendering across all hosts when `card-style: framed` is active in `PROMPTKIT.md` (the shipped default), and standard for terminal tools (Cline, OpenCode, Aider, Windows Terminal, PowerShell, Bash). In rich markdown/web IDE chats (e.g. Antigravity, Cursor, Copilot), Mode 1 GFM alerts (`card-style: markdown`) can alternatively be selected for native styled UI cards. When rendering Mode 2 in chat interfaces, wrap in code blocks (````text ... ````) or keep widths bounded (≤60 chars) so variable-width fonts do not wrap ceiling and floor borders.
 
 ### 1. Opening: Clean TL;DR, Changes & Evidence
 ```text
@@ -159,7 +179,9 @@ Default across all hosts when `card-style: framed` is active in `PROMPTKIT.md` (
   ✓ tsc --noEmit: exit 0
 ```
 
-### 2. Telemetry Card (Ceiling & Floor Box — Zero Side-Walls)
+### 2. Expanded Telemetry Card (Ceiling & Floor Box — Zero Side-Walls)
+
+Expanded form only; routine turns use the compact default.
 To prevent line wrapping and jagged border breakage on long words or narrow terminals, use top ceiling and bottom floor framing with indented body lines and **no side walls (`║`)**:
 
 ```text
@@ -196,7 +218,8 @@ To prevent line wrapping and jagged border breakage on long words or narrow term
   ╚══════════════════════════════════════════════════════════════╝
   ```
 
-- **Next Steps (Interactive Numbered Choice)**:
+- **Next Steps (Interactive Numbered Choice) — expanded advisory card (opt-in)**:
+  Under the compact default these are plain numbered lines; the box is opt-in.
   ```text
   ╔═ 💡NEXT STEPS ═══════════════════════════════════════════════╗
     [1] (Recommended) Proceed to M3: Implement Stripe webhook
@@ -231,7 +254,10 @@ Raw unformatted URLs (e.g. `https://github.com/...`) are prohibited in turn comp
 
 ## Opt-Out & Configuration
 
-- **`card-style` in `PROMPTKIT.md`**: Controls the visual style of cards and callouts:
+- **`status-cards` in `PROMPTKIT.md`**: Controls the routine status lines.
+  - `status-cards: on` (default) — Emits the compact three-line routine status on completion. Never a box.
+  - `status-cards: off` — Suppresses the routine lines and decorative framing. Genuine halts (`🛑ACTION REQUIRED` or `🚫BLOCKED`) still fire with their reply hints.
+- **`card-style` in `PROMPTKIT.md`**: Controls the visual style of the expanded cards that do render — halt boxes, decision probes, and a human-requested expanded telemetry card:
   - `card-style: framed` (default) — Uses ceiling-and-floor Unicode boxes (`╔═ ... ╚═`) with indented body lines and explicit reply hints.
   - `card-style: markdown` — Uses GitHub-style markdown blockquotes and alerts (`> [!TIP]`, `> [!IMPORTANT]`) with explicit reply hints.
   - `card-style: off` (or `status-cards: off`) — Suppresses decorative telemetry and advisory framing. Genuine halts (`🛑ACTION REQUIRED` or `🚫BLOCKED`) still fire.

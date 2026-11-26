@@ -3,7 +3,8 @@
 # Usage: scripts/check-doctor.ps1 [-KitRoot <path>] [-Fix]
 #
 # Reports host directive blocks, engine version/drift, managed-path ignore
-# state, docs state-store drift, and intake record-path health. Read-only by
+# state, docs state-store drift and freshness/size guard, and intake
+# record-path health. Read-only by
 # default: it never stages, commits, edits, or runs an upgrade. The only
 # permitted write is -Fix, which re-emits a MISSING managed directive block
 # into an installed host file (the profile-appropriate template with
@@ -704,6 +705,95 @@ function Check-DocsDrift {
 }
 
 Check-DocsDrift
+
+# --- Check 4b: state freshness & size guard (Issue #791) -------------------
+# Bounded live-projection guard. Measures docs/STATE.md in lines and in the
+# repository's token convention ((bytes + 2) / 4), then compares against the
+# optional `state-guard: lines=.. tokens=.. commits=..` declaration in
+# PROMPTKIT.md (defaults 500 / 6000 / 25; `off` disables the row). Staleness is
+# the number of commits since the last commit that touched docs/STATE.md,
+# computed with rev-list only. A half that cannot be measured degrades to SKIP,
+# never to OK.
+function Get-StateGuardNumber {
+    param([string]$Key, [int]$Fallback)
+    $pattern = '(^|\s)' + [regex]::Escape($Key) + '=([0-9]+)(\s|$)'
+    $m = [regex]::Match($script:stateGuardLine, $pattern)
+    if ($m.Success) { return [int]$m.Groups[2].Value }
+    return $Fallback
+}
+
+function Check-StateFreshness {
+    $stateFile = Join-Path $kitRoot 'docs/STATE.md'
+    if (-not (Test-Path -LiteralPath $stateFile -PathType Leaf)) {
+        Emit 'state-freshness' 'SKIP(no STATE.md)' 'no readable docs/STATE.md' 'Create docs/STATE.md to enable the freshness guard'
+        return
+    }
+    if ($script:stateGuardLine -match '^state-guard:\s*(off|disabled)(\s|$)') {
+        Emit 'state-freshness' 'SKIP(guard off)' 'state-guard is off in PROMPTKIT.md' 'Remove the off setting to re-enable the freshness guard'
+        return
+    }
+    $maxLines = Get-StateGuardNumber 'lines' 500
+    $maxTokens = Get-StateGuardNumber 'tokens' 6000
+    $maxCommits = Get-StateGuardNumber 'commits' 25
+    try {
+        $stateText = Get-Content -LiteralPath $stateFile -Raw -ErrorAction Stop
+        $bytes = [int64](Get-Item -LiteralPath $stateFile).Length
+    } catch {
+        Emit 'state-freshness' 'INCOMPLETE' 'docs/STATE.md could not be measured (read failed)' 'Check file permissions and re-run pk:doctor'
+        return
+    }
+    if ($null -eq $stateText) { $stateText = '' }
+    $lineCount = 0
+    if ($stateText.Length -gt 0) {
+        $lineCount = ([regex]::Matches($stateText, "`n")).Count
+        if (-not $stateText.EndsWith("`n")) { $lineCount++ }
+    }
+    $tokens = [int64][math]::Floor(($bytes + 2) / 4)
+    $commitsSince = $null
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        $shaRaw = (Invoke-LocalGit -Dir $kitRoot @('rev-list', '-1', 'HEAD', '--', 'docs/STATE.md') | Out-String).Trim()
+        if ($script:gitStatus -eq 0 -and -not [string]::IsNullOrEmpty($shaRaw)) {
+            $stateSha = ($shaRaw -split "`n")[0].Trim()
+            $countRaw = (Invoke-LocalGit -Dir $kitRoot @('rev-list', '--count', ($stateSha + '..HEAD')) | Out-String).Trim()
+            if ($script:gitStatus -eq 0 -and $countRaw -match '^[0-9]+$') { $commitsSince = [int]$countRaw }
+        }
+    }
+    $over = @()
+    if ($lineCount -gt $maxLines) { $over += "lines $lineCount > $maxLines" }
+    if ($tokens -gt $maxTokens) { $over += "tokens $tokens > $maxTokens" }
+    $overText = $over -join '; '
+    if ($null -eq $commitsSince) {
+        if ($overText -eq '') {
+            Emit 'state-freshness' 'SKIP(staleness unverified)' "within the size guard ($lineCount lines, $tokens tok); docs/STATE.md has no readable commit history" 'Commit docs/STATE.md or run pk:doctor inside a git repository with history'
+        } else {
+            Emit 'state-freshness' 'STALE(bloat)' "docs/STATE.md is over the guard: $overText; commit history was unavailable for the staleness half" 'Archive completed items to docs/STATE-ARCHIVE.md (pk:checkpoint archival flow)'
+        }
+        return
+    }
+    if ($commitsSince -ge $maxCommits) {
+        $status = if ($overText -ne '') { "STALE(bloat+$commitsSince)" } else { "STALE(+$commitsSince)" }
+        $detail = "docs/STATE.md: $lineCount lines (guard $maxLines), $tokens tok (guard $maxTokens), $commitsSince commits since its last update (guard $maxCommits)"
+        if ($overText -ne '') { $detail = $detail + " - over: $overText" }
+        Emit 'state-freshness' $status $detail 'Refresh docs/STATE.md with pk:checkpoint and archive completed entries to docs/STATE-ARCHIVE.md'
+        return
+    }
+    if ($overText -ne '') {
+        Emit 'state-freshness' 'STALE(bloat)' "docs/STATE.md is over the guard: $overText ($lineCount lines / $tokens tok; $commitsSince commits since its last update)" 'Archive completed items to docs/STATE-ARCHIVE.md (pk:checkpoint archival flow)'
+        return
+    }
+    Emit 'state-freshness' 'OK' "within guard: $lineCount lines / $tokens tok; $commitsSince commits since docs/STATE.md last changed" '-'
+}
+
+$script:stateGuardLine = ''
+$profilePath = Join-Path $kitRoot 'PROMPTKIT.md'
+if (Test-Path -LiteralPath $profilePath -PathType Leaf) {
+    try {
+        $profileGuardText = Get-Content -LiteralPath $profilePath -Raw -ErrorAction Stop
+        $guardMatch = [regex]::Match($profileGuardText, '(?m)^state-guard:[^\n\r]*')
+        if ($guardMatch.Success) { $script:stateGuardLine = $guardMatch.Value }
+    } catch { }
+}
+Check-StateFreshness
 
 # --- Check 5: intake provenance (record-path health only, Issue #641) ------
 # Deliberately narrow: it verifies that a completed intake names a resolvable

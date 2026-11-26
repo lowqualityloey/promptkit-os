@@ -6,7 +6,7 @@ Trigger anytime with: `pk:doctor`
 No aliases: the spec registers none, and any bare `pk:` alias would first have to join the alias allowlist in `scripts/validate-references.sh` (and its `.ps1` twin) plus the orphan-trigger check, which requires zero warnings.
 
 ## Mission
-One command checks hosts × engine version × ignore-state × docs-drift × intake-record provenance × submodule registration, scoped by install-mode, and reports exactly what rotted: a stale engine, missing host directive blocks, unexpectedly ignored managed paths, diverged state stores, an unresolvable intake record, an unregistered `.promptkit` gitlink. "pk stopped working and nobody noticed" becomes impossible. `pk:doctor` diagnoses; it never repairs.
+One command checks hosts × engine version × ignore-state × docs-drift × state-freshness × intake-record provenance × submodule registration, scoped by install-mode, and reports exactly what rotted: a stale engine, missing host directive blocks, unexpectedly ignored managed paths, diverged state stores, a bloated or stale state projection, an unresolvable intake record, an unregistered `.promptkit` gitlink. "pk stopped working and nobody noticed" becomes impossible. `pk:doctor` diagnoses; it never repairs.
 
 ## Level
 **Level 2 (Controlled).** A new workflow is a public contract surface under [`docs/adrs/0002-workflow-lifecycle-policy.md`](../docs/adrs/0002-workflow-lifecycle-policy.md) (proposed SemVer impact `minor`). The workflow is **read-only**: it observes and reports, following the Phase 1 framing of [`workflows/sync.md`](./sync.md).
@@ -36,8 +36,9 @@ One command checks hosts × engine version × ignore-state × docs-drift × inta
 ┌───────────────────────────────────────────────────────────────────────┐
 │                          PK:DOCTOR LIFECYCLE                          │
 ├──────────────────────────────┬────────────────────────────────────────┤
-│ Phase 1: Scope & Install     │ Phase 2: Six Checks                    │
-│ Mode                         │ (hosts/version/ignore/docs/prov/submod)│
+│ Phase 1: Scope & Install     │ Phase 2: Seven Checks                  │
+│ Mode                         │ (hosts/version/ignore/docs/state/      │
+│                              │  prov/submod)                          │
 ├───────────────────────────────────────────────────────────────────────┤
 │ Phase 3: Machine-Readable Report & Exit Code                          │
 └───────────────────────────────────────────────────────────────────────┘
@@ -48,7 +49,7 @@ One command checks hosts × engine version × ignore-state × docs-drift × inta
 2. Classify the install door from the courier's own discriminator, exactly as `package/bin/promptkit-os.js` tests it: `<kit>/.git` exists → submodule/clone; absent → npx courier tarball.
 3. Enumerate expected host files and workflows **from the declared mode**: a Lite install expects only its 6 workflows, so no row may report `MISSING` for a Balanced-only workflow (mode-scoping is a correctness rule, not a cosmetic one).
 
-### Phase 2: The Six Checks
+### Phase 2: The Seven Checks
 
 **1. hosts**: enumerate the expected host directive files from the declared profile; report `OK` when `<!-- PROMPTKIT_START -->` is present in each, `MISSING` when absent (remediation: re-run the installer). Scope by declared mode per Phase 1.
 
@@ -66,6 +67,8 @@ One command checks hosts × engine version × ignore-state × docs-drift × inta
 **3. ignore-state**: run `git check-ignore -v` on the kit directory, `PROMPTKIT.md`, `docs/`, and the installed host files, using the three-way status branch pattern from `scripts/check-harness-security.sh`; report `IGNORED(<rule source>)` (naming the rule and its source line) or `OK`. An unexpected git exit status → `INCOMPLETE`, never `OK`.
 
 **4. docs-drift**: compare `docs/STATE.md` §3A ↔ the latest canonical Task Record ↔ the harness handoff store. Agreement → `OK`; disagreement → `DIVERGED(<pair>)` with the exact differing field (e.g. `DIVERGED(STATE §3A vs Task Record): milestone`); a missing store or the unsettled three-store precedence contract (#550/#553) → `SKIP(<reason>)`.
+
+**4b. state-freshness** (issue #791): read the optional `state-guard: lines=<n> tokens=<n> commits=<n>` machine line in `PROMPTKIT.md` (defaults 500 / 6,000 / 25; `off` disables the row), then measure `docs/STATE.md`: line count, tokens as `(bytes + 2) / 4` — the repository's measurement convention — and commits since the last commit that touched the file (`git rev-list -1 HEAD -- docs/STATE.md`, then `git rev-list --count <sha>..HEAD`). Those two `rev-list` calls are the only git operations this row adds to the read-only allowlist above, and it never writes or repairs. Rows: `OK` when every threshold holds; `STALE(bloat)` when over a size threshold; `STALE(+n)` when the file is `n` commits stale; `STALE(bloat+n)` when both apply; `SKIP(no STATE.md)` when the store is absent or unreadable; `SKIP(guard off)` when the guard is disabled; `SKIP(staleness unverified)` when size is within guard but history cannot be read; `INCOMPLETE` when the file cannot be measured. Remediation names the one-step archival flow in [`workflows/checkpoint.md`](./checkpoint.md) that moves completed entries to `docs/STATE-ARCHIVE.md` under the State Mutation Contract; the check itself never edits either file, and an overage with no eligible entry is reported as-is rather than silently exceeded.
 
 **5. provenance**: read the `intake-status` and `intake-record` machine fields in `PROMPTKIT.md` and report the intake record's *path health*. `SKIP(<reason>)` when `intake-status` is absent, an unfilled placeholder, unrecognized, or anything other than `complete`, and when the `intake-record` value is absent or an unfilled placeholder; `INCOMPLETE` when the declared path is absolute, drive-qualified, or contains a traversal segment, when the path or its symlink chain resolves outside the project root, or when an existing path or symlink chain cannot be resolved; `MISSING` when the record is absent, is not a regular file, or is not readable; `OK` when `intake-record` resolves to a readable project-relative file inside the project root.
 

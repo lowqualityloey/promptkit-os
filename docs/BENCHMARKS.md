@@ -99,7 +99,7 @@ Two units are reported separately because they are paid differently:
 | **Level 1 (Standard)** | 0 | 0 | **0 tok** (optional quick-tier checkpoint 267 tok) |
 | **Level 2 (Controlled)** | 2 | 3,991 | **998 tok** (Lite form default) |
 | **Level 3 (Release-Critical)** | 5 | 54,242 | **13,561 tok** (full form) |
-| *Shared setup, once per project* | 1 | 12,084 | *3,021 tok* |
+| *Shared setup, once per project* | 1 | 12,312 | *3,078 tok* |
 
 **Controlled work has two record forms, and the Lite form is the Level 2 default.** [`templates/execution-task-record-lite-template.md`](../templates/execution-task-record-lite-template.md) (3,161 B / 790 tok) keeps all 41 validator labels and drops only the fill-in commentary; [`templates/execution-checkpoint-lite-template.md`](../templates/execution-checkpoint-lite-template.md) (830 B / 208 tok) carries the 17-label checkpoint whose evidence stays in the linked Task Record. Together they are 3,991 B / 998 tok, and `Record Form: Lite` is what the validator reads to accept them. The full forms — [`templates/execution-task-record-template.md`](../templates/execution-task-record-template.md) (19,249 B / 4,812 tok) and the Full Tier checkpoint (560 tok) — stay mandatory for Level 3 and are opt-in for Level 2 work that asks for strict evidence; `Record Form: Lite` is refused, and only at Level 3. A Level 2 task that opts into the full forms therefore carries 5,372 tok, which is the figure the fourth revision published as every Level 2 task's default.
 
