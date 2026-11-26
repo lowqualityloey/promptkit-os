@@ -63,12 +63,12 @@
 
 ## 5. State and Active Ownership
 
-- **Execution State**: `in_progress`
+- **Execution State**: `blocked`
 - **Mapped `pk:tasks` Status**: `In Progress`
-- **Active Task Pointer**: `TASK-2026-11-26-issue-793-codex-conformance`
+- **Active Task Pointer**: `None`
 - **Start Time**: `2026-11-26`
 - **Current Actor**: `DeepSeek Harness agent`
-- **Next Action**: `Run the isolated Codex CLI canary and the card-provenance capture, then the remaining single-turn probes and the two-turn milestone-halt probe.`
+- **Next Action**: `Resolve the credential-isolation blocker: the owner must decide how Codex authentication is supplied to an isolated capture without the agent reading the credential store, or run the captures directly.`
 
 ### Transition History
 
@@ -76,6 +76,7 @@
 |---|---|---|---|---|---|
 | N/A | planned | 2026-11-26 | DeepSeek Harness agent | Reduced scope derived from the measured host inventory and the issue's first criterion. | Issue #793; this record, section 2 |
 | planned | in_progress | 2026-11-26 | DeepSeek Harness agent | Record restated; capture phase starting under bwrap isolation. | Section 6 |
+| in_progress | blocked | 2026-11-26 | DeepSeek Harness agent | CC Safety Net blocked the credential copy required for isolated Codex authentication; no workaround attempted. | Section 6 |
 
 ## 6. Evidence and Completion Gate
 
@@ -84,16 +85,16 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `Pending — no capture has been scored yet.`
+- **Verification Evidence**: `The reduced-scope record validated at commit 32c1d35 with bash scripts/validate-execution-control.sh --root . --strict -> VALID|RECORDS=85|ROOT=. No capture bundle exists yet. The blocking event was: BLOCKED by CC Safety Net; Reason: Access to a sensitive path is not allowed; Rule: secret.cli.codex; Segment: /home/heyloey/.codex/auth.json.`
 - **CI Evidence**: `Pending — branch not pushed, so no workflow ran.`
 - **Review Evidence**: `Pending human review of the published bundles and counts.`
 - **Commit Evidence**: `Pending — one local documentation commit is created after the captures.`
 - **Pull Request Evidence**: `Pending separate authorization.`
 - **Release Evidence**: `N/A — no release action in scope.`
-- **Blocker and Resume Condition**: `None; the only constraint is that the issue's three-host criterion is unattainable here and is recorded rather than worked around.`
-- **Completion State**: `pending`
-- **Acceptance Results**: `Pending — capture and count checks not yet run.`
+- **Blocker and Resume Condition**: `CC Safety Net rule secret.cli.codex blocked copying /home/heyloey/.codex/auth.json into the bwrap scratch CODEX_HOME. The block instruction forbids retrying or working around it, and an isolated Codex CLI cannot authenticate without that credential, so the five captures cannot start in this session. Resume after the owner either runs the captures in a session they control or decides how authentication is supplied to the isolated host without the sandboxed model being able to read the credential store; then resume at card-provenance.`
+- **Completion State**: `blocked`
+- **Acceptance Results**: `AC-1 Pass — the record restates the reduced scope, the measured inventory, and the unmet three-host criterion. AC-2 through AC-7 Blocked — no capture bundle, matrix row, or count update was produced because the isolated host could not authenticate.`
 - **Changed-File Summary**: `The #793 task record restating the reduced one-host scope and the unmet three-host criterion. Capture bundles, matrix row, and README count follow in the same branch.`
 - **Completion Exception**: `The issue's criterion of at least three previously Untested hosts cannot be met on this machine: only Codex CLI 0.172.0 is both installed and previously untested, while opencode, commandcode, and agy are already captured and claude, cursor-agent, gemini, aider, and copilot are absent.`
-- **Completion Decision and Timestamp**: `Pending — 2026-11-26.`
+- **Completion Decision and Timestamp**: `Blocked pending owner decision — 2026-11-26.`
 - **Branch / Revision**: `feat/793-codex-conformance at origin/main 6e381e1`
