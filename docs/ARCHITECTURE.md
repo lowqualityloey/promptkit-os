@@ -138,7 +138,7 @@ In multi-agent environments (Antigravity, Claude Code, Cursor background agents)
   ```
   ````
 - **Zero Action-Blindness**: Whenever the assistant halts a turn requiring human decisions, PR review, or local actions, it terminates the message with a high-contrast `> [!IMPORTANT]` callout (`### 🛑ACTION REQUIRED:`). If blocked, it emits `> [!WARNING]` (`### 🚫BLOCKED:`).
-- **Opt-out**: set `status-cards: off` in `PROMPTKIT.md` to suppress the decorative card (default `on`; halts still fire).
+- **Default and opt-out**: routine completion is three compact Markdown lines, never a box; framed and alert cards are reserved for `🛑ACTION REQUIRED` / `🚫BLOCKED` halts. Set `status-cards: off` to suppress the routine lines (halts still fire).
 - **Spend field**: completions may append `> 💰 Spend: <in> / <out> (source: host usage)` when the host exposes per-turn usage (omitted when unmeasured or trivial).
 - **Quiet completion**: when `docs/STATE.md` shows nothing pending, the turn ends with `All milestones closed — nothing pending.` instead of a Next-Step recommendation — independent of the card opt-out. `COMPLETED` status seals the project with a closeout record (measured vs estimated spend, gates held) in `docs/STATE.md`.
 - **Dual-Compatibility & Markdown Parser Hygiene**: Status cards and callouts render as clean bordered accent blocks in terminal CLIs (OpenCode, Claude Code) and rich alert cards in web IDEs and DeepSeek harnesses. All callouts strictly use the `> [!TYPE]` blockquote syntax to prevent raw unrendered bracket leakage across Markdown renderers.

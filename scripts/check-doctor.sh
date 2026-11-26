@@ -4,7 +4,8 @@
 # Usage: scripts/check-doctor.sh [KIT_ROOT] [--fix]
 #
 # Reports host directive blocks, engine version/drift, managed-path ignore
-# state, docs state-store drift, and intake record-path health. Read-only by
+# state, docs state-store drift, docs/STATE.md freshness and size, and intake
+# record-path health. Read-only by
 # default: it never stages, commits, edits, or runs an upgrade. The only
 # permitted write is `--fix`, which re-emits a MISSING managed directive block
 # into an installed host file (the profile-appropriate template with
@@ -685,6 +686,84 @@ check_docs_drift() {
 }
 
 check_docs_drift
+
+# --- Check 4b: state freshness & size guard (Issue #791) -------------------
+# Bounded live-projection guard. Measures docs/STATE.md in lines and in the
+# repository's token convention ((bytes + 2) / 4), then compares against the
+# optional `state-guard: lines=.. tokens=.. commits=..` declaration in
+# PROMPTKIT.md (defaults 500 / 6000 / 25; `off` disables the row). Staleness is
+# the number of commits since the last commit that touched docs/STATE.md,
+# computed with rev-list only. A half that cannot be measured degrades to SKIP,
+# never to OK.
+state_guard_num() {
+    local key="$1" fallback="$2"
+    if [[ "$state_guard_line" =~ (^|[[:space:]])${key}=([0-9]+)([[:space:]]|$) ]]; then
+        printf '%s' "${BASH_REMATCH[2]}"
+    else
+        printf '%s' "$fallback"
+    fi
+}
+
+check_state_freshness() {
+    local state_file="$kit_root/docs/STATE.md"
+    if [[ ! -f "$state_file" || ! -r "$state_file" ]]; then
+        emit 'state-freshness' 'SKIP(no STATE.md)' 'no readable docs/STATE.md' 'Create docs/STATE.md to enable the freshness guard'
+        return 0
+    fi
+    if [[ "$state_guard_line" =~ ^state-guard:[[:space:]]*(off|disabled)([[:space:]]|$) ]]; then
+        emit 'state-freshness' 'SKIP(guard off)' 'state-guard is off in PROMPTKIT.md' 'Remove the off setting to re-enable the freshness guard'
+        return 0
+    fi
+    local max_lines max_tokens max_commits lines bytes tokens
+    max_lines="$(state_guard_num lines 500)"
+    max_tokens="$(state_guard_num tokens 6000)"
+    max_commits="$(state_guard_num commits 25)"
+    lines="$(awk 'END { print NR }' "$state_file" 2>/dev/null || true)"
+    bytes="$(wc -c < "$state_file" 2>/dev/null | tr -d '[:space:]' || true)"
+    if [[ ! "$lines" =~ ^[0-9]+$ || ! "$bytes" =~ ^[0-9]+$ ]]; then
+        emit 'state-freshness' 'INCOMPLETE' 'docs/STATE.md could not be measured (line or byte read failed)' 'Check file permissions and re-run pk:doctor'
+        return 0
+    fi
+    tokens=$(( (bytes + 2) / 4 ))
+    local state_sha="" commits_since="" history="unverified"
+    if command -v git >/dev/null 2>&1; then
+        state_sha="$(git -C "$kit_root" --no-optional-locks -c core.fsmonitor=false rev-list -1 HEAD -- docs/STATE.md 2>/dev/null || true)"
+        if [[ -n "$state_sha" ]]; then
+            commits_since="$(git -C "$kit_root" --no-optional-locks -c core.fsmonitor=false rev-list --count "$state_sha..HEAD" 2>/dev/null || true)"
+            if [[ "$commits_since" =~ ^[0-9]+$ ]]; then history="measured"; fi
+        fi
+    fi
+    local over="" status="" detail=""
+    if (( lines > max_lines )); then over="lines $lines > $max_lines"; fi
+    if (( tokens > max_tokens )); then
+        if [[ -n "$over" ]]; then over="$over; "; fi
+        over="${over}tokens $tokens > $max_tokens"
+    fi
+    if [[ "$history" == "unverified" ]]; then
+        if [[ -z "$over" ]]; then
+            emit 'state-freshness' 'SKIP(staleness unverified)' "within the size guard ($lines lines, $tokens tok); docs/STATE.md has no readable commit history" 'Commit docs/STATE.md or run pk:doctor inside a git repository with history'
+            return 0
+        fi
+        emit 'state-freshness' 'STALE(bloat)' "docs/STATE.md is over the guard: $over; commit history was unavailable for the staleness half" 'Archive completed items to docs/STATE-ARCHIVE.md (pk:checkpoint archival flow)'
+        return 0
+    fi
+    if (( commits_since >= max_commits )); then
+        if [[ -n "$over" ]]; then status="STALE(bloat+$commits_since)"; else status="STALE(+$commits_since)"; fi
+        detail="docs/STATE.md: $lines lines (guard $max_lines), $tokens tok (guard $max_tokens), $commits_since commits since its last update (guard $max_commits)"
+        if [[ -n "$over" ]]; then detail="$detail — over: $over"; fi
+        emit 'state-freshness' "$status" "$detail" 'Refresh docs/STATE.md with pk:checkpoint and archive completed entries to docs/STATE-ARCHIVE.md'
+        return 0
+    fi
+    if [[ -n "$over" ]]; then
+        emit 'state-freshness' 'STALE(bloat)' "docs/STATE.md is over the guard: $over ($lines lines / $tokens tok; $commits_since commits since its last update)" 'Archive completed items to docs/STATE-ARCHIVE.md (pk:checkpoint archival flow)'
+        return 0
+    fi
+    emit 'state-freshness' 'OK' "within guard: $lines lines / $tokens tok; $commits_since commits since docs/STATE.md last changed" '-'
+    return 0
+}
+
+state_guard_line="$(grep -m1 -E '^state-guard:' -- "$kit_root/PROMPTKIT.md" 2>/dev/null | tr -d '\r' || true)"
+check_state_freshness
 
 # --- Check 5: intake provenance (record-path health only, Issue #641) ------
 # Deliberately narrow: it verifies that a completed intake names a resolvable

@@ -1,5 +1,7 @@
 # Project State & Living Execution Tracker
 
+<!-- Bounded live projection: keep this file inside the `state-guard:` thresholds (line/token/commit) declared in `PROMPTKIT.md`; completed history moves to `docs/STATE-ARCHIVE.md` via `pk:checkpoint`. -->
+
 ## 1. Executive Summary & Current Position
 - **Project Name**: [Project Name]
 - **Current Milestone / Epic**: [e.g., Milestone 2: Core Domain Engine]
@@ -173,6 +175,6 @@ Compact record of pairing sessions to enable instant chat resumption:
 | :--- | :--- | :--- | :--- | :--- |
 | not tracked | not tracked | not tracked | not tracked | not tracked |
 
-- **Running total**: not tracked — refreshed by `pk:checkpoint`; keep measured tokens and heuristic context-payload ranges as separate totals and never add them together. One row per real work session (trivial sessions under ~5 turns with no workflow usage write nothing). When host metering is unavailable, compute the lower and upper bounds independently via the heuristic (`turns × 8k` through `turns × 15k tok/turn`) rather than emitting a midpoint or `not measured`.
+- **Running total**: not tracked — refreshed by `pk:checkpoint`; sum measured tokens only. One row per real work session (trivial sessions under ~5 turns with no workflow usage write nothing). When host metering is unavailable, write `host telemetry unavailable` in `Measured in/out` and `not measured` in the estimated column; never infer a range, midpoint, or spend figure.
 - **Note evidence**: use `duration=<value>; repairs=<count or not tracked>; interventions=<count or not tracked>; verification=<result or not tracked>; outcome=<accepted | rejected | incomplete | blocked | not tracked>`. Never infer `0`, `passed`, or `accepted` from missing evidence.
-- **Evidence boundary**: this ledger is operational telemetry, not CPAC benchmark evidence. Heuristic context payload is not provider billing telemetry or actual spend; avoided rework remains `not measured` without comparative evidence. Preserve historical rows and the five-column shape without silent backfill.
+- **Evidence boundary**: this ledger is operational telemetry, not CPAC benchmark evidence. Recorded values are host-reported or `not measured`; avoided rework remains `not measured` without comparative evidence. Completed rows older than ~30 days move to `docs/STATE-ARCHIVE.md` through the `pk:checkpoint` archival flow so the live ledger stays bounded. Preserve historical rows and the five-column shape without silent backfill.

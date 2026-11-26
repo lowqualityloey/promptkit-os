@@ -1126,6 +1126,59 @@ try {
     Want-Contains "submodule`tOK"
     Want-NotContains "submodule`tMISSING"
     Report-Scenario 'N8 gitlink registration -> MISSING(.gitmodules) without mapping, OK with'
+
+    # S16: docs/STATE.md over the size guard -> STALE(bloat), exit 1 (#791).
+    Begin-Scenario
+    $rootS16 = New-HealthyKit 's16' 'balanced'
+    [IO.File]::AppendAllText((Join-Path $rootS16 'PROMPTKIT.md'), "state-guard: lines=10 tokens=100 commits=25`n", $utf8)
+    $filler = [System.Text.StringBuilder]::new()
+    for ($i = 1; $i -le 15; $i++) { [void]$filler.Append("- filler row $i`n") }
+    [IO.File]::AppendAllText((Join-Path $rootS16 'docs/STATE.md'), $filler.ToString(), $utf8)
+    Invoke-Doctor -Root $rootS16
+    Want-Status 1
+    Want-Contains "state-freshness`tSTALE(bloat)"
+    Want-Contains 'docs/STATE-ARCHIVE.md'
+    Report-Scenario 'S16 STATE.md over the size guard -> STALE(bloat), exit 1'
+
+    # S17: docs/STATE.md trailing HEAD past the commits guard -> STALE(+n), exit 1.
+    Begin-Scenario
+    $rootS17 = New-HealthyKit 's17' 'balanced'
+    [IO.File]::AppendAllText((Join-Path $rootS17 'PROMPTKIT.md'), "state-guard: lines=500 tokens=6000 commits=2`n", $utf8)
+    Invoke-SetupGit $rootS17 @('config', 'user.name', 'Fixture')
+    Invoke-SetupGit $rootS17 @('config', 'user.email', 'fixture@example.invalid')
+    Invoke-SetupGit $rootS17 @('add', 'PROMPTKIT.md', 'docs')
+    Invoke-SetupGit $rootS17 @('commit', '-qm', 'state baseline')
+    for ($i = 1; $i -le 3; $i++) {
+        [IO.File]::AppendAllText((Join-Path $rootS17 'notes.txt'), "note $i`n", $utf8)
+        Invoke-SetupGit $rootS17 @('add', 'notes.txt')
+        Invoke-SetupGit $rootS17 @('commit', '-qm', "note $i")
+    }
+    Invoke-Doctor -Root $rootS17
+    Want-Status 1
+    Want-Contains "state-freshness`tSTALE(+3)"
+    Report-Scenario 'S17 STATE.md stale against HEAD -> STALE(+3), exit 1'
+
+    # S18: a fresh committed STATE.md inside the guard -> state-freshness OK, exit 0.
+    Begin-Scenario
+    $rootS18 = New-HealthyKit 's18' 'balanced'
+    [IO.File]::AppendAllText((Join-Path $rootS18 'PROMPTKIT.md'), "state-guard: lines=500 tokens=6000 commits=25`n", $utf8)
+    Invoke-SetupGit $rootS18 @('config', 'user.name', 'Fixture')
+    Invoke-SetupGit $rootS18 @('config', 'user.email', 'fixture@example.invalid')
+    Invoke-SetupGit $rootS18 @('add', 'PROMPTKIT.md', 'docs')
+    Invoke-SetupGit $rootS18 @('commit', '-qm', 'healthy baseline')
+    Invoke-Doctor -Root $rootS18
+    Want-Status 0
+    Want-Contains "state-freshness`tOK"
+    Report-Scenario 'S18 fresh committed STATE.md -> state-freshness OK, exit 0'
+
+    # S19: state-guard: off disables the row -> SKIP(guard off), exit 0.
+    Begin-Scenario
+    $rootS19 = New-HealthyKit 's19' 'balanced'
+    [IO.File]::AppendAllText((Join-Path $rootS19 'PROMPTKIT.md'), "state-guard: off`n", $utf8)
+    Invoke-Doctor -Root $rootS19
+    Want-Status 0
+    Want-Contains "state-freshness`tSKIP(guard off)"
+    Report-Scenario 'S19 state-guard: off -> SKIP(guard off), exit 0'
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }

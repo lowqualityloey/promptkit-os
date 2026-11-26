@@ -16,7 +16,10 @@
 profile: balanced
 
 status-cards: on
-> `status-cards: on` (default) emits the 3-line telemetry card on completion; `off` suppresses the decorative card only — `> [!IMPORTANT]` / `> [!WARNING]` halts still fire. A missing line means `on`.
+> `status-cards: on` (default) emits three compact Markdown status lines on completion and never a box; framed or alert cards are reserved for `🛑ACTION REQUIRED` and `🚫BLOCKED` halts. `off` suppresses the routine lines only — halts still fire. A missing line means `on`.
+
+state-guard: lines=500 tokens=6000 commits=25
+> `state-guard:` caps `docs/STATE.md` before `pk:checkpoint` offers archival: line count, measured tokens (`(bytes + 2) / 4`), and commits since its last change. `pk:doctor` reports the same thresholds as its `state-freshness` row. Missing values fall back to the defaults shown; `off` disables the guard.
 
 preset: standard
 > `preset: standard` (default) runs the full ceremony surface. `solo-fast` — a solo maintainer on a small repository — keeps routine progress on concise Markdown lines with framed callouts reserved for ACTION REQUIRED and BLOCKED, and drives the five-command loop (`pk:plan`, `pk:auto`, `pk:review`, `pk:commit`, `pk:checkpoint`). A preset never relaxes a hard gate: push, PR, destructive operations, and Level 3 work still require explicit human approval. A missing line means `standard`.

@@ -1061,6 +1061,67 @@ n8() {
     want_not_contains $'submodule\tMISSING'
 }
 
+# S16: docs/STATE.md over the size guard -> STALE(bloat), exit 1.
+s16() {
+    local root i
+    root="$(make_healthy s16 balanced)"
+    printf 'state-guard: lines=10 tokens=100 commits=25\n' >> "$root/PROMPTKIT.md"
+    i=1
+    while [[ "$i" -le 15 ]]; do
+        printf -- '- filler row %s\n' "$i" >> "$root/docs/STATE.md"
+        i=$((i + 1))
+    done
+    run_doctor "$root"
+    want_status 1
+    want_contains $'state-freshness\tSTALE(bloat)'
+    want_contains 'docs/STATE-ARCHIVE.md'
+}
+
+# S17: docs/STATE.md trailing HEAD past the commits guard -> STALE(+n), exit 1.
+s17() {
+    local root i
+    root="$(make_healthy s17 balanced)"
+    printf 'state-guard: lines=500 tokens=6000 commits=2\n' >> "$root/PROMPTKIT.md"
+    git -C "$root" config user.name Fixture
+    git -C "$root" config user.email fixture@example.invalid
+    git -C "$root" add PROMPTKIT.md docs
+    git -C "$root" commit -qm 'state baseline'
+    i=1
+    while [[ "$i" -le 3 ]]; do
+        printf 'note %s\n' "$i" >> "$root/notes.txt"
+        git -C "$root" add notes.txt
+        git -C "$root" commit -qm "note $i"
+        i=$((i + 1))
+    done
+    run_doctor "$root"
+    want_status 1
+    want_contains $'state-freshness\tSTALE(+3)'
+}
+
+# S18: a fresh committed STATE.md inside the guard -> state-freshness OK, exit 0.
+s18() {
+    local root
+    root="$(make_healthy s18 balanced)"
+    printf 'state-guard: lines=500 tokens=6000 commits=25\n' >> "$root/PROMPTKIT.md"
+    git -C "$root" config user.name Fixture
+    git -C "$root" config user.email fixture@example.invalid
+    git -C "$root" add PROMPTKIT.md docs
+    git -C "$root" commit -qm 'healthy baseline'
+    run_doctor "$root"
+    want_status 0
+    want_contains $'state-freshness\tOK'
+}
+
+# S19: state-guard: off disables the row -> SKIP(guard off), exit 0.
+s19() {
+    local root
+    root="$(make_healthy s19 balanced)"
+    printf 'state-guard: off\n' >> "$root/PROMPTKIT.md"
+    run_doctor "$root"
+    want_status 0
+    want_contains $'state-freshness\tSKIP(guard off)'
+}
+
 begin; s1; report 'S1 healthy Balanced install -> all OK, exit 0'
 begin; s2; report 'S2 stale engine + ignored path + diverged projection -> exit 1'
 begin; s3; report 'S3 intentional ignore alone -> IGNORED, exit 0'
@@ -1109,6 +1170,10 @@ begin; p23; report 'P23 double-backtick wrapping -> MISSING, exit 1'
 begin; p24; report 'P24 trailing-separator record -> OK'
 begin; p25; report 'P25 unreadable record file -> MISSING, exit 1'
 begin; n8; report 'N8 gitlink registration -> MISSING(.gitmodules) without mapping, OK with'
+begin; s16; report 'S16 STATE.md over the size guard -> STALE(bloat), exit 1'
+begin; s17; report 'S17 STATE.md stale against HEAD -> STALE(+3), exit 1'
+begin; s18; report 'S18 fresh committed STATE.md -> state-freshness OK, exit 0'
+begin; s19; report 'S19 state-guard: off -> SKIP(guard off), exit 0'
 
 printf 'Passed: %s | Failed: %s | Skipped: %s\n' "$PASS" "$FAIL" "$SKIPPED"
 [[ "$FAIL" -eq 0 ]] || exit 1

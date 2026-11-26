@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Historical baseline:** 2026-09-14 on `main` (v1.6.0) · **Current measurements:** last committed 2026-11-26 at `b9604e3`, the Level 2 Lite record forms (issue #790): the Level 2 ceremony requirement drops 5,372 → 998 tok (Lite Task Record 790 + Lite checkpoint 208), the spec band narrows to 1,977–6,478 tok, the full forms stay Level 3 and opt-in at Level 2, and the workflow edits re-propagate core-six 32,985 → 33,475 tok and full workflow set 119,972 → 120,510 tok while the directives stay at 2,404 Balanced / 1,415 Lite; this documentation-only commit restates the anchor to it because a commit cannot contain its own SHA. Prior anchor `93e902c` (#788); earlier anchors in §11. · **Method:** `bytes / 4` via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 19,794 tok / full set 75,505 tok.
+**Historical baseline:** 2026-09-14 on `main` (v1.6.0) · **Current measurements:** last committed 2026-11-26 at `7302872`, the telemetry and state-guard de-cluttering (issue #791) rebased onto the #790 Lite record forms: compact Markdown routine telemetry, honest checkpoint spend, a `state-freshness` doctor row, SETUP 3,021 → 3,078 tok, combined core-six 33,814 tok and full workflow set 121,208 tok, Level 2 998 tok / band 1,977–6,478 unchanged, directives unchanged at 2,404 Balanced / 1,415 Lite; this documentation-only commit restates the anchor to it because a commit cannot contain its own SHA. Prior anchor `1afa37b` (#790 merge); earlier anchors in §11. · **Method:** `bytes / 4` via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 19,794 tok / full set 75,505 tok.
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [26 Inlined Workflows (120,510 tok) + Templates + Protocols] │
+│ Every Turn: [26 Inlined Workflows (121,208 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -40,8 +40,8 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **33,475 tok** |
-| Full workflow set | 26 | **120,510 tok** |
+| Core-six Lite subset | 6 | **33,814 tok** |
+| Full workflow set | 26 | **121,208 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -99,7 +99,7 @@ Two units are reported separately because they are paid differently:
 | **Level 1 (Standard)** | 0 | 0 | **0 tok** (optional quick-tier checkpoint 267 tok) |
 | **Level 2 (Controlled)** | 2 | 3,991 | **998 tok** (Lite form default) |
 | **Level 3 (Release-Critical)** | 5 | 54,242 | **13,561 tok** (full form) |
-| *Shared setup, once per project* | 1 | 12,084 | *3,021 tok* |
+| *Shared setup, once per project* | 1 | 12,312 | *3,078 tok* |
 
 **Controlled work has two record forms, and the Lite form is the Level 2 default.** [`templates/execution-task-record-lite-template.md`](../templates/execution-task-record-lite-template.md) (3,161 B / 790 tok) keeps all 41 validator labels and drops only the fill-in commentary; [`templates/execution-checkpoint-lite-template.md`](../templates/execution-checkpoint-lite-template.md) (830 B / 208 tok) carries the 17-label checkpoint whose evidence stays in the linked Task Record. Together they are 3,991 B / 998 tok, and `Record Form: Lite` is what the validator reads to accept them. The full forms — [`templates/execution-task-record-template.md`](../templates/execution-task-record-template.md) (19,249 B / 4,812 tok) and the Full Tier checkpoint (560 tok) — stay mandatory for Level 3 and are opt-in for Level 2 work that asks for strict evidence; `Record Form: Lite` is refused, and only at Level 3. A Level 2 task that opts into the full forms therefore carries 5,372 tok, which is the figure the fourth revision published as every Level 2 task's default.
 
@@ -396,6 +396,7 @@ The banner at the top of this file is deliberately short: it names the current a
 
 | Date | Anchor | Change | Figures it moved |
 | :--- | :--- | :--- | :--- |
+| 2026-11-26 | `7302872` | #791 compact telemetry + honest checkpoint spend + STATE freshness guard (rebased on #790) | SETUP 3,021 → 3,078 tok (12,084 → 12,312 B); Level 2 requirement stays 998 tok and band 1,977–6,478; combined core-six 33,814 tok and full set 121,208 tok; directives unchanged |
 | 2026-11-26 | `b9604e3` | #790 L2 Lite record forms + Solo/Fast preset | L2 ceremony 5,372 → 998 tok; band 6,351–10,852 → 1,977–6,478; core-six 32,985 → 33,475; full set 119,972 → 120,510; directives unchanged |
 | 2026-11-26 | `93e902c` | #788 directive-headroom trim | directive 2,488 → 2,404 Balanced, 1,482 → 1,415 Lite; full-set and core-six unchanged |
 | 2026-11-26 | `3b895a4` | #787 release-archive export-ignore | full workflow set 119,959 → 119,972 tok; `pk:ship` 17,295/16,289 → 17,308/16,302 |
