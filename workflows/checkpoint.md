@@ -82,6 +82,35 @@ For Level 2 (Controlled) and Level 3 (Release-Critical) Work, checkpointing is a
 - Scope changes require a linked Scope Change Record (scaffold: [`templates/execution-scope-change-template.md`](../templates/execution-scope-change-template.md)) before changing objective, files, acceptance criteria, dependencies, non-goals, risk, or verification. Expansion requires human confirmation or a separate Task Record.
 - Mid-implementation new requirements are intercepted, never silently absorbed, per the canonical New-Requirement Interception table in `workflows/sync.md` (doc-only appends, Scope Change Records, planning re-open with intake status `partial`, Later ledger).
 
+#### Checkpoint Importer Field Mapping
+
+The checkpoint importer accepts a `/handoff` payload or free text and maps it onto the canonical checkpoint labels. A label is required at the quick tier only when marked yes.
+
+| Label | Quick (L1) required | From /handoff payload | Derivable from local git | Degrades to (when unmappable) |
+| :--- | :--- | :--- | :--- | :--- |
+| Record Type | yes | no | no | n/a |
+| Checkpoint ID | yes | no | no | n/a |
+| Task ID | no | yes | no | TRACEABILITY_MISSING (full); `N/A — no Task Record (Level 0/1)` (quick) |
+| Specification | no | yes | no | POLICY_LIMITATION |
+| Created | yes | partial | yes | n/a |
+| Checkpoint Type | no | no | no | POLICY_LIMITATION |
+| Execution State | yes | yes | no | not measured |
+| Objective | yes | yes | no | not measured |
+| Completed Work | no | partial | no | not measured |
+| Remaining Work | yes | partial | no | not measured |
+| Changed Files | no | yes | yes | not measured |
+| Branch / Revision | no | yes | yes | n/a |
+| Locked Decisions and Invariants | no | yes | no | not measured |
+| Verification Evidence | no | yes | no | not measured |
+| CI Evidence | no | partial | no | POLICY_LIMITATION |
+| Blockers | yes | partial | no | not measured |
+| Scope Changes | no | partial | no | not measured |
+| Next Action | yes | yes | no | not measured |
+| Resume Condition | yes | partial | no | not measured |
+| Recorded By | yes | no | no | POLICY_LIMITATION |
+
+The importer emits a `Ceremony Level` line in every draft whose level is known, so a `quick` draft re-validates at the quick tier. Level 0 payloads are refused (`REFUSED-L0`); unlabeled payloads default fail-closed to the `full` tier. Verdicts: `QUICK-VALID` (all ten quick labels resolve at Level 1; unresolved full-only labels degrade via `POLICY_LIMITATION` and are never reported as full-valid), `FULL-VALID` (all 20 labels and a resolvable Task ID), otherwise `DRAFT-INCOMPLETE`. The exit status is 0 only for `QUICK-VALID` or `FULL-VALID`. A resolvable linked Task Record owns the tier: a lower payload claim is flagged as a downgrade (`POLICY_LIMITATION`) and the draft takes the record's level. A supplied `Task ID` that does not resolve, or a `Checkpoint ID` that is not a stable canonical ID, stays visible in the draft and counts as unresolved, so canonical re-validation reports the same failure.
+
 Phase 4 may synchronize `docs/STATE.md`, but STATE is a projection owned by `pk:checkpoint`; the canonical `docs/tasks/<task-id>.md` Task Record remains the Local Task Source. At a session or role boundary, the receiver must validate the Task ID, revision, changed files, acceptance criteria, blockers, invariants, and exactly one next action before editing. A mismatch leaves execution blocked or `checkpoint_due` until reconciled. Harness-spawned sessions bind to the #516 default boundary: `workflows/auto.md --until review`.
 
 #### State Mutation Contract (single arbitration rule)
