@@ -47,8 +47,8 @@
   - **Result**: `Pass`
   - **Evidence**: `scripts/measure-ceremony-overhead.sh and .ps1 pin SETUP=1000; docs/BENCHMARKS.md rows read 3,999 B / 1,000 tok, 34,646 tok and 122,741 tok; the documentation-only follow-up commit restates the anchor to the implementation commit`
 - [ ] **AC-5**: `Every required local gate exits 0, the record lists every touched path with no brace shorthand, CHANGELOG.md carries exactly one [Unreleased] entry for the branch, and no raw host path appears in code, docs or this record.`
-  - **Result**: `Pending`
-  - **Evidence**: `Final gate run recorded in Verification Evidence after the docs-only anchor commit`
+  - **Result**: `Pass`
+  - **Evidence**: `All eleven gates exit 0 on the branch tree; see Verification Evidence`
 
 ## Execution Policy
 - **Mode**: `Gated Mode`
@@ -87,15 +87,15 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `Pending the final gate run on the documentation-only anchor tree`
+- **Verification Evidence**: `run-init-safety-tests.sh PASS (including the unchanged Tests 38a-38e and 39a-39f); run-terminal-picker-tests.sh PASS; run-courier-integrity-pin-fixtures.sh PASS|24 executable courier policy fixtures; run-behavioral-contract-tests.sh 831 passed, 0 failed on the anchor-restated tree; run-doctor-tests.sh 52 passed, 0 failed, 0 skipped; validate-references.sh . --strict PASS; validate-execution-control.sh --root . --strict VALID|RECORDS=88|ROOT=.; measure-ceremony-overhead.sh exit 0 with SETUP 1,000 tok, full set 122,741 tok and core-six 34,646 tok; scan-staged-secrets.sh 0 findings; check-changelog-entry.sh CHANGELOG_GATE|PASS; git diff --check clean.`
 - **CI Evidence**: `N/A - local branch, not pushed`
 - **Review Evidence**: `N/A`
-- **Commit Evidence**: `N/A before commit`
+- **Commit Evidence**: `3b24d16 refactor(templates): slim consumer STATE template (#808); this documentation-only follow-up commit restates the benchmarks anchor`
 - **Pull Request Evidence**: `N/A`
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
 - **Completion State**: `awaiting_review`
-- **Acceptance Results**: `AC-1 pass; AC-2 pass; AC-3 pass; AC-4 pass; AC-5 pending`
+- **Acceptance Results**: `AC-1 pass; AC-2 pass; AC-3 pass; AC-4 pass; AC-5 pass`
 - **Changed-File Summary**: `The consumer STATE template lost the PromptKit-internal importer and release-handoff material and now measures 1,000 tokens; that material lives canonically in the checkpoint workflow; the project-profile wording and arrow are fixed; the ceremony baseline and published benchmarks reflect the new setup size and workflow inventory.`
 - **Completion Exception**: `None`
 - **Completion Decision and Timestamp**: `Pending review, DeepSeek Harness agent (lead), 2026-11-27 08:30 UTC`
