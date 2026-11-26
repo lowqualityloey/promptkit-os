@@ -375,4 +375,3 @@ git status --short
 Expected: the first command passes with no broken links or template references; the second passes with `CHANGELOG_GATE|PASS` — a docs-only range carries no behavior-surface path, and the structural check has no repeated heading to reject; `git diff --check` prints nothing; `git status --short` lists exactly the three files in AC-4.
 
 No PowerShell suite runs at this stage. The repository's `pwsh` is an unusable shim in this environment, and no behavior changed, so there is no .ps1 subject to exercise. That omission is stated here rather than left for a reader to infer from an empty log.
-

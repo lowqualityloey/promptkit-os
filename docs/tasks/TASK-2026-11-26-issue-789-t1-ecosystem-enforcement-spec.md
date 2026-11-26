@@ -101,4 +101,3 @@
 - **Changed-File Summary**: `Add the T1 design specification for ecosystem enforcement packs, covering the consumer Tier-1 vacuum, the unclaimed host-hook surfaces, the flat-file versus progressive-discovery gap, and the dual-shell and rubric-literalism tax; rule on the distribution channel, the hook matrix with default-deny, and the idempotency and progressive-discovery contract; and record one CHANGELOG documentation entry.`
 - **Completion Exception**: `No PowerShell suite was executed because the local pwsh is an unusable WSL shim; none was in scope, since this record changes no .ps1 and no behavior. The four-line difference between the measured shell total and the figure in issue #789 is left unexplained and documented rather than reconciled by inference.`
 - **Completion Decision and Timestamp**: `Acceptance criteria verified on every surface this environment can execute; committed locally for review — 2026-11-26.`
-
