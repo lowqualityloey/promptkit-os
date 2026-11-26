@@ -46,7 +46,7 @@
 - [ ] **AC-2**: `Five Codex CLI 0.172.0 bundles exist under docs/internal/host-conformance/codex-cli/, each carrying the 22-file contract, the raw post-scrub session JSONL, a scorer.txt recorded from the probe's real checks, and a README naming the host, model, date, and transform.`
 - [ ] **AC-3**: `Every bundle records a negative isolation canary (CANNOT-READ under bwrap) and a positive unisolated control, with the exact bwrap invocation in isolation.txt.`
 - [ ] **AC-4**: `The milestone-halt bundle records a 300 s observation window, a resumed turn with no sign-off, state-check.json, and a reproducible bash scripts/check-milestone-halt-evidence.sh result.`
-- [ ] **AC-5**: `No tracked artifact in the five bundles or the host index contains /home/heyloey, /home/linuxbrew, or any other raw host home path; paths are masked as $HOME and <repo>.`
+- [ ] **AC-5**: `No tracked artifact in the five bundles or the host index contains a raw host home path (such as /home/<user> or /home/linuxbrew); paths are masked as $HOME and <repo>.`
 - [ ] **AC-6**: `docs/HOST-CONFORMANCE.md records the Codex CLI row as measured with per-probe verdicts and capture metadata, and README.md states four of eleven host configurations with live captures and seven Untested.`
 - [ ] **AC-7**: `No file under scripts/, workflows/, protocols/, templates/, or the measured inputs changes; git diff against origin/main touches only docs/internal/host-conformance/codex-cli/, docs/HOST-CONFORMANCE.md, README.md, and this record.`
 
@@ -85,13 +85,13 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `The reduced-scope record validated at commit 32c1d35 with bash scripts/validate-execution-control.sh --root . --strict -> VALID|RECORDS=85|ROOT=. The decision update is revalidated before its commit. No capture bundle exists. The blocking event was: BLOCKED by CC Safety Net; Reason: Access to a sensitive path is not allowed; Rule: secret.cli.codex; Segment: /home/heyloey/.codex/auth.json.`
+- **Verification Evidence**: `The reduced-scope record validated at commit 32c1d35 with bash scripts/validate-execution-control.sh --root . --strict -> VALID|RECORDS=85|ROOT=. The decision update is revalidated before its commit. No capture bundle exists. The blocking event was: BLOCKED by CC Safety Net; Reason: Access to a sensitive path is not allowed; Rule: secret.cli.codex; Segment: ~/.codex/auth.json.`
 - **CI Evidence**: `Pending — branch not pushed, so no workflow ran.`
 - **Review Evidence**: `Owner reviewed the blocker and selected option 3 on 2026-11-27: leave issue #793 open with the blocker recorded and publish no capture arm.`
-- **Commit Evidence**: `32c1d35 restates the reduced scope; 3544a7c records the blocker. A third local commit records the owner's option-3 decision. No capture commit exists.`
+- **Commit Evidence**: `32c1d35 restates the reduced scope; 3544a7c records the blocker. A third local commit records the owner's option-3 decision; a fourth masks the raw home path in this record. No capture commit exists.`
 - **Pull Request Evidence**: `Pending separate authorization.`
 - **Release Evidence**: `N/A — no release action in scope.`
-- **Blocker and Resume Condition**: `CC Safety Net rule secret.cli.codex blocked copying /home/heyloey/.codex/auth.json into the bwrap scratch CODEX_HOME. The block instruction forbids retrying or working around it, and an isolated Codex CLI cannot authenticate without that credential, so the five captures cannot start in this session. On 2026-11-27 the owner selected option 3: leave issue #793 open with this blocker recorded and publish no capture arm. Resume only on a new instruction that supplies an approved authentication path or owner-run capture bundles; then resume at card-provenance.`
+- **Blocker and Resume Condition**: `CC Safety Net rule secret.cli.codex blocked copying ~/.codex/auth.json into the bwrap scratch CODEX_HOME. The block instruction forbids retrying or working around it, and an isolated Codex CLI cannot authenticate without that credential, so the five captures cannot start in this session. On 2026-11-27 the owner selected option 3: leave issue #793 open with this blocker recorded and publish no capture arm. Resume only on a new instruction that supplies an approved authentication path or owner-run capture bundles; then resume at card-provenance.`
 - **Completion State**: `blocked`
 - **Acceptance Results**: `AC-1 Pass — the record restates the reduced scope, the measured inventory, and the unmet three-host criterion. AC-2 through AC-7 Blocked — no capture bundle, matrix row, or count update was produced because the isolated host could not authenticate; under the owner's option-3 decision no capture arm is published in this task.`
 - **Changed-File Summary**: `The #793 task record only: reduced one-host scope, unmet three-host criterion, credential-isolation blocker, and owner option-3 decision. No capture bundle, matrix row, or README count is published.`
