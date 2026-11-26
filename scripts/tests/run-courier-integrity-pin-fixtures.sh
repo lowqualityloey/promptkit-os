@@ -130,13 +130,42 @@ try {
   const wrongPin = createCourier('wrong-pin', pin('0'.repeat(64)));
   const preload = path.join(work, 'stub-fetch.js');
   fs.writeFileSync(preload, `const fs=require('node:fs');\nglobalThis.fetch=async url=>{fs.writeFileSync(process.env.PROMPTKIT_STUB_FETCH_MARKER,String(url));return {ok:true,arrayBuffer:async()=>fs.readFileSync(process.env.PROMPTKIT_STUB_ARCHIVE)};};\n`);
+  // Byte-level snapshot of a tree outside the project root, so a refused
+  // install through a symlinked .promptkit/ can prove the link target was not
+  // touched at all.
+  function snapshotTree(dir) {
+    const entries = [];
+    const walk = (current, prefix) => {
+      for (const entry of fs.readdirSync(current).sort()) {
+        const full = path.join(current, entry);
+        const rel = prefix ? `${prefix}/${entry}` : entry;
+        const stat = fs.lstatSync(full);
+        if (stat.isSymbolicLink()) {
+          entries.push(`link ${rel} -> ${fs.readlinkSync(full)}`);
+        } else if (stat.isDirectory()) {
+          entries.push(`dir ${rel}/`);
+          walk(full, rel);
+        } else {
+          entries.push(`file ${rel} ${crypto.createHash('sha256').update(fs.readFileSync(full)).digest('hex')}`);
+        }
+      }
+    };
+    walk(dir, '');
+    return entries;
+  }
   let cases = 0;
   function run(name, bin, opts = {}) {
     const root = opts.root || path.join(work, 'projects', name);
     fs.mkdirSync(root, { recursive: true });
+    let externalDir;
     if (!opts.root) {
       fs.writeFileSync(path.join(root, 'keep.txt'), 'untouched');
-      if (opts.overlay || opts.update) {
+      if (opts.symlink) {
+        externalDir = path.join(work, 'external', name);
+        fs.mkdirSync(externalDir, { recursive: true });
+        if (opts.symlinkContent) fs.writeFileSync(path.join(externalDir, 'existing.txt'), 'untouched');
+        fs.symlinkSync(externalDir, path.join(root, '.promptkit'), process.platform === 'win32' ? 'junction' : 'dir');
+      } else if (opts.overlay || opts.update) {
         fs.mkdirSync(path.join(root, '.promptkit'));
         fs.writeFileSync(path.join(root, '.promptkit', 'existing.txt'), 'untouched');
       }
@@ -145,6 +174,7 @@ try {
         fs.writeFileSync(path.join(root, '.promptkit', '.git'), 'gitdir: fixture\n');
       }
     }
+    const externalBefore = externalDir ? snapshotTree(externalDir) : null;
     const fetchMarker = path.join(work, `${name}-fetch.txt`);
     const installerMarker = path.join(work, `${name}-installer.txt`);
     const stdout = path.join(work, `${name}-stdout.txt`);
@@ -182,12 +212,16 @@ try {
     if (opts.overlay && !opts.update) assert.equal(fs.readFileSync(path.join(kitDir, 'existing.txt'), 'utf8'), 'untouched');
     if (opts.update) assert.ok(!fs.existsSync(path.join(kitDir, 'existing.txt')), `${name}: update kept a stale entry`);
     if (opts.message) assert.match(diagnostic, opts.message, `${name}: diagnostic`);
+    if (externalDir) {
+      assert.ok(fs.lstatSync(kitDir).isSymbolicLink(), `${name}: refused run replaced the symlink`);
+      assert.deepEqual(snapshotTree(externalDir), externalBefore, `${name}: external symlink target mutated`);
+    }
     if (fetched) assert.match(fs.readFileSync(fetchMarker, 'utf8'), /archive\/refs\/tags\/v9\.8\.7\.tar\.gz$/);
     if (installed) {
       if (opts.kit !== false) assert.ok(fs.existsSync(path.join(kitDir, 'init.sh')), `${name}: archive extracted`);
       const forwarded = fs.readFileSync(installerMarker, 'utf8').trim().split(/\r?\n/);
       assert.deepEqual(forwarded, [...args.filter(arg => arg !== '--force' && arg !== '--update'), root, `--engine-version=v${version}`], `${name}: installer arguments`);
-    } else if (!opts.overlay && !opts.submodule) {
+    } else if (!opts.overlay && !opts.submodule && !opts.symlink) {
       assert.deepEqual(fs.readdirSync(root), ['keep.txt'], `${name}: no project mutation`);
     }
     assert.ok(!fs.readdirSync(root).some((entry) => entry.startsWith('.promptkit-staging-') || entry.startsWith('.promptkit-backup-')), `${name}: staging or backup directory left behind`);
@@ -218,6 +252,15 @@ try {
   run('update-refuses-submodule', good, { submodule: true, args: ['--update'], exit: 1, fetch: false, install: false, message: /git-submodule install/ });
   run('update-requires-existing-install', good, { args: ['--update'], exit: 1, fetch: false, install: false, kit: false, message: /no \.promptkit\/ to update/ });
   run('update-rejects-force', good, { overlay: true, args: ['--update', '--force'], exit: 1, fetch: false, install: false, message: /mutually exclusive/ });
+  // Issue #814: a symbolic .promptkit/ (even dangling or empty) must fail closed at
+  // every door. Pre-fix, the default install treated the empty link target as a
+  // clean fresh install, --force rmSync'd through the link, and --update renamed
+  // the link itself; all three left the external directory changed or the link
+  // replaced. Each case asserts refusal, byte-identical external preservation, and
+  // that the link is still a link.
+  run('install-refuses-kit-symlink', good, { symlink: true, args: ['--balanced'], exit: 1, fetch: false, install: false, message: /symbolic link/ });
+  run('force-refuses-kit-symlink', good, { symlink: true, symlinkContent: true, args: ['--force', '--balanced'], exit: 1, fetch: false, install: false, message: /symbolic link/ });
+  run('update-refuses-kit-symlink', good, { symlink: true, symlinkContent: true, args: ['--update'], exit: 1, fetch: false, install: false, message: /symbolic link/ });
   // A cancel (130) removes only a kit this run created and keeps a pre-existing one.
   run('cancel-removes-fresh-kit', good, { installerExit: 130, exit: 130, kit: false, message: /removed the newly created \.promptkit\// });
   run('cancel-keeps-forced-overlay', good, { overlay: true, installerExit: 130, args: ['--force'], exit: 130, kitEntries: ['existing.txt', 'init.sh', 'init.ps1'], message: /existing \.promptkit\/ left unchanged/ });

@@ -392,19 +392,31 @@ function Invoke-StripDirectives {
     $plan = @()
     $rootFull = [System.IO.Path]::GetFullPath($Root)
     $encoding = [System.Text.Encoding]::GetEncoding(28591)
+    # Canonicalize the project root and the user-owned paths before inspecting
+    # any candidate, so an alias (./PROMPTKIT.md, docs/./STATE.md,
+    # docs//STATE.md, docs\STATE.md, or an in-repo symlink) cannot slip past the
+    # protection check into the strip path.
+    $canonicalRoot = Resolve-CanonicalPath $rootFull
+    $protectedPromptkit = Resolve-CanonicalPath (Join-Path $canonicalRoot "PROMPTKIT.md")
+    $protectedState = Resolve-CanonicalPath (Join-Path $canonicalRoot "docs/STATE.md")
+    $protectedKit = Resolve-CanonicalPath (Join-Path $canonicalRoot ".promptkit")
+    $pathComparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
 
     foreach ($rel in $candidates) {
         $full = Join-Path $rootFull $rel
         if (-not (Test-Path -LiteralPath $full -PathType Leaf)) { continue }
-        if ($rel -in @("PROMPTKIT.md", "docs/STATE.md") -or $rel -like ".promptkit*") {
-            Write-Host "[!] --strip-directives never modifies $($rel): that file is user-owned. Nothing was changed." -ForegroundColor Red
+        $canonical = Resolve-CanonicalPath $full
+        $isProtected = $canonical.Equals($protectedPromptkit, $pathComparison) -or
+            $canonical.Equals($protectedState, $pathComparison) -or
+            (Test-PathContained $protectedKit $canonical)
+        if ($isProtected) {
+            Write-Host "[!] --strip-directives never modifies $($rel): it resolves to a protected PromptKit path that is user-owned. Nothing was changed." -ForegroundColor Red
             exit 1
         }
         if (-not (Test-PathContained $rootFull $full)) {
             Write-Host "[!] Refusing to strip $($rel): it resolves outside the project root. Nothing was changed." -ForegroundColor Red
             exit 1
         }
-        $canonical = Resolve-CanonicalPath $full
         if ($seen.ContainsKey($canonical)) { continue }
         $seen[$canonical] = $true
 

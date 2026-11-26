@@ -27,7 +27,8 @@ Install PromptKit OS using the OpenCode host target so its generated `.opencode/
 ### Model Floor Guidance Note
 
 - **Task Ceremony Level 0 (Direct) & Task Ceremony Level 1 (Standard)**: Fast-tier / smaller models (e.g. Flash, Haiku, GPT-4o-mini, local models) are adequate for direct execution, exploratory debugging, and minimal `quick`-tier checkpoint projections without Task Record files.
-- **Task Ceremony Level 2 (Controlled) & Task Ceremony Level 3 (Release-Critical)**: Frontier reasoning models are recommended to satisfy the complete 20-label checkpoint gate, maintain multi-step traceability, invariant tracking, and release evidence.
+- **Task Ceremony Level 2 (Controlled)**: Frontier reasoning models are recommended to maintain multi-step traceability and invariant tracking. The Lite Task Record and the 17-label Lite checkpoint are the default; the full 20-label record and checkpoint are an opt-in for strict evidence.
+- **Task Ceremony Level 3 (Release-Critical)**: Frontier reasoning models are recommended to satisfy the mandatory full 20-label checkpoint gate and produce release evidence.
 - *Note*: This is operational guidance, not an automated runtime restriction; PromptKit OS does not enforce runtime model gating.
 
 
@@ -38,7 +39,7 @@ The git submodule flow used in the stages below is canonical. The npm package `p
 **Updating an existing install:**
 
 - **Submodule install**: `git submodule update --remote --merge .promptkit`, rerun `./.promptkit/init.sh` (Windows: `.\.promptkit\init.ps1`), then run `pk:sync` in your next session so the agent hot-reloads the updated rules.
-- **Courier-made `.promptkit/`**: rerun the courier; it refuses to overlay a non-empty `.promptkit/` and prints the update command that matches how the existing install was made.
+- **Courier-made `.promptkit/`**: run `npx promptkit-os@latest --update` to replace the courier copy in place (the replacement is atomic, so a file removed upstream cannot survive). The courier refuses `--update` on a git-submodule install, and a plain `npx promptkit-os@latest` refuses to overlay a non-empty `.promptkit/` and prints the update command that matches how the existing install was made.
 
 ### Adoption Stage 0: Zero Installation (Try Before You Buy)
 **Time**: 5 minutes  

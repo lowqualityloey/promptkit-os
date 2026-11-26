@@ -535,12 +535,21 @@ strip_directives() {
         ".opencode/rules.md"
         "CONVENTIONS.md"
     )
-    local rel full canon seen index start_count end_count first_start first_end staged_file action
+    local rel full canon canon_root canon_promptkit canon_state canon_kit seen index start_count end_count first_start first_end staged_file action
     if [[ ${#EXTRA_TARGETS[@]} -gt 0 ]]; then
         for rel in "${EXTRA_TARGETS[@]}"; do
             candidates+=("$rel")
         done
     fi
+
+    # Canonicalize the project root and the user-owned paths before inspecting
+    # any candidate, so an alias (./PROMPTKIT.md, docs/./STATE.md, docs//STATE.md,
+    # a Windows separator variant, or an in-repo symlink) cannot slip past the
+    # protection check into the strip path.
+    canon_root="$(resolve_canonical_path "$PROJECT_ROOT")"
+    canon_promptkit="$(resolve_canonical_path "$canon_root/PROMPTKIT.md")"
+    canon_state="$(resolve_canonical_path "$canon_root/docs/STATE.md")"
+    canon_kit="$(resolve_canonical_path "$canon_root/.promptkit")"
 
     STRIP_FILES=()
     STRIP_ACTIONS=()
@@ -551,19 +560,22 @@ strip_directives() {
     for rel in "${candidates[@]}"; do
         full="$PROJECT_ROOT/$rel"
         [[ -f "$full" ]] || continue
-        case "$rel" in
-            PROMPTKIT.md|docs/STATE.md|.promptkit|.promptkit/*)
-                echo "Error: --strip-directives never modifies $rel; that file is user-owned. Nothing was changed." >&2
-                rm -rf "$work_dir"
-                exit 1
-                ;;
-        esac
+        canon="$(resolve_canonical_path "$full")"
+        if [[ "$canon" == "$canon_promptkit" || "$canon" == "$canon_state" ]]; then
+            echo "Error: --strip-directives never modifies $rel: it resolves to a protected PromptKit path that is user-owned. Nothing was changed." >&2
+            rm -rf "$work_dir"
+            exit 1
+        fi
+        if [[ "$canon" == "$canon_kit" || "$canon" == "$canon_kit"/* ]]; then
+            echo "Error: --strip-directives never modifies $rel: it resolves inside the protected .promptkit/ directory. Nothing was changed." >&2
+            rm -rf "$work_dir"
+            exit 1
+        fi
         if ! is_path_contained "$PROJECT_ROOT" "$full"; then
             echo "Error: Refusing to strip $rel: it resolves outside the project root. Nothing was changed." >&2
             rm -rf "$work_dir"
             exit 1
         fi
-        canon="$(resolve_canonical_path "$full")"
         case "$seen" in
             *$'\n'"$canon"$'\n'*) continue ;;
         esac

@@ -123,6 +123,37 @@ function assertUpdatable(kitDir) {
   }
 }
 
+// The install door is a plain directory owned by the project root. lstat is
+// deliberate: existsSync follows links, so a dangling .promptkit symlink would
+// read as "absent" and a fresh install would be laid down through the link.
+// --force would rmSync the link's target entries and --update would rename the
+// link itself, so both doors are refused for anything that is not a real
+// directory, and the resolved parent must still be the resolved project root.
+function kitTargetKind(kitDir, root) {
+  let stat;
+  try {
+    stat = fs.lstatSync(kitDir);
+  } catch (err) {
+    if (err.code === "ENOENT") return "absent";
+    throw err;
+  }
+  if (stat.isSymbolicLink()) {
+    die(`${KIT_DIR}/ is a symbolic link — refusing to install, overlay or update through it; nothing was changed. Remove the link and re-run.`);
+  }
+  if (!stat.isDirectory()) {
+    die(`${KIT_DIR}/ exists but is not a directory — refusing to install, overlay or update through it; nothing was changed.`);
+  }
+  const canonicalRoot = fs.realpathSync(root);
+  const canonicalParent = path.dirname(fs.realpathSync(kitDir));
+  const same = process.platform === "win32"
+    ? canonicalRoot.toLowerCase() === canonicalParent.toLowerCase()
+    : canonicalRoot === canonicalParent;
+  if (!same) {
+    die(`${KIT_DIR}/ does not resolve inside the project root — refusing to install, overlay or update through it; nothing was changed.`);
+  }
+  return "directory";
+}
+
 function projectRootFrom(args) {
   const positional = args.filter((a) => !a.startsWith("-"));
   return path.resolve(positional[0] || process.cwd());
@@ -195,6 +226,9 @@ function extractToStaging(tarball, root) {
 }
 
 function extract(tarball, root, dest, options = {}) {
+  // Re-check the door here as well: the download is asynchronous, so the target
+  // could be swapped for a symlink between the main() guard and this mutation.
+  kitTargetKind(dest, root);
   // Extract into a sibling staging directory and only publish it after tar exits 0.
   // A tar failure (missing binary, corrupt/truncated archive, full disk) then leaves no
   // partially written .promptkit/ and no staging leftovers, so an immediate retry
@@ -333,7 +367,7 @@ PROMPTKIT.md / docs/STATE.md if unwanted). No daemon, nothing left behind.
 
   const url = `https://github.com/${REPO}/archive/refs/tags/v${version}.tar.gz`;
   const kitDir = path.join(root, KIT_DIR);
-  const freshInstall = !fs.existsSync(kitDir);
+  const freshInstall = kitTargetKind(kitDir, root) === "absent";
   if (update) assertUpdatable(kitDir);
   else assertInstallTargetIsClean(kitDir, force);
 

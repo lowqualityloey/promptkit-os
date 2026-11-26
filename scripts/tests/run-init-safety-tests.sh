@@ -1857,6 +1857,42 @@ if [[ -n "$PWSH_BIN" ]]; then
     }
 fi
 
+# Test 39g: a protected path is refused by its canonical identity, not by the
+# literal candidate string (#814). Each alias carries a complete directive block,
+# so a raw-string check would strip a user-owned file instead of refusing.
+STRIP_ALIAS="$TEST_ROOT/strip_alias"
+mkdir -p "$STRIP_ALIAS/docs"
+printf 'user profile\n\n<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->\n' > "$STRIP_ALIAS/PROMPTKIT.md"
+printf '# State\n\n<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->\n' > "$STRIP_ALIAS/docs/STATE.md"
+cp "$STRIP_ALIAS/PROMPTKIT.md" "$TEST_ROOT/strip_alias_promptkit_expected"
+cp "$STRIP_ALIAS/docs/STATE.md" "$TEST_ROOT/strip_alias_state_expected"
+for strip_alias_target in './PROMPTKIT.md' 'docs/./STATE.md' 'docs//STATE.md'; do
+    set +e
+    strip_alias_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives "$STRIP_ALIAS" --target="$strip_alias_target" 2>&1)"
+    strip_alias_status=$?
+    set -e
+    if [[ "$strip_alias_status" -ne 1 ]]; then
+        echo "Test 39g: protected-path alias '$strip_alias_target' was not refused (exit $strip_alias_status)" >&2
+        exit 1
+    fi
+    grep -qF 'protected PromptKit path' <<< "$strip_alias_out"
+done
+if ln -s PROMPTKIT.md "$STRIP_ALIAS/alias-rules.md" 2>/dev/null; then
+    set +e
+    strip_alias_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives "$STRIP_ALIAS" --target=alias-rules.md 2>&1)"
+    strip_alias_status=$?
+    set -e
+    if [[ "$strip_alias_status" -ne 1 ]]; then
+        echo "Test 39g: in-repo symlink alias to PROMPTKIT.md was not refused (exit $strip_alias_status)" >&2
+        exit 1
+    fi
+    grep -qF 'protected PromptKit path' <<< "$strip_alias_out"
+else
+    echo "  SKIP: symbolic link creation unsupported on this host (strip alias)"
+fi
+cmp -s "$STRIP_ALIAS/PROMPTKIT.md" "$TEST_ROOT/strip_alias_promptkit_expected"
+cmp -s "$STRIP_ALIAS/docs/STATE.md" "$TEST_ROOT/strip_alias_state_expected"
+
 # Test 38a: --solo-fast writes the preset machine line and leaves the profile alone
 PRESET_ROOT="$TEST_ROOT/preset_solo"
 mkdir -p "$PRESET_ROOT"
@@ -1968,4 +2004,4 @@ for manifest_entry in "${MANIFEST_EXEMPTIONS[@]}"; do
         exit 1
     fi
 done
-echo "init.sh non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical --help/-h with the full option list and option-token parity against init.ps1's Show-InitHelp, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, the PowerShell twin pinned by shape), directive-block strip mode (complete-block removal preserving custom prose, CRLF and no-final-newline EOF state, whitespace-only host files deleted, --dry-run writing nothing, malformed and reversed markers refused before any write, door-matched .promptkit/ removal hints, user-owned PROMPTKIT.md and docs/STATE.md untouched, and the init.ps1 twin compared byte for byte whenever pwsh is available) tests passed."
+echo "init.sh non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical --help/-h with the full option list and option-token parity against init.ps1's Show-InitHelp, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, the PowerShell twin pinned by shape), directive-block strip mode (complete-block removal preserving custom prose, CRLF and no-final-newline EOF state, whitespace-only host files deleted, --dry-run writing nothing, malformed and reversed markers refused before any write, door-matched .promptkit/ removal hints, user-owned PROMPTKIT.md and docs/STATE.md untouched, canonical protected-path aliases (./PROMPTKIT.md, docs/./STATE.md, docs//STATE.md, and an in-repo symlink to PROMPTKIT.md) refused without mutation, and the init.ps1 twin compared byte for byte whenever pwsh is available) tests passed."
