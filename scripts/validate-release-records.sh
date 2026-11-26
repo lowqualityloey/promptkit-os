@@ -4,6 +4,14 @@
 
 set -u
 
+# Bash 4 is required for associative arrays and readarray-style builtins; fail with
+# an actionable message before Bash 3.2 (macOS /bin/bash) trips over a syntax error.
+if (( BASH_VERSINFO[0] < 4 )); then
+    echo "Bash 4.0+ required (found $BASH_VERSION)." >&2
+    echo "macOS ships Bash 3.2; install a newer Bash (e.g. brew install bash) and run this script explicitly." >&2
+    exit 1
+fi
+
 ROOT="."
 STRICT=0
 ERROR_COUNT=0

@@ -26,6 +26,7 @@ param (
     [string]$AddHost = "",
     [switch]$Reconfigure,
     [string[]]$Target = @(),
+    [Alias("h")]
     [switch]$Help,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Remaining = @()
@@ -324,7 +325,7 @@ function Test-PathContained {
     return $false
 }
 
-if ($Help) {
+function Show-InitHelp {
     Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
     Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
     Write-Host "Options:"
@@ -332,20 +333,24 @@ if ($Help) {
     Write-Host "  --balanced          Balanced profile: the full workflow set, Level 0-3 adaptive ceremony (default)"
     Write-Host "  --turbo             Turbo profile: Balanced + parallel subagent waves, up to ~2x measured token cost"
     Write-Host "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
-    Write-Host "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import)"
+    Write-Host "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import, no auto-push)"
     Write-Host "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,windsurf,copilot,cline,trae,aider)"
     Write-Host "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
     Write-Host "  --reconfigure       Force interactive host re-selection on existing installations"
     Write-Host "  --target=rel/path   Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
-    Write-Host "  -Help               Show this help`n"
-    Write-Host "Interactive (TTY): Arrow keys move, Enter selects, Space toggles checkboxes, q cancels."
-    Write-Host "  A final review lets you edit choices before installation. PROMPTKIT_NO_INTERACTIVE=1 skips the wizard.`n"
+    Write-Host "  -Help, -h, --help   Show this help`n"
     Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
+    Write-Host "Interactive: Arrow keys move, Enter selects, Space toggles checkboxes, q cancels; final review lets you edit choices."
+    Write-Host "Preflight opt-out: PROMPTKIT_NO_PREFLIGHT=1 skips advisory local security inspection (independent of picker)"
+    Write-Host "Env escape hatch: PROMPTKIT_NO_INTERACTIVE=1 skips the picker even in a TTY (use flags or Balanced default)"
     Write-Host "Examples:"
     Write-Host "  .\init.ps1 --lite"
     Write-Host "  .\init.ps1 --balanced C:\path\to\project"
-    Write-Host "  .\init.ps1 --turbo --experimental"
-    Write-Host "  .\init.ps1 (interactive picker when TTY)`n"
+    Write-Host "  .\init.ps1 --turbo --experimental`n"
+}
+
+if ($Help) {
+    Show-InitHelp
     exit 0
 }
 
@@ -383,17 +388,25 @@ if ($Turbo) { $Profile = "turbo"; $ProfileSet = $true }
 # Also check $args for --lite style (when called via pwsh -File with --lite).
 # Tokens PowerShell cannot bind (notably --name=value with a double dash) land
 # in $Remaining instead of throwing, so merge both sources before parsing.
-$AllArgs = @($args) + @($Remaining)
+# $args is $null under [CmdletBinding] when everything bound, and @($null) is a
+# one-element array - drop null/empty entries or the first loop pass would look
+# like an empty positional argument and report a phantom second project root.
+$AllArgs = @(@($args) + @($Remaining) | Where-Object { -not [string]::IsNullOrEmpty($_) })
 foreach ($a in $AllArgs) {
     switch ($a) {
         "--lite" { $Profile = "lite"; $ProfileSet = $true }
         "--balanced" { $Profile = "balanced"; $ProfileSet = $true }
         "--turbo" { $Profile = "turbo"; $ProfileSet = $true }
         "--experimental" { $Experimental = $true }
-        "--tracking=local" { $Tracking = "local"; $TrackingSet = $true }
-        "--tracking=github" { $Tracking = "github"; $TrackingSet = $true }
-        "--tracking=jira" { $Tracking = "jira"; $TrackingSet = $true }
-        "--tracking=linear" { $Tracking = "linear"; $TrackingSet = $true }
+        { $_ -like "--tracking=*" } {
+            $trackingValue = $_.Substring(11)
+            if ($trackingValue -notin @("local", "github", "jira", "linear")) {
+                Write-Host "[!] Unknown tracking: $trackingValue (use local|github|jira|linear)" -ForegroundColor Red
+                exit 1
+            }
+            $Tracking = $trackingValue
+            $TrackingSet = $true
+        }
         { $_ -like "--engine-version=*" } { $CourierEngineVersion = $_.Substring(17) }
         { $_ -like "--host=*" } { $Hosts = $_.Substring(7); $HostSet = $true }
         { $_ -like "--add-host=*" } {
@@ -410,14 +423,20 @@ foreach ($a in $AllArgs) {
         }
         "--reconfigure" { $Reconfigure = $true }
         "--help" { 
-            Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
-            Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
-            Write-Host 'PROMPTKIT_NO_PREFLIGHT=1 skips advisory local security inspection independently of PROMPTKIT_NO_INTERACTIVE.'
+            Show-InitHelp
             exit 0
         }
         default {
-            if ($a -notlike "--*" -and $TargetDir -eq "") {
+            if ($a -like "-*") {
+                Write-Host "[!] Unknown flag: $a" -ForegroundColor Red
+                Write-Host "Use --help for usage."
+                exit 1
+            }
+            if ($TargetDir -eq "") {
                 $TargetDir = $a
+            } else {
+                Write-Host "[!] Multiple project roots provided: $TargetDir and $a" -ForegroundColor Red
+                exit 1
             }
         }
     }

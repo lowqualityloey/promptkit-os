@@ -209,9 +209,40 @@ if (!fs.existsSync(fixtureDir) || !fs.statSync(fixtureDir).isDirectory()) fail('
 
 const agyPath = options.agy || which('agy');
 const bwrapPath = options.bwrap || which('bwrap');
+const rtkPath = which('rtk');
+
+// Every host path is derived from the environment, never from a literal: this
+// harness has to run on a machine whose operator is not this repository's
+// author. A root or empty HOME cannot be isolated, so refuse it rather than
+// mask nothing and call the result confinement.
+const homeDir = os.homedir();
+if (!homeDir || homeDir === '/' || homeDir === path.parse(homeDir).root) {
+  fail('cannot isolate HOME: os.homedir() resolved to ' + JSON.stringify(homeDir));
+}
 
 const workDir = options.work ? path.resolve(options.work) : fs.mkdtempSync(path.join(os.tmpdir(), 'pk-capture-'));
 const repoDir = path.join(workDir, 'repo');
+
+// The sandbox gets a disposable HOME staged for this run only, so no host
+// credential, global instruction file, MCP config, conversation log or
+// Antigravity worktree is reachable from inside. Created after the
+// --print-plan gate so planning stays filesystem-pure.
+const captureHome = path.join(workDir, 'capture-home');
+const ensureCaptureHome = () => fs.mkdirSync(captureHome, { recursive: true });
+
+// The narrowest credential set that still lets agy authenticate: one OAuth
+// token and one account id, bound read-only and only as files. The sibling
+// directories that hold conversations, brain, worktrees and MCP configuration
+// never enter the sandbox.
+const CREDENTIAL_FILES = [
+  '.gemini/antigravity-cli/antigravity-oauth-token',
+  '.config/antigravity/credential-user-scope',
+];
+const credentialFiles = CREDENTIAL_FILES
+  .map((rel) => path.join(homeDir, rel))
+  .filter((file) => {
+    try { return fs.statSync(file).isFile(); } catch { return false; }
+  });
 
 const agyArgs = [
   '--input-format', 'stream-json',
@@ -223,22 +254,28 @@ const agyArgs = [
 ];
 
 // The confinement recipe from docs/internal/host-conformance/antigravity/README.md.
-// Both --tmpfs mounts are load-bearing: masking only the primary checkout leaves
-// the answer key readable from the other copies on the machine.
-function bwrapArgv(fixture, inner) {
+// Both HOME mounts are load-bearing: masking only the primary checkout leaves
+// the answer key readable from the other copies on the machine, and the staged
+// HOME keeps the host's credentials and Antigravity worktrees out of reach. The
+// only read-write binds are the staged HOME and the fixture, so a session
+// cannot write anywhere the host will keep.
+function bwrapMountArgv() {
   const args = [
     '--dev-bind', '/', '/',
-    '--tmpfs', '/home/heyloey',
+    '--tmpfs', homeDir,
+    '--bind', captureHome, homeDir,
     '--tmpfs', '/tmp',
   ];
+  // Mount sources are resolved on the host, so these file binds land inside the
+  // staged HOME at their own $HOME-relative paths and nowhere else.
   if (agyPath) args.push('--ro-bind', agyPath, agyPath);
-  const rtk = '/home/heyloey/.local/bin/rtk';
-  if (fs.existsSync(rtk)) args.push('--ro-bind', rtk, rtk);
-  for (const dir of ['/home/heyloey/.gemini', '/home/heyloey/.config/antigravity']) {
-    if (fs.existsSync(dir)) args.push('--bind', dir, dir);
-  }
-  args.push('--bind', fixture, fixture, '--chdir', fixture);
-  return args.concat(inner);
+  if (rtkPath) args.push('--ro-bind', rtkPath, rtkPath);
+  for (const file of credentialFiles) args.push('--ro-bind', file, file);
+  return args;
+}
+
+function bwrapArgv(fixture, inner) {
+  return bwrapMountArgv().concat(['--bind', fixture, fixture, '--chdir', fixture], inner);
 }
 
 const invocation = 'agy --input-format stream-json --output-format stream-json --model ' + options.model +
@@ -250,12 +287,19 @@ if (options.printPlan) {
   process.stdout.write('CAPTURE_PROMPT|' + prompt + '\n');
   process.stdout.write('CAPTURE_AGY|' + (agyPath || '(not found)') + '\n');
   process.stdout.write('CAPTURE_BWRAP|' + (bwrapPath || '(not found)') + '\n');
+  process.stdout.write('CAPTURE_HOME|' + captureHome + '\n');
+  process.stdout.write('CAPTURE_CREDENTIAL|' + (credentialFiles.length ? credentialFiles.join(',') : '(none)') + '\n');
+  process.stdout.write('CAPTURE_MOUNTS|' + bwrapMountArgv().join(' ') + '\n');
   process.stdout.write('CAPTURE_INVOCATION|' + invocation + '\n');
   process.exit(0);
 }
 
 if (!agyPath) fail('agy not found on PATH; pass --agy <path>');
 if (!bwrapPath) fail('bwrap not found on PATH; pass --bwrap <path>');
+if (!credentialFiles.length) {
+  process.stderr.write('capture-host-session: warning: no credential staged under ' + homeDir +
+    '; agy may fail to authenticate inside the sandbox\n');
+}
 
 // ---------------------------------------------------------------------------
 // Bundle scaffolding
@@ -263,6 +307,7 @@ if (!bwrapPath) fail('bwrap not found on PATH; pass --bwrap <path>');
 
 fs.mkdirSync(bundleDir, { recursive: true });
 fs.mkdirSync(workDir, { recursive: true });
+ensureCaptureHome();
 
 const bundle = (name) => path.join(bundleDir, name);
 const write = (name, body) => fs.writeFileSync(bundle(name), body);
@@ -633,9 +678,12 @@ write('provenance.json', JSON.stringify(provenance, null, 2) + '\n');
 write('isolation.txt', [
   '# Isolation configuration - ' + scenario,
   '#',
-  '# Reproduce with the bwrap invocation below. Both --tmpfs mounts are',
+  '# Reproduce with the bwrap invocation below. Both HOME mounts are',
   '# load-bearing: masking only the primary checkout leaves the answer key',
-  '# readable from the other copies on the machine.',
+  '# readable from the other copies on the machine, and the staged HOME keeps',
+  '# host credentials, global instructions and Antigravity worktrees out of',
+  '# reach. The staged HOME must exist before the run:',
+  '#   mkdir -p ' + captureHome,
   '',
   '$ bwrap ' + bwrapArgv(repoDir, [agyPath].concat(agyArgs)).join(' '),
   '',
