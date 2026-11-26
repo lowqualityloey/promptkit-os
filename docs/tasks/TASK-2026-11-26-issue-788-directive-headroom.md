@@ -29,6 +29,7 @@
   - `scripts/measure-tokenizer-delta.ps1` (`--strict` mode; offline `SKIPPED` exit 0 preserved)
   - `scripts/tests/run-behavioral-contract-tests.sh` (two new milestone-evidence assertions)
   - `scripts/tests/run-behavioral-contract-tests.ps1` (two new milestone-evidence assertions)
+  - `scripts/tests/run-token-budget-tests.ps1` (derive the Balanced cap from the measure script instead of a literal)
   - `protocols/context-sync.md` (section 1 and section 3.3 first-run command-review guidance)
   - `protocols/setup.md` (guard-required numeric refresh of the Balanced figure)
   - `README.md` (two numeric/claim refreshes)
