@@ -191,6 +191,7 @@ Find your current engineering context below and activate the corresponding workf
 
 | Current Context / Problem | Recommended Trigger | Primary Artifact Output | Core Value Delivered |
 | :--- | :--- | :--- | :--- |
+| **Unshaped Option Space / Whiteboard** | `pk:brainstorm` (`pk:plan` divergent pre-intake) | Conversation only | Widens candidate directions at zero artifact cost before intake converges |
 | **New Feature or Inception** | `pk:plan` | `docs/specs/` | Modular RFC spec, deletion test, threat modeling |
 | **New Project / Greenfield Inception** | `pk:onboard` | Intake Record + `PROMPTKIT.md` | Bounded discovery interview (size-classed): MVP intent, surfaces, deployment, design inputs |
 | **Existing Repo / Brownfield Intake** | `pk:onboard` | `PROMPTKIT.md` & `docs/STATE.md` | Automated stack scan, command extraction, PROMPTKIT.md generation |
@@ -222,7 +223,7 @@ Find your current engineering context below and activate the corresponding workf
 
 The risk classification (the L0-L3 ceremony level) and the workflow recommendation are two separate concerns, decided independently of each other.
 
-- **Trigger-to-file aliases** (the convention alone would misresolve these): `pk:design` -> `workflows/design-system.md`, `pk:spike` -> `workflows/research.md`, `pk:retro` -> `workflows/reflect.md`, `pk:grill` -> `workflows/tutor.md`. These are documented aliases, not missing workflows: each alias target listed above exists on disk. A prior audit wrongly suspected missing files; every target was always present under its aliased name.
+- **Trigger-to-file aliases** (the convention alone would misresolve these): `pk:design` -> `workflows/design-system.md`, `pk:spike` -> `workflows/research.md`, `pk:retro` -> `workflows/reflect.md`, `pk:grill` -> `workflows/tutor.md`, `pk:brainstorm` -> `workflows/plan.md` (its Divergent Pre-Intake section). These are documented aliases, not missing workflows: each alias target listed above exists on disk. A prior audit wrongly suspected missing files; every target was always present under its aliased name.
 - **Safe fallback**: Requests with no confident signal fall back safely rather than guessing at a workflow.
 
 ---
@@ -356,6 +357,7 @@ If the request involves non-trivial engineering changes (new features, crashes, 
    - **Known defects, review findings, security patches, code smells**: Auto-route to `pk:fix`. Enforce security-first ordering, reproduction/measurement, and single-concern scope.
    - **Structural refactoring, technical debt, code modernization**: Auto-route to `pk:refactor`. Pin behavior with Golden Master snapshots and follow the Mikado method.
    - **Performance regressions, slow queries, latency, memory leaks, bundle bloat**: Auto-route to `pk:perf`. Capture baseline metrics before modifying code.
+   - **Vague ideation, open-ended what-could-we-build, or an unshaped option space**: Auto-route to `pk:brainstorm` (the divergent pre-intake section of `pk:plan`). Keep it artifact-free and promote one direction into planning before any spec or Task Record exists.
    - **New features, cross-component additions, new pages**: Auto-route to `pk:plan`. Create the RFC spec before writing code.
    - **Existing codebase intake, repo analysis, setup**: Auto-route to `pk:onboard`. Scan repository manifests and populate PROMPTKIT.md.
    - **Task breakdowns, issue creation, acceptance criteria, Kanban cards**: Auto-route to `pk:tasks`. Structure atomic 1-4 hour issues with Gherkin AC.
@@ -373,8 +375,8 @@ If the request involves non-trivial engineering changes (new features, crashes, 
 ### Tier 3: Subagent Delegation Guardrails
 When executing workflows in agentic multi-agent environments (Antigravity, Claude Code, Cursor background agents), follow `<kit>/protocols/subagent-delegation.md`:
 - **Delegate to Subagents**:
-  - `pk:spike`: Fan out parallel subagents to benchmark competing frameworks concurrently.
-  - `pk:review`: Run Spec Fidelity and Fowler Code Smells audits in concurrent subagents.
+  - `pk:spike`: Fan out read-only evaluation of competing frameworks concurrently in Balanced; a benchmark that must write scaffolding is a write wave and stays Turbo-gated.
+  - `pk:review`: Run the Spec Fidelity and Fowler Code Smells audits in concurrent subagents — both are read-only, so Balanced allows this.
   - `pk:onboard`: Delegate deep manifest parsing and directory topology scanning.
   - Heavy exploration requiring reading >3 files or external documentation searches.
 - **Retain in Main Thread**:
@@ -382,6 +384,7 @@ When executing workflows in agentic multi-agent environments (Antigravity, Claud
   - Quick single-file edits (<10 lines) and syntax lookups.
   - Git staging, atomic commits (`pk:commit`), and pull request creation (`pk:pr`).
   - Final architectural synthesis and invariant locking (`pk:plan`, `docs/STATE.md`).
+- **Parallelism policy**: read-only fan-out (exploration, research, independent review axes) is allowed in **Balanced**; parallel **write** waves require the Turbo profile with `--turbo --experimental`, the [wave pre-flight checklist](../docs/recipes/auto-waves-preflight-checklist.md), and worktree isolation.
 - **Synthesis Mandate**: All subagents must return compact 5-15 line synthesized reports (with exact file paths and line numbers) rather than dumping raw tool scrollback into parent context.
 
 

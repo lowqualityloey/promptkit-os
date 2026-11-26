@@ -68,7 +68,7 @@ Evaluate 2 to 4 realistic options, always including the baseline:
 
 > [!TIP]
 > **Subagent Parallel Fan-Out (`protocols/subagent-delegation.md`)**:
-> Check the active profile first: fan out only when the host supports concurrent subagents and the profile permits parallel execution (Turbo; otherwise evaluate candidates sequentially in-thread). When fanning out (e.g. Subagent 1 evaluates Candidate A, Subagent 2 benchmarks Candidate B), require each subagent to return a compact 10-line synthesis adhering to the Multi-Vector Evaluation Dimensions below.
+> Check the active profile first: fan out read-only evaluation whenever the host supports concurrent subagents — Balanced may do this. Reserve Turbo for candidates whose benchmark must write a scaffold into the workspace, and evaluate those sequentially in-thread until Turbo is active. When fanning out (e.g. Subagent 1 evaluates Candidate A, Subagent 2 benchmarks Candidate B), require each subagent to return a compact 10-line synthesis adhering to the Multi-Vector Evaluation Dimensions below.
 
 ### Step 3: Multi-Vector Comparative Matrix
 Audit all candidates across engineering dimensions:

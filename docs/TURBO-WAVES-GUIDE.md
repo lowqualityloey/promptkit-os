@@ -10,6 +10,7 @@ How to run PromptKit OS autonomous pipelines — sequential or parallel — **wi
 
 - **Are:** parallel lanes of the same `pk:auto` pipeline (plan → tasks → code → test → review), each lane in a fresh worker context, checkpointed per wave to `docs/STATE.md`.
 - **Are not:** a scheduler, daemon, background service, or second orchestration engine. PromptKit defines governance; your host executes; you authorize.
+- **Not to be confused with read-only fan-out:** exploration, research, and independent review axes may run concurrently in Balanced because they write nothing. Waves below are **write** lanes, which is why they stay Turbo-gated.
 - **Will never do:** merge, tag, publish, deploy, rollback, expand scope silently, or weaken tests to go green — in any profile, including Turbo.
 
 ---

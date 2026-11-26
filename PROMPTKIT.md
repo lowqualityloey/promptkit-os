@@ -9,9 +9,9 @@
 - **Description**:
   - `lite`: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value — onboarding
   - `balanced`: the full 26-workflow set, Level 0-3 adaptive ceremony (default) — teams, production
-  - `turbo`: experimental, Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval
+  - `turbo`: experimental, Balanced + parallel write waves, up to ~2x measured token cost, still requires human L3 approval
 - **Preset**: `standard` (default) or `solo-fast` — Solo/Fast bundles the five-command loop, concise routine telemetry and Level 2 Lite records; it never relaxes the push/PR, destructive-operation or Level 3 human-approval gates
-- **Upgrade Path**: Run `.promptkit/init.sh --balanced` for full, `--lite` for minimal, `--turbo --experimental` for parallel waves — or switch in-session with `pk:profile`
+- **Upgrade Path**: Run `.promptkit/init.sh --balanced` for full, `--lite` for minimal, `--turbo --experimental` for parallel write waves — or switch in-session with `pk:profile`
 
 profile: balanced
 

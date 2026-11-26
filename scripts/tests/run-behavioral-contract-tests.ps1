@@ -504,6 +504,16 @@ Assert-Contains "workflows/profile.md" "4-Phase Switch Protocol" "Profile workfl
 Assert-Contains "workflows/profile.md" "Turbo guard" "Profile workflow enforces the Turbo experimental guard"
 Assert-Contains "workflows/profile.md" "PROMPTKIT_NO_INTERACTIVE" "Profile workflow honors non-interactive default"
 Assert-Contains "workflows/route.md" "Wrong Profile / Mode Upgrade" "Router decision matrix registers pk:profile"
+
+Write-Host "`n📌 Scenario M2: Divergent Brainstorm & Balanced Read-Only Parallelism (pk:brainstorm)" -ForegroundColor Yellow
+Assert-Contains "workflows/plan.md" "Divergent Pre-Intake" "Plan workflow carries the divergent pre-intake section"
+Assert-Contains "workflows/plan.md" "pk:brainstorm" "Plan workflow names the pk:brainstorm alias"
+Assert-Contains "workflows/route.md" "Unshaped Option Space" "Router decision matrix registers divergent ideation"
+Assert-Contains "protocols/subagent-delegation.md" "Read-Only Parallelism" "Delegation protocol allows read-only parallelism in Balanced"
+Assert-Contains "workflows/auto.md" "Turbo-gated write waves" "Auto workflow scopes turbo gating to write waves"
+Assert-Contains "docs/TURBO-WAVES-GUIDE.md" "read-only fan-out" "Turbo guide distinguishes read-only fan-out from write waves"
+Assert-Contains "README.md" "Divergent Ideation" "README cheat-sheet surfaces pk:brainstorm"
+Assert-Contains "protocols/setup.md" "Brainstorm" "Setup protocol registry lists the brainstorm alias"
 $warnOut = (& bash scripts/validate-references.sh . 2>&1) -join "`n"
 $warnCount = ([regex]::Matches($warnOut, 'WARNING')).Count
 if ($warnCount -eq 0) {

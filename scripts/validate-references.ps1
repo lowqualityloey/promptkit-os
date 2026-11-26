@@ -236,6 +236,7 @@ foreach ($file in $AllMarkdownFiles) {
                     "spike" = "research.md"
                     "retro" = "reflect.md"
                     "design" = "design-system.md"
+                    "brainstorm" = "plan.md"
                     "init" = "onboard.md"
                     "task" = "tasks.md"
                     "update" = "sync.md"

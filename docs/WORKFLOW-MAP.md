@@ -11,6 +11,7 @@ pk:route → pk:plan / pk:tasks → pk:debug → pk:commit → pk:checkpoint
  (GPS)      (spec / breakdown)   (fix)       (save)      (handover)
 ```
 
+- `pk:brainstorm` widens the option space before `pk:plan` converges: it is the divergent pre-intake section of `workflows/plan.md`, with zero artifacts and no Task Record, and it promotes exactly one direction into planning.
 - Tracker lives at `PROMPTKIT.md` `tracking: local|github|jira|linear` (Jira/Linear = manual import, no auto-push).
 - Output: TL;DR top → Details → Next; choices priced; single 3-line card with `[■■■■□□]` bar.
 

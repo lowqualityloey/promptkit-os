@@ -118,9 +118,25 @@ Dependencies, risk, owner/approval boundary, execution policy, stop conditions, 
 
 ---
 
+## Divergent Pre-Intake (`pk:brainstorm`)
+
+`pk:brainstorm` is the one deliberately divergent mode in the lifecycle. It runs **before** `pk:plan` converges on a problem statement, and its only job is to widen the option space with zero ceremony.
+
+- **Zero artifacts by default.** No Task Record, no specification, no slot table, no `ASSUMPTION-*` / `DECISION-*` / `DIVERGENCE-*` record, no checkpoint, no ledger row, and nothing written to `docs/` while diverging. Ceremony begins only after a direction is promoted.
+- **No code.** Brainstorming never edits tracked files, runs migrations, installs dependencies, or commits. If the work turns into an experiment, stop and route to `pk:spike`; if it turns into implementation, promote the direction first.
+- **Bounded, not gated.** Keep the whiteboard to the size class — small: up to 3 candidate directions, medium: up to 5, large: up to 8 — and stop when the set stops changing. The loop is timeboxed by the developer, never by a required artifact.
+- **Output shape.** A short direction list in the conversation. Each direction names the outcome it buys, the assumption it rests on, and the cheapest test that would kill it. Keep it to one line per field.
+- **Promotion handoff.** When the developer picks a direction, announce `pk:brainstorm → pk:plan (direction promoted)` and run `pk:plan` Step 0 intake from that direction only. Unselected directions go to the intake record's Later ledger as proposed, not built. The Level 2 Task Record and specification start then, and only for the promoted direction.
+- **Hard gates unchanged.** Push, PR, destructive operations, Level 3 human approval, and every write still follow their normal gates. Brainstorming can never lower a ceremony level or authorize implementation.
+- **Routing.** `pk:brainstorm` is a documented alias that runs this section of `workflows/plan.md`; it is not a 27th workflow file, so the ADR 0002 non-overlap gate and the 26-workflow registry are unchanged.
+
+---
+
 ## Workflow Steps
 
 ### Step 0: Intake Preflight (Bounded, Never Blocks Small Work)
+If the option space is still open, run the Divergent Pre-Intake section above first — intake converges on one direction, while brainstorm keeps several alive at zero artifact cost.
+
 Before any planning interrogation, read the machine-readable signals at the top of `PROMPTKIT.md` (`size:`, `intake-status:`):
 
 1. **`intake-status: complete`** → proceed directly to Step 1. Do not re-ask intake questions (Question Retention extends to intake slots).
