@@ -536,6 +536,69 @@ try {
     if ($LASTEXITCODE -eq 0) {
         throw "Failed Test 15d: -Target parameter binding bypassed the '..' check; expected rejection."
     }
+
+    # Test 15f: an unknown flag fails closed before any file is created (AC-1).
+    $parserUnknownRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "parser_unknown_flag") -Force).FullName
+    $parserUnknownOutput = & pwsh -NoProfile -File $initScriptPath --unknown-flag -ProjectRoot $parserUnknownRoot 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 1) {
+        throw "Failed Test 15f: --unknown-flag should exit 1, got $LASTEXITCODE."
+    }
+    if (-not $parserUnknownOutput.Contains('Unknown flag: --unknown-flag')) {
+        throw "Failed Test 15f: --unknown-flag did not name the rejected flag."
+    }
+    if (@(Get-ChildItem -LiteralPath $parserUnknownRoot -Force).Count -ne 0) {
+        throw "Failed Test 15f: --unknown-flag created files in the project root."
+    }
+
+    # Test 15g: an unknown tracking value fails closed instead of installing (AC-1).
+    $parserTrackingRoot = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "parser_unknown_tracking") -Force).FullName
+    $parserTrackingOutput = & pwsh -NoProfile -File $initScriptPath -ProjectRoot $parserTrackingRoot --tracking=invalid 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 1) {
+        throw "Failed Test 15g: --tracking=invalid should exit 1, got $LASTEXITCODE."
+    }
+    if (-not $parserTrackingOutput.Contains('Unknown tracking: invalid (use local|github|jira|linear)')) {
+        throw "Failed Test 15g: --tracking=invalid did not report the valid choices."
+    }
+    if (@(Get-ChildItem -LiteralPath $parserTrackingRoot -Force).Count -ne 0) {
+        throw "Failed Test 15g: --tracking=invalid created files in the project root."
+    }
+
+    # Test 15h: two positional project roots fail closed instead of installing (AC-1).
+    $parserMultiA = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "parser_multi_a") -Force).FullName
+    $parserMultiB = (New-Item -ItemType Directory -Path (Join-Path $TestRoot "parser_multi_b") -Force).FullName
+    $parserMultiOutput = & pwsh -NoProfile -File $initScriptPath $parserMultiA $parserMultiB 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 1) {
+        throw "Failed Test 15h: two project roots should exit 1, got $LASTEXITCODE."
+    }
+    if (-not $parserMultiOutput.Contains('Multiple project roots provided:')) {
+        throw "Failed Test 15h: two project roots did not report the conflict."
+    }
+    if (@(Get-ChildItem -LiteralPath $parserMultiA -Force).Count -ne 0) {
+        throw "Failed Test 15h: the first project root was mutated."
+    }
+    if (@(Get-ChildItem -LiteralPath $parserMultiB -Force).Count -ne 0) {
+        throw "Failed Test 15h: the second project root was mutated."
+    }
+
+    # Test 15i: -Help and --help are byte-identical and document every option (AC-1).
+    $helpLong = & pwsh -NoProfile -File $initScriptPath -Help | Out-String
+    $helpLongExit = $LASTEXITCODE
+    $helpDoubleDash = & pwsh -NoProfile -File $initScriptPath --help | Out-String
+    $helpDoubleDashExit = $LASTEXITCODE
+    if ($helpLongExit -ne 0 -or $helpDoubleDashExit -ne 0) {
+        throw "Failed Test 15i: help should exit 0, got -Help=$helpLongExit and --help=$helpDoubleDashExit."
+    }
+    if ($helpLong -ne $helpDoubleDash) {
+        throw "Failed Test 15i: -Help and --help output differ."
+    }
+    foreach ($helpOption in @('--lite', '--balanced', '--turbo', '--experimental', '--tracking=', '--host=', '--add-host=', '--reconfigure', '--target=', '--help')) {
+        if (-not $helpLong.Contains($helpOption)) {
+            throw "Failed Test 15i: help omits $helpOption."
+        }
+    }
+    if (-not $helpLong.Contains('Usage: .\init.ps1 [options] [project-root]')) {
+        throw "Failed Test 15i: help omits the usage line."
+    }
     # Test 15e: PROMPTKIT.md is byte-idempotent across re-runs. The profile/tracking/
     # projection split-filter-append passes used to keep the split's trailing empty
     # element and grow one blank line per pass per rerun; smoke.sh §3 compares
@@ -1842,7 +1905,7 @@ try {
         Remove-Item Env:\name -ErrorAction SilentlyContinue
     }
 
-    Write-Host "init.ps1 non-destructive update, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert tests, the manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and the README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, and the PowerShell twin pinned by shape) passed." -ForegroundColor Green
+    Write-Host "init.ps1 non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical -Help/--help with the full option list, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert tests, the manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and the README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, and the PowerShell twin pinned by shape) passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

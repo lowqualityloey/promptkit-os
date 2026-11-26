@@ -168,11 +168,12 @@ done
 printf '== Twin parity ==\n'
 if PWSH="$(pwsh_bin)"; then
     begin
-    # Both forwarders are given the same bundle path: the plan echoes it, so a
-    # difference in the path would mask a real difference in the plan.
-    bash "$HARNESS_SH" ce-escalation-balanced "$TMP/twin-bundle" --print-plan >"$TMP/twin-sh.txt" 2>&1
+    # Both forwarders are given the same bundle path and the same --work: the
+    # plan echoes both, so a difference in either would mask a real difference in
+    # the plan (the staged HOME lives under the work directory).
+    bash "$HARNESS_SH" ce-escalation-balanced "$TMP/twin-bundle" --work "$TMP/twin-work" --print-plan >"$TMP/twin-sh.txt" 2>&1
     check_status "$?" 0
-    "$PWSH" -NoProfile -File "$HARNESS_PS1" ce-escalation-balanced "$TMP/twin-bundle" --print-plan >"$TMP/twin-ps.txt" 2>&1
+    "$PWSH" -NoProfile -File "$HARNESS_PS1" ce-escalation-balanced "$TMP/twin-bundle" --work "$TMP/twin-work" --print-plan >"$TMP/twin-ps.txt" 2>&1
     check_status "$?" 0
     scenario_check "$(diff -q "$TMP/twin-sh.txt" "$TMP/twin-ps.txt" >/dev/null 2>&1 && printf 1 || printf 0)" "Bash and PowerShell plans differ"
     if ! diff -q "$TMP/twin-sh.txt" "$TMP/twin-ps.txt" >/dev/null 2>&1; then
@@ -374,6 +375,164 @@ scenario_check "$([[ "$real_line" == *'behavioral=PASS'* ]] && printf 1 || print
     "the real bundle no longer grades as recorded: $real_line"
 report 'a comment-only write log is rejected as absent evidence'
 
+# Flatten a CAPTURE_MOUNTS argv into one row per mount: op<TAB>src<TAB>dst
+# (--tmpfs carries a destination only). The plan prints the exact argv the
+# harness runs, so asserting on the flattened recipe asserts on the live one.
+mount_rows() {
+    printf '%s\n' "$1" | awk '{
+        for (i = 1; i <= NF; i++) {
+            if ($i == "--tmpfs") { printf "tmpfs\t%s\n", $(i + 1); i += 1 }
+            else if ($i == "--bind" || $i == "--ro-bind" || $i == "--dev-bind") {
+                printf "%s\t%s\t%s\n", $i, $(i + 1), $(i + 2); i += 2
+            }
+        }
+    }'
+}
+
+printf '== HOME isolation recipe (deterministic, no bwrap needed) ==\n'
+# The recipe must be derived from os.homedir(), never from one operator's
+# path, and the sandbox must get a staged HOME rather than read-write binds of
+# the host's credential, instruction and worktree directories. Everything
+# below is asserted on the plan the harness prints for itself.
+begin
+RECIPE_WORK="$TMP/recipe-work"
+RECIPE_PLAN="$TMP/recipe.plan"
+bash "$HARNESS_SH" ce-escalation-lite "$TMP/recipe-bundle" --work "$RECIPE_WORK" --print-plan >"$RECIPE_PLAN" 2>&1
+check_status "$?" 0
+stage_home="$(sed -n 's/^CAPTURE_HOME|//p' "$RECIPE_PLAN" | head -1)"
+recipe_mounts="$(sed -n 's/^CAPTURE_MOUNTS|//p' "$RECIPE_PLAN" | head -1)"
+recipe_creds="$(sed -n 's/^CAPTURE_CREDENTIAL|//p' "$RECIPE_PLAN" | head -1)"
+scenario_check "$([[ "$stage_home" == "$RECIPE_WORK/capture-home" ]] && printf 1 || printf 0)" \
+    "plan does not stage a disposable HOME under --work: $stage_home"
+scenario_check "$([[ ! -e "$stage_home" ]] && printf 1 || printf 0)" \
+    "--print-plan created the staged HOME it claims to create only on a run"
+flat_mounts="$(mount_rows "$recipe_mounts")"
+home_rw="$(printf '%s\n' "$flat_mounts" | awk -F'\t' -v h="$HOME" -v s="$stage_home" '$1 == "--bind" && $2 == s && $3 == h { n++ } END { print n + 0 }')"
+home_subdir_rw="$(printf '%s\n' "$flat_mounts" | awk -F'\t' -v h="$HOME" '$1 == "--bind" && index($3, h "/") == 1 { n++ } END { print n + 0 }')"
+home_tmpfs="$(printf '%s\n' "$flat_mounts" | awk -F'\t' -v h="$HOME" '$1 == "tmpfs" && $2 == h { n++ } END { print n + 0 }')"
+tmp_tmpfs="$(printf '%s\n' "$flat_mounts" | awk -F'\t' '$1 == "tmpfs" && $2 == "/tmp" { n++ } END { print n + 0 }')"
+scenario_check "$([[ "$home_rw" -eq 1 ]] && printf 1 || printf 0)" \
+    "the staged HOME is not the single read-write bind at \$HOME (found $home_rw)"
+scenario_check "$([[ "$home_subdir_rw" -eq 0 ]] && printf 1 || printf 0)" \
+    "a host directory under \$HOME is still mounted read-write ($home_subdir_rw bind(s))"
+scenario_check "$([[ "$home_tmpfs" -eq 1 && "$tmp_tmpfs" -eq 1 ]] && printf 1 || printf 0)" \
+    "the recipe lost a load-bearing tmpfs (home=$home_tmpfs tmp=$tmp_tmpfs)"
+# Every read-only bind must be a file bound onto its own path: a directory
+# bind would put back the credentials, global instructions or worktrees the
+# staged HOME exists to keep out.
+ro_not_file="$(printf '%s\n' "$flat_mounts" | awk -F'\t' '$1 == "--ro-bind" { print $2 }' | while IFS= read -r src; do
+    [[ -n "$src" ]] || continue
+    [[ -f "$src" ]] || printf '%s ' "$src"
+done)"
+ro_not_self="$(printf '%s\n' "$flat_mounts" | awk -F'\t' '$1 == "--ro-bind" && $2 != $3 { print $2"->"$3 }' | tr '\n' ' ')"
+scenario_check "$([[ -z "$ro_not_file" ]] && printf 1 || printf 0)" \
+    "a --ro-bind source is not a regular file: $ro_not_file"
+scenario_check "$([[ -z "$ro_not_self" ]] && printf 1 || printf 0)" \
+    "a --ro-bind does not land on its own \$HOME-relative path: $ro_not_self"
+forbidden_hits="$(printf '%s' "$recipe_mounts" | grep -oE 'worktrees|brain|settings\.json|mcp_config|GEMINI\.md' | wc -l)"
+scenario_check "$([[ "$forbidden_hits" -eq 0 ]] && printf 1 || printf 0)" \
+    "the recipe still names a credential/instruction surface ($forbidden_hits hit(s))"
+bad_creds=""
+if [[ "$recipe_creds" != '(none)' ]]; then
+    while IFS= read -r cred; do
+        [[ -n "$cred" ]] || continue
+        [[ -f "$cred" ]] || bad_creds="$bad_creds $cred(not-a-file)"
+        [[ "$cred" == "$HOME"/* ]] || bad_creds="$bad_creds $cred(outside-home)"
+    done <<< "$(printf '%s' "$recipe_creds" | tr ',' '\n')"
+fi
+scenario_check "$([[ -z "$bad_creds" ]] && printf 1 || printf 0)" \
+    "the staged credential set is not a set of files under \$HOME:$bad_creds"
+report 'the plan stages a disposable HOME and binds only files read-only'
+
+begin
+# A literal /home/<name> in the module would pin the recipe to one machine, and
+# a host whose operator differs would run with an unmasked home. Asserted on the
+# source, not on this host's plan, so it fails on any host.
+literal_hits="$(grep -Fn '/home/' "$MODULE" | wc -l)"
+user_hits="$(grep -Fc 'heyloey' "$MODULE")"
+scenario_check "$([[ "$literal_hits" -eq 0 ]] && printf 1 || printf 0)" \
+    "the module still carries $literal_hits hardcoded /home/ path(s)"
+scenario_check "$([[ "$user_hits" -eq 0 ]] && printf 1 || printf 0)" \
+    "the module still names one operator's user ($user_hits occurrence(s))"
+# Any host: the recipe follows os.homedir(), so a different HOME moves the
+# masked mount with it instead of leaving the real home unmasked.
+ALT_HOME="$TMP/alt-home"
+mkdir -p "$ALT_HOME"
+HOME="$ALT_HOME" bash "$HARNESS_SH" ce-escalation-lite "$TMP/alt-bundle" --work "$TMP/alt-work" --print-plan >"$TMP/alt.plan" 2>&1
+check_status "$?" 0
+alt_tmpfs="$(mount_rows "$(sed -n 's/^CAPTURE_MOUNTS|//p' "$TMP/alt.plan" | head -1)" | awk -F'\t' -v h="$ALT_HOME" '$1 == "tmpfs" && $2 == h { n++ } END { print n + 0 }')"
+alt_creds="$(sed -n 's/^CAPTURE_CREDENTIAL|//p' "$TMP/alt.plan" | head -1)"
+scenario_check "$([[ "$alt_tmpfs" -eq 1 ]] && printf 1 || printf 0)" \
+    "a different HOME is not the one masked: expected --tmpfs $ALT_HOME"
+scenario_check "$([[ "$alt_creds" == '(none)' ]] && printf 1 || printf 0)" \
+    "a HOME with no credential still staged one: $alt_creds"
+# A root or empty HOME cannot be isolated, and masking nothing while claiming
+# confinement is worse than refusing.
+HOME=/ bash "$HARNESS_SH" ce-escalation-lite "$TMP/root-bundle" --print-plan >"$TMP/root.plan" 2>&1
+check_status "$?" 2
+scenario_check "$(grep -qF 'cannot isolate HOME' "$TMP/root.plan" && printf 1 || printf 0)" \
+    "a root HOME is not refused with 'cannot isolate HOME'"
+report 'the recipe follows os.homedir() and refuses an unisolatable HOME'
+
+printf '== Live bwrap canary (skipped without unprivileged user namespaces) ==\n'
+# The recipe is only worth its argv if the kernel lets it run. Ubuntu 24.04's
+# apparmor_restrict_unprivileged_userns=1, a locked-down container and macOS all
+# refuse the clone, and a canary that cannot start must skip, not fail.
+CANARY_BWRAP="$(command -v bwrap 2>/dev/null || true)"
+if [[ -n "$CANARY_BWRAP" ]] && "$CANARY_BWRAP" --dev-bind / / --tmpfs /tmp true >/dev/null 2>&1; then
+    begin
+    LIVE="$TMP/live"
+    mkdir -p "$LIVE/work/capture-home" "$LIVE/fixture"
+    printf 'fixture-marker\n' > "$LIVE/fixture/marker.txt"
+    bash "$HARNESS_SH" ce-escalation-lite "$LIVE/bundle" --work "$LIVE/work" --print-plan >"$LIVE/plan" 2>&1
+    check_status "$?" 0
+    live_mounts="$(sed -n 's/^CAPTURE_MOUNTS|//p' "$LIVE/plan" | head -1)"
+    # Unquoted on purpose: the plan is a space-separated argv, exactly as
+    # isolation.txt records it, and the paths this suite passes have no spaces.
+    "$CANARY_BWRAP" $live_mounts --bind "$LIVE/fixture" "$LIVE/fixture" --chdir "$LIVE/fixture" \
+        bash -c 'set -u
+printf "HOME_INODE=%s\n" "$(stat -c "%d:%i" "$HOME")"
+printf "ENTRIES=%s\n" "$(ls -A "$HOME" | sort | tr "\n" ",")"
+printf "CHECKOUT=%s\n" "$([ -e "$1/init.sh" ] && echo visible || echo unreachable)"
+printf "SCENARIO=%s\n" "$([ -r "$1/scripts/tests/eval-scenarios/ce-escalation-lite.md" ] && echo readable || echo unreachable)"
+printf "SSH=%s\n" "$([ -e "$HOME/.ssh" ] && echo visible || echo unreachable)"
+printf "WORKTREES=%s\n" "$([ -e "$HOME/.gemini/antigravity/worktrees" ] && echo visible || echo unreachable)"
+printf "BRAIN=%s\n" "$([ -e "$HOME/.gemini/antigravity/brain" ] && echo visible || echo unreachable)"
+printf "GEMINI_SETTINGS=%s\n" "$([ -e "$HOME/.gemini/settings.json" ] && echo visible || echo unreachable)"
+printf "TOKEN=%s\n" "$([ -r "$HOME/.gemini/antigravity-cli/antigravity-oauth-token" ] && echo readable || echo absent)"
+printf "WRITABLE=%s\n" "$(: > "$HOME/.write-probe" && echo yes || echo no)"
+printf "FIXTURE=%s\n" "$(cat "$2/marker.txt" 2>/dev/null || echo missing)"' \
+        canary "$REPO_ROOT" "$LIVE/fixture" >"$LIVE/inside.txt" 2>&1
+    check_status "$?" 0
+    inside() { sed -n "s/^$1=//p" "$LIVE/inside.txt" | head -1; }
+    # The inode is the proof: the HOME visible inside is a different directory
+    # from the host's, so every host file under it is unreachable, whatever the
+    # host happens to keep there. The named paths below are the ones the issue
+    # calls out, and stay readable-less even on a host that has them.
+    scenario_check "$([[ -n "$(inside HOME_INODE)" && "$(inside HOME_INODE)" != "$(stat -c '%d:%i' "$HOME")" ]] && printf 1 || printf 0)" \
+        "the sandbox still shows the host HOME (inode $(inside HOME_INODE))"
+    scenario_check "$([[ "$(inside CHECKOUT)" == unreachable ]] && printf 1 || printf 0)" \
+        "the host checkout is readable inside the sandbox: $REPO_ROOT"
+    scenario_check "$([[ "$(inside SCENARIO)" == unreachable ]] && printf 1 || printf 0)" \
+        "the scenario file (the answer key) is readable inside the sandbox"
+    scenario_check "$([[ "$(inside WORKTREES)" == unreachable && "$(inside BRAIN)" == unreachable ]] && printf 1 || printf 0)" \
+        "Antigravity worktrees or brain are visible inside the sandbox"
+    scenario_check "$([[ "$(inside GEMINI_SETTINGS)" == unreachable ]] && printf 1 || printf 0)" \
+        "global Antigravity settings are visible inside the sandbox"
+    scenario_check "$([[ "$(inside SSH)" == unreachable ]] && printf 1 || printf 0)" \
+        "~/.ssh is visible inside the sandbox"
+    if [[ "$(sed -n 's/^CAPTURE_CREDENTIAL|//p' "$LIVE/plan" | head -1)" != '(none)' ]]; then
+        scenario_check "$([[ "$(inside TOKEN)" == readable ]] && printf 1 || printf 0)" \
+            "the narrow OAuth token is not readable inside the sandbox, so agy could not authenticate"
+    fi
+    scenario_check "$([[ "$(inside WRITABLE)" == yes ]] && printf 1 || printf 0)" \
+        "the staged HOME is not writable inside the sandbox"
+    scenario_check "$([[ "$(inside FIXTURE)" == fixture-marker ]] && printf 1 || printf 0)" \
+        "the fixture bind did not reach the session"
+    report 'a live sandbox cannot read the host checkout, worktrees or credentials'
+else
+    printf 'SKIP: bwrap cannot create unprivileged user namespaces on this host\n'
+fi
 printf '== Live capture (skipped without agy and bwrap) ==\n'
 AGY="$(command -v agy 2>/dev/null || true)"
 BWRAP="$(command -v bwrap 2>/dev/null || true)"

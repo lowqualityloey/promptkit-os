@@ -272,95 +272,88 @@ for file in "${ALL_MD_FILES[@]}"; do
     fi
 done
 
-# Validate template directory completeness
+# Validate template directory completeness from the filesystem inventory
 echo ""
 echo "📋 Checking template directory completeness..."
 
-EXPECTED_TEMPLATES=(
-    "project-profile-template.md"
-    "design-profile-template.md"
-    "state-tracker-template.md"
-    "tech-spec-template.md"
-    "adr-template.md"
-    "data-model-spec.md"
-    "auth-matrix-template.md"
-    "api-contract-spec.md"
-    "test-plan-template.md"
-    "release-checklist.md"
-    "pull-request-template.md"
-    "perf-audit-template.md"
-    "issue-task-template.md"
-    "rca-postmortem-template.md"
-    "code-review-checklist.md"
-    "design-tokens-spec.md"
-    "spike-template.md"
-    "ci-triage-template.md"
-    "execution-scope-change-template.md"
-    "friction-evaluation-template.md"
-)
+EXPECTED_TEMPLATE_COUNT=29
+template_inventory=()
+for template_path in "$TEMPLATES_DIR"/*.md; do
+    [ -e "$template_path" ] || continue
+    template_inventory+=("$(basename "$template_path")")
+done
 
-for template in "${EXPECTED_TEMPLATES[@]}"; do
-    if [ -f "$TEMPLATES_DIR/$template" ]; then
+if [ "${#template_inventory[@]}" -ne "$EXPECTED_TEMPLATE_COUNT" ]; then
+    echo "  ❌ MISSING templates: expected $EXPECTED_TEMPLATE_COUNT markdown templates, found ${#template_inventory[@]}"
+    ((ERROR_COUNT++))
+fi
+
+for template in "${template_inventory[@]}"; do
+    if [ -s "$TEMPLATES_DIR/$template" ]; then
         echo "  ✅ templates/$template"
     else
-        echo "  ❌ MISSING: templates/$template"
+        echo "  ❌ EMPTY: templates/$template"
         ((ERROR_COUNT++))
     fi
 done
 
-# Validate core workflow files
+# Workflows: the inventory is the directory itself; ADR 0002 requires each one
+# to carry a reference row in protocols/setup.md.
 echo ""
 echo "🔄 Checking core workflow files..."
 
-CORE_WORKFLOWS=(
-    "route.md"
-    "tutor.md"
-    "plan.md"
-    "onboard.md"
-    "tasks.md"
-    "data.md"
-    "auth.md"
-    "api.md"
-    "test.md"
-    "design-system.md"
-    "research.md"
-    "debug.md"
-    "fix.md"
-    "perf.md"
-    "review.md"
-    "commit.md"
-    "pr.md"
-    "ship.md"
-    "checkpoint.md"
-    "sync.md"
-    "reflect.md"
-)
+EXPECTED_WORKFLOW_COUNT=26
+workflow_inventory=()
+for workflow_path in "$WORKFLOWS_DIR"/*.md; do
+    [ -e "$workflow_path" ] || continue
+    workflow_inventory+=("$(basename "$workflow_path")")
+done
 
-for workflow in "${CORE_WORKFLOWS[@]}"; do
-    if [ -f "$WORKFLOWS_DIR/$workflow" ]; then
+if [ "${#workflow_inventory[@]}" -ne "$EXPECTED_WORKFLOW_COUNT" ]; then
+    echo "  ❌ MISSING workflows: expected $EXPECTED_WORKFLOW_COUNT workflows, found ${#workflow_inventory[@]}"
+    ((ERROR_COUNT++))
+fi
+
+for workflow in "${workflow_inventory[@]}"; do
+    if [ ! -s "$WORKFLOWS_DIR/$workflow" ]; then
+        echo "  ❌ EMPTY: workflows/$workflow"
+        ((ERROR_COUNT++))
+        continue
+    fi
+    if grep -Fq "workflows/$workflow" "$PROTOCOLS_DIR/setup.md"; then
         echo "  ✅ workflows/$workflow"
     else
-        echo "  ❌ MISSING: workflows/$workflow"
+        echo "  ❌ UNREGISTERED in protocols/setup.md: workflows/$workflow"
         ((ERROR_COUNT++))
     fi
 done
 
-# Validate protocol files
+# Protocols: same derivation, same registration requirement, setup.md included.
 echo ""
 echo "📜 Checking protocol files..."
 
-CORE_PROTOCOLS=(
-    "setup.md"
-    "context-sync.md"
-    "code-quality-gate.md"
-    "subagent-delegation.md"
-)
+EXPECTED_PROTOCOL_COUNT=9
+protocol_inventory=()
+for protocol_path in "$PROTOCOLS_DIR"/*.md; do
+    [ -e "$protocol_path" ] || continue
+    protocol_inventory+=("$(basename "$protocol_path")")
+done
 
-for protocol in "${CORE_PROTOCOLS[@]}"; do
-    if [ -f "$PROTOCOLS_DIR/$protocol" ]; then
+if [ "${#protocol_inventory[@]}" -ne "$EXPECTED_PROTOCOL_COUNT" ]; then
+    echo "  ❌ protocols/: expected $EXPECTED_PROTOCOL_COUNT protocols, found ${#protocol_inventory[@]}"
+    ((ERROR_COUNT++))
+fi
+
+for protocol in "${protocol_inventory[@]}"; do
+    if [ ! -s "$PROTOCOLS_DIR/$protocol" ]; then
+        echo "  ❌ EMPTY: protocols/$protocol"
+        ((ERROR_COUNT++))
+        continue
+    fi
+    if grep -Fq "protocols/$protocol" "$PROTOCOLS_DIR/setup.md"; then
         echo "  ✅ protocols/$protocol"
     else
-        echo "  ❌ MISSING: protocols/$protocol"
+        echo "  ❌ UNREGISTERED in protocols/setup.md: protocols/$protocol"
         ((ERROR_COUNT++))
     fi
 done

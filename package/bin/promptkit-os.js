@@ -38,6 +38,18 @@ const KIT_DIR = ".promptkit";
 const TARBALL_SHA256_BY_VERSION = {
   "1.10.1": "1e55459914a1c46aa71df8f9cb8ce4c9ff37d1c02d67f70e5607b3bfd4f48d4b",
   "1.11.0": "6503fdfcde286055b8c053aa0ffa8bdf244cf77df3321cccd6a8d8f780195ade",
+  // Historical pins for the published v2.x cohort, recovered from the npm courier
+  // tarballs of each release and verified against the current GitHub tag archive
+  // (sha256 + scripts/verify-release-archive.py --commit <tag>). They exist so an
+  // explicitly requested older courier version still has an auditable pin instead
+  // of failing closed with "no integrity pin".
+  "2.0.0": "4fb5b9d85e0f19bfe333c361e00465705b60636a8026edd62c15c6f2d61cbf4b",
+  "2.0.1": "6f3d667346bbc8cdc42e916fafcbde5dd0e42753398fe528609bf990ea35365b",
+  "2.1.0": "44a8a25e16c7abf31b412b8129ecead8bf1f0d1e3c75deb7d1cb1059d1ba9b17",
+  "2.2.0": "fbc1106938e0588a68566dea231a468d1915596746d103ddf19bfd861697475d",
+  "2.3.0": "47242231bfb6fb677922a4bbce8fdf8fda32570275a4807c3f4d721a046bd01c",
+  "2.4.0": "58a36d4a62222ef8a3136cd2bd5add0508885f9005e8766efaa09fc7dc308718",
+  "2.5.0": "ee09bc0a83977ecaaf29ab8b3a699f84b0d0a0094d72bbbb363e2269a2d80a1a",
   // @pin-insert
 };
 
@@ -141,22 +153,50 @@ async function download(url) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-async function extract(tarball, dest) {
-  // Every tar operand must stay relative: GNU tar — the first `tar` on PATH inside
+function extract(tarball, root, dest) {
+  // Extract into a sibling staging directory and only publish it after tar exits 0.
+  // A tar failure (missing binary, corrupt/truncated archive, full disk) then leaves no
+  // partially written .promptkit/ and no staging leftovers, so an immediate retry
+  // starts clean. Staging is created inside `root` so the final rename stays on the
+  // same filesystem.
+  //
+  // Every tar operand must also stay relative: GNU tar — the first `tar` on PATH inside
   // Git Bash — reads `C:\...` operands as remote host:path and dies with
-  // "Cannot connect to C: resolve failed", so the staging-temp-dir + absolute -C
-  // form broke the Windows leg wherever Git Bash leads PATH. Staging the archive
-  // inside `dest` (created by the caller) and extracting with cwd=dest leaves no
-  // absolute path in argv at all, on GNU tar, bsdtar, and POSIX tar alike.
-  const stagedTarball = path.join(dest, ".promptkit-release.tar.gz");
-  fs.writeFileSync(stagedTarball, tarball);
-  const res = spawnSync("tar", ["-xzf", ".promptkit-release.tar.gz", "--strip-components=1"], { cwd: dest, stdio: "inherit" });
-  fs.rmSync(stagedTarball, { force: true });
-  if (res.error) {
-    const hint = res.error.code === "ENOENT" ? "tar not found on PATH" : res.error.message;
-    die(`failed to extract release tarball: ${hint}`);
+  // "Cannot connect to C: resolve failed", so the older staging-temp-dir + absolute -C
+  // form broke the Windows leg wherever Git Bash leads PATH. Extracting with
+  // cwd=staging and a relative archive name leaves no absolute path in argv at all,
+  // on GNU tar, bsdtar, and POSIX tar alike.
+  const staging = fs.mkdtempSync(path.join(root, `${KIT_DIR}-staging-`));
+  try {
+    const stagedTarball = path.join(staging, ".promptkit-release.tar.gz");
+    fs.writeFileSync(stagedTarball, tarball);
+    const res = spawnSync("tar", ["-xzf", ".promptkit-release.tar.gz", "--strip-components=1"], { cwd: staging, stdio: "inherit" });
+    if (res.error) {
+      const hint = res.error.code === "ENOENT" ? "tar not found on PATH" : res.error.message;
+      throw new Error(`failed to extract release tarball: ${hint} (no changes were made to ${KIT_DIR}/)`);
+    }
+    if (res.status !== 0) {
+      throw new Error(`failed to extract release tarball (tar exit ${res.status ?? res.signal}) (no changes were made to ${KIT_DIR}/)`);
+    }
+    fs.rmSync(stagedTarball, { force: true });
+    if (fs.existsSync(dest)) {
+      // --force opts into the documented overlay: move each top-level entry over the
+      // existing tree, replacing same-named entries so no stale file survives inside
+      // them. tar has already succeeded, so a failed extraction never reaches this
+      // block and never mutates the existing install.
+      for (const entry of fs.readdirSync(staging)) {
+        fs.rmSync(path.join(dest, entry), { recursive: true, force: true });
+        fs.renameSync(path.join(staging, entry), path.join(dest, entry));
+      }
+      fs.rmSync(staging, { recursive: true, force: true });
+    } else {
+      fs.renameSync(staging, dest);
+      fs.chmodSync(dest, 0o755);
+    }
+  } catch (err) {
+    fs.rmSync(staging, { recursive: true, force: true });
+    throw err;
   }
-  if (res.status !== 0) die(`failed to extract release tarball (tar exit ${res.status ?? res.signal})`);
 }
 
 function runInstaller(kitDir, args) {
@@ -240,8 +280,7 @@ async function main() {
   const tarball = await download(url);
   verifyTarballIntegrity(tarball, expectedDigest, version);
   process.stderr.write(`[promptkit-os] verified release tarball integrity (sha256) for v${version}\n`);
-  fs.mkdirSync(kitDir, { recursive: true });
-  await extract(tarball, kitDir);
+  extract(tarball, root, kitDir);
   process.stderr.write(`[promptkit-os] extracted release v${version} into ${KIT_DIR}/\n`);
 
   runInstaller(kitDir, installerArgs(args, version));

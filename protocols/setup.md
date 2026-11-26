@@ -25,7 +25,7 @@ Three different things are easy to conflate, so they are listed separately here:
 
 **2. Universal fallback.** The `agents` target, which maps to `AGENTS.md`. Assistants that read `AGENTS.md` but have no dedicated installer id — Codex CLI, for example — are served through this fallback, and `AGENTS.md` is the file created when no known host configuration exists (see Preconditions below). The `gemini` target also maps to `AGENTS.md`: Antigravity discovers both `AGENTS.md` and `GEMINI.md` and dedupes by resolved path, so writing both would inject the same directive twice (`docs/HOST-CONFORMANCE.md` section 4, issue #764). An existing `GEMINI.md` from an earlier install is left in place and is no longer refreshed at all — it is not a host target and it is not in the installer's existing-config scan, so its managed block goes stale rather than being rewritten. Delete it to halve the static directive cost, or pass `--target=GEMINI.md` if you deliberately want that file maintained.
 
-**3. Runtime-validated hosts.** A separate question from installer support. Per-host live fidelity is tracked in `docs/HOST-CONFORMANCE.md`; as of that matrix only OpenCode carries any recorded live capture (`PARTIAL`, 1 of 5 probes) and every other host is `Untested`. This section documents install targets only — it is not evidence of validated runtime behavior.
+**3. Runtime-validated hosts.** A separate question from installer support. Per-host live fidelity is tracked in `docs/HOST-CONFORMANCE.md`; as of that matrix three of its eleven rows carry recorded live captures — Antigravity / Gemini CLI, OpenCode, and Command Code CLI, each `PARTIAL` with 5 of 5 probes under single-host capture — and the other eight remain `Untested`. This section documents install targets only — it is not evidence of validated runtime behavior.
 
 ---
 
@@ -153,6 +153,8 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Commit**: `<kit>/workflows/commit.md`
 - **Pull Request**: `<kit>/workflows/pr.md`
 - **Debug**: `<kit>/workflows/debug.md`
+- **Fix**: `<kit>/workflows/fix.md`
+- **Refactor**: `<kit>/workflows/refactor.md`
 - **Performance**: `<kit>/workflows/perf.md`
 - **Data**: `<kit>/workflows/data.md`
 - **Auth**: `<kit>/workflows/auth.md`
@@ -163,9 +165,12 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Design System**: `<kit>/workflows/design-system.md`
 - **Reflect**: `<kit>/workflows/reflect.md`
 - **Checkpoint**: `<kit>/workflows/checkpoint.md`
+- **Sync**: `<kit>/workflows/sync.md`
 - **Profile**: `<kit>/workflows/profile.md`
 - **Verify-Bootstrap**: `<kit>/workflows/verify-bootstrap.md`
 - **Doctor**: `<kit>/workflows/doctor.md`
+- **Auto**: `<kit>/workflows/auto.md`
+- **Setup**: `<kit>/protocols/setup.md`
 - **Quality Gate (DoD)**: `<kit>/protocols/code-quality-gate.md`
 - **Rendered UI Evidence**: `<kit>/protocols/rendered-ui-evidence.md` (lazy-loaded by `<kit>/workflows/design-system.md` and the quality gate when the task changes browser-rendered UI)
 - **Context Economy**: `<kit>/protocols/context-economy.md`
@@ -175,7 +180,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Telemetry Cards**: `<kit>/protocols/telemetry-cards.md`
 - **Checkpoint Ignore Policy**: `<kit>/protocols/checkpoint-ignore-policy.md`
 
-> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols (`setup`, `context-sync`, `code-quality-gate`, `subagent-delegation`); the remaining protocols stay out of the static directive to keep it under the 2500-token Balanced budget (currently 2488/2500). `telemetry-cards.md` is referenced inline by the directive, `discovery-intake.md` and `rendered-ui-evidence.md` are lazy-loaded by their relevant workflows, and `context-economy.md` is reached transitively through the reference list above. Unlisted therefore means "not in the static directive", not "unreachable".
+> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols (`setup`, `context-sync`, `code-quality-gate`, `subagent-delegation`); the remaining protocols stay out of the static directive to keep it under the 2500-token Balanced budget (currently 2488/2500). `telemetry-cards.md` is referenced inline by the directive, `discovery-intake.md` and `rendered-ui-evidence.md` are lazy-loaded by their relevant workflows, and `context-economy.md` is discoverable but was not reached through this list in the six measured cells: the two cells that opened it found it by directory listing and keyword search (`protocols/context-economy.md` §11). Unlisted therefore means "not in the static directive", not "unreachable".
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)
 - **Visual Identity & Brand**: `./DESIGN.md` (if present)
 - **Living State & Tracker**: `./docs/STATE.md` (if present)
