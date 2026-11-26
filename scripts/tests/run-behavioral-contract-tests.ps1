@@ -2155,6 +2155,23 @@ Assert-Contains "scripts/tests/eval-scenarios/injection-untrusted-content.md" "r
 Assert-NotContains "scripts/tests/eval-scenarios/ce-antistarvation-balanced.md" "are not parsed for write intent" "Anti-starvation limitation no longer claims exec lines are unparsed"
 Assert-NotContains "scripts/tests/eval-scenarios/ce-antistarvation-lite.md" "are not parsed for write intent" "Lite anti-starvation limitation no longer claims exec lines are unparsed"
 
+# Issue #786: host-conformance counts, the setup registry, and the reference
+# validator inventories are derived and pinned here so they cannot drift apart.
+Assert-Contains "README.md" "eleven host configurations" "README host matrix counts all eleven registered hosts"
+Assert-Contains "docs/HOST-CONFORMANCE.md" "full set of 11 host environments" "Host-conformance table declares eleven host environments"
+Assert-Contains "docs/HOST-CONFORMANCE.md" "recorded against the three" "Host-conformance intro points at the three captured rows"
+Assert-Contains "protocols/setup.md" "three of its eleven rows carry recorded live captures" "Setup runtime-host note matches the registry"
+Assert-Contains "protocols/setup.md" "workflows/auto.md" "Setup registry references workflows/auto.md"
+Assert-Contains "protocols/setup.md" "workflows/refactor.md" "Setup registry references workflows/refactor.md"
+Assert-Contains "protocols/setup.md" "protocols/setup.md" "Setup registry references setup.md itself"
+Assert-NotContains "protocols/setup.md" "reached transitively through the reference list above" "Setup registry drops the disproven transitive discovery claim"
+Assert-Contains "scripts/validate-references.sh" "EXPECTED_WORKFLOW_COUNT=26" "Bash validator pins the 26-workflow inventory"
+Assert-Contains "scripts/validate-references.sh" "EXPECTED_PROTOCOL_COUNT=9" "Bash validator pins the 9-protocol inventory"
+Assert-Contains "scripts/validate-references.sh" "EXPECTED_TEMPLATE_COUNT=29" "Bash validator pins the 29-template inventory"
+Assert-Contains "scripts/validate-references.ps1" "ExpectedWorkflowCount = 26" "PowerShell validator pins the 26-workflow inventory"
+Assert-Contains "scripts/validate-references.ps1" "ExpectedProtocolCount = 9" "PowerShell validator pins the 9-protocol inventory"
+Assert-Contains "scripts/validate-references.ps1" "ExpectedTemplateCount = 29" "PowerShell validator pins the 29-template inventory"
+
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan
 Write-Host "===========================================================" -ForegroundColor DarkGray

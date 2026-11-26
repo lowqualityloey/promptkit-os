@@ -181,6 +181,7 @@ graph TD
     Question2 -->|Building| Question4{What are you<br/>building?}
     Question2 -->|Fixing| Question5{What's broken?}
     Question2 -->|Shipping| Question6{Ready to<br/>deploy?}
+    Question2 -->|Maintaining| Question8{What maintenance<br/>task?}
     Question2 -->|Learning| Question7{How deep do you<br/>want to go?}
     
     Question3 -->|New feature| Plan[pk:plan Step 0 intake preflight<br/>Spec-Driven Architecture + MVP floor]
@@ -208,6 +209,12 @@ graph TD
     Question7 -->|Gentle guidance| Tutor[pk:tutor<br/>Socratic Learning]
     Question7 -->|Deep challenge| Grill[pk:grill<br/>Architecture Defense]
     Question7 -->|Session ending| Checkpoint[pk:checkpoint<br/>State Handover]
+
+    Question8 -->|Install health audit| Doctor[pk:doctor<br/>Installed Governance Audit]
+    Question8 -->|Reload rules after an update| Sync[pk:sync<br/>Protocol Synchronization]
+    Question8 -->|Switch profile| Profile[pk:profile<br/>Runtime Profile Switcher]
+    Question8 -->|Scaffold done-gates| VerifyBootstrap[pk:verify-bootstrap<br/>Project-Local Verification]
+    Question8 -->|Run unattended| Auto[pk:auto<br/>Autonomous SDLC Pipeline]
     
     style Start fill:#4A90E2,color:#fff
     style Route fill:#F39C12,color:#fff
@@ -215,6 +222,8 @@ graph TD
     style Debug fill:#E74C3C,color:#fff
     style Tutor fill:#9B59B6,color:#fff
     style Review fill:#E67E22,color:#fff
+    style Doctor fill:#16A085,color:#fff
+    style Auto fill:#8E44AD,color:#fff
 ```
 
 ---
@@ -265,6 +274,10 @@ graph TD
 |:---|:---|:---|
 | Find the right workflow | `pk:route` | Interactive decision matrix |
 | See all commands | `pk:route` | Full workflow catalog |
+| Audit an installed workspace | `pk:doctor` | Host/version/ignore-state drift report |
+| Reload rules after an engine update | `pk:sync` | Synchronized instructions + announced diffs |
+| Change Lite/Balanced/Turbo at runtime | `pk:profile` | Re-injected profile, mechanically verified |
+| Run a well-specified task unattended | `pk:auto` | Chained plan → tasks → test → review, halted at the terminal boundary |
 
 ---
 
