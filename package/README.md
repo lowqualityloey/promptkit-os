@@ -16,7 +16,7 @@ npx promptkit-os@latest --turbo --experimental
 npx promptkit-os@latest /path/to/project
 ```
 
-Pass-through flags: `--lite`, `--balanced`, `--turbo`, `--experimental`, `--host=`, `--add-host=`, `--target=`, `--tracking=`, `--reconfigure`.
+Pass-through flags: `--lite`, `--balanced`, `--solo-fast`, `--turbo`, `--experimental`, `--host=`, `--add-host=`, `--target=`, `--tracking=`, `--reconfigure`. Courier-only flags: `--update` and `--force`.
 
 Requires Node 18+ (the courier runs on Node; the installed product does not) — the courier checks at startup and prints a clear error on older runtimes instead of failing on a missing `fetch`. On Windows it also requires **PowerShell 7 (`pwsh`)**, which is what `init.ps1` targets — stock Windows PowerShell 5.1 is not supported.
 
@@ -27,15 +27,15 @@ Requires Node 18+ (the courier runs on Node; the installed product does not) —
 If `.promptkit/` already exists and is not empty, the courier **refuses to overlay it** — a tarball merge can leave stale files behind and mix delivery doors. The right update path depends on how it was installed:
 
 ```bash
+# courier install — download, SHA-verify, extract to a staging tree, then swap
+# atomically with rollback on failure
+npx promptkit-os@latest --update
+
 # git-submodule install
 git submodule update --remote --merge .promptkit && bash .promptkit/init.sh
-
-# courier install (replace the existing tree; new couriers verify the archive)
-rm -rf .promptkit
-npx promptkit-os@latest --balanced
 ```
 
-The courier detects which case applies (a submodule install has `.promptkit/.git`) and prints the matching command. `--force` overlays anyway, but it is not recommended.
+`--update` is courier-only: it refuses when `.promptkit/.git` exists and points you at the submodule command, refuses a missing `.promptkit/`, and is mutually exclusive with `--force`. Without `--update` the courier detects which case applies and prints the matching command. `--force` overlays anyway, but it is not recommended.
 
 ## Version pinning
 
@@ -47,7 +47,7 @@ GitHub-generated tag archives are not guaranteed byte-for-byte immutable forever
 
 ## Removal
 
-Delete `.promptkit/` — plus the generated `PROMPTKIT.md` and `docs/STATE.md` if you don't want them. No daemon, no cache, no registration, nothing left behind.
+First remove PromptKit's directive blocks from every host file the installer wrote to: `bash .promptkit/init.sh --strip-directives` (PowerShell: `pwsh -File .promptkit/init.ps1 --strip-directives`). It removes only complete `<!-- PROMPTKIT_START -->` … `<!-- PROMPTKIT_END -->` blocks, preserves your own content and line endings, deletes a host file only when nothing else was in it, and never touches `PROMPTKIT.md`, `docs/STATE.md`, or `.promptkit/`; add `--dry-run` to preview. Then delete `.promptkit/` — a courier install needs nothing else, while a submodule install must be unregistered first as the main README describes. Delete the generated `PROMPTKIT.md` and `docs/STATE.md` only if you don't want them. No daemon, no cache, no registration, nothing left behind.
 
 ## Which path should I use?
 

@@ -252,6 +252,8 @@ HOSTS=""
 HOST_SET=0
 PRESET=""
 PRESET_SET=0
+STRIP_DIRECTIVES=0
+DRY_RUN=0
 RECONFIGURE=0
 EXTRA_TARGETS=()
 PROJECT_ROOT=""
@@ -418,6 +420,12 @@ for arg in "$@"; do
         --reconfigure)
             RECONFIGURE=1
             ;;
+        --strip-directives)
+            STRIP_DIRECTIVES=1
+            ;;
+        --dry-run)
+            DRY_RUN=1
+            ;;
         --help|-h)
             echo -e "\nPromptKit OS init.sh — 1-Click Setup\n"
             echo -e "Usage: ./init.sh [options] [project-root]\n"
@@ -432,6 +440,8 @@ for arg in "$@"; do
             echo -e "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
             echo -e "  --reconfigure       Force interactive host re-selection on existing installations"
             echo -e "  --target=rel/path  Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
+            echo -e "  --strip-directives  Remove PromptKit directive blocks from host files and exit; keeps PROMPTKIT.md, docs/STATE.md and .promptkit/"
+            echo -e "  --dry-run           With --strip-directives: report files that would change, write nothing"
             echo -e "  -h, --help          Show this help\n"
             echo -e "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
             echo -e "Interactive: Arrow keys move, Enter selects, Space toggles checkboxes, q cancels; final review lets you edit choices."
@@ -464,6 +474,190 @@ for arg in "$@"; do
     esac
 done
 
+if [[ "$DRY_RUN" -eq 1 && "$STRIP_DIRECTIVES" -eq 0 ]]; then
+    echo -e "\033[0;31m[!] --dry-run only applies to --strip-directives\033[0m" >&2
+    exit 1
+fi
+
+# --strip-directives: remove complete PromptKit directive blocks from host
+# files while preserving every other byte (line endings and EOF state
+# included). Staging happens before any write, so a malformed marker aborts
+# with nothing changed; backups live in the work dir so a failed write rolls
+# back the files already touched. PROMPTKIT.md, docs/STATE.md and .promptkit/
+# are user-owned and are never modified here.
+strip_block_lines() {
+    local file="$1" start_line="$2" end_line="$3" output="$4"
+    : > "$output"
+    if [[ "$start_line" -gt 1 ]]; then
+        head -n "$((start_line - 1))" "$file" >> "$output"
+    fi
+    tail -n "+$((end_line + 1))" "$file" >> "$output" 2>/dev/null || true
+}
+
+restore_stripped_files() {
+    local limit="$1" i=0
+    while [[ "$i" -lt "$limit" ]]; do
+        if [[ -f "${STRIP_BACKUPS[$i]}" ]]; then
+            cp -p "${STRIP_BACKUPS[$i]}" "${STRIP_FILES[$i]}" 2>/dev/null || true
+        fi
+        i=$((i + 1))
+    done
+}
+
+print_strip_removal_hint() {
+    echo ""
+    echo "PROMPTKIT.md, docs/STATE.md and .promptkit/ are yours and were not modified."
+    if [[ -e "$PROJECT_ROOT/.promptkit/.git" ]]; then
+        echo "This install is a git submodule. To remove the engine directory:"
+        echo "  git submodule deinit .promptkit"
+        echo "  git rm .promptkit"
+    elif [[ -e "$PROJECT_ROOT/.promptkit" ]]; then
+        echo "This install is a courier copy. To remove the engine directory:"
+        echo "  rm -rf .promptkit"
+    fi
+}
+
+strip_directives() {
+    local work_dir
+    work_dir="$(mktemp -d)"
+    local CR=$'\r'
+    local -a candidates=(
+        "AGENTS.md"
+        "CLAUDE.md"
+        "GEMINI.md"
+        ".cursorrules"
+        ".cursor/rules/promptkit.mdc"
+        ".windsurfrules"
+        ".github/copilot-instructions.md"
+        ".clinerules"
+        ".clinerules/promptkit.md"
+        ".traerules"
+        ".opencode/rules.md"
+        "CONVENTIONS.md"
+    )
+    local rel full canon seen index start_count end_count first_start first_end staged_file action
+    if [[ ${#EXTRA_TARGETS[@]} -gt 0 ]]; then
+        for rel in "${EXTRA_TARGETS[@]}"; do
+            candidates+=("$rel")
+        done
+    fi
+
+    STRIP_FILES=()
+    STRIP_ACTIONS=()
+    STRIP_STAGED=()
+    STRIP_BACKUPS=()
+    seen=$'\n'
+    index=0
+    for rel in "${candidates[@]}"; do
+        full="$PROJECT_ROOT/$rel"
+        [[ -f "$full" ]] || continue
+        case "$rel" in
+            PROMPTKIT.md|docs/STATE.md|.promptkit|.promptkit/*)
+                echo "Error: --strip-directives never modifies $rel; that file is user-owned. Nothing was changed." >&2
+                rm -rf "$work_dir"
+                exit 1
+                ;;
+        esac
+        if ! is_path_contained "$PROJECT_ROOT" "$full"; then
+            echo "Error: Refusing to strip $rel: it resolves outside the project root. Nothing was changed." >&2
+            rm -rf "$work_dir"
+            exit 1
+        fi
+        canon="$(resolve_canonical_path "$full")"
+        case "$seen" in
+            *$'\n'"$canon"$'\n'*) continue ;;
+        esac
+        seen="$seen$canon"$'\n'
+
+        start_count="$(grep -E -c "^[[:space:]]*<!-- PROMPTKIT_START -->[[:space:]]*${CR}?$" "$full" 2>/dev/null || true)"
+        end_count="$(grep -E -c "^[[:space:]]*<!-- PROMPTKIT_END -->[[:space:]]*${CR}?$" "$full" 2>/dev/null || true)"
+        if [[ "$start_count" -eq 0 && "$end_count" -eq 0 ]]; then
+            continue
+        fi
+        if [[ "$start_count" -ne 1 || "$end_count" -ne 1 ]]; then
+            echo "Error: Cannot strip $rel: expected exactly one complete PromptKit directive block with START before END. Nothing was changed." >&2
+            rm -rf "$work_dir"
+            exit 1
+        fi
+        first_start="$(grep -n -E "^[[:space:]]*<!-- PROMPTKIT_START -->[[:space:]]*${CR}?$" "$full" | head -n 1 | cut -d: -f1)"
+        first_end="$(grep -n -E "^[[:space:]]*<!-- PROMPTKIT_END -->[[:space:]]*${CR}?$" "$full" | head -n 1 | cut -d: -f1)"
+        if [[ "$first_start" -ge "$first_end" ]]; then
+            echo "Error: Cannot strip $rel: expected exactly one complete PromptKit directive block with START before END. Nothing was changed." >&2
+            rm -rf "$work_dir"
+            exit 1
+        fi
+
+        staged_file="$work_dir/staged_$index"
+        strip_block_lines "$full" "$first_start" "$first_end" "$staged_file"
+        if grep -q '[^[:space:]]' "$staged_file"; then
+            action="strip"
+        else
+            action="delete"
+        fi
+        STRIP_FILES+=("$full")
+        STRIP_ACTIONS+=("$action")
+        STRIP_STAGED+=("$staged_file")
+        index=$((index + 1))
+    done
+
+    local total=${#STRIP_FILES[@]} i
+    if [[ "$total" -eq 0 ]]; then
+        echo "No PromptKit directive blocks found in this project."
+        print_strip_removal_hint
+        rm -rf "$work_dir"
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        for (( i=0; i<total; i++ )); do
+            rel="${STRIP_FILES[$i]#"$PROJECT_ROOT"/}"
+            if [[ "${STRIP_ACTIONS[$i]}" == "delete" ]]; then
+                printf '  would delete %s (holds only the PromptKit block)\n' "$rel"
+            else
+                printf '  would strip %s\n' "$rel"
+            fi
+        done
+        printf 'Dry run: %d file(s) would change. Nothing was written.\n' "$total"
+        print_strip_removal_hint
+        rm -rf "$work_dir"
+        return 0
+    fi
+
+    for (( i=0; i<total; i++ )); do
+        STRIP_BACKUPS[$i]="$work_dir/backup_$i"
+        if ! cp -p "${STRIP_FILES[$i]}" "${STRIP_BACKUPS[$i]}"; then
+            echo "Error: Could not back up ${STRIP_FILES[$i]#"$PROJECT_ROOT"/}; nothing was changed." >&2
+            rm -rf "$work_dir"
+            exit 1
+        fi
+    done
+
+    for (( i=0; i<total; i++ )); do
+        rel="${STRIP_FILES[$i]#"$PROJECT_ROOT"/}"
+        if [[ "${STRIP_ACTIONS[$i]}" == "delete" ]]; then
+            if ! rm -f "${STRIP_FILES[$i]}"; then
+                echo "Error: Could not delete $rel; restoring the files already changed." >&2
+                restore_stripped_files $((i + 1))
+                rm -rf "$work_dir"
+                exit 1
+            fi
+            printf '  deleted %s (held only the PromptKit block)\n' "$rel"
+        else
+            if ! cat "${STRIP_STAGED[$i]}" > "${STRIP_FILES[$i]}"; then
+                echo "Error: Could not write $rel; restoring the files already changed." >&2
+                restore_stripped_files $((i + 1))
+                rm -rf "$work_dir"
+                exit 1
+            fi
+            printf '  stripped %s\n' "$rel"
+        fi
+    done
+    printf 'Removed PromptKit directives from %d file(s).\n' "$total"
+    print_strip_removal_hint
+    rm -rf "$work_dir"
+}
+
+
 # Resolve PROJECT_ROOT if not provided via positional arg
 if [[ -z "$PROJECT_ROOT" ]]; then
     if [[ "$DIR_NAME" == ".promptkit" || "$DIR_NAME" == "promptkit" ]]; then
@@ -471,6 +665,13 @@ if [[ -z "$PROJECT_ROOT" ]]; then
     else
         PROJECT_ROOT="$(pwd -P)"
     fi
+fi
+
+# Strip mode writes only host files, never PROMPTKIT.md/docs/STATE.md/.promptkit,
+# and exits before any install staging or generation runs.
+if [[ "$STRIP_DIRECTIVES" -eq 1 ]]; then
+    strip_directives
+    exit 0
 fi
 
 # Fresh-project detection (before any writes): a project with no tracked files
