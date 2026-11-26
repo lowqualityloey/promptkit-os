@@ -208,84 +208,18 @@ jobs:
 
       - name: Validate Bash Script Syntax
         run: |
-          bash -n init.sh
-          bash -n scripts/measure-tokens.sh
-          bash -n scripts/measure-per-task-tokens.sh
-          bash -n scripts/measure-ceremony-overhead.sh
-          bash -n scripts/measure-tokenizer-delta.sh
-          bash -n scripts/measure-turbo-overhead.sh
-          bash -n scripts/measure-cpac.sh
-          bash -n scripts/extract-commandcode-telemetry.sh
-          bash -n scripts/tests/run-cpac-ingestion-tests.sh
-          bash -n scripts/strip-benchmark-diff.sh
-          bash -n scripts/aggregate-benchmark-runs.sh
-          bash -n scripts/tests/run-benchmark-tools-tests.sh
-          bash -n scripts/tests/run-benchmark-driver-tests.sh
-          bash -n benchmarks/audit-blinding.sh
-          bash -n scripts/tests/run-benchmark-blinding-tests.sh
-          bash -n scripts/check-benchmark-task-cards.sh
-          bash -n scripts/tests/run-benchmark-task-card-tests.sh
-          bash -n scripts/install-benchmark-task-card-hook.sh
-          bash -n scripts/tests/run-benchmark-task-card-hook-tests.sh
-          bash -n benchmarks/run-ab-benchmark.sh
-          bash -n benchmarks/seed/neutralize.sh
-          bash -n benchmarks/seed/build-phase3b-seed.sh
-          bash -n benchmarks/seed/build-phase3c-seed.sh
-          bash -n benchmarks/validate-phase3c-probes.sh
-          bash -n scripts/tests/run-token-budget-tests.sh
-          bash -n scripts/validate-execution-control.sh
-          bash -n scripts/validate-authorization-evidence.sh
-          bash -n scripts/mint-courier-integrity-pin.sh
-          bash -n scripts/check-milestone-halt-evidence.sh
-          bash -n scripts/tests/run-authorization-evidence-fixtures.sh
-          bash -n scripts/tests/run-milestone-halt-evidence-fixtures.sh
-          bash -n scripts/tests/run-onboarding-provenance-fixtures.sh
-          bash -n scripts/tests/run-courier-integrity-pin-fixtures.sh
-          bash -n scripts/tests/run-execution-control-fixtures.sh
-          bash -n scripts/tests/run-execution-control-properties.sh
-          bash -n scripts/validate-release-records.sh
-          bash -n scripts/check-changelog-entry.sh
-          bash -n scripts/tests/run-changelog-gate-tests.sh
-          bash -n scripts/check-math-labels.sh
-          bash -n scripts/tests/run-math-label-gate-tests.sh
-          bash -n scripts/tests/run-release-record-properties.sh
-          bash -n scripts/validate-ci-triage.sh
-          bash -n scripts/tests/run-ci-triage-fixtures.sh
-          bash -n scripts/validate-playbooks.sh
-          bash -n scripts/tests/run-playbook-contract-tests.sh
-          bash -n scripts/validate-lsp-evidence.sh
-          bash -n scripts/tests/run-lsp-evidence-fixtures.sh
-          bash -n scripts/tests/run-reference-link-tests.sh
-          bash -n scripts/tests/run-behavioral-contract-tests.sh
-          bash -n scripts/scan-staged-secrets.sh
-          bash -n scripts/tests/run-staged-secret-scan-tests.sh
-          bash -n scripts/run-behavioral-eval.sh
-          bash -n scripts/tests/run-init-safety-tests.sh
-          bash -n scripts/isolate-worktree.sh
-          bash -n scripts/tests/run-worktree-isolation-tests.sh
-          bash -n scripts/tests/run-profile-matrix.sh
-          bash -n scripts/tests/run-terminal-picker-tests.sh
-          bash -n scripts/tests/release-records.examples.sh
-          bash -n scripts/check-checkpoint-ignore.sh
-          bash -n scripts/check-setup-assert.sh
-          bash -n scripts/tests/run-checkpoint-ignore-tests.sh
-          bash -n scripts/check-synthetic-base.sh
-          bash -n scripts/tests/run-synthetic-base-tests.sh
-          bash -n scripts/check-doctor.sh
-          bash -n scripts/tests/run-doctor-tests.sh
-          bash -n scripts/tests/run-projection-parity-tests.sh
-          bash -n scripts/pk
-          bash -n scripts/pk-route.sh
-          bash -n scripts/tests/run-pk-entry-points-tests.sh
-          bash -n scripts/tests/run-pk-route-tests.sh
-          bash -n scripts/check-ai-attribution.sh
-          bash -n scripts/install-attribution-hook.sh
-          bash -n scripts/tests/run-ai-attribution-tests.sh
-          bash -n scripts/render-capture-transcript.sh
-          bash -n scripts/tests/run-render-capture-transcript-tests.sh
-          bash -n scripts/capture-host-session.sh
-          bash -n scripts/tests/run-capture-host-session-tests.sh
-          echo "Bash scripts parsed with 0 syntax errors."
+          set -euo pipefail
+          count=0
+          while IFS= read -r script; do
+            [ -n "$script" ] || continue
+            bash -n "$script"
+            count=$((count + 1))
+          done < <(git ls-files '*.sh'; printf '%s\n' scripts/pk)
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No shell scripts were discovered; the git ls-files syntax sweep cannot pass vacuously."
+            exit 1
+          fi
+          echo "Parsed $count shell scripts with 0 syntax errors."
 
       - name: Run Staged Secret Scan Regression Tests (Bash)
         run: bash scripts/tests/run-staged-secret-scan-tests.sh
@@ -637,79 +571,26 @@ jobs:
       - name: Validate PowerShell Script Syntax
         shell: pwsh
         run: |
-          $syntaxFiles = @(
-            "init.ps1",
-            "scripts/terminal-picker.ps1",
-            "scripts/measure-tokens.ps1",
-            "scripts/measure-tokenizer-delta.ps1",
-            "scripts/measure-ceremony-overhead.ps1",
-            "scripts/validate-execution-control.ps1",
-            "scripts/tests/run-execution-control-fixtures.ps1",
-            "scripts/tests/run-execution-control-properties.ps1",
-            "scripts/validate-release-records.ps1",
-            "scripts/check-changelog-entry.ps1",
-            "scripts/tests/run-changelog-gate-tests.ps1",
-            "scripts/check-math-labels.ps1",
-            "scripts/tests/run-math-label-gate-tests.ps1",
-            "scripts/tests/run-release-record-properties.ps1",
-            "scripts/validate-ci-triage.ps1",
-            "scripts/tests/run-ci-triage-fixtures.ps1",
-            "scripts/validate-playbooks.ps1",
-            "scripts/tests/run-playbook-contract-tests.ps1",
-            "scripts/validate-lsp-evidence.ps1",
-            "scripts/tests/run-lsp-evidence-fixtures.ps1",
-            "scripts/tests/run-reference-link-tests.ps1",
-            "scripts/tests/run-behavioral-contract-tests.ps1",
-            "scripts/scan-staged-secrets.ps1",
-            "scripts/tests/run-staged-secret-scan-tests.ps1",
-            "scripts/run-behavioral-eval.ps1",
-            "scripts/tests/run-init-safety-tests.ps1",
-            "scripts/isolate-worktree.ps1",
-            "scripts/tests/run-worktree-isolation-tests.ps1",
-            "scripts/tests/run-profile-matrix.ps1",
-            "scripts/tests/run-terminal-picker-tests.ps1",
-            "scripts/tests/release-records.examples.ps1",
-            "scripts/check-checkpoint-ignore.ps1",
-            "scripts/check-setup-assert.ps1",
-            "scripts/tests/run-checkpoint-ignore-tests.ps1",
-            "scripts/check-synthetic-base.ps1",
-            "scripts/tests/run-synthetic-base-tests.ps1",
-            "scripts/check-doctor.ps1",
-            "scripts/tests/run-doctor-tests.ps1",
-            "scripts/tests/run-projection-parity-tests.ps1",
-            "scripts/pk.ps1",
-            "scripts/pk-route.ps1",
-            "scripts/tests/run-pk-entry-points-tests.ps1",
-            "scripts/tests/run-pk-route-tests.ps1",
-            "scripts/check-ai-attribution.ps1",
-            "scripts/install-attribution-hook.ps1",
-            "scripts/tests/run-ai-attribution-tests.ps1",
-            "scripts/tests/run-milestone-halt-evidence-fixtures.ps1",
-            "scripts/tests/run-onboarding-provenance-fixtures.ps1",
-            "scripts/measure-cpac.ps1",
-            "scripts/extract-commandcode-telemetry.ps1",
-            "scripts/tests/run-cpac-ingestion-tests.ps1",
-            "scripts/strip-benchmark-diff.ps1",
-            "scripts/aggregate-benchmark-runs.ps1",
-            "scripts/tests/run-benchmark-tools-tests.ps1",
-            "scripts/check-benchmark-task-cards.ps1",
-            "scripts/tests/run-benchmark-task-card-tests.ps1",
-            "scripts/install-benchmark-task-card-hook.ps1",
-            "scripts/tests/run-benchmark-task-card-hook-tests.ps1",
-            "scripts/render-capture-transcript.ps1",
-            "scripts/tests/run-render-capture-transcript-tests.ps1",
-            "scripts/capture-host-session.ps1",
-            "scripts/tests/run-capture-host-session-tests.ps1"
-          )
+          $syntaxFiles = @(git ls-files '*.ps1')
+          if ($syntaxFiles.Count -eq 0) {
+            Write-Error "::error::No PowerShell scripts were discovered; the git ls-files syntax sweep cannot pass vacuously."
+            exit 1
+          }
+          $parseFailures = 0
           foreach ($file in $syntaxFiles) {
             $errors = @()
             [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$null, [ref]$errors) | Out-Null
             if ($errors.Count -gt 0) {
-              $errors | ForEach-Object { Write-Error $_ }
-              exit 1
+              $parseFailures += 1
+              $errors | ForEach-Object { Write-Error ("{0}: {1}" -f $file, $_) }
             }
           }
-          Write-Host "PowerShell scripts parsed with 0 syntax errors."
+          if ($parseFailures -gt 0) { exit 1 }
+          Write-Host "Parsed $($syntaxFiles.Count) PowerShell scripts with 0 syntax errors."
+
+      - name: Run Token Budget Gate Regression Tests (PowerShell)
+        shell: pwsh
+        run: pwsh -NoProfile -File .\scripts\tests\run-token-budget-tests.ps1
 
       - name: Run Staged Secret Scan Regression Tests (PowerShell)
         shell: pwsh
@@ -824,25 +705,55 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Scan The Pull Request Diff For Credential Patterns
+      - name: Scan The Commit Range For Credential Patterns
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
-          git fetch origin main
-          if ! git rev-parse --verify --quiet origin/main >/dev/null; then
-            echo "::error::origin/main unavailable; cannot scan the pull-request diff. Fetch the base ref (fetch-depth: 0) and re-run."
-            exit 1
-          fi
-          git read-tree origin/main
-          git add -A -- .
-          if git diff --cached --quiet; then
-            echo "No diff against origin/main to scan."
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch origin main
+            if ! git rev-parse --verify --quiet origin/main >/dev/null; then
+              echo "::error::origin/main unavailable; cannot scan the pull-request diff. Fetch the base ref (fetch-depth: 0) and re-run."
+              exit 1
+            fi
+            base=origin/main
+          elif [ "$EVENT_NAME" = "push" ]; then
+            if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+              echo "::notice::This push records no parent commit (new branch or initial commit); skipping the commit-range scan. Pull-request runs still gate the change."
+              exit 0
+            fi
+            if ! git rev-parse --verify --quiet "${BEFORE_SHA}^{commit}" >/dev/null; then
+              echo "::error::push base commit $BEFORE_SHA is not present in the checkout; refusing to scan an unknown range (fetch-depth: 0 is required)."
+              exit 1
+            fi
+            base=$BEFORE_SHA
+          else
+            echo "::notice::$EVENT_NAME has no commit range to scan; skipping."
             exit 0
           fi
-          bash scripts/scan-staged-secrets.sh .
+          head="$(git rev-parse HEAD)"
+          scan_parent="$(mktemp -d)"
+          scan_root="$scan_parent/scan"
+          cleanup_scan_worktree() {
+            git -C "$scan_root" read-tree "$base" >/dev/null 2>&1 || true
+            git worktree remove "$scan_root" >/dev/null 2>&1 || true
+            rm -rf "$scan_parent"
+            git worktree prune >/dev/null 2>&1 || true
+          }
+          trap cleanup_scan_worktree EXIT
+          git worktree add --detach --quiet "$scan_root" "$base"
+          git -C "$scan_root" read-tree "$head"
+          if git -C "$scan_root" diff --cached --quiet; then
+            echo "No diff against $base to scan."
+            exit 0
+          fi
+          bash scripts/scan-staged-secrets.sh "$scan_root"
 
   validate-linux:
     name: Lint & Validate (Linux)
     if: ${{ always() && github.event_name == 'pull_request' }}
-    needs: [changes, linux-docs, linux-code-a, linux-code-b]
+    needs: [changes, linux-docs, linux-code-a, linux-code-b, staged-secret-scan]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -854,6 +765,7 @@ jobs:
           if ! printf '%s' "$NEEDS" | jq -e --arg lane "$LANE" '
               (.["changes"].result == "success")
               and (.["linux-docs"].result == "success")
+              and (.["staged-secret-scan"].result == "success")
               and (if $lane == "full"
                    then (.["linux-code-a"].result == "success") and (.["linux-code-b"].result == "success")
                    elif $lane == "docs"
