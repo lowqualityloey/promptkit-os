@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Historical baseline:** 2026-09-14 on `main` (v1.6.0) · **Current measurements:** last committed 2026-11-26 at `93e902c`, the directive-headroom trim (issue #788): Balanced 2,488 → 2,404 tok, Lite 1,482 → 1,415, ceilings 2,425/1,450 under the unchanged 2,500/1,500 caps; this documentation-only commit restates the anchor to it because a commit cannot contain its own SHA. Prior anchor `3b895a4` (#787); earlier anchors in §11. · **Method:** `bytes / 4` via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 19,794 tok / full set 75,505 tok.
+**Historical baseline:** 2026-09-14 on `main` (v1.6.0) · **Current measurements:** last committed 2026-11-26 at `b9604e3`, the Level 2 Lite record forms (issue #790): the Level 2 ceremony requirement drops 5,372 → 998 tok (Lite Task Record 790 + Lite checkpoint 208), the spec band narrows to 1,977–6,478 tok, the full forms stay Level 3 and opt-in at Level 2, and the workflow edits re-propagate core-six 32,985 → 33,475 tok and full workflow set 119,972 → 120,510 tok while the directives stay at 2,404 Balanced / 1,415 Lite; this documentation-only commit restates the anchor to it because a commit cannot contain its own SHA. Prior anchor `93e902c` (#788); earlier anchors in §11. · **Method:** `bytes / 4` via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 19,794 tok / full set 75,505 tok.
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -396,6 +396,7 @@ The banner at the top of this file is deliberately short: it names the current a
 
 | Date | Anchor | Change | Figures it moved |
 | :--- | :--- | :--- | :--- |
+| 2026-11-26 | `b9604e3` | #790 L2 Lite record forms + Solo/Fast preset | L2 ceremony 5,372 → 998 tok; band 6,351–10,852 → 1,977–6,478; core-six 32,985 → 33,475; full set 119,972 → 120,510; directives unchanged |
 | 2026-11-26 | `93e902c` | #788 directive-headroom trim | directive 2,488 → 2,404 Balanced, 1,482 → 1,415 Lite; full-set and core-six unchanged |
 | 2026-11-26 | `3b895a4` | #787 release-archive export-ignore | full workflow set 119,959 → 119,972 tok; `pk:ship` 17,295/16,289 → 17,308/16,302 |
 | 2026-11-21 | `db68dd4` | #787 orphan-recipe backlink fix | 119,905 → 119,959; `pk:ship` 17,265/16,259 → 17,295/16,289 |
