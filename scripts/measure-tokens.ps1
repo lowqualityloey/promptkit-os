@@ -7,8 +7,10 @@
     UTF-8 byte counts, character and word counts, and token estimates (bytes/4).
     Compares against the current workflow files for live counts; historical measurements are labeled in docs/BENCHMARKS.md.
     In -Strict mode (CI gate parity with measure-tokens.sh), host detection is
-    skipped and BOTH canonical directive templates are asserted against their
-    profile budgets: Balanced <= 2,500 tokens and Lite <= 1,500 tokens.
+    skipped and BOTH canonical directive templates are asserted against tightened
+    bytes/4 ceilings: Balanced <= 2,425 and Lite <= 1,450. Both sit below the
+    real-tokenizer caps (2,500 / 1,500) so a directive whose cl100k/o200k count
+    already crossed a cap cannot still report PASS (#788).
 #>
 
 [CmdletBinding()]
@@ -22,8 +24,11 @@ param (
 $ErrorActionPreference = "Stop"
 
 # Single source of truth for budget constants (documented in docs/BENCHMARKS.md section 2).
-$TokenBudgetBalanced = 2500
-$TokenBudgetLite = 1500
+# These are bytes/4 CI ceilings, deliberately tighter than the real-tokenizer caps of
+# 2,500 / 1,500: the measured cl100k ratio (~1.004 Balanced, ~1.024 Lite) must not be
+# able to carry a directive past its cap while the proxy still reports PASS (#788).
+$TokenBudgetBalanced = 2425
+$TokenBudgetLite = 1450
 
 if ($Strict) {
     $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path

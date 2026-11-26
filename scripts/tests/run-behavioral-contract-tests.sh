@@ -497,6 +497,8 @@ assert_contains "templates/agent-directive-lite-template.md" 'milestone end:.*ve
 assert_contains "templates/agent-directive-lite-template.md" 'sync .docs/STATE\.md.' "Lite retains docs/STATE.md synchronization at milestone end"
 assert_contains "templates/agent-directive-lite-template.md" 'request sign-off' "Lite retains the human sign-off request"
 assert_contains "templates/agent-directive-template.md" 'this task.s.*uncommitted changes' "Balanced directive retains the task-scoped milestone boundary"
+assert_contains "templates/agent-directive-template.md" 'sign-off or resume reply is void unless the closing milestone recorded executed exit-0 verification evidence' "Balanced directive voids a sign-off or resume without executed verification evidence"
+assert_contains "templates/agent-directive-lite-template.md" 'sign-off or resume reply is void unless the closing milestone recorded executed exit-0 verification evidence' "Lite directive voids a sign-off or resume without executed verification evidence"
 assert_contains "templates/agent-directive-template.md" 'pre-existing dirt.*surfaced.*never a stall reason' "Balanced directive retains the pre-existing-dirt exception"
 assert_contains "protocols/code-quality-gate.md" 'produced.*by the current task' "Quality gate retains the substantive task-scope qualification"
 assert_contains "protocols/code-quality-gate.md" 'documented exception.*do not stall' "Quality gate retains the pre-existing-dirt exception"
