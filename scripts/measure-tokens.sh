@@ -8,7 +8,10 @@ set -euo pipefail
 #              canonical Balanced template fallback) and assert it against the
 #              profile-appropriate budget. Backward compatible.
 #   --strict : CI gate mode. Ignores host-file detection and asserts BOTH canonical
-#              templates: Balanced <= 2,500 tokens AND Lite <= 1,500 tokens.
+#              templates against tightened bytes/4 ceilings: Balanced <= 2,425 and
+#              Lite <= 1,450. Both sit below the real-tokenizer caps (2,500 / 1,500)
+#              so a directive whose cl100k/o200k count already crossed a cap cannot
+#              still report PASS (#788).
 #              Emits machine-parseable lines: PROFILE|MEASURED|BUDGET|PASS|FAIL
 TARGET_FILE=""
 STRICT=0
@@ -21,8 +24,11 @@ for arg in "$@"; do
 done
 
 # Single source of truth for budget constants (documented in docs/BENCHMARKS.md section 2).
-TOKEN_BUDGET_BALANCED=2500
-TOKEN_BUDGET_LITE=1500
+# These are bytes/4 CI ceilings, deliberately tighter than the real-tokenizer caps of
+# 2,500 / 1,500: the measured cl100k ratio (~1.004 Balanced, ~1.024 Lite) must not be
+# able to carry a directive past its cap while the proxy still reports PASS (#788).
+TOKEN_BUDGET_BALANCED=2425
+TOKEN_BUDGET_LITE=1450
 
 if [[ "$STRICT" -eq 1 ]]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
