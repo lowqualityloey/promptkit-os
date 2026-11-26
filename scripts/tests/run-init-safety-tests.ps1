@@ -2019,7 +2019,10 @@ try {
     $aliasProfileHash = (Get-FileHash -LiteralPath (Join-Path $stripAlias "PROMPTKIT.md") -Algorithm SHA256).Hash
     $aliasStateHash = (Get-FileHash -LiteralPath (Join-Path (Join-Path $stripAlias "docs") "STATE.md") -Algorithm SHA256).Hash
     $aliasTargets = @("./PROMPTKIT.md", "docs/./STATE.md", "docs//STATE.md")
-    if ($IsWindows) { $aliasTargets += "docs`STATE.md" }
+    # Single quotes keep the backslash literal: this is the Windows separator
+    # form, not a PowerShell escape. A double-quoted backtick here produced
+    # "docsSTATE.md" and made Test 39f assert on a non-existent path in CI.
+    if ($IsWindows) { $aliasTargets += 'docs\STATE.md' }
     foreach ($aliasTarget in $aliasTargets) {
         $aliasRun = Invoke-StripAssert -StripRoot $stripAlias -StripArgs @("--target=$aliasTarget")
         if ($aliasRun.ExitCode -ne 1) { throw "Failed Test 39f (protected alias $aliasTarget): expected exit 1, got $($aliasRun.ExitCode)." }
