@@ -16,20 +16,30 @@ both work — which makes `milestone-halt` newly testable rather than merely re-
 read `scripts/tests/eval-scenarios/halt-callout.md` and a prior passing transcript — the
 answer key — and then produced a correct-looking halt. That capture was discarded.
 
-The working mechanism is `bwrap`:
+The working mechanism is `bwrap`, driven by `scripts/capture-host-session.mjs`, which
+derives every path from `os.homedir()` — never from one operator's username — and stages a
+disposable HOME instead of mounting the real one:
 
 ```bash
 bwrap --dev-bind / / \
-  --tmpfs /home/heyloey \
+  --tmpfs "$HOME" --bind <work>/capture-home "$HOME" \
   --tmpfs /tmp \
-  --ro-bind /home/heyloey/.local/bin/agy /home/heyloey/.local/bin/agy \
-  --ro-bind /home/heyloey/.local/bin/rtk /home/heyloey/.local/bin/rtk \
-  --bind /home/heyloey/.gemini /home/heyloey/.gemini \
-  --bind /home/heyloey/.config/antigravity /home/heyloey/.config/antigravity \
+  --ro-bind <agy> <agy> \
+  --ro-bind <rtk> <rtk> \
+  --ro-bind "$HOME/.gemini/antigravity-cli/antigravity-oauth-token" \
+           "$HOME/.gemini/antigravity-cli/antigravity-oauth-token" \
+  --ro-bind "$HOME/.config/antigravity/credential-user-scope" \
+           "$HOME/.config/antigravity/credential-user-scope" \
   --bind <fixture> <fixture> --chdir <fixture> \
-  /home/heyloey/.local/bin/agy --input-format stream-json --output-format stream-json -p='' \
-  --mode accept-edits --dangerously-skip-permissions
+  <agy> --input-format stream-json --output-format stream-json --model <model> \
+    --mode accept-edits --dangerously-skip-permissions -p=
 ```
+
+The harness prints this argv before it runs anything: `--print-plan` emits `CAPTURE_HOME|`,
+`CAPTURE_CREDENTIAL|` and a `CAPTURE_MOUNTS|` line carrying the mount part verbatim, so the
+recipe can be inspected and replayed without spending a model turn. A run creates
+`<work>/capture-home` — the staged HOME — before the sandbox starts; `--print-plan` never
+creates it.
 
 Two `--tmpfs` mounts are load-bearing, and the second one was learned the hard way. Hiding
 only the kit checkout at `/home/heyloey/personal/promptkit-os` is **not enough**: this
@@ -37,8 +47,17 @@ machine carries roughly twenty copies of the scenario files — a second checkou
 (`promptkit-os-b4-603`), `.promptkit/` stages inside several unrelated projects, and scratch
 trees under `/tmp`. A capture that hid only the first copy was still contaminated, because
 the model found `/tmp/pk24-engine/scripts/tests/eval-scenarios/halt-callout.md`. Masking all
-of `/home/heyloey` and `/tmp`, then binding back only the binary, `rtk`, the credential
-directory and the fixture, is what actually closes it.
+of `$HOME` and `/tmp`, then binding back only the engine binaries, the credential files and
+the fixture, is what actually closes it.
+
+The HOME above the mask is a stage, not the operator's home. Earlier revisions of this recipe
+bound `~/.gemini` and `~/.config/antigravity` read-write, which put the OAuth token, global
+instructions, MCP server definitions, conversation logs and
+`~/.gemini/antigravity/worktrees/` — full kit checkouts, answer key included — inside a
+`--dangerously-skip-permissions` session. The stage now carries exactly two files for the
+Antigravity CLI (the OAuth token and the `credential-user-scope` id), so settings,
+`GEMINI.md`, MCP config, brain, conversation summary databases and worktrees stay out of the
+sandbox entirely.
 
 Verify isolation mechanically before trusting a capture — this needs no model. **The form
 originally documented here was wrong and is corrected below**, because it reported a pass on
@@ -85,6 +104,14 @@ to detect the failure it is meant to detect:
 |---|---|
 | Without isolation (plain shell) | **53–59**, across `.promptkit/` stages, `.pkab/` trees, worktrees and the primary checkout |
 | Under the `bwrap` invocation above | **0**, and the direct read is refused |
+
+`scripts/tests/run-capture-host-session-tests.sh` (and its `.ps1` twin) carries this canary
+against the recipe the harness prints, plus deterministic assertions that need no `bwrap`:
+the mask follows `os.homedir()`, the staged HOME is the only read-write bind at `$HOME`,
+every `--ro-bind` is a file landing on its own path, and no `worktrees`, `brain`,
+`settings.json`, `mcp_config` or `GEMINI.md` surface appears in the argv. The live half skips
+cleanly — never fails — where `bwrap` is absent or cannot create unprivileged user namespaces
+(macOS, and Ubuntu 24.04 with `apparmor_restrict_unprivileged_userns=1`).
 
 The non-zero control is the reason the second `--tmpfs` exists: masking only the primary
 checkout leaves the answer key readable from a dozen unrelated project directories.
