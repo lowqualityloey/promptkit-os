@@ -17,6 +17,7 @@
 - **In Scope**:
   - `templates/state-tracker-template.md`
   - `templates/project-profile-template.md`
+  - `protocols/setup.md`
   - `workflows/checkpoint.md`
   - `scripts/measure-ceremony-overhead.sh`
   - `scripts/measure-ceremony-overhead.ps1`
@@ -46,6 +47,9 @@
 - [ ] **AC-4**: `Both ceremony-overhead twins publish the re-measured SETUP baseline (3,999 B / 1,000 tok) and docs/BENCHMARKS.md restates the SETUP, full-set and core-six figures plus the provenance anchor required by the behavioral guard.`
   - **Result**: `Pass`
   - **Evidence**: `scripts/measure-ceremony-overhead.sh and .ps1 pin SETUP=1000; docs/BENCHMARKS.md rows read 3,999 B / 1,000 tok, 34,646 tok and 122,741 tok; the documentation-only follow-up commit restates the anchor to the implementation commit`
+- [ ] **AC-6**: `protocols/setup.md describes how a fresh docs/STATE.md obtains its Engine Version row now that the slim template no longer ships the placeholder, so the setup path and the template agree.`
+  - **Result**: `Pass`
+  - **Evidence**: `protocols/setup.md now states that a fresh install writes the row and a re-run replaces or inserts it, and that a hand-rendered file must add it`
 - [ ] **AC-5**: `Every required local gate exits 0, the record lists every touched path with no brace shorthand, CHANGELOG.md carries exactly one [Unreleased] entry for the branch, and no raw host path appears in code, docs or this record.`
   - **Result**: `Pass`
   - **Evidence**: `All eleven gates exit 0 on the branch tree; see Verification Evidence`
@@ -79,6 +83,7 @@
   - `templates/state-tracker-template.md` - slimmed from 180 lines / 12,312 B to 70 lines / 3,999 B / 1,000 tok; importer table, verdict rules and §3B removed while every section header, projection field and pinned contract string stays
   - `workflows/checkpoint.md` - new #### Checkpoint Importer Field Mapping section carrying the moved 20-row table and verdict paragraph verbatim; the existing optional release-evaluation handoff remains the canonical §3B home
   - `templates/project-profile-template.md` - Turbo description now says "parallel write waves"; Execution Precedence uses the Unicode arrow
+  - `protocols/setup.md` - engine-stamp guidance now describes the installer-written row and the hand-rendering insertion instead of a template placeholder
   - `scripts/measure-ceremony-overhead.sh` - SETUP baseline 3,078 → 1,000 tokens
   - `scripts/measure-ceremony-overhead.ps1` - PowerShell twin SETUP baseline 3,078 → 1,000 tokens
   - `docs/BENCHMARKS.md` - SETUP row 12,312 B / 3,078 tok → 3,999 B / 1,000 tok; inventory rows 34,646 and 122,741 tok; banner and §11.1 anchor restated by the follow-up docs commit
@@ -87,15 +92,15 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `run-init-safety-tests.sh PASS (including the unchanged Tests 38a-38e and 39a-39f); run-terminal-picker-tests.sh PASS; run-courier-integrity-pin-fixtures.sh PASS|24 executable courier policy fixtures; run-behavioral-contract-tests.sh 831 passed, 0 failed on the anchor-restated tree; run-doctor-tests.sh 52 passed, 0 failed, 0 skipped; validate-references.sh . --strict PASS; validate-execution-control.sh --root . --strict VALID|RECORDS=88|ROOT=.; measure-ceremony-overhead.sh exit 0 with SETUP 1,000 tok, full set 122,741 tok and core-six 34,646 tok; scan-staged-secrets.sh 0 findings; check-changelog-entry.sh CHANGELOG_GATE|PASS; git diff --check clean.`
+- **Verification Evidence**: `run-init-safety-tests.sh PASS (including the unchanged Tests 38a-38e and 39a-39f); run-terminal-picker-tests.sh PASS; run-courier-integrity-pin-fixtures.sh PASS|24 executable courier policy fixtures; run-behavioral-contract-tests.sh 831 passed, 0 failed on the anchor-restated tree; run-doctor-tests.sh 52 passed, 0 failed, 0 skipped; validate-references.sh . --strict PASS; validate-execution-control.sh --root . --strict VALID|RECORDS=88|ROOT=.; measure-ceremony-overhead.sh --strict exit 0 with SETUP 1,000 tok, full set 122,741 tok and core-six 34,646 tok, and its PowerShell twin reports CEREMONY_GATE|PASS under pwsh 7.7.0; scan-staged-secrets.sh 0 findings; check-changelog-entry.sh CHANGELOG_GATE|PASS; git diff --check clean.`
 - **CI Evidence**: `N/A - local branch, not pushed`
 - **Review Evidence**: `N/A`
-- **Commit Evidence**: `3b24d16 refactor(templates): slim consumer STATE template (#808); this documentation-only follow-up commit restates the benchmarks anchor`
+- **Commit Evidence**: `3b24d16 refactor(templates): slim consumer STATE template (#808); this documentation-only follow-up commit restates the benchmarks anchor and aligns the setup engine-stamp guidance`
 - **Pull Request Evidence**: `N/A`
 - **Release Evidence**: `N/A`
 - **Blocker and Resume Condition**: `None`
 - **Completion State**: `awaiting_review`
-- **Acceptance Results**: `AC-1 pass; AC-2 pass; AC-3 pass; AC-4 pass; AC-5 pass`
+- **Acceptance Results**: `AC-1 pass; AC-2 pass; AC-3 pass; AC-4 pass; AC-5 pass; AC-6 pass`
 - **Changed-File Summary**: `The consumer STATE template lost the PromptKit-internal importer and release-handoff material and now measures 1,000 tokens; that material lives canonically in the checkpoint workflow; the project-profile wording and arrow are fixed; the ceremony baseline and published benchmarks reflect the new setup size and workflow inventory.`
 - **Completion Exception**: `None`
 - **Completion Decision and Timestamp**: `Pending review, DeepSeek Harness agent (lead), 2026-11-27 08:30 UTC`

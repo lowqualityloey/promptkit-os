@@ -88,7 +88,7 @@ Never use `describe --abbrev=0`; it discards the commit distance and understates
 
 **Hard rule: a rendered directive must never contain a literal `$` placeholder.** If any of the three survives into a host configuration file, the directive is broken and the host will read the placeholder as content. Check for `\$KIT_DIR_REL`, `\$ENGINE_VERSION`, and `\$ENGINE_SHA` in the generated block before reporting this step complete.
 
-**Stamp `docs/STATE.md` too.** `<kit>/templates/state-tracker-template.md` ships with an honest placeholder row, `- **Engine Version**: [vX.Y.Z @ short-sha | not stamped — re-run installer]`. When the installer ran, it already replaced that row. When you hand-rendered the directive, stamp the same row with the same `$ENGINE_VERSION` / `$ENGINE_SHA` values, inserting the row if the file predates the engine stamp. Leaving the placeholder untouched is acceptable; leaving a literal `$ENGINE_VERSION` token is not.
+**Stamp `docs/STATE.md` too.** A fresh install writes `- **Engine Version**: <version> @ <short-sha>` into the seeded `docs/STATE.md`; on a re-run the installer replaces an existing row or inserts one after `Last Updated` when the file predates the engine stamp. When you hand-rendered the directive, stamp the same row with the same `$ENGINE_VERSION` / `$ENGINE_SHA` values, inserting it yourself if the row is absent. Leaving a placeholder value untouched is acceptable; leaving a literal `$ENGINE_VERSION` token is not.
 
 ### Installed-Instruction Integrity Boundary
 
