@@ -98,7 +98,7 @@ const work = fs.mkdtempSync(path.join(os.tmpdir(), 'promptkit-courier-exec-'));
 try {
   const fixture = path.join(work, 'fixture', 'promptkit-os-v9.8.7');
   fs.mkdirSync(fixture, { recursive: true });
-  fs.writeFileSync(path.join(fixture, 'init.sh'), '#!/usr/bin/env bash\nprintf "%s\\n" "$@" > "$PROMPTKIT_STUB_MARKER"\n');
+  fs.writeFileSync(path.join(fixture, 'init.sh'), '#!/usr/bin/env bash\nprintf "%s\\n" "$@" > "$PROMPTKIT_STUB_MARKER"\nexit "${PROMPTKIT_STUB_EXIT:-0}"\n');
   fs.writeFileSync(path.join(fixture, 'init.ps1'), '$args | Set-Content -LiteralPath $env:PROMPTKIT_STUB_MARKER\n');
   const archive = path.join(work, 'fixture.tar.gz');
   const packed = spawnSync('tar', ['-czf', archive, '-C', path.join(work, 'fixture'), 'promptkit-os-v9.8.7'], { stdio: 'inherit' });
@@ -136,9 +136,13 @@ try {
     fs.mkdirSync(root, { recursive: true });
     if (!opts.root) {
       fs.writeFileSync(path.join(root, 'keep.txt'), 'untouched');
-      if (opts.overlay) {
+      if (opts.overlay || opts.update) {
         fs.mkdirSync(path.join(root, '.promptkit'));
         fs.writeFileSync(path.join(root, '.promptkit', 'existing.txt'), 'untouched');
+      }
+      if (opts.submodule) {
+        fs.mkdirSync(path.join(root, '.promptkit'));
+        fs.writeFileSync(path.join(root, '.promptkit', '.git'), 'gitdir: fixture\n');
       }
     }
     const fetchMarker = path.join(work, `${name}-fetch.txt`);
@@ -148,6 +152,7 @@ try {
     const env = { ...process.env, NODE_OPTIONS: `--require=${JSON.stringify(preload)}`,
       PROMPTKIT_STUB_ARCHIVE: opts.archive || archive, PROMPTKIT_STUB_FETCH_MARKER: fetchMarker,
       PROMPTKIT_STUB_MARKER: installerMarker };
+    if (opts.installerExit !== undefined) env.PROMPTKIT_STUB_EXIT = String(opts.installerExit);
     if (opts.path !== undefined) env.PATH = opts.path;
     delete env.PROMPTKIT_TARBALL_SHA256;
     delete env.PROMPTKIT_REQUIRE_INTEGRITY_PIN;
@@ -174,17 +179,18 @@ try {
     assert.equal(fs.existsSync(kitDir), opts.kit ?? true, `${name}: target mutation`);
     if (opts.kitEntries) assert.deepEqual(fs.readdirSync(kitDir).sort(), [...opts.kitEntries].sort(), `${name}: kit contents`);
     assert.equal(fs.readFileSync(path.join(root, 'keep.txt'), 'utf8'), 'untouched');
-    if (opts.overlay) assert.equal(fs.readFileSync(path.join(kitDir, 'existing.txt'), 'utf8'), 'untouched');
+    if (opts.overlay && !opts.update) assert.equal(fs.readFileSync(path.join(kitDir, 'existing.txt'), 'utf8'), 'untouched');
+    if (opts.update) assert.ok(!fs.existsSync(path.join(kitDir, 'existing.txt')), `${name}: update kept a stale entry`);
     if (opts.message) assert.match(diagnostic, opts.message, `${name}: diagnostic`);
     if (fetched) assert.match(fs.readFileSync(fetchMarker, 'utf8'), /archive\/refs\/tags\/v9\.8\.7\.tar\.gz$/);
     if (installed) {
-      assert.ok(fs.existsSync(path.join(kitDir, 'init.sh')), `${name}: archive extracted`);
+      if (opts.kit !== false) assert.ok(fs.existsSync(path.join(kitDir, 'init.sh')), `${name}: archive extracted`);
       const forwarded = fs.readFileSync(installerMarker, 'utf8').trim().split(/\r?\n/);
-      assert.deepEqual(forwarded, [...args.filter(arg => arg !== '--force'), root, `--engine-version=v${version}`], `${name}: installer arguments`);
-    } else if (!opts.overlay) {
+      assert.deepEqual(forwarded, [...args.filter(arg => arg !== '--force' && arg !== '--update'), root, `--engine-version=v${version}`], `${name}: installer arguments`);
+    } else if (!opts.overlay && !opts.submodule) {
       assert.deepEqual(fs.readdirSync(root), ['keep.txt'], `${name}: no project mutation`);
     }
-    assert.ok(!fs.readdirSync(root).some((entry) => entry.startsWith('.promptkit-staging-')), `${name}: staging directory left behind`);
+    assert.ok(!fs.readdirSync(root).some((entry) => entry.startsWith('.promptkit-staging-') || entry.startsWith('.promptkit-backup-')), `${name}: staging or backup directory left behind`);
     console.log(`PASS|${name}: exit=${result.status}, fetch=${fetched}, target=${fs.existsSync(kitDir)}, installer=${installed}`);
     cases++;
   }
@@ -206,6 +212,15 @@ try {
   run('missing-tar', good, { path: emptyBin, exit: 1, install: false, kit: false, message: /tar not found on PATH/ });
   run('force-with-corrupt-archive', good, { overlay: true, args: ['--force'], archive: corruptArchive, override: corruptDigest, exit: 1, install: false, kit: true, kitEntries: ['existing.txt'], message: /failed to extract release tarball/ });
   run('corrupt-archive-retry', good, { root: path.join(work, 'projects', 'corrupt-archive'), kitEntries: ['init.sh', 'init.ps1'], message: /verified release tarball integrity/ });
+  // --update replaces a courier install atomically; it must never forward the
+  // courier-only flag, resurrect a stale entry, or leave a backup behind.
+  run('update-replaces-courier-install', good, { update: true, args: ['--update', '--balanced'], kitEntries: ['init.sh', 'init.ps1'], message: /verified release tarball integrity/ });
+  run('update-refuses-submodule', good, { submodule: true, args: ['--update'], exit: 1, fetch: false, install: false, message: /git-submodule install/ });
+  run('update-requires-existing-install', good, { args: ['--update'], exit: 1, fetch: false, install: false, kit: false, message: /no \.promptkit\/ to update/ });
+  run('update-rejects-force', good, { overlay: true, args: ['--update', '--force'], exit: 1, fetch: false, install: false, message: /mutually exclusive/ });
+  // A cancel (130) removes only a kit this run created and keeps a pre-existing one.
+  run('cancel-removes-fresh-kit', good, { installerExit: 130, exit: 130, kit: false, message: /removed the newly created \.promptkit\// });
+  run('cancel-keeps-forced-overlay', good, { overlay: true, installerExit: 130, args: ['--force'], exit: 130, kitEntries: ['existing.txt', 'init.sh', 'init.ps1'], message: /existing \.promptkit\/ left unchanged/ });
   console.log(`PASS|${cases} executable courier policy fixtures (stub archive, no real installer)`);
 } finally {
   if (!work.startsWith(path.resolve(os.tmpdir()) + path.sep)) throw new Error('refusing to remove unexpected fixture path');

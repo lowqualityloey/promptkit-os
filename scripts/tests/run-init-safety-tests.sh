@@ -1703,6 +1703,37 @@ git -C "$README_HOST" -c protocol.file.allow=always submodule add -q --force --n
 # The name was exported so the later commands see it, the way one shell would.
 unset name
 
+# Test 38a: --solo-fast writes the preset machine line and leaves the profile alone
+PRESET_ROOT="$TEST_ROOT/preset_solo"
+mkdir -p "$PRESET_ROOT"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --lite --solo-fast "$PRESET_ROOT" >/dev/null
+grep -q '^profile: lite$' "$PRESET_ROOT/PROMPTKIT.md"
+grep -q '^preset: solo-fast$' "$PRESET_ROOT/PROMPTKIT.md"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --lite --solo-fast "$PRESET_ROOT" >/dev/null
+[[ "$(grep -c '^preset: solo-fast$' "$PRESET_ROOT/PROMPTKIT.md")" -eq 1 ]]
+
+# Test 38b: --host=codex shares the universal AGENTS.md target, like gemini
+CODEX_ROOT="$TEST_ROOT/host_codex"
+mkdir -p "$CODEX_ROOT"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --host=codex "$CODEX_ROOT" >/dev/null
+grep -q 'PROMPTKIT_START' "$CODEX_ROOT/AGENTS.md"
+[[ ! -e "$CODEX_ROOT/CODEX.md" ]]
+
+# Test 38c: the interactive picker is disabled below Bash 4. The host running
+# this suite has a modern Bash, so the guard is asserted at the source line that
+# implements it instead of by downgrading the interpreter.
+grep -q 'BASH_VERSINFO\[0\]' "$REPO_ROOT/init.sh"
+grep -A2 'BASH_VERSINFO\[0\]' "$REPO_ROOT/init.sh" | grep -q 'PICKER_TTY=0'
+
+# Test 38d: no dead 'back' key binding remains in the terminal picker
+if grep -q 'PK_PICKER_KEY=back' "$REPO_ROOT/scripts/terminal-picker.sh"; then
+    echo "terminal-picker.sh still binds a 'back' key that neither picker handles." >&2
+    exit 1
+fi
+
+# Test 38e: a failed Turbo confirmation read cancels instead of continuing
+grep -qF 'Acknowledge this and enable Turbo? [y/N]: " choice || cancel_setup' "$REPO_ROOT/init.sh"
+
 # Test 37: manifest coverage guard. Every engine-relative path the installers
 # resolve must be a row of scripts/setup-assert-files.txt or sit on the
 # exemption list below with a written reason. The manifest is what the installer
