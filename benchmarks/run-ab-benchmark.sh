@@ -59,6 +59,14 @@
 set -euo pipefail
 export LC_ALL=C
 
+# Bash 4 is required for associative arrays and readarray-style builtins; fail with
+# an actionable message before Bash 3.2 (macOS /bin/bash) trips over a syntax error.
+if (( BASH_VERSINFO[0] < 4 )); then
+    echo "Bash 4.0+ required (found $BASH_VERSION)." >&2
+    echo "macOS ships Bash 3.2; install a newer Bash (e.g. brew install bash) and run this script explicitly." >&2
+    exit 1
+fi
+
 # The checkout this script ships in. A packet records the engine root as
 # <engine> instead of the operator's absolute checkout path, so --finalize
 # resolves that placeholder here and reports when this checkout is not the one
