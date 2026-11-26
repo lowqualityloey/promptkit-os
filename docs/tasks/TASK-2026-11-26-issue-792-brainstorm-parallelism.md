@@ -109,7 +109,7 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `git diff --check clean; validate-execution-control VALID|RECORDS=82|ROOT=.; validate-references All references valid with zero trigger warnings; run-token-budget-tests Passed 8 Failed 0; measure-tokens BALANCED|2404|2425|PASS and LITE|1415|1450|PASS; measure-ceremony-overhead CEREMONY_GATE|PASS; measure-tokenizer-delta four rows PASS; run-doctor-tests Passed 48 Failed 0; run-behavioral-contract-tests Passed 817 Failed 0.`
+- **Verification Evidence**: `Combined tree after rebasing onto #791: git diff --check clean; validate-execution-control VALID|RECORDS=84|ROOT=.; validate-references All references valid with zero trigger warnings; run-token-budget-tests Passed 8 Failed 0; measure-tokens BALANCED|2404|2425|PASS and LITE|1415|1450|PASS; measure-ceremony-overhead CEREMONY_GATE|PASS with SETUP 3078 and L2 998; measure-tokenizer-delta four rows PASS; run-doctor-tests Passed 52 Failed 0; run-behavioral-contract-tests Passed 831 Failed 0.`
 - **Behavior IDs**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
@@ -123,6 +123,6 @@
 
 - **Completion State**: `awaiting_review`
 - **Acceptance Results**: `AC-1 pending; AC-2 pending; AC-3 pending; AC-4 pending`
-- **Changed-File Summary**: `Adds a zero-artifact divergent pre-intake for pk:brainstorm inside workflows/plan.md with a one-direction promotion handoff; splits delegation policy so read-only fan-out is allowed in Balanced while parallel write waves keep the Turbo, pre-flight and worktree gates; registers the alias in the router, setup registry, workflow map, README and Turbo guide; teaches the reference validator the alias; re-propagates workflow totals 120,510 to 120,917 and the pk:plan payload to 21,424 Balanced and 20,435 Lite.`
+- **Changed-File Summary**: `Adds a zero-artifact divergent pre-intake for pk:brainstorm inside workflows/plan.md with a one-direction promotion handoff; splits delegation policy so read-only fan-out is allowed in Balanced while parallel write waves keep the Turbo, pre-flight and worktree gates; registers the alias in the router, setup registry, workflow map, README and Turbo guide; teaches the reference validator the alias; re-propagates combined workflow totals to 122,153 tok (core-six 34,058) with the pk:plan payload at 21,424 Balanced and 20,435 Lite.`
 - **Completion Exception**: `None`
 - **Completion Decision and Timestamp**: `Awaiting review with local gates green, 2026-11-26 07:30 UTC`

@@ -1,6 +1,6 @@
 # PromptKit OS Architecture & Token Economics Analysis
 
-**Historical baseline:** 2026-09-14 on `main` (v1.6.0) · **Current measurements:** last committed 2026-11-26 at `7302872`, the telemetry and state-guard de-cluttering (issue #791) rebased onto the #790 Lite record forms: compact Markdown routine telemetry, honest checkpoint spend, a `state-freshness` doctor row, SETUP 3,021 → 3,078 tok, combined core-six 33,814 tok and full workflow set 121,208 tok, Level 2 998 tok / band 1,977–6,478 unchanged, directives unchanged at 2,404 Balanced / 1,415 Lite; this documentation-only commit restates the anchor to it because a commit cannot contain its own SHA. Prior anchor `1afa37b` (#790 merge); earlier anchors in §11. · **Method:** `bytes / 4` via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 19,794 tok / full set 75,505 tok.
+**Historical baseline:** 2026-09-14 on `main` (v1.6.0) · **Current measurements:** last committed 2026-11-26 at `692ba38`, the divergent-brainstorm and read-only parallelism change (issue #792) rebased onto the #790/#791 record and telemetry work: full workflow set 121,208 → 122,153 tok and core-six 33,814 → 34,058, `pk:plan` gains the zero-artifact divergent mode, Balanced permits read-only fan-out without the Turbo gate, SETUP 3,078 tok, Level 2 998 tok / band 1,977–6,478 unchanged, directives unchanged at 2,404 Balanced / 1,415 Lite; this documentation-only commit restates the anchor to it because a commit cannot contain its own SHA. Prior anchor `4cad266` (#791 merge); earlier anchors in §11. · **Method:** `bytes / 4` via `scripts/measure-tokens.sh` · Historical monolithic baseline: core-6 19,794 tok / full set 75,505 tok.
 
 This document provides a factual, mechanically verifiable analysis of the token economics, context window preservation, and engineering ROI of the PromptKit OS architecture. All numbers below can be reproduced via `bash scripts/measure-tokens.sh [file]` and `wc -c workflows/*.md`.
 
@@ -15,7 +15,7 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    MONOLITHIC MEGA-PROMPT MODEL                         │
-│ Every Turn: [26 Inlined Workflows (121,208 tok) + Templates + Protocols] │
+│ Every Turn: [26 Inlined Workflows (122,153 tok) + Templates + Protocols] │
 │ Context Window Waste: High static token bloat on every single message   │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -40,8 +40,8 @@ PromptKit OS uses a **Just-In-Time (JIT) Filesystem Architecture**:
 
 | Inventory | Workflow Files | Measured Tokens |
 | :--- | ---: | ---: |
-| Core-six Lite subset | 6 | **33,814 tok** |
-| Full workflow set | 26 | **121,208 tok** |
+| Core-six Lite subset | 6 | **34,058 tok** |
+| Full workflow set | 26 | **122,153 tok** |
 
 ¹ Current core-subset baseline is the live sum of the six workflow files loaded by the Lite profile (route, debug, commit, checkpoint, sync, profile); the full-set baseline includes every `workflows/*.md` file. The inventory values above are regenerated from the checked-out source revision. Historical values at the 2026-09-14 measurement were 19,794 and 75,505 tok, respectively; the previous unsourced "18.5k" constant is retired.
 
@@ -396,6 +396,7 @@ The banner at the top of this file is deliberately short: it names the current a
 
 | Date | Anchor | Change | Figures it moved |
 | :--- | :--- | :--- | :--- |
+| 2026-11-26 | `692ba38` | #792 divergent pk:brainstorm + Balanced read-only parallelism (rebased on #791) | combined full set 121,208 → 122,153 tok; combined core-six 33,814 → 34,058; `pk:plan` and `plan.md`/`route.md` §9 tokenizer rows moved; directives unchanged |
 | 2026-11-26 | `7302872` | #791 compact telemetry + honest checkpoint spend + STATE freshness guard (rebased on #790) | SETUP 3,021 → 3,078 tok (12,084 → 12,312 B); Level 2 requirement stays 998 tok and band 1,977–6,478; combined core-six 33,814 tok and full set 121,208 tok; directives unchanged |
 | 2026-11-26 | `b9604e3` | #790 L2 Lite record forms + Solo/Fast preset | L2 ceremony 5,372 → 998 tok; band 6,351–10,852 → 1,977–6,478; core-six 32,985 → 33,475; full set 119,972 → 120,510; directives unchanged |
 | 2026-11-26 | `93e902c` | #788 directive-headroom trim | directive 2,488 → 2,404 Balanced, 1,482 → 1,415 Lite; full-set and core-six unchanged |
