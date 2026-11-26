@@ -21,12 +21,21 @@
 
 - **Objective**: `Make a tagged release archive a clean consumer artefact: exclude every maintainer-only tree, leave no dangling relative link in the shipped documents, and prove by fixture that the extracted tree installs and validates on its own.`
 - **In Scope**:
-- `.gitattributes` export-ignore block for `benchmarks/`, `docs/internal/`, `docs/releases/`, `docs/tasks/`, `docs/reviews/`, `docs/archive/`, `docs/tests/`, `scripts/tests/`, `.github/`, and `.gitattributes` itself
-- `docs/HOST-CONFORMANCE.md`, `docs/BENCHMARKS.md`, `docs/BEHAVIORAL-EVAL.md`, `docs/ENFORCEMENT.md`, `docs/MIGRATION.md`, `docs/token-efficiency-review.md`, `SECURITY.md`, `protocols/context-economy.md`, `workflows/ship.md`, `CHANGELOG.md` relative-link rewiring (49 links)
-- `scripts/tests/run-release-archive-export-tests.sh` and `scripts/tests/run-release-archive-export-tests.ps1`
-- `.github/workflows/ci.yml` fixture wiring (`linux-code-b`, `windows-code-a`)
-- `docs/BENCHMARKS.md` re-propagated figures and the documentation-only provenance restatement
-- `CHANGELOG.md` and this record
+  - `.gitattributes` — export-ignore block for `benchmarks/`, `docs/internal/`, `docs/releases/`, `docs/tasks/`, `docs/reviews/`, `docs/archive/`, `docs/tests/`, `scripts/tests/`, `.github/`, and `.gitattributes` itself
+  - `.github/workflows/ci.yml` — fixture wiring in the `linux-code-b` and `windows-code-a` jobs
+  - `docs/HOST-CONFORMANCE.md` — relative-link rewiring (30 links)
+  - `docs/BENCHMARKS.md` — relative-link rewiring, re-propagated figures, and the documentation-only provenance restatement
+  - `docs/BEHAVIORAL-EVAL.md` — relative-link rewiring (2 links)
+  - `docs/ENFORCEMENT.md` — relative-link rewiring (1 link)
+  - `docs/MIGRATION.md` — relative-link rewiring (1 link)
+  - `docs/token-efficiency-review.md` — relative-link rewiring (1 link)
+  - `SECURITY.md` — relative-link rewiring (1 link)
+  - `protocols/context-economy.md` — relative-link rewiring (1 link)
+  - `workflows/ship.md` — relative-link rewiring (1 link)
+  - `CHANGELOG.md` — one `[Unreleased]` / `### Fixed` entry plus relative-link rewiring (3 links)
+  - `scripts/tests/run-release-archive-export-tests.sh` — Bash archive-export fixture
+  - `scripts/tests/run-release-archive-export-tests.ps1` — PowerShell twin of the archive-export fixture
+  - `docs/tasks/TASK-2026-11-26-issue-787-archive-export-packaging.md` — this record
 - **Explicit Non-Goals**:
   - `No retroactive mutation of historical tags or their archives.`
   - `No change to install behaviour, workflow routing, protocol content, or template inventories.`

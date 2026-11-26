@@ -2424,6 +2424,25 @@ assert_contains "scripts/tests/eval-scenarios/injection-untrusted-content.md" "r
 assert_not_contains "scripts/tests/eval-scenarios/ce-antistarvation-balanced.md" "are not parsed for write intent" "Anti-starvation limitation no longer claims exec lines are unparsed"
 assert_not_contains "scripts/tests/eval-scenarios/ce-antistarvation-lite.md" "are not parsed for write intent" "Lite anti-starvation limitation no longer claims exec lines are unparsed"
 
+# Issue #786: host-conformance counts, the setup registry, and the reference
+# validator inventories are derived and pinned here so they cannot drift apart.
+assert_contains "README.md" "eleven host configurations" "README host matrix counts all eleven registered hosts"
+assert_contains "docs/HOST-CONFORMANCE.md" "full set of 11 host environments" "Host-conformance table declares eleven host environments"
+assert_contains "docs/HOST-CONFORMANCE.md" "recorded against the three" "Host-conformance intro points at the three captured rows"
+assert_contains "protocols/setup.md" "three of its eleven rows carry recorded live captures" "Setup runtime-host note matches the registry"
+assert_contains "protocols/setup.md" "workflows/auto.md" "Setup registry references workflows/auto.md"
+assert_contains "protocols/setup.md" "workflows/refactor.md" "Setup registry references workflows/refactor.md"
+assert_contains "protocols/setup.md" "protocols/setup.md" "Setup registry references setup.md itself"
+assert_not_contains "protocols/setup.md" "reached transitively through the reference list above" "Setup registry drops the disproven transitive discovery claim"
+assert_contains "scripts/validate-references.sh" "EXPECTED_WORKFLOW_COUNT=26" "Bash validator pins the 26-workflow inventory"
+assert_contains "scripts/validate-references.sh" "EXPECTED_PROTOCOL_COUNT=9" "Bash validator pins the 9-protocol inventory"
+assert_contains "scripts/validate-references.sh" "EXPECTED_TEMPLATE_COUNT=29" "Bash validator pins the 29-template inventory"
+assert_contains "scripts/validate-references.sh" "workflow_inventory" "Bash validator derives workflows from the filesystem"
+assert_contains "scripts/validate-references.ps1" "ExpectedWorkflowCount = 26" "PowerShell validator pins the 26-workflow inventory"
+assert_contains "scripts/validate-references.ps1" "ExpectedProtocolCount = 9" "PowerShell validator pins the 9-protocol inventory"
+assert_contains "scripts/validate-references.ps1" "ExpectedTemplateCount = 29" "PowerShell validator pins the 29-template inventory"
+assert_contains "scripts/validate-references.ps1" "WorkflowInventory" "PowerShell validator derives workflows from the filesystem"
+
 echo ""
 echo "📊 Behavioral Contract Verification Summary"
 echo "Passed: $PASS_COUNT | Failed: $FAIL_COUNT"

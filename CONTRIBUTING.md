@@ -37,21 +37,10 @@ Installers run bounded advisory inspection before project writes; `PROMPTKIT_NO_
 ### Bash (macOS / Linux / WSL)
 
 ```bash
-# Validate Bash script syntax
-bash -n init.sh
-bash -n scripts/validate-execution-control.sh
-bash -n scripts/validate-release-records.sh
-bash -n scripts/validate-ci-triage.sh
-bash -n scripts/tests/run-behavioral-contract-tests.sh
-bash -n scripts/tests/run-onboard-divergence-fixtures.sh
-bash -n scripts/tests/run-init-safety-tests.sh
-bash -n scripts/check-checkpoint-ignore.sh
-bash -n scripts/tests/run-checkpoint-ignore-tests.sh
-bash -n scripts/pk
-bash -n scripts/tests/run-pk-entry-points-tests.sh
-bash -n scripts/check-ai-attribution.sh
-bash -n scripts/install-attribution-hook.sh
-bash -n scripts/tests/run-ai-attribution-tests.sh
+# Validate Bash script syntax (every tracked script, matching CI)
+while IFS= read -r script; do
+  bash -n "$script" || exit 1
+done < <(git ls-files '*.sh'; printf '%s\n' scripts/pk)
 
 # Run safety & contract test suites
 bash scripts/tests/run-init-safety-tests.sh
@@ -119,29 +108,9 @@ bash scripts/validate-release-records.sh --root . --strict
 ### PowerShell (Windows / Cross-Platform PowerShell 7)
 
 ```powershell
-# Validate PowerShell script syntax
-$syntaxFiles = @(
-  "init.ps1",
-  "scripts/validate-execution-control.ps1",
-  "scripts/tests/run-execution-control-fixtures.ps1",
-  "scripts/validate-release-records.ps1",
-  "scripts/validate-ci-triage.ps1",
-  "scripts/tests/run-ci-triage-fixtures.ps1",
-  "scripts/tests/run-behavioral-contract-tests.ps1",
-  "scripts/tests/run-onboard-divergence-fixtures.ps1",
-  "scripts/tests/run-init-safety-tests.ps1",
-  "scripts/check-checkpoint-ignore.ps1",
-  "scripts/tests/run-checkpoint-ignore-tests.ps1",
-  "scripts/pk.ps1",
-  "scripts/tests/run-pk-entry-points-tests.ps1",
-  "scripts/check-ai-attribution.ps1",
-  "scripts/install-attribution-hook.ps1",
-  "scripts/tests/run-ai-attribution-tests.ps1",
-  "scripts/render-capture-transcript.ps1",
-  "scripts/tests/run-render-capture-transcript-tests.ps1",
-  "scripts/capture-host-session.ps1",
-  "scripts/tests/run-capture-host-session-tests.ps1"
-)
+# Validate PowerShell script syntax (every tracked script, matching CI)
+$syntaxFiles = @(git ls-files '*.ps1')
+if ($syntaxFiles.Count -eq 0) { throw "No PowerShell scripts were discovered." }
 foreach ($file in $syntaxFiles) {
   $errors = @()
   [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$null, [ref]$errors) | Out-Null
@@ -249,7 +218,7 @@ Mechanical gates catch most resubmission causes; the rest is judgment. Before op
 
 1. **CHANGELOG entry**: behavior-surface changes (`workflows/`, `templates/`, `protocols/`, `package/`, top-level `scripts/`, `benchmarks/run-*.sh`, `init.sh`/`init.ps1`) carry an `[Unreleased]` entry, and that entry must not repeat a heading inside a single version section — one `### Added`, one `### Fixed`, one `### Documentation` per version, with every bullet for that kind under it. A repeated heading splits one logical group across the file and breaks the Keep a Changelog shape the file's own header promises. Gate: `scripts/check-changelog-entry.sh` (+ `.ps1` twin), CI-wired against `origin/main`; it reads the committed blob first so uncommitted edits cannot mask the range, ignores fenced code blocks, and fails with `CHANGELOG_GATE|DUPLICATE-HEADING` naming each repeated heading and its occurrence count. Regression coverage is C4/C5 in `scripts/tests/run-changelog-gate-tests.sh` (+ `.ps1` twin).
 2. **No stale pending language**: "pending <authority action>" text must not survive the merge that resolves it. The countersignature-consistency scenario in the behavioral twins covers retro chains; sweep your own diff for the pattern.
-3. **Twin parity**: every behavior change ships in both `.sh` and `.ps1`; new scripts join both CI syntax lists; new fixture cases register in the shared manifests.
+3. **Twin parity**: every behavior change ships in both `.sh` and `.ps1`; the CI syntax sweeps discover tracked `*.sh` (plus the extensionless `scripts/pk`) and `*.ps1` with `git ls-files`, so a new script is parsed automatically and neither job carries a hand-maintained list; new fixture cases register in the shared manifests.
 4. **Measured-figure anchor**: `docs/BENCHMARKS.md` stamps its figures with `**Current measurements:** <date> at `<commit>``. Editing any measured input — `workflows/`, `protocols/code-quality-gate.md`, or a measured template (`agent-directive-template.md`, `agent-directive-lite-template.md`, `tech-spec-template.md`, `release-checklist.md`) — requires restating that anchor to the commit you measured at **and** re-propagating every published figure. The twin suites enforce this: if the anchor does not resolve, or resolves and a measured input changed after it, the run fails — the unresolvable case fails closed (#568), not skipped. The anchor must be a commit **on `main`**: a squash- or rebase-merged PR-branch commit is not on `main`, resolves only while the PR branch is still fetched, and fails the suite (fail-closed, not skipped) once the branch is deleted or unfetched — so **merge anchor-bearing PRs with a merge commit, never squash or rebase**, keeping the anchor commit an ancestor of `main` regardless of whether the PR branch is later retained. The guard resolves the anchor with `git cat-file -e`, so it can only pass in a clone that actually contains that commit: **a shallow clone cannot pass this suite.** CI checks out with `fetch-depth: 0`; clone without `--depth` locally, or run `git fetch --unshallow` before validating, or the run fails with `provenance anchor <sha> is unreachable` on a tree that is in fact correct. `docs/BENCHMARKS.md` §9 (the `bytes/4` vs. real-tokenizer comparison) is the one exception to enforcement: `scripts/measure-tokenizer-delta.sh` always exits 0 and prints `SKIPPED` without `tiktoken`, so no gate can catch it going stale. Re-run it in the same change that touches a measured input — `pip install tiktoken`, then `bash scripts/measure-tokenizer-delta.sh` — and update the table, its `**Provenance:**` line, and any verdict sentence in §9 that quotes a ratio.
 5. **Encoded policy has a prose referent**: graphs, enums, and budgets enforced by scripts are also stated where users read them, with mechanical parity where it matters.
 6. **PR body**: `templates/pull-request-template.md` sections, acceptance criteria with in-turn evidence, and a top-level `Closes #N` line so the merge closes the issue.

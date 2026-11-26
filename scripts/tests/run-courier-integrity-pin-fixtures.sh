@@ -104,6 +104,14 @@ try {
   const packed = spawnSync('tar', ['-czf', archive, '-C', path.join(work, 'fixture'), 'promptkit-os-v9.8.7'], { stdio: 'inherit' });
   assert.equal(packed.status, 0, `stub archive creation: ${packed.error || packed.status}`);
   const digest = crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
+  // Deliberately invalid archive bytes, pinned by their own digest so the integrity
+  // gate passes and the failure has to come from tar itself. An empty PATH directory
+  // simulates a host with no tar at all.
+  const corruptArchive = path.join(work, 'corrupt.tar.gz');
+  fs.writeFileSync(corruptArchive, Buffer.from('this is not a tar archive\n'));
+  const corruptDigest = crypto.createHash('sha256').update(fs.readFileSync(corruptArchive)).digest('hex');
+  const emptyBin = path.join(work, 'empty-bin');
+  fs.mkdirSync(emptyBin);
   const marker = '  // @pin-insert';
   assert.equal(source.split(marker).length, 2, 'exactly one pin insertion point');
   const pin = (value) => source.replace(marker, `  "${version}": "${value}",\n${marker}`);
@@ -124,20 +132,23 @@ try {
   fs.writeFileSync(preload, `const fs=require('node:fs');\nglobalThis.fetch=async url=>{fs.writeFileSync(process.env.PROMPTKIT_STUB_FETCH_MARKER,String(url));return {ok:true,arrayBuffer:async()=>fs.readFileSync(process.env.PROMPTKIT_STUB_ARCHIVE)};};\n`);
   let cases = 0;
   function run(name, bin, opts = {}) {
-    const root = path.join(work, 'projects', name);
+    const root = opts.root || path.join(work, 'projects', name);
     fs.mkdirSync(root, { recursive: true });
-    fs.writeFileSync(path.join(root, 'keep.txt'), 'untouched');
-    if (opts.overlay) {
-      fs.mkdirSync(path.join(root, '.promptkit'));
-      fs.writeFileSync(path.join(root, '.promptkit', 'existing.txt'), 'untouched');
+    if (!opts.root) {
+      fs.writeFileSync(path.join(root, 'keep.txt'), 'untouched');
+      if (opts.overlay) {
+        fs.mkdirSync(path.join(root, '.promptkit'));
+        fs.writeFileSync(path.join(root, '.promptkit', 'existing.txt'), 'untouched');
+      }
     }
     const fetchMarker = path.join(work, `${name}-fetch.txt`);
     const installerMarker = path.join(work, `${name}-installer.txt`);
     const stdout = path.join(work, `${name}-stdout.txt`);
     const stderr = path.join(work, `${name}-stderr.txt`);
     const env = { ...process.env, NODE_OPTIONS: `--require=${JSON.stringify(preload)}`,
-      PROMPTKIT_STUB_ARCHIVE: archive, PROMPTKIT_STUB_FETCH_MARKER: fetchMarker,
+      PROMPTKIT_STUB_ARCHIVE: opts.archive || archive, PROMPTKIT_STUB_FETCH_MARKER: fetchMarker,
       PROMPTKIT_STUB_MARKER: installerMarker };
+    if (opts.path !== undefined) env.PATH = opts.path;
     delete env.PROMPTKIT_TARBALL_SHA256;
     delete env.PROMPTKIT_REQUIRE_INTEGRITY_PIN;
     if (opts.override !== undefined) env.PROMPTKIT_TARBALL_SHA256 = opts.override;
@@ -161,6 +172,7 @@ try {
     assert.equal(fetched, opts.fetch ?? true, `${name}: fetch`);
     assert.equal(installed, opts.install ?? true, `${name}: stub installer`);
     assert.equal(fs.existsSync(kitDir), opts.kit ?? true, `${name}: target mutation`);
+    if (opts.kitEntries) assert.deepEqual(fs.readdirSync(kitDir).sort(), [...opts.kitEntries].sort(), `${name}: kit contents`);
     assert.equal(fs.readFileSync(path.join(root, 'keep.txt'), 'utf8'), 'untouched');
     if (opts.overlay) assert.equal(fs.readFileSync(path.join(kitDir, 'existing.txt'), 'utf8'), 'untouched');
     if (opts.message) assert.match(diagnostic, opts.message, `${name}: diagnostic`);
@@ -172,6 +184,7 @@ try {
     } else if (!opts.overlay) {
       assert.deepEqual(fs.readdirSync(root), ['keep.txt'], `${name}: no project mutation`);
     }
+    assert.ok(!fs.readdirSync(root).some((entry) => entry.startsWith('.promptkit-staging-')), `${name}: staging directory left behind`);
     console.log(`PASS|${name}: exit=${result.status}, fetch=${fetched}, target=${fs.existsSync(kitDir)}, installer=${installed}`);
     cases++;
   }
@@ -187,6 +200,12 @@ try {
   run('wrong-embedded-pin', wrongPin, { exit: 1, install: false, kit: false, message: /tarball integrity mismatch/ });
   run('nonempty-target-guard', good, { overlay: true, exit: 1, fetch: false, install: false, message: /Refusing to overlay/ });
   run('explicit-force-and-profile', good, { overlay: true, args: ['--force', '--turbo', '--experimental', '--host=claude', '--tracking=on'], message: /verified release tarball integrity/ });
+  // AC-2: a tar failure must leave no .promptkit/ and no staging leftovers, and a clean
+  // retry in the same project must then succeed.
+  run('corrupt-archive', good, { archive: corruptArchive, override: corruptDigest, exit: 1, install: false, kit: false, message: /failed to extract release tarball \(tar exit \d+\)/ });
+  run('missing-tar', good, { path: emptyBin, exit: 1, install: false, kit: false, message: /tar not found on PATH/ });
+  run('force-with-corrupt-archive', good, { overlay: true, args: ['--force'], archive: corruptArchive, override: corruptDigest, exit: 1, install: false, kit: true, kitEntries: ['existing.txt'], message: /failed to extract release tarball/ });
+  run('corrupt-archive-retry', good, { root: path.join(work, 'projects', 'corrupt-archive'), kitEntries: ['init.sh', 'init.ps1'], message: /verified release tarball integrity/ });
   console.log(`PASS|${cases} executable courier policy fixtures (stub archive, no real installer)`);
 } finally {
   if (!work.startsWith(path.resolve(os.tmpdir()) + path.sep)) throw new Error('refusing to remove unexpected fixture path');

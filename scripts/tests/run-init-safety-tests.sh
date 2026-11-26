@@ -3,6 +3,14 @@
 
 set -euo pipefail
 
+# Bash 4 is required for associative arrays and readarray-style builtins; fail with
+# an actionable message before Bash 3.2 (macOS /bin/bash) trips over a syntax error.
+if (( BASH_VERSINFO[0] < 4 )); then
+    echo "Bash 4.0+ required (found $BASH_VERSION)." >&2
+    echo "macOS ships Bash 3.2; install a newer Bash (e.g. brew install bash) and run this script explicitly." >&2
+    exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TEST_ROOT="$(mktemp -d)"
@@ -483,6 +491,63 @@ TRAILING_ROOT="$TEST_ROOT/trailingdotdot"
 mkdir -p "$TRAILING_ROOT"
 if HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --target=docs/.. "$TRAILING_ROOT" >/dev/null 2>&1; then
     echo "Trailing --target=docs/.. was accepted; expected rejection." >&2
+    exit 1
+fi
+
+# Test 21a: unknown flag fails closed before any file is created (AC-1)
+PARSER_UNKNOWN="$TEST_ROOT/parser_unknown_flag"
+mkdir -p "$PARSER_UNKNOWN"
+set +e
+parser_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --unknown-flag "$PARSER_UNKNOWN" 2>&1)"
+parser_status=$?
+set -e
+[[ "$parser_status" -eq 1 ]]
+grep -qF -- 'Unknown flag: --unknown-flag' <<< "$parser_out"
+grep -qF -- 'Use --help for usage.' <<< "$parser_out"
+[[ -z "$(ls -A "$PARSER_UNKNOWN")" ]]
+
+# Test 21b: unknown tracking value fails closed instead of installing (AC-1)
+PARSER_TRACKING="$TEST_ROOT/parser_unknown_tracking"
+mkdir -p "$PARSER_TRACKING"
+set +e
+parser_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --tracking=invalid "$PARSER_TRACKING" 2>&1)"
+parser_status=$?
+set -e
+[[ "$parser_status" -eq 1 ]]
+grep -qF -- 'Unknown tracking: invalid (use local|github|jira|linear)' <<< "$parser_out"
+[[ -z "$(ls -A "$PARSER_TRACKING")" ]]
+
+# Test 21c: two positional project roots fail closed instead of installing into either (AC-1)
+PARSER_MULTI_A="$TEST_ROOT/parser_multi_a"
+PARSER_MULTI_B="$TEST_ROOT/parser_multi_b"
+mkdir -p "$PARSER_MULTI_A" "$PARSER_MULTI_B"
+set +e
+parser_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" "$PARSER_MULTI_A" "$PARSER_MULTI_B" 2>&1)"
+parser_status=$?
+set -e
+[[ "$parser_status" -eq 1 ]]
+grep -qE 'Multiple project roots provided: .*parser_multi_a and .*parser_multi_b' <<< "$parser_out"
+[[ -z "$(ls -A "$PARSER_MULTI_A")" ]]
+[[ -z "$(ls -A "$PARSER_MULTI_B")" ]]
+
+# Test 21d: --help and -h are byte-identical and document every option (AC-1)
+help_long="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --help)"
+help_short="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" -h)"
+[[ "$help_long" == "$help_short" ]]
+grep -qF -- 'Usage: ./init.sh [options] [project-root]' <<< "$help_long"
+for help_option in --lite --balanced --turbo --experimental --tracking= --host= --add-host= --reconfigure --target= --help; do
+    grep -qF -- "$help_option" <<< "$help_long"
+done
+grep -qF -- '-h, --help' <<< "$help_long"
+
+# Test 21e: the two engines document the same option set (init.sh help vs init.ps1 Show-InitHelp)
+sh_help_options="$(grep -oE -- '--[a-z][a-z0-9-]*(=[^ ]*)?' <<< "$help_long" | sed 's/=.*//' | sort -u)"
+ps1_help_options="$(awk '/^function Show-InitHelp \{/{flag=1;next} flag&&/^\}/{exit} flag' "$REPO_ROOT/init.ps1" | grep -oE -- '--[a-z][a-z0-9-]*(=[^ ]*)?' | sed 's/=.*//' | sort -u)"
+[[ -n "$sh_help_options" ]]
+[[ -n "$ps1_help_options" ]]
+if [[ "$sh_help_options" != "$ps1_help_options" ]]; then
+    echo "init.sh and init.ps1 document different option sets." >&2
+    diff <(printf '%s\n' "$sh_help_options") <(printf '%s\n' "$ps1_help_options") >&2 || true
     exit 1
 fi
 
@@ -1718,4 +1783,4 @@ for manifest_entry in "${MANIFEST_EXEMPTIONS[@]}"; do
         exit 1
     fi
 done
-echo "init.sh non-destructive update, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, and the PowerShell twin pinned by shape) tests passed."
+echo "init.sh non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical --help/-h with the full option list and option-token parity against init.ps1's Show-InitHelp, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, and the PowerShell twin pinned by shape) tests passed."
