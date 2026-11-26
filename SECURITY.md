@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-Report vulnerabilities privately through GitHub's **Report a vulnerability** flow (this repository → *Security* tab → *Advisories* → *Report a vulnerability*). Do not open a public issue for security reports. Include the affected version (npm package version or repository commit), a reproduction, and an impact assessment. Reports are triaged by the maintainer; fixes ship through the normal release process ([`docs/internal/release-evaluation.md`](docs/internal/release-evaluation.md)).
+Report vulnerabilities privately through GitHub's **Report a vulnerability** flow (this repository → *Security* tab → *Advisories* → *Report a vulnerability*). Do not open a public issue for security reports. Include the affected version (npm package version or repository commit), a reproduction, and an impact assessment. Reports are triaged by the maintainer; fixes ship through the normal release process ([`docs/internal/release-evaluation.md`](https://github.com/lowqualityloey/promptkit-os/blob/main/docs/internal/release-evaluation.md)).
 
 ## Supply-Chain Model
 

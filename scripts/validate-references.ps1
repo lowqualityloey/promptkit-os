@@ -270,95 +270,77 @@ foreach ($file in $AllMarkdownFiles) {
     }
 }
 
-# Validate template directory completeness
+# Validate template directory completeness from the filesystem inventory
 Write-Host "`n📋 Checking template directory completeness..." -ForegroundColor Cyan
 
-$ExpectedTemplates = @(
-    "project-profile-template.md",
-    "design-profile-template.md",
-    "state-tracker-template.md",
-    "tech-spec-template.md",
-    "adr-template.md",
-    "data-model-spec.md",
-    "auth-matrix-template.md",
-    "api-contract-spec.md",
-    "test-plan-template.md",
-    "release-checklist.md",
-    "pull-request-template.md",
-    "perf-audit-template.md",
-    "issue-task-template.md",
-    "rca-postmortem-template.md",
-    "code-review-checklist.md",
-    "design-tokens-spec.md",
-    "spike-template.md",
-    "ci-triage-template.md",
-    "execution-scope-change-template.md",
-    "friction-evaluation-template.md"
-)
+$ExpectedTemplateCount = 29
+$TemplateInventory = @(Get-ChildItem -Path $TemplatesDir -Filter *.md -File | Sort-Object Name)
 
-foreach ($template in $ExpectedTemplates) {
-    $path = Join-Path $TemplatesDir $template
-    if (Test-Path $path) {
-        Write-Host "  ✅ templates/$template" -ForegroundColor Green
+if ($TemplateInventory.Count -ne $ExpectedTemplateCount) {
+    Write-Host "  ❌ MISSING templates: expected $ExpectedTemplateCount markdown templates, found $($TemplateInventory.Count)" -ForegroundColor Red
+    $script:ErrorCount++
+}
+
+foreach ($template in $TemplateInventory) {
+    $path = Join-Path $TemplatesDir $template.Name
+    if ((Get-Item $path).Length -gt 0) {
+        Write-Host "  ✅ templates/$($template.Name)" -ForegroundColor Green
     } else {
-        Write-Host "  ❌ MISSING: templates/$template" -ForegroundColor Red
+        Write-Host "  ❌ EMPTY: templates/$($template.Name)" -ForegroundColor Red
         $script:ErrorCount++
     }
 }
 
-# Validate core workflow files exist
+# Workflows: the inventory is the directory itself; ADR 0002 requires each one
+# to carry a reference row in protocols/setup.md.
 Write-Host "`n🔄 Checking core workflow files..." -ForegroundColor Cyan
 
-$CoreWorkflows = @(
-    "route.md",
-    "tutor.md",
-    "plan.md",
-    "onboard.md",
-    "tasks.md",
-    "data.md",
-    "auth.md",
-    "api.md",
-    "test.md",
-    "design-system.md",
-    "research.md",
-    "debug.md",
-    "fix.md",
-    "perf.md",
-    "review.md",
-    "commit.md",
-    "pr.md",
-    "ship.md",
-    "checkpoint.md",
-    "sync.md",
-    "reflect.md"
-)
+$SetupProtocolPath = Join-Path $ProtocolsDir "setup.md"
+$ExpectedWorkflowCount = 26
+$WorkflowInventory = @(Get-ChildItem -Path $WorkflowsDir -Filter *.md -File | Sort-Object Name)
 
-foreach ($workflow in $CoreWorkflows) {
-    $path = Join-Path $WorkflowsDir $workflow
-    if (Test-Path $path) {
-        Write-Host "  ✅ workflows/$workflow" -ForegroundColor Green
+if ($WorkflowInventory.Count -ne $ExpectedWorkflowCount) {
+    Write-Host "  ❌ MISSING workflows: expected $ExpectedWorkflowCount workflows, found $($WorkflowInventory.Count)" -ForegroundColor Red
+    $script:ErrorCount++
+}
+
+foreach ($workflow in $WorkflowInventory) {
+    $path = Join-Path $WorkflowsDir $workflow.Name
+    if ((Get-Item $path).Length -eq 0) {
+        Write-Host "  ❌ EMPTY: workflows/$($workflow.Name)" -ForegroundColor Red
+        $script:ErrorCount++
+        continue
+    }
+    if (Select-String -Path $SetupProtocolPath -SimpleMatch -Quiet -Pattern ("workflows/" + $workflow.Name)) {
+        Write-Host "  ✅ workflows/$($workflow.Name)" -ForegroundColor Green
     } else {
-        Write-Host "  ❌ MISSING: workflows/$workflow" -ForegroundColor Red
+        Write-Host "  ❌ UNREGISTERED in protocols/setup.md: workflows/$($workflow.Name)" -ForegroundColor Red
         $script:ErrorCount++
     }
 }
 
-# Validate protocol files
+# Protocols: same derivation, same registration requirement, setup.md included.
 Write-Host "`n📜 Checking protocol files..." -ForegroundColor Cyan
 
-$CoreProtocols = @(
-    "setup.md",
-    "context-sync.md",
-    "code-quality-gate.md",
-    "subagent-delegation.md"
-)
+$ExpectedProtocolCount = 9
+$ProtocolInventory = @(Get-ChildItem -Path $ProtocolsDir -Filter *.md -File | Sort-Object Name)
 
-foreach ($protocol in $CoreProtocols) {
-    $path = Join-Path $ProtocolsDir $protocol
-    if (Test-Path $path) {
-        Write-Host "  ✅ protocols/$protocol" -ForegroundColor Green
+if ($ProtocolInventory.Count -ne $ExpectedProtocolCount) {
+    Write-Host "  ❌ protocols/: expected $ExpectedProtocolCount protocols, found $($ProtocolInventory.Count)" -ForegroundColor Red
+    $script:ErrorCount++
+}
+
+foreach ($protocol in $ProtocolInventory) {
+    $path = Join-Path $ProtocolsDir $protocol.Name
+    if ((Get-Item $path).Length -eq 0) {
+        Write-Host "  ❌ EMPTY: protocols/$($protocol.Name)" -ForegroundColor Red
+        $script:ErrorCount++
+        continue
+    }
+    if (Select-String -Path $SetupProtocolPath -SimpleMatch -Quiet -Pattern ("protocols/" + $protocol.Name)) {
+        Write-Host "  ✅ protocols/$($protocol.Name)" -ForegroundColor Green
     } else {
-        Write-Host "  ❌ MISSING: protocols/$protocol" -ForegroundColor Red
+        Write-Host "  ❌ UNREGISTERED in protocols/setup.md: protocols/$($protocol.Name)" -ForegroundColor Red
         $script:ErrorCount++
     }
 }

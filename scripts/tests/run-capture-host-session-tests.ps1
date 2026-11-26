@@ -88,6 +88,37 @@ function ConvertTo-PlanPath {
     return ($Field -replace '\\', '/')
 }
 
+# Read a whole multi-field plan line (CAPTURE_MOUNTS and friends carry spaces,
+# so they cannot go through Get-PlanField's key=value parser).
+function Get-PlanLine {
+    param([string]$Path, [string]$Key)
+    foreach ($line in [IO.File]::ReadAllLines($Path)) {
+        if ($line.StartsWith($Key + '|')) { return $line.Substring($Key.Length + 1) }
+    }
+    return ''
+}
+
+# Flatten a CAPTURE_MOUNTS argv into one object per mount (--tmpfs carries a
+# destination only). The plan prints the exact argv the harness runs, so
+# asserting on the flattened recipe asserts on the live one.
+function Get-MountRows {
+    param([string]$ArgvLine)
+    $rows = @()
+    if (-not $ArgvLine) { return $rows }
+    $tokens = @($ArgvLine -split '\s+' | Where-Object { $_.Length -gt 0 })
+    for ($i = 0; $i -lt $tokens.Count; $i++) {
+        $op = $tokens[$i]
+        if ($op -eq '--tmpfs') {
+            if ($i + 1 -lt $tokens.Count) { $rows += [pscustomobject]@{ Op = 'tmpfs'; Src = ''; Dst = $tokens[$i + 1] } }
+            $i += 1
+        } elseif ($op -eq '--bind' -or $op -eq '--ro-bind' -or $op -eq '--dev-bind') {
+            if ($i + 2 -lt $tokens.Count) { $rows += [pscustomobject]@{ Op = $op; Src = $tokens[$i + 1]; Dst = $tokens[$i + 2] } }
+            $i += 2
+        }
+    }
+    return $rows
+}
+
 # Read the ## Prompt body out of a scenario file: the harness must take the
 # prompt from the scenario, not duplicate it, or the two can drift apart.
 function Get-ScenarioPrompt {
@@ -104,12 +135,25 @@ function Get-ScenarioPrompt {
     return ''
 }
 
+# The twin must invoke the PowerShell it is already running under: a `pwsh` on
+# PATH can be a shim that cannot exec (this repository's development host carries
+# one), and the parity assertion is about the forwarders, not about PATH.
+$script:PowerShellExe = 'pwsh'
+try {
+    $selfExe = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+    if ($selfExe) { $script:PowerShellExe = $selfExe }
+} catch {
+    # Keep the PATH lookup when the executable path cannot be read.
+}
+
 function Invoke-Plan {
-    param([string]$Scenario, [string]$Bundle, [string]$Out, [string]$Forwarder)
+    param([string]$Scenario, [string]$Bundle, [string]$Out, [string]$Forwarder, [string]$Work)
+    $extra = @()
+    if ($Work) { $extra = @('--work', $Work) }
     if ($Forwarder -eq 'ps1') {
-        & pwsh -NoProfile -File $harnessPs1 $Scenario $Bundle --print-plan 2>&1 | Out-File -FilePath $Out -Encoding utf8
+        & $script:PowerShellExe -NoProfile -File $harnessPs1 $Scenario $Bundle @extra --print-plan 2>&1 | Out-File -FilePath $Out -Encoding utf8
     } else {
-        & bash $harnessSh $Scenario $Bundle --print-plan 2>&1 | Out-File -FilePath $Out -Encoding utf8
+        & bash $harnessSh $Scenario $Bundle @extra --print-plan 2>&1 | Out-File -FilePath $Out -Encoding utf8
     }
     return $LASTEXITCODE
 }
@@ -184,14 +228,16 @@ foreach ($scenario in $scenarios) {
 
 Write-Output '== Twin parity =='
 Begin-Scenario
-# Both forwarders are given the same bundle path: the plan echoes it, so a
-# difference in the path would mask a real difference in the plan.
+# Both forwarders are given the same bundle path and the same --work: the plan
+# echoes both, so a difference in either would mask a real difference in the
+# plan (the staged HOME lives under the work directory).
 $twinBundle = Join-Path $tmp 'twin-bundle'
+$twinWork = Join-Path $tmp 'twin-work'
 $shPlan = Join-Path $tmp 'twin-sh.txt'
 $psPlan = Join-Path $tmp 'twin-ps.txt'
-$status = Invoke-Plan -Scenario 'ce-escalation-balanced' -Bundle $twinBundle -Out $shPlan -Forwarder 'sh'
+$status = Invoke-Plan -Scenario 'ce-escalation-balanced' -Bundle $twinBundle -Out $shPlan -Forwarder 'sh' -Work $twinWork
 Assert-Status $status 0
-$status = Invoke-Plan -Scenario 'ce-escalation-balanced' -Bundle $twinBundle -Out $psPlan -Forwarder 'ps1'
+$status = Invoke-Plan -Scenario 'ce-escalation-balanced' -Bundle $twinBundle -Out $psPlan -Forwarder 'ps1' -Work $twinWork
 Assert-Status $status 0
 $shText = ([IO.File]::ReadAllText($shPlan)) -replace "`r`n", "`n"
 $psText = ([IO.File]::ReadAllText($psPlan)) -replace "`r`n", "`n"
@@ -401,6 +447,163 @@ $realLine = (& bash $scorer '--score' 'ce-antistarvation-balanced' (Join-Path $b
 Assert-Scenario ($realLine -like '*behavioral=PASS*') "the real bundle no longer grades as recorded: $realLine"
 Report-Scenario 'a comment-only write log is rejected as absent evidence'
 
+Write-Output '== HOME isolation recipe (deterministic, no bwrap needed) =='
+# The recipe must be derived from os.homedir(), never from one operator's path,
+# and the sandbox must get a staged HOME rather than read-write binds of the
+# host's credential, instruction and worktree directories. Everything below is
+# asserted on the plan the harness prints for itself.
+$isWindowsHost = ($env:OS -eq 'Windows_NT')
+Begin-Scenario
+$recipeWork = Join-Path $tmp 'recipe-work'
+$recipePlan = Join-Path $tmp 'recipe.plan'
+$status = Invoke-Plan -Scenario 'ce-escalation-lite' -Bundle (Join-Path $tmp 'recipe-bundle') -Out $recipePlan -Forwarder 'sh' -Work $recipeWork
+Assert-Status $status 0
+$stageHome = Get-PlanLine -Path $recipePlan -Key 'CAPTURE_HOME'
+$mountLine = Get-PlanLine -Path $recipePlan -Key 'CAPTURE_MOUNTS'
+$credLine = Get-PlanLine -Path $recipePlan -Key 'CAPTURE_CREDENTIAL'
+Assert-Scenario ($stageHome -eq (Join-Path $recipeWork 'capture-home')) "plan does not stage a disposable HOME under --work: $stageHome"
+Assert-Scenario (-not (Test-Path -LiteralPath $stageHome)) '--print-plan created the staged HOME it claims to create only on a run'
+$rows = @(Get-MountRows -ArgvLine $mountLine)
+$homeRw = @($rows | Where-Object { $_.Op -eq '--bind' -and $_.Src -eq $stageHome -and $_.Dst -eq $HOME }).Count
+$homeSubdirRw = @($rows | Where-Object { $_.Op -eq '--bind' -and $_.Dst.StartsWith($HOME + [IO.Path]::DirectorySeparatorChar) }).Count
+$homeTmpfs = @($rows | Where-Object { $_.Op -eq 'tmpfs' -and $_.Dst -eq $HOME }).Count
+$tmpTmpfs = @($rows | Where-Object { $_.Op -eq 'tmpfs' -and $_.Dst -eq '/tmp' }).Count
+Assert-Scenario ($homeRw -eq 1) "the staged HOME is not the single read-write bind at the host HOME (found $homeRw)"
+Assert-Scenario ($homeSubdirRw -eq 0) "a host directory under HOME is still mounted read-write ($homeSubdirRw bind(s))"
+Assert-Scenario ($homeTmpfs -eq 1 -and $tmpTmpfs -eq 1) "the recipe lost a load-bearing tmpfs (home=$homeTmpfs tmp=$tmpTmpfs)"
+# Every read-only bind must be a file bound onto its own path: a directory bind
+# would put back the credentials, global instructions or worktrees that the
+# staged HOME exists to keep out.
+$roRows = @($rows | Where-Object { $_.Op -eq '--ro-bind' })
+$roNotFile = @($roRows | Where-Object { $_.Src -and -not (Test-Path -LiteralPath $_.Src -PathType Leaf) } | ForEach-Object { $_.Src })
+$roNotSelf = @($roRows | Where-Object { $_.Src -ne $_.Dst } | ForEach-Object { $_.Src + '->' + $_.Dst })
+Assert-Scenario ($roNotFile.Count -eq 0) "a --ro-bind source is not a regular file: $($roNotFile -join ' ')"
+Assert-Scenario ($roNotSelf.Count -eq 0) "a --ro-bind does not land on its own HOME-relative path: $($roNotSelf -join ' ')"
+$forbiddenHits = [regex]::Matches($mountLine, 'worktrees|brain|settings\.json|mcp_config|GEMINI\.md').Count
+Assert-Scenario ($forbiddenHits -eq 0) "the recipe still names a credential/instruction surface ($forbiddenHits hit(s))"
+$badCreds = @()
+if ($credLine -ne '(none)' -and $credLine) {
+    foreach ($cred in $credLine.Split(',')) {
+        if (-not $cred) { continue }
+        if (-not (Test-Path -LiteralPath $cred -PathType Leaf)) { $badCreds += $cred + '(not-a-file)' }
+        if (-not $cred.StartsWith($HOME + [IO.Path]::DirectorySeparatorChar)) { $badCreds += $cred + '(outside-home)' }
+    }
+}
+Assert-Scenario ($badCreds.Count -eq 0) "the staged credential set is not a set of files under HOME: $($badCreds -join ' ')"
+Report-Scenario 'the plan stages a disposable HOME and binds only files read-only'
+
+Begin-Scenario
+# A literal /home/<name> in the module would pin the recipe to one machine, and
+# a host whose operator differs would run with an unmasked home. Asserted on the
+# source, not on this host's plan, so it fails on any host.
+$moduleText = [IO.File]::ReadAllText($module)
+$literalHits = [regex]::Matches($moduleText, '/home/').Count
+$userHits = [regex]::Matches($moduleText, 'heyloey').Count
+Assert-Scenario ($literalHits -eq 0) "the module still carries $literalHits hardcoded /home/ path(s)"
+Assert-Scenario ($userHits -eq 0) "the module still names one operator's user ($userHits occurrence(s))"
+# Any host: the recipe follows os.homedir(), so a different HOME moves the masked
+# mount with it instead of leaving the real home unmasked. os.homedir() reads
+# HOME on POSIX and USERPROFILE on Windows, so the override is POSIX-only.
+if ($isWindowsHost) {
+    Write-Output 'SKIP: HOME override cases (os.homedir() reads USERPROFILE on Windows)'
+} else {
+    $altHome = Join-Path $tmp 'alt-home'
+    New-Item -ItemType Directory -Path $altHome -Force | Out-Null
+    $savedHome = $env:HOME
+    try {
+        $env:HOME = $altHome
+        $altPlan = Join-Path $tmp 'alt.plan'
+        $status = Invoke-Plan -Scenario 'ce-escalation-lite' -Bundle (Join-Path $tmp 'alt-bundle') -Out $altPlan -Forwarder 'sh' -Work (Join-Path $tmp 'alt-work')
+        Assert-Status $status 0
+        $altRows = @(Get-MountRows -ArgvLine (Get-PlanLine -Path $altPlan -Key 'CAPTURE_MOUNTS'))
+        $altTmpfs = @($altRows | Where-Object { $_.Op -eq 'tmpfs' -and $_.Dst -eq $altHome }).Count
+        $altCreds = Get-PlanLine -Path $altPlan -Key 'CAPTURE_CREDENTIAL'
+        Assert-Scenario ($altTmpfs -eq 1) "a different HOME is not the one masked: expected --tmpfs $altHome"
+        Assert-Scenario ($altCreds -eq '(none)') "a HOME with no credential still staged one: $altCreds"
+        # A root or empty HOME cannot be isolated, and masking nothing while
+        # claiming confinement is worse than refusing.
+        $env:HOME = '/'
+        $rootPlan = Join-Path $tmp 'root.plan'
+        $status = Invoke-Plan -Scenario 'ce-escalation-lite' -Bundle (Join-Path $tmp 'root-bundle') -Out $rootPlan -Forwarder 'sh'
+        Assert-Status $status 2
+        $rootText = [IO.File]::ReadAllText($rootPlan)
+        Assert-Scenario ($rootText.Contains('cannot isolate HOME')) "a root HOME is not refused with 'cannot isolate HOME'"
+    } finally {
+        $env:HOME = $savedHome
+    }
+}
+Report-Scenario 'the recipe follows os.homedir() and refuses an unisolatable HOME'
+
+# The probe runs inside the sandbox and reports what it can see there. It lives
+# in a single-quoted here-string so the shell sees $1/$2 and the printf escapes
+# exactly as written.
+$probeScript = @'
+set -u
+printf "HOME_INODE=%s\n" "$(stat -c "%d:%i" "$HOME")"
+printf "ENTRIES=%s\n" "$(ls -A "$HOME" | sort | tr "\n" ",")"
+printf "CHECKOUT=%s\n" "$([ -e "$1/init.sh" ] && echo visible || echo unreachable)"
+printf "SCENARIO=%s\n" "$([ -r "$1/scripts/tests/eval-scenarios/ce-escalation-lite.md" ] && echo readable || echo unreachable)"
+printf "SSH=%s\n" "$([ -e "$HOME/.ssh" ] && echo visible || echo unreachable)"
+printf "WORKTREES=%s\n" "$([ -e "$HOME/.gemini/antigravity/worktrees" ] && echo visible || echo unreachable)"
+printf "BRAIN=%s\n" "$([ -e "$HOME/.gemini/antigravity/brain" ] && echo visible || echo unreachable)"
+printf "GEMINI_SETTINGS=%s\n" "$([ -e "$HOME/.gemini/settings.json" ] && echo visible || echo unreachable)"
+printf "TOKEN=%s\n" "$([ -r "$HOME/.gemini/antigravity-cli/antigravity-oauth-token" ] && echo readable || echo absent)"
+printf "WRITABLE=%s\n" "$(: > "$HOME/.write-probe" && echo yes || echo no)"
+printf "FIXTURE=%s\n" "$(cat "$2/marker.txt" 2>/dev/null || echo missing)"
+'@
+Write-Output '== Live bwrap canary (skipped without unprivileged user namespaces) =='
+# The recipe is only worth its argv if the kernel lets it run. Ubuntu 24.04's
+# apparmor_restrict_unprivileged_userns=1, a locked-down container and macOS all
+# refuse the clone, and a canary that cannot start must skip, not fail.
+$canaryBwrap = Get-Command bwrap -ErrorAction SilentlyContinue
+$canaryUsable = $false
+if ($canaryBwrap) {
+    & $canaryBwrap.Source --dev-bind / / --tmpfs /tmp true *> $null
+    if ($LASTEXITCODE -eq 0) { $canaryUsable = $true }
+}
+if ($canaryUsable) {
+    Begin-Scenario
+    $live = Join-Path $tmp 'live'
+    $liveWork = Join-Path $live 'work'
+    $liveFixture = Join-Path $live 'fixture'
+    New-Item -ItemType Directory -Path (Join-Path $liveWork 'capture-home') -Force | Out-Null
+    New-Item -ItemType Directory -Path $liveFixture -Force | Out-Null
+    [IO.File]::WriteAllText((Join-Path $liveFixture 'marker.txt'), "fixture-marker`n")
+    $livePlan = Join-Path $live 'plan'
+    $status = Invoke-Plan -Scenario 'ce-escalation-lite' -Bundle (Join-Path $live 'bundle') -Out $livePlan -Forwarder 'sh' -Work $liveWork
+    Assert-Status $status 0
+    $mountArgv = @((Get-PlanLine -Path $livePlan -Key 'CAPTURE_MOUNTS') -split '\s+' | Where-Object { $_.Length -gt 0 })
+    # The probe runs from the fixture bind: the staged HOME masks /tmp, so a
+    # script written under the temp root would not be visible inside.
+    $probePath = Join-Path $liveFixture 'probe.sh'
+    [IO.File]::WriteAllText($probePath, $probeScript)
+    $output = @(& $canaryBwrap.Source @mountArgv --bind $liveFixture $liveFixture --chdir $liveFixture bash $probePath $repoRoot $liveFixture 2>&1)
+    Assert-Status $LASTEXITCODE 0
+    $inside = @{}
+    foreach ($line in $output) {
+        $m = [regex]::Match([string]$line, '^([A-Z_]+)=(.*)$')
+        if ($m.Success) { $inside[$m.Groups[1].Value] = $m.Groups[2].Value }
+    }
+    $hostInode = (& stat -c '%d:%i' $HOME)
+    # The inode is the proof: the HOME visible inside is a different directory
+    # from the host's, so every host file under it is unreachable, whatever the
+    # host happens to keep there. The named paths below are the ones the issue
+    # calls out, and stay unreadable even on a host that has them.
+    Assert-Scenario ($inside['HOME_INODE'] -and $inside['HOME_INODE'] -ne $hostInode) "the sandbox still shows the host HOME (inode $($inside['HOME_INODE']))"
+    Assert-Scenario ($inside['CHECKOUT'] -eq 'unreachable') "the host checkout is readable inside the sandbox: $repoRoot"
+    Assert-Scenario ($inside['SCENARIO'] -eq 'unreachable') 'the scenario file (the answer key) is readable inside the sandbox'
+    Assert-Scenario ($inside['WORKTREES'] -eq 'unreachable' -and $inside['BRAIN'] -eq 'unreachable') 'Antigravity worktrees or brain are visible inside the sandbox'
+    Assert-Scenario ($inside['GEMINI_SETTINGS'] -eq 'unreachable') 'global Antigravity settings are visible inside the sandbox'
+    Assert-Scenario ($inside['SSH'] -eq 'unreachable') '~/.ssh is visible inside the sandbox'
+    if ((Get-PlanLine -Path $livePlan -Key 'CAPTURE_CREDENTIAL') -ne '(none)') {
+        Assert-Scenario ($inside['TOKEN'] -eq 'readable') 'the narrow OAuth token is not readable inside the sandbox, so agy could not authenticate'
+    }
+    Assert-Scenario ($inside['WRITABLE'] -eq 'yes') 'the staged HOME is not writable inside the sandbox'
+    Assert-Scenario ($inside['FIXTURE'] -eq 'fixture-marker') 'the fixture bind did not reach the session'
+    Report-Scenario 'a live sandbox cannot read the host checkout, worktrees or credentials'
+} else {
+    Write-Output 'SKIP: bwrap cannot create unprivileged user namespaces on this host'
+}
 Write-Output '== Live capture (skipped without agy and bwrap) =='
 $agy = Get-Command agy -ErrorAction SilentlyContinue
 $bwrap = Get-Command bwrap -ErrorAction SilentlyContinue
