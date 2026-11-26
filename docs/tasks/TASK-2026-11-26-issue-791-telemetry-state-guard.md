@@ -115,7 +115,7 @@
 - **Scope Change Records**: `None`
 - **Checkpoint Records**: `None`
 - **Handoff Records**: `None`
-- **Verification Evidence**: `git diff --check clean; validate-execution-control VALID|RECORDS=82|ROOT=.; validate-references All references valid; run-token-budget-tests Passed 8 Failed 0; measure-tokens BALANCED|2404|2425|PASS and LITE|1415|1450|PASS; measure-ceremony-overhead CEREMONY_GATE|PASS with SETUP 3078 and all 16 anchors OK; measure-tokenizer-delta four rows PASS; run-doctor-tests Passed 52 Failed 0; run-behavioral-contract-tests Passed 818 Failed 0.`
+- **Verification Evidence**: `Combined tree after rebasing onto #790: git diff --check clean; validate-execution-control VALID|RECORDS=83|ROOT=.; validate-references All references valid; run-token-budget-tests Passed 8 Failed 0; measure-tokens BALANCED|2404|2425|PASS and LITE|1415|1450|PASS; measure-ceremony-overhead CEREMONY_GATE|PASS with SETUP 3078, L2 998 and all 16 anchors OK; measure-tokenizer-delta four rows PASS; run-doctor-tests Passed 52 Failed 0; run-behavioral-contract-tests Passed 823 Failed 0.`
 - **Behavior IDs**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Intent Register**: `N/A - TDD Enforcement Mode disabled`
 - **TDD Execution Evidence**: `N/A - TDD Enforcement Mode disabled`
