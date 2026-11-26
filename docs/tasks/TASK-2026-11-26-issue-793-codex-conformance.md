@@ -36,7 +36,7 @@
   - `No capture on opencode, commandcode, or agy, because those hosts are already represented and the issue asks for previously Untested hosts.`
   - `No claim that Codex CLI meets the three-host criterion, no issue closure, and no promotion of an Untested cell without a live bundle behind it.`
   - `No push, pull request, merge, tag, release, or issue update in this phase.`
-- **Dependencies**: `Codex CLI 0.172.0 at /home/linuxbrew/.linuxbrew/bin/codex, authenticated through ChatGPT (codex login status exits 0); bwrap 0.9.0; git; the five seed fixtures recovered from the published commandcode repository bundles.`
+- **Dependencies**: `Codex CLI 0.172.0 at <linuxbrew>/bin/codex, authenticated through ChatGPT (codex login status exits 0); bwrap 0.9.0; git; the five seed fixtures recovered from the published commandcode repository bundles.`
 - **Risk**: `Medium — live host behaviour is not fully predictable and the Codex CLI path has no committed renderer, so a bad transform could misreport the arm. Mitigated by preserving the raw JSONL, scrubbing only paths, recording the transform in provenance.json, and publishing FAIL or PARTIAL exactly as scored.`
 - **Verification Condition**: `Five bundles exist under docs/internal/host-conformance/codex-cli/ with the 22-file contract, each scorer.txt records the measured line, the isolation canary reports CANNOT-READ under bwrap while the same command reads unisolated, the milestone bundle carries a 300 s observation window and reproduces its state-check via bash scripts/check-milestone-halt-evidence.sh, no tracked artifact contains a raw host home path, docs/HOST-CONFORMANCE.md and README.md state four of eleven and seven Untested, and bash scripts/validate-execution-control.sh --root . --strict passes with this record in_progress or completed as appropriate.`
 
@@ -46,7 +46,7 @@
 - [ ] **AC-2**: `Five Codex CLI 0.172.0 bundles exist under docs/internal/host-conformance/codex-cli/, each carrying the 22-file contract, the raw post-scrub session JSONL, a scorer.txt recorded from the probe's real checks, and a README naming the host, model, date, and transform.`
 - [ ] **AC-3**: `Every bundle records a negative isolation canary (CANNOT-READ under bwrap) and a positive unisolated control, with the exact bwrap invocation in isolation.txt.`
 - [ ] **AC-4**: `The milestone-halt bundle records a 300 s observation window, a resumed turn with no sign-off, state-check.json, and a reproducible bash scripts/check-milestone-halt-evidence.sh result.`
-- [ ] **AC-5**: `No tracked artifact in the five bundles or the host index contains a raw host home path (such as /home/<user> or /home/linuxbrew); paths are masked as $HOME and <repo>.`
+- [ ] **AC-5**: `No tracked artifact in the five bundles or the host index contains a raw host home or Homebrew prefix path; paths are masked as $HOME, <linuxbrew>, and <repo>.`
 - [ ] **AC-6**: `docs/HOST-CONFORMANCE.md records the Codex CLI row as measured with per-probe verdicts and capture metadata, and README.md states four of eleven host configurations with live captures and seven Untested.`
 - [ ] **AC-7**: `No file under scripts/, workflows/, protocols/, templates/, or the measured inputs changes; git diff against origin/main touches only docs/internal/host-conformance/codex-cli/, docs/HOST-CONFORMANCE.md, README.md, and this record.`
 
