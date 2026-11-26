@@ -1905,7 +1905,145 @@ try {
         Remove-Item Env:\name -ErrorAction SilentlyContinue
     }
 
-    Write-Host "init.ps1 non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical -Help/--help with the full option list, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert tests, the manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and the README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, and the PowerShell twin pinned by shape) passed." -ForegroundColor Green
+    # Test 39a-39f: directive-block strip mode parity with the bash suite
+    # (issue #814). The PowerShell twin had no strip-mode coverage; these run
+    # the real init.ps1 against the same fixtures the bash suite uses.
+
+    function Invoke-StripAssert {
+        param([string]$StripRoot, [string[]]$StripArgs = @())
+        $stripArgList = @("--strip-directives") + $StripArgs + @($StripRoot)
+        $stripCaptured = & pwsh -NoProfile -File $initScriptPath @stripArgList 2>&1 | Out-String
+        return [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = $stripCaptured }
+    }
+
+    # Test 39a: mixed prose survives, a whitespace-only host file is deleted,
+    # and the user-owned paths are untouched.
+    $stripMixed = Join-Path $TestRoot "strip_mixed"
+    New-Item -ItemType Directory -Path (Join-Path $stripMixed "docs") -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $stripMixed ".promptkit") -Force | Out-Null
+    [System.IO.File]::WriteAllText((Join-Path $stripMixed "AGENTS.md"), "Custom prose.`n`n<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->`n`nAfter.", $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $stripMixed "CLAUDE.md"), "<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->`n`n `n", $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $stripMixed "PROMPTKIT.md"), "user profile`n", $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path (Join-Path $stripMixed "docs") "STATE.md"), "# State`n", $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path (Join-Path $stripMixed ".promptkit") "init.sh"), "kit file`n", $utf8NoBom)
+    $mixedProfileHash = (Get-FileHash -LiteralPath (Join-Path $stripMixed "PROMPTKIT.md") -Algorithm SHA256).Hash
+    $mixedStateHash = (Get-FileHash -LiteralPath (Join-Path (Join-Path $stripMixed "docs") "STATE.md") -Algorithm SHA256).Hash
+    $mixedKitHash = (Get-FileHash -LiteralPath (Join-Path (Join-Path $stripMixed ".promptkit") "init.sh") -Algorithm SHA256).Hash
+    $mixedRun = Invoke-StripAssert -StripRoot $stripMixed
+    if ($mixedRun.ExitCode -ne 0) { throw "Failed Test 39a (strip mixed): exit $($mixedRun.ExitCode): $($mixedRun.Output)" }
+    $mixedAgents = [System.IO.File]::ReadAllText((Join-Path $stripMixed "AGENTS.md"))
+    if (-not $mixedAgents.Contains("Custom prose.") -or -not $mixedAgents.Contains("After.")) {
+        throw "Failed Test 39a (strip mixed): custom prose did not survive: $mixedAgents"
+    }
+    if ($mixedAgents.Contains("PROMPTKIT_START")) { throw "Failed Test 39a (strip mixed): directive marker survived." }
+    if (Test-Path -LiteralPath (Join-Path $stripMixed "CLAUDE.md")) { throw "Failed Test 39a (strip mixed): whitespace-only host file was not deleted." }
+    if ((Get-FileHash -LiteralPath (Join-Path $stripMixed "PROMPTKIT.md") -Algorithm SHA256).Hash -ne $mixedProfileHash) { throw "Failed Test 39a (strip mixed): PROMPTKIT.md was modified." }
+    if ((Get-FileHash -LiteralPath (Join-Path (Join-Path $stripMixed "docs") "STATE.md") -Algorithm SHA256).Hash -ne $mixedStateHash) { throw "Failed Test 39a (strip mixed): docs/STATE.md was modified." }
+    if ((Get-FileHash -LiteralPath (Join-Path (Join-Path $stripMixed ".promptkit") "init.sh") -Algorithm SHA256).Hash -ne $mixedKitHash) { throw "Failed Test 39a (strip mixed): .promptkit/init.sh was modified." }
+
+    # Test 39b: CRLF and no-final-newline EOF state are byte-preserved.
+    $stripBytes = Join-Path $TestRoot "strip_bytes"
+    New-Item -ItemType Directory -Path $stripBytes -Force | Out-Null
+    [System.IO.File]::WriteAllText((Join-Path $stripBytes "AGENTS.md"), "# Windows file`r`n`r`n<!-- PROMPTKIT_START -->`r`ndirective`r`n<!-- PROMPTKIT_END -->`r`n`r`nTail.`r`n", $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $stripBytes ".cursorrules"), "Keep me`n`n<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->", $utf8NoBom)
+    $bytesRun = Invoke-StripAssert -StripRoot $stripBytes
+    if ($bytesRun.ExitCode -ne 0) { throw "Failed Test 39b (strip bytes): exit $($bytesRun.ExitCode): $($bytesRun.Output)" }
+    $latin1 = [System.Text.Encoding]::GetEncoding(28591)
+    $expectedAgents = $latin1.GetBytes("# Windows file`r`n`r`n`r`nTail.`r`n")
+    $actualAgents = [System.IO.File]::ReadAllBytes((Join-Path $stripBytes "AGENTS.md"))
+    if ([Convert]::ToBase64String($actualAgents) -ne [Convert]::ToBase64String($expectedAgents)) { throw "Failed Test 39b (strip bytes): CRLF bytes not preserved." }
+    $expectedCursor = $latin1.GetBytes("Keep me`n`n")
+    $actualCursor = [System.IO.File]::ReadAllBytes((Join-Path $stripBytes ".cursorrules"))
+    if ([Convert]::ToBase64String($actualCursor) -ne [Convert]::ToBase64String($expectedCursor)) { throw "Failed Test 39b (strip bytes): EOF bytes not preserved." }
+
+    # Test 39c: --dry-run reports the same plan and writes nothing.
+    $stripDry = Join-Path $TestRoot "strip_dry"
+    New-Item -ItemType Directory -Path $stripDry -Force | Out-Null
+    [System.IO.File]::WriteAllText((Join-Path $stripDry "AGENTS.md"), "Prose.`n`n<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->`n", $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path $stripDry "CLAUDE.md"), "<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->`n`n", $utf8NoBom)
+    $dryAgentsBefore = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes((Join-Path $stripDry "AGENTS.md")))
+    $dryClaudeBefore = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes((Join-Path $stripDry "CLAUDE.md")))
+    $dryRun = Invoke-StripAssert -StripRoot $stripDry -StripArgs @("--dry-run")
+    if ($dryRun.ExitCode -ne 0) { throw "Failed Test 39c (strip dry-run): exit $($dryRun.ExitCode): $($dryRun.Output)" }
+    if (-not $dryRun.Output.Contains("would strip AGENTS.md")) { throw "Failed Test 39c (strip dry-run): missing AGENTS.md plan line." }
+    if (-not $dryRun.Output.Contains("would delete CLAUDE.md")) { throw "Failed Test 39c (strip dry-run): missing CLAUDE.md plan line." }
+    if (-not $dryRun.Output.Contains("Nothing was written")) { throw "Failed Test 39c (strip dry-run): missing immutability notice." }
+    if ([Convert]::ToBase64String([System.IO.File]::ReadAllBytes((Join-Path $stripDry "AGENTS.md"))) -ne $dryAgentsBefore) { throw "Failed Test 39c (strip dry-run): AGENTS.md mutated." }
+    if ([Convert]::ToBase64String([System.IO.File]::ReadAllBytes((Join-Path $stripDry "CLAUDE.md"))) -ne $dryClaudeBefore) { throw "Failed Test 39c (strip dry-run): CLAUDE.md mutated." }
+
+    # Test 39d: malformed and reversed marker pairs are refused before any write.
+    $stripBad = Join-Path $TestRoot "strip_bad"
+    New-Item -ItemType Directory -Path $stripBad -Force | Out-Null
+    $badAgents = Join-Path $stripBad "AGENTS.md"
+    [System.IO.File]::WriteAllText($badAgents, "A`n<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->`n<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->`n", $utf8NoBom)
+    $badHashBefore = (Get-FileHash -LiteralPath $badAgents -Algorithm SHA256).Hash
+    $badRun = Invoke-StripAssert -StripRoot $stripBad
+    if ($badRun.ExitCode -ne 1) { throw "Failed Test 39d (strip double block): expected exit 1, got $($badRun.ExitCode)." }
+    if (-not $badRun.Output.Contains("Cannot strip AGENTS.md")) { throw "Failed Test 39d (strip double block): refusal message missing." }
+    if ((Get-FileHash -LiteralPath $badAgents -Algorithm SHA256).Hash -ne $badHashBefore) { throw "Failed Test 39d (strip double block): file mutated." }
+    [System.IO.File]::WriteAllText($badAgents, "A`n<!-- PROMPTKIT_END -->`nd`n<!-- PROMPTKIT_START -->`n", $utf8NoBom)
+    $revHashBefore = (Get-FileHash -LiteralPath $badAgents -Algorithm SHA256).Hash
+    $revRun = Invoke-StripAssert -StripRoot $stripBad
+    if ($revRun.ExitCode -ne 1) { throw "Failed Test 39d (strip reversed): expected exit 1, got $($revRun.ExitCode)." }
+    if (-not $revRun.Output.Contains("Cannot strip AGENTS.md")) { throw "Failed Test 39d (strip reversed): refusal message missing." }
+    if ((Get-FileHash -LiteralPath $badAgents -Algorithm SHA256).Hash -ne $revHashBefore) { throw "Failed Test 39d (strip reversed): file mutated." }
+
+    # Test 39e: the .promptkit/ removal hint is door-matched.
+    $stripHintCourier = Join-Path $TestRoot "strip_hint_courier"
+    New-Item -ItemType Directory -Path (Join-Path $stripHintCourier ".promptkit") -Force | Out-Null
+    [System.IO.File]::WriteAllText((Join-Path $stripHintCourier "AGENTS.md"), "<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->`n", $utf8NoBom)
+    $hintCourierRun = Invoke-StripAssert -StripRoot $stripHintCourier
+    if (-not $hintCourierRun.Output.Contains("Remove-Item -Recurse -Force .promptkit")) { throw "Failed Test 39e (courier hint): missing PowerShell removal command." }
+    if ($hintCourierRun.Output.Contains("git submodule deinit")) { throw "Failed Test 39e (courier hint): printed submodule commands." }
+    if (-not $hintCourierRun.Output.Contains("PROMPTKIT.md, docs/STATE.md and .promptkit/ are yours")) { throw "Failed Test 39e (courier hint): missing ownership notice." }
+    $stripHintSubmodule = Join-Path $TestRoot "strip_hint_submodule"
+    New-Item -ItemType Directory -Path (Join-Path $stripHintSubmodule ".promptkit") -Force | Out-Null
+    [System.IO.File]::WriteAllText((Join-Path $stripHintSubmodule "AGENTS.md"), "<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->`n", $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path (Join-Path $stripHintSubmodule ".promptkit") ".git"), "gitdir: ../.git/modules/promptkit`n", $utf8NoBom)
+    $hintSubmoduleRun = Invoke-StripAssert -StripRoot $stripHintSubmodule
+    if (-not $hintSubmoduleRun.Output.Contains("git submodule deinit .promptkit")) { throw "Failed Test 39e (submodule hint): missing deinit command." }
+    if (-not $hintSubmoduleRun.Output.Contains("git rm .promptkit")) { throw "Failed Test 39e (submodule hint): missing git rm command." }
+    if ($hintSubmoduleRun.Output.Contains("Remove-Item -Recurse -Force .promptkit")) { throw "Failed Test 39e (submodule hint): printed courier command." }
+    $stripHintNone = Join-Path $TestRoot "strip_hint_none"
+    New-Item -ItemType Directory -Path $stripHintNone -Force | Out-Null
+    [System.IO.File]::WriteAllText((Join-Path $stripHintNone "AGENTS.md"), "<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->`n", $utf8NoBom)
+    $hintNoneRun = Invoke-StripAssert -StripRoot $stripHintNone
+    if ($hintNoneRun.Output.Contains("Remove-Item -Recurse -Force .promptkit") -or $hintNoneRun.Output.Contains("git submodule deinit")) { throw "Failed Test 39e (no kit): printed a removal command." }
+
+    # Test 39f: protected paths are refused by canonical identity, including the
+    # Windows separator form and an in-repo symlink alias.
+    $stripAlias = Join-Path $TestRoot "strip_alias"
+    New-Item -ItemType Directory -Path (Join-Path $stripAlias "docs") -Force | Out-Null
+    [System.IO.File]::WriteAllText((Join-Path $stripAlias "PROMPTKIT.md"), "user profile`n`n<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->`n", $utf8NoBom)
+    [System.IO.File]::WriteAllText((Join-Path (Join-Path $stripAlias "docs") "STATE.md"), "# State`n`n<!-- PROMPTKIT_START -->`nd`n<!-- PROMPTKIT_END -->`n", $utf8NoBom)
+    $aliasProfileHash = (Get-FileHash -LiteralPath (Join-Path $stripAlias "PROMPTKIT.md") -Algorithm SHA256).Hash
+    $aliasStateHash = (Get-FileHash -LiteralPath (Join-Path (Join-Path $stripAlias "docs") "STATE.md") -Algorithm SHA256).Hash
+    $aliasTargets = @("./PROMPTKIT.md", "docs/./STATE.md", "docs//STATE.md")
+    # Single quotes keep the backslash literal: this is the Windows separator
+    # form, not a PowerShell escape. A double-quoted backtick here produced
+    # "docsSTATE.md" and made Test 39f assert on a non-existent path in CI.
+    if ($IsWindows) { $aliasTargets += 'docs\STATE.md' }
+    foreach ($aliasTarget in $aliasTargets) {
+        $aliasRun = Invoke-StripAssert -StripRoot $stripAlias -StripArgs @("--target=$aliasTarget")
+        if ($aliasRun.ExitCode -ne 1) { throw "Failed Test 39f (protected alias $aliasTarget): expected exit 1, got $($aliasRun.ExitCode)." }
+        if (-not $aliasRun.Output.Contains("protected PromptKit path")) { throw "Failed Test 39f (protected alias $aliasTarget): refusal message missing." }
+    }
+    if ((Get-FileHash -LiteralPath (Join-Path $stripAlias "PROMPTKIT.md") -Algorithm SHA256).Hash -ne $aliasProfileHash) { throw "Failed Test 39f (protected alias): PROMPTKIT.md was modified." }
+    if ((Get-FileHash -LiteralPath (Join-Path (Join-Path $stripAlias "docs") "STATE.md") -Algorithm SHA256).Hash -ne $aliasStateHash) { throw "Failed Test 39f (protected alias): docs/STATE.md was modified." }
+    $aliasLinkCreated = $false
+    try {
+        New-Item -ItemType SymbolicLink -Path (Join-Path $stripAlias "alias-rules.md") -Target (Join-Path $stripAlias "PROMPTKIT.md") -ErrorAction Stop | Out-Null
+        $aliasLinkCreated = $true
+    } catch {
+        Write-Output "  SKIP: symbolic link creation unsupported on this host (strip alias)"
+    }
+    if ($aliasLinkCreated) {
+        $aliasLinkRun = Invoke-StripAssert -StripRoot $stripAlias -StripArgs @("--target=alias-rules.md")
+        if ($aliasLinkRun.ExitCode -ne 1) { throw "Failed Test 39f (symlink alias): expected exit 1, got $($aliasLinkRun.ExitCode)." }
+        if (-not $aliasLinkRun.Output.Contains("protected PromptKit path")) { throw "Failed Test 39f (symlink alias): refusal message missing." }
+        if ((Get-FileHash -LiteralPath (Join-Path $stripAlias "PROMPTKIT.md") -Algorithm SHA256).Hash -ne $aliasProfileHash) { throw "Failed Test 39f (symlink alias): PROMPTKIT.md was modified." }
+    }
+    Write-Host "init.ps1 non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical -Help/--help with the full option list, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert tests, directive-block strip mode (mixed prose preserved, whitespace-only host file deleted, CRLF and no-final-newline EOF bytes preserved, --dry-run writes nothing, malformed and reversed markers refused, door-matched .promptkit/ removal hints, canonical protected-path aliases including the Windows separator form and an in-repo symlink), the manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and the README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, and the PowerShell twin pinned by shape) passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
