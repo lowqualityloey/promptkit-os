@@ -849,6 +849,22 @@ function Test-Task {
     foreach ($label in $requiredLabels) { [void](Require-Label $FilePath $id $label) }
     [void](Require-Value $FilePath $id 'Record Type')
     if ((Get-FieldValue $FilePath 'Record Type') -ne 'Task Record') { Add-Diagnostic 'INVALID_STATE' $id $path 'Record Type is not Task Record' 'Use the canonical Task Record type' }
+
+    $recordForm = Get-FieldValue $FilePath 'Record Form'
+    if (-not [string]::IsNullOrWhiteSpace($recordForm) -and $recordForm -cnotin @('Lite', 'Full')) {
+        Add-Diagnostic 'INVALID_STATE' $id $path "Unknown Record Form: $recordForm" 'Use Lite or Full'
+    }
+    if ($recordForm -eq 'Lite') {
+        $formCeremony = Get-FieldValue $FilePath 'Ceremony Level'
+        if ([string]::IsNullOrWhiteSpace($formCeremony)) { $formCeremony = Get-FieldValue $FilePath 'Work Classification' }
+        $formLevel = '2'
+        if (-not [string]::IsNullOrWhiteSpace($formCeremony)) {
+            $formLevel = Get-ParsedCeremonyLevel $formCeremony
+            if ($formLevel -eq 'invalid') { $formLevel = '2' }
+        }
+        if ($formLevel -eq '3') { Add-Diagnostic 'POLICY_LIMITATION' $id $path 'Lite Record Form cannot carry Level 3 work' 'Use the full task record form at Level 3' }
+    }
+
     foreach ($label in @('Specification', 'Owner / Actor', 'Execution Scope', 'Approval Boundary', 'Created', 'Risk')) { [void](Require-Value $FilePath $id $label) }
     [void](Require-Value $FilePath $id 'Objective' 'READINESS_FAILURE')
     [void](Require-Label $FilePath $id 'Dependencies' 'READINESS_FAILURE')
@@ -981,8 +997,22 @@ function Test-Checkpoint {
     }
 
     $tier = 'full'
+    $recordForm = Get-FieldValue $FilePath 'Record Form'
+    if (-not [string]::IsNullOrWhiteSpace($recordForm) -and $recordForm -cnotin @('Lite', 'Full')) {
+        Add-Diagnostic 'INVALID_STATE' $id $path "Unknown Record Form: $recordForm" 'Use Lite or Full'
+    }
     if ($effectiveLevel -eq '1') {
         $tier = 'quick'
+    }
+    if ($recordForm -eq 'Lite') {
+        switch ($effectiveLevel) {
+            '1' { $tier = 'quick' }
+            '3' {
+                Add-Diagnostic 'POLICY_LIMITATION' $id $path 'Lite Record Form is refused at Level 3' 'Use the full checkpoint form'
+                $tier = 'full'
+            }
+            default { $tier = 'lite' }
+        }
     }
 
     if ($tier -eq 'quick') {
@@ -1025,6 +1055,17 @@ function Test-Checkpoint {
             }
         }
         $script:QuickUnresolvedCount += $unresolvedCount
+        return
+    }
+
+    if ($tier -eq 'lite') {
+        if ((Get-FieldValue $FilePath 'Record Type') -ne 'Checkpoint Record') { Add-Diagnostic 'CHECKPOINT_INCOMPLETE' $id $path 'Record Type is not Checkpoint Record' 'Use the canonical Checkpoint Record type' }
+        $liteValues = @('Checkpoint ID', 'Task ID', 'Created', 'Execution State', 'Objective', 'Completed Work', 'Remaining Work', 'Branch / Revision', 'Locked Decisions and Invariants', 'Next Action', 'Resume Condition', 'Recorded By')
+        foreach ($label in $liteValues) { [void](Require-Value $FilePath $id $label 'CHECKPOINT_INCOMPLETE') }
+        [void](Require-Label $FilePath $id 'Changed Files' 'CHECKPOINT_INCOMPLETE')
+        [void](Require-Label $FilePath $id 'Blockers' 'CHECKPOINT_INCOMPLETE')
+        $liteTaskId = Get-FieldValue $FilePath 'Task ID'
+        if ([string]::IsNullOrWhiteSpace($liteTaskId) -or (-not $TaskById.ContainsKey($liteTaskId))) { Add-Diagnostic 'TRACEABILITY_MISSING' $id $path "Checkpoint references unknown Task ID: $liteTaskId" 'Link the checkpoint to an existing Task Record' }
         return
     }
 

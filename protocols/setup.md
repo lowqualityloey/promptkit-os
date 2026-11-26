@@ -224,6 +224,7 @@ After updating configuration:
    - `[pk:design]`: Design accessible UI components with modern tokens.
    - `[pk:retro]`: Run a retro on completed work, capture insights, and generate ADRs.
    - `[pk:checkpoint]`: Compress active session context and generate a handover prompt for a fresh chat.
+3. **Surface the five-command loop** on first run — most solo work needs nothing else: `pk:plan` → `pk:auto` → `pk:review` → `pk:commit` → `pk:checkpoint`. Mention `preset: solo-fast` in `./PROMPTKIT.md` for the tight loop (concise routine status, framed callouts only for ACTION REQUIRED or BLOCKED, Level 2 Lite records by default). A preset changes presentation and defaults only: push, PR, destructive operations, and Level 3 keep their human-approval gates.
 
 ---
 

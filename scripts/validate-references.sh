@@ -276,7 +276,7 @@ done
 echo ""
 echo "📋 Checking template directory completeness..."
 
-EXPECTED_TEMPLATE_COUNT=29
+EXPECTED_TEMPLATE_COUNT=31
 template_inventory=()
 for template_path in "$TEMPLATES_DIR"/*.md; do
     [ -e "$template_path" ] || continue

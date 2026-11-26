@@ -447,6 +447,11 @@ Assert-Contains "templates/project-profile-template.md" "status-cards:" "Project
 Assert-Contains "templates/agent-directive-template.md" "status-cards: off" "Directive conditions the card on the status-cards opt-out"
 Assert-Contains "templates/agent-directive-lite-template.md" "status-cards: off" "Lite directive conditions the card on the status-cards opt-out"
 Assert-Contains "protocols/telemetry-cards.md" "status-cards: off" "Telemetry-cards protocol documents the opt-out and halt guarantee"
+Assert-Contains "templates/project-profile-template.md" "preset:" "Project profile template carries the preset machine line"
+Assert-Contains "workflows/profile.md" "solo-fast" "Profile workflow documents the Solo/Fast preset and its flags"
+Assert-Contains "README.md" "### The five-command loop" "README surfaces the five-command loop"
+Assert-Contains "workflows/tasks.md" "execution-task-record-lite-template.md" "Tasks workflow defaults ordinary Level 2 to the Lite record form"
+Assert-Contains "workflows/checkpoint.md" "execution-checkpoint-lite-template.md" "Checkpoint workflow links the Lite checkpoint template"
 Assert-Contains "protocols/telemetry-cards.md" "Quiet Completion" "Telemetry-cards protocol defines quiet completion when nothing is pending"
 Assert-Contains "protocols/telemetry-cards.md" "Spend:" "Telemetry-cards protocol specifies the per-turn spend field"
 Assert-Contains "templates/state-tracker-template.md" "COMPLETED" "State template offers the terminal COMPLETED status"
@@ -2169,10 +2174,10 @@ Assert-Contains "protocols/setup.md" "protocols/setup.md" "Setup registry refere
 Assert-NotContains "protocols/setup.md" "reached transitively through the reference list above" "Setup registry drops the disproven transitive discovery claim"
 Assert-Contains "scripts/validate-references.sh" "EXPECTED_WORKFLOW_COUNT=26" "Bash validator pins the 26-workflow inventory"
 Assert-Contains "scripts/validate-references.sh" "EXPECTED_PROTOCOL_COUNT=9" "Bash validator pins the 9-protocol inventory"
-Assert-Contains "scripts/validate-references.sh" "EXPECTED_TEMPLATE_COUNT=29" "Bash validator pins the 29-template inventory"
+Assert-Contains "scripts/validate-references.sh" "EXPECTED_TEMPLATE_COUNT=31" "Bash validator pins the 31-template inventory"
 Assert-Contains "scripts/validate-references.ps1" "ExpectedWorkflowCount = 26" "PowerShell validator pins the 26-workflow inventory"
 Assert-Contains "scripts/validate-references.ps1" "ExpectedProtocolCount = 9" "PowerShell validator pins the 9-protocol inventory"
-Assert-Contains "scripts/validate-references.ps1" "ExpectedTemplateCount = 29" "PowerShell validator pins the 29-template inventory"
+Assert-Contains "scripts/validate-references.ps1" "ExpectedTemplateCount = 31" "PowerShell validator pins the 31-template inventory"
 
 Write-Host "📊 Behavioral Contract Verification Summary" -ForegroundColor Cyan
 Write-Host "Passed: $script:PassCount | Failed: $script:FailCount" -ForegroundColor Cyan

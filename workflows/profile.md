@@ -10,6 +10,14 @@ Profile economics and token budgets are maintained in [`docs/BENCHMARKS.md`](../
 
 ---
 
+## Preset: `standard` / `solo-fast`
+
+The `preset:` machine line in `./PROMPTKIT.md` is independent of the profile. `standard` (the default when the line is missing) runs the full ceremony surface. `solo-fast` — a solo maintainer on a small repository — keeps routine progress on concise Markdown lines, reserves framed callouts for ACTION REQUIRED and BLOCKED, and drives the five-command loop (`pk:plan`, `pk:auto`, `pk:review`, `pk:commit`, `pk:checkpoint`).
+
+Neither preset relaxes a hard gate. Push, PR, destructive operations and Level 3 work keep their explicit human-approval boundaries, and the verification and evidence gates are identical.
+
+---
+
 ## Preconditions & When to Switch
 - **Onboarded with Lite, growth needs Balanced** (Level 2/3 work appearing: schema, auth, contracts).
 - **Experimenting with Turbo** (parallel subagent waves; requires explicit experimental acknowledgement).
@@ -46,6 +54,7 @@ Profile economics and token budgets are maintained in [`docs/BENCHMARKS.md`](../
    - Option 3: Balanced — full 26 workflows, Level 0-3 adaptive ceremony
    - Option 4 (only when not already Turbo): Turbo — experimental, requires acknowledgement
    Hosts without native pickers: fall back to `> [!TIP] ### 💡 Choose profile (Type number & Enter):` with the same ordering.
+2c. **Preset flags (independent of the profile)**: `pk:profile --solo-fast` or `pk:profile --standard` sets the `preset:` line and leaves the profile untouched. Apply it by editing `./PROMPTKIT.md` directly — the installer rewrites only the profile line, the `## 0.` body and the directive block — then confirm with `grep '^preset:' PROMPTKIT.md`. State the visible effect (routine output density, the five-command loop) and restate that the hard gates are unchanged. Never infer a preset switch from task size.
 4. **Non-interactive / CI** (`PROMPTKIT_NO_INTERACTIVE=1` or no interactive host): never prompt — apply the flag if given, otherwise default to **Balanced**; state this in the reply.
 
 ### Phase 3: Apply (delegate — do not hand-edit directive blocks)
@@ -53,7 +62,8 @@ Profile economics and token budgets are maintained in [`docs/BENCHMARKS.md`](../
    - Linux/macOS: `./init.sh --<profile>` (Turbo: `--turbo --experimental`)
    - Windows: `.\init.ps1 -<Profile>` (Turbo: `-Turbo -Experimental`)
 2. The installer idempotently replaces ONLY the `<!-- PROMPTKIT_START -->`-bounded directive block and updates `PROMPTKIT.md` (bottom `profile:` line and `## 0.` body). User-authored content outside the markers is never rewritten.
-3. If the installer reports a malformed/orphaned marker error, STOP and surface it (run `pk:sync` after fixing markers manually) — do not append a second block.
+3. Preset-only switches skip this phase entirely: no installer run, no directive rewrite, `profile:` stays byte-identical.
+4. If the installer reports a malformed/orphaned marker error, STOP and surface it (run `pk:sync` after fixing markers manually) — do not append a second block.
 
 ### Phase 4: Verify & Close
 1. Return to the host project root first (the installer ran inside the kit directory; the checks below read host files). Confirm mechanically:
@@ -69,6 +79,7 @@ Profile economics and token budgets are maintained in [`docs/BENCHMARKS.md`](../
 - [ ] Profile line AND `## 0.` body agree on the new profile; exactly one directive block present in each configured agent file.
 - [ ] Turbo refusal honored when experimental acknowledgement is absent.
 - [ ] Turbo suitability question asked before the acknowledgement; the advisory outcome is recorded and an explicit override is still honored.
+- [ ] A preset-only switch leaves `profile:` and the directive block untouched and restates the hard-gate guarantee.
 - [ ] No prompt rendered in non-interactive contexts (`PROMPTKIT_NO_INTERACTIVE=1`, piped stdin, CI).
 - [ ] Token measurement shown post-switch matches expectations for the target profile.
 - [ ] `pk:sync` recommended (or executed) so the live session adopts the new directive.
