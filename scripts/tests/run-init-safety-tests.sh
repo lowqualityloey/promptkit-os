@@ -1703,6 +1703,160 @@ git -C "$README_HOST" -c protocol.file.allow=always submodule add -q --force --n
 # The name was exported so the later commands see it, the way one shell would.
 unset name
 
+# Test 39a: --strip-directives removes only complete directive blocks, deletes a
+# host file that held nothing else, and leaves every user-owned PromptKit file
+# alone (AC-2, AC-3, AC-4).
+STRIP_BASIC="$TEST_ROOT/strip_basic"
+mkdir -p "$STRIP_BASIC/docs" "$STRIP_BASIC/.promptkit"
+cat > "$STRIP_BASIC/AGENTS.md" <<'EOF'
+# Project Instructions
+
+Custom rule one.
+
+<!-- PROMPTKIT_START -->
+directive line
+<!-- PROMPTKIT_END -->
+
+Trailing custom prose.
+EOF
+cat > "$STRIP_BASIC/CLAUDE.md" <<'EOF'
+<!-- PROMPTKIT_START -->
+only the block
+<!-- PROMPTKIT_END -->
+EOF
+printf 'user profile\n' > "$STRIP_BASIC/PROMPTKIT.md"
+printf '# State\n' > "$STRIP_BASIC/docs/STATE.md"
+printf 'kit file\n' > "$STRIP_BASIC/.promptkit/init.sh"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives "$STRIP_BASIC" >/dev/null
+grep -qF 'Custom rule one.' "$STRIP_BASIC/AGENTS.md"
+grep -qF 'Trailing custom prose.' "$STRIP_BASIC/AGENTS.md"
+if grep -q 'PROMPTKIT_START\|PROMPTKIT_END' "$STRIP_BASIC/AGENTS.md"; then
+    echo "strip mode left a PromptKit directive marker in AGENTS.md" >&2
+    exit 1
+fi
+[[ ! -e "$STRIP_BASIC/CLAUDE.md" ]]
+grep -qF 'user profile' "$STRIP_BASIC/PROMPTKIT.md"
+grep -qF '# State' "$STRIP_BASIC/docs/STATE.md"
+grep -qF 'kit file' "$STRIP_BASIC/.promptkit/init.sh"
+
+# Test 39b: strip mode preserves CRLF endings and the original EOF state
+# byte for byte (AC-2). awk-style line rewriting would fail both checks.
+STRIP_BYTES="$TEST_ROOT/strip_bytes"
+mkdir -p "$STRIP_BYTES"
+printf '# Windows file\r\n\r\n<!-- PROMPTKIT_START -->\r\ndirective\r\n<!-- PROMPTKIT_END -->\r\n\r\nTail.\r\n' > "$STRIP_BYTES/AGENTS.md"
+printf 'Keep me\n\n<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->' > "$STRIP_BYTES/.cursorrules"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives "$STRIP_BYTES" >/dev/null
+printf '# Windows file\r\n\r\n\r\nTail.\r\n' > "$TEST_ROOT/strip_bytes_crlf_expected"
+printf 'Keep me\n\n' > "$TEST_ROOT/strip_bytes_eof_expected"
+cmp -s "$STRIP_BYTES/AGENTS.md" "$TEST_ROOT/strip_bytes_crlf_expected" || {
+    echo "strip mode did not preserve CRLF endings byte for byte" >&2
+    exit 1
+}
+cmp -s "$STRIP_BYTES/.cursorrules" "$TEST_ROOT/strip_bytes_eof_expected" || {
+    echo "strip mode did not preserve the no-final-newline EOF state" >&2
+    exit 1
+}
+
+# Test 39c: --dry-run reports the same plan and writes nothing (AC-1)
+STRIP_DRY="$TEST_ROOT/strip_dry"
+mkdir -p "$STRIP_DRY"
+printf 'Before\n\n<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->\n' > "$STRIP_DRY/AGENTS.md"
+printf '<!-- PROMPTKIT_START -->\nonly\n<!-- PROMPTKIT_END -->\n' > "$STRIP_DRY/CLAUDE.md"
+cp "$STRIP_DRY/AGENTS.md" "$TEST_ROOT/strip_dry_agents_before"
+cp "$STRIP_DRY/CLAUDE.md" "$TEST_ROOT/strip_dry_claude_before"
+strip_dry_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives --dry-run "$STRIP_DRY")"
+cmp -s "$STRIP_DRY/AGENTS.md" "$TEST_ROOT/strip_dry_agents_before"
+cmp -s "$STRIP_DRY/CLAUDE.md" "$TEST_ROOT/strip_dry_claude_before"
+grep -qF 'would strip AGENTS.md' <<< "$strip_dry_out"
+grep -qF 'would delete CLAUDE.md' <<< "$strip_dry_out"
+grep -qF 'Nothing was written' <<< "$strip_dry_out"
+
+# Test 39d: a malformed or reversed marker pair is refused before any write (AC-1)
+STRIP_MALFORMED="$TEST_ROOT/strip_malformed"
+mkdir -p "$STRIP_MALFORMED"
+printf 'custom\n\n<!-- PROMPTKIT_START -->\na\n<!-- PROMPTKIT_END -->\n\n<!-- PROMPTKIT_START -->\nb\n<!-- PROMPTKIT_END -->\n' > "$STRIP_MALFORMED/AGENTS.md"
+cp "$STRIP_MALFORMED/AGENTS.md" "$TEST_ROOT/strip_malformed_before"
+set +e
+strip_bad_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives "$STRIP_MALFORMED" 2>&1)"
+strip_bad_status=$?
+set -e
+[[ "$strip_bad_status" -eq 1 ]]
+grep -qF 'Cannot strip AGENTS.md' <<< "$strip_bad_out"
+cmp -s "$STRIP_MALFORMED/AGENTS.md" "$TEST_ROOT/strip_malformed_before"
+[[ ! -e "$STRIP_MALFORMED/PROMPTKIT.md" ]]
+STRIP_REVERSED="$TEST_ROOT/strip_reversed"
+mkdir -p "$STRIP_REVERSED"
+printf '<!-- PROMPTKIT_END -->\na\n<!-- PROMPTKIT_START -->\n' > "$STRIP_REVERSED/AGENTS.md"
+set +e
+strip_rev_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives "$STRIP_REVERSED" 2>&1)"
+strip_rev_status=$?
+set -e
+[[ "$strip_rev_status" -eq 1 ]]
+grep -qF 'Cannot strip AGENTS.md' <<< "$strip_rev_out"
+
+# Test 39e: the removal hint is door-matched. A courier copy gets the rm
+# command; a submodule gets the git commands; neither is guessed when no
+# .promptkit/ exists. PROMPTKIT.md and docs/STATE.md stay user-owned (AC-4).
+STRIP_HINT_COURIER="$TEST_ROOT/strip_hint_courier"
+mkdir -p "$STRIP_HINT_COURIER/.promptkit"
+printf '<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->\n' > "$STRIP_HINT_COURIER/AGENTS.md"
+strip_courier_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives "$STRIP_HINT_COURIER")"
+grep -qF 'rm -rf .promptkit' <<< "$strip_courier_out"
+if grep -qF 'git submodule deinit' <<< "$strip_courier_out"; then
+    echo "courier removal hint wrongly printed submodule commands" >&2
+    exit 1
+fi
+grep -qF 'PROMPTKIT.md, docs/STATE.md and .promptkit/ are yours' <<< "$strip_courier_out"
+STRIP_HINT_SUBMODULE="$TEST_ROOT/strip_hint_submodule"
+mkdir -p "$STRIP_HINT_SUBMODULE/.promptkit"
+printf '<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->\n' > "$STRIP_HINT_SUBMODULE/AGENTS.md"
+printf 'gitdir: ../.git/modules/promptkit\n' > "$STRIP_HINT_SUBMODULE/.promptkit/.git"
+strip_submodule_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives "$STRIP_HINT_SUBMODULE")"
+grep -qF 'git submodule deinit .promptkit' <<< "$strip_submodule_out"
+grep -qF 'git rm .promptkit' <<< "$strip_submodule_out"
+if grep -qF 'rm -rf .promptkit' <<< "$strip_submodule_out"; then
+    echo "submodule removal hint wrongly printed the courier command" >&2
+    exit 1
+fi
+STRIP_HINT_NONE="$TEST_ROOT/strip_hint_none"
+mkdir -p "$STRIP_HINT_NONE"
+printf '<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->\n' > "$STRIP_HINT_NONE/AGENTS.md"
+strip_none_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives "$STRIP_HINT_NONE")"
+if grep -qF 'rm -rf .promptkit' <<< "$strip_none_out" || grep -qF 'git submodule deinit' <<< "$strip_none_out"; then
+    echo "strip mode printed a removal command for a project without .promptkit/" >&2
+    exit 1
+fi
+
+# Test 39f: the PowerShell twin accepts the same switches and produces the same
+# bytes. The static assertions always run; execution is skipped only when no
+# working pwsh is available on this host (the Windows suite covers it there).
+grep -qF '[switch]$StripDirectives' "$REPO_ROOT/init.ps1"
+grep -qF '[switch]$DryRun' "$REPO_ROOT/init.ps1"
+grep -qF '"--strip-directives"' "$REPO_ROOT/init.ps1"
+grep -qF '"--dry-run"' "$REPO_ROOT/init.ps1"
+PWSH_BIN=""
+for strip_pwsh_candidate in /usr/bin/pwsh pwsh; do
+    if command -v "$strip_pwsh_candidate" >/dev/null 2>&1 && "$strip_pwsh_candidate" -NoProfile -Command 'exit 0' >/dev/null 2>&1; then
+        PWSH_BIN="$strip_pwsh_candidate"
+        break
+    fi
+done
+if [[ -n "$PWSH_BIN" ]]; then
+    STRIP_PS1="$TEST_ROOT/strip_ps1"
+    mkdir -p "$STRIP_PS1"
+    printf '# Windows file\r\n\r\n<!-- PROMPTKIT_START -->\r\ndirective\r\n<!-- PROMPTKIT_END -->\r\n\r\nTail.\r\n' > "$STRIP_PS1/AGENTS.md"
+    printf 'Keep me\n\n<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->' > "$STRIP_PS1/.cursorrules"
+    "$PWSH_BIN" -NoProfile -File "$REPO_ROOT/init.ps1" --strip-directives "$STRIP_PS1" >/dev/null
+    cmp -s "$STRIP_PS1/AGENTS.md" "$TEST_ROOT/strip_bytes_crlf_expected" || {
+        echo "init.ps1 strip mode did not match init.sh on CRLF content" >&2
+        exit 1
+    }
+    cmp -s "$STRIP_PS1/.cursorrules" "$TEST_ROOT/strip_bytes_eof_expected" || {
+        echo "init.ps1 strip mode did not match init.sh on EOF state" >&2
+        exit 1
+    }
+fi
+
 # Test 38a: --solo-fast writes the preset machine line and leaves the profile alone
 PRESET_ROOT="$TEST_ROOT/preset_solo"
 mkdir -p "$PRESET_ROOT"
@@ -1814,4 +1968,4 @@ for manifest_entry in "${MANIFEST_EXEMPTIONS[@]}"; do
         exit 1
     fi
 done
-echo "init.sh non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical --help/-h with the full option list and option-token parity against init.ps1's Show-InitHelp, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, and the PowerShell twin pinned by shape) tests passed."
+echo "init.sh non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical --help/-h with the full option list and option-token parity against init.ps1's Show-InitHelp, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, the PowerShell twin pinned by shape), directive-block strip mode (complete-block removal preserving custom prose, CRLF and no-final-newline EOF state, whitespace-only host files deleted, --dry-run writing nothing, malformed and reversed markers refused before any write, door-matched .promptkit/ removal hints, user-owned PROMPTKIT.md and docs/STATE.md untouched, and the init.ps1 twin compared byte for byte whenever pwsh is available) tests passed."

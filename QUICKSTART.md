@@ -49,9 +49,9 @@ npx promptkit-os@latest --balanced
 npx promptkit-os@latest --lite
 ```
 
-The npm package is a **courier, not a dependency**: it fetches the release tarball matching its own version into `.promptkit/` and runs the same `init.sh` / `init.ps1` above, so the resulting tree is identical to the submodule path. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`, never a moving ref. The git submodule path above remains canonical, and it is also how you **update** a submodule install — the courier refuses to overlay a non-empty `.promptkit/` and prints the update command matching your install type.
+The npm package is a **courier, not a dependency**: it fetches the release tarball matching its own version into `.promptkit/` and runs the same `init.sh` / `init.ps1` above, so the resulting tree is identical to the submodule path. `npx promptkit-os@X.Y.Z` always resolves to release tag `vX.Y.Z`, never a moving ref. The git submodule path above remains canonical, and it is also how you **update** a submodule install. A courier install updates in place with `npx promptkit-os@latest --update`; for any other non-empty `.promptkit/` the courier refuses to overlay it and prints the update command matching your install type.
 
-**Removal**: delete `.promptkit/` (plus generated `PROMPTKIT.md` / `docs/STATE.md` if unwanted). No daemon, no cache, nothing left behind.
+**Removal**: strip PromptKit's directive blocks from your host files with `bash .promptkit/init.sh --strip-directives` (PowerShell: `pwsh -File .promptkit/init.ps1 --strip-directives`; add `--dry-run` to preview), then delete `.promptkit/` (plus generated `PROMPTKIT.md` / `docs/STATE.md` if unwanted). No daemon, no cache, nothing left behind.
 
 </details>
 
@@ -82,6 +82,9 @@ Pull the latest engine and re-run the installer (idempotent — never overwrites
 git submodule update --remote --merge .promptkit
 bash .promptkit/init.sh      # macOS/Linux (use --balanced or --lite to switch profile)
 .\.promptkit\init.ps1        # Windows
+
+# Installed via npm courier (atomic replace; refuses submodules and --force)
+npx promptkit-os@latest --update
 
 # Installed via direct clone
 git -C .promptkit pull origin main && bash .promptkit/init.sh

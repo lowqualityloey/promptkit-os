@@ -26,6 +26,8 @@ param (
     [string]$Hosts = "",
     [string]$AddHost = "",
     [switch]$Reconfigure,
+    [switch]$StripDirectives,
+    [switch]$DryRun,
     [string[]]$Target = @(),
     [Alias("h")]
     [switch]$Help,
@@ -331,6 +333,157 @@ function Test-PathContained {
     return $false
 }
 
+# --strip-directives: read a file into line segments that keep their own line
+# terminators, so rebuilding the file after removing the directive block
+# preserves CRLF/LF and the original EOF state byte for byte.
+function Get-StripLines {
+    param([string]$Path)
+    $encoding = [System.Text.Encoding]::GetEncoding(28591)
+    $text = $encoding.GetString([System.IO.File]::ReadAllBytes($Path))
+    $lines = New-Object System.Collections.Generic.List[string]
+    $i = 0
+    while ($i -lt $text.Length) {
+        $nl = $text.IndexOf([string][char]10, $i)
+        if ($nl -lt 0) {
+            $lines.Add($text.Substring($i))
+            break
+        }
+        $lines.Add($text.Substring($i, $nl - $i + 1))
+        $i = $nl + 1
+    }
+    return ,$lines
+}
+
+function Write-StripRemovalHint {
+    param([string]$Root)
+    Write-Host ""
+    Write-Host "PROMPTKIT.md, docs/STATE.md and .promptkit/ are yours and were not modified."
+    if (Test-Path -LiteralPath (Join-Path $Root ".promptkit/.git")) {
+        Write-Host "This install is a git submodule. To remove the engine directory:"
+        Write-Host "  git submodule deinit .promptkit"
+        Write-Host "  git rm .promptkit"
+    } elseif (Test-Path -LiteralPath (Join-Path $Root ".promptkit")) {
+        Write-Host "This install is a courier copy. To remove the engine directory:"
+        Write-Host "  Remove-Item -Recurse -Force .promptkit"
+    }
+}
+
+function Invoke-StripDirectives {
+    param(
+        [string]$Root,
+        [bool]$DryRunMode
+    )
+    $candidates = @(
+        "AGENTS.md",
+        "CLAUDE.md",
+        "GEMINI.md",
+        ".cursorrules",
+        ".cursor/rules/promptkit.mdc",
+        ".windsurfrules",
+        ".github/copilot-instructions.md",
+        ".clinerules",
+        ".clinerules/promptkit.md",
+        ".traerules",
+        ".opencode/rules.md",
+        "CONVENTIONS.md"
+    )
+    $candidates += $ExtraTargets
+    $seen = @{}
+    $plan = @()
+    $rootFull = [System.IO.Path]::GetFullPath($Root)
+    $encoding = [System.Text.Encoding]::GetEncoding(28591)
+
+    foreach ($rel in $candidates) {
+        $full = Join-Path $rootFull $rel
+        if (-not (Test-Path -LiteralPath $full -PathType Leaf)) { continue }
+        if ($rel -in @("PROMPTKIT.md", "docs/STATE.md") -or $rel -like ".promptkit*") {
+            Write-Host "[!] --strip-directives never modifies $($rel): that file is user-owned. Nothing was changed." -ForegroundColor Red
+            exit 1
+        }
+        if (-not (Test-PathContained $rootFull $full)) {
+            Write-Host "[!] Refusing to strip $($rel): it resolves outside the project root. Nothing was changed." -ForegroundColor Red
+            exit 1
+        }
+        $canonical = Resolve-CanonicalPath $full
+        if ($seen.ContainsKey($canonical)) { continue }
+        $seen[$canonical] = $true
+
+        $lines = Get-StripLines $full
+        $startIndex = -1
+        $endIndex = -1
+        $starts = 0
+        $ends = 0
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            $body = $lines[$i].TrimEnd([char[]]@([char]13, [char]10))
+            if ($body -match '^\s*<!-- PROMPTKIT_START -->\s*$') {
+                $starts++
+                if ($startIndex -lt 0) { $startIndex = $i }
+            } elseif ($body -match '^\s*<!-- PROMPTKIT_END -->\s*$') {
+                $ends++
+                if ($endIndex -lt 0) { $endIndex = $i }
+            }
+        }
+        if ($starts -eq 0 -and $ends -eq 0) { continue }
+        if ($starts -ne 1 -or $ends -ne 1 -or $startIndex -ge $endIndex) {
+            Write-Host "[!] Cannot strip $($rel): expected exactly one complete PromptKit directive block with START before END. Nothing was changed." -ForegroundColor Red
+            exit 1
+        }
+
+        $builder = New-Object System.Text.StringBuilder
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($i -ge $startIndex -and $i -le $endIndex) { continue }
+            [void]$builder.Append($lines[$i])
+        }
+        $strippedText = $builder.ToString()
+        $action = if ($strippedText -match '[^\s]') { "strip" } else { "delete" }
+        $plan += [pscustomobject]@{ Rel = $rel; Full = $full; Action = $action; Text = $strippedText }
+    }
+
+    if ($plan.Count -eq 0) {
+        Write-Host "No PromptKit directive blocks found in this project."
+        Write-StripRemovalHint $rootFull
+        return
+    }
+    if ($DryRunMode) {
+        foreach ($entry in $plan) {
+            if ($entry.Action -eq "delete") {
+                Write-Host "  would delete $($entry.Rel) (holds only the PromptKit block)"
+            } else {
+                Write-Host "  would strip $($entry.Rel)"
+            }
+        }
+        Write-Host "Dry run: $($plan.Count) file(s) would change. Nothing was written."
+        Write-StripRemovalHint $rootFull
+        return
+    }
+
+    $backups = @{}
+    foreach ($entry in $plan) { $backups[$entry.Full] = [System.IO.File]::ReadAllBytes($entry.Full) }
+    $applied = 0
+    try {
+        foreach ($entry in $plan) {
+            if ($entry.Action -eq "delete") {
+                Remove-Item -LiteralPath $entry.Full -Force
+                Write-Host "  deleted $($entry.Rel) (held only the PromptKit block)"
+            } else {
+                [System.IO.File]::WriteAllBytes($entry.Full, $encoding.GetBytes($entry.Text))
+                Write-Host "  stripped $($entry.Rel)"
+            }
+            $applied++
+        }
+    } catch {
+        for ($k = 0; $k -lt $applied; $k++) {
+            [System.IO.File]::WriteAllBytes($plan[$k].Full, $backups[$plan[$k].Full])
+        }
+        [System.IO.File]::WriteAllBytes($entry.Full, $backups[$entry.Full])
+        Write-Host "[!] Strip failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "    Files already changed were restored." -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "Removed PromptKit directives from $($plan.Count) file(s)."
+    Write-StripRemovalHint $rootFull
+}
+
 function Show-InitHelp {
     Write-Host "`nPromptKit OS init.ps1 — 1-Click Setup`n" -ForegroundColor Cyan
     Write-Host "Usage: .\init.ps1 [options] [project-root]`n"
@@ -345,6 +498,8 @@ function Show-InitHelp {
     Write-Host "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
     Write-Host "  --reconfigure       Force interactive host re-selection on existing installations"
     Write-Host "  --target=rel/path   Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
+    Write-Host "  --strip-directives  Remove PromptKit directive blocks from host files and exit; keeps PROMPTKIT.md, docs/STATE.md and .promptkit/"
+    Write-Host "  --dry-run           With --strip-directives: report files that would change, write nothing"
     Write-Host "  -Help, -h, --help   Show this help`n"
     Write-Host "Profiles stored in PROMPTKIT.md as 'profile: lite|balanced|turbo'"
     Write-Host "Interactive: Arrow keys move, Enter selects, Space toggles checkboxes, q cancels; final review lets you edit choices."
@@ -431,6 +586,8 @@ foreach ($a in $AllArgs) {
             $ExtraTargets += $_.Substring(9)
         }
         "--reconfigure" { $Reconfigure = $true }
+        "--strip-directives" { $StripDirectives = $true }
+        "--dry-run" { $DryRun = $true }
         "--help" { 
             Show-InitHelp
             exit 0
@@ -460,6 +617,23 @@ foreach ($t in $ExtraTargets) {
         Write-Host "[!] --target must be a project-relative path without '..': $t" -ForegroundColor Red
         exit 1
     }
+}
+
+if ($DryRun -and -not $StripDirectives) {
+    Write-Host "[!] --dry-run only applies to --strip-directives" -ForegroundColor Red
+    exit 1
+}
+# Strip mode runs before the install settings probe, banner, picker, or any
+# write: it only removes directive blocks from host files, then exits.
+if ($StripDirectives) {
+    $stripRoot = if ($TargetDir -ne "") { $TargetDir } elseif ((Split-Path -Leaf (Split-Path -Parent $MyInvocation.MyCommand.Path)) -in @(".promptkit", "promptkit")) { Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) ".." } else { (Get-Location).Path }
+    if ($TargetDir -ne "" -and -not (Test-Path -LiteralPath $TargetDir -PathType Container)) {
+        Write-Host "[!] Project root not found: $TargetDir" -ForegroundColor Red
+        exit 1
+    }
+    $stripRootPath = (Resolve-Path -LiteralPath $stripRoot).Path
+    Invoke-StripDirectives -Root $stripRootPath -DryRunMode:$DryRun
+    exit 0
 }
 
 # Keep installed settings on update re-runs (flags always win over installed values)
