@@ -200,7 +200,7 @@ Use the shared [`Canonical Artifact Contract`](../docs/WORKFLOW-MAP.md#canonical
 
 ### PromptKit OS Internal Release Evaluation
 
-This repository's release-candidate evaluation procedure is maintained separately in [`docs/internal/release-evaluation.md`](../docs/internal/release-evaluation.md) and applies only to this repository. Load it only when performing a release evaluation **in this repository**; consumer repositories do not inherit this internal governance pack.
+This repository's release-candidate evaluation procedure is maintained separately in [`docs/internal/release-evaluation.md`](https://github.com/lowqualityloey/promptkit-os/blob/main/docs/internal/release-evaluation.md) and applies only to this repository. Load it only when performing a release evaluation **in this repository**; consumer repositories do not inherit this internal governance pack.
 
 - **Evaluation & Baseline**: Any unresolved blocker leaves the evaluation unapproved.
 - **QA & Blocker Review**: The QA/Reviewer must conduct a Blocker review; any correction/re-review must be recorded.

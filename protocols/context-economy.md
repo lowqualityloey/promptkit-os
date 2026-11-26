@@ -142,7 +142,7 @@ The claim this protocol makes is that the agent is **directed** to escalate and 
 
 **Discovery route (measured 2026-11-24; the documented route did not carry).** This file is not named in the protocol line of the Balanced or Lite directive — that line lists `setup`, `context-sync`, `code-quality-gate`, and `subagent-delegation`. The route to this file was documented as **transitive**: the directive points at `protocols/setup.md`, whose *Workflows & Protocols Reference* lists `context-economy.md`, and `docs/WORKFLOW-MAP.md` also links it directly.
 
-Six live cells now exist — three probes × both profiles — captured on Antigravity CLI (`agy` 1.5.15, `gemini-3.8-flash-high`) at kit commit `31e4da2`, each under `bwrap` isolation with the grading material excluded from the staged kit. The bundles are under [`docs/internal/host-conformance/antigravity/`](../docs/internal/host-conformance/antigravity/), and every verdict below is the recorded `scorer.txt` line, not a re-reading.
+Six live cells now exist — three probes × both profiles — captured on Antigravity CLI (`agy` 1.5.15, `gemini-3.8-flash-high`) at kit commit `31e4da2`, each under `bwrap` isolation with the grading material excluded from the staged kit. The bundles are under [`docs/internal/host-conformance/antigravity/`](https://github.com/lowqualityloey/promptkit-os/tree/main/docs/internal/host-conformance/antigravity), and every verdict below is the recorded `scorer.txt` line, not a re-reading.
 
 | Cell | Verdict | Opened this file | Reached the discipline |
 | :--- | :--- | :--- | :--- |
