@@ -6,6 +6,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=../terminal-picker.sh
 source "$SCRIPT_DIR/terminal-picker.sh"
 
+# 'b'/'B' used to map to a "back" action that neither picker implemented, so
+# pressing it silently did nothing. The dead binding is gone; a bare 'b' is now
+# reported as an unhandled key instead of pretending to be a navigation action.
+PK_PICKER_KEY=""
+pk_picker_read_key <<< 'b'
+[[ "$PK_PICKER_KEY" == "other" ]] || { echo "terminal picker still maps 'b' to an unimplemented action" >&2; exit 1; }
+
 pk_picker_clear() { :; }
 KEYS=()
 KEY_INDEX=0

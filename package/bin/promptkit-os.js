@@ -64,13 +64,14 @@ function passthroughFlags(argv) {
     "--balanced",
     "--turbo",
     "--experimental",
+    "--solo-fast",
     "--reconfigure",
     "-h",
     "--help",
   ]);
   const out = [];
   for (const arg of argv) {
-    if (arg === "--force") continue; // courier-only flag, never forwarded to the installer
+    if (arg === "--force" || arg === "--update") continue; // courier-only flags, never forwarded to the installer
     if (known.has(arg) || arg.startsWith("--host=") || arg.startsWith("--add-host=") || arg.startsWith("--target=") || arg.startsWith("--tracking=")) {
       out.push(arg);
     } else if (!arg.startsWith("-")) {
@@ -107,6 +108,19 @@ function assertInstallTargetIsClean(kitDir, force) {
       update +
       "\n            To force an overlay anyway (not recommended), re-run with --force."
   );
+}
+
+function assertUpdatable(kitDir) {
+  if (!fs.existsSync(kitDir)) {
+    die(`no ${KIT_DIR}/ to update — run npx promptkit-os@latest without --update to make a fresh install`);
+  }
+  if (fs.existsSync(path.join(kitDir, ".git"))) {
+    die(
+      `${KIT_DIR}/ is a git-submodule install, not a courier install — update it in place:
+` +
+        "  git submodule update --remote --merge .promptkit && bash .promptkit/init.sh"
+    );
+  }
 }
 
 function projectRootFrom(args) {
@@ -148,12 +162,39 @@ function verifyTarballIntegrity(tarball, expectedHex, version) {
 
 async function download(url) {
   process.stderr.write(`[promptkit-os] fetching ${url}\n`);
-  const res = await fetch(url, { redirect: "follow" });
+  let res;
+  try {
+    res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(30_000) });
+  } catch (err) {
+    die(`download failed for ${url}: ${err && err.message ? err.message : String(err)}`);
+  }
   if (!res.ok) die(`download failed (HTTP ${res.status}) for ${url}`);
   return Buffer.from(await res.arrayBuffer());
 }
 
-function extract(tarball, root, dest) {
+function extractToStaging(tarball, root) {
+  const staging = fs.mkdtempSync(path.join(root, `${KIT_DIR}-staging-`));
+  try {
+    const stagedTarball = path.join(staging, ".promptkit-release.tar.gz");
+    fs.writeFileSync(stagedTarball, tarball);
+
+    const res = spawnSync("tar", ["-xzf", ".promptkit-release.tar.gz", "--strip-components=1"], { cwd: staging, stdio: "inherit" });
+    if (res.error) {
+      const hint = res.error.code === "ENOENT" ? "tar not found on PATH" : res.error.message;
+      throw new Error(`failed to extract release tarball: ${hint} (no changes were made to ${KIT_DIR}/)`);
+    }
+    if (res.status !== 0) {
+      throw new Error(`failed to extract release tarball (tar exit ${res.status ?? res.signal}) (no changes were made to ${KIT_DIR}/)`);
+    }
+    fs.rmSync(stagedTarball, { force: true });
+    return staging;
+  } catch (err) {
+    fs.rmSync(staging, { recursive: true, force: true });
+    throw err;
+  }
+}
+
+function extract(tarball, root, dest, options = {}) {
   // Extract into a sibling staging directory and only publish it after tar exits 0.
   // A tar failure (missing binary, corrupt/truncated archive, full disk) then leaves no
   // partially written .promptkit/ and no staging leftovers, so an immediate retry
@@ -166,20 +207,25 @@ function extract(tarball, root, dest) {
   // form broke the Windows leg wherever Git Bash leads PATH. Extracting with
   // cwd=staging and a relative archive name leaves no absolute path in argv at all,
   // on GNU tar, bsdtar, and POSIX tar alike.
-  const staging = fs.mkdtempSync(path.join(root, `${KIT_DIR}-staging-`));
+  const staging = extractToStaging(tarball, root);
   try {
-    const stagedTarball = path.join(staging, ".promptkit-release.tar.gz");
-    fs.writeFileSync(stagedTarball, tarball);
-    const res = spawnSync("tar", ["-xzf", ".promptkit-release.tar.gz", "--strip-components=1"], { cwd: staging, stdio: "inherit" });
-    if (res.error) {
-      const hint = res.error.code === "ENOENT" ? "tar not found on PATH" : res.error.message;
-      throw new Error(`failed to extract release tarball: ${hint} (no changes were made to ${KIT_DIR}/)`);
-    }
-    if (res.status !== 0) {
-      throw new Error(`failed to extract release tarball (tar exit ${res.status ?? res.signal}) (no changes were made to ${KIT_DIR}/)`);
-    }
-    fs.rmSync(stagedTarball, { force: true });
-    if (fs.existsSync(dest)) {
+    if (options.replace) {
+      // --update replaces the whole tree instead of merging, so a file removed
+      // upstream cannot survive in the consumer's copy. The old tree is moved
+      // aside first and restored if the rename or chmod fails.
+      const backup = path.join(root, `${KIT_DIR}-backup-${process.pid}-${Date.now()}`);
+      const hadDest = fs.existsSync(dest);
+      if (hadDest) fs.renameSync(dest, backup);
+      try {
+        fs.renameSync(staging, dest);
+        fs.chmodSync(dest, 0o755);
+      } catch (err) {
+        fs.rmSync(dest, { recursive: true, force: true });
+        if (hadDest) fs.renameSync(backup, dest);
+        throw err;
+      }
+      if (hadDest) fs.rmSync(backup, { recursive: true, force: true });
+    } else if (fs.existsSync(dest)) {
       // --force opts into the documented overlay: move each top-level entry over the
       // existing tree, replacing same-named entries so no stale file survives inside
       // them. tar has already succeeded, so a failed extraction never reaches this
@@ -211,7 +257,7 @@ function runInstaller(kitDir, args) {
         : res.error.message;
       die(`failed to launch init.ps1: ${hint}`);
     }
-    if (res.status !== 0) die(`init.ps1 failed (exit ${res.status ?? res.signal})`);
+    return res.status;
   } else {
     const sh = path.join(kitDir, "init.sh");
     if (!fs.existsSync(sh)) die("init.sh missing from release tarball");
@@ -223,7 +269,7 @@ function runInstaller(kitDir, args) {
         : res.error.message;
       die(`failed to launch init.sh: ${hint}`);
     }
-    if (res.status !== 0) die(`init.sh failed (exit ${res.status ?? res.signal})`);
+    return res.status;
   }
 }
 
@@ -248,25 +294,38 @@ async function main() {
     );
   }
 
-  const args = passthroughFlags(process.argv.slice(2));
-  const force = process.argv.slice(2).includes("--force");
+  const rawArgs = process.argv.slice(2);
+  const args = passthroughFlags(rawArgs);
+  const force = rawArgs.includes("--force");
+  const update = rawArgs.includes("--update");
   if (args.includes("--help") || args.includes("-h")) {
     process.stdout.write(
-      "promptkit-os <version> — installs PromptKit OS into ./.promptkit and runs the canonical installer\n\n" +
-        "Usage:\n" +
-        "  npx promptkit-os@latest                 # install (interactive picker if TTY)\n" +
-        "  npx promptkit-os@latest --balanced      # explicit profile\n" +
-        "  npx promptkit-os@latest --lite\n" +
-        "  npx promptkit-os@latest --turbo --experimental\n" +
-        "  npx promptkit-os@latest /path/to/project\n\n" +
-        "Pass-through flags: --lite --balanced --turbo --experimental --host= --add-host= --target= --tracking= --reconfigure\n" +
-        "Courier flags: --force (overlay a non-empty .promptkit/; not recommended)\n\n" +
-        "Updating an existing install? Use the canonical path instead:\n" +
-        "  git submodule update --remote --merge .promptkit && bash .promptkit/init.sh\n\n" +
-        "The npm package is a courier, not a dependency. Removal: delete .promptkit/ (and generated\n" +
-        "PROMPTKIT.md / docs/STATE.md if unwanted). No daemon, nothing left behind.\n"
+`promptkit-os <version> — installs PromptKit OS into ./.promptkit and runs the canonical installer
+
+Usage:
+  npx promptkit-os@latest                 # install (interactive picker if TTY)
+  npx promptkit-os@latest --balanced      # explicit profile
+  npx promptkit-os@latest --lite
+  npx promptkit-os@latest --turbo --experimental
+  npx promptkit-os@latest /path/to/project
+  npx promptkit-os@latest --update        # atomically replace this courier install
+
+Pass-through flags: --lite --balanced --turbo --experimental --solo-fast --host= --add-host= --target= --tracking= --reconfigure
+Courier flags: --force (overlay a non-empty .promptkit/; not recommended), --update (replace a courier install; refuses git-submodule installs)
+Hosts: --host=codex targets AGENTS.md, the same file as the universal target.
+
+Updating an existing install?
+  npx promptkit-os@latest --update      # courier install (not a git submodule)
+  git submodule update --remote --merge .promptkit && bash .promptkit/init.sh   # git-submodule install
+
+The npm package is a courier, not a dependency. Removal: delete .promptkit/ (and generated
+PROMPTKIT.md / docs/STATE.md if unwanted). No daemon, nothing left behind.
+`
     );
     return;
+  }
+  if (update && force) {
+    die("--update and --force are mutually exclusive — --update replaces a courier install with the release tarball; --force overlays an existing tree without removing stale files");
   }
 
   const root = projectRootFrom(args);
@@ -274,16 +333,42 @@ async function main() {
 
   const url = `https://github.com/${REPO}/archive/refs/tags/v${version}.tar.gz`;
   const kitDir = path.join(root, KIT_DIR);
-  assertInstallTargetIsClean(kitDir, force);
+  const freshInstall = !fs.existsSync(kitDir);
+  if (update) assertUpdatable(kitDir);
+  else assertInstallTargetIsClean(kitDir, force);
 
   const expectedDigest = expectedTarballDigest(version);
   const tarball = await download(url);
   verifyTarballIntegrity(tarball, expectedDigest, version);
-  process.stderr.write(`[promptkit-os] verified release tarball integrity (sha256) for v${version}\n`);
-  extract(tarball, root, kitDir);
-  process.stderr.write(`[promptkit-os] extracted release v${version} into ${KIT_DIR}/\n`);
+  process.stderr.write(`[promptkit-os] verified release tarball integrity (sha256) for v${version}
+`);
+  extract(tarball, root, kitDir, { replace: update });
+  process.stderr.write(`[promptkit-os] extracted release v${version} into ${KIT_DIR}/
+`);
 
-  runInstaller(kitDir, installerArgs(args, version));
+  const status = runInstaller(kitDir, installerArgs(args, version));
+  const installerName = process.platform === "win32" ? "init.ps1" : "init.sh";
+  if (status === 130) {
+    // The canonical installers exit 130 when the user cancels. A fresh non-forced
+    // courier run has created .promptkit/ only to run the installer, so remove it
+    // and leave the project exactly as it was found. Never remove a pre-existing
+    // install, and never remove one the user explicitly asked to overlay.
+    if (freshInstall && !force) {
+      fs.rmSync(kitDir, { recursive: true, force: true });
+      process.stderr.write(`[promptkit-os] setup cancelled — removed the newly created ${KIT_DIR}/
+`);
+    } else {
+      process.stderr.write(`[promptkit-os] setup cancelled — existing ${KIT_DIR}/ left unchanged
+`);
+    }
+    process.exit(130);
+  }
+  if (status !== 0) die(`${installerName} failed (exit ${status})`);
+  process.stderr.write(
+    `[promptkit-os] ${KIT_DIR}/ is a courier copy with no upstream — commit it for a reproducible install, ` +
+      `or add ${KIT_DIR}/ to .gitignore and reinstall with npx promptkit-os@latest; git submodule update does not apply.
+`
+  );
 }
 
 if (require.main === module) {

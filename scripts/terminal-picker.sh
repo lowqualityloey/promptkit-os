@@ -38,8 +38,6 @@ pk_picker_read_key() {
         PK_PICKER_KEY=space
     elif [[ "$key" == 'q' || "$key" == 'Q' ]]; then
         PK_PICKER_KEY=cancel
-    elif [[ "$key" == 'b' || "$key" == 'B' ]]; then
-        PK_PICKER_KEY=back
     else
         PK_PICKER_KEY=other
     fi

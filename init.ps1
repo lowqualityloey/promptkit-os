@@ -20,6 +20,7 @@ param (
     [switch]$Balanced,
     [switch]$Turbo,
     [switch]$Experimental,
+    [switch]$SoloFast,
     [ValidateSet("local","github","jira","linear")]
     [string]$Tracking = "local",
     [string]$Hosts = "",
@@ -39,6 +40,8 @@ $ProfileInteractive = $false
 $TrackingInteractive = $false
 $HostInteractive = $false
 $CourierEngineVersion = ""
+$Preset = ""
+$PresetSet = $false
 
 function Show-SetupBanner {
     if (-not $UsePicker) { return }
@@ -58,6 +61,9 @@ function Get-HostFile($Name) {
         # dedupes by resolved path, so writing both injects the directive twice
         # (docs/HOST-CONFORMANCE.md section 4, issue #764).
         "gemini" { return "AGENTS.md" }
+        # codex reads AGENTS.md too (OpenAI Codex CLI), so the universal target
+        # already covers it; no separate host file is written.
+        "codex" { return "AGENTS.md" }
         "windsurf" { return ".windsurfrules" }
         "copilot" { return ".github/copilot-instructions.md" }
         "cline" { return ".clinerules" }
@@ -66,8 +72,8 @@ function Get-HostFile($Name) {
         default { return "" }
     }
 }
-$KnownHostsList = @("claude","opencode","cursor","gemini","windsurf","copilot","cline","trae","aider")
-$HostPickerLabels = @("Claude Code", "OpenCode", "Cursor", "Gemini CLI", "Windsurf", "GitHub Copilot", "Cline", "Trae", "Aider")
+$KnownHostsList = @("claude","opencode","cursor","gemini","windsurf","copilot","cline","trae","aider","codex")
+$HostPickerLabels = @("Claude Code", "OpenCode", "Cursor", "Gemini CLI", "Windsurf", "GitHub Copilot", "Cline", "Trae", "Aider", "Codex CLI")
 
 function Stop-PromptKitSetup {
     Write-Host "`nSetup cancelled before any project files were changed."
@@ -333,8 +339,9 @@ function Show-InitHelp {
     Write-Host "  --balanced          Balanced profile: the full workflow set, Level 0-3 adaptive ceremony (default)"
     Write-Host "  --turbo             Turbo profile: Balanced + parallel subagent waves, up to ~2x measured token cost"
     Write-Host "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
+    Write-Host "  --solo-fast         Solo/Fast preset: five-command loop, terse status lines, Level 2 Lite task records"
     Write-Host "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import, no auto-push)"
-    Write-Host "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,windsurf,copilot,cline,trae,aider)"
+    Write-Host "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,codex,windsurf,copilot,cline,trae,aider)"
     Write-Host "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
     Write-Host "  --reconfigure       Force interactive host re-selection on existing installations"
     Write-Host "  --target=rel/path   Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
@@ -384,6 +391,7 @@ if ($PSBoundParameters.ContainsKey("Hosts")) { $HostSet = $true }
 if ($Lite) { $Profile = "lite"; $ProfileSet = $true }
 if ($Balanced) { $Profile = "balanced"; $ProfileSet = $true }
 if ($Turbo) { $Profile = "turbo"; $ProfileSet = $true }
+if ($SoloFast) { $Preset = "solo-fast"; $PresetSet = $true }
 
 # Also check $args for --lite style (when called via pwsh -File with --lite).
 # Tokens PowerShell cannot bind (notably --name=value with a double dash) land
@@ -397,6 +405,7 @@ foreach ($a in $AllArgs) {
         "--lite" { $Profile = "lite"; $ProfileSet = $true }
         "--balanced" { $Profile = "balanced"; $ProfileSet = $true }
         "--turbo" { $Profile = "turbo"; $ProfileSet = $true }
+        "--solo-fast" { $Preset = "solo-fast"; $PresetSet = $true }
         "--experimental" { $Experimental = $true }
         { $_ -like "--tracking=*" } {
             $trackingValue = $_.Substring(11)
@@ -482,9 +491,9 @@ if (-not $TrackingSet -and (Test-Path $probeProfile)) {
 if (-not $HostSet -and -not $Reconfigure -and (Test-Path $probeProfile)) {
     $installedHosts = @()
     foreach ($h in $KnownHostsList) {
-        # gemini maps to AGENTS.md, so an AGENTS.md-only install would otherwise
-        # re-detect as "gemini" instead of the universal "agents" target.
-        if ($h -eq "gemini") { continue }
+        # gemini and codex map to AGENTS.md, so an AGENTS.md-only install would
+        # otherwise re-detect as one of them instead of the universal target.
+        if ($h -eq "gemini" -or $h -eq "codex") { continue }
         $hf = Get-HostFile $h
         if ($hf -ne "" -and (Test-Path (Join-Path $probeRoot $hf))) {
             $installedHosts += $h
@@ -1184,7 +1193,8 @@ function Get-UpdatedProfileContent {
         [string]$Profile,
         [string]$Tracking,
         [string]$TrackingProjection,
-        [string]$EngineDir
+        [string]$EngineDir,
+        [string]$Preset
     )
     $text = $CurrentContent
     $today = Get-Date -Format 'yyyy-MM-dd'
@@ -1239,6 +1249,14 @@ ${dateLine}- **Engine**: $EngineDir
         $lines += "projection: $TrackingProjection"
     }
     $text = ($lines -join "`n") + "`n"
+
+    if (-not [string]::IsNullOrEmpty($Preset)) {
+        $text = $text -replace "?
+$", ""
+        $lines = @($text -split "`r?`n" | Where-Object { $_ -notmatch "^preset:" })
+        $lines += "preset: $Preset"
+        $text = ($lines -join "`n") + "`n"
+    }
     return $text
 }
 
@@ -1324,7 +1342,7 @@ try {
     } elseif (Test-Path -LiteralPath $TemplateProfile) {
         $profileInitialContent = [System.IO.File]::ReadAllText($TemplateProfile, [System.Text.Encoding]::UTF8)
     }
-    $stagedProfile = Get-UpdatedProfileContent -CurrentContent $profileInitialContent -Profile $Profile -Tracking $Tracking -TrackingProjection $TrackingProjection -EngineDir $EngineDir
+    $stagedProfile = Get-UpdatedProfileContent -CurrentContent $profileInitialContent -Profile $Profile -Tracking $Tracking -TrackingProjection $TrackingProjection -EngineDir $EngineDir -Preset $Preset
 
     if (-not (Test-Path -LiteralPath $ProjectProfile)) {
         $createdFiles.Add($ProjectProfile)

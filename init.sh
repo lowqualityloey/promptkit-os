@@ -56,6 +56,12 @@ PICKER_TTY=0
 if [[ -t 0 && -t 1 && -z "${PROMPTKIT_NO_INTERACTIVE:-}" && "${TERM:-}" != "dumb" ]]; then
     PICKER_TTY=1
 fi
+# terminal-picker.sh reads keys with `read -N`, which only exists in Bash 4+.
+# macOS still ships Bash 3.2 as /bin/bash, where the picker cannot read input;
+# fall back to the numbered menu rather than showing an unresponsive picker.
+if [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    PICKER_TTY=0
+fi
 PROFILE_INTERACTIVE=0
 TRACKING_INTERACTIVE=0
 HOST_INTERACTIVE=0
@@ -79,7 +85,7 @@ choose_profile() {
             1) PROFILE="lite" ;;
             2)
                 printf '\nTurbo is experimental and can use up to ~2x measured token cost.\n'
-                read -r -p "Acknowledge this and enable Turbo? [y/N]: " choice
+                read -r -p "Acknowledge this and enable Turbo? [y/N]: " choice || cancel_setup
                 [[ "$choice" =~ ^[Yy]$ ]] || { PROFILE="balanced"; PROFILE_SET=1; PROFILE_INTERACTIVE=1; return 0; }
                 PROFILE="turbo"; EXPERIMENTAL=1 ;;
         esac
@@ -150,8 +156,8 @@ choose_tracking() {
 
 choose_hosts() {
     local choice attempts=0 token invalid
-    local -a ids=(claude opencode cursor gemini windsurf copilot cline trae aider)
-    local -a labels=("Claude Code" "OpenCode" "Cursor" "Gemini CLI" "Windsurf" "GitHub Copilot" "Cline" "Trae" "Aider")
+    local -a ids=(claude opencode cursor gemini windsurf copilot cline trae aider codex)
+    local -a labels=("Claude Code" "OpenCode" "Cursor" "Gemini CLI" "Windsurf" "GitHub Copilot" "Cline" "Trae" "Aider" "Codex CLI")
     if [[ "$PICKER_TTY" -eq 1 ]]; then
         local defaults
         if [[ "$HOST_INTERACTIVE" -eq 1 ]]; then
@@ -244,6 +250,8 @@ TRACKING_SET=0
 TRACKING_PROJECTION=""
 HOSTS=""
 HOST_SET=0
+PRESET=""
+PRESET_SET=0
 RECONFIGURE=0
 EXTRA_TARGETS=()
 PROJECT_ROOT=""
@@ -335,6 +343,9 @@ host_file() {
         # dedupes by resolved path, so writing both injects the directive twice
         # (docs/HOST-CONFORMANCE.md section 4, issue #764).
         gemini) echo "AGENTS.md" ;;
+        # codex reads AGENTS.md too (OpenAI Codex CLI), so it has no separate
+        # host file; the universal target already covers it.
+        codex) echo "AGENTS.md" ;;
         windsurf) echo ".windsurfrules" ;;
         copilot) echo ".github/copilot-instructions.md" ;;
         cline) echo ".clinerules" ;;
@@ -343,7 +354,7 @@ host_file() {
         *) echo "" ;;
     esac
 }
-KNOWN_HOSTS="claude opencode cursor gemini windsurf copilot cline trae aider"
+KNOWN_HOSTS="claude opencode cursor gemini codex windsurf copilot cline trae aider"
 
 # Parse args: flags + optional positional project root
 for arg in "$@"; do
@@ -359,6 +370,10 @@ for arg in "$@"; do
         --turbo)
             PROFILE="turbo"
             PROFILE_SET=1
+            ;;
+        --solo-fast)
+            PRESET="solo-fast"
+            PRESET_SET=1
             ;;
         --experimental)
             EXPERIMENTAL=1
@@ -411,8 +426,9 @@ for arg in "$@"; do
             echo -e "  --balanced          Balanced profile: the full workflow set, Level 0-3 adaptive ceremony (default)"
             echo -e "  --turbo             Turbo profile: Balanced + parallel subagent waves, up to ~2x measured token cost"
             echo -e "  --experimental      Required for --turbo, acknowledges experimental cost and warnings"
+            echo -e "  --solo-fast         Solo/Fast preset: five-command loop, terse status lines, Level 2 Lite task records"
             echo -e "  --tracking=local|github|jira|linear  Task tracker (default: local; jira/linear = manual import, no auto-push)"
-            echo -e "  --host=a,b,c        AI hosts to configure (comma-separated from: claude,opencode,cursor,gemini,windsurf,copilot,cline,trae,aider)"
+            echo -e "  --host=a,b,c        AI hosts to configure (comma-separated from: ${KNOWN_HOSTS// /,})"
             echo -e "  --add-host=name     Add one host to an existing install (agents = universal AGENTS.md)"
             echo -e "  --reconfigure       Force interactive host re-selection on existing installations"
             echo -e "  --target=rel/path  Custom directive file (project-relative, repeatable; e.g. docs/AI.md)"
@@ -517,9 +533,9 @@ fi
 if [[ "$HOST_SET" -eq 0 && "$RECONFIGURE" -eq 0 && -f "$PROJECT_ROOT/PROMPTKIT.md" ]]; then
     installed_hosts=""
     for h in $KNOWN_HOSTS; do
-        # gemini maps to AGENTS.md, so an AGENTS.md-only install would otherwise
-        # re-detect as "gemini" instead of the universal "agents" target.
-        if [[ "$h" == "gemini" ]]; then
+        # gemini and codex map to AGENTS.md, so an AGENTS.md-only install would
+        # otherwise re-detect as one of them instead of the universal target.
+        if [[ "$h" == "gemini" || "$h" == "codex" ]]; then
             continue
         fi
         hf="$(host_file "$h")"
@@ -614,6 +630,7 @@ probe_host() {
         opencode) command -v opencode >/dev/null 2>&1 || [[ -d "$HOME/.config/opencode" ]] ;;
         cursor) command -v cursor >/dev/null 2>&1 || [[ -d "$HOME/.cursor" ]] ;;
         gemini) command -v gemini >/dev/null 2>&1 ;;
+        codex) command -v codex >/dev/null 2>&1 ;;
         windsurf) command -v windsurf >/dev/null 2>&1 || [[ -d "$HOME/.windsurf" ]] ;;
         copilot) command -v copilot >/dev/null 2>&1 ;;
         cline) [[ -d "$HOME/.config/cline" ]] || [[ -d "$HOME/.cline" ]] ;;
@@ -1198,6 +1215,9 @@ else
         grep -v "^projection:" "$STAGED_PROFILE" > "$PROJ_TMP" || true
         cat "$PROJ_TMP" > "$STAGED_PROFILE" && rm -f "$PROJ_TMP"
     fi
+fi
+if [[ "$PRESET_SET" -eq 1 ]]; then
+    set_staged_machine_field "$STAGED_PROFILE" "preset" "$PRESET"
 fi
 
 # 7. Transactional Commit with Rollback (F07 - P2, F10 - P2, R5 - P2)
