@@ -9,7 +9,7 @@
 - **Description**:
   - `lite`: 6 utility workflows (route, debug, commit, checkpoint, sync, profile) <1,500 tok, 80% value — onboarding
   - `balanced`: the full 26-workflow set, Level 0-3 adaptive ceremony (default) — teams, production
-  - `turbo`: experimental, Balanced + parallel subagent waves, up to ~2x measured token cost, still requires human L3 approval
+  - `turbo`: experimental, Balanced + parallel write waves, up to ~2x measured token cost, still requires human L3 approval
 - **Preset**: `standard` (default) or `solo-fast` — Solo/Fast bundles the five-command loop, concise routine telemetry and Level 2 Lite records; it never relaxes the push/PR, destructive-operation or Level 3 human-approval gates
 - **Upgrade Path**: From your resolved kit root, run `./init.sh --balanced` for full, `--lite` for minimal, `--turbo --experimental` for parallel waves — or switch in-session with `pk:profile`
 
@@ -110,7 +110,7 @@ PromptKit OS enforces Evidence-Gated Verification. Every completion claim requir
 - **GitHub MCP**: [e.g. `github-mcp-server` for PR creation, issue reading, commit search | N/A]
 - **Database MCP**: [e.g. `postgres-mcp` or `sqlite-mcp` for read-only schema discovery & `pk:data` checks | N/A]
 - **Browser / UI MCP**: [e.g. `playwright` for `pk:design` visual and E2E verification | N/A]
-- **Execution Precedence**: Native MCP Tools $\rightarrow$ Native IDE Search/Edit Tools $\rightarrow$ Terminal CLI Commands $\rightarrow$ Structured Markdown Fallback
+- **Execution Precedence**: Native MCP Tools → Native IDE Search/Edit Tools → Terminal CLI Commands → Structured Markdown Fallback
 
 ### 5a. LSP Capabilities (Optional)
 > Record detected language-server capabilities for range-accurate diagnostics (`file:line:col`) consumed by `pk:review`. Progressive Enhancement applies: LSP is an optional accelerator, disabled by default, with zero token overhead for Lite-profile users. When unavailable, assistants fall back to the Section 3 typecheck/lint commands with zero errors. The assistant never starts or enables a language server; humans configure in-host.
