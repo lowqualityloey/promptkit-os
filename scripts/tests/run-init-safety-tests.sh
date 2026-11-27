@@ -1893,6 +1893,76 @@ fi
 cmp -s "$STRIP_ALIAS/PROMPTKIT.md" "$TEST_ROOT/strip_alias_promptkit_expected"
 cmp -s "$STRIP_ALIAS/docs/STATE.md" "$TEST_ROOT/strip_alias_state_expected"
 
+# Test 39h: a host candidate that is a hard link to a user-owned PromptKit file
+# is refused by file identity, not by path (#818). Canonicalisation cannot see a
+# hard link, so #814's alias check let this case strip a user-owned file.
+strip_hl_index=0
+strip_hl_refused=0
+strip_hl_skipped=0
+for strip_hl_spec in 'AGENTS.md|PROMPTKIT.md|protected PromptKit path' '.cursorrules|docs/STATE.md|protected PromptKit path' 'CLAUDE.md|.promptkit/rules.md|inside the protected .promptkit/ directory'; do
+    strip_hl_index=$((strip_hl_index + 1))
+    strip_hl_candidate="${strip_hl_spec%%|*}"
+    strip_hl_rest="${strip_hl_spec#*|}"
+    strip_hl_target="${strip_hl_rest%%|*}"
+    strip_hl_expected="${strip_hl_rest#*|}"
+    STRIP_HARDLINK="$TEST_ROOT/strip_hardlink_$strip_hl_index"
+    mkdir -p "$STRIP_HARDLINK/docs" "$STRIP_HARDLINK/.promptkit"
+    printf 'user profile\n\n<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->\n' > "$STRIP_HARDLINK/PROMPTKIT.md"
+    printf '# State\n\n<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->\n' > "$STRIP_HARDLINK/docs/STATE.md"
+    printf 'kit rules\n\n<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->\n' > "$STRIP_HARDLINK/.promptkit/rules.md"
+    cp "$STRIP_HARDLINK/PROMPTKIT.md" "$TEST_ROOT/strip_hardlink_${strip_hl_index}_promptkit_expected"
+    cp "$STRIP_HARDLINK/docs/STATE.md" "$TEST_ROOT/strip_hardlink_${strip_hl_index}_state_expected"
+    cp "$STRIP_HARDLINK/.promptkit/rules.md" "$TEST_ROOT/strip_hardlink_${strip_hl_index}_kit_expected"
+    if ! ln "$STRIP_HARDLINK/$strip_hl_target" "$STRIP_HARDLINK/$strip_hl_candidate" 2>/dev/null; then
+        strip_hl_skipped=$((strip_hl_skipped + 1))
+        continue
+    fi
+    set +e
+    strip_hl_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives "$STRIP_HARDLINK" 2>&1)"
+    strip_hl_status=$?
+    set -e
+    if [[ "$strip_hl_status" -ne 1 ]]; then
+        echo "Test 39h: hard link $strip_hl_candidate -> $strip_hl_target was not refused (exit $strip_hl_status)" >&2
+        exit 1
+    fi
+    if ! grep -qF "$strip_hl_expected" <<< "$strip_hl_out"; then
+        echo "Test 39h: refusal for $strip_hl_candidate did not name the identity rule" >&2
+        exit 1
+    fi
+    if ! grep -qF "$strip_hl_candidate" <<< "$strip_hl_out"; then
+        echo "Test 39h: refusal for $strip_hl_candidate did not name the file" >&2
+        exit 1
+    fi
+    cmp -s "$STRIP_HARDLINK/PROMPTKIT.md" "$TEST_ROOT/strip_hardlink_${strip_hl_index}_promptkit_expected"
+    cmp -s "$STRIP_HARDLINK/docs/STATE.md" "$TEST_ROOT/strip_hardlink_${strip_hl_index}_state_expected"
+    cmp -s "$STRIP_HARDLINK/.promptkit/rules.md" "$TEST_ROOT/strip_hardlink_${strip_hl_index}_kit_expected"
+    strip_hl_refused=$((strip_hl_refused + 1))
+done
+[[ "$((strip_hl_refused + strip_hl_skipped))" -eq 3 ]]
+if [[ "$strip_hl_skipped" -gt 0 ]]; then
+    echo "  SKIP: hard link creation unsupported on this host (strip identity)"
+fi
+
+# Test 39i: two names for one inode are planned once, so the file is never
+# stripped or backed up twice under two names (#818).
+STRIP_DEDUPE="$TEST_ROOT/strip_dedupe"
+mkdir -p "$STRIP_DEDUPE"
+printf 'Before\n\n<!-- PROMPTKIT_START -->\nd\n<!-- PROMPTKIT_END -->\n\nAfter\n' > "$STRIP_DEDUPE/.cursorrules"
+printf 'Before\n\n\nAfter\n' > "$TEST_ROOT/strip_dedupe_expected"
+if ln "$STRIP_DEDUPE/.cursorrules" "$STRIP_DEDUPE/CONVENTIONS.md" 2>/dev/null; then
+    strip_dedupe_out="$(HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$REPO_ROOT/init.sh" --strip-directives "$STRIP_DEDUPE")"
+    if [[ "$(grep -c '^  stripped ' <<< "$strip_dedupe_out")" -ne 1 ]]; then
+        echo "Test 39i: a hard-linked pair was stripped more than once" >&2
+        exit 1
+    fi
+    grep -qF '  stripped .cursorrules' <<< "$strip_dedupe_out"
+    grep -qF 'Removed PromptKit directives from 1 file(s).' <<< "$strip_dedupe_out"
+    cmp -s "$STRIP_DEDUPE/.cursorrules" "$TEST_ROOT/strip_dedupe_expected"
+    cmp -s "$STRIP_DEDUPE/CONVENTIONS.md" "$TEST_ROOT/strip_dedupe_expected"
+else
+    echo "  SKIP: hard link creation unsupported on this host (strip identity)"
+fi
+
 # Test 38a: --solo-fast writes the preset machine line and leaves the profile alone
 PRESET_ROOT="$TEST_ROOT/preset_solo"
 mkdir -p "$PRESET_ROOT"
@@ -1923,6 +1993,44 @@ fi
 
 # Test 38e: a failed Turbo confirmation read cancels instead of continuing
 grep -qF 'Acknowledge this and enable Turbo? [y/N]: " choice || cancel_setup' "$REPO_ROOT/init.sh"
+# Test 40a: a courier-style install carries no .git, so a later direct run
+# without an explicit --engine-version= must keep the identity the project
+# already carries instead of stamping "unknown" over it (#819).
+ENGINE_KIT="$TEST_ROOT/engine_gitless_kit"
+copy_kit "$ENGINE_KIT"
+ENGINE_HOST="$TEST_ROOT/engine_gitless_host"
+mkdir -p "$ENGINE_HOST"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$ENGINE_KIT/init.sh" --lite --solo-fast --host=agents --add-host=claude --engine-version=v2.6.1 "$ENGINE_HOST" >/dev/null
+grep -qF -- '- **Engine Version**: v2.6.1 @ unknown' "$ENGINE_HOST/docs/STATE.md"
+grep -qF 'Engine: v2.6.1 (unknown)' "$ENGINE_HOST/AGENTS.md"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$ENGINE_KIT/init.sh" --lite --solo-fast --host=agents "$ENGINE_HOST" >/dev/null
+grep -qF -- '- **Engine Version**: v2.6.1 @ unknown' "$ENGINE_HOST/docs/STATE.md"
+grep -qF 'Engine: v2.6.1 (unknown)' "$ENGINE_HOST/AGENTS.md"
+if grep -qF 'Engine: unknown' "$ENGINE_HOST/AGENTS.md"; then
+    echo "Test 40a: a re-run without --engine-version= degraded the engine identity to unknown" >&2
+    exit 1
+fi
+# A host that already says "unknown" must not shadow a later host that still
+# carries a real stamp (#819): neutralize docs/STATE.md and AGENTS.md and let
+# the directive scan recover the identity from CLAUDE.md.
+sed -i 's/- \*\*Engine Version\*\*: v2.6.1 @ unknown/- **Engine Version**: unknown @ unknown/' "$ENGINE_HOST/docs/STATE.md"
+sed -i 's/^Engine: v2.6.1 (unknown)/Engine: unknown (unknown)/' "$ENGINE_HOST/AGENTS.md"
+grep -qF 'Engine: v2.6.1 (unknown)' "$ENGINE_HOST/CLAUDE.md"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$ENGINE_KIT/init.sh" --lite --solo-fast --host=agents --add-host=claude "$ENGINE_HOST" >/dev/null
+grep -qF -- '- **Engine Version**: v2.6.1 @ unknown' "$ENGINE_HOST/docs/STATE.md"
+grep -qF 'Engine: v2.6.1 (unknown)' "$ENGINE_HOST/AGENTS.md"
+grep -qF 'Engine: v2.6.1 (unknown)' "$ENGINE_HOST/CLAUDE.md"
+if grep -qF 'Engine: unknown' "$ENGINE_HOST/AGENTS.md"; then
+    echo "Test 40a: an unknown host directive shadowed a later valid host" >&2
+    exit 1
+fi
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$ENGINE_KIT/init.sh" --lite --solo-fast --host=agents --engine-version=v2.6.2 "$ENGINE_HOST" >/dev/null
+grep -qF -- '- **Engine Version**: v2.6.2 @ unknown' "$ENGINE_HOST/docs/STATE.md"
+grep -qF 'Engine: v2.6.2 (unknown)' "$ENGINE_HOST/AGENTS.md"
+ENGINE_FRESH="$TEST_ROOT/engine_gitless_fresh"
+mkdir -p "$ENGINE_FRESH"
+HOME="$FAKE_HOME" PATH="/usr/bin:/bin" bash "$ENGINE_KIT/init.sh" --lite --solo-fast --host=agents "$ENGINE_FRESH" >/dev/null
+grep -qF 'Engine: unknown' "$ENGINE_FRESH/AGENTS.md"
 
 # Test 37: manifest coverage guard. Every engine-relative path the installers
 # resolve must be a row of scripts/setup-assert-files.txt or sit on the
@@ -2004,4 +2112,4 @@ for manifest_entry in "${MANIFEST_EXEMPTIONS[@]}"; do
         exit 1
     fi
 done
-echo "init.sh non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical --help/-h with the full option list and option-token parity against init.ps1's Show-InitHelp, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, the PowerShell twin pinned by shape), directive-block strip mode (complete-block removal preserving custom prose, CRLF and no-final-newline EOF state, whitespace-only host files deleted, --dry-run writing nothing, malformed and reversed markers refused before any write, door-matched .promptkit/ removal hints, user-owned PROMPTKIT.md and docs/STATE.md untouched, canonical protected-path aliases (./PROMPTKIT.md, docs/./STATE.md, docs//STATE.md, and an in-repo symlink to PROMPTKIT.md) refused without mutation, and the init.ps1 twin compared byte for byte whenever pwsh is available) tests passed."
+echo "init.sh non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical --help/-h with the full option list and option-token parity against init.ps1's Show-InitHelp, CRLF/LF compatibility, duplicate/malformed/reversed markers, literal $, awk failure, UTF-8, directory targets, file permissions, byte-idempotency, kit-reference path-bounding (sibling prefix, root equality), GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert (courier, partial-copy, direct-clone, submodule, standalone, opt-out, incomplete), manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, the PowerShell twin pinned by shape), directive-block strip mode (complete-block removal preserving custom prose, CRLF and no-final-newline EOF state, whitespace-only host files deleted, --dry-run writing nothing, malformed and reversed markers refused before any write, door-matched .promptkit/ removal hints, user-owned PROMPTKIT.md and docs/STATE.md untouched, canonical protected-path aliases (./PROMPTKIT.md, docs/./STATE.md, docs//STATE.md, and an in-repo symlink to PROMPTKIT.md) refused without mutation, hard-link candidates to PROMPTKIT.md, docs/STATE.md and .promptkit/ refused by file identity with the protected files byte-identical, one inode reachable under two candidate names planned and stripped once, the engine identity of a git-less courier install preserved across a later direct run without an explicit --engine-version= while an explicit value still overrides it, and the init.ps1 twin compared byte for byte whenever pwsh is available) tests passed."

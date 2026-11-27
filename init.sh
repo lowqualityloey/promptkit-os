@@ -15,6 +15,9 @@ source "$SCRIPT_DIR/scripts/terminal-picker.sh"
 # excludes the repo's non-release backup/* tags, which describe would otherwise pick.
 ENGINE_VERSION="unknown"
 ENGINE_SHA="unknown"
+# An explicit --engine-version= from the npx courier, recorded during arg parsing and
+# only consulted when the kit carries no .git (#819). See the resolver below.
+ENGINE_VERSION_EXPLICIT=""
 resolve_engine_identity() {
     if [[ -e "$SCRIPT_DIR/.git" ]] && command -v git >/dev/null 2>&1; then
         local described short_sha
@@ -43,6 +46,74 @@ validate_engine_identity() {
 # first, or it would re-escape the metacharacters handled after it.
 sed_replacement_escape() {
     printf '%s' "$1" | sed -e 's/[\\&|]/\\&/g' | tr '\n' ' '
+}
+
+# #819: a courier install carries no .promptkit/.git, so a later direct run of this
+# script (--solo-fast, --lite, --add-host, --reconfigure, a bare rerun) has no git
+# metadata to resolve and used to stamp "unknown" over a valid v2.6.x identity. When
+# .git is absent and --engine-version= was not passed, reuse the identity the project
+# already carries instead of degrading it. This is display-only: a project with no
+# usable stamp still installs, stamped "unknown" exactly as before.
+state_stamp_engine_identity() {
+    local state_file="$1" version_line version sha
+    [[ -f "$state_file" ]] || return 0
+    version_line="$(grep -m 1 -E '^- \*\*Engine Version\*\*:' "$state_file" 2>/dev/null || true)"
+    [[ -n "$version_line" ]] || return 0
+    # A template placeholder row ("[YYYY-MM-DD]") is not an installed stamp.
+    if [[ "$version_line" == *'['* ]]; then return 0; fi
+    version="$(printf '%s\n' "$version_line" | sed -n 's/^-[[:space:]]*\*\*Engine Version\*\*:[[:space:]]*\([^[:space:]]*\)[[:space:]]*@.*/\1/p')"
+    sha="$(printf '%s\n' "$version_line" | sed -n 's/.*@[[:space:]]*\([^[:space:]]*\).*/\1/p')"
+    [[ -n "$version" ]] || return 0
+    ENGINE_VERSION="$version"
+    ENGINE_SHA="${sha:-unknown}"
+    return 0
+}
+
+directive_stamp_engine_identity() {
+    local host rel host_path version_line version sha
+    for host in agents $KNOWN_HOSTS; do
+        rel="$(host_file "$host")"
+        [[ -n "$rel" ]] || continue
+        host_path="$PROJECT_ROOT/$rel"
+        [[ -f "$host_path" ]] || continue
+        version_line="$(grep -m 1 -E '^[[:space:]]*Engine:[[:space:]]*' "$host_path" 2>/dev/null || true)"
+        [[ -n "$version_line" ]] || continue
+        if [[ "$version_line" == *'['* ]]; then continue; fi
+        version="$(printf '%s\n' "$version_line" | sed -n 's/^[[:space:]]*Engine:[[:space:]]*\([^[:space:]]*\)[[:space:]]*(\([^)]*\)).*/\1/p')"
+        sha="$(printf '%s\n' "$version_line" | sed -n 's/^[[:space:]]*Engine:[[:space:]]*\([^[:space:]]*\)[[:space:]]*(\([^)]*\)).*/\2/p')"
+        # A host that already says "unknown" (or a value the identity grammar
+        # would reject) must not stop the scan: a later host file can still
+        # hold a recoverable stamp (#819).
+        if [[ -z "$version" || "$version" == "unknown" ]]; then continue; fi
+        if [[ ! "$version" =~ ^[A-Za-z0-9._+-]+$ ]]; then continue; fi
+        ENGINE_VERSION="$version"
+        ENGINE_SHA="${sha:-unknown}"
+        return 0
+    done
+    return 0
+}
+
+# Precedence: git metadata in the kit checkout (already resolved above), then an
+# explicit --engine-version= from the courier, then whatever identity this project is
+# already stamped with. The flag stays ignored when .git exists, exactly as before: a
+# real checkout is authoritative, and a hostile tag inside it must degrade to
+# "unknown" rather than be overridable by a caller (#819). Runs after PROJECT_ROOT is
+# known and after --strip-directives exits, because strip mode must never read a stamp.
+resolve_engine_identity_after_args() {
+    if [[ "$ENGINE_VERSION" == "unknown" && ! -e "$SCRIPT_DIR/.git" && -n "$ENGINE_VERSION_EXPLICIT" ]]; then
+        ENGINE_VERSION="$ENGINE_VERSION_EXPLICIT"
+        validate_engine_identity
+    fi
+    if [[ "$ENGINE_VERSION" != "unknown" || -e "$SCRIPT_DIR/.git" ]]; then
+        return 0
+    fi
+    state_stamp_engine_identity "$PROJECT_ROOT/docs/STATE.md"
+    validate_engine_identity
+    if [[ "$ENGINE_VERSION" == "unknown" ]]; then
+        directive_stamp_engine_identity
+        validate_engine_identity
+    fi
+    return 0
 }
 resolve_engine_identity
 
@@ -333,6 +404,14 @@ get_file_mode() {
     stat -L -c '%a' "$1" 2>/dev/null || stat -L -f '%Lp' "$1" 2>/dev/null || true
 }
 
+# File identity (device:inode) — the only way to detect a hard link: canonicalization
+# resolves symlinks, but a hard link has no link target to resolve (#818). GNU and
+# BSD/macOS stat differ only in the flag; an empty result skips the identity checks
+# instead of failing the strip, so an exotic stat degrades to the path-only behaviour.
+get_file_identity() {
+    stat -L -c '%d:%i' "$1" 2>/dev/null || stat -L -f '%d:%i' "$1" 2>/dev/null || true
+}
+
 # Known host -> directive file map (defined early: arg parsing validates against it).
 # Probes are best-effort suggestions only; the TTY menu (or --host=) is authoritative.
 host_file() {
@@ -388,10 +467,9 @@ for arg in "$@"; do
             esac
             ;;
         --engine-version=*)
-            if [[ ! -e "$SCRIPT_DIR/.git" ]]; then
-                ENGINE_VERSION="${arg#--engine-version=}"
-                validate_engine_identity
-            fi
+            # Recorded, not applied: precedence is git metadata, then this flag, then
+            # the identity the project already carries (#819).
+            ENGINE_VERSION_EXPLICIT="${arg#--engine-version=}"
             ;;
         --host=*)
             HOSTS="${arg#--host=}"
@@ -536,6 +614,7 @@ strip_directives() {
         "CONVENTIONS.md"
     )
     local rel full canon canon_root canon_promptkit canon_state canon_kit seen index start_count end_count first_start first_end staged_file action
+    local identity protected_ids seen_ids protected_path protected_identity kit_file
     if [[ ${#EXTRA_TARGETS[@]} -gt 0 ]]; then
         for rel in "${EXTRA_TARGETS[@]}"; do
             candidates+=("$rel")
@@ -550,6 +629,29 @@ strip_directives() {
     canon_promptkit="$(resolve_canonical_path "$canon_root/PROMPTKIT.md")"
     canon_state="$(resolve_canonical_path "$canon_root/docs/STATE.md")"
     canon_kit="$(resolve_canonical_path "$canon_root/.promptkit")"
+
+    # Hard-link protection (#818): a canonical path cannot distinguish a hard link from
+    # its twin, so record the identity of every path strip mode must never rewrite — the
+    # two protected files plus everything inside the kit. Empty stat output leaves the
+    # list empty and degrades to the path-only checks instead of failing the strip.
+    protected_ids=$'\n'
+    for protected_path in "$canon_promptkit" "$canon_state"; do
+        if [[ -f "$protected_path" ]]; then
+            protected_identity="$(get_file_identity "$protected_path")"
+            if [[ -n "$protected_identity" ]]; then
+                protected_ids="$protected_ids$protected_identity"$'\n'
+            fi
+        fi
+    done
+    if [[ -d "$canon_kit" ]]; then
+        while IFS= read -r -d '' kit_file; do
+            protected_identity="$(get_file_identity "$kit_file")"
+            if [[ -n "$protected_identity" ]]; then
+                protected_ids="$protected_ids$protected_identity"$'\n'
+            fi
+        done < <(find "$canon_kit" -type f -print0 2>/dev/null)
+    fi
+    seen_ids=$'\n'
 
     STRIP_FILES=()
     STRIP_ACTIONS=()
@@ -575,6 +677,30 @@ strip_directives() {
             echo "Error: Refusing to strip $rel: it resolves outside the project root. Nothing was changed." >&2
             rm -rf "$work_dir"
             exit 1
+        fi
+        # A hard link shares the inode, not the path: canonicalization cannot see it, so
+        # compare the underlying file identity before planning any write (#818).
+        if [[ -f "$canon_promptkit" && "$full" -ef "$canon_promptkit" ]] \
+            || [[ -f "$canon_state" && "$full" -ef "$canon_state" ]]; then
+            echo "Error: --strip-directives never modifies $rel: it is a hard link to a protected PromptKit path that is user-owned. Nothing was changed." >&2
+            rm -rf "$work_dir"
+            exit 1
+        fi
+        identity="$(get_file_identity "$full")"
+        if [[ -n "$identity" ]]; then
+            case "$protected_ids" in
+                *$'\n'"$identity"$'\n'*)
+                    echo "Error: --strip-directives never modifies $rel: it is a hard link inside the protected .promptkit/ directory. Nothing was changed." >&2
+                    rm -rf "$work_dir"
+                    exit 1
+                    ;;
+            esac
+            # Two host names hard-linked to one file are one file: strip and back it up
+            # once, never twice under two names.
+            case "$seen_ids" in
+                *$'\n'"$identity"$'\n'*) continue ;;
+            esac
+            seen_ids="$seen_ids$identity"$'\n'
         fi
         case "$seen" in
             *$'\n'"$canon"$'\n'*) continue ;;
@@ -685,6 +811,11 @@ if [[ "$STRIP_DIRECTIVES" -eq 1 ]]; then
     strip_directives
     exit 0
 fi
+
+# Install mode only: settle the engine identity once PROJECT_ROOT and the flags are
+# known (#819). Strip mode must never read docs/STATE.md or host files, so this call
+# stays below that exit.
+resolve_engine_identity_after_args
 
 # Fresh-project detection (before any writes): a project with no tracked files
 # (git) or no non-hidden top-level entries (non-git) has no code yet, so the

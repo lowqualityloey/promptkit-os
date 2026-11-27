@@ -226,9 +226,6 @@ function extractToStaging(tarball, root) {
 }
 
 function extract(tarball, root, dest, options = {}) {
-  // Re-check the door here as well: the download is asynchronous, so the target
-  // could be swapped for a symlink between the main() guard and this mutation.
-  kitTargetKind(dest, root);
   // Extract into a sibling staging directory and only publish it after tar exits 0.
   // A tar failure (missing binary, corrupt/truncated archive, full disk) then leaves no
   // partially written .promptkit/ and no staging leftovers, so an immediate retry
@@ -243,6 +240,12 @@ function extract(tarball, root, dest, options = {}) {
   // on GNU tar, bsdtar, and POSIX tar alike.
   const staging = extractToStaging(tarball, root);
   try {
+    // Re-check the door here rather than before extraction: the download is
+    // asynchronous and tar itself takes time, so the target could be swapped for a
+    // symlink between the main() guard and the mutation below. Checking last narrows
+    // that check-then-use window to the rename that follows. A refusal exits before
+    // any mutation and leaves only an inert `.promptkit-staging-*` directory behind.
+    kitTargetKind(dest, root);
     if (options.replace) {
       // --update replaces the whole tree instead of merging, so a file removed
       // upstream cannot survive in the consumer's copy. The old tree is moved
