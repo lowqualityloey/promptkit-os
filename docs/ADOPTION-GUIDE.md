@@ -536,7 +536,7 @@ When using PromptKit OS alongside agent environments with rich skill ecosystems 
 | **Git Commit Skills** | Message analysis, diff staging logic | `pk:commit` (Secret hygiene, gate check, atomic boundaries) | Let skill stage changes; require PromptKit oracle gate verification before commit. |
 | **TDD / Testing Skills** | Test generation, assertion synthesis | `pk:test` (Pyramid allocation, seam boundaries, TDD mode) | Skill generates unit tests; `pk:test` defines seam allocation and test plans. |
 | **Task / Issue Managers** | Board sync, backlog manipulation | `pk:tasks` (Local Task Record authority, Gherkin AC) | Local `docs/tasks/` remains authoritative; skill syncs external board as projection. |
-| **Design System Skills** | Component code, CSS/Tailwind tokens | `pk:design` + `./DESIGN.md` (Visual authority, anti-slop) | Skill implements UI components; `./DESIGN.md` serves as supreme visual truth. |
+| **Design System Skills** | Visual direction, component code, typography/palette, CSS/Tailwind tokens, `DESIGN.md` authorship | `pk:design` (Ceremony tier, WCAG 2.2 AA, responsive reflow, applicability-based state contracts, rendered-UI evidence) | When the user invokes the design skill, it is the **single owner** of `./DESIGN.md` and of taste decisions; PromptKit verifies accessibility, reflow, states, and rendered evidence instead of writing a competing token file. Without an active design skill, `pk:design` authors `./DESIGN.md` itself. |
 | **Architecture / Spikes** | Deep domain lookups, library comparisons | `pk:spike` / `pk:plan` (Trade-off matrix, Expand-Contract) | Skill executes technical probes; PromptKit structures the durable spec. |
 
 ---

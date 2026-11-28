@@ -10,7 +10,7 @@
 
 ## 1. Color System & Semantic Tokens
 
-> 🚫 **Anti-Slop Guardrail**: Ground the palette in your product's distinct identity (`DESIGN.md`). Avoid generic AI blue-to-purple gradients, cyan glows, or rainbow borders. Limit the active palette to 2–3 core colors + 1 intentional accent.
+> 🚫 **Anti-Slop Guardrail**: Ground the palette in your product's distinct identity (`DESIGN.md`). Avoid generic AI blue-to-purple gradients, cyan glows, or rainbow borders. On `Operate` / `Read` surfaces (the utility default) limit the active palette to 2–3 core colors + 1 intentional accent, with the accent under 5% of viewport; `Persuade` / `Experience` surfaces may run a broader, brand-led palette when the accepted direction or an active external design skill calls for it — accessibility and honest copy still bind.
 >
 > 💡 **Design Tool Token Ingestion**: When pulling tokens from Figma Variables or Tokens Studio, export them as semantic aliases into `:root` rather than baking raw hex codes into individual components.
 

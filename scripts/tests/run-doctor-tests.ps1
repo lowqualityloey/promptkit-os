@@ -634,6 +634,9 @@ try {
     Invoke-Doctor -Root $rootN3
     Want-Status 1
     Want-Contains "docs-drift`tDIVERGED(STATE 3A vs Task Record: Next Action; Owner / Current Actor)"
+    # (#824) asymmetric labels name both sides in the detail and remediation
+    Want-Contains 'STATE 3A "Owner / Current Actor" maps to Task Record "Current Actor"'
+    Want-Contains 'Copy the record''s "Current Actor" value into 3A''s "Owner / Current Actor"'
     Want-NotContains "docs-drift`tDIVERGED(STATE 3A vs Task Record: Task ID)"
 
     # (e) prose normalization: reflowed whitespace and extra backticks agree (#671)

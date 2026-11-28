@@ -562,6 +562,10 @@ Check-Submodule
 # Classes (#671): machine = byte-exact after extraction; prose = normalized
 # (all leading/trailing backticks stripped, internal whitespace runs collapsed)
 # so 3A prose may reflow without diverging.
+# Asymmetric labels (#824): when a 3A label maps to a differently named Task
+# Record label, the detail and remediation name both sides so an operator does
+# not hunt for a field that is spelled differently in the other store. The
+# DIVERGED status token itself is unchanged.
 $sharedProjectionFields = @(
     'Task ID|Task ID|machine',
     'Execution State|Execution State|machine',
@@ -580,6 +584,18 @@ function Get-ProjectionField {
     $m = [regex]::Match($Text, "(?m)^- \*\*$([regex]::Escape($Label))\*\*:[ \t]*(.*)$")
     if (-not $m.Success) { return '' }
     return $m.Groups[1].Value.Trim().Trim('`').Trim()
+}
+
+function Get-FieldLabelPair {
+    # Prints "<3A label><TAB><Task Record label>" when the two names differ.
+    param([string]$Label)
+    foreach ($pair in $sharedProjectionFields) {
+        $parts = $pair.Split('|')
+        if ($parts[0] -ne $Label) { continue }
+        if ($parts[0] -eq $parts[1]) { return $null }
+        return "$($parts[0])`t$($parts[1])"
+    }
+    return $null
 }
 
 function ConvertTo-NormalizedProse {
@@ -696,7 +712,25 @@ function Check-DocsDrift {
         # One run names every diverging field (#670); a single divergence keeps the
         # exact historical single-field verdict, joined fields use "; ".
         $joined = $diffFields -join '; '
-        Emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $joined)" "projection disagrees with the canonical Task Record on $joined" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
+        $hints = ''
+        $remedies = ''
+        foreach ($f in $diffFields) {
+            $pairLabels = Get-FieldLabelPair $f
+            if ($pairLabels) {
+                $labelParts = $pairLabels.Split("`t")
+                $pLabelName = $labelParts[0]
+                $rLabelName = $labelParts[1]
+                if ($hints) { $hints += '; ' }
+                $hints += "STATE 3A `"$pLabelName`" maps to Task Record `"$rLabelName`""
+                if ($remedies) { $remedies += ' ' }
+                $remedies += "Copy the record's `"$rLabelName`" value into 3A's `"$pLabelName`"."
+            }
+        }
+        $detail = "projection disagrees with the canonical Task Record on $joined"
+        if ($hints) { $detail += " — $hints" }
+        $remediation = 'Reconcile 3A to the Task Record (the Task Record is authoritative).'
+        if ($remedies) { $remediation += " $remedies" }
+        Emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $joined)" $detail $remediation
     } elseif ($compared -gt 0) {
         Emit 'docs-drift' 'OK' 'projection agrees with the canonical Task Record' '-'
     } else {

@@ -515,6 +515,26 @@ check_submodule
 # Classes (#671): machine = byte-exact after extraction; prose = normalized
 # (all leading/trailing backticks stripped, internal whitespace runs collapsed)
 # so 3A prose may reflow without diverging.
+# Asymmetric labels (#824): when a 3A label maps to a differently named Task
+# Record label, the detail and remediation name both sides so an operator does
+# not hunt for a field that is spelled differently in the other store. The
+# DIVERGED status token itself is unchanged.
+# Prints "<3A label><TAB><Task Record label>" when the two names differ, and
+# prints nothing when they match. Used only to explain a divergence (#824).
+field_label_pair() {
+    local want="$1" pair p rest r
+    for pair in "${SHARED_PROJECTION_FIELDS[@]}"; do
+        p="${pair%%|*}"
+        rest="${pair#*|}"
+        r="${rest%%|*}"
+        if [[ "$p" == "$want" && "$p" != "$r" ]]; then
+            printf '%s\t%s\n' "$p" "$r"
+            return 0
+        fi
+    done
+    return 1
+}
+
 SHARED_PROJECTION_FIELDS=(
     'Task ID|Task ID|machine'
     'Execution State|Execution State|machine'
@@ -673,10 +693,18 @@ check_docs_drift() {
         # One run names every diverging field (#670); a single divergence keeps the
         # exact historical single-field verdict, joined fields use "; ".
         joined=""
+        hints=""
+        remedies=""
         for f in "${diff_fields[@]}"; do
             if [[ -z "$joined" ]]; then joined="$f"; else joined="$joined; $f"; fi
+            if pair_labels="$(field_label_pair "$f")"; then
+                p_label_name="${pair_labels%%$'\t'*}"
+                r_label_name="${pair_labels#*$'\t'}"
+                hints="${hints:+$hints; }STATE 3A \"$p_label_name\" maps to Task Record \"$r_label_name\""
+                remedies="${remedies:+$remedies }Copy the record's \"$r_label_name\" value into 3A's \"$p_label_name\"."
+            fi
         done
-        emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $joined)" "projection disagrees with the canonical Task Record on $joined" 'Reconcile 3A to the Task Record (the Task Record is authoritative)'
+        emit 'docs-drift' "DIVERGED(STATE 3A vs Task Record: $joined)" "projection disagrees with the canonical Task Record on $joined${hints:+ — $hints}" "Reconcile 3A to the Task Record (the Task Record is authoritative).${remedies:+ $remedies}"
     elif [[ "$compared" -gt 0 ]]; then
         emit 'docs-drift' 'OK' 'projection agrees with the canonical Task Record' '-'
     else

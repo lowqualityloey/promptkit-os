@@ -1,6 +1,8 @@
 # Brand & Design Identity Specification (`DESIGN.md`)
 
 > **Instructions for AI**: Read this file during every session. This document is the single source of truth for the project's visual identity, styling tokens, typography, surfaces, and anti-slop design guardrails. All UI code must conform to these rules.
+>
+> **Single-owner note**: When an external design skill (e.g. Impeccable, a studio/brand skill) owns visual direction, **it authors this file**; `pk:design` verifies accessibility, responsive reflow, applicability-based states, and rendered-UI evidence instead of writing a competing token file. Rules marked *utility default* below bind `Operate` / `Read` surfaces and may be overridden by an expressive brief or that skill.
 
 ---
 
@@ -9,6 +11,7 @@
 ### Resolution Status
 > Resolve every section below before treating any `DESIGN.md` value as authoritative. Placeholder examples in brackets are illustrations, never decisions.
 - [ ] Brand identity resolved (product name, personality)
+- [ ] Surface mode resolved (Operate / Read / Persuade / Experience)
 - [ ] Theme resolved (preset accepted or custom; light/dark default)
 - [ ] Typography resolved (pairing accepted or system stack waived)
 - [ ] Icon strategy resolved (single family chosen, or text-only navigation declared)
@@ -19,6 +22,7 @@
 
 ## 1.1 Brand Identity Fields
 - **Product Name**: [e.g., Shelf / Acme Analytics]
+- **Surface Mode**: [`Operate` | `Read` | `Persuade` | `Experience`] — `Operate` / `Read` surfaces follow the utility defaults marked below; `Persuade` / `Experience` surfaces may override them per the accepted brief or active external design skill.
 - **Theme Preset**: [Custom | Cobalt Dev-Tool (Cool Technical) | Hum Warm Editorial (Artisanal Humanist)]
 - **Brand Personality**: [e.g., Clean, industrial, high-signal, utilitarian, editorial]
 - **Theme Default**: [Light theme default | Dark theme default | System auto with toggle]
@@ -29,7 +33,7 @@
 ## 2. Color Palette & Anti-Slop Guardrails
 > 🚫 **Anti-Slop Rule**: Never use generic AI blue-to-purple / cyan gradients, rainbow glow backdrops, or neon pastel palettes. All colors must derive strictly from the tokens below.
 >
-> 💡 **The 5% Signal Rule**: Saturated accent color must occupy less than 5% of any viewport area. It is used strictly for optical signals (active tabs, focus rings, primary action buttons, status badges), never as a decorative background wash.
+> 💡 **The 5% Signal Rule (*utility default*)**: On `Operate` / `Read` surfaces saturated accent color occupies less than 5% of any viewport area, used strictly for optical signals (active tabs, focus rings, primary action buttons, status badges), never as a decorative background wash. Expressive `Persuade` / `Experience` surfaces follow the accepted brand system instead; contrast stays non-negotiable.
 >
 > 💡 **Figma / Design Tool Ingestion**: When extracting colors from Figma Variables, Tokens Studio, or Dev Mode, normalize them into the semantic tokens below. Never permit an AI assistant to paste raw arbitrary hex codes directly into JSX or CSS classes.
 
@@ -54,8 +58,8 @@
 
 ## 3. Typography Hierarchy & Zero-Cost Rules
 
-### Zero-Byte Native System Font Stacks (Default)
-External font downloads are not required. Modern system fonts provide zero-latency, zero-layout-shift rendering:
+### Zero-Byte Native System Font Stacks (*utility default*)
+External font downloads are not required on utility surfaces. Modern system fonts provide zero-latency, zero-layout-shift rendering; an expressive brief or active external design skill may substitute a display/web pairing, which then becomes the recorded choice.
 - **Heading / Display Font**: `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
   - Optional Web Pairing: Space Grotesk, Cabinet Grotesk, or Instrument Serif.
 - **Body Font**: `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
@@ -74,9 +78,9 @@ External font downloads are not required. Modern system fonts provide zero-laten
 ---
 
 ## 4. Surfaces, Radius & Elevation
-- **Hairlines Over Blur**:
+- **Hairlines Over Blur (*utility default*)**:
   - Depth is created via 1px crisp mechanical borders (`--border-hairline`), not blurred drop shadows.
-  - Cards and list rows sit flat and matte.
+  - Cards and list rows sit flat and matte. An expressive surface may layer elevation, texture, or ambient gradients when its accepted direction calls for them.
 - **No Hand-Drawn Fake Chrome**:
   - Never draw fake browser address bars (URL pills with red/yellow/green traffic-light dots) or fake phone frames. Real screenshots sit matte in a clean `<figure>` with a 1px hairline border.
 - **Border Radii (Intentional Hierarchy)**:

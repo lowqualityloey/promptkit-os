@@ -12,7 +12,7 @@ Profile economics and token budgets are maintained in [`docs/BENCHMARKS.md`](../
 
 ## Preset: `standard` / `solo-fast`
 
-The `preset:` machine line in `./PROMPTKIT.md` is independent of the profile. `standard` (the default when the line is missing) runs the full ceremony surface. `solo-fast` — a solo maintainer on a small repository — keeps routine progress on concise Markdown lines, reserves framed callouts for ACTION REQUIRED and BLOCKED, and drives the five-command loop (`pk:plan`, `pk:auto`, `pk:review`, `pk:commit`, `pk:checkpoint`).
+The `preset:` machine line in `./PROMPTKIT.md` is independent of the profile. `standard` (the default when the line is missing) runs the full ceremony surface. `solo-fast` — a solo maintainer on a small repository — keeps routine progress on concise Markdown lines, reserves halt callouts for ACTION REQUIRED and BLOCKED, and drives the five-command loop (`pk:plan`, `pk:auto`, `pk:review`, `pk:commit`, `pk:checkpoint`).
 
 Neither preset relaxes a hard gate. Push, PR, destructive operations and Level 3 work keep their explicit human-approval boundaries, and the verification and evidence gates are identical.
 

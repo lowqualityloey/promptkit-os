@@ -1,7 +1,7 @@
 # Telemetry Status Cards & Visual Formatting Protocol
 
 ## Purpose
-Canonical visual formatting specification for telemetry status lines, human-action callouts, and turn structures. Routine progress, completion, and advisory next-step telemetry is **compact Markdown**: three concise lines and no box. Genuine stops (`🛑ACTION REQUIRED`, `🚫BLOCKED`) and decision probes render as an **expanded card** in one of two styles — Framed Mode (tactile ceiling-and-floor Unicode boxes, the shipped `card-style` default) or Markdown Mode (GitHub-style alerts) — with CLI/Terminal support across Cline, OpenCode, Aider, Cursor, VS Code, and Antigravity.
+Canonical visual formatting specification for telemetry status lines, human-action callouts, and turn structures. Routine progress, completion, and advisory next-step telemetry is **compact Markdown**: three concise bullet lines and no box. Genuine stops (`🛑ACTION REQUIRED`, `🚫BLOCKED`) and decision probes render as a **borderless CommonMark callout** — a `---` divider plus a `>` blockquote — because that shape renders identically in every CommonMark and GFM host, with no alert tokens to leak as literal text and no box borders to shear when an emoji is double-width. `card-style: clean` is therefore the shipped default; GitHub alerts (`card-style: gfm`) and CLI monospace boxes (`card-style: framed`) remain opt-in styles.
 
 ---
 
@@ -16,7 +16,7 @@ Callout types are strictly tiered by priority; only the highest applicable level
 
 If a higher-priority callout is active, it carries the next action; a separate advisory TIP is strictly forbidden.
 
-**Precedence:** this document is canonical for callout *format*; `protocols/code-quality-gate.md` is canonical for *when-to-halt and Type A-D routing*; `protocols/setup.md` defers to both. The canonical turn-close order in both modes is **TL;DR opening → telemetry card → callout**; any workflow restating a close order must match this sequence.
+**Precedence:** this document is canonical for callout *format*; `protocols/code-quality-gate.md` is canonical for *when-to-halt and Type A-D routing*; `protocols/setup.md` defers to both. The canonical turn-close order in every style is **TL;DR opening → telemetry card → callout**; any workflow restating a close order must match this sequence.
 
 ---
 
@@ -27,14 +27,15 @@ Progress bars across all environments must use square geometric Unicode characte
 - **Empty**: `□` (U+25A1)
 - **Format**: `[■■■■■■■■□□] 80% (8/10)`
 
-> [!CAUTION]
+**Conditional, never decorative.** A bar is permitted only when the canonical record holds a real countable list this turn — named milestones, or an `AC-*` acceptance-criteria checklist with a fixed denominator. When no countable list exists (one open task, an unstarted phase, a review pending), emit plain status text: `awaiting sign-off`, `in progress`, or `2 of 3 gates passed` only when those three gates are enumerated. Never derive a fraction from intuition, and never render a denominator the record does not contain — a fabricated `9/10` is a provenance violation, and `not measured` is always better than an invented fraction.
+
 > **Anti-Glitch Invariant**: Shaded textured blocks (`▓`, `▒`, `░`) and solid vertical blocks (`█`) are strictly banned from progress bars because they produce font width collisions and yellow scanline rendering artifacts in IDE themes.
 
 ---
 
 ## Mandatory Reply Hint Contract (`👉 Reply: Type '...'`)
 
-Every human callout block (`NEXT STEPS`, `ACTION REQUIRED`, `BLOCKED`, `DECISION NEEDED`, `GRILL PROBE`) across all modes must conclude with an unambiguous, single-keystroke or single-word **Reply Hint** line.
+Every human callout block (`NEXT STEPS`, `ACTION REQUIRED`, `BLOCKED`, `DECISION NEEDED`, `GRILL PROBE`) in every style must conclude with an unambiguous, single-keystroke or single-word **Reply Hint** line. In the default style the hint is bolded inside the blockquote (`> **👉 Reply:** Type ...`); in GFM and framed styles the plain `👉 Reply:` form below is equally valid.
 
 The developer must never wonder what to type or whether they have to write an essay:
 - **Numbered choices**: `👉 Reply: Type '1' (or press Enter) for recommended.`
@@ -79,27 +80,31 @@ The host cannot mechanically halt an agent, inspect a future turn, or detect a m
 
 ## Compact Status Default (Routine Telemetry)
 
-Routine progress, completion, and advisory next-step telemetry is **three concise Markdown lines — never a box, never a framed card**:
+Routine progress, completion, and advisory next-step telemetry is **three concise Markdown bullet lines — never a box, never a framed card**. The bullet markers are mandatory, not cosmetic: three consecutive bare lines collapse into a single run-on paragraph in CommonMark and GFM, because a single newline is not a line break.
 
 ```markdown
-📊 Milestone: M2: Core Database [■■■■■■■■□□] 8/10 (80%) — source: `docs/STATE.md`
-🎯 Active: TASK-2026-09-18-persistence (In Progress)
-🟢 Quality Gate: 32 passed, 0 failed (`vitest run`) · `tsc --noEmit` exit code 0
+- 📊 Milestone: M2: Core Database [■■■■■■■■□□] 8/10 (80%) — source: `docs/STATE.md`
+- 🎯 Active: TASK-2026-09-18-persistence (In Progress)
+- 🟢 Quality Gate: 32 passed, 0 failed (`vitest run`) · `tsc --noEmit` exit code 0
 ```
 
-- One line per signal: milestone/progress, active work, quality gate or verification. Append a `💰 Spend: <in> / <out>` line only when the host exposes per-turn usage; otherwise omit it or write `not measured`.
-- No ceiling/floor borders, no `╔═` framing, no alert block, and no extra decoration around routine lines. Plain text or a single blockquote both qualify; the shape stays three lines.
-- A **framed box (Mode 2) or GFM alert (Mode 1) is reserved for a genuine stop** — `🛑ACTION REQUIRED`, `🚫BLOCKED`, `🎯GRILL PROBE`, `DECISION NEEDED` — where the human must act or decide. Routine milestones, completed work, and advisory next steps never render as a box.
-- The expanded telemetry card (boxed Mode 1 or Mode 2 form) is opt-in: render it only when the human asks for it or an explicit workflow step requires the expanded layout for evidence review.
-- `status-cards: off` suppresses these routine lines; halt boxes and their reply hints still fire (see *Cards-Off Still Communicates Genuine Halts*).
+- One bullet per signal: milestone/progress, active work, quality gate or verification. Append a `- 💰 Spend: <in> / <out>` bullet only when the host exposes per-turn usage; otherwise omit it or write `not measured`.
+- Never rely on a hard-break hack (two trailing spaces, `<br>`) as the separator; the `- ` marker keeps the three lines distinct in every renderer, and an empty line between them is unnecessary.
+- No ceiling/floor borders, no `╔═` framing, no alert block, and no extra decoration around routine lines. Plain text or a single blockquote both qualify; the shape stays three bullet lines.
+- The `📊 Milestone` bullet carries a progress bar **only per the *Universal Square Progress Bar Contract*** — a real countable list this turn; otherwise plain status text such as `awaiting sign-off` or `in progress`.
+- A **borderless CommonMark callout (Mode 1) is the shipped default for a genuine stop** — `🛑ACTION REQUIRED`, `🚫BLOCKED`, `🎯GRILL PROBE`, `DECISION NEEDED` — where the human must act or decide. `gfm` alerts and `framed` boxes are opt-in and never appear on a routine turn.
+- The expanded telemetry card (blockquote or boxed form) is opt-in: render it only when the human asks for it or an explicit workflow step requires the expanded layout for evidence review.
+- `status-cards: off` suppresses these routine lines; halt callouts and their reply hints still fire (see *Cards-Off Still Communicates Genuine Halts*).
 
 ---
 
 ## Dual-Compatible Telemetry Status Cards
 
-Provides the two **expanded-card renderings** selected by `card-style:` for turns that legitimately render a box — genuine stops, decision probes, and a human-requested expanded telemetry card. Routine turns use the *Compact Status Default* above.
+Provides the expanded-callout renderings selected by `card-style:` for turns that legitimately render one — genuine stops, decision probes, and a human-requested expanded telemetry card. Routine turns use the *Compact Status Default* above. `clean` (Mode 1) is the shipped default; `framed` (Mode 2) and `gfm` (Mode 3) are opt-in.
 
-### Mode 1: Markdown Mode (Rich Web & IDE Renderers)
+### Mode 1: Borderless CommonMark (Shipped Default — `card-style: clean`)
+
+Every host that parses CommonMark or GFM renders this identically: a `---` thematic break, a `>` blockquote, a bold stop label, and one reply hint. No `[!IMPORTANT]`/`[!WARNING]` tokens (which render as literal text outside GitHub), no `╔═ ║ ╚` borders, and no trailing two-space hard breaks.
 
 #### 1. Opening: TL;DR & Two-Column Table
 ```markdown
@@ -113,55 +118,86 @@ Provides the two **expanded-card renderings** selected by `card-style:` for turn
 
 #### 2. Expanded Telemetry Card (Single 3-Line Blockquote)
 
-Expanded form only. Routine completion uses the compact default (three plain lines, no blockquote alert).
+Expanded form only. Routine completion uses the compact default (three bullet lines, no blockquote callout).
 ```markdown
-> 📊 Milestone: M2: Core Database `[■■■■■■■■□□]` 8/10 (80%) — source: `docs/STATE.md`  
-> 🎯 Active: TASK-2026-09-18-persistence (In Progress)  
-> 🟢 Quality Gate: 32 passed, 0 failed (`vitest run`) · `tsc --noEmit` exit code 0  
+> - 📊 Milestone: M2: Core Database `[■■■■■■■■□□]` 8/10 (80%) — source: `docs/STATE.md`
+> - 🎯 Active: TASK-2026-09-18-persistence (In Progress)
+> - 🟢 Quality Gate: 32 passed, 0 failed (`vitest run`) · `tsc --noEmit` exit code 0
 ```
-*(Append a 4th line `> 💰 Spend: <in> / <out> (source: host usage)` only when host exposes per-turn token usage).*
+*(Append a 4th line `> 💰 Spend: <in> / <out> (source: host usage)` only when the host exposes per-turn token usage).*
 
-#### 3. Human Action Callouts (Tight Headers & Descriptive Links)
+#### 3. Human Action Callouts (Default Style)
 
-- **Hard Stop / Review Ready (`[!IMPORTANT]`)**:
+The callout is fenced top and bottom by `---` so it separates cleanly from prose even in renderers that ignore blockquote styling. One callout per turn.
+
+- **Hard Stop / Review Ready**:
   ```markdown
-  > [!IMPORTANT]
-  > ### 🛑ACTION REQUIRED:
-  > Pull Request is **Review Ready** and CI checks are green (Linux & Windows).
+  ---
+
+  > **🛑 ACTION REQUIRED — PR #284 is review-ready (CI green: Linux & Windows)**
   >
-  > 👉 **[Review and Merge PR #284](https://github.com/lowqualityloey/promptkit-os/pull/284)** to close this milestone.
+  > 👉 [Pull request #284](https://github.com/lowqualityloey/promptkit-os/pull/284)
   >
-  > 👉 **Reply**: Type `merged` or `done` after merging to continue.
+  > **👉 Reply:** Type `merged` or `done` after merging to continue.
+
+  ---
   ```
 
-- **Blocked State (`[!WARNING]`)**:
+- **Blocked State**:
   ```markdown
-  > [!WARNING]
-  > ### 🚫BLOCKED:
-  > Two automated repair attempts failed on `tests/auth.test.ts`.
+  ---
+
+  > **🚫 BLOCKED — `DATABASE_URL` is unset and no test database exists**
+  >
   > - **Error**: `ERR_DATABASE_CONNECTION_REFUSED` on port 5432
-  > - **Action needed**: Start local Postgres container via `docker compose up -d`.
+  > - **Tried**: 2 bounded repair attempts, both failed at connect
+  > - **Action needed**: Start local Postgres via `docker compose up -d`
   >
-  > 👉 **Reply**: Type `retry` once freed (or `skip` only if this dependency is explicitly waivable).
+  > **👉 Reply:** Type `retry` once freed (or `skip` only if this dependency is explicitly waivable).
+
+  ---
   ```
 
-- **Next Steps (`[!TIP]`) — expanded advisory card (opt-in)**:
-  Under the compact default, advisory next steps are plain numbered lines in the closing prose; render this card only when the human asks for the expanded layout. Advisory next step only, with nothing required, uses `> [!TIP]` titled `### 💡 Next Recommended Step:` or `### 💡NEXT STEPS (Type number & Enter):`.
+- **Next Steps (`💡 NEXT STEPS`) — expanded advisory card (opt-in)**:
+  Under the compact default, advisory next steps are plain numbered lines in the closing prose; render this callout only when the human asks for the expanded layout. Advisory next step only, with nothing required.
   ```markdown
-  > [!TIP]
-  > ### 💡 Next Recommended Step:
+  ---
+
+  > **💡 NEXT STEPS — pick one to continue**
+  >
   > 1. **(Recommended)** Proceed to M3: Implement Stripe webhook receiver.
   > 2. Run stress/concurrency benchmark on new connection pool.
   > 3. Stop here — create session checkpoint (`pk:checkpoint`) to resume in a fresh chat.
   >
-  > 👉 **Reply**: Type `1` (or press Enter) for recommended.
+  > **👉 Reply:** Type `1` (or press Enter) for recommended.
+
+  ---
+  ```
+
+- **Pre-Implementation Grilling (1-by-1 Decision Probes)**:
+  ```markdown
+  ---
+
+  > **🎯 GRILL PROBE 2/5 — Session storage trade-off**
+  >
+  > <1-2 line context on why this design decision matters>
+  >
+  > 1. **(Recommended)** <First-choice option with trade-off rationale>
+  > 2. <Viable alternative option>
+  > 3. <Alternative option or explicit non-goal>
+  >
+  > **👉 Reply:** Type `1` for recommended, or write custom answer.
+
+  ---
   ```
 
 ---
 
-## Mode 2: CLI / Terminal Mode & Framed Mode (Ceiling & Floor Boxes)
+## Mode 2: CLI / Terminal Mode — Open-Right Framed Boxes (Opt-In)
 
-The expanded halt/decision rendering across all hosts when `card-style: framed` is active in `PROMPTKIT.md` (the shipped default), and standard for terminal tools (Cline, OpenCode, Aider, Windows Terminal, PowerShell, Bash). In rich markdown/web IDE chats (e.g. Antigravity, Cursor, Copilot), Mode 1 GFM alerts (`card-style: markdown`) can alternatively be selected for native styled UI cards. When rendering Mode 2 in chat interfaces, wrap in code blocks (````text ... ````) or keep widths bounded (≤60 chars) so variable-width fonts do not wrap ceiling and floor borders.
+Opt-in via `card-style: framed`, and the preferred rendering for genuinely monospaced hosts (Windows Terminal, PowerShell, Bash, plain `less`/`cat` output, and CLI agents such as Cline, OpenCode, and Aider). Ceiling-and-floor framing only: the right-hand corners (`╗`, `╝`) and any right-side `║` wall are deliberately absent, so a double-width emoji, a wide CJK label, or a long path can never shear the border open. Body lines are indented two spaces; the left edge carries no wall either, which keeps the output copy-pasteable as plain text.
+
+In a proportional-font chat renderer prefer Mode 1; if you must show Mode 2 there, fence it as ````text```` so the border columns stay aligned.
 
 ### 1. Opening: Clean TL;DR, Changes & Evidence
 ```text
@@ -179,60 +215,59 @@ The expanded halt/decision rendering across all hosts when `card-style: framed` 
   ✓ tsc --noEmit: exit 0
 ```
 
-### 2. Expanded Telemetry Card (Ceiling & Floor Box — Zero Side-Walls)
+### 2. Expanded Telemetry Card (Open-Right Ceiling & Floor)
 
-Expanded form only; routine turns use the compact default.
-To prevent line wrapping and jagged border breakage on long words or narrow terminals, use top ceiling and bottom floor framing with indented body lines and **no side walls (`║`)**:
+Expanded form only; routine turns use the compact default. A bar appears only with a real countable list (*Universal Square Progress Bar Contract*).
 
 ```text
-╔═ 📊TELEMETRY ════════════════════════════════════════════════╗
+╔═ 📊TELEMETRY ════════════════════════════════════════════════
   Milestone:    [■■■■■■■■□□] 80% · M2: Core Database (8/10)
   Active Task:  TASK-2026-09-18-persistence
   Quality Gate: 32 passed · tsc exit 0 (VERIFIED)
-╚══════════════════════════════════════════════════════════════╝
+╚══════════════════════════════════════════════════════════════
 ```
 
-### 3. Human Action Callouts (Ceiling & Floor Framing)
+### 3. Human Action Callouts (Open-Right Framing)
 
 - **Hard Stop / Review Ready**:
   ```text
-  ╔═ 🛑ACTION REQUIRED ══════════════════════════════════════════╗
+  ╔═ 🛑ACTION REQUIRED ══════════════════════════════════════════
     Pull Request is Review Ready (CI passed: Linux & Windows):
     👉 [Review and Merge PR #284](https://github.com/lowqualityloey/promptkit-os/pull/284)
 
     Action: Review diff and merge PR to main to close milestone.
 
     👉 Reply: Type 'merged' or 'done' after merging to continue.
-  ╚══════════════════════════════════════════════════════════════╝
+  ╚══════════════════════════════════════════════════════════════
   ```
 
 - **Blocked State**:
   ```text
-  ╔═ 🚫BLOCKED ══════════════════════════════════════════════════╗
+  ╔═ 🚫BLOCKED ══════════════════════════════════════════════════
     Waiting on human input:
     - Error: ERR_DATABASE_CONNECTION_REFUSED on port 5432
     - Bounded Repair: 2 automatic attempts failed
     - Action: Start local Postgres container (`docker compose up -d`)
 
     👉 Reply: Type 'retry' once freed (or 'skip' only if explicitly waivable).
-  ╚══════════════════════════════════════════════════════════════╝
+  ╚══════════════════════════════════════════════════════════════
   ```
 
 - **Next Steps (Interactive Numbered Choice) — expanded advisory card (opt-in)**:
   Under the compact default these are plain numbered lines; the box is opt-in.
   ```text
-  ╔═ 💡NEXT STEPS ═══════════════════════════════════════════════╗
+  ╔═ 💡NEXT STEPS ═══════════════════════════════════════════════
     [1] (Recommended) Proceed to M3: Implement Stripe webhook
     [2] Run stress/concurrency benchmark on connection pool
     [3] Stop here — create session checkpoint (pk:checkpoint)
 
     👉 Reply: Type '1' (or press Enter) for recommended.
-  ╚══════════════════════════════════════════════════════════════╝
+  ╚══════════════════════════════════════════════════════════════
   ```
 
 - **Pre-Implementation Grilling (1-by-1 Decision Probes)**:
   ```text
-  ╔═ 🎯GRILL PROBE M/N: <Title> ═════════════════════════════════╗
+  ╔═ 🎯GRILL PROBE M/N: <Title> ═════════════════════════════════
     <1-2 line context on why this design decision matters>
 
     [1] (Recommended) <First-choice option with trade-off rationale>
@@ -240,8 +275,28 @@ To prevent line wrapping and jagged border breakage on long words or narrow term
     [3] <Alternative option or explicit non-goal>
 
     👉 Reply: Type '1' for recommended, or write custom answer.
-  ╚══════════════════════════════════════════════════════════════╝
+  ╚══════════════════════════════════════════════════════════════
   ```
+
+---
+
+## Mode 3: GFM Alerts (Opt-In — `card-style: gfm`)
+
+Use only on hosts known to render GitHub-flavored alerts (github.com, GitHub Mobile, and the GitHub-authored markdown viewers). Outside GitHub the `[!IMPORTANT]` token arrives as literal bracket text, which is why this style is no longer the default. At most one alert per turn; `markdown` is an accepted legacy alias for `gfm`.
+
+- **Hard Stop / Review Ready (`[!IMPORTANT]`)** titled `### 🛑ACTION REQUIRED:`
+- **Blocked State (`[!WARNING]`)** titled `### 🚫BLOCKED:`
+- **Advisory Next Step (`[!TIP]`) — opt-in** titled `### 💡 Next Recommended Step:` or `### 💡NEXT STEPS (Type number & Enter):`
+
+```markdown
+> [!WARNING]
+> ### 🚫BLOCKED:
+> Two automated repair attempts failed on `tests/auth.test.ts`.
+> - **Error**: `ERR_DATABASE_CONNECTION_REFUSED` on port 5432
+> - **Action needed**: Start local Postgres container via `docker compose up -d`.
+>
+> 👉 **Reply**: Type `retry` once freed (or `skip` only if this dependency is explicitly waivable).
+```
 
 ---
 
@@ -255,11 +310,12 @@ Raw unformatted URLs (e.g. `https://github.com/...`) are prohibited in turn comp
 ## Opt-Out & Configuration
 
 - **`status-cards` in `PROMPTKIT.md`**: Controls the routine status lines.
-  - `status-cards: on` (default) — Emits the compact three-line routine status on completion. Never a box.
+  - `status-cards: on` (default) — Emits the compact three-bullet routine status on completion. Never a box.
   - `status-cards: off` — Suppresses the routine lines and decorative framing. Genuine halts (`🛑ACTION REQUIRED` or `🚫BLOCKED`) still fire with their reply hints.
-- **`card-style` in `PROMPTKIT.md`**: Controls the visual style of the expanded cards that do render — halt boxes, decision probes, and a human-requested expanded telemetry card:
-  - `card-style: framed` (default) — Uses ceiling-and-floor Unicode boxes (`╔═ ... ╚═`) with indented body lines and explicit reply hints.
-  - `card-style: markdown` — Uses GitHub-style markdown blockquotes and alerts (`> [!TIP]`, `> [!IMPORTANT]`) with explicit reply hints.
+- **`card-style` in `PROMPTKIT.md`**: Controls the visual style of the expanded callouts that do render — halt callouts, decision probes, and a human-requested expanded telemetry card:
+  - `card-style: clean` (default) — Borderless CommonMark: `---` divider plus `>` blockquote, bold stop label, one bolded reply hint. Renders identically in every CommonMark/GFM host, which is why it shipped as the default in v2.7.0.
+  - `card-style: gfm` — GitHub-style alerts (`> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`) with explicit reply hints. Opt-in. `card-style: markdown` is a deprecated alias for `gfm`: it keeps the pre-v2.7.0 meaning, so an existing install that already set `markdown` does not silently switch styles.
+  - `card-style: framed` — Opt-in CLI/terminal ceiling-and-floor boxes with open right edges (`╔═` / `╚═`, no `╗` / `╝`, no right `║` wall) so variable-width emoji never misalign the border.
   - `card-style: off` (or `status-cards: off`) — Suppresses decorative telemetry and advisory framing. Genuine halts (`🛑ACTION REQUIRED` or `🚫BLOCKED`) still fire.
 - **Quiet Completion**: When `docs/STATE.md` shows no open milestones, tasks, or blockers, end the turn with a quiet completion statement instead of an advisory next-step callout:
   - Markdown: `> ✅ **All milestones closed · Worktree clean · Zero open tasks.**`
