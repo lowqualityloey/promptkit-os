@@ -368,6 +368,79 @@ function Write-StripRemovalHint {
     }
 }
 
+# File identity (device:inode on Unix, volume:file index on Windows) — the only way to
+# detect a hard link: canonicalization resolves symlinks, but a hard link has no link
+# target to resolve (#818). An unavailable identity returns "" and skips the identity
+# checks instead of failing the strip, so an exotic filesystem degrades to the
+# path-only behaviour.
+function Get-FileIdentity([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return "" }
+    if ([System.IO.Path]::DirectorySeparatorChar -eq '\') {
+        try {
+            if ($null -eq ('PromptKit.FileIdentityProbe' -as [type])) {
+                Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
+
+namespace PromptKit
+{
+    public static class FileIdentityProbe
+    {
+        [StructLayout(LayoutKind.Sequential)]
+        public struct BY_HANDLE_FILE_INFORMATION
+        {
+            public uint FileAttributes;
+            public System.Runtime.InteropServices.ComTypes.FILETIME CreationTime;
+            public System.Runtime.InteropServices.ComTypes.FILETIME LastAccessTime;
+            public System.Runtime.InteropServices.ComTypes.FILETIME LastWriteTime;
+            public uint VolumeSerialNumber;
+            public uint FileSizeHigh;
+            public uint FileSizeLow;
+            public uint NumberOfLinks;
+            public uint FileIndexHigh;
+            public uint FileIndexLow;
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern SafeFileHandle CreateFileW(string lpFileName, uint dwDesiredAccess, uint dwShareMode, IntPtr lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetFileInformationByHandle(SafeFileHandle hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation);
+
+        public static string Get(string path)
+        {
+            using (SafeFileHandle handle = CreateFileW(path, 0, 7, IntPtr.Zero, 3, 0, IntPtr.Zero))
+            {
+                if (handle.IsInvalid) { return ""; }
+                BY_HANDLE_FILE_INFORMATION info;
+                if (!GetFileInformationByHandle(handle, out info)) { return ""; }
+                ulong index = ((ulong)info.FileIndexHigh << 32) | info.FileIndexLow;
+                return info.VolumeSerialNumber.ToString() + ":" + index.ToString();
+            }
+        }
+    }
+}
+'@ -ErrorAction Stop
+            }
+            return [PromptKit.FileIdentityProbe]::Get($Path)
+        } catch {
+            return ""
+        }
+    }
+    foreach ($statFlags in @($('-c', '%d:%i'), $('-f', '%d:%i'))) {
+        try {
+            $identityValue = & stat -L $statFlags[0] $statFlags[1] $Path 2>$null
+            if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($identityValue)) {
+                return "$identityValue".Trim()
+            }
+        } catch {
+        }
+    }
+    return ""
+}
+
+
 function Invoke-StripDirectives {
     param(
         [string]$Root,
@@ -389,6 +462,7 @@ function Invoke-StripDirectives {
     )
     $candidates += $ExtraTargets
     $seen = @{}
+    $seenIdentities = @{}
     $plan = @()
     $rootFull = [System.IO.Path]::GetFullPath($Root)
     $encoding = [System.Text.Encoding]::GetEncoding(28591)
@@ -401,6 +475,20 @@ function Invoke-StripDirectives {
     $protectedState = Resolve-CanonicalPath (Join-Path $canonicalRoot "docs/STATE.md")
     $protectedKit = Resolve-CanonicalPath (Join-Path $canonicalRoot ".promptkit")
     $pathComparison = if ([System.IO.Path]::DirectorySeparatorChar -eq '\') { [System.StringComparison]::OrdinalIgnoreCase } else { [System.StringComparison]::Ordinal }
+
+    # Hard-link protection (#818): a canonical path cannot distinguish a hard link from
+    # its twin, so record the identity of every path strip mode must never rewrite — the
+    # two protected files plus everything inside the kit. An empty identity degrades to
+    # the path-only checks.
+    $protectedPromptkitIdentity = Get-FileIdentity $protectedPromptkit
+    $protectedStateIdentity = Get-FileIdentity $protectedState
+    $kitIdentities = @{}
+    if (Test-Path -LiteralPath $protectedKit -PathType Container) {
+        foreach ($kitItem in (Get-ChildItem -LiteralPath $protectedKit -Recurse -File -Force -ErrorAction SilentlyContinue)) {
+            $kitIdentity = Get-FileIdentity $kitItem.FullName
+            if ($kitIdentity -ne "") { $kitIdentities[$kitIdentity] = $true }
+        }
+    }
 
     foreach ($rel in $candidates) {
         $full = Join-Path $rootFull $rel
@@ -417,8 +505,26 @@ function Invoke-StripDirectives {
             Write-Host "[!] Refusing to strip $($rel): it resolves outside the project root. Nothing was changed." -ForegroundColor Red
             exit 1
         }
+        # A hard link shares the inode, not the path: canonicalization cannot see it, so
+        # compare the underlying file identity before planning any write (#818).
+        $identity = Get-FileIdentity $canonical
+        if (($protectedPromptkitIdentity -ne "" -and $identity -eq $protectedPromptkitIdentity) -or
+            ($protectedStateIdentity -ne "" -and $identity -eq $protectedStateIdentity)) {
+            Write-Host "[!] --strip-directives never modifies $($rel): it is a hard link to a protected PromptKit path that is user-owned. Nothing was changed." -ForegroundColor Red
+            exit 1
+        }
+        if ($identity -ne "" -and $kitIdentities.ContainsKey($identity)) {
+            Write-Host "[!] --strip-directives never modifies $($rel): it is a hard link inside the protected .promptkit/ directory. Nothing was changed." -ForegroundColor Red
+            exit 1
+        }
         if ($seen.ContainsKey($canonical)) { continue }
         $seen[$canonical] = $true
+        # Two host names hard-linked to one file are one file: strip and back it up
+        # once, never twice under two names.
+        if ($identity -ne "") {
+            if ($seenIdentities.ContainsKey($identity)) { continue }
+            $seenIdentities[$identity] = $true
+        }
 
         $lines = Get-StripLines $full
         $startIndex = -1
@@ -777,6 +883,54 @@ $TaskTemplateTarget = Join-Path $IssueTemplateDir "task.md"
 $TemplateTask = Join-Path $ScriptDir "templates/github-issue-template.md"
 $EngineDir = Split-Path $ScriptDir -Leaf
 
+# #819: a courier install carries no .promptkit/.git, so a later direct run of this
+# script (--solo-fast, --lite, --add-host, --reconfigure, a bare rerun) has no git
+# metadata to resolve and used to stamp "unknown" over a valid v2.6.x identity. When
+# .git is absent and --engine-version= was not passed, reuse the identity the project
+# already carries instead of degrading it. This is display-only: a project with no
+# usable stamp still installs, stamped "unknown" exactly as before.
+function Get-StateStampEngineIdentity([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
+    $stampLine = $null
+    foreach ($candidateLine in [System.IO.File]::ReadAllLines($Path)) {
+        if ($candidateLine -match '^- \*\*Engine Version\*\*:') { $stampLine = $candidateLine; break }
+    }
+    if ($null -eq $stampLine) { return $null }
+    # A template placeholder row ("[YYYY-MM-DD]") is not an installed stamp.
+    if ($stampLine.Contains('[')) { return $null }
+    $stampMatch = [regex]::Match($stampLine, '^- \*\*Engine Version\*\*:[ \t]*(\S+)[ \t]*@[ \t]*(\S*)')
+    if (-not $stampMatch.Success) { return $null }
+    $stampSha = $stampMatch.Groups[2].Value
+    if ([string]::IsNullOrWhiteSpace($stampSha)) { $stampSha = "unknown" }
+    return [pscustomobject]@{ Version = $stampMatch.Groups[1].Value; Sha = $stampSha }
+}
+
+function Get-DirectiveStampEngineIdentity([string]$Root) {
+    foreach ($stampHost in (@("agents") + $KnownHostsList)) {
+        $stampRel = Get-HostFile $stampHost
+        if ([string]::IsNullOrWhiteSpace($stampRel)) { continue }
+        $stampPath = Join-Path $Root $stampRel
+        if (-not (Test-Path -LiteralPath $stampPath -PathType Leaf)) { continue }
+        $stampLine = $null
+        foreach ($candidateLine in [System.IO.File]::ReadAllLines($stampPath)) {
+            if ($candidateLine -match '^[ \t]*Engine:[ \t]*') { $stampLine = $candidateLine; break }
+        }
+        if ($null -eq $stampLine) { continue }
+        if ($stampLine.Contains('[')) { continue }
+        $stampMatch = [regex]::Match($stampLine, '^[ \t]*Engine:[ \t]*(\S+)[ \t]*\(([^)]*)\)')
+        if (-not $stampMatch.Success) { continue }
+        # A host that already says "unknown" (or carries a value the identity
+        # grammar would reject) must not stop the scan: a later host file can
+        # still hold a recoverable stamp (#819).
+        $stampVersion = $stampMatch.Groups[1].Value
+        if ($stampVersion -eq "unknown" -or $stampVersion -notmatch '^[A-Za-z0-9._+-]+$') { continue }
+        $stampSha = $stampMatch.Groups[2].Value
+        if ([string]::IsNullOrWhiteSpace($stampSha)) { $stampSha = "unknown" }
+        return [pscustomobject]@{ Version = $stampVersion; Sha = $stampSha }
+    }
+    return $null
+}
+
 # Stamp the installed engine identity (#545). Must never fail the install: unresolved
 # values degrade to "unknown", which pk:sync reports as its own state, not an error.
 # Never add -abbrev=0 here: it discards commit distance (measured: v1.10.1 vs
@@ -784,8 +938,13 @@ $EngineDir = Split-Path $ScriptDir -Leaf
 # excludes the repo's non-release backup/* tags, which describe would otherwise pick.
 $EngineVersion = "unknown"
 $EngineSha = "unknown"
+# Precedence: git metadata in the kit checkout, then an explicit --engine-version=
+# from the courier, then the identity the project already carries (#819). The flag
+# stays ignored when .git exists: a real checkout is authoritative, and a hostile tag
+# inside it must degrade to "unknown" rather than be overridable by a caller.
+$hasGitDir = Test-Path -LiteralPath (Join-Path $ScriptDir ".git")
 try {
-    if (Test-Path -LiteralPath (Join-Path $ScriptDir ".git")) {
+    if ($hasGitDir) {
         if (Get-Command git -ErrorAction SilentlyContinue) {
             $describeOutput = git -C $ScriptDir describe --tags --match "v[0-9]*" 2>$null
             $describeExit = $LASTEXITCODE
@@ -804,6 +963,7 @@ try {
     $EngineSha = "unknown"
 }
 
+
 # `git describe` output is influenced by any tag an attacker can push to the kit repo, and
 # both values are substituted into the directive below. A legal git ref may contain '$',
 # which PowerShell's -replace reads as a substitution reference in the REPLACEMENT text
@@ -812,6 +972,27 @@ try {
 # unresolved value: the stamp stays display-only and no tag can rewrite the directive.
 if ($EngineVersion -notmatch '^[A-Za-z0-9._+-]+$') { $EngineVersion = "unknown" }
 if ($EngineSha -notmatch '^[A-Za-z0-9._+-]+$') { $EngineSha = "unknown" }
+
+# #819: no .git and no --engine-version= means this is a later direct run against a
+# courier install. Prefer the stamp the project already carries over degrading it.
+if ($EngineVersion -eq "unknown" -and -not $hasGitDir) {
+    $stampIdentity = Get-StateStampEngineIdentity $StateTracker
+    if ($null -ne $stampIdentity) {
+        $EngineVersion = $stampIdentity.Version
+        $EngineSha = $stampIdentity.Sha
+        if ($EngineVersion -notmatch '^[A-Za-z0-9._+-]+$') { $EngineVersion = "unknown" }
+        if ($EngineSha -notmatch '^[A-Za-z0-9._+-]+$') { $EngineSha = "unknown" }
+    }
+    if ($EngineVersion -eq "unknown") {
+        $stampIdentity = Get-DirectiveStampEngineIdentity $ProjectRoot
+        if ($null -ne $stampIdentity) {
+            $EngineVersion = $stampIdentity.Version
+            $EngineSha = $stampIdentity.Sha
+            if ($EngineVersion -notmatch '^[A-Za-z0-9._+-]+$') { $EngineVersion = "unknown" }
+            if ($EngineSha -notmatch '^[A-Za-z0-9._+-]+$') { $EngineSha = "unknown" }
+        }
+    }
+}
 
 # Escape a value for use as .NET replacement text, where '$' introduces a substitution
 # reference. Doubling every '$' makes it literal.

@@ -2043,7 +2043,130 @@ try {
         if (-not $aliasLinkRun.Output.Contains("protected PromptKit path")) { throw "Failed Test 39f (symlink alias): refusal message missing." }
         if ((Get-FileHash -LiteralPath (Join-Path $stripAlias "PROMPTKIT.md") -Algorithm SHA256).Hash -ne $aliasProfileHash) { throw "Failed Test 39f (symlink alias): PROMPTKIT.md was modified." }
     }
-    Write-Host "init.ps1 non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical -Help/--help with the full option list, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert tests, directive-block strip mode (mixed prose preserved, whitespace-only host file deleted, CRLF and no-final-newline EOF bytes preserved, --dry-run writes nothing, malformed and reversed markers refused, door-matched .promptkit/ removal hints, canonical protected-path aliases including the Windows separator form and an in-repo symlink), the manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and the README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, and the PowerShell twin pinned by shape) passed." -ForegroundColor Green
+    # Test 39g: a host candidate that is a hard link to a user-owned PromptKit
+    # file is refused by file identity, not by path (#818). Canonicalisation on
+    # both sides cannot see a hard link, so #814's alias check let it through.
+    $nl = [Environment]::NewLine
+    $hardLinkSpecs = @(
+        @{ Candidate = "AGENTS.md"; Target = "PROMPTKIT.md"; Expected = "protected PromptKit path" }
+        @{ Candidate = ".cursorrules"; Target = "docs/STATE.md"; Expected = "protected PromptKit path" }
+        @{ Candidate = "CLAUDE.md"; Target = ".promptkit/rules.md"; Expected = "inside the protected .promptkit/ directory" }
+    )
+    $hardLinkIndex = 0
+    $hardLinkRefused = 0
+    $hardLinkSkipped = 0
+    foreach ($hardLinkSpec in $hardLinkSpecs) {
+        $hardLinkIndex++
+        $stripHardLink = Join-Path $TestRoot ("strip_hardlink_" + $hardLinkIndex)
+        New-Item -ItemType Directory -Path (Join-Path $stripHardLink "docs") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $stripHardLink ".promptkit") -Force | Out-Null
+        [System.IO.File]::WriteAllText((Join-Path $stripHardLink "PROMPTKIT.md"), ([string]::Join($nl, @("user profile", "", "<!-- PROMPTKIT_START -->", "d", "<!-- PROMPTKIT_END -->")) + $nl), $utf8NoBom)
+        [System.IO.File]::WriteAllText((Join-Path (Join-Path $stripHardLink "docs") "STATE.md"), ([string]::Join($nl, @("# State", "", "<!-- PROMPTKIT_START -->", "d", "<!-- PROMPTKIT_END -->")) + $nl), $utf8NoBom)
+        [System.IO.File]::WriteAllText((Join-Path (Join-Path $stripHardLink ".promptkit") "rules.md"), ([string]::Join($nl, @("kit rules", "", "<!-- PROMPTKIT_START -->", "d", "<!-- PROMPTKIT_END -->")) + $nl), $utf8NoBom)
+        $hlProfileHash = (Get-FileHash -LiteralPath (Join-Path $stripHardLink "PROMPTKIT.md") -Algorithm SHA256).Hash
+        $hlStateHash = (Get-FileHash -LiteralPath (Join-Path (Join-Path $stripHardLink "docs") "STATE.md") -Algorithm SHA256).Hash
+        $hlKitHash = (Get-FileHash -LiteralPath (Join-Path (Join-Path $stripHardLink ".promptkit") "rules.md") -Algorithm SHA256).Hash
+        $hardLinkCreated = $false
+        try {
+            New-Item -ItemType HardLink -Path (Join-Path $stripHardLink $hardLinkSpec.Candidate) -Target (Join-Path $stripHardLink $hardLinkSpec.Target) -ErrorAction Stop | Out-Null
+            $hardLinkCreated = $true
+        } catch {
+            $hardLinkSkipped++
+        }
+        if (-not $hardLinkCreated) { continue }
+        $hlRun = Invoke-StripAssert -StripRoot $stripHardLink
+        if ($hlRun.ExitCode -ne 1) { throw "Failed Test 39g (hard link $($hardLinkSpec.Candidate) -> $($hardLinkSpec.Target)): expected exit 1, got $($hlRun.ExitCode)." }
+        if (-not $hlRun.Output.Contains($hardLinkSpec.Expected)) { throw "Failed Test 39g (hard link $($hardLinkSpec.Candidate)): refusal did not name the identity rule." }
+        if (-not $hlRun.Output.Contains($hardLinkSpec.Candidate)) { throw "Failed Test 39g (hard link $($hardLinkSpec.Candidate)): refusal did not name the file." }
+        if ((Get-FileHash -LiteralPath (Join-Path $stripHardLink "PROMPTKIT.md") -Algorithm SHA256).Hash -ne $hlProfileHash) { throw "Failed Test 39g (hard link $($hardLinkSpec.Candidate)): PROMPTKIT.md was modified." }
+        if ((Get-FileHash -LiteralPath (Join-Path (Join-Path $stripHardLink "docs") "STATE.md") -Algorithm SHA256).Hash -ne $hlStateHash) { throw "Failed Test 39g (hard link $($hardLinkSpec.Candidate)): docs/STATE.md was modified." }
+        if ((Get-FileHash -LiteralPath (Join-Path (Join-Path $stripHardLink ".promptkit") "rules.md") -Algorithm SHA256).Hash -ne $hlKitHash) { throw "Failed Test 39g (hard link $($hardLinkSpec.Candidate)): .promptkit/rules.md was modified." }
+        $hardLinkRefused++
+    }
+    if (($hardLinkRefused + $hardLinkSkipped) -ne $hardLinkSpecs.Count) { throw "Failed Test 39g (hard links): only $($hardLinkRefused + $hardLinkSkipped) of $($hardLinkSpecs.Count) candidates were exercised." }
+    if ($hardLinkSkipped -gt 0) { Write-Output "  SKIP: hard link creation unsupported on this host (strip identity)" }
+
+    # Test 39h: two names for one inode are planned once, so the file is never
+    # stripped or backed up twice under two names (#818).
+    $stripDedupe = Join-Path $TestRoot "strip_dedupe"
+    New-Item -ItemType Directory -Path $stripDedupe -Force | Out-Null
+    $dedupeBlock = [string]::Join($nl, @("Before", "", "<!-- PROMPTKIT_START -->", "d", "<!-- PROMPTKIT_END -->", "", "After")) + $nl
+    $dedupeExpected = [string]::Join($nl, @("Before", "", "", "After")) + $nl
+    [System.IO.File]::WriteAllText((Join-Path $stripDedupe ".cursorrules"), $dedupeBlock, $utf8NoBom)
+    $dedupeLinkCreated = $false
+    try {
+        New-Item -ItemType HardLink -Path (Join-Path $stripDedupe "CONVENTIONS.md") -Target (Join-Path $stripDedupe ".cursorrules") -ErrorAction Stop | Out-Null
+        $dedupeLinkCreated = $true
+    } catch {
+        Write-Output "  SKIP: hard link creation unsupported on this host (strip identity)"
+    }
+    if ($dedupeLinkCreated) {
+        $dedupeRun = Invoke-StripAssert -StripRoot $stripDedupe
+        if ($dedupeRun.ExitCode -ne 0) { throw "Failed Test 39h (hard-linked pair): exit $($dedupeRun.ExitCode): $($dedupeRun.Output)" }
+        $dedupeStripLines = @(($dedupeRun.Output -split "\r?\n") | Where-Object { $_.StartsWith("  stripped ") })
+        if ($dedupeStripLines.Count -ne 1) { throw "Failed Test 39h (hard-linked pair): $($dedupeStripLines.Count) strip lines for one inode." }
+        if (-not $dedupeRun.Output.Contains("  stripped .cursorrules")) { throw "Failed Test 39h (hard-linked pair): the surviving name is not the first candidate." }
+        if (-not $dedupeRun.Output.Contains("Removed PromptKit directives from 1 file(s).")) { throw "Failed Test 39h (hard-linked pair): the removal count did not collapse to one file." }
+        if ([System.IO.File]::ReadAllText((Join-Path $stripDedupe ".cursorrules")) -ne $dedupeExpected) { throw "Failed Test 39h (hard-linked pair): the first name has the wrong bytes." }
+        if ([System.IO.File]::ReadAllText((Join-Path $stripDedupe "CONVENTIONS.md")) -ne $dedupeExpected) { throw "Failed Test 39h (hard-linked pair): the second name for the same inode was not stripped." }
+    }
+
+    # Test 40a: a courier-style install carries no .git, so a later direct run
+    # without an explicit --engine-version= keeps the identity the project
+    # already carries instead of stamping "unknown" over it (#819).
+    $engineKit = Join-Path $TestRoot "engine_gitless_kit"
+    New-AssertKitCopy -Destination $engineKit
+    $engineKitInit = Join-Path $engineKit "init.ps1"
+    $engineHost = Join-Path $TestRoot "engine_gitless_host"
+    New-Item -ItemType Directory -Path $engineHost -Force | Out-Null
+    $engineFirst = & pwsh -NoProfile -File $engineKitInit -ProjectRoot $engineHost --lite --solo-fast --host=agents --add-host=claude --engine-version=v2.6.1 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) { throw "Failed Test 40a (engine identity): the first install exited $($LASTEXITCODE): $engineFirst" }
+    $engineStatePath = Join-Path (Join-Path $engineHost "docs") "STATE.md"
+    $engineAgentsPath = Join-Path $engineHost "AGENTS.md"
+    $engineState = [System.IO.File]::ReadAllText($engineStatePath)
+    $engineAgents = [System.IO.File]::ReadAllText($engineAgentsPath)
+    if (-not $engineState.Contains("- **Engine Version**: v2.6.1 @ unknown")) { throw "Failed Test 40a (engine identity): docs/STATE.md did not record v2.6.1: $engineState" }
+    if (-not $engineAgents.Contains("Engine: v2.6.1 (unknown)")) { throw "Failed Test 40a (engine identity): AGENTS.md did not record v2.6.1." }
+    $engineSecond = & pwsh -NoProfile -File $engineKitInit -ProjectRoot $engineHost --lite --solo-fast --host=agents 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) { throw "Failed Test 40a (engine identity): the re-run exited $($LASTEXITCODE): $engineSecond" }
+    $engineState = [System.IO.File]::ReadAllText($engineStatePath)
+    $engineAgents = [System.IO.File]::ReadAllText($engineAgentsPath)
+    if (-not $engineState.Contains("- **Engine Version**: v2.6.1 @ unknown")) { throw "Failed Test 40a (engine identity): a re-run without --engine-version= lost the stamp in docs/STATE.md: $engineState" }
+    if (-not $engineAgents.Contains("Engine: v2.6.1 (unknown)")) { throw "Failed Test 40a (engine identity): a re-run without --engine-version= lost the stamp in AGENTS.md." }
+    if ($engineAgents.Contains("Engine: unknown")) { throw "Failed Test 40a (engine identity): a re-run without --engine-version= degraded the identity to unknown." }
+    # A host that already says "unknown" must not shadow a later host that still
+    # carries a real stamp (#819): neutralize docs/STATE.md and AGENTS.md and let
+    # the directive scan recover the identity from CLAUDE.md.
+    $engineStateNeutral = [System.IO.File]::ReadAllText($engineStatePath).Replace('v2.6.1 @ unknown', 'unknown @ unknown')
+    [System.IO.File]::WriteAllText($engineStatePath, $engineStateNeutral)
+    $engineAgentsNeutral = [System.IO.File]::ReadAllText($engineAgentsPath).Replace('Engine: v2.6.1 (unknown)', 'Engine: unknown (unknown)')
+    [System.IO.File]::WriteAllText($engineAgentsPath, $engineAgentsNeutral)
+    $engineClaudePath = Join-Path $engineHost "CLAUDE.md"
+    $engineClaude = [System.IO.File]::ReadAllText($engineClaudePath)
+    if (-not $engineClaude.Contains("Engine: v2.6.1 (unknown)")) { throw "Failed Test 40a (engine identity): CLAUDE.md did not record v2.6.1." }
+    $engineNeutral = & pwsh -NoProfile -File $engineKitInit -ProjectRoot $engineHost --lite --solo-fast --host=agents --add-host=claude 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) { throw "Failed Test 40a (engine identity): the neutralized re-run exited $($LASTEXITCODE): $engineNeutral" }
+    $engineState = [System.IO.File]::ReadAllText($engineStatePath)
+    $engineAgents = [System.IO.File]::ReadAllText($engineAgentsPath)
+    $engineClaude = [System.IO.File]::ReadAllText($engineClaudePath)
+    if (-not $engineState.Contains("- **Engine Version**: v2.6.1 @ unknown")) { throw "Failed Test 40a (engine identity): an unknown state stamp shadowed a later valid host." }
+    if (-not $engineAgents.Contains("Engine: v2.6.1 (unknown)")) { throw "Failed Test 40a (engine identity): an unknown host directive shadowed a later valid host." }
+    if ($engineAgents.Contains("Engine: unknown")) { throw "Failed Test 40a (engine identity): the recovered identity degraded to unknown." }
+    if (-not $engineClaude.Contains("Engine: v2.6.1 (unknown)")) { throw "Failed Test 40a (engine identity): the valid host stamp was lost." }
+    $engineThird = & pwsh -NoProfile -File $engineKitInit -ProjectRoot $engineHost --lite --solo-fast --host=agents --engine-version=v2.6.2 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) { throw "Failed Test 40a (engine identity): the override run exited $($LASTEXITCODE): $engineThird" }
+    $engineState = [System.IO.File]::ReadAllText($engineStatePath)
+    $engineAgents = [System.IO.File]::ReadAllText($engineAgentsPath)
+    if (-not $engineState.Contains("- **Engine Version**: v2.6.2 @ unknown")) { throw "Failed Test 40a (engine identity): an explicit --engine-version= did not override docs/STATE.md: $engineState" }
+    if (-not $engineAgents.Contains("Engine: v2.6.2 (unknown)")) { throw "Failed Test 40a (engine identity): an explicit --engine-version= did not override AGENTS.md." }
+    $engineFresh = Join-Path $TestRoot "engine_gitless_fresh"
+    New-Item -ItemType Directory -Path $engineFresh -Force | Out-Null
+    $engineFreshOut = & pwsh -NoProfile -File $engineKitInit -ProjectRoot $engineFresh --lite --solo-fast --host=agents 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) { throw "Failed Test 40a (engine identity): the fresh install exited $($LASTEXITCODE): $engineFreshOut" }
+    $engineFreshAgents = [System.IO.File]::ReadAllText((Join-Path $engineFresh "AGENTS.md"))
+    if (-not $engineFreshAgents.Contains("Engine: unknown")) { throw "Failed Test 40a (engine identity): a fresh git-less install should still report unknown." }
+
+    Write-Host "init.ps1 non-destructive update, fail-closed CLI parser (unknown flag, unknown tracking, two project roots; nothing created), byte-identical -Help/--help with the full option list, CRLF/LF compatibility, duplicate/reversed/incomplete markers, literal $, UTF-8 emoji/CJK, directory target, strict byte-idempotency, host selection, add-host, custom-target, containment, transaction rollback, GitHub-template tracking gate, freshness-aware hint (empty, busy, courier-staged, submodule-staged), dangling-kit warning (unstaged, complete, partial, two-file, missing-manifest-row, empty-scripts, missing-lite-workflow, deinitialized-submodule, deleted-submodule-directory, drifted-submodule, obstructed-untracked-file, nested-project-root) with install-door-matched recovery advice (courier replace with a data-loss warning, submodule in-place restore EXECUTED and verified in all four submodule states, deinitialized and deleted-directory submodules restored in place, drifted checkout returned to the recorded commit, nested project root classified from the toplevel index), install-door structural-assert tests, directive-block strip mode (mixed prose preserved, whitespace-only host file deleted, CRLF and no-final-newline EOF bytes preserved, --dry-run writes nothing, malformed and reversed markers refused, door-matched .promptkit/ removal hints, canonical protected-path aliases including the Windows separator form and an in-repo symlink), the manifest coverage guard (every engine-relative reference is a manifest row or a reasoned exemption), and the README removal recipe (commands extracted from README.md's bash fence and EXECUTED against a submodule registered under a name containing a space and holding a detached-only commit plus an ignored file: the name resolved before removal where the old awk lookup returns nothing, the quoted module path where the unquoted expansion dies, --all finding the detached commit where --branches finds nothing, --ignored reporting the ignored file where a plain status reports nothing, a non-forced deinit exiting 0 and DELETING that ignored file, the module repository inspected directly instead of through the deinitialized work tree, deinit/rm/commit leaving no gitlink and an empty .gitmodules, the leftover module repository making a plain re-add fail while --force reuses it, hard-link candidates to PROMPTKIT.md, docs/STATE.md and .promptkit/ refused by file identity with the protected files byte-identical, two names for one inode stripped once, the engine identity of a git-less courier install preserved across a later direct run without an explicit --engine-version= and still overridable by one, and the PowerShell twin pinned by shape) passed." -ForegroundColor Green
 } finally {
     Remove-Item -Path $TestRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
