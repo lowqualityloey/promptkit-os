@@ -24,9 +24,12 @@
 #      their output must be identical. This is asserted directly rather than
 #      assumed from the shared implementation.
 #
-# A third case re-scores a re-rendered bundle and requires the same verdict line
-# as the committed scorer.txt, which is what makes the round-trip meaningful:
-# identical bytes that score differently would not be a pass.
+# A third case re-scores a re-rendered bundle and compares the verdict with the
+# committed transcript scored under the current scenario. The reference is the
+# committed transcript, not the bundle's scorer.txt: that line records the kit
+# version named in provenance.json, and a deliberate scenario revision (the
+# v2.7.0 callout contract) must not read as renderer drift. Identical bytes must
+# still score identically under one rubric.
 
 set -uo pipefail
 export LC_ALL=C
@@ -372,9 +375,10 @@ if [[ -f "$bundle/scorer.txt" && -f "$SCORER" ]]; then
     render halt-callout "$work/transcript.md" "$work/observed-writes.log" >/dev/null 2>&1
     check_status "$?" 0
     rendered="$(bash "$SCORER" --score halt-callout "$work/transcript.md" 2>&1 | grep -E '^halt-callout\|' | head -1)"
-    committed="$(grep -E '^halt-callout\|' "$bundle/scorer.txt" | head -1)"
+    committed="$(bash "$SCORER" --score halt-callout "$bundle/transcript.md" 2>&1 | grep -E '^halt-callout\|' | head -1)"
     scenario_check "$([[ -n "$rendered" ]] && printf 1 || printf 0)" "scorer produced no verdict line for the re-rendered bundle"
-    scenario_check "$([[ "$rendered" == "$committed" ]] && printf 1 || printf 0)" "verdict differs: rendered '$rendered' vs committed '$committed'"
+    scenario_check "$([[ -n "$committed" ]] && printf 1 || printf 0)" "scorer produced no verdict line for the committed transcript"
+    scenario_check "$([[ "$rendered" == "$committed" ]] && printf 1 || printf 0)" "verdict differs: rendered '$rendered' vs committed transcript '$committed'"
 else
     scenario_check 0 "missing scorer.txt or scripts/run-behavioral-eval.sh"
 fi

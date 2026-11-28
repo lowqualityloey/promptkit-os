@@ -29,9 +29,12 @@
 #      their output must be identical. This is asserted directly rather than
 #      assumed from the shared implementation.
 #
-# A third case re-scores a re-rendered bundle and requires the same verdict line
-# as the committed scorer.txt, which is what makes the round-trip meaningful:
-# identical bytes that score differently would not be a pass.
+# A third case re-scores a re-rendered bundle and compares the verdict with the
+# committed transcript scored under the current scenario. The reference is the
+# committed transcript, not the bundle's scorer.txt: that line records the kit
+# version named in provenance.json, and a deliberate scenario revision (the
+# v2.7.0 callout contract) must not read as renderer drift. Identical bytes must
+# still score identically under one rubric.
 
 [CmdletBinding()]
 param()
@@ -443,9 +446,10 @@ if ((Test-Path -LiteralPath $scorerTxt) -and (Test-Path -LiteralPath $scorer)) {
     if (Test-Path -LiteralPath $provenance) { Copy-Item -LiteralPath $provenance -Destination $work -Force }
     Assert-Status (Invoke-Render 'halt-callout' (Join-Path $work 'transcript.md') (Join-Path $work 'observed-writes.log') 'sh') 0
     $renderedVerdict = @(& bash $scorer --score halt-callout (Join-Path $work 'transcript.md') 2>&1 | Where-Object { $_ -match '^halt-callout\|' })[0]
-    $committedVerdict = @([IO.File]::ReadAllLines($scorerTxt) | Where-Object { $_ -match '^halt-callout\|' })[0]
+    $committedVerdict = @(& bash $scorer --score halt-callout (Join-Path $bundle 'transcript.md') 2>&1 | Where-Object { $_ -match '^halt-callout\|' })[0]
     Assert-Scenario ($null -ne $renderedVerdict) 'scorer produced no verdict line for the re-rendered bundle'
-    Assert-Scenario ($renderedVerdict -eq $committedVerdict) "verdict differs: rendered '$renderedVerdict' vs committed '$committedVerdict'"
+    Assert-Scenario ($null -ne $committedVerdict) 'scorer produced no verdict line for the committed transcript'
+    Assert-Scenario ($renderedVerdict -eq $committedVerdict) "verdict differs: rendered '$renderedVerdict' vs committed transcript '$committedVerdict'"
 } else {
     Assert-Scenario $false 'missing scorer.txt or scripts/run-behavioral-eval.sh'
 }
