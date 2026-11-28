@@ -28,19 +28,21 @@ Eliminate decision fatigue and guesswork by mapping every software development s
 > A decision-grade summary of Levels 0–3 ships in the injected directive so agents can classify a request without loading this file. This document remains the canonical authority; where the summary and this file differ, this file wins.
 
 ### Upfront Ceremony Declaration Protocol (Turn 1 Announcement)
-In the opening turn (Turn 1) of every task or interaction — except informational Level 0 fast-path requests, which emit no banner per Tier 1 below — the assistant must explicitly classify the request and declare its ceremony level on the very first line of output using this exact standardized banner format:
+In the opening turn (Turn 1) of every task or interaction — except informational Level 0 fast-path requests, which emit no banner per Tier 1 below — the assistant must explicitly classify the request and declare its ceremony level on the very first line of output. Emit **one** line: a level banner and a separate auto-route announcement are never stacked.
 
 ```text
-[PromptKit OS: Level <0-3> (<Name>) — <1-line justification>]
+[PromptKit OS: Level <0-3> (<Name>) — <1-line justification> · pk:<workflow>]
 ```
+
+Append ` · pk:<workflow>` only when a workflow is engaged; omit it for a direct answer that routes nowhere. Never emit a second `[PromptKit OS: Auto-routed to ...]` line.
 
 **Standard Banner Formats by Level**:
 - **Level 0**: `[PromptKit OS: Level 0 (Direct) — <Explanation / query / typo fix>. Zero overhead.]`
-- **Level 1**: `[PromptKit OS: Level 1 (Standard) — <Localized bug fix / feature>. No Task Record required.]`
-- **Level 2**: `[PromptKit OS: Level 2 (Controlled) — <Schema / auth / API / multi-component scope>. Task Record required.]`
-- **Level 3**: `[PromptKit OS: Level 3 (Release-Critical) — <Release / deploy / tag candidate>. Full evaluation required.]`
+- **Level 1**: `[PromptKit OS: Level 1 (Standard) — <Localized bug fix / feature>. No Task Record required. · pk:<workflow>]`
+- **Level 2**: `[PromptKit OS: Level 2 (Controlled) — <Schema / auth / API / multi-component scope>. Task Record required. · pk:<workflow>]`
+- **Level 3**: `[PromptKit OS: Level 3 (Release-Critical) — <Release / deploy / tag candidate>. Full evaluation required. · pk:<workflow>]`
 
-Before executing any request, classify the work using the PromptKit OS 4-level task ceremony model to balance developer velocity with engineering rigor:
+Classify before executing any request with the PromptKit OS 4-level ceremony model, balancing developer velocity against engineering rigor:
 
 ### Level 0 — Direct (Zero Overhead & Fast Verification)
 - **Applicability**: Conceptual questions, explanations, documentation typos, formatting, syntax lookups, and tiny non-risky single-line tweaks.
@@ -70,23 +72,23 @@ Before executing any request, classify the work using the PromptKit OS 4-level t
 
 PromptKit OS enforces Evidence-Gated Verification: completion claims strictly require executed evidence appropriate to the task's ceremony level:
 
-| Ceremony Level | Typical Scope | Required Verification Tier | Required Evidence / Artifact |
-| :--- | :--- | :--- | :--- |
-| **Level 0 (Direct)** | Doc typo, formatting, 1-line localized fix, spike | `fast` (e.g. `tsc --noEmit`, link-check, `cargo check`) | Terminal tool execution with exit code 0 |
-| **Level 1 (Standard)** | Localized bug fix, small feature tweak, component repair | `fast` + `required` (targeted unit test, component verification) | Exit code 0 + test output evidence in turn |
-| **Level 2 (Controlled)** | Database schema, auth, public API contracts, multi-component | `fast` + `required` + `extended` (integration suite, schema diff, linter) | Exit code 0 + Local Task Record evidence |
-| **Level 3 (Release-Critical)** | Release candidates, deployments, tag generation, security patch | Full suite + Release Candidate Evaluation (`pk:ship`) | Exit code 0 + Release Record + Human Approval |
+| Ceremony Level | Required Verification Tier | Required Evidence / Artifact |
+| :--- | :--- | :--- |
+| **Level 0 (Direct)** | `fast` (e.g. `tsc --noEmit`, link-check, `cargo check`) | Terminal tool execution with exit code 0 |
+| **Level 1 (Standard)** | `fast` + `required` (targeted unit test, component verification) | Exit code 0 + test output evidence in turn |
+| **Level 2 (Controlled)** | `fast` + `required` + `extended` (integration suite, schema diff, linter) | Exit code 0 + Local Task Record evidence |
+| **Level 3 (Release-Critical)** | Full suite + Release Candidate Evaluation (`pk:ship`) | Exit code 0 + Release Record + Human Approval |
 
 ### Canonical Mapping & Legacy Compatibility
 
-The 4-level ceremony model refines and clarifies the system's execution boundaries:
+The 4-level ceremony model refines the earlier ceremony classes. Protocols and templates that still use the legacy vocabulary map as follows; scope and verification rules live in the level sections above and are not repeated here:
 
-| Level | Ceremony Class | Scope & File Impact | Required Task Record? |
-| :--- | :--- | :--- | :--- |
-| **Level 0** | **Direct (L0 Work)** | Conceptual queries, syntax lookups, doc typos, formatting, 1-line micro-fixes | **No** (Fast-path direct execution + `fast` verify) |
-| **Level 1** | **Standard (Lightweight Work)** | Localized bug fixes, small self-contained feature tweaks, or single-component changes modifying source files without schema/auth/breaking contract risks | **No** (Natural workflow `pk:debug`/`pk:test` with inline/`STATE.md` tracking + `required` verify) |
-| **Level 2** | **Controlled** | Relational schema/data migrations, auth, permissions, breaking API contracts, or multi-component architectural changes | **Yes** (Canonical Task Record at `docs/tasks/<task-id>.md` + `extended` verify) |
-| **Level 3** | **Release-Critical Work** | Release candidates, deployments, tag generation, or high-impact contract changes | **Yes** (Level 2 evidence plus release candidate evaluation `pk:ship` & human approval) |
+| Level | Legacy Ceremony Class | Required Task Record? |
+| :--- | :--- | :--- |
+| **Level 0** | **Direct (L0 Work)** | **No** (fast-path direct execution + `fast` verify) |
+| **Level 1** | **Standard (Lightweight Work)** | **No** (inline or `docs/STATE.md` tracking + `required` verify) |
+| **Level 2** | **Controlled** | **Yes** (canonical Task Record at `docs/tasks/<task-id>.md` + `extended` verify) |
+| **Level 3** | **Release-Critical Work** | **Yes** (Level 2 evidence plus release candidate evaluation `pk:ship` & human approval) |
 
 **Important Rule**: Modifying durable source files during an ordinary bug fix or small localized tweak is classified as **Level 1 (Standard)** and does **not** trigger Level 2 (Controlled) requirements or mandate creating `docs/tasks/<task-id>.md`. Where protocols or templates refer to "Controlled Work", those requirements apply specifically to **Level 2 (Controlled)** and **Level 3 (Release-Critical)** tasks.
 
@@ -127,7 +129,8 @@ To prevent framework bloat while providing deep architectural invariants, the ro
 - **Repository Manifest Signals**: Candidate manifests (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`, `render.yaml`) map to bounded playbooks in `docs/stacks/`.
 - **Bounded JIT Loading**: The assistant loads **only** the candidate playbook(s) declared in `PROMPTKIT.md` (e.g. `docs/stacks/database-turso.md`).
 - **Context Exclusion**: Unrelated stack playbooks (e.g. Rust playbooks in a Next.js repo) are strictly excluded to preserve token budgets.
-- **Precedence Hierarchy**: Local Project Profile Overrides > PromptKit Stack Playbooks > External Host Skills.
+- **Precedence Hierarchy**: Local Project Profile Overrides > Explicitly User-Invoked External Craft Skills > PromptKit Stack Playbooks > Ambient Host Skills.
+  - *Explicit Craft Invocation*: When the user explicitly invokes an external craft skill for a task (e.g. Impeccable, a Taste skill, a Matt Pocock skill), that skill owns domain craft — visual direction, typography, palette, copy voice, motion, or the named engineering idiom. PromptKit neither restates that craft nor overrules its taste decisions; it retains ceremony level, risk classification, human-approval boundaries, and verification evidence.
   - *Invocation vs. Classification*: Invoking an external host skill or slash command never reclassifies work. Classification is determined strictly by the produced work (e.g. database migrations produced via a host skill remain Level 2 (Controlled) work).
   - *Gate Subordination*: Skill-specific process instructions yield to PromptKit Hard Gates (machine-verified oracle compliance, Expand-Contract data safety, secret hygiene, and milestone boundaries). Domain knowledge is preserved; process instructions yield.
   - *Namespace Collisions*: Host skills named with a `pk-*` prefix collide with PromptKit's `pk:*` text-convention triggers and shadow workflow routing. Host skills should use domain-specific names (e.g. `sql-optimizer`, not `pk-db`).
@@ -350,8 +353,7 @@ If the request is:
 If the request involves non-trivial engineering changes (new features, crashes, schema changes, auth, API modifications, or releases):
 
 **Action**:
-1. Announce the active workflow in a single brief line:
-   `[PromptKit OS: Auto-routed to pk:<workflow>]`
+1. Announce the level and active workflow in the single consolidated Turn-1 banner defined in the Upfront Ceremony Declaration Protocol above — never a second auto-route line.
 2. Automatically adhere to that workflow's quality gates, pre-conditions, and artifact outputs:
    - **Bugs, errors, broken tests, unexpected behavior (unknown cause)**: Auto-route to `pk:debug`. Establish the reproduction loop before proposing any fix.
    - **Known defects, review findings, security patches, code smells**: Auto-route to `pk:fix`. Enforce security-first ordering, reproduction/measurement, and single-concern scope.

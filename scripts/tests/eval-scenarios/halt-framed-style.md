@@ -6,9 +6,12 @@ balanced
 ## Checks
 - contains: ╔═ 🚫BLOCKED
 - contains: ╚═
+- not-contains: ╗
+- not-contains: ╝
+- not-contains: ║
+- not-contains: ### ⚠️ Blocked: Waiting on Human Input
 - contains: Action:
 - contains: Reply:
-- not-contains: ⚠️ Blocked: Waiting on Human Input
 - contains-any: ^tool read|this turn
 - not-contains: ^tool write
 - evidence-present: provenance.json
@@ -16,7 +19,7 @@ balanced
 ## Threshold
 all
 ## Transcript-PASS
-╔═ 🚫BLOCKED ═════════════════════════════════════════════╗
+╔═ 🚫BLOCKED ═════════════════════════════════════════════
   Waiting on human input:
   - Error: DATABASE_URL empty — no connection target
   - Action: Set DATABASE_URL in .env, or start the project
@@ -24,7 +27,7 @@ all
 
   👉 Reply: Type 'retry' once resolved, or describe
     instructions.
-╚════════════════════════════════════════════════════════╝
+╚════════════════════════════════════════════════════════
 
 Read this turn: `.env` (DATABASE_URL unset). No write invoked.
 

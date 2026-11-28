@@ -14,6 +14,20 @@ Guide the developer in designing, engineering, and auditing production-grade, hu
 
 `pk:design` MUST specify the required UX, accessibility, visual, responsive, and behavioral outcome. It MUST NOT prescribe an implementation stack. Resolve the project's stack first (see `./PROMPTKIT.md`): React, Radix UI, React Aria, CVA, and Tailwind appear in this workflow as labeled **implementation examples** for React + Tailwind projects — never as mandatory dependencies. Port every example to the project's own stack (e.g., semantic HTML plus the project's CSS in an Astro project) while preserving the stated contract.
 
+### External Design Skill Delegation
+
+When a dedicated external design skill is active — for example Impeccable, a Taste-family aesthetic skill, or a studio/brand system skill the user explicitly invokes — `pk:design` delegates **visual direction** to it: typography pairing, palette and color system, spacing and radius language, component ornamentation, and authorship of `DESIGN.md`. That skill is the **single owner** of `DESIGN.md`; `pk:design` must not write, overwrite, or fork a competing token file, duplicate its aesthetic doctrine, or overrule its taste calls.
+
+PromptKit retains the governance half of the contract and still verifies it:
+
+- **Ceremony level and design tier** (D0–D3) — an external skill never reclassifies work or relaxes escalation.
+- **WCAG 2.2 AA accessibility** — contrast, focus-visible, keyboard operation, target size, semantic structure.
+- **Responsive reflow** — mobile viewport behavior, `min-w-0` overflow safety, `dvh` and safe-area handling.
+- **Applicability-based interactive states** — default and focus-visible always; hover/active, disabled, loading, empty, and error states wherever the surface supports them.
+- **Rendered-UI verification** — evidence per [`protocols/rendered-ui-evidence.md`](../protocols/rendered-ui-evidence.md), a rendered check rather than a claim.
+
+With no external design skill and no existing `DESIGN.md`, `pk:design` authors the file itself from Step 1 below. Delegation is never abdication: PromptKit still blocks an inaccessible or unverified surface from shipping.
+
 ---
 
 ## The 5-Layer UI Component Architecture
@@ -98,7 +112,7 @@ Figma frames are static desktop or mobile snapshots that frequently omit critica
 When inspired by an existing product or visual reference, extract its design DNA rather than copying pixels:
 1. **Inspect Macrostructure & Rhythm**: Identify hero archetype, navigation model, and section surface banding. Refuse repeating identical layout cards.
 2. **Extract Typography Roles**: Identify distinct display, body, and tabular numeral roles. Refuse using a single generic sans-serif for all roles.
-3. **Derive Color Bands & Signal Accent**: Map surface paper/background, border hairlines, and isolate the single $\le 5\%$ accent hue.
+3. **Derive Color Bands & Signal Accent**: Map surface paper/background, border hairlines, and isolated accent hue(s). A reference that is itself expressive keeps its own accent prescription; the $\le 5\%$ share is the utility default, not a constraint on the reference.
 4. **Export Portable `DESIGN.md`**: Emit a project-root `DESIGN.md` declaring tokens, typography pairing, and chosen Iconify family so any agent builds against it.
 
 ---
@@ -120,16 +134,19 @@ Escalate D0→D1→D2→D3 when risk requires it (a11y impact, cross-surface rea
 
 ### Step 1: Tactile Aesthetic Foundations & Anti-Slop Discipline
 
-1. **Tactile Canvas & The "Paper" Rule (`antislop-ui`)**:
+**Surface Mode gate (read before applying anything below)**: Resolve the surface mode from the project profile, the brief, or an active external design skill — `Operate` (dashboards, admin, dev tools), `Read` (docs, knowledge bases, editorial reference), `Persuade` (landing pages, marketing, pricing), `Experience` (consumer products, showcases, portfolios). Items 1, 2, 6, and 7 below are the **utility / operator defaults** for `Operate` and `Read` surfaces: matte paper grounds, `1px` hairlines, a sub-5% signal accent, `system-ui` stacks, and the Cobalt/Hum presets. On `Persuade` and `Experience` surfaces those aesthetic constants are **lifted** — an expressive brief, brand kit, or active external design skill may choose saturated color fields, display typefaces, larger accent areas, gradients, and motion. What never lifts on any surface: honest copy (zero invented metrics, logos, or testimonials), the anti-template rhythm rules in item 3, WCAG 2.2 AA contrast, responsive reflow, and rendered-UI verification.
+
+1. **Tactile Canvas & The "Paper" Rule (`antislop-ui`) — *utility / operator default***:
    - **No Pure Extremes**: Never default to raw `#000000` pitch black or sterile `#ffffff` blinding white.
    - **Engineered Paper Grounds**: Light mode sits on calm, tinted paper (`oklch(96–98.5% 0.005–0.015 <anchor hue>)`). Dark mode sits on deep tinted obsidian or graphite (`oklch(13–16% 0.008–0.015 <anchor hue>)`).
    - **Tint the Neutrals**: Neutrals must carry a subtle chroma trace of the anchor hue in both themes. If the anchor is warm terracotta, neutrals lean warm espresso; if cobalt, they lean cool graphite.
    - **Hairlines Over Blur**: Depth comes from 1px ruler-drawn borders (`--color-rule`), not heavy drop shadows (`shadow-2xl`) or washed-out glassmorphism blur (`backdrop-blur`). Everything sits matte.
    - **Elevation in Dark Mode**: Elevated cards and dialogs sit `+3% to +5%` lighter than the base canvas (`oklch(17%)` over `oklch(13%)`) with a 1px hairline border. Surfaces never sit darker than the canvas.
 
-2. **The 5% Signal Rule**:
+2. **The 5% Signal Rule — *utility / operator default***:
    - Limit saturated accent color to **less than 5% of any viewport**.
    - Accents are optical **signals** (active tab tick, focus ring, primary action button, status badge), never decorative background washes or rainbow gradients.
+   - On an expressive `Persuade` / `Experience` surface, a brand system or explicit brief may run a bolder accent field; contrast and honest copy stay non-negotiable, and a decorative gradient is still slop unless the accepted direction asks for it.
 
 3. **Macrostructure & Layout Rhythm Variety**:
    - **Break the Generic Rut**: Refuse the automatic AI template (`Hero + Badge ──> 3 Bento Cards ──> Fake Logos ──> Pill CTA ──> 4-col Footer`).
@@ -149,7 +166,7 @@ Escalate D0→D1→D2→D3 when risk requires it (a11y impact, cross-surface rea
    - **No Hand-Drawn Fake Chrome**: Never draw fake browser address bars (URL pills with red/yellow/green traffic-light dots) or fake phone frames. Real screenshots sit matte in a clean `<figure>` with a 1px hairline border.
    - **No Uniform Pill Syndrome**: Use intentional geometric radii (`rounded-md` or `rounded-lg`). Reserve `rounded-full` strictly for avatar circles and status dots.
 
-6. **Dual-Mode Theme Presets**:
+6. **Dual-Mode Theme Presets — *utility / operator default***:
    - **Preset A: Cobalt Dev-Tool (Cool Technical Register)**:
      - *Light*: Canvas `oklch(98.5% 0.004 250)`, Ink `oklch(22% 0.016 258)`, Hairline `oklch(88% 0.008 250)`, Signal Cobalt `oklch(56% 0.22 256)`.
      - *Dark*: Canvas `oklch(14% 0.010 255)`, Card `oklch(18% 0.012 255)`, Ink `oklch(93% 0.006 255)`, Signal Cobalt `oklch(65% 0.21 256)`.
@@ -157,7 +174,7 @@ Escalate D0→D1→D2→D3 when risk requires it (a11y impact, cross-surface rea
      - *Light*: Canvas `oklch(97% 0.012 80)`, Ink `oklch(20% 0.015 65)`, Hairline `oklch(86% 0.010 80)`, Signal Terracotta `oklch(58% 0.18 45)`.
      - *Dark*: Canvas `oklch(15% 0.012 60)`, Card `oklch(19% 0.014 60)`, Ink `oklch(92% 0.008 75)`, Signal Terracotta `oklch(68% 0.17 50)`.
 
-7. **Zero-Byte Native System Font Stacks**:
+7. **Zero-Byte Native System Font Stacks — *utility / operator default***:
    - **No Mandatory Font Bundles**: External web font downloads are never required. Rely on zero-latency native system font stacks:
      - `--font-sans`: `system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
      - `--font-mono`: `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace`
@@ -400,7 +417,7 @@ observing the rendered result.
 - [ ] **Figma Blindspots Remediated**: Static pixel widths replaced with fluid reflow, ~44×44px touch targets verified, and loading skeletons / empty states implemented.
 - [ ] **Applicability-Based State Contract**: Interactive components explicitly implement all states applicable to their role (default + focus-visible universally; hover/active for pointer-interactive; disabled when disableable; loading/error/success for async/stateful controls).
 - [ ] **Honest Copy**: Copy contains zero fabricated metrics, fake customer counts, or invented social proof.
-- [ ] **5% Signal Accent**: Saturated accent is confined to $<5\%$ of viewport area; no decorative gradient floods.
+- [ ] **5% Signal Accent (utility surfaces)**: On `Operate` / `Read` surfaces saturated accent is confined to $<5\%$ of viewport area with no decorative gradient floods; on `Persuade` / `Experience` surfaces the accepted brand system governs accent share instead.
 - [ ] **Typography & AI Tells**: Headings are upright (no italic titles); `tabular-nums` enabled on data/counters; no hand-drawn browser chrome.
 - [ ] **Single Icon Family**: All UI icons derive from a single cohesive set via Iconify (`simple-icons` for tech marks); consistency applies to icons that exist, without requiring icons on approved text-only controls.
 - [ ] **Favicon Declared**: Every shipped page has a favicon per the stated rule; no blank-tab default.

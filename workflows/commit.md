@@ -123,11 +123,13 @@ Format all commit messages strictly according to the Conventional Commits specif
 
 #### Contract Impact Evidence or Maintenance Classification
 
-Before developer confirmation, classify every PromptKit OS eligible commit using one of the two paths below. The classification may be recorded in the commit body or in a stable linked planning or review record. It provides traceability for later QA and release evaluation; it does not approve a version or release. No public contract impact → Maintenance classification; potential public contract impact → Contract Impact Evidence.
+**Scope — PromptKit OS repository commits only.** This classification exists so PromptKit's own release evaluation can trace contract movement. A consumer repository running `pk:commit` keeps the Conventional Commit format, secret scanning, and probe hygiene above; it is not expected to reproduce PromptKit's internal release-evaluation rubric.
+
+Before developer confirmation, classify every eligible **PromptKit OS repository** commit using one of the two paths below. The classification may be recorded in the commit body or in a stable linked planning or review record. It provides traceability for later QA and release evaluation; it does not approve a version or release. No public contract impact → Maintenance classification; potential public contract impact → Contract Impact Evidence.
 
 ##### Public PromptKit Contract Impact
 
-Use this path when the commit intentionally changes a user-observable PromptKit OS workflow, template, protocol, command trigger, documented output schema, required artifact, or documented behavior (otherwise use Maintenance Commit). Record all of the following in the commit body or linked record:
+Use this path when a PromptKit OS repository commit intentionally changes a user-observable PromptKit OS workflow, template, protocol, command trigger, documented output schema, required artifact, or documented behavior (otherwise use Maintenance Commit). Record all of the following in the commit body or linked record:
 
 - **Evidence ID**: A stable evidence reference such as `EVIDENCE-YYYY-MM-DD-slug`.
 - **Commit Evidence Location**: The commit-body field or linked planning/review record path and anchor containing this evidence.
@@ -144,7 +146,7 @@ The Conventional Commit label is informational, not the versioning authority. A 
 
 ##### Maintenance Commit
 
-Use this path when the commit has no intentional Public PromptKit Contract change. Record an explicit declaration in the commit body or linked planning/review record:
+Use this path when a PromptKit OS repository commit has no intentional Public PromptKit Contract change. Record an explicit declaration in the commit body or linked planning/review record:
 
 - **Maintenance Commit**: `Yes`
 - **No Intentional Public PromptKit Contract Change**: State this explicitly.

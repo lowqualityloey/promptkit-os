@@ -181,7 +181,7 @@ Persistent memory is not policy: setup and reinjection must not import session l
 - **Telemetry Cards**: `<kit>/protocols/telemetry-cards.md`
 - **Checkpoint Ignore Policy**: `<kit>/protocols/checkpoint-ignore-policy.md`
 
-> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols (`setup`, `context-sync`, `code-quality-gate`, `subagent-delegation`); the remaining protocols stay out of the static directive to keep it under the 2500-token Balanced budget (currently 2404/2500). `telemetry-cards.md` is referenced inline by the directive, `discovery-intake.md` and `rendered-ui-evidence.md` are lazy-loaded by their relevant workflows, and `context-economy.md` is discoverable but was not reached through this list in the six measured cells: the two cells that opened it found it by directory listing and keyword search (`protocols/context-economy.md` §11). Unlisted therefore means "not in the static directive", not "unreachable".
+> Note: `<kit>/templates/agent-directive-template.md` intentionally lists only the four always-needed protocols (`setup`, `context-sync`, `code-quality-gate`, `subagent-delegation`); the remaining protocols stay out of the static directive to keep it under the 2500-token Balanced budget (currently 2409/2500). `telemetry-cards.md` is referenced inline by the directive, `discovery-intake.md` and `rendered-ui-evidence.md` are lazy-loaded by their relevant workflows, and `context-economy.md` is discoverable but was not reached through this list in the six measured cells: the two cells that opened it found it by directory listing and keyword search (`protocols/context-economy.md` §11). Unlisted therefore means "not in the static directive", not "unreachable".
 - **Project Profile & Rules**: `./PROMPTKIT.md` (if present)
 - **Visual Identity & Brand**: `./DESIGN.md` (if present)
 - **Living State & Tracker**: `./docs/STATE.md` (if present)
@@ -225,7 +225,7 @@ After updating configuration:
    - `[pk:design]`: Design accessible UI components with modern tokens.
    - `[pk:retro]`: Run a retro on completed work, capture insights, and generate ADRs.
    - `[pk:checkpoint]`: Compress active session context and generate a handover prompt for a fresh chat.
-3. **Surface the five-command loop** on first run — most solo work needs nothing else: `pk:plan` → `pk:auto` → `pk:review` → `pk:commit` → `pk:checkpoint`. Mention `preset: solo-fast` in `./PROMPTKIT.md` for the tight loop (concise routine status, framed callouts only for ACTION REQUIRED or BLOCKED, Level 2 Lite records by default). A preset changes presentation and defaults only: push, PR, destructive operations, and Level 3 keep their human-approval gates.
+3. **Surface the five-command loop** on first run — most solo work needs nothing else: `pk:plan` → `pk:auto` → `pk:review` → `pk:commit` → `pk:checkpoint`. Mention `preset: solo-fast` in `./PROMPTKIT.md` for the tight loop (concise routine status, halt callouts reserved for ACTION REQUIRED or BLOCKED, Level 2 Lite records by default). A preset changes presentation and defaults only: push, PR, destructive operations, and Level 3 keep their human-approval gates.
 
 ---
 

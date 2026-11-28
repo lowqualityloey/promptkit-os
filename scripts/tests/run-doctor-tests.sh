@@ -464,6 +464,9 @@ EOF
     want_status 1
     want_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Next Action; Owner / Current Actor)'
     want_not_contains $'docs-drift\tDIVERGED(STATE 3A vs Task Record: Task ID)'
+    # (#824) asymmetric labels name both sides in the detail and remediation
+    want_contains "STATE 3A \"Owner / Current Actor\" maps to Task Record \"Current Actor\""
+    want_contains "Copy the record's \"Current Actor\" value into 3A's \"Owner / Current Actor\""
 
     # (e) prose normalization: reflowed whitespace and extra backticks agree (#671)
     cat > "$root/docs/STATE.md" <<EOF

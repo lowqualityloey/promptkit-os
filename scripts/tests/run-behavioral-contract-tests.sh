@@ -1013,9 +1013,9 @@ check_benchmark_figure "Balanced static directive" "$(static_metric BALANCED)" \
 check_benchmark_figure "Lite static directive" "$(static_metric LITE)" \
     "$(benchmark_metric 'Component (Balanced)' 'Approx. Token Weight' 'Total Baseline Static Overhead (Lite)')"
 check_benchmark_figure "Balanced static reduction percent" "$(static_savings_percent "$BALANCED_SAVINGS_OUT")" \
-    "$(benchmark_metric 'Profile' 'Reduction vs ~32.8k current core-subset baseline¹' 'Balanced')"
+    "$(benchmark_metric 'Profile' 'Reduction vs ~35.1k current core-subset baseline¹' 'Balanced')"
 check_benchmark_figure "Lite static reduction percent" "$(static_savings_percent "$LITE_SAVINGS_OUT")" \
-    "$(benchmark_metric 'Profile' 'Reduction vs ~32.8k current core-subset baseline¹' 'Lite')"
+    "$(benchmark_metric 'Profile' 'Reduction vs ~35.1k current core-subset baseline¹' 'Lite')"
 check_benchmark_figure "Full workflow-set token total" "$(fullset_measured_tokens "$FULLSET_OUT")" \
     "$(benchmark_metric 'Inventory' 'Measured Tokens' 'Full workflow set')"
 check_benchmark_figure "Core-six workflow-set token total" "$(core_six_measured_tokens "$FULLSET_OUT")" \
@@ -2466,6 +2466,34 @@ assert_contains "scripts/validate-references.sh" "workflow_inventory" "Bash vali
 assert_contains "scripts/validate-references.ps1" "ExpectedWorkflowCount = 26" "PowerShell validator pins the 26-workflow inventory"
 assert_contains "scripts/validate-references.ps1" "ExpectedProtocolCount = 9" "PowerShell validator pins the 9-protocol inventory"
 assert_contains "scripts/validate-references.ps1" "ExpectedTemplateCount = 31" "PowerShell validator pins the 31-template inventory"
+
+# Issue #823/#824/#825: surface-aware design defaults, consumer-repo friction,
+# and universal CommonMark callouts.
+echo ""
+echo "📌 Scenario AV: Surface Modes, Consumer Friction & CommonMark Callouts (#823, #824, #825)"
+assert_contains "workflows/design-system.md" "### External Design Skill Delegation" "Design workflow delegates visual direction to an active external skill"
+assert_contains "workflows/design-system.md" "single owner" "External design skill is the single owner of DESIGN.md"
+assert_contains "workflows/design-system.md" "Surface Mode gate" "Design defaults are gated by surface mode"
+assert_contains "templates/design-profile-template.md" "Surface Mode" "Design profile records the resolved surface mode"
+assert_contains "templates/design-tokens-spec.md" "utility default" "Token spec scopes restrained defaults to utility surfaces"
+assert_contains "docs/ADOPTION-GUIDE.md" "single owner" "Adoption matrix records single-owner DESIGN.md delegation"
+assert_contains "workflows/commit.md" "PromptKit OS repository commits only" "Commit rubric is scoped to PromptKit OS repository commits"
+assert_contains "workflows/checkpoint.md" "Deterministic rollover recipe" "Checkpoint ships an append-only STATE rollover recipe"
+assert_contains "workflows/route.md" "Explicitly User-Invoked External Craft Skills" "Router precedence ranks explicit craft skills above stack playbooks"
+assert_contains "workflows/route.md" "Never emit a second .*Auto-routed" "Router consolidates the Turn-1 banner into one line"
+assert_contains "scripts/check-doctor.sh" "maps to Task Record" "Doctor names both asymmetric projection labels in Bash"
+assert_contains "scripts/check-doctor.ps1" "maps to Task Record" "Doctor names both asymmetric projection labels in PowerShell"
+assert_contains "protocols/telemetry-cards.md" "card-style: clean" "Telemetry protocol ships borderless CommonMark as the default"
+assert_contains "protocols/telemetry-cards.md" "Conditional, never decorative" "Progress bars require a real countable list"
+assert_contains "protocols/telemetry-cards.md" "Open-Right Framed Boxes" "Framed style is documented as open-right and opt-in"
+assert_contains "templates/project-profile-template.md" "card-style: clean" "Project profile defaults to clean callouts"
+assert_contains "PROMPTKIT.md" "card-style: clean" "PROMPTKIT.md defaults to clean callouts"
+assert_contains "docs/ARCHITECTURE.md" "borderless CommonMark" "Architecture describes the borderless default"
+assert_contains "scripts/tests/eval-scenarios/halt-callout.md" "🚫 BLOCKED" "Default halt scenario exercises the borderless callout"
+assert_not_contains "scripts/tests/eval-scenarios/halt-callout.md" "\[!WARNING\]" "Default halt scenario emits no GFM alert token"
+assert_contains "scripts/tests/eval-scenarios/halt-framed-style.md" "╔═ 🚫BLOCKED" "Framed scenario exercises the opt-in CLI box"
+assert_contains "scripts/tests/eval-scenarios/halt-framed-style.md" "not-contains: ╗" "Framed scenario rejects the closed right corner"
+assert_contains "scripts/tests/eval-scenarios/halt-gfm-style.md" "\[!WARNING\]" "GFM scenario exercises the opt-in alert style"
 assert_contains "scripts/validate-references.ps1" "WorkflowInventory" "PowerShell validator derives workflows from the filesystem"
 
 echo ""

@@ -101,7 +101,7 @@ Once installed, most solo work runs on five commands:
 | `pk:commit` | Secret scan, gates, and atomic Conventional Commits |
 | `pk:checkpoint` | Persist active state and hand off before a context reset |
 
-Set `preset: solo-fast` in `./PROMPTKIT.md` (or run `pk:profile --solo-fast`) for the tight loop: concise routine status, framed callouts only for ACTION REQUIRED or BLOCKED, and Level 2 Lite records by default. Hard gates — push, PR, destructive operations, and Level 3 — are unchanged.
+Set `preset: solo-fast` in `./PROMPTKIT.md` (or run `pk:profile --solo-fast`) for the tight loop: concise routine status, halt callouts reserved for ACTION REQUIRED or BLOCKED, and Level 2 Lite records by default. Hard gates — push, PR, destructive operations, and Level 3 — are unchanged.
 
 ### What PromptKit Looks Like in Chat
 
@@ -198,10 +198,10 @@ For authoritative Level 0–3 classification, escalation, downgrade, and Task Re
 
 The core instruction layer stays small; workflows, stack playbooks, and boundary recipes load only when triggered:
 
-- **Balanced** profile: ~2,404 tok static footprint (~93% static saving vs. ~32.8k current core-subset baseline; 2,500 tok budget cap)
-- **Lite** profile: ~1,415 tok static footprint (~96% static saving vs. the current baseline; 1,500 tok budget cap)
+- **Balanced** profile: ~2,409 tok static footprint (~93% static saving vs. ~35.1k current core-subset baseline; 2,500 tok budget cap)
+- **Lite** profile: ~1,431 tok static footprint (~96% static saving vs. the current baseline; 1,500 tok budget cap)
 
-These figures use the `bytes/4` proxy (`measure-tokens.sh`), whose cap is set below the real tokenizer cap so both directives clear both conventions (Balanced 2,404 proxy vs 2,411 `cl100k_base`; Lite 1,415 vs 1,449, against 2,500/1,500 caps — see [`docs/BENCHMARKS.md` §9](./docs/BENCHMARKS.md) and [`docs/BENCHMARK-METHODOLOGY.md`](./docs/BENCHMARK-METHODOLOGY.md)).
+These figures use the `bytes/4` proxy (`measure-tokens.sh`), whose cap is set below the real tokenizer cap so both directives clear both conventions (Balanced 2,409 proxy vs 2,429 `cl100k_base`; Lite 1,431 vs 1,475, against 2,500/1,500 caps — see [`docs/BENCHMARKS.md` §9](./docs/BENCHMARKS.md) and [`docs/BENCHMARK-METHODOLOGY.md`](./docs/BENCHMARK-METHODOLOGY.md)).
 
 PromptKit couples JIT loading with the **Context Economy Protocol** ([`protocols/context-economy.md`](./protocols/context-economy.md)), governing **Minimum Sufficient Context** and adaptive **Z0–Z4 context zoom** (decoupled from L0–L3 risk ceremony). These are advisory agent instructions: CI asserts that the invariant text is present and that the directive token budgets hold, but PromptKit does not enforce this protocol at runtime.
 
